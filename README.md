@@ -147,8 +147,9 @@ The current checkout contains:
   stdlib-branch, conflict, package, and compiler-server probes;
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
-- a structured C11 type/declarator AST with a deterministic golden compiled by
-  both GCC and Clang, plus an expression/statement printer seed;
+- a structured C11 AST with deterministic declarator and exhaustive
+  expression/statement precedence and escaping goldens, compiled and executed
+  without `hxrt` by both GCC and Clang;
 - a provisional standalone `hxrt` allocator/string/status/Int32 ABI seed with
   strict hosted and freestanding compilation plus C++17 header consumption; it
   is not yet selected or linked by generated programs;

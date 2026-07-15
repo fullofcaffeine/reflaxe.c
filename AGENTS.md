@@ -105,8 +105,9 @@ missing-metadata or missing-adapter assumptions.
   syntax when evaluation order, lifetime, ownership, cleanup, dispatch,
   boxing, or failure edges matter.
 - Extend `CAST` and `CASTPrinter` structurally. Normal lowering must not
-  concatenate user-derived C strings. Raw compiler-owned AST nodes remain
-  narrow, validated escape valves.
+  concatenate user-derived C strings. No raw expression or declaration node is
+  currently admitted; any future compiler-owned escape valve needs a narrow
+  typed authority, validation, executable negative tests, and an owning issue.
 - Treat `CDeclarator` as the C grammar tree, not as a semantic type string:
   `DGroup` is the parenthesized-declarator production, `DName(null)` is an
   abstract declarator, and array/function variants retain their distinct C11
@@ -116,10 +117,28 @@ missing-metadata or missing-adapter assumptions.
   C11 spelling; E1.T04 still owns mangling, reserved namespaces, and collision
   policy. Typed attributes, alignment specifiers, and atomic type names have
   dedicated nodes—do not restore `Array<String>` attributes.
+- Preserve expression-tree association exactly; do not algebraically
+  reassociate, commute, or flatten nodes even when a C operator looks
+  associative. Numeric precedence alone is insufficient for C grammar:
+  assignment left operands and prefix increment/decrement operands require a
+  `unary-expression`, and adjacent unary tokens need separation when they
+  could fuse into `++`, `--`, or `&&`.
+- Construct integer and floating constants through validated literal nodes,
+  `_Generic` through typed associations, and source anchors through structured
+  `DLineDirective`/`SLineDirective` nodes. Never restore opaque literal or
+  preprocessor-token strings. A `#line` mapping applies to the immediately
+  following physical line, so the printer must not insert a blank after it.
+- Treat generated C as adversarial source text: identifiers, strings, byte
+  characters, comments, and line filenames must pass their dedicated
+  validators/escapers. Preserve trigraph safety and reject malformed Unicode;
+  never interpolate user text into comments, literals, directives, or tokens.
 - `CASTPrinter` defaults to strict ISO C11. GNU/Clang attribute output requires
   an explicit dialect and must never leak into the normative strict lane.
-  Update `test/c_ast/expected/declarators.c` only from an intentional structural
-  fixture change, then run both `npm run test:c-ast` and the native matrix.
+  Update `test/c_ast/expected/declarators.c` or `expressions.c` only from an
+  intentional structural fixture change, then run both `npm run test:c-ast`
+  and the native matrix. The expression fixture's literal 6×6 family matrix is
+  the reviewable contract; do not replace it with expected values derived from
+  the printer's own precedence table.
 - Write generated artifacts only through Reflaxe output ownership. Never
   hand-manage stale output outside its generated-file manifest.
 - Preserve Haxe evaluation order explicitly and never depend on C undefined
@@ -288,13 +307,13 @@ missing-metadata or missing-adapter assumptions.
   fixture, and public-header floor. C17 preserves that contract; C23 internal
   syntax remains experimental and cannot silently alter semantics or ABI.
 - `scripts/ci/runtime_smoke.py` owns the native warning baseline and must
-  compile/run the structural C AST golden, hosted/freestanding runtime paths,
-  the public header from C++17, the C-library fixture, and the opaque-handle
-  C++ shim. Auto mode may skip an
-  unavailable optional compiler family only with an explicit `SKIP` reason and
-  must run at least one complete C/C++ pair. CI passes `--toolchain gcc` and
-  `--toolchain clang` in separate required lanes; either missing, mislabeled,
-  unrun, warning-producing, or failing lane is a hard failure.
+  compile/run both structural C AST goldens, hosted/freestanding runtime
+  paths, the public header from C++17, the C-library fixture, and the
+  opaque-handle C++ shim. Auto mode may skip an unavailable optional compiler
+  family only with an explicit `SKIP` reason and must run at least one complete
+  C/C++ pair. CI passes `--toolchain gcc` and `--toolchain clang` in separate
+  required lanes; either missing, mislabeled, unrun, warning-producing, or
+  failing lane is a hard failure.
 - Direct Haxe/Reflaxe builds activate through
   `--custom-target c=<directory>` and expose the public `c` target conditional.
   The compiler owns `target.name=c`; use `target.unicode` without
@@ -395,11 +414,12 @@ bash scripts/lint/whitespace_guard.sh
 `npm test` verifies the exact dependency lock, vendored Reflaxe checksum, the
 complete current target-owned Haxe graph and explicit macro branches,
 source/package lifecycle behavior, cold/compiler-server C/non-C isolation,
-macro order, the structural declarator golden, the available local strict
-native smoke lanes, notices, and governance policy. GitHub CI additionally
-requires distinct GCC/G++ and Clang/Clang++ lanes. The AST golden is generated
-by Haxe code that directly constructs target-owned AST; it proves C syntax, not
-Haxe-language lowering or generated-program success.
+macro order, the structural declarator and expression/statement goldens, the
+available local strict native smoke lanes, notices, and governance policy.
+GitHub CI additionally requires distinct GCC/G++ and Clang/Clang++ lanes. The
+AST goldens are generated by Haxe code that directly constructs target-owned
+AST; they prove C syntax, not Haxe-language lowering or generated-program
+success.
 
 After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
 keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks

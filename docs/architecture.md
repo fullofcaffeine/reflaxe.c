@@ -62,11 +62,24 @@ or parsing target-code strings. Final C tokens use validated `CIdentifier`
 values; array bounds, parameter-list forms, C11 alignment/atomics, anonymous
 aggregate specifiers, and compiler attributes remain typed nodes.
 
+Expressions likewise retain their exact AST association. The printer combines
+C11 precedence with grammar-category checks for assignment and prefix
+increment/decrement operands, and inserts token boundaries where adjacent
+unary operators could become a different token. Integer and floating constants
+are validated representations rather than source fragments; `_Generic`
+associations, comments, strings, byte characters, and `#line` anchors are also
+structured or escaped at their owning boundary. There is no raw expression or
+declaration node. Line anchors are syntax capability only: source-map policy,
+sidecar provenance, and diagnostic remapping remain owned by E8.T08.
+
 The printer's default dialect is strict ISO C11. Compiler attributes are
 explicit extension nodes and require an explicit GNU or Clang mode. The
-`test/c_ast` Haxe fixture renders a deterministic declarator golden, while the
-required GCC and Clang lanes compile and execute that checked-in C. This is a
-direct AST/printer proof only; Haxe-to-HxcIR-to-C lowering remains fail-closed.
+`test/c_ast` Haxe fixtures render deterministic declarator and
+expression/statement goldens. The latter includes a literal 6×6 ordered
+precedence-family matrix, every unary and binary operator, adversarial escaping,
+and all statement shapes. Required GCC and Clang lanes compile and execute both
+checked-in C files with no `hxrt` selection. This is a direct AST/printer proof
+only; Haxe-to-HxcIR-to-C lowering remains fail-closed.
 
 ## Target and native baseline
 

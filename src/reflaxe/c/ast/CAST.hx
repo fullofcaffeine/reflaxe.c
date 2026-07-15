@@ -285,9 +285,15 @@ enum CDesignator {
 	DIndex(index:CExpr);
 }
 
+/** A structured standard `#line` directive. The mapped line applies to the next source line. */
+typedef CLineDirective = {
+	final line:Int;
+	final file:Null<String>;
+}
+
 enum CDecl {
 	DComment(text:String);
-	DRawCompilerOwned(text:String);
+	DLineDirective(directive:CLineDirective);
 	DStaticAssert(condition:CExpr, message:String);
 	DForwardStruct(name:CIdentifier, attributes:Array<CAttribute>);
 	DForwardUnion(name:CIdentifier, attributes:Array<CAttribute>);
@@ -303,6 +309,7 @@ enum CDecl {
 enum CStmt {
 	SEmpty;
 	SComment(text:String);
+	SLineDirective(directive:CLineDirective);
 	SExpr(expr:CExpr);
 	SDecl(decl:CVariableDecl);
 	SBlock(statements:Array<CStmt>);
@@ -371,10 +378,121 @@ enum CBinaryOp {
 	Comma;
 }
 
+enum CIntegerBase {
+	IBDecimal;
+	IBOctal;
+	IBHexadecimal;
+}
+
+enum CIntegerSuffix {
+	ISNone;
+	ISUnsigned;
+	ISLong;
+	ISUnsignedLong;
+	ISLongLong;
+	ISUnsignedLongLong;
+}
+
+/** A validated integer value plus typed C representation choices. The sign is a unary operator. */
+class CIntegerLiteral {
+	public final base:CIntegerBase;
+	public final digits:String;
+	public final suffix:CIntegerSuffix;
+
+	public function new(base:CIntegerBase, digits:String, suffix:CIntegerSuffix = ISNone) {
+		final radix = switch base {
+			case IBDecimal: 10;
+			case IBOctal: 8;
+			case IBHexadecimal: 16;
+		}
+		if (!validDigits(digits, radix))
+			throw 'Invalid base-$radix C integer magnitude: "$digits"';
+		if (digits.length > 1 && digits.charCodeAt(0) == 0x30)
+			throw 'C integer magnitudes must use canonical leading-zero spelling: "$digits"';
+		this.base = base;
+		this.digits = base == IBHexadecimal ? digits.toUpperCase() : digits;
+		this.suffix = suffix;
+	}
+
+	public static function decimal(digits:String, suffix:CIntegerSuffix = ISNone):CIntegerLiteral
+		return new CIntegerLiteral(IBDecimal, digits, suffix);
+
+	static function validDigits(value:String, radix:Int):Bool {
+		if (value.length == 0)
+			return false;
+		for (index in 0...value.length) {
+			final code = value.charCodeAt(index);
+			if (code == null)
+				return false;
+			final digit = if (code >= 0x30 && code <= 0x39) code - 0x30 else if (code >= 0x41 && code <= 0x46) code - 0x41 + 10 else if (code >= 0x61
+				&& code <= 0x66) code
+				- 0x61 + 10 else -1;
+			if (digit < 0 || digit >= radix)
+				return false;
+		}
+		return true;
+	}
+}
+
+enum CFloatRepresentation {
+	FRDecimal(wholeDigits:String, fractionalDigits:String, exponent:Null<Int>);
+	FRHexadecimal(wholeDigits:String, fractionalDigits:String, binaryExponent:Int);
+}
+
+enum CFloatSuffix {
+	FSNone;
+	FSFloat;
+	FSLongDouble;
+}
+
+/** A structured floating value. The printer supplies canonical separators and exponent markers. */
+class CFloatLiteral {
+	public final representation:CFloatRepresentation;
+	public final suffix:CFloatSuffix;
+
+	public function new(representation:CFloatRepresentation, suffix:CFloatSuffix = FSNone) {
+		switch representation {
+			case FRDecimal(whole, fraction, _):
+				validateParts(whole, fraction, 10);
+			case FRHexadecimal(whole, fraction, _):
+				validateParts(whole, fraction, 16);
+		}
+		this.representation = representation;
+		this.suffix = suffix;
+	}
+
+	static function validateParts(whole:String, fraction:String, radix:Int):Void {
+		if (whole == "" && fraction == "")
+			throw "A C floating literal requires at least one significand digit";
+		if (whole != "" && !validDigits(whole, radix) || fraction != "" && !validDigits(fraction, radix))
+			throw 'Invalid base-$radix C floating significand: "$whole.$fraction"';
+	}
+
+	static function validDigits(value:String, radix:Int):Bool {
+		for (index in 0...value.length) {
+			final code = value.charCodeAt(index);
+			if (code == null)
+				return false;
+			final digit = if (code >= 0x30 && code <= 0x39) code - 0x30 else if (code >= 0x41 && code <= 0x46) code - 0x41 + 10 else if (code >= 0x61
+				&& code <= 0x66) code
+				- 0x61 + 10 else -1;
+			if (digit < 0 || digit >= radix)
+				return false;
+		}
+		return true;
+	}
+}
+
+/** A type association, or `type == null` for the one optional default association. */
+typedef CGenericAssociation = {
+	final type:Null<CTypedDeclarator>;
+	final expression:CExpr;
+}
+
 enum CExpr {
 	EIdentifier(name:CIdentifier);
-	EInt(value:String);
-	EFloat(value:String);
+	EInt(value:CIntegerLiteral);
+	EFloat(value:CFloatLiteral);
 	EString(value:String);
 	EChar(value:Int);
 	EBool(value:Bool);
@@ -389,6 +507,6 @@ enum CExpr {
 	ESizeOfType(type:CType, declarator:CDeclarator);
 	EAlignOfType(type:CType, declarator:CDeclarator);
 	ECompoundLiteral(type:CType, declarator:CDeclarator, initializer:CInitializer);
+	EGenericSelection(control:CExpr, associations:Array<CGenericAssociation>);
 	EParen(value:CExpr);
-	ERawCompilerOwned(text:String);
 }

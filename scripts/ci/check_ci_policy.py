@@ -20,8 +20,11 @@ REQUIRED_NATIVE_FILES = (
     "runtime/hxrt/test/runtime_smoke.c",
     "runtime/hxrt/test/public_header_cpp.cpp",
     "test/c_ast/CASTGolden.hx",
+    "test/c_ast/ExpressionGolden.hx",
     "test/c_ast/c_ast.hxml",
+    "test/c_ast/expression.hxml",
     "test/c_ast/expected/declarators.c",
+    "test/c_ast/expected/expressions.c",
     "test/c_ast/run.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
@@ -108,8 +111,10 @@ def validate() -> list[str]:
             errors.append(f"native smoke runner lost strict flag {required_flag}")
     if "required toolchain" not in runner or "SKIP" not in runner:
         errors.append("native smoke runner must distinguish required failures from optional skips")
-    if "structural-c-ast-golden-run" not in runner or "C_AST_GOLDEN" not in runner:
-        errors.append("native smoke runner must compile and execute the structural C AST golden")
+    if "structural-c-ast-golden-run" not in runner or "C_AST_GOLDENS" not in runner:
+        errors.append("native smoke runner must compile and execute the declarator C AST golden")
+    if "expression-precedence-golden-run" not in runner or "expressions.c" not in runner:
+        errors.append("native smoke runner must compile and execute the expression C AST golden")
 
     return errors
 

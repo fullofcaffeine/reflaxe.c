@@ -1,0 +1,7 @@
+# Dedicated E1.T02 expression/statement precedence and escaping golden test.
+
+-cp test/c_ast/
+-lib reflaxe.c
+
+-main ExpressionGolden
+--interp

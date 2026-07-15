@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render the structural C AST twice and compare it with the checked-in golden."""
+"""Render every structural C AST corpus twice and compare checked-in goldens."""
 
 from __future__ import annotations
 
@@ -8,12 +8,31 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-HXML = Path(__file__).with_name("c_ast.hxml")
-EXPECTED = Path(__file__).with_name("expected") / "declarators.c"
+
+@dataclass(frozen=True)
+class GoldenCase:
+    label: str
+    hxml: Path
+    expected: Path
+
+
+CASES = (
+    GoldenCase(
+        "declarator",
+        Path(__file__).with_name("c_ast.hxml"),
+        Path(__file__).with_name("expected") / "declarators.c",
+    ),
+    GoldenCase(
+        "expression/statement",
+        Path(__file__).with_name("expression.hxml"),
+        Path(__file__).with_name("expected") / "expressions.c",
+    ),
+)
 
 
 class CASTGoldenFailure(RuntimeError):
@@ -25,11 +44,11 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def render(label: str) -> str:
+def render(case: GoldenCase, label: str) -> str:
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     result = subprocess.run(
-        [development_tool("haxe"), str(HXML)],
+        [development_tool("haxe"), str(case.hxml)],
         cwd=ROOT,
         env=environment,
         check=False,
@@ -49,33 +68,48 @@ def main() -> int:
     if shutil.which(development_tool("haxe")) is None:
         print("c-ast-golden: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
-    if not EXPECTED.is_file():
-        print(f"c-ast-golden: ERROR: missing golden: {EXPECTED}", file=sys.stderr)
+    missing = [case.expected for case in CASES if not case.expected.is_file()]
+    if missing:
+        print(
+            "c-ast-golden: ERROR: missing goldens: "
+            + ", ".join(str(path) for path in missing),
+            file=sys.stderr,
+        )
         return 1
 
     try:
-        first = render("first structural AST render")
-        second = render("second structural AST render")
-        if first != second:
-            raise CASTGoldenFailure("two renders in one checkout were not byte-identical")
-        if "hxrt" in first or "hxc_runtime" in first:
-            raise CASTGoldenFailure("declarator-only golden unexpectedly selected runtime code")
-        expected = EXPECTED.read_text(encoding="utf-8")
-        if first != expected:
-            difference = "".join(
-                difflib.unified_diff(
-                    expected.splitlines(keepends=True),
-                    first.splitlines(keepends=True),
-                    fromfile="expected/declarators.c",
-                    tofile="actual/declarators.c",
+        for case in CASES:
+            first = render(case, f"first {case.label} AST render")
+            second = render(case, f"second {case.label} AST render")
+            if first != second:
+                raise CASTGoldenFailure(
+                    f"two {case.label} renders were not byte-identical"
                 )
-            )
-            raise CASTGoldenFailure("structural printer output drifted:\n" + difference)
+            if "hxrt" in first or "hxc_runtime" in first:
+                raise CASTGoldenFailure(
+                    f"{case.label} golden unexpectedly selected runtime code"
+                )
+            expected = case.expected.read_text(encoding="utf-8")
+            if first != expected:
+                difference = "".join(
+                    difflib.unified_diff(
+                        expected.splitlines(keepends=True),
+                        first.splitlines(keepends=True),
+                        fromfile=f"expected/{case.expected.name}",
+                        tofile=f"actual/{case.expected.name}",
+                    )
+                )
+                raise CASTGoldenFailure(
+                    f"{case.label} printer output drifted:\n" + difference
+                )
     except (CASTGoldenFailure, OSError, UnicodeError, subprocess.TimeoutExpired) as error:
         print(f"c-ast-golden: ERROR: {error}", file=sys.stderr)
         return 1
 
-    print("c-ast-golden: OK: deterministic structural C11 declarator corpus matched")
+    print(
+        "c-ast-golden: OK: deterministic declarator and expression/statement "
+        "C11 corpora matched without runtime selection"
+    )
     return 0
 
 

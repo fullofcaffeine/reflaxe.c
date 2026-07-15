@@ -42,8 +42,9 @@ class CASTPrinter {
 			out.push("");
 
 		for (index in 0...unit.declarations.length) {
-			out.push(printDecl(unit.declarations[index]));
-			if (index + 1 < unit.declarations.length)
+			final declaration = unit.declarations[index];
+			out.push(printDecl(declaration));
+			if (index + 1 < unit.declarations.length && !isLineDirectiveDecl(declaration))
 				out.push("");
 		}
 		return out.join("\n") + "\n";
@@ -52,7 +53,7 @@ class CASTPrinter {
 	public function printDecl(decl:CDecl):String {
 		return switch decl {
 			case DComment(text): printComment(text);
-			case DRawCompilerOwned(text): text;
+			case DLineDirective(directive): printLineDirective(directive);
 			case DStaticAssert(condition, message): '_Static_assert(${printExpr(condition, 3)}, ${quote(message)});';
 			case DForwardStruct(name, attributes): joinTokens(['struct ${identifier(name)}', printAttributes(attributes)]) + ";";
 			case DForwardUnion(name, attributes): joinTokens(['union ${identifier(name)}', printAttributes(attributes)]) + ";";
@@ -77,6 +78,7 @@ class CASTPrinter {
 		return switch stmt {
 			case SEmpty: line(";");
 			case SComment(text): line(printComment(text));
+			case SLineDirective(directive): printLineDirective(directive);
 			case SExpr(expr): line(printExpr(expr) + ";");
 			case SDecl(decl): line(printVariable(decl) + ";");
 			case SBlock(statements): printBlock(statements);
@@ -105,8 +107,8 @@ class CASTPrinter {
 		final current = precedence(expr);
 		final rendered = switch expr {
 			case EIdentifier(name): identifier(name);
-			case EInt(value): value;
-			case EFloat(value): value;
+			case EInt(value): printIntegerLiteral(value);
+			case EFloat(value): printFloatLiteral(value);
 			case EString(value): quote(value);
 			case EChar(value): printChar(value);
 			case EBool(value): value ? "true" : "false";
@@ -123,8 +125,8 @@ class CASTPrinter {
 			case ESizeOfType(type, declarator): 'sizeof(${printTypeName(type, declarator)})';
 			case EAlignOfType(type, declarator): '_Alignof(${printTypeName(type, declarator)})';
 			case ECompoundLiteral(type, declarator, initializer): '(${printTypeName(type, declarator)})${printInitializer(initializer)}';
+			case EGenericSelection(control, associations): printGenericSelection(control, associations);
 			case EParen(value): '(${printExpr(value)})';
-			case ERawCompilerOwned(text): text;
 		}
 		return current < parentPrecedence ? '($rendered)' : rendered;
 	}
@@ -328,6 +330,16 @@ class CASTPrinter {
 	}
 
 	function printSwitch(value:CExpr, cases:Array<CCase>):String {
+		var defaultCount = 0;
+		for (caseData in cases) {
+			if (!caseData.isDefault && caseData.values.length == 0)
+				throw "A C switch case group requires at least one case or default label";
+			if (caseData.isDefault)
+				defaultCount++;
+		}
+		if (defaultCount > 1)
+			throw "A C switch permits at most one default label";
+
 		final out:Array<String> = [line('switch (${printExpr(value)}) {')];
 		indent++;
 		for (caseData in cases) {
@@ -336,8 +348,7 @@ class CASTPrinter {
 			for (caseValue in caseData.values)
 				out.push(line('case ${printExpr(caseValue, 3)}:'));
 			indent++;
-			for (statement in caseData.body)
-				out.push(printStmt(statement));
+			out.push(printBlock(caseData.body));
 			indent--;
 		}
 		indent--;
@@ -355,43 +366,51 @@ class CASTPrinter {
 	}
 
 	function printUnary(op:CUnaryOp, value:CExpr):String {
+		if (op == SizeOfExpr)
+			return 'sizeof(${printExpr(value)})';
+
 		final operandPrecedence = switch op {
 			case PostIncrement | PostDecrement: 15;
 			case _: 14;
 		}
-		final operand = printExpr(value, operandPrecedence);
+		final operand = switch op {
+			case PreIncrement | PreDecrement: printUnaryExpressionOperand(value);
+			case _: printExpr(value, operandPrecedence);
+		}
 		return switch op {
-			case AddressOf: '&$operand';
-			case Dereference: '*$operand';
-			case Plus: '+$operand';
-			case Minus: '-$operand';
-			case LogicalNot: '!$operand';
-			case BitwiseNot: '~$operand';
-			case PreIncrement: '++$operand';
-			case PreDecrement: '--$operand';
+			case AddressOf: joinUnaryToken("&", operand);
+			case Dereference: joinUnaryToken("*", operand);
+			case Plus: joinUnaryToken("+", operand);
+			case Minus: joinUnaryToken("-", operand);
+			case LogicalNot: joinUnaryToken("!", operand);
+			case BitwiseNot: joinUnaryToken("~", operand);
+			case PreIncrement: joinUnaryToken("++", operand);
+			case PreDecrement: joinUnaryToken("--", operand);
 			case PostIncrement: '$operand++';
 			case PostDecrement: '$operand--';
-			case SizeOfExpr: 'sizeof($operand)';
+			case SizeOfExpr: throw "unreachable sizeof expression branch";
 		}
 	}
 
 	function printBinary(op:CBinaryOp, left:CExpr, right:CExpr):String {
 		final p = binaryPrecedence(op);
-		final rightAssociative = isRightAssociative(op);
-		final leftParent = rightAssociative ? p + 1 : p;
-		final rightParent = rightAssociative ? p : p + 1;
-		return '${printExpr(left, leftParent)} ${binaryToken(op)} ${printExpr(right, rightParent)}';
+		if (isAssignment(op))
+			return '${printAssignmentLeft(left)} ${binaryToken(op)} ${printExpr(right, p)}';
+		if (op == Comma)
+			return '${printExpr(left, p)}, ${printExpr(right, p + 1)}';
+		return '${printExpr(left, p)} ${binaryToken(op)} ${printExpr(right, p + 1)}';
 	}
 
 	function precedence(expr:CExpr):Int {
 		return switch expr {
-			case EIdentifier(_) | EInt(_) | EFloat(_) | EString(_) | EChar(_) | EBool(_) | ENull | ERawCompilerOwned(_): 16;
+			case EIdentifier(_) | EInt(_) | EFloat(_) | EString(_) | EChar(_) | EBool(_) | ENull | EGenericSelection(_, _): 16;
 			case ECall(_, _) | EIndex(_, _) | EMember(_, _, _): 15;
 			case EUnary(PostIncrement, _) | EUnary(PostDecrement, _): 15;
 			case EUnary(_, _) | ECast(_, _, _) | ESizeOfType(_, _) | EAlignOfType(_, _): 14;
 			case EBinary(op, _, _): binaryPrecedence(op);
 			case EConditional(_, _, _): 3;
-			case ECompoundLiteral(_, _, _) | EParen(_): 16;
+			case ECompoundLiteral(_, _, _): 15;
+			case EParen(_): 16;
 		}
 	}
 
@@ -448,11 +467,88 @@ class CASTPrinter {
 		}
 	}
 
-	function isRightAssociative(op:CBinaryOp):Bool {
+	function isAssignment(op:CBinaryOp):Bool {
 		return switch op {
 			case Assign | AddAssign | SubtractAssign | MultiplyAssign | DivideAssign | ModuloAssign | ShiftLeftAssign | ShiftRightAssign | BitAndAssign |
 				BitXorAssign | BitOrAssign: true;
 			case _: false;
+		}
+	}
+
+	function printAssignmentLeft(expression:CExpr):String
+		return isUnaryExpression(expression) ? printExpr(expression) : '(${printExpr(expression)})';
+
+	function printUnaryExpressionOperand(expression:CExpr):String
+		return isUnaryExpression(expression) ? printExpr(expression) : '(${printExpr(expression)})';
+
+	/** Mirrors the C11 `unary-expression` grammar category, not lvalue validity. */
+	function isUnaryExpression(expression:CExpr):Bool {
+		return switch expression {
+			case ECast(_, _, _) | EBinary(_, _, _) | EConditional(_, _, _): false;
+			case _: true;
+		}
+	}
+
+	function joinUnaryToken(token:String, operand:String):String {
+		final left = token.charAt(token.length - 1);
+		final right = operand.charAt(0);
+		final separator = left == "+" && right == "+" || left == "-" && right == "-" || left == "&" && right == "&" ? " " : "";
+		return token + separator + operand;
+	}
+
+	function printGenericSelection(control:CExpr, associations:Array<CGenericAssociation>):String {
+		if (associations.length == 0)
+			throw "A C11 generic selection requires at least one association";
+		var defaultCount = 0;
+		final rendered = associations.map(association -> {
+			final selector = if (association.type == null) {
+				defaultCount++;
+				"default";
+			} else {
+				if (declaratorIdentifier(association.type.declarator) != null)
+					throw "A generic association requires an abstract type-name";
+				printTypeName(association.type.type, association.type.declarator);
+			}
+			'$selector: ${printExpr(association.expression, 2)}';
+		});
+		if (defaultCount > 1)
+			throw "A C11 generic selection permits at most one default association";
+		return '_Generic(${printExpr(control, 2)}, ${rendered.join(", ")})';
+	}
+
+	function printIntegerLiteral(literal:CIntegerLiteral):String {
+		final value = switch literal.base {
+			case IBDecimal: literal.digits;
+			case IBOctal: literal.digits == "0" ? "0" : "0" + literal.digits;
+			case IBHexadecimal: "0x" + literal.digits;
+		}
+		return value + switch literal.suffix {
+			case ISNone: "";
+			case ISUnsigned: "U";
+			case ISLong: "L";
+			case ISUnsignedLong: "UL";
+			case ISLongLong: "LL";
+			case ISUnsignedLongLong: "ULL";
+		}
+	}
+
+	function printFloatLiteral(literal:CFloatLiteral):String {
+		final value = switch literal.representation {
+			case FRDecimal(whole, fraction, exponent):
+				final significand = (whole == "" ? "0" : whole) + "." + (fraction == "" ? "0" : fraction);
+				exponent == null ? significand : significand + "e" + Std.string(exponent);
+			case FRHexadecimal(whole, fraction, exponent):
+				"0x"
+				+ (whole == "" ? "0" : whole.toUpperCase())
+				+ "."
+				+ (fraction == "" ? "0" : fraction.toUpperCase())
+				+ "p"
+				+ Std.string(exponent);
+		}
+		return value + switch literal.suffix {
+			case FSNone: "";
+			case FSFloat: "F";
+			case FSLongDouble: "L";
 		}
 	}
 
@@ -630,6 +726,19 @@ class CASTPrinter {
 		}
 	}
 
+	function isLineDirectiveDecl(declaration:CDecl):Bool {
+		return switch declaration {
+			case DLineDirective(_): true;
+			case _: false;
+		}
+	}
+
+	function printLineDirective(directive:CLineDirective):String {
+		if (directive.line < 1)
+			throw 'C #line number must be positive, got ${directive.line}';
+		return directive.file == null ? '#line ${directive.line}' : '#line ${directive.line} ${quote(directive.file)}';
+	}
+
 	function includeKindOrder(kind:CIncludeKind):Int
 		return switch kind {
 			case System: 0;
@@ -661,7 +770,19 @@ class CASTPrinter {
 	}
 
 	function printComment(text:String):String {
-		final safe = StringTools.replace(text, "*/", "* /");
+		final escaped = new StringBuf();
+		for (byte in utf8Bytes(text)) {
+			if (byte == 0x3F) {
+				escaped.add("\\077"); // Prevent trigraph replacement before comments are removed.
+			} else if (byte >= 0x20 && byte < 0x7F) {
+				escaped.addChar(byte);
+			} else {
+				escaped.add("\\" + octalByte(byte));
+			}
+		}
+		var safe = escaped.toString();
+		safe = StringTools.replace(safe, "/*", "/ *");
+		safe = StringTools.replace(safe, "*/", "* /");
 		return '/* $safe */';
 	}
 

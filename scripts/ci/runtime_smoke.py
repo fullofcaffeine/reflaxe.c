@@ -19,7 +19,20 @@ RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCE = ROOT / "runtime/hxrt/src/hxc_runtime.c"
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
-C_AST_GOLDEN = ROOT / "test/c_ast/expected/declarators.c"
+C_AST_GOLDENS = (
+    (
+        "declarator",
+        ROOT / "test/c_ast/expected/declarators.c",
+        "c-ast-golden: OK",
+        "structural-c-ast-golden-run",
+    ),
+    (
+        "expression",
+        ROOT / "test/c_ast/expected/expressions.c",
+        "c-expression-golden: OK",
+        "expression-precedence-golden-run",
+    ),
+)
 POINTLIB = ROOT / "test/native/pointlib"
 CPP_SHIM = ROOT / "test/native/cpp_shim"
 
@@ -207,28 +220,29 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     family = toolchain.family
     lanes: list[str] = []
 
-    c_ast_object = build / "c_ast_golden.o"
-    c_ast_executable = build / "c_ast_golden"
-    compile_object(
-        toolchain.cc,
-        C_STRICT_FLAGS,
-        C_AST_GOLDEN,
-        c_ast_object,
-        includes=(),
-        label=f"{family} structural C AST golden",
-    )
-    link_executable(
-        toolchain.cc,
-        (c_ast_object,),
-        c_ast_executable,
-        label=f"{family} structural C AST golden link",
-    )
-    run_executable(
-        c_ast_executable,
-        "c-ast-golden: OK",
-        label=f"{family} structural C AST golden execution",
-    )
-    lanes.append("structural-c-ast-golden-run")
+    for golden_name, golden_source, sentinel, lane in C_AST_GOLDENS:
+        c_ast_object = build / f"c_ast_{golden_name}_golden.o"
+        c_ast_executable = build / f"c_ast_{golden_name}_golden"
+        compile_object(
+            toolchain.cc,
+            C_STRICT_FLAGS,
+            golden_source,
+            c_ast_object,
+            includes=(),
+            label=f"{family} {golden_name} C AST golden",
+        )
+        link_executable(
+            toolchain.cc,
+            (c_ast_object,),
+            c_ast_executable,
+            label=f"{family} {golden_name} C AST golden link",
+        )
+        run_executable(
+            c_ast_executable,
+            sentinel,
+            label=f"{family} {golden_name} C AST golden execution",
+        )
+        lanes.append(lane)
 
     runtime_object = build / "hxc_runtime.o"
     runtime_smoke_object = build / "runtime_smoke.o"

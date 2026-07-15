@@ -20,26 +20,28 @@ class CASTGolden {
 		unit.declarations.push(DForwardStruct(id("hxc_opaque"), []));
 		unit.declarations.push(DTypedef(type(TStruct(id("hxc_opaque"))), name("hxc_opaque"), []));
 
-		unit.declarations.push(DTypedef(type(TEnumDefinition(null, [enumerator("HXC_MODE_FAST", EInt("1")), enumerator("HXC_MODE_SAFE", EInt("2"))], [])),
-			name("hxc_mode"), []));
+		unit.declarations.push(DTypedef(type(TEnumDefinition(null, [
+			enumerator("HXC_MODE_FAST", integer("1")),
+			enumerator("HXC_MODE_SAFE", integer("2"))
+		], [])), name("hxc_mode"), []));
 
 		unit.declarations.push(DTypedef(i32(), DFunction(DGroup(DPointer(name("hxc_binary_fn"), [])), FPPrototype([
 			param(type(TInt(32, true), [QConst]), DPointer(name("left"), [QRestrict])),
 			param(type(TInt(32, true), [QConst]), DPointer(name("right"), [QRestrict]))
 		], false)), []));
 
-		unit.declarations.push(DTypedef(i32(), DArray(DGroup(DPointer(name("hxc_matrix_ptr"), [])), ABFixed(EInt("4")), []), []));
+		unit.declarations.push(DTypedef(i32(), DArray(DGroup(DPointer(name("hxc_matrix_ptr"), [])), ABFixed(integer("4")), []), []));
 
 		unit.declarations.push(DTypedef(i32(),
-			DFunction(DGroup(DPointer(DArray(name("hxc_transform_table"), ABFixed(EInt("3")), []), [])), FPPrototype([param(i32(), name("value"))], false)),
+			DFunction(DGroup(DPointer(DArray(name("hxc_transform_table"), ABFixed(integer("3")), []), [])), FPPrototype([param(i32(), name("value"))], false)),
 			[]));
 
 		unit.declarations.push(DStruct(id("hxc_dispatch"), [
 			field(type(TNamed(id("hxc_binary_fn"))), name("binary")),
 			field(i32(), DFunction(DGroup(DPointer(name("transform"), [])), FPPrototype([param(i32(), name("value"))], false))),
-			field(i32(), DPointer(DArray(name("items"), ABFixed(EInt("4")), []), [])),
-			field(i32(), DArray(DGroup(DPointer(name("matrix"), [])), ABFixed(EInt("4")), [])),
-			field(type(TAtomic(i32(), abstractName())), name("counter"), [AlignExpr(EInt("16"))]),
+			field(i32(), DPointer(DArray(name("items"), ABFixed(integer("4")), []), [])),
+			field(i32(), DArray(DGroup(DPointer(name("matrix"), [])), ABFixed(integer("4")), [])),
+			field(type(TAtomic(i32(), abstractName())), name("counter"), [AlignExpr(integer("16"))]),
 			field(type(TUnionDefinition(null, [
 				field(i32(), name("signed_value")),
 				field(type(TInt(32, false)), name("unsigned_value"))
@@ -57,10 +59,10 @@ class CASTGolden {
 			param(i32(), DArray(DArray(name("matrix"), ABStaticMinimum(EIdentifier(id("rows"))), [QRestrict]), ABVariable, []))
 		], false)), []));
 
-		unit.declarations.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(type(TStruct(id("hxc_dispatch"))), abstractName()), EInt("16")),
+		unit.declarations.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(type(TStruct(id("hxc_dispatch"))), abstractName()), integer("16")),
 			"aligned atomic field raises aggregate alignment"));
-		unit.declarations.push(DStaticAssert(EBinary(Greater, ESizeOfType(i32(), DArray(DGroup(DPointer(abstractName(), [])), ABFixed(EInt("4")), [])),
-			EInt("0")),
+		unit.declarations.push(DStaticAssert(EBinary(Greater, ESizeOfType(i32(), DArray(DGroup(DPointer(abstractName(), [])), ABFixed(integer("4")), [])),
+			integer("0")),
 			"abstract pointer-to-array declarator is complete"));
 
 		unit.declarations.push(DFunction({
@@ -90,7 +92,7 @@ class CASTGolden {
 					type: type(TStruct(id("hxc_dispatch"))),
 					declarator: name("dispatch"),
 					initializer: IList([
-						{designators: [DField(id("counter"))], value: IExpr(EInt("0"))},
+						{designators: [DField(id("counter"))], value: IExpr(integer("0"))},
 						{designators: [DField(id("enabled"))], value: IExpr(EBool(true))}
 					]),
 					attributes: []
@@ -98,11 +100,11 @@ class CASTGolden {
 				SExpr(ECall(EIdentifier(id("hxc_select")),
 					[
 						EMember(EIdentifier(id("dispatch")), id("binary"), false),
-						EIndex(EMember(EIdentifier(id("dispatch")), id("items"), false), EInt("0"))
+						EIndex(EMember(EIdentifier(id("dispatch")), id("items"), false), integer("0"))
 					])),
 				SExpr(ECast(type(TVoid), abstractName(), EIdentifier(id("dispatch")))),
 				SExpr(ECall(EIdentifier(id("puts")), [EString("c-ast-golden: OK")])),
-				SReturn(EInt("0"))
+				SReturn(integer("0"))
 			]),
 			attributes: []
 		}));
@@ -155,6 +157,9 @@ class CASTGolden {
 
 	static function i32():CType
 		return type(TInt(32, true));
+
+	static function integer(value:String):CExpr
+		return EInt(CIntegerLiteral.decimal(value));
 
 	static function name(value:String):CDeclarator
 		return DName(id(value));

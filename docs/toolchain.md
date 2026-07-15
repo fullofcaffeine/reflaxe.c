@@ -65,8 +65,10 @@ The probes cover:
 - back-to-back C/non-C/C builds through one Haxe compiler server;
 - full Reflaxe registration followed by source-anchored `HXC1000`, with no
   plausible generated artifact, in cold and compiler-server builds;
-- two byte-identical renders of a structural C11 declarator corpus, matched
-  against `test/c_ast/expected/declarators.c`;
+- two byte-identical renders apiece of the structural C11 declarator and
+  expression/statement corpora, matched against
+  `test/c_ast/expected/declarators.c` and `expressions.c`, with no runtime
+  selection;
 - a temporary package layout with Reflaxe flattened into the package classpath;
 - required license and provenance files in that staged package.
 
@@ -84,12 +86,13 @@ as explicit optional `SKIP` lines, and fails if no complete pair actually runs.
 GitHub CI does not use that optional discovery contract. Its independent matrix
 invokes `--toolchain gcc` and `--toolchain clang`; each named C11/C++17 pair is
 required and a missing or mismatched executable is an error. Both lanes compile
-with warnings as errors, compile and execute the structural C AST golden, run
+with warnings as errors, compile and execute both structural C AST goldens, run
 the hosted runtime seed and native fixtures, compile the freestanding runtime
-path, and link a C++17 consumer of the public C header. The declarator golden is
-rendered from target-owned AST by a Haxe test fixture; it is not evidence that
-Haxe application lowering exists. The remaining native lanes are seed/interop
-checks, not runtime feature-selection claims.
+path, and link a C++17 consumer of the public C header. The declarator and
+expression/statement goldens are rendered from target-owned AST by Haxe test
+fixtures. Both are runtime-free direct printer proofs; they are not evidence
+that Haxe application lowering exists. The remaining native lanes are
+seed/interop checks, not runtime feature-selection claims.
 
 ## Activation sequence
 
