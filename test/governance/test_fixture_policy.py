@@ -55,6 +55,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "typed-ast",
                 "c-ast",
                 "declaration-plan",
+                "symbol-registry",
                 "hxc-ir",
             ),
         )

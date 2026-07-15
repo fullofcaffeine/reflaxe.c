@@ -124,9 +124,14 @@ flags or shell fragments. Sysroots, target triples, arbitrary compiler options,
 and platform capability selection belong to the resolved build model rather
 than source metadata.
 
-Explicit C identifiers may not use C keywords, implementation-reserved names,
-or the `hxc_` / `hxrt_` namespaces. The spelling is still pre-1.0: E7 and
-E10.T09 own public ABI stabilization and compatibility policy.
+Explicit C identifiers may not use C keywords, underscore-prefixed or
+double-underscore implementation-reserved forms, or the `hxc_` / `hxrt_`
+namespaces. Exact `@:c.name` values are never rewritten. Duplicate checks follow
+C namespaces: tags are separate from ordinary symbols and members are separate
+per aggregate. The [deterministic symbol registry](symbol-naming.md) supplies
+documented `hxc_api_` public defaults when a name is omitted and records every
+generated collision; the spelling is still pre-1.0 because E7 and E10.T09 own
+public ABI stabilization and compatibility policy.
 
 ## Verification layers
 
@@ -148,7 +153,10 @@ remains separate:
 - C and C++ consumers compile generated public headers independently; and
 - ABI probes and manifests compare actual symbols and layouts.
 
-The macro never writes files. During M0, the implementation-only
+The macro never writes files. `TypedCNameFinalizer` consumes its schema-2
+snapshot without reparsing metadata, preserves exact names, assigns deterministic
+defaults, and supplies finalized names to declaration planning. During M0, the
+implementation-only
 `reflaxe_c_contract_report` define prints its deterministic JSON payload for the
 compile-backed snapshot test. The whole-program compiler will later consume the
 same typed snapshot and emit inspected artifacts through Reflaxe output
@@ -182,8 +190,9 @@ inspection, and no-runtime evidence; and document ownership and unsafe effects.
 - E0.T04 integrates the complete compiler/macro and non-macro type-check gate;
   E0.T06 owns diagnostic catalog machinery.
 - E1.T01 and E1.T03 provide structural C declarators plus typed
-  include/forward/complete declaration planning; E1.T04 finalizes default names
-  and E1.T07 owns production multi-file emission.
+  include/forward/complete declaration planning; E1.T04 now supplies the
+  deterministic symbol registry/default-name finalizer, and E1.T07 owns
+  production multi-file emission of its manifest shape.
 - E3 owns aggregate representation, pointer/ownership operations, and unsafe
   lexical enforcement.
 - E6 owns imported qualifiers, constants, layouts, functions, and exact external

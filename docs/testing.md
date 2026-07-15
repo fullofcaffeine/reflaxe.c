@@ -137,3 +137,10 @@ registered runners and expected roots, complete ownership of existing expected
 files, snapshot-registry parity, package/pre-commit/CI wiring, and the example
 manifest rule. It is part of `npm test` and the pre-commit path for relevant
 changes.
+
+`test/symbol_registry` is the focused positive/negative/snapshot suite for the
+schema-1 `hxc.symbols.json` shape. It renders twice, reverses request and typed
+declaration discovery order inside the Haxe fixture, validates exact-name
+failures and both collision origins, feeds finalized defaults into declaration
+planning, rejects host paths, and asserts an empty typed-contract runtime feature
+set. It proves naming analysis only; it does not claim production C emission.

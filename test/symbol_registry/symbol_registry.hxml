@@ -1,0 +1,7 @@
+# Dedicated E1.T04 deterministic C symbol registry and name-finalization test.
+
+-cp test/symbol_registry/
+-lib reflaxe.c
+
+-main SymbolRegistryGolden
+--interp

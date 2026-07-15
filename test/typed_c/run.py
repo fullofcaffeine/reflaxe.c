@@ -105,6 +105,12 @@ def check_positive_and_deterministic() -> None:
     if "hxrt" in forward_payload.lower():
         raise TypedCProbeFailure("M0 typed C declaration report unexpectedly mentions hxrt")
 
+    namespace_reuse = compile_fixture("namespace_reuse")
+    require_success(
+        namespace_reuse,
+        "C tag/ordinary/per-aggregate member namespace reuse fixture",
+    )
+
 
 def check_negative_fixtures() -> None:
     cases = {
@@ -118,7 +124,9 @@ def check_negative_fixtures() -> None:
         "invalid_build_fact": "library name contains a character outside",
         "missing_metadata_argument": "`@:c.header` expects 2 parameter(s), received 0",
         "invalid_pack": "`c.pack` must be a power of two",
-        "reserved_symbol": "is reserved by C or reflaxe.c",
+        "reserved_symbol": "is reserved by C, C++ header compatibility, or reflaxe.c",
+        "leading_underscore": "is reserved by C, C++ header compatibility, or reflaxe.c",
+        "double_underscore": "is reserved by C, C++ header compatibility, or reflaxe.c",
     }
     source_position = re.compile(r"(?:^|/)(?:Main|Widget[^/]*)\.hx:\d+: characters \d+-\d+")
     for directory, expected in cases.items():

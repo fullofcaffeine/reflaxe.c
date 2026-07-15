@@ -74,7 +74,8 @@ field, enum-constructor, metadata, and expression-root sequences with explicit
 ordinals, records primary/secondary module ownership, retains raw compiler
 objects for lowering, and carries `getMainModule()` plus
 `getMainExpr()` as the entry point. A fresh `CompilationContext` owns the result
-once, and request-local captures are cleared before `CCompiler` runs. See
+once plus a fresh empty `CSymbolRegistry`; request-local captures are cleared
+before `CCompiler` runs. See
 [typed-AST input boundary](typed-ast-input.md).
 
 `TypedAstInventory` exposes a path-stable implementation report for unsupported
@@ -129,6 +130,16 @@ precedence-family matrix, every unary and binary operator, adversarial escaping,
 and all statement shapes. Required GCC and Clang lanes compile and execute both
 checked-in C files with no `hxrt` selection. This is a direct AST/printer proof
 only; Haxe-to-HxcIR-to-C lowering remains fail-closed.
+
+`CSymbolRegistry` owns the boundary before any finalized name reaches that C
+AST. It batch-finalizes path-independent semantic requests against C's ordinary,
+tag, member, and label namespaces; exact `@:c.name` values are preserved or
+rejected, while compiler-owned defaults use readable `hxc_` provenance and
+stable hash suffixes only for collisions or length limits. The schema-1 table
+and collision ledger are the in-memory shape of `hxc.symbols.json`.
+`TypedCNameFinalizer` applies that policy structurally to schema-2 typed C
+snapshots before declaration planning. See [deterministic symbol
+naming](symbol-naming.md).
 
 ## Target and native baseline
 
@@ -248,6 +259,7 @@ Haxe declarations and types
   -> typed c.* abstractions
   -> validated metadata/macros
   -> deterministic TypedCContractSnapshot
+  -> TypedCNameFinalizer / CSymbolRegistry
   -> CDeclarationPlanner (complete/forward/include/header decisions)
   -> declaration, header, layout, ownership, and build facts
   -> HxcIR / C AST / neutral manifest

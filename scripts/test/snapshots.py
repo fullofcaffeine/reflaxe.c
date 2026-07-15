@@ -188,6 +188,22 @@ def declaration_plan_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def symbol_registry_artifacts() -> list[Artifact]:
+    module = load_module("symbol_registry", "test/symbol_registry/run.py")
+    first_payload, report = module.render("snapshot first symbol registry render")
+    second_payload, repeated = module.render("snapshot second symbol registry render")
+    if first_payload != second_payload or report != repeated:
+        raise SnapshotFailure("two symbol-registry snapshot renders were not byte-identical")
+    module.validate(report)
+    return [
+        Artifact(
+            Path("test/symbol_registry/expected/symbol-registry.json"),
+            "json",
+            report,
+        )
+    ]
+
+
 def hxc_ir_artifacts() -> list[Artifact]:
     module = load_module("hxc_ir", "test/hxc_ir/run.py")
     module.check_oracle()
@@ -222,6 +238,7 @@ GENERATORS: dict[str, Generator] = {
     "typed-ast": typed_ast_artifacts,
     "c-ast": c_ast_artifacts,
     "declaration-plan": declaration_plan_artifacts,
+    "symbol-registry": symbol_registry_artifacts,
     "hxc-ir": hxc_ir_artifacts,
 }
 

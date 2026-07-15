@@ -14,7 +14,7 @@ filterTypes
   -> replace pending capture with this request's complete ModuleType array
 
 onCompileStart
-  -> create a fresh CompilationContext
+  -> create a fresh CompilationContext and empty CSymbolRegistry
   -> move pending capture into current-request storage
   -> clear pending storage
 
@@ -29,7 +29,8 @@ Capturing before Reflaxe callback filtering is important: typedefs and externs
 remain available even when no class/enum callback would otherwise present them.
 No later compiler stage may reconstruct the program from callback order.
 
-Every request replaces all mutable adapter state. The compiler-server test runs
+Every request replaces all mutable adapter state, including the later symbol
+request set. The compiler-server test runs
 a rich program followed by a smaller program and requires the smaller report to
 match its cold build byte for byte.
 

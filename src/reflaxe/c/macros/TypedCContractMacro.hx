@@ -203,7 +203,7 @@ class TypedCContractMacro {
 		}
 		final cName = cNameEntry == null ? null : readCIdentifier(cNameEntry, 0, "C declaration name");
 		if (cName != null) {
-			registerSymbol(cName, shell.path, cNameEntry.pos, explicitSymbols);
+			registerSymbol(cName, shell.path, declarationSymbolNamespace(layout), cNameEntry.pos, explicitSymbols);
 		}
 
 		final headerEntry = single(shell.meta, "c.header", shell.path);
@@ -349,8 +349,9 @@ class TypedCContractMacro {
 		if (constant && (!isStatic || !isVariable)) {
 			error("c.constant is valid only on a static value field", single(field.meta, "c.constant", '${shell.path}.${field.name}').pos);
 		}
-		if (cName != null && (exported || isStatic || !isVariable)) {
-			registerSymbol(cName, '${shell.path}.${field.name}', cNameEntry.pos, explicitSymbols);
+		if (cName != null) {
+			final symbolNamespace = !isStatic && isVariable ? 'member:${shell.path}' : "ordinary:translation-unit";
+			registerSymbol(cName, '${shell.path}.${field.name}', symbolNamespace, cNameEntry.pos, explicitSymbols);
 		}
 
 		final linkage = readOptionalEnum(field.meta, "c.linkage", "c.Linkage", ["External", "Internal", "Static", "Inline"], '${shell.path}.${field.name}');
@@ -844,13 +845,12 @@ class TypedCContractMacro {
 				return;
 			}
 		}
-		final second = value.length > 1 ? value.charCodeAt(1) : null;
 		if (C_KEYWORDS.indexOf(value) != -1
-			|| StringTools.startsWith(value, "__")
-			|| (StringTools.startsWith(value, "_") && second != null && second >= 65 && second <= 90)
+			|| StringTools.startsWith(value, "_")
+			|| value.indexOf("__") != -1
 			|| StringTools.startsWith(value, "hxc_")
 			|| StringTools.startsWith(value, "hxrt_")) {
-			error('C identifier `$value` is reserved by C or reflaxe.c', pos);
+			error('C identifier `$value` is reserved by C, C++ header compatibility, or reflaxe.c', pos);
 		}
 	}
 
@@ -862,12 +862,20 @@ class TypedCContractMacro {
 		return isIdentifierStart(code) || (code != null && code >= 48 && code <= 57);
 	}
 
-	static function registerSymbol(name:String, owner:String, pos:Position, symbols:Map<String, SymbolOrigin>):Void {
-		final existing = symbols.get(name);
+	static function declarationSymbolNamespace(layout:Null<String>):String {
+		return switch layout {
+			case "struct" | "union" | "opaque" | "enum": "tag:translation-unit";
+			case _: "ordinary:translation-unit";
+		};
+	}
+
+	static function registerSymbol(name:String, owner:String, namespace:String, pos:Position, symbols:Map<String, SymbolOrigin>):Void {
+		final key = namespace + "\x00" + name;
+		final existing = symbols.get(key);
 		if (existing != null) {
-			error('duplicate explicit C symbol `$name` on `$owner`; first declared by `${existing.owner}`', pos);
+			error('duplicate explicit C symbol `$name` in `$namespace` on `$owner`; first declared by `${existing.owner}`', pos);
 		} else {
-			symbols.set(name, {owner: owner});
+			symbols.set(key, {owner: owner});
 		}
 	}
 

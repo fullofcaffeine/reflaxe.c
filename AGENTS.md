@@ -114,8 +114,10 @@ missing-metadata or missing-adapter assumptions.
   forms. Never infer grouping in the printer or encode `*`, `[]`, or `()` in an
   identifier.
 - Construct finalized output names through `CIdentifier`. It checks lexical
-  C11 spelling; E1.T04 still owns mangling, reserved namespaces, and collision
-  policy. Typed attributes, alignment specifiers, and atomic type names have
+  C11 spelling after `CSymbolRegistry` has finalized namespace ownership,
+  reserved-name escaping, and collisions. Never construct emitted identifiers
+  directly from Haxe names or add a second sanitizer. Typed attributes,
+  alignment specifiers, and atomic type names have
   dedicated nodes—do not restore `Array<String>` attributes.
 - Preserve expression-tree association exactly; do not algebraically
   reassociate, commute, or flatten nodes even when a C operator looks
@@ -379,6 +381,27 @@ missing-metadata or missing-adapter assumptions.
   module set. It must remain deterministic and per-compilation, must not consult
   ambient process state, and must not write files. Later compiler stages route
   snapshot-derived artifacts through Reflaxe output ownership.
+- Register every emitted name through the per-compilation `CSymbolRegistry` and
+  finalize only after collecting the complete semantic request set. Stable keys
+  contain qualified Haxe identity, normalized overload/specialization facts,
+  real C namespace/scope, and source ordinals—never filesystem paths, discovery
+  counters, object addresses, or map order. Keep `hxc-c-symbol-v1` changes
+  explicit and update `docs/symbol-naming.md` plus the owned snapshot together.
+- Exact `@:c.name` values are ABI/interop facts: preserve them byte-for-byte or
+  reject them with `HXC5002`; never silently sanitize or hash them. Generated
+  internal/public/external defaults use the registry's `hxc_`, `hxc_api_`, and
+  `hxc_external_` namespaces. `hxc_` and `hxrt_` remain unavailable to authored
+  names, and public C/C++ spellings may not begin with underscore or contain
+  double underscore.
+- Respect C namespaces. Ordinary identifiers, tags, per-aggregate members, and
+  per-function labels do not share one flat collision map. A generated collision
+  is resolved from canonical semantic identity and recorded with both source and
+  C names; an exact collision is an error naming every source symbol.
+- `TypedCNameFinalizer` is the structural schema-2 handoff to declaration
+  planning. Preserve layout-significant field order and the snapshot's runtime,
+  allocation, ownership, unsafe, and portability effects. Naming selects no
+  runtime feature; a synthetic runtime-private role in the naming golden is not
+  permission to register or link `hxrt` without runtime-plan evidence.
 - Typed C contract schema 2 retains sorted `ownerModulePaths` on every merged
   build fact. Do not discard that provenance: declaration-owned includes are
   what let the planner keep generated headers minimal and explain why each

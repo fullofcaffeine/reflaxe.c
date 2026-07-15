@@ -71,7 +71,10 @@ The M0 intrinsic types and namespaced declaration metadata now type-check, and a
 compile-backed validator produces a deterministic structural contract report
 with source-positioned negative diagnostics. A target-owned planner now turns
 that contract into stable header/source placement, complete-type ordering,
-minimal includes, forward declarations, and portable guards. A test-only C AST
+minimal includes, forward declarations, and portable guards. The deterministic
+symbol registry finalizes exact or generated names across real C namespaces,
+keeps overloads and specializations stable across discovery order, and exposes
+the future `hxc.symbols.json` table/collision-ledger shape. A test-only C AST
 adapter proves the planned headers independently under strict GCC and Clang;
 production Haxe lowering/header emission and native layout proof do not exist
 yet. The exact boundary and examples are in
@@ -179,6 +182,9 @@ The current checkout contains:
 - a deterministic declaration planner with declaration-owned include
   provenance, complete-type diagnostics, pointer-cycle forward declarations,
   public/private separation, and independently compiled header goldens;
+- a per-compilation deterministic C symbol registry with exact-name validation,
+  namespace-aware collision provenance, typed-contract default finalization,
+  and an owned zero-runtime `hxc.symbols.json`-shape snapshot;
 - a target-owned HxcIR model, validator, and deterministic source-aware dumper
   covering explicit side-effect/cleanup order, places and values, dispatch,
   conversions, failure edges, initialization, and named runtime intent;
@@ -231,6 +237,7 @@ python3 test/typed_c/run.py
 python3 test/typed_ast/run.py
 python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
+python3 test/symbol_registry/run.py
 python3 test/hxc_ir/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
@@ -276,6 +283,7 @@ before expanding language coverage.
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
+- [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)

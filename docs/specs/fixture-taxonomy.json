@@ -28,6 +28,7 @@
         "diagnostics",
         "typed-c",
         "typed-ast",
+        "symbol-registry",
         "hxc-ir"
       ]
     },
@@ -47,6 +48,7 @@
         "diagnostics",
         "typed-c",
         "typed-ast",
+        "symbol-registry",
         "hxc-ir"
       ]
     },
@@ -82,6 +84,7 @@
         "typed-ast",
         "c-ast",
         "declaration-plan",
+        "symbol-registry",
         "hxc-ir"
       ]
     },
@@ -271,6 +274,25 @@
       ]
     },
     {
+      "id": "symbol-registry",
+      "directory": "test/symbol_registry",
+      "runner": [
+        "python3",
+        "test/symbol_registry/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "C namespaces, exact names, generated defaults, and collision provenance are structural",
+        "overloads and generic specializations are byte-identical across discovery order and contain no host paths",
+        "typed C name finalization feeds declaration planning without selecting hxrt"
+      ]
+    },
+    {
       "id": "hxc-ir",
       "directory": "test/hxc_ir",
       "runner": [
@@ -360,6 +382,15 @@
         "formats": [
           "json",
           "header"
+        ]
+      },
+      {
+        "id": "symbol-registry",
+        "expectedRoots": [
+          "test/symbol_registry/expected/symbol-registry.json"
+        ],
+        "formats": [
+          "json"
         ]
       },
       {

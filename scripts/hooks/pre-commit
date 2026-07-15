@@ -76,7 +76,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|diagnostics|testing|typed-ast-input)\.md|docs/specs/fixture-(case|taxonomy).*\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|diagnostics|typed_ast)/)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|diagnostics|symbol-naming|testing|typed-ast-input)\.md|docs/specs/fixture-(case|taxonomy).*\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|diagnostics|symbol_registry|typed_ast)/)'; then
   echo "[pre-commit] Validating fixture taxonomy, snapshot ownership, and example assertions..."
   python3 "$ROOT_DIR/scripts/ci/check_fixture_policy.py"
 fi
@@ -121,12 +121,17 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ast|contract|plan)
   python3 "$ROOT_DIR/test/declaration_plan/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CompilationContext\.hx|ast/CAST\.hx|contract/|macros/|naming/|plan/)|test/symbol_registry/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running deterministic C symbol registry probes..."
+  python3 "$ROOT_DIR/test/symbol_registry/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ir/|test/hxc_ir/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running HxcIR semantic invariant and golden probes..."
   python3 "$ROOT_DIR/test/hxc_ir/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|hxc_ir)/expected/|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|hxc_ir)/expected/|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Checking registered snapshots without updating them..."
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
 fi

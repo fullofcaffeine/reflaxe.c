@@ -12,7 +12,7 @@ class CTranslationUnit {
 	One already-finalized C identifier token.
 
 	This validates lexical C11 spelling, not namespace ownership or mangling.
-	The symbol registry owns reserved-name and collision policy in E1.T04.
+	`CSymbolRegistry` owns reserved-name and collision policy before AST creation.
  */
 class CIdentifier {
 	public final value:String;

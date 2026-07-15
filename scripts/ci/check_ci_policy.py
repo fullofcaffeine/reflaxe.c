@@ -48,6 +48,15 @@ REQUIRED_GATE_FILES = (
     "test/declaration_plan/support/include/project/config.h",
     "test/declaration_plan/smoke.c",
     "test/declaration_plan/run.py",
+    "src/reflaxe/c/naming/CSymbolRequest.hx",
+    "src/reflaxe/c/naming/CSymbolRegistry.hx",
+    "src/reflaxe/c/naming/CSymbolRegistryError.hx",
+    "src/reflaxe/c/naming/TypedCNameFinalizer.hx",
+    "docs/symbol-naming.md",
+    "test/symbol_registry/SymbolRegistryGolden.hx",
+    "test/symbol_registry/symbol_registry.hxml",
+    "test/symbol_registry/expected/symbol-registry.json",
+    "test/symbol_registry/run.py",
     "test/hxc_ir/HxcIRGolden.hx",
     "test/hxc_ir/hxc_ir.hxml",
     "test/hxc_ir/oracle.hxml",
@@ -144,6 +153,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:c-ast entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
         errors.append("package.json must retain the test:declaration-plan entry point")
+    if scripts.get("test:symbol-registry") != "python3 test/symbol_registry/run.py":
+        errors.append("package.json must retain the test:symbol-registry entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
@@ -160,6 +171,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:diagnostics")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:declaration-plan")
+    if "npm run test:symbol-registry" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:symbol-registry")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
@@ -195,6 +208,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed diagnostic policy test")
     if "test/declaration_plan/run.py" not in pre_commit:
         errors.append("pre-commit must run the declaration planning golden test")
+    if "test/symbol_registry/run.py" not in pre_commit:
+        errors.append("pre-commit must run the deterministic symbol registry test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/typed_ast/run.py" not in pre_commit:

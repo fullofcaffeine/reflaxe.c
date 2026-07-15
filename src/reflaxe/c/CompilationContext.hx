@@ -4,10 +4,12 @@ package reflaxe.c;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.frontend.TypedProgramInput;
 #end
+import reflaxe.c.naming.CSymbolRegistry;
 
 /** Mutable compiler state has one instance per Haxe compilation request. */
 class CompilationContext {
 	public final profile:CProfile;
+	public final symbols:CSymbolRegistry;
 
 	#if (macro || reflaxe_runtime)
 	public var typedProgram(default, null):Null<TypedProgramInput> = null;
@@ -15,6 +17,7 @@ class CompilationContext {
 
 	public function new(profile:CProfile) {
 		this.profile = profile;
+		this.symbols = new CSymbolRegistry();
 	}
 
 	#if (macro || reflaxe_runtime)
