@@ -168,14 +168,30 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     source = required_text(report, "source")
     if (
         not header.startswith("#ifndef HXC_GENERATED_PATH_")
-        or "int32_t hxc_method_FunctionFixture_mutualLeft(" not in header
-        or "int32_t hxc_method_FunctionFixture_mutualRight(" not in header
+        or "_Noreturn void hxc_method_FunctionFixture_recursive(" not in header
+        or "_Noreturn void hxc_method_FunctionFixture_recursiveStep(" not in header
+        or "_Noreturn void hxc_method_FunctionFixture_mutualLeft(" not in header
+        or "_Noreturn void hxc_method_FunctionFixture_mutualRight(" not in header
         or '#include "hxc/program.h"' not in source
         or "int main(void)" not in source
         or "hxc_method_FunctionFixture_main();" not in source
         or "return 0;" not in source
     ):
         raise FunctionLoweringFailure("prototype plan or executable entry shape drifted")
+    for field in ("recursive", "recursiveStep", "mutualLeft", "mutualRight"):
+        definition_start = source.find(
+            f"_Noreturn void hxc_method_FunctionFixture_{field}("
+        )
+        definition_end = source.find("\n}\n", definition_start)
+        definition = source[definition_start:definition_end]
+        if (
+            definition_start == -1
+            or definition_end == -1
+            or "\n  return" in definition
+        ):
+            raise FunctionLoweringFailure(
+                f"closed recursive cycle {field} lost its no-return C proof"
+            )
     left_prototype = header.find("hxc_method_FunctionFixture_mutualLeft")
     right_prototype = header.find("hxc_method_FunctionFixture_mutualRight")
     left_definition = source.find("hxc_method_FunctionFixture_mutualLeft")

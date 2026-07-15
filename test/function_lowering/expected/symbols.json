@@ -429,27 +429,6 @@
       "naming": "generated",
       "sourceOrdinal": 0,
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_mutualLeft_callzx2Dresult_n0",
-      "semanticKey": "9:temporary|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:mutualLeft|1:3:i32|0:|0:|3:15:FunctionFixture10:mutualLeft11:call-result|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:mutualLeft|1:3:i32|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_mutualLeft_callzx2Dresult_n0",
-      "sourceSymbol": "FunctionFixture.mutualLeft.call-result#0"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 0,
-      "requestedName": null,
       "cName": "hxc_local_FunctionFixture_mutualLeft_value_n0",
       "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:mutualLeft|1:3:i32|0:|0:|3:15:FunctionFixture10:mutualLeft5:value|0:|0:|1:0",
       "escapeReasons": [],
@@ -483,27 +462,6 @@
       "specializationArguments": [],
       "baseName": "hxc_method_FunctionFixture_mutualRight",
       "sourceSymbol": "FunctionFixture.mutualRight(i32)"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_mutualRight_callzx2Dresult_n0",
-      "semanticKey": "9:temporary|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:mutualRight|1:3:i32|0:|0:|3:15:FunctionFixture11:mutualRight11:call-result|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:mutualRight|1:3:i32|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_mutualRight_callzx2Dresult_n0",
-      "sourceSymbol": "FunctionFixture.mutualRight.call-result#0"
     },
     {
       "overloadSignature": [],
@@ -694,27 +652,6 @@
       "naming": "generated",
       "sourceOrdinal": 0,
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_recursive_callzx2Dresult_n0",
-      "semanticKey": "9:temporary|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:|3:15:FunctionFixture9:recursive11:call-result|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_recursive_callzx2Dresult_n0",
-      "sourceSymbol": "FunctionFixture.recursive.call-result#0"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 0,
-      "requestedName": null,
       "cName": "hxc_local_FunctionFixture_recursive_value_n0",
       "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:|3:15:FunctionFixture9:recursive5:value|0:|0:|1:0",
       "escapeReasons": [],
@@ -748,27 +685,6 @@
       "specializationArguments": [],
       "baseName": "hxc_method_FunctionFixture_recursiveStep",
       "sourceSymbol": "FunctionFixture.recursiveStep(i32)"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_recursiveStep_callzx2Dresult_n0",
-      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture13:recursiveStep|1:3:i32|0:|0:|3:15:FunctionFixture13:recursiveStep11:call-result|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture13:recursiveStep|1:3:i32|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_recursiveStep_callzx2Dresult_n0",
-      "sourceSymbol": "FunctionFixture.recursiveStep.call-result#0"
     },
     {
       "overloadSignature": [],

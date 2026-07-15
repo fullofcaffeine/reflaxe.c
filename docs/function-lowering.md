@@ -48,6 +48,13 @@ contains every prototype before `src/program.c` defines any function. Recursive
 and mutually recursive call graphs therefore compile without discovery-order
 dependencies.
 
+The current admitted bodies are one unconditional block. When the direct-call
+graph proves a closed recursive cycle, the compiler also proves that its HxcIR
+return is unreachable, marks every cycle member with the standard C11
+`_Noreturn` function specifier, and omits the unreachable C return. This makes
+closed recursive cycles explicit to optimizing C compilers; the native gate
+keeps `-Winfinite-recursion` enabled rather than hiding the warning.
+
 The Haxe entry function for this slice must be `static function main():Void`.
 It keeps its compiler-owned internal C name. The executable wrapper is the exact
 hosted C signature:

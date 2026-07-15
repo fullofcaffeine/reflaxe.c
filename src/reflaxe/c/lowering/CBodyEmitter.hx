@@ -10,7 +10,8 @@ class CBodyEmitter {
 	public function new() {}
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
-			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool):CStmt {
+			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
+			?nonReturningFunctionIds:Map<String, Bool>):CStmt {
 		if (fn.blocks.length != 1 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
 			fail('body lowering requires one cleanup-free entry block in `${fn.id}`');
 		}
@@ -20,6 +21,7 @@ class CBodyEmitter {
 		final referencedValues = referencedValueIds(block);
 		final referencedLocals = referencedLocalIds(block);
 		final statements:Array<CStmt> = [];
+		var terminatedByNonReturningCall = false;
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
 			values.set(parameter.id, EIdentifier(name));
@@ -76,13 +78,25 @@ class CBodyEmitter {
 						statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
 					}
 				case IRIOCall(call):
-					emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames, lineDirectives, fn.id);
+					terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
+						lineDirectives, nonReturningFunctionIds, fn.id);
 				case _:
 					fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the static primitive function subset');
+			}
+			if (terminatedByNonReturningCall) {
+				break;
 			}
 		}
 
 		final terminator = requireTerminator(block.terminator, fn.id);
+		if (terminatedByNonReturningCall) {
+			switch terminator.kind {
+				case IRTReturn(_, cleanup) if (cleanup.length == 0):
+					return SBlock(statements);
+				case _:
+					fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
+			}
+		}
 		addLineDirective(statements, terminator.source, lineDirectives);
 		switch terminator.kind {
 			case IRTReturn(valueId, cleanup):
@@ -232,11 +246,13 @@ class CBodyEmitter {
 	}
 
 	function emitCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction, call:HxcIRCall,
-			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
+			nonReturningFunctionIds:Null<Map<String, Bool>>, functionId:String):Bool {
 		final targetId = switch call.dispatch {
 			case IRCDDirect(value): value;
 			case _: return fail('call `${instruction.id}` in `$functionId` is not direct static dispatch');
 		};
+		final doesNotReturn = nonReturningFunctionIds != null && nonReturningFunctionIds.exists(targetId);
 		final targetName = requireFunctionName(functionNames, targetId, functionId);
 		final arguments = call.arguments.map(argument -> requireValue(values, argument, functionId));
 		final callExpression:CExpr = ECall(EIdentifier(targetName), arguments);
@@ -246,7 +262,7 @@ class CBodyEmitter {
 				fail('Void call `${instruction.id}` in `$functionId` unexpectedly defines a value');
 			}
 			statements.push(SExpr(callExpression));
-			return;
+			return doesNotReturn;
 		}
 
 		final result = requireResult(instruction, functionId);
@@ -256,7 +272,7 @@ class CBodyEmitter {
 				fail('referenced call result `${result.id}` in `$functionId` has no finalized C temporary');
 			}
 			statements.push(SExpr(callExpression));
-			return;
+			return doesNotReturn;
 		}
 		statements.push(SDecl({
 			storage: [],
@@ -267,6 +283,7 @@ class CBodyEmitter {
 			attributes: []
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
+		return doesNotReturn;
 	}
 
 	static function requireResult(instruction:HxcIRInstruction, functionId:String):HxcIRResult {

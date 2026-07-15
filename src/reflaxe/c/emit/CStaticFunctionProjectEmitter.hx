@@ -39,6 +39,11 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final bodyEmitter = new CBodyEmitter();
+		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
+		final functionNames:Map<String, CIdentifier> = [];
+		for (fn in lowered.functions) {
+			functionNames.set(fn.ir.id, fn.cName);
+		}
 		final headerUnit = new CTranslationUnit();
 		final headers:Array<String> = [];
 		for (fn in lowered.functions) {
@@ -53,19 +58,21 @@ class CStaticFunctionProjectEmitter {
 			headerUnit.includes.push({path: header, kind: System});
 		}
 		for (fn in lowered.functions) {
-			headerUnit.declarations.push(DPrototype([], [], bodyEmitter.cType(fn.ir.returnType),
+			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
+			headerUnit.declarations.push(DPrototype([], functionSpecifiers, bodyEmitter.cType(fn.ir.returnType),
 				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)), []));
 		}
 
 		final sourceUnit = new CTranslationUnit();
 		sourceUnit.includes.push({path: HEADER_INCLUDE, kind: Local});
 		for (fn in lowered.functions) {
+			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
 			sourceUnit.declarations.push(DFunction({
 				storage: [],
-				functionSpecifiers: [],
+				functionSpecifiers: functionSpecifiers,
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
-				body: fn.body,
+				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, false, nonReturningFunctionIds),
 				attributes: []
 			}));
 		}
@@ -99,6 +106,73 @@ class CStaticFunctionProjectEmitter {
 			}
 		}
 		throw new ProjectEmissionError('static function project cannot resolve executable entry `$id`');
+	}
+
+	/**
+		Every admitted instruction is unconditional. A closed direct-call cycle
+		therefore cannot reach its HxcIR return and may use C11 `_Noreturn`.
+	**/
+	static function nonReturningCallCycles(functions:Array<CLoweredBodyFunction>):Map<String, Bool> {
+		final known:Map<String, Bool> = [];
+		for (fn in functions) {
+			known.set(fn.ir.id, true);
+		}
+
+		final targetsByFunction:Map<String, Array<String>> = [];
+		for (fn in functions) {
+			final targets:Array<String> = [];
+			for (block in fn.ir.blocks) {
+				for (instruction in block.instructions) {
+					switch instruction.kind {
+						case IRIOCall({dispatch: IRCDDirect(targetId)}):
+							if (known.exists(targetId) && targets.indexOf(targetId) == -1) {
+								targets.push(targetId);
+							}
+						case _:
+					}
+				}
+			}
+			targets.sort(compareStrings);
+			targetsByFunction.set(fn.ir.id, targets);
+		}
+
+		final result:Map<String, Bool> = [];
+		for (fn in functions) {
+			final directTargets = targetsByFunction.get(fn.ir.id);
+			if (directTargets == null) {
+				throw new ProjectEmissionError('static function call graph lost `${fn.ir.id}`');
+			}
+			for (targetId in directTargets) {
+				if (canReach(targetId, fn.ir.id, targetsByFunction)) {
+					result.set(fn.ir.id, true);
+					break;
+				}
+			}
+		}
+		return result;
+	}
+
+	static function canReach(initialId:String, targetId:String, targetsByFunction:Map<String, Array<String>>):Bool {
+		final visited:Map<String, Bool> = [];
+		final pending = [initialId];
+		var index = 0;
+		while (index < pending.length) {
+			final currentId = pending[index++];
+			if (currentId == targetId) {
+				return true;
+			}
+			if (visited.exists(currentId)) {
+				continue;
+			}
+			visited.set(currentId, true);
+			final directTargets = targetsByFunction.get(currentId);
+			if (directTargets != null) {
+				for (nextId in directTargets) {
+					pending.push(nextId);
+				}
+			}
+		}
+		return false;
 	}
 
 	static function compareStrings(left:String, right:String):Int

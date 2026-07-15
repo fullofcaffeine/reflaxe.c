@@ -138,8 +138,10 @@ source-positioned `HXC1001`; they never become an opaque value. E2.T02 lowers
 primitive constants, initialized locals/reads, nested cleanup-free blocks, and
 returns. E2.T03 adds primitive parameters, explicit argument conversions, and
 direct static calls, then emits the reachable graph with a private prototype
-header and hosted `int main(void)` wrapper. See [primitive function-body
-lowering](body-lowering.md) and [static function
+header and hosted `int main(void)` wrapper. Within the current unconditional
+single-block subset, a closed direct-call cycle is compiler-proven non-returning
+and emitted with structural C11 `_Noreturn` plus no unreachable return. See
+[primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function set before sealing

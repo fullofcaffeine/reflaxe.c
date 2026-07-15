@@ -57,18 +57,18 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":56:3-56:9
     end block "entry"
   end function "function.FunctionFixture.main"
-  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:44-42:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:44-42:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:44-42:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.mutualRight") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":41:10-41:28
-      terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":41:3-41:28
+  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualRight") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":41:3-41:21
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
     end block "entry"
   end function "function.FunctionFixture.mutualLeft"
-  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:45-46:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:45-46:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:45-46:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.mutualLeft") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:10-45:27
-      terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:3-45:27
+  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualLeft") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:3-45:20
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
     end block "entry"
   end function "function.FunctionFixture.mutualRight"
   function "function.FunctionFixture.ordered" name="FunctionFixture.ordered" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":28:41-30:3
@@ -86,18 +86,18 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":3:3-3:15
     end block "entry"
   end function "function.FunctionFixture.passthrough"
-  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:43-34:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:43-34:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:43-34:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.recursiveStep") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:10-33:30
-      terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:3-33:30
+  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.recursiveStep") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:3-33:23
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
     end block "entry"
   end function "function.FunctionFixture.recursive"
-  function "function.FunctionFixture.recursiveStep" name="FunctionFixture.recursiveStep" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:47-38:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:47-38:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:47-38:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.FunctionFixture.recursive") arguments=["parameter.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":37:10-37:26
-      terminator return value="value.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":37:3-37:26
+  function "function.FunctionFixture.recursiveStep" name="FunctionFixture.recursiveStep" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.recursive") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":37:3-37:19
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
     end block "entry"
   end function "function.FunctionFixture.recursiveStep"
 end module "FunctionFixture"
