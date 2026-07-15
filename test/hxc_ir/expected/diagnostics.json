@@ -1,0 +1,17 @@
+{
+  "missingTerminator": [
+    "HXC9000 error [profile=portable] test/negative/MissingTerminator.hx:1:1-8:2 [module:invalid.MissingTerminator.function:invalid.MissingTerminator.main.block:entry] Invalid HxcIR: basic block `entry` has no terminator Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "cleanupOrder": [
+    "HXC9000 error [profile=portable] test/negative/CleanupOrder.hx:6:1-6:2 [module:invalid.CleanupOrder.function:invalid.CleanupOrder.main.block:entry.terminator.cleanup:1] Invalid HxcIR: cleanup actions in region `cleanup.bad` must execute in reverse registration order Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "useBeforeDefinition": [
+    "HXC9000 error [profile=portable] test/negative/UseBeforeDefinition.hx:2:1-2:2 [module:invalid.UseBeforeDefinition.function:invalid.UseBeforeDefinition.main.block:entry.instruction:0:bad.store.value] Invalid HxcIR: value `value.later` is not available at this instruction; preserve order or pass it through a block parameter Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "unsupportedTypedNode": [
+    "HXC1001 error [profile=portable] test/hxc_ir/fixtures/SideEffects.hx:18:1-18:2 [function app.Main.main expression] Unsupported typed Haxe node `TUnop(OpIncrement,Postfix)` while lowering function app.Main.main expression. Remediation: Use a supported construct or implement its typed IR and C AST lowering with semantic tests."
+  ],
+  "absoluteSource": [
+    "HXC9000 error [profile=portable] invalid/source:1:1-1:2 [module:invalid.AbsoluteSource.source] Invalid HxcIR: source path must be normalized, repository-relative UTF-8 with `/` separators; the unstable spelling was redacted Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ]
+}

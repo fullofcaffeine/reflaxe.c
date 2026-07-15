@@ -1,0 +1,311 @@
+package reflaxe.c.ir;
+
+/** A complete target-owned semantic program, before any C syntax is chosen. */
+typedef HxcIRProgram = {
+	final schemaVersion:Int;
+	final modules:Array<HxcIRModule>;
+}
+
+typedef HxcIRModule = {
+	final id:String;
+	final types:Array<HxcIRTypeDeclaration>;
+	final typeInstances:Array<HxcIRTypeInstance>;
+	final globals:Array<HxcIRGlobal>;
+	final functions:Array<HxcIRFunction>;
+	final source:HxcSourceSpan;
+}
+
+enum HxcIRTypeRef {
+	IRTBool;
+	IRTInt(width:Int, signed:Bool);
+	IRTFloat(width:Int);
+	IRTVoid;
+	IRTInstance(instanceId:String);
+	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
+	IRTFunction(parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef);
+	IRTDynamic;
+}
+
+enum HxcIRTypeKind {
+	IRTKPrimitive;
+	IRTKAggregate(fields:Array<HxcIRTypeField>);
+	IRTKTaggedUnion(cases:Array<HxcIRTagCase>);
+	IRTKReference;
+	IRTKFunction;
+	IRTKExtern;
+}
+
+typedef HxcIRTypeField = {
+	final name:String;
+	final type:HxcIRTypeRef;
+	final mutable:Bool;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRTagCase = {
+	final name:String;
+	final payload:Array<HxcIRTypeRef>;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRTypeDeclaration = {
+	final id:String;
+	final displayName:String;
+	final kind:HxcIRTypeKind;
+	final source:HxcSourceSpan;
+}
+
+enum HxcIRRepresentation {
+	IRRDirect;
+	IRRTagged;
+	IRROpaqueHandle;
+	IRRManaged(runtimeFeature:String);
+}
+
+typedef HxcIRTypeInstance = {
+	final id:String;
+	final declarationId:String;
+	final arguments:Array<HxcIRTypeRef>;
+	final representation:HxcIRRepresentation;
+	final source:HxcSourceSpan;
+}
+
+enum HxcIRConstant {
+	IRCInt(value:String);
+	IRCFloat(value:String);
+	IRCBool(value:Bool);
+	IRCString(value:String);
+	IRCNull;
+}
+
+enum HxcIRGlobalInitialization {
+	IRGIUninitialized;
+	IRGIConstant(value:HxcIRConstant);
+	IRGIDeferred(initializerFunctionId:String);
+}
+
+typedef HxcIRGlobal = {
+	final id:String;
+	final type:HxcIRTypeRef;
+	final mutable:Bool;
+	final initialization:HxcIRGlobalInitialization;
+	final source:HxcSourceSpan;
+}
+
+enum HxcIRInitializationState {
+	IRISUninitialized;
+	IRISInitializing;
+	IRISInitialized;
+	IRISMoved;
+	IRISDestroyed;
+}
+
+enum HxcIRLocalStorage {
+	IRLSAutomatic;
+	IRLSStatic;
+	IRLSFrame;
+	IRLSRegion(regionId:String);
+}
+
+typedef HxcIRParameter = {
+	final id:String;
+	final type:HxcIRTypeRef;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRLocal = {
+	final id:String;
+	final type:HxcIRTypeRef;
+	final storage:HxcIRLocalStorage;
+	final initialState:HxcIRInitializationState;
+	final source:HxcSourceSpan;
+}
+
+/** Mutable addressable storage is always distinct from an immutable value ID. */
+enum HxcIRPlace {
+	IRPLocal(localId:String);
+	IRPGlobal(globalId:String);
+	IRPDereference(pointerValueId:String);
+	IRPField(base:HxcIRPlace, fieldName:String);
+	IRPIndex(base:HxcIRPlace, indexValueId:String);
+}
+
+enum HxcIRImplementation {
+	IRIStatic;
+	IRIProgramLocal(helperId:String);
+	IRIRuntime(featureId:String);
+}
+
+enum HxcIRConversionKind {
+	IRCNumeric;
+	IRCNullability;
+	IRCPointer;
+	IRCBox;
+	IRCUnbox;
+	IRCRepresentation;
+	IRCChecked;
+}
+
+enum HxcIRAllocationIntent {
+	IRAStack;
+	IRAOwned;
+	IRAShared;
+	IRAArena(arenaId:String);
+}
+
+enum HxcIRFailureKind {
+	IRFException;
+	IRFResultError;
+	IRFAllocationFailure;
+	IRFNativeStatus;
+}
+
+enum HxcIRFailureTarget {
+	IRFTBlock(blockId:String);
+	IRFTPropagate;
+	IRFTAbort;
+}
+
+typedef HxcIRCleanupStep = {
+	final regionId:String;
+	final actionId:String;
+}
+
+typedef HxcIRFailureEdge = {
+	final kind:HxcIRFailureKind;
+	final target:HxcIRFailureTarget;
+	final arguments:Array<String>;
+	final cleanup:Array<HxcIRCleanupStep>;
+}
+
+enum HxcIRCallDispatch {
+	IRCDDirect(functionId:String);
+	IRCDVirtual(slotId:String, receiverValueId:String);
+	IRCDInterface(interfaceTypeId:String, slotId:String, receiverValueId:String);
+	IRCDClosure(callableValueId:String);
+	IRCDNative(symbol:String);
+	IRCDRuntime(featureId:String, operationId:String);
+	IRCDIntrinsic(intrinsicId:String);
+}
+
+typedef HxcIRCall = {
+	final dispatch:HxcIRCallDispatch;
+	final arguments:Array<String>;
+	final returnType:HxcIRTypeRef;
+	final failure:Null<HxcIRFailureEdge>;
+}
+
+typedef HxcIRNamedValue = {
+	final name:String;
+	final valueId:String;
+}
+
+typedef HxcIRResult = {
+	final id:String;
+	final type:HxcIRTypeRef;
+}
+
+/**
+	Instruction array order is semantic evaluation order. No emitter may compact
+	two side-effecting instructions into a C expression with weaker ordering.
+ */
+enum HxcIRInstructionKind {
+	IRIOSequence(label:String);
+	IRIOConstant(value:HxcIRConstant);
+	IRIOLoad(place:HxcIRPlace);
+	IRIOStore(place:HxcIRPlace, valueId:String);
+	IRIOAddress(place:HxcIRPlace);
+	IRIOUnary(operationId:String, valueId:String, implementation:HxcIRImplementation);
+	IRIOBinary(operationId:String, leftValueId:String, rightValueId:String, implementation:HxcIRImplementation);
+	IRIOConvert(valueId:String, kind:HxcIRConversionKind, targetType:HxcIRTypeRef, implementation:HxcIRImplementation);
+	IRIOCall(call:HxcIRCall);
+	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
+	IRIOProject(valueId:String, fieldName:String);
+	IRIOConstructTag(instanceId:String, tagName:String, payload:Array<String>);
+	IRIOMatchTag(valueId:String, tagName:String);
+	IRIOAllocate(type:HxcIRTypeRef, intent:HxcIRAllocationIntent, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
+	IRIODeallocate(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRIORetain(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRIOTrace(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
+}
+
+typedef HxcIRInstruction = {
+	final id:String;
+	final result:Null<HxcIRResult>;
+	final kind:HxcIRInstructionKind;
+	final source:HxcSourceSpan;
+}
+
+enum HxcIRCleanupIdempotence {
+	IRCExactlyOnce;
+	IRCIdempotent;
+}
+
+enum HxcIRCleanupActionKind {
+	IRCADestroy(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRCARelease(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRCADeallocate(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRCAFinally(blockId:String);
+}
+
+typedef HxcIRCleanupAction = {
+	final id:String;
+	final idempotence:HxcIRCleanupIdempotence;
+	final kind:HxcIRCleanupActionKind;
+	final source:HxcSourceSpan;
+}
+
+/** Actions are registered in array order and execute in reverse on an edge. */
+typedef HxcIRCleanupRegion = {
+	final id:String;
+	final parentId:Null<String>;
+	final actions:Array<HxcIRCleanupAction>;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRBlockEdge = {
+	final targetBlockId:String;
+	final arguments:Array<String>;
+	final cleanup:Array<HxcIRCleanupStep>;
+}
+
+typedef HxcIRSwitchCase = {
+	final value:HxcIRConstant;
+	final edge:HxcIRBlockEdge;
+}
+
+enum HxcIRTerminatorKind {
+	IRTJump(edge:HxcIRBlockEdge);
+	IRTBranch(conditionValueId:String, whenTrue:HxcIRBlockEdge, whenFalse:HxcIRBlockEdge);
+	IRTSwitch(valueId:String, cases:Array<HxcIRSwitchCase>, defaultEdge:HxcIRBlockEdge);
+	IRTReturn(valueId:Null<String>, cleanup:Array<HxcIRCleanupStep>);
+	IRTThrow(valueId:String, edge:HxcIRFailureEdge);
+	IRTUnreachable;
+}
+
+typedef HxcIRTerminator = {
+	final kind:HxcIRTerminatorKind;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRBlock = {
+	final id:String;
+	final parameters:Array<HxcIRParameter>;
+	final instructions:Array<HxcIRInstruction>;
+	final terminator:Null<HxcIRTerminator>;
+	final source:HxcSourceSpan;
+}
+
+typedef HxcIRFunction = {
+	final id:String;
+	final displayName:String;
+	final parameters:Array<HxcIRParameter>;
+	final locals:Array<HxcIRLocal>;
+	final returnType:HxcIRTypeRef;
+	final entryBlockId:String;
+	final blocks:Array<HxcIRBlock>;
+	final cleanupRegions:Array<HxcIRCleanupRegion>;
+	final source:HxcSourceSpan;
+}

@@ -1,0 +1,7 @@
+# Dedicated E1.T05 target-owned semantic IR invariant and golden test.
+
+-cp test/hxc_ir/
+-lib reflaxe.c
+
+-main HxcIRGolden
+--interp

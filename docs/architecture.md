@@ -55,6 +55,23 @@ A compilation produces multiple file categories and sidecar reports. `Manual` le
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
+The schema-1 semantic core is implemented under `src/reflaxe/c/ir/` and its
+normative internal invariants are documented in [HxcIR semantic
+contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
+mutable storage uses structural places; cross-block data uses typed block
+parameters. Cleanup actions are registered in source order while every edge
+records their validated reverse, inner-to-outer execution order. Calls and
+memory operations distinguish static/direct, program-local, and named runtime
+implementations, so the IR never selects an implicit runtime core.
+
+`HxcIRDumper` canonicalizes only semantically unordered collections and retains
+ordered instructions, edge arguments, and cleanup steps with repository-relative
+source spans. `HxcIRValidator` rejects missing targets/results/terminators,
+use-before-definition, illegal lifetime transitions, and malformed cleanup
+paths. Unsupported typed nodes use source-positioned `HXC1001`; they never
+become an opaque value. Typed-module normalization and HxcIR-to-C lowering are
+still absent, so the production compiler remains at its `HXC1000` boundary.
+
 The type model normalizes base specifiers and keeps them separate from a
 grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and
 abstract declarators therefore retain their association without reconstructing

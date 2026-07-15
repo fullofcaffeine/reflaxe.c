@@ -1,0 +1,65 @@
+hxcir schema=1
+module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
+  type "type.interface" name="coverage.Interface" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
+  type "type.object" name="coverage.Object" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
+  type "type.option" name="coverage.Option" kind=tagged-union @"test/hxc_ir/fixtures/IRCoverage.hx":4:1-7:2
+    case "Some" payload=[i32] @"test/hxc_ir/fixtures/IRCoverage.hx":5:1-5:2
+    case "None" payload=[] @"test/hxc_ir/fixtures/IRCoverage.hx":6:1-6:2
+  type "type.record" name="coverage.Record" kind=aggregate @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-3:2
+    field "x" type=i32 mutable=true @"test/hxc_ir/fixtures/IRCoverage.hx":2:1-2:2
+  instance "instance.interface" declaration="type.interface" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
+  instance "instance.object" declaration="type.object" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
+  instance "instance.option" declaration="type.option" arguments=[] representation=tagged @"test/hxc_ir/fixtures/IRCoverage.hx":4:1-7:2
+  instance "instance.record" declaration="type.record" arguments=[] representation=direct @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-3:2
+  function "fn.coverage" name="coverage.IR.coverage" returns=void entry="entry" @"test/hxc_ir/fixtures/IRCoverage.hx":15:1-39:2
+    parameter "value.receiver" type=instance("instance.object") @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    parameter "value.callable" type=function(i32)->i32 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    parameter "value.argument" type=i32 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    local "local.owned" type=pointer(nonnull,instance("instance.object")) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
+    block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-39:2
+      instruction "c00.one" result="value.one":i32 constant value=int(1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c01.convert" result="value.float":f64 convert value="value.one" kind=numeric target=f64 implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.box" result="value.boxed":dynamic convert value="value.one" kind=box target=dynamic implementation=runtime("dynamic") @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.unbox" result="value.unboxed":i32 convert value="value.boxed" kind=unbox target=i32 implementation=runtime("dynamic") @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c02.direct" result=- call dispatch=direct("fn.coverage.target") arguments=[] returns=void failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
+      instruction "c02.result-edge" result=- call dispatch=direct("fn.coverage.target") arguments=[] returns=void failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
+      instruction "c03.virtual" result="value.virtual":i32 call dispatch=virtual(slot="slot.render",receiver="value.receiver") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":21:1-21:2
+      instruction "c04.interface" result="value.interface":i32 call dispatch=interface(type="instance.interface",slot="slot.measure",receiver="value.receiver") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":22:1-22:2
+      instruction "c05.closure" result="value.closure":i32 call dispatch=closure("value.callable") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":23:1-23:2
+      instruction "c06.native" result="value.native":i32 call dispatch=native("native.status") arguments=["value.argument"] returns=i32 failure=failure(kind=native-status,target=propagate,arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":24:1-24:2
+      instruction "c07.runtime" result=- call dispatch=runtime(feature="exception",operation="checkpoint") arguments=[] returns=void failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":25:1-25:2
+      instruction "c08.intrinsic" result="value.intrinsic":i32 call dispatch=intrinsic("haxe.i32.clamp") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":26:1-26:2
+      instruction "c09.unary" result="value.negative":i32 unary operation="haxe.i32.negate" value="value.one" implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":27:1-27:2
+      instruction "c10.record" result="value.record":instance("instance.record") construct-aggregate instance="instance.record" fields=["x"="value.one"] @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
+      instruction "c11.project" result="value.projected":i32 project value="value.record" field="x" @"test/hxc_ir/fixtures/IRCoverage.hx":29:1-29:2
+      instruction "c12.tag" result="value.option":instance("instance.option") construct-tag instance="instance.option" tag="Some" payload=["value.one"] @"test/hxc_ir/fixtures/IRCoverage.hx":30:1-30:2
+      instruction "c13.match" result="value.is-some":bool match-tag value="value.option" tag="Some" @"test/hxc_ir/fixtures/IRCoverage.hx":31:1-31:2
+      instruction "c14.allocate" result="value.allocation":pointer(nonnull,instance("instance.object")) allocate type=instance("instance.object") intent=owned implementation=program-local("helper.allocate-object") failure=failure(kind=allocation-failure,target=propagate,arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":32:1-32:2
+      instruction "c15.initialize" result=- initialize place=local("local.owned") value="value.allocation" transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":33:1-33:2
+      instruction "c16.retain" result=- retain place=local("local.owned") implementation=runtime("object") @"test/hxc_ir/fixtures/IRCoverage.hx":34:1-34:2
+      instruction "c17.trace" result=- trace place=local("local.owned") implementation=runtime("gc") @"test/hxc_ir/fixtures/IRCoverage.hx":35:1-35:2
+      instruction "c18.deallocate" result=- deallocate place=local("local.owned") implementation=program-local("helper.free-object") @"test/hxc_ir/fixtures/IRCoverage.hx":36:1-36:2
+      instruction "c19.lifetime" result=- lifetime place=local("local.owned") transition=initialized->destroyed reason="explicit deallocation completed" @"test/hxc_ir/fixtures/IRCoverage.hx":37:1-37:2
+      terminator branch condition="value.is-some" true=edge(target="success",arguments=["value.projected"],cleanup=[]) false=edge(target="result-error",arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":38:1-38:2
+    end block "entry"
+    block "result-error" @"test/hxc_ir/fixtures/IRCoverage.hx":40:1-40:2
+      terminator return value=none cleanup=[] @"test/hxc_ir/fixtures/IRCoverage.hx":40:1-40:2
+    end block "result-error"
+    block "success" @"test/hxc_ir/fixtures/IRCoverage.hx":39:1-39:2
+      parameter "value.forwarded" type=i32 @"test/hxc_ir/fixtures/IRCoverage.hx":39:1-39:2
+      instruction "c20.forwarded" result="value.forwarded-copy":i32 unary operation="haxe.i32.identity" value="value.forwarded" implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":39:1-39:2
+      terminator return value=none cleanup=[] @"test/hxc_ir/fixtures/IRCoverage.hx":39:1-39:2
+    end block "success"
+  end function "fn.coverage"
+  function "fn.coverage.target" name="coverage.IR.target" returns=void entry="entry" @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2
+    block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2
+      terminator return value=none cleanup=[] @"test/hxc_ir/fixtures/IRCoverage.hx":12:1-12:2
+    end block "entry"
+  end function "fn.coverage.target"
+  function "fn.coverage.throw" name="coverage.IR.throwValue" returns=void entry="entry" @"test/hxc_ir/fixtures/IRCoverage.hx":14:1-14:2
+    parameter "value.thrown" type=dynamic @"test/hxc_ir/fixtures/IRCoverage.hx":14:1-14:2
+    block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":14:1-14:2
+      terminator throw value="value.thrown" edge=failure(kind=exception,target=propagate,arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":14:1-14:2
+    end block "entry"
+  end function "fn.coverage.throw"
+end module "coverage.IR"

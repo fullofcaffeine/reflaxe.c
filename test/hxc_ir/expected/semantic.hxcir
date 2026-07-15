@@ -1,0 +1,51 @@
+hxcir schema=1
+module "app.SideEffectSupport" @"test/hxc_ir/fixtures/SideEffectSupport.hx":1:1-10:2
+  function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
+    block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
+      instruction "fn.nextIndex.constant" result="fn.nextIndex.result":i32 constant value=int(0) @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
+      terminator return value="fn.nextIndex.result" cleanup=[] @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
+    end block "entry"
+  end function "fn.nextIndex"
+  function "fn.produce" name="app.SideEffectSupport.produce" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
+    block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
+      instruction "fn.produce.constant" result="fn.produce.result":i32 constant value=int(7) @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
+      terminator return value="fn.produce.result" cleanup=[] @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
+    end block "entry"
+  end function "fn.produce"
+end module "app.SideEffectSupport"
+module "app.SideEffects" @"test/hxc_ir/fixtures/SideEffects.hx":1:1-40:2
+  type "type.buffer" name="app.Buffer" kind=aggregate @"test/hxc_ir/fixtures/SideEffects.hx":1:1-4:2
+    field "data" type=pointer(nonnull,i32) mutable=true @"test/hxc_ir/fixtures/SideEffects.hx":2:1-2:2
+    field "length" type=i32 mutable=false @"test/hxc_ir/fixtures/SideEffects.hx":3:1-3:2
+  type "type.error" name="app.Error" kind=tagged-union @"test/hxc_ir/fixtures/SideEffects.hx":5:1-8:2
+    case "Message" payload=[dynamic] @"test/hxc_ir/fixtures/SideEffects.hx":6:1-6:2
+    case "Unavailable" payload=[] @"test/hxc_ir/fixtures/SideEffects.hx":7:1-7:2
+  instance "instance.buffer" declaration="type.buffer" arguments=[] representation=direct @"test/hxc_ir/fixtures/SideEffects.hx":1:1-4:2
+  instance "instance.error" declaration="type.error" arguments=[] representation=tagged @"test/hxc_ir/fixtures/SideEffects.hx":5:1-8:2
+  global "global.calls" type=i32 mutable=true initialization=constant(int(0)) @"test/hxc_ir/fixtures/SideEffects.hx":10:1-10:2
+  function "fn.main" name="app.SideEffects.main" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffects.hx":12:1-24:2
+    local "local.array" type=instance("instance.buffer") storage=automatic state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":14:1-14:2
+    local "local.scratch" type=i32 storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
+    local "local.token" type=pointer(nullable,void) storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2
+    cleanup "cleanup.inner" parent="cleanup.outer" registration-order @"test/hxc_ir/fixtures/SideEffects.hx":15:1-21:2
+      action "destroy-scratch" idempotence=exactly-once destroy place=local("local.scratch") transition=initialized->destroyed @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
+      action "release-token" idempotence=exactly-once release place=local("local.token") implementation=program-local("helper.release-token") @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2
+    cleanup "cleanup.outer" parent=none registration-order @"test/hxc_ir/fixtures/SideEffects.hx":13:1-21:2
+      action "destroy-array" idempotence=exactly-once destroy place=local("local.array") transition=initialized->destroyed @"test/hxc_ir/fixtures/SideEffects.hx":14:1-14:2
+    block "entry" @"test/hxc_ir/fixtures/SideEffects.hx":17:1-21:2
+      instruction "i00.sequence" result=- sequence label="arr[nextIndex()] += produce()" @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i01.next-index" result="value.index":i32 call dispatch=direct("fn.nextIndex") arguments=[] returns=i32 failure=none @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i02.slot-address" result="value.slot":pointer(nonnull,i32) address place=index(local("local.array"),"value.index") @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i03.current" result="value.current":i32 load place=dereference("value.slot") @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i04.produce" result="value.rhs":i32 call dispatch=direct("fn.produce") arguments=[] returns=i32 failure=failure(kind=exception,target=block("catch"),arguments=[],cleanup=["cleanup.inner"."release-token","cleanup.inner"."destroy-scratch","cleanup.outer"."destroy-array"]) @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i05.add" result="value.updated":i32 binary operation="haxe.i32.add" left="value.current" right="value.rhs" implementation=static @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i06.store" result=- store place=dereference("value.slot") value="value.updated" @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
+      instruction "i07.widen" result="value.widened":f64 convert value="value.updated" kind=numeric target=f64 implementation=static @"test/hxc_ir/fixtures/SideEffects.hx":19:1-19:2
+      terminator return value="value.updated" cleanup=["cleanup.inner"."release-token","cleanup.inner"."destroy-scratch","cleanup.outer"."destroy-array"] @"test/hxc_ir/fixtures/SideEffects.hx":20:1-20:2
+    end block "entry"
+    block "catch" @"test/hxc_ir/fixtures/SideEffects.hx":22:1-24:2
+      instruction "i08.fallback" result="value.fallback":i32 constant value=int(-1) @"test/hxc_ir/fixtures/SideEffects.hx":22:1-22:2
+      terminator return value="value.fallback" cleanup=[] @"test/hxc_ir/fixtures/SideEffects.hx":23:1-23:2
+    end block "catch"
+  end function "fn.main"
+end module "app.SideEffects"

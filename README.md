@@ -79,6 +79,16 @@ yet. The exact boundary and examples are in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
 [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).
 
+The target-owned [HxcIR semantic core](docs/hxc-ir.md) now structurally records
+values versus places, exact instruction order, initialization/lifetime changes,
+all call dispatch forms, conversions, allocation intent, failure successors,
+and reverse inner-to-outer cleanup paths before C syntax exists. Its validator,
+canonical source-aware dumps, reordered-input goldens, matching Eval side-effect
+oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. This is an
+independently testable compiler layer, not a claim that typed Haxe reaches it in
+production or that C is emitted; `HXC1000` remains the honest whole-program
+boundary.
+
 ### CLI bootstrap
 
 Direct Haxe/HXML compilation remains the canonical path. During bootstrap, the
@@ -154,6 +164,9 @@ The current checkout contains:
 - a deterministic declaration planner with declaration-owned include
   provenance, complete-type diagnostics, pointer-cycle forward declarations,
   public/private separation, and independently compiled header goldens;
+- a target-owned HxcIR model, validator, and deterministic source-aware dumper
+  covering explicit side-effect/cleanup order, places and values, dispatch,
+  conversions, failure edges, initialization, and named runtime intent;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -200,6 +213,7 @@ python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
 python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
+python3 test/hxc_ir/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_license_policy.py
 ```
@@ -229,6 +243,7 @@ before expanding language coverage.
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
+- [HxcIR semantic contract](docs/hxc-ir.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)

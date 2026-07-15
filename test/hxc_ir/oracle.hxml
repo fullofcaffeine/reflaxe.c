@@ -1,0 +1,5 @@
+# Eval oracle for the source expression represented by semantic.hxcir.
+
+-cp test/hxc_ir/fixtures/
+-main SideEffects
+--interp

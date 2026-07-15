@@ -72,6 +72,10 @@ The probes cover:
 - two byte-identical declaration plans and planned-header renders, matched
   against `test/declaration_plan/expected/**`, including actionable complete
   cycle/source-placement diagnostics and no runtime selection;
+- two byte-identical canonical HxcIR reports, including reversed unordered
+  inputs, source-aware semantic/coverage goldens, explicit side-effect and
+  cleanup order, every call dispatch form, named runtime intent, and stable
+  negative diagnostics, plus an Eval oracle for the source-side effect trace;
 - a temporary package layout with Reflaxe flattened into the package classpath;
 - required license and provenance files in that staged package.
 

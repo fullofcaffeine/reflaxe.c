@@ -14,7 +14,7 @@ WORKFLOW = ROOT / ".github/workflows/governance.yml"
 PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 
-REQUIRED_NATIVE_FILES = (
+REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxc_runtime.h",
     "runtime/hxrt/src/hxc_runtime.c",
     "runtime/hxrt/test/runtime_smoke.c",
@@ -37,6 +37,16 @@ REQUIRED_NATIVE_FILES = (
     "test/declaration_plan/support/include/project/config.h",
     "test/declaration_plan/smoke.c",
     "test/declaration_plan/run.py",
+    "test/hxc_ir/HxcIRGolden.hx",
+    "test/hxc_ir/hxc_ir.hxml",
+    "test/hxc_ir/oracle.hxml",
+    "test/hxc_ir/fixtures/SideEffectSupport.hx",
+    "test/hxc_ir/fixtures/SideEffects.hx",
+    "test/hxc_ir/fixtures/IRCoverage.hx",
+    "test/hxc_ir/expected/semantic.hxcir",
+    "test/hxc_ir/expected/coverage.hxcir",
+    "test/hxc_ir/expected/diagnostics.json",
+    "test/hxc_ir/run.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -81,9 +91,9 @@ def read_text(path: Path, errors: list[str]) -> str:
 
 def validate() -> list[str]:
     errors: list[str] = []
-    missing_files = [path for path in REQUIRED_NATIVE_FILES if not (ROOT / path).is_file()]
+    missing_files = [path for path in REQUIRED_GATE_FILES if not (ROOT / path).is_file()]
     if missing_files:
-        errors.append("required native smoke files are missing: " + ", ".join(missing_files))
+        errors.append("required compiler/native gate files are missing: " + ", ".join(missing_files))
 
     package = load_json(PACKAGE, errors)
     scripts = package.get("scripts", {})
@@ -96,10 +106,14 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:c-ast entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
         errors.append("package.json must retain the test:declaration-plan entry point")
+    if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
+        errors.append("package.json must retain the test:hxc-ir entry point")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:declaration-plan")
+    if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:native" not in str(scripts.get("test", "")):
         errors.append("package.json test must execute test:native")
     if "python3 scripts/ci/check_ci_policy.py" not in str(
@@ -121,6 +135,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the structural C AST golden test")
     if "test/declaration_plan/run.py" not in pre_commit:
         errors.append("pre-commit must run the declaration planning golden test")
+    if "test/hxc_ir/run.py" not in pre_commit:
+        errors.append("pre-commit must run the HxcIR semantic golden test")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):
