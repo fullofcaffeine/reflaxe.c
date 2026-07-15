@@ -59,11 +59,13 @@ Before changing compiler, runtime, target API, ABI, or build behavior, read:
 1. `AGENTS.md` and `bd prime` for the current operating rules;
 2. `docs/PRD.md` completely, especially Sections 0, 10-17, 24, 29, 32,
    36, and 40;
-3. `docs/architecture.md` for compiler-layer invariants;
-4. `docs/research/repo-patterns.md` for sibling-target and hxcpp precedent;
-5. `docs/BEADS_PLAN.md` and the active issue from
+3. the relevant accepted records under `docs/adr/` for public decisions that
+   refine the PRD;
+4. `docs/architecture.md` for compiler-layer invariants;
+5. `docs/research/repo-patterns.md` for sibling-target and hxcpp precedent;
+6. `docs/BEADS_PLAN.md` and the active issue from
    `docs/specs/beads-plan.json`;
-6. every existing source/runtime file in the area being changed.
+7. every existing source/runtime file in the area being changed.
 
 An accepted ADR that explicitly supersedes the PRD has highest authority.
 Otherwise use this order: PRD, architecture/configuration docs, active Beads
@@ -74,7 +76,7 @@ acceptance criteria, scaffold code, then examples/comments.
 The current checkout is a deliberately partial slice of the fuller scaffold
 described by PRD Section 32. Verify files with `rg --files` before citing or
 running them. In particular, this checkout currently lacks several documented
-assets, including `CODEX_HANDOFF.md`, `scripts/`, schemas, ADRs, examples,
+assets, including `CODEX_HANDOFF.md`, some schemas, examples,
 Reflaxe/Haxe package metadata, runtime implementation sources, and most
 compiler lifecycle classes referenced by the adapter.
 
@@ -116,6 +118,28 @@ compiler lifecycle classes referenced by the adapter.
   `c.*` abstraction or a reusable compiler lowering instead.
 - Runtime support is a feature graph. Every selected helper needs a stable
   feature ID and a source reason; unused features must remain absent.
+- Runtime planning happens only after direct-representation, escape/lifetime,
+  and specialization decisions. Prefer direct idiomatic C, then a program-local
+  specialized helper, then the narrowest dependency-closed `hxrt` slice. Never
+  add an unconditional runtime `core`; a runtime-free build contains no `hxrt`
+  include, source, define, library, or symbol.
+- Runtime warnings identify deduplicated root semantic requirements at source
+  spans. Transitive dependencies belong in `hxc.runtime-plan.json`, not as
+  repetitive warnings. Every successful build, including an empty plan, records
+  the resolved policy and its provenance.
+- C-facing features use ordinary Haxe first, then typed `c.*` abstractions,
+  validated metadata/macros, a narrow typed DSL only for a demonstrated language
+  gap, and finally explicit raw C authority. Repeated raw snippets indicate a
+  missing abstraction.
+- A new macro, metadata spelling, or DSL needs typed/inspectable inputs and
+  outputs, source-positioned negative diagnostics, deterministic expansion
+  evidence, explicit allocation/ownership/unsafe/runtime/portability effects,
+  and a documented benefit that justifies its surface area. It must not bypass
+  profile, runtime, environment, ABI, or raw-boundary policy.
+- Use Haxe compile-time checks for declaration graphs, layouts, qualifiers,
+  ownership, lifetimes, constants, and schemas where sound, but retain native
+  authority: imported ABI facts come from Clang/probes and generated layout
+  claims receive `_Static_assert` plus C/C++ consumer tests.
 - Public C ABI types are separate from internal object/runtime layouts. Every
   exported pointer, string, buffer, handle, callback, error, and allocator
   boundary needs explicit layout, ownership, nullability, lifetime, calling
@@ -127,6 +151,9 @@ compiler lifecycle classes referenced by the adapter.
   semantic contract; `metal` exposes explicit C layout/ownership constraints.
 - Runtime policy (`auto|minimal|none`) and environment
   (`hosted|freestanding|wasi|emscripten`) are orthogonal to profile.
+- With no explicit runtime override, `portable` resolves to `auto + summary` and
+  `metal` to `minimal + warn`; explicit valid combinations still win. Use
+  `hxc_runtime=none` for the hard whole-program no-runtime proof.
 - Strict hosted C11 with no extensions is the default until an accepted ADR or
   issue explicitly selects another dialect/environment.
 - Idiomatic, warning-clean C is required in every profile; it is not a third

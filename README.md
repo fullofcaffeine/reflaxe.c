@@ -32,7 +32,7 @@ Arbitrary C++ APIs require an existing or generated `extern "C"` shim.
 One compiler pipeline will serve two explicit contracts:
 
 - **`portable`** preserves Haxe semantics and pulls in narrowly scoped runtime
-  features only when needed.
+  features only when direct C cannot preserve the required behavior.
 - **`metal`** exposes C-native layout and ownership constraints, rejecting
   hidden allocation or broad runtime fallback unless explicitly enabled.
 
@@ -41,8 +41,34 @@ Runtime policy and target environment remain independent of that profile:
 ```text
 -D reflaxe_c_profile=portable|metal
 -D hxc_runtime=auto|minimal|none
+-D hxc_runtime_diagnostics=off|summary|warn
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 ```
+
+Direct idiomatic C is the first lowering choice in both profiles. The compiler
+may next generate a program-local specialization; `hxrt` is the last semantic
+fallback and is selected feature by feature with source reasons. There is no
+unconditional runtime core. A proven runtime-free build contains no `hxrt`
+header, source, define, library, or symbol.
+
+With no explicit override, portable uses `auto` plus an aggregate runtime
+summary; metal uses the narrow `minimal` allowlist and warns at each root runtime
+requirement. `hxc_runtime=none` turns runtime freedom into a hard whole-program
+proof. Every successful build is planned to emit `hxc.runtime-plan.json`, even
+when the selected feature set is empty.
+
+The planned `c.*` surface also makes C itself pleasant to author from Haxe:
+typed pointers, spans, ownership, layouts, header groups, linkage, calling
+conventions, compile-time constants/assertions, external build facts, and ABI
+exports. Haxe types and macros should catch invalid declaration graphs, layout
+contracts, ownership, qualifiers, and DSL schemas at the originating source
+position; C compilers, Clang, static assertions, and ABI probes still verify the
+native facts. Ordinary Haxe comes first, then typed APIs and validated metadata;
+a DSL must justify a real language gap, and raw C stays explicit and unsafe.
+
+These are M0 design contracts, not currently implemented capabilities. The
+ratified rationale lives in [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md)
+and [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).
 
 ### CLI bootstrap
 

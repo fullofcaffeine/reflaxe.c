@@ -61,7 +61,49 @@ The scaffold's compiler classes establish lifecycle and interfaces, but broad la
 
 ## Runtime feature graph
 
-`RuntimeRequirementAnalyzer` records source reasons. `RuntimeFeatureRegistry` resolves dependencies. `ProjectEmitter` copies/emits only selected features. `hxc_runtime=none` asks `NoRuntimeEligibilityAnalyzer` for a proof; a failed proof returns all blocking features and source sites.
+Runtime planning follows representation selection, escape/lifetime analysis, and
+specialization. For each operation the compiler prefers, in order: direct
+idiomatic C, a program-local specialized helper, the narrowest dependency-closed
+`hxrt` feature, or a policy diagnostic. There is no unconditional runtime core.
+
+`RuntimeRequirementAnalyzer` records stable root reason kinds, consumed typed
+surfaces, and source spans. `RuntimeFeatureRegistry` resolves deterministic
+dependencies while preserving root-versus-transitive provenance.
+`ProjectEmitter` copies/emits only selected features.
+`hxc_runtime=none` asks `NoRuntimeEligibilityAnalyzer` for a proof; a failed
+proof returns every blocking feature and source site. A successful proof is also
+written to `hxc.runtime-plan.json` and means no `hxrt` include, source, define,
+library, or symbol exists in the build.
+
+Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
+These are presets over independent axes, not separate compiler pipelines. See
+[ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
+
+## Typed C authoring boundary
+
+The compiler consumes C-native intent as structured typed facts, not normal-path
+code strings:
+
+```text
+Haxe declarations and types
+  -> typed c.* abstractions
+  -> validated metadata/macros
+  -> declaration, header, layout, ownership, and build facts
+  -> HxcIR / C AST / neutral manifest
+```
+
+Header/source grouping, forward declarations, includes, linkage, visibility,
+calling conventions, qualifiers, layout, ownership, and compile-time assertions
+share one declaration model with bindgen and ABI export. Haxe macros can reject
+invalid combinations at the original source span; generated `_Static_assert`,
+Clang-derived header facts, compiled probes, and C/C++ consumers provide the
+native verification layer.
+
+Ordinary Haxe comes first, followed by typed `c.*`, validated metadata/macros, a
+narrow typed DSL only for a real language gap, and finally explicit raw C
+authority. Every macro/DSL must expose its expansion and allocation, ownership,
+unsafe, portability, and runtime effects. See
+[ADR 0002](adr/0002-haxe-first-typed-c-authoring.md).
 
 ## ABI boundary
 

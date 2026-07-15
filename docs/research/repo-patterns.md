@@ -169,13 +169,25 @@ The Elixir target's very large transformer set demonstrates both the power and t
 
 Portable and metal/native contracts are real when a target has ownership, representation, runtime, or ecosystem boundaries.
 
+The current Rust design makes `idiomatic` a quality bar rather than a profile,
+uses typed native surfaces to decide representation eligibility, records stable
+semantic runtime-requirement reasons before emission, and applies both a
+source/typed-AST no-runtime eligibility check and a final generated-code guard.
+Its typed-DSL admission policy prefers ordinary Haxe, typed metadata/macros, and
+typed facades before a constrained DSL or raw target code.
+
+The current Go design separates its compatibility profile preset from native
+authority, specialization, and fallback axes. Typed APIs/modules establish the
+source boundary; selective runtime packaging does not change semantics. This is
+a useful warning against making profile names carry every independent policy.
+
 ### Ruby lesson
 
 The Ruby PRD explicitly rejects cargo-culting a third profile without a distinct tested contract. It defines `ruby_first` and `portable`, while insisting both emit idiomatic Ruby.
 
 ### C conclusion
 
-C needs `portable` and `metal`. It does not need a separate `idiomatic` mode because idiomatic C is mandatory in both. Hosted/freestanding and runtime selection are orthogonal policies.
+C needs `portable` and `metal`. It does not need a separate `idiomatic` mode because idiomatic C is mandatory in both. Hosted/freestanding and runtime selection are orthogonal policies. Profiles may supply reviewable defaults: portable uses exact automatic slicing with an aggregate summary, while metal uses the narrow allowlist and source warnings. Typed `c.*` consumption remains an explicit source fact rather than a semantic change inferred only from a profile name.
 
 ## Runtime analysis
 
@@ -190,6 +202,12 @@ The Rust and Go repositories contain concepts such as:
 
 C adopts the same pattern and strengthens it with allocator, GC, exception, reflection, thread, and platform feature groups.
 
+Unlike the current Go selective planner's compatibility baseline, C must not add
+an unconditional runtime `core`: direct C and program-local specialization run
+first, and a successful no-runtime proof means zero `hxrt` build artifacts or
+symbols. Root semantic reasons are reported separately from transitive feature
+edges so warnings stay actionable.
+
 ## Boundary enforcement
 
 The supplied targets distinguish:
@@ -200,6 +218,26 @@ The supplied targets distinguish:
 - compiler-owned injection helpers.
 
 C uses `BoundaryEnforcer`, `StrictModeEnforcer`, and a typed `c.Syntax`/`c.Unsafe` surface.
+
+## Haxe-first C authoring
+
+The Rust typed-DSL rules generalize well to C. The target should prefer, in
+order, ordinary Haxe declarations, typed `c.*` abstractions, validated
+metadata/macros, a narrow typed DSL for a genuine syntax gap, and raw C only at
+an explicit unsafe authority boundary.
+
+For C this includes authoring as well as consuming headers: typed Haxe facts can
+describe header groups, prototypes, structs/unions/enums, qualifiers, incomplete
+types, linkage, calling conventions, visibility, layout, constants/assertions,
+and build inputs. Haxe macros can reject invalid declaration graphs, ownership,
+or layout contracts at the original source position. They complement rather
+than replace C/C++ compilation, Clang-derived ABI facts, `_Static_assert`, and
+compiled probes.
+
+A DSL is not accepted merely for convenience. It needs typed inputs/outputs,
+negative diagnostics, deterministic inspectable expansion, explicit
+allocation/ownership/unsafe/runtime effects, and a concrete safety,
+portability, or ergonomics benefit proportional to its surface area.
 
 ## Standard library
 

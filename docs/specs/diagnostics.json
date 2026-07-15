@@ -47,6 +47,13 @@
       "remediation": "Remove the source requirement, select an allowed runtime policy, or provide an explicit metal implementation."
     },
     {
+      "id": "HXC2001",
+      "name": "runtime-feature-selected",
+      "defaultSeverity": "info",
+      "summary": "A root source semantic requirement selected an hxrt feature after direct C and local specialization were ineligible.",
+      "remediation": "Inspect hxc.runtime-plan.json; accept the explained feature, choose a semantics-preserving typed C alternative, or select a stricter runtime policy."
+    },
+    {
       "id": "HXC3000",
       "name": "invalid-abi-boundary",
       "defaultSeverity": "error",
@@ -73,6 +80,13 @@
       "defaultSeverity": "error",
       "summary": "A public target macro is present as an API contract but its validated implementation is not complete.",
       "remediation": "Complete the owning Beads milestone before using the macro in production code."
+    },
+    {
+      "id": "HXC5002",
+      "name": "invalid-typed-c-contract",
+      "defaultSeverity": "error",
+      "summary": "A typed C declaration, header, layout, ownership, build, macro, or DSL contract is invalid for the resolved target configuration.",
+      "remediation": "Correct the reported typed declaration or metadata at its Haxe source span; do not bypass validation with raw C."
     },
     {
       "id": "HXC9000",

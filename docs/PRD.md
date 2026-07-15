@@ -27,11 +27,17 @@ This document is normative unless an accepted architecture decision record (ADR)
 
 This is a **brownfield bootstrap**, not a greenfield project brief. The archive already contains a deliberate M0 skeleton: target activation macros, profile/runtime policy types, a Reflaxe adapter, a fail-closed whole-program compiler entry point, a structural C AST and printer seed, a small runtime ABI seed, target-facing `c.*` abstractions, example seeds, and a deterministic Beads plan. Codex MUST inspect and extend those assets rather than generating an unrelated target from scratch.
 
+The published Git checkout is currently a partial extraction of that archive.
+`rg --files` is authoritative for what is actually present: in particular, the
+typed `c.*` abstraction and macro seeds are absent and are tracked by Beads issue
+`haxe_c-od2.3`. A named archive asset is a design constraint, not evidence that
+the corresponding file or implementation exists in this checkout.
+
 ### 0.1 Required read order
 
 Before changing code, Codex MUST read:
 
-1. `CODEX_HANDOFF.md` for the archive contract;
+1. `CODEX_HANDOFF.md` for the archive contract, when present in the checkout;
 2. `AGENTS.md` for non-negotiable implementation behavior;
 3. this PRD completely, including Sections 31–40;
 4. `docs/architecture.md` for compiler-layer invariants;
@@ -126,6 +132,12 @@ Runtime selection is orthogonal to the profile:
 - **`minimal`** permits a documented small runtime but forbids broad fallback features.
 - **`none`** requires proof that the program can compile without `hxrt`; otherwise compilation fails with actionable diagnostics.
 
+Profiles supply defaults without removing that orthogonality: `portable` resolves
+to `auto` with an aggregate runtime summary, while `metal` resolves to `minimal`
+and warns at each root runtime requirement. Any valid combination can be selected
+explicitly, including runtime-free portable code and an explicitly runtime-using
+metal build.
+
 This is deliberately not “nice C versus correct C.” Every profile MUST produce idiomatic C. The difference is which source-level contract wins when Haxe semantics and direct C representation conflict.
 
 The implementation strategy is:
@@ -141,6 +153,13 @@ Haxe typed AST
 ```
 
 The compiler MUST lower to hand-written-looking C where semantics match. Runtime helpers are a selective implementation technique, not the default representation of every value.
+
+C-native source surfaces follow the same philosophy. Haxe declarations, typed
+`c.*` abstractions, metadata, and compile-time macros SHOULD express headers,
+layouts, linkage, ownership, and build facts before a narrow DSL or raw C is
+considered. The Haxe compiler is intentionally used for earlier, source-positioned
+verification, while C compilers, Clang-derived facts, `_Static_assert`, and ABI
+probes retain final native authority. See ADR 0001 and ADR 0002.
 
 ---
 
@@ -528,6 +547,9 @@ The README MUST not demean hxcpp. hxcpp is evidence that Haxe can be a serious s
 10. **No raw-injection normalization.** Repeated raw code is a missing abstraction.
 11. **Per-build state only.** Compiler daemons and cached builds must not leak state.
 12. **Determinism is a feature.** Identical input and toolchain policy produce byte-identical generated artifacts.
+13. **Haxe first, C explicit.** Use ordinary Haxe, typed `c.*` APIs, and validated metadata before inventing a DSL; use raw C only at a named unsafe boundary.
+14. **Compile-time checks are layered.** Haxe macros catch source-contract mistakes early, while C compilers, Clang, static assertions, and ABI probes remain authoritative for native facts.
+15. **Every abstraction earns its surface area.** A macro, metadata spelling, or DSL needs a documented correctness, portability, or ergonomics benefit and inspectable cost.
 
 ---
 
@@ -553,13 +575,18 @@ Conflicting selections MUST be a fatal diagnostic. The canonical report always r
 `portable` is the default and MUST:
 
 - preserve Haxe language and standard-library semantics;
-- permit selective runtime features;
+- permit selective runtime features only after direct C and program-local specialization have been considered;
 - prefer concrete C types and direct control flow;
 - preserve source evaluation order explicitly;
 - support garbage-collected object graphs where required;
 - support exceptions, reflection, dynamic values, closures, and classes through direct lowering plus runtime slices;
 - keep portable code compilable on other Haxe targets unless it imports `c.*` or uses C-specific metadata;
 - reject ABI exposure that has no stable C representation unless an adapter is provided.
+
+`portable` is not a runtime-heavy lane. A portable whole program that needs no
+`hxrt` feature MUST emit no `hxrt` artifact, and the runtime plan records the
+positive proof. Its default runtime policy is `auto`, with one aggregate runtime
+summary when a feature is selected.
 
 ### 9.3 `metal` contract
 
@@ -576,17 +603,53 @@ Conflicting selections MUST be a fatal diagnostic. The canonical report always r
 
 `metal` does not mean “all Haxe features disappear.” It means the compiler cannot silently add broad semantic machinery.
 
+Typed `c.*` APIs, C externs, and validated C metadata define explicit native
+source boundaries; selecting `metal` alone does not turn arbitrary portable Haxe
+APIs into different APIs. The default metal runtime policy is `minimal`, and
+root runtime requirements are warnings. Users who require a mechanically proven
+zero-runtime artifact select `none`; users may explicitly select `auto` when they
+accept its fully reported fallback costs.
+
 ### 9.4 Runtime policy
 
 ```text
 -D hxc_runtime=auto|minimal|none
+-D hxc_runtime_diagnostics=off|summary|warn
 ```
 
-- `auto`: infer all required runtime features.
-- `minimal`: allow only the documented minimal feature allowlist; fail if a broad feature such as reflection registry or general dynamic dispatch is needed.
-- `none`: require a proven runtime-free program.
+- `auto`: infer the exact dependency closure needed after direct C lowering and
+  program-local specialization.
+- `minimal`: apply the same inference, but allow only a versioned narrow feature
+  allowlist; fail if broad machinery such as tracing collection, reflection
+  registration, general dynamic dispatch, or general exceptions is needed.
+- `none`: require a proven runtime-free program and emit/include/compile/link no
+  `hxrt` artifact or symbol.
 
-The compiler MUST emit `hxc.runtime-plan.json`, including feature IDs, source reasons, dependencies, copied/generated files, libraries, and defines.
+The runtime-diagnostic setting affects console presentation, never semantics or
+packaging:
+
+- `off`: keep evidence in the runtime plan without a console notice;
+- `summary`: print one aggregate notice when `hxrt` is selected;
+- `warn`: report deduplicated root semantic requirements at their source spans
+  and keep transitive dependency edges in the plan rather than emitting warning
+  spam.
+
+Absent explicit overrides, the profile preset resolves `portable` to
+`auto + summary` and `metal` to `minimal + warn`. Resolution provenance is
+recorded. Policy conflicts remain errors regardless of diagnostic presentation.
+
+Runtime selection MUST follow this precedence:
+
+1. direct idiomatic C with the required semantics;
+2. a compiler-generated, program-local specialization or helper;
+3. the narrowest dependency-closed `hxrt` feature set;
+4. a source-positioned policy diagnostic when fallback is forbidden.
+
+The compiler MUST emit `hxc.runtime-plan.json` for every successful build,
+including runtime-free builds. It includes feature IDs, stable root reason kinds,
+source spans and consumed APIs, transitive dependencies, direct/native
+representation decisions, copied/generated files, symbols, libraries, defines,
+policy provenance, and the positive no-runtime proof or all blockers.
 
 ### 9.5 Environment preset
 
@@ -872,6 +935,13 @@ Generated code MUST compile under the project's strict warning baseline without 
 - cast alignment and qualifier loss where supported.
 
 Warnings from third-party headers are isolated with system-include policy rather than globally disabled.
+
+This native warning baseline is separate from compiler policy diagnostics.
+`hxc_runtime_diagnostics=warn` reports root semantic decisions that selected
+`hxrt` even when the resulting C is warning-clean. Each warning MUST name the
+feature, the source construct or API that required it, and a semantics-preserving
+alternative when one exists. Transitive feature dependencies appear in
+`hxc.runtime-plan.json` and do not each create another warning.
 
 ### 11.4 Undefined behavior discipline
 
@@ -1188,6 +1258,13 @@ Each module declares hosted/freestanding/WASI/Emscripten support and has explici
 
 The runtime is named `hxrt` internally and uses `hxc_` public/internal symbol prefixes. It is a feature graph, not a monolith.
 
+`hxrt` is selected only after representation, direct-lowering, escape, lifetime,
+and specialization analyses have exhausted valid runtime-free C forms. The
+planner MUST NOT add a universal `core` feature merely because a compilation
+occurred. `core` is an ordinary dependency of features that actually need it;
+an eligible build has no runtime headers, files, link inputs, defines, or
+symbols.
+
 Candidate feature groups:
 
 - `core` — assertions, panic hooks, source positions;
@@ -1211,6 +1288,24 @@ Candidate feature groups:
 - `export_error`.
 
 Features declare dependencies in a machine-readable registry.
+
+Each root request also declares a stable semantic reason kind, owning typed
+surface, source span, and the policy that admitted it. Dependency-derived
+features record their parent edge rather than pretending to be independent
+source requirements. The deterministic plan distinguishes:
+
+- direct C/native representation decisions;
+- program-local specialized helpers;
+- root runtime requirements;
+- transitive runtime features;
+- manual requests and their validation provenance;
+- runtime-free proof blockers.
+
+Source reasons include, where applicable, object identity/reference mutation,
+cyclic managed graphs, shared closure cells, dynamic operations, reachable
+reflection, general exception behavior, portable string/array semantics, and
+real platform abstractions. Free-form “runtime needed” explanations are not
+sufficient acceptance evidence.
 
 ### 13.2 Allocator interface
 
@@ -1622,6 +1717,10 @@ c.Syntax
 c.Ptr<T>
 c.ConstPtr<T>
 c.NullablePtr<T>
+c.Ref<T>
+c.ConstRef<T>
+c.RestrictPtr<T>
+c.VolatilePtr<T>
 c.FunctionPtr<T>
 c.CString
 c.StringView
@@ -1642,11 +1741,65 @@ c.Arena
 c.Lib
 c.Build
 c.Export
+c.Header
+c.Layout
+c.StaticAssert
+c.Linkage
+c.CallingConvention
+c.MemoryOrder
+c.Unsafe
 ```
 
-These are target-facing types and compiler intrinsics, not necessarily runtime objects.
+These are target-facing types, compile-time contracts, and compiler intrinsics,
+not necessarily runtime objects. A `c.*` import is an explicit C-native source
+boundary; it must not silently infect unrelated portable modules or require
+`hxrt` merely because the abstraction exists.
 
-### 17.2 Struct and union mapping
+### 17.2 Typed declarations, headers, structs, and unions
+
+C developers MUST be able to author C-facing declarations and header structure
+from typed Haxe. Exact metadata and module spellings remain provisional until
+ADR 0002's implementation issue accepts them, but the surface MUST cover:
+
+- public/private header grouping and stable C names;
+- imported extern declarations and exported Haxe declarations;
+- prototypes, enums, structs, unions, opaque/incomplete handles, arrays,
+  function pointers, bitfields, packing, and alignment;
+- forward declarations and complete-type dependency checking;
+- `const`, `volatile`, `restrict`, atomic, mutability, and ownership facts;
+- internal/external/static/inline linkage, visibility, calling conventions,
+  sections, and target capability gates;
+- typed compile-time constants and assertions.
+
+Representative intent:
+
+```haxe
+@:cOpaque
+extern class WidgetStorage {}
+
+@:cHeader("widget.h")
+@:cPublic
+@:cStruct
+class WidgetConfig {
+  public var capacity:c.Size;
+  public var storage:c.NullablePtr<WidgetStorage>;
+}
+
+@:cHeader("widget.h")
+class WidgetApi {
+  @:cExport
+  @:cName("widget_recommended_capacity")
+  public static function recommendedCapacity(config:WidgetConfig):c.Size {
+    return config.capacity;
+  }
+}
+```
+
+The declaration planner derives prototypes, forward declarations, local/system
+includes, public/private visibility, and dependency order from typed facts. Users
+do not manually author include guards or repeat dependency ordering in strings.
+External headers remain explicit metadata because they are build inputs, not
+facts the Haxe type graph can invent.
 
 Proposed metadata/macros:
 
@@ -1663,7 +1816,12 @@ extern class ValueUnion { ... }
 @:cBitField(3)
 ```
 
-Macros validate invalid combinations and emit layout assertions in generated C.
+Macros and compiler analyses validate invalid combinations, incomplete by-value
+types, declaration cycles, duplicate/reserved symbols, target-dependent layout,
+qualifier/ownership conflicts, and unsafe callback or pointer lifetimes at Haxe
+source positions. Generated C also emits `_Static_assert` where a native compiler
+must verify size, alignment, offset, or configuration facts. Clang and compiled
+ABI probes remain authoritative for imported header layouts.
 
 ### 17.3 Native includes and link metadata
 
@@ -1672,12 +1830,18 @@ Typed APIs replace raw preprocessor strings:
 ```haxe
 @:cInclude("sqlite3.h")
 @:cLink("sqlite3")
-@:cDefine("SQLITE_THREADSAFE=1")
+@:cDefine("SQLITE_THREADSAFE", 1)
 @:cPkgConfig("sqlite3")
 extern class SQLite3 { ... }
 ```
 
 The compiler aggregates and deduplicates these into the manifest and build files.
+
+Haxe conditional compilation SHOULD resolve configuration before C emission
+when possible. Function-like C macros SHOULD become typed inline functions or
+generated wrappers when ABI-compatible. Raw preprocessor branches and macro
+bodies are reserved for external/platform contracts that genuinely require
+them; the C preprocessor is not the high-level authoring model.
 
 ### 17.4 Unsafe boundary
 
@@ -1725,7 +1889,32 @@ Haxe macros SHOULD power high-level ergonomic libraries that erase into ordinary
 
 Generated runtime reflection is not required when compile-time information suffices.
 
-### 17.7 Macro testing
+The compiler and standard library SHOULD deliberately use Haxe's type checker
+and macro system for checks C often reports later or less locally: format/command
+schemas, literal ranges, buffer-size relationships, enum exhaustiveness, layout
+eligibility, ownership/nullability completeness, callback retention, atomic
+ordering, header visibility leaks, and conflicting build facts. These checks
+complement native compilation; they do not pretend Haxe can prove arbitrary C
+ABI or undefined-behavior facts on its own.
+
+### 17.7 Macro and DSL admission/testing
+
+A first-party macro, metadata spelling, or DSL MUST have a documented reason to
+exist. Prefer, in order: ordinary Haxe; typed `c.*` abstractions; validated
+metadata/macros; a narrow typed DSL where Haxe has no clear native form; and only
+then an explicit raw C boundary.
+
+An admitted macro or DSL requires:
+
+- typed inputs and outputs, or a constrained parser when text is the external
+  format being modeled;
+- a concrete correctness, portability, or ergonomics gain that justifies its
+  maintenance and language-surface cost;
+- source-positioned actionable diagnostics;
+- deterministic, inspectable expansion and generated-declaration artifacts;
+- explicit allocation, ownership, unsafe, portability, and runtime effects;
+- no bypass around profile, runtime, environment, ABI, or raw-boundary policy;
+- no stringly typed C mini-language disguised as a convenience API.
 
 Every macro library needs:
 
@@ -1734,6 +1923,10 @@ Every macro library needs:
 - determinism tests;
 - cross-target typing tests when the source API is intended to be portable;
 - no-runtime evidence where advertised.
+
+If an implementation uses raw C internally, that remains a documented unsafe
+authority boundary and application code receives a typed facade. Repeated raw
+use is a missing abstraction to design, not a pattern to normalize.
 
 ---
 
@@ -1770,11 +1963,12 @@ diagnostics, and JSON output MUST be shared rather than reimplemented per host.
 ```text
 hxc new <name> [--kind app|library|embedded]
 hxc build [project.hxml] [--profile portable|metal] [--runtime auto|minimal|none]
+          [--runtime-diagnostics off|summary|warn]
 hxc run [project.hxml] [-- args...]
 hxc test [selector]
 hxc clean
 hxc doctor
-hxc inspect manifest|runtime|abi|symbols|stdlib|lowering
+hxc inspect manifest|runtime|abi|symbols|stdlib|lowering|declarations|macros
 hxc bindgen <header> [options]
 hxc export [project.hxml] [options]
 hxc fmt-generated
@@ -1923,9 +2117,11 @@ This proves the portability promise rather than merely describing it.
 Every compiler diagnostic has a stable ID, severity, source span, profile, and remediation. Categories include:
 
 - unsupported semantic construct;
+- runtime feature selected after direct lowering was ineligible;
 - runtime-policy violation;
 - metal fallback violation;
 - unsafe operation;
+- invalid typed C declaration, header, layout, or macro contract;
 - ABI-invalid export;
 - ownership ambiguity;
 - layout mismatch;
@@ -2509,7 +2705,10 @@ The PRD proceeds with these defaults unless changed by ADR:
    `reflaxe.c`; optional orchestration CLI named `hxc`; repository-owned code
    licensed `GPL-3.0-only`. Third-party notices/provenance remain an M0 gate.
 2. **Profiles:** `portable` default plus `metal`; no third “idiomatic” profile.
-3. **Runtime policy:** `auto|minimal|none` orthogonal to profile.
+3. **Runtime policy:** `auto|minimal|none` remains orthogonal to profile;
+   absent overrides, portable resolves to `auto + summary` and metal to
+   `minimal + warn`. Direct C and program-local specialization always precede
+   `hxrt`; `none` proves complete runtime absence. See ADR 0001.
 4. **C dialect:** strict C11 default, C17/C23 opt-in.
 5. **Runtime memory:** precise non-moving GC as the intended portable baseline, pluggable allocator/collector adapters, no runtime for eligible metal code.
 6. **String storage:** likely UTF-8 runtime representation, pending a conformance ADR.
@@ -2519,6 +2718,10 @@ The PRD proceeds with these defaults unless changed by ADR:
 10. **ABI:** opaque handles by default; no exceptions across boundary; explicit ownership and status errors.
 11. **Haxe version:** exact 4.3.7 contract first; Haxe 5/custom-target support tracked separately.
 12. **Target define:** define `c` for target-conditional code while avoiding conflict with unrelated user defines through documented build detection.
+13. **Typed C authoring:** Haxe declarations plus typed `c.*` APIs and validated
+    metadata/macros model headers and C-native facts; narrow DSLs require an
+    admission rationale and raw C remains an explicit unsafe escape. See ADR
+    0002.
 
 ---
 
@@ -4474,9 +4677,9 @@ This table normalizes every material product thought from the initiating brief i
 | Learn from hxcpp but emit C, not C++ | Reuse project-generation and dependency lessons; reject C++ object/runtime assumptions | HXC-PROD-007, HXC-COMP-010 | §2.10, §7.5, §39 |
 | Generate idiomatic hand-written-looking C | Idiomatic output is required in every profile and measured by review, warnings, snapshots, and runtime-helper reports | HXC-PROD-003, HXC-COMP-004 | §5, §8, §10, §21 |
 | Support both Haxe-level and close-to-metal programming | Portable and metal semantic contracts share one pipeline; runtime policy is orthogonal | HXC-PROD-002–005 | §9, §13, §17 |
-| Use runtime helpers only where semantics require them | Feature graph, source reasons, `auto|minimal|none`, and no-runtime proof | HXC-RT-001–004 | §9.4, §13, §18.5 |
+| Use runtime helpers only where semantics require them | Direct C/local specialization first, then a reasoned feature graph, `auto|minimal|none`, source warnings, and no-runtime proof | HXC-RT-001–004, HXC-RT-013 | §9.4, §13, §18.5 |
 | Appeal to Haxe programmers | Full standard library, portability lane, familiar language, C ecosystem access | HXC-PROD-006, HXC-STD-001–010 | §7.1, §14 |
-| Appeal to C programmers and purists | Typed layout, pointers, ownership, allocators, ABI controls, freestanding support, readable output | HXC-PROD-004, HXC-MAC-001–007 | §7.2, §17 |
+| Appeal to C programmers and purists | Typed layout, pointers, ownership, allocators, headers, ABI controls, compile-time verification, freestanding support, and readable output | HXC-PROD-004, HXC-MAC-001–007, HXC-MAC-011–012 | §7.2, §17 |
 | Be useful to C++ programmers | C++-compatible C headers and optional wrappers; arbitrary C++ APIs require shims | HXC-FFI-013, HXC-ABI-003 | §7.3, §15.8, §16.4 |
 | Provide a TypeScript-to-native bridge story | Position Haxe as familiar, but do not claim language identity; add onboarding examples later | HXC-PROD-010, HXC-DOC-008 | §7.4, §39 |
 | Support the complete Haxe standard library | Tracked ledger, implementation ownership, differential conformance, platform capability matrix | HXC-STD-001–010 | §14, §21 |
@@ -4559,7 +4762,7 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-PROD-002 | `portable` MUST be the default semantic contract and preserve Haxe behavior even when selective runtime support is required. | P0 | E2–E5 | Differential fixtures match a reference Haxe target and runtime reports explain selected helpers. |
 | HXC-PROD-003 | Every supported profile MUST emit readable, idiomatic C; “idiomatic” is not a separate correctness-off mode. | P0 | E1/E10 | Generated-code review rubric, warning-clean builds, deterministic snapshots, and representative hand-written baselines pass. |
 | HXC-PROD-004 | `metal` MUST expose explicit C layouts, pointers, ownership, allocators, linkage, calling conventions, and freestanding constraints. | P0 | E3/E8 | Runtime-free layout/ownership examples compile and ABI probes match native C. |
-| HXC-PROD-005 | Runtime policy MUST be orthogonal to profile through `auto|minimal|none` and MUST fail when a requested policy cannot satisfy semantics. | P0 | E4/E8 | Policy matrix tests prove exact feature selection and actionable failures. |
+| HXC-PROD-005 | Runtime policy MUST be orthogonal to profile through `auto|minimal|none`; direct C and local specialization MUST precede selective `hxrt`; and the compiler MUST fail when a requested policy cannot satisfy semantics. | P0 | E4/E8 | Policy matrix tests prove exact feature selection, profile-default provenance, warnings, zero-runtime absence, and actionable failures. |
 | HXC-PROD-006 | The 1.0 portable contract MUST support the full applicable Haxe standard library for each declared platform, with explicit capability exceptions. | P1 | E5/E10 | The standard-library ledger has no unowned applicable modules and conformance suites pass. |
 | HXC-PROD-007 | `hxc` MUST complement rather than misrepresent hxcpp: use hxc for C ABI/output/freestanding workflows and hxcpp for direct C++ semantics/ecosystem integration. | P0 | E9 | README comparison is technically accurate and demonstrated by C, C++, and shim examples. |
 | HXC-PROD-008 | Haxe-authored code MUST be able to consume C libraries and produce C-compatible libraries without hand-written boilerplate for ordinary cases. | P0 | E6/E7 | A generated SQLite-style binding and a generated shared library are independently consumed. |
@@ -4635,10 +4838,10 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 
 | ID | Normative requirement | Priority | Suggested epic | Minimum evidence |
 | --- | --- | --- | --- | --- |
-| HXC-RT-001 | Runtime capabilities MUST be modeled as stable feature IDs with dependency closure. | P0 | E4 | Feature manifest validation and closure tests pass. |
-| HXC-RT-002 | Every selected runtime feature MUST include one or more source reasons in an inspection report. | P0 | E4/E8 | Tests assert why each helper was selected. |
-| HXC-RT-003 | `hxc_runtime=none` MUST prove eligibility and fail with precise blockers rather than silently linking runtime code. | P0 | E4 | No-runtime positive and negative fixtures pass. |
-| HXC-RT-004 | Unused runtime source and metadata MUST not be emitted or linked. | P0 | E4 | Feature-combination tests inspect sources, symbols, and binary size. |
+| HXC-RT-001 | Runtime capabilities MUST be modeled as stable feature IDs with deterministic dependency closure and no unconditional baseline feature. | P0 | E4 | Feature manifest validation, empty-plan, and closure tests pass. |
+| HXC-RT-002 | Every root runtime requirement MUST include a stable semantic reason, consumed typed surface, and source span; transitive features MUST retain dependency-edge provenance. | P0 | E4/E8 | Tests assert why each helper was selected without duplicate dependency warnings. |
+| HXC-RT-003 | `hxc_runtime=none` MUST prove eligibility and fail with precise blockers rather than silently linking runtime code; success means no `hxrt` include, source, define, library, or symbol. | P0 | E4 | No-runtime positive/negative fixtures and artifact/symbol inspection pass. |
+| HXC-RT-004 | Direct C and program-local specialization MUST precede runtime requests, and unused runtime source/metadata MUST not be emitted or linked. | P0 | E3/E4 | Representation and feature-combination tests inspect lowering decisions, sources, symbols, and binary size. |
 | HXC-RT-005 | Allocation MUST use an explicit allocator ABI and permit user/platform allocators. | P0 | E4 | Hosted, custom, failure-injection, and freestanding allocator tests pass. |
 | HXC-RT-006 | Portable managed objects MUST use a memory strategy that preserves reachability and cycles; the backend MUST be pluggable behind a stable compiler/runtime interface. | P0 | E4 | Cycle, root, finalization policy, stress, and backend-conformance tests pass. |
 | HXC-RT-007 | The compiler SHOULD stack/region-allocate values proven not to escape without changing observable behavior. | P2 | E4/E10 | Escape-analysis fixtures and allocation benchmarks demonstrate safe reductions. |
@@ -4647,6 +4850,7 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-RT-010 | The runtime public ABI MUST be versioned and checked against generated code/manifests. | P0 | E4/E7 | Mismatched ABI versions fail clearly; compatible versions link. |
 | HXC-RT-011 | Hosted, freestanding, WASI, and Emscripten environments MUST expose capability matrices and avoid unavailable libc assumptions. | P1 | E4/E8 | Environment-specific compile tests and capability diagnostics pass. |
 | HXC-RT-012 | Runtime implementation MUST remain valid strict C for the declared baseline and C++-include-safe at public headers. | P0 | E4/E10 | GCC/Clang/MSVC or documented equivalent and C++ header smoke tests pass. |
+| HXC-RT-013 | Runtime diagnostics MUST support silent-report, aggregate-summary, and deduplicated root-warning presentation without changing semantics or packaging. | P1 | E0/E4/E8 | Profile/default/override fixtures assert diagnostic severity, source spans, report equality, and resolution provenance. |
 
 ### 33.6 Standard library
 
@@ -4713,6 +4917,8 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-MAC-008 | Rails/Ruby-like ergonomics MUST come from convention, generated code, and type-checked macros, not open-class/runtime `method_missing` behavior. | P1 | E9 | Todo example remains concise in Haxe and explicit in generated C. |
 | HXC-MAC-009 | Macro implementations MUST account for Haxe phase/build-order limitations and avoid order-dependent global state. | P0 | E0/E9 | Randomized module order and compiler-server macro tests pass. |
 | HXC-MAC-010 | Users MUST be able to inspect macro products, mappings, generated declarations, and source reasons. | P1 | E8/E9 | `hxc inspect macros` or build artifacts expose deterministic expansion reports. |
+| HXC-MAC-011 | Haxe-authored C declarations MUST express public/private headers, forward declarations, qualifiers, linkage, layout, calling conventions, constants/assertions, and build facts through typed constructs, with dependency structure derived by the compiler. | P0 | E1/E6/E7 | Header-authoring fixtures produce deterministic C/C++-consumable headers and reject invalid declaration graphs before C emission. |
+| HXC-MAC-012 | A first-party macro or DSL MUST justify why ordinary Haxe and existing typed APIs are insufficient, keep typed/inspectable inputs and outputs, diagnose misuse at source positions, and expose allocation, ownership, unsafe, portability, and runtime effects. | P0 | E0/E9 | Admission review plus positive/negative/determinism/no-runtime fixtures pass for every admitted surface. |
 
 ### 33.10 CLI and build experience
 
@@ -5085,6 +5291,8 @@ These are design gates, not invitations to restart the whole product discussion.
 | Exact Haxe and Reflaxe baseline | Start with Haxe 4.3.7 and a pinned Reflaxe revision proven by scaffold compilation; broaden later through CI | E0.T03 / ADR | Blocks compiler API work. |
 | Default C dialect | Strict C11 default; allow C17/C23 feature gates after compiler-matrix evidence | E0.T01 / ADR | Blocks AST/printer extension choices. |
 | Target define name | Use documented `c`/`target.name=c` activation only after conflict testing; keep `reflaxe_c` internal compatibility define | E0.T01 / ADR | Blocks target-conditional stdlib behavior. |
+| Direct C and runtime fallback | Owner accepted direct C/local specialization before selective `hxrt`; portable defaults to `auto + summary`, metal to `minimal + warn`, and explicit `none` proves complete absence | ADR 0001 / E0.T01 / E4.T01 / E4.T10 | Runtime planner, diagnostics, manifests, and no-runtime fixtures use one reason ledger. |
+| Typed C authoring and DSL admission | Owner accepted Haxe-first declarations, typed `c.*`, validated metadata/macros, narrow justified DSLs, and explicit raw authority in that order | ADR 0002 / `haxe_c-od2.3` | Blocks bootstrap completion of the absent `c.*` scaffold and informs E3/E6/E7/E9. |
 | String representation | Use a length-carrying Unicode representation; decide UTF-8 versus UTF-16/code-unit semantics through Haxe conformance tests; keep `CString` separate | E0.T01 / ADR | Blocks broad String/std/FFI work. |
 | Portable managed-memory bootstrap | Define a backend interface first. Consider a proven hosted collector for alpha and a precise target-owned backend as the long-term default; do not bake backend details into generated public types | E0.T01/E4.T04 / ADR | Blocks classes/closures/dynamic at portable scale. |
 | Exception lowering | Evaluate explicit failure edges plus runtime unwinding/cleanup stack; never expose setjmp/longjmp or native exceptions through public C ABI | E0.T01/E4 / ADR | Blocks try/catch/finally and cleanup architecture. |
