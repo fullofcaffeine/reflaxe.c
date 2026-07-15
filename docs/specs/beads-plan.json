@@ -1,0 +1,3932 @@
+{
+  "schemaVersion": 1,
+  "planVersion": "2026-07-14",
+  "project": {
+    "name": "reflaxe.c / hxc",
+    "issueTitlePrefix": "HXC",
+    "sourceOfIntent": "docs/PRD.md",
+    "sourceOfExecution": "Beads after materialization",
+    "bootstrap": "scripts/beads/bootstrap.py",
+    "rules": [
+      "Issue dependency direction is child needs blocker.",
+      "Children of an epic are parallel unless explicit blocking edges exist.",
+      "Create discovered work with a discovered-from relationship instead of expanding claimed scope silently.",
+      "Close an issue only after its acceptance commands and evidence pass."
+    ]
+  },
+  "epics": [
+    {
+      "key": "E0",
+      "title": "Repository and governance foundation",
+      "priority": 0,
+      "milestone": "M0",
+      "description": "Ratify contracts, make the scaffold build reproducibly, and establish the project rules Codex must follow.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m0",
+        "epic-e0"
+      ]
+    },
+    {
+      "key": "E1",
+      "title": "Reflaxe compiler core and C AST",
+      "priority": 0,
+      "milestone": "M1",
+      "description": "Build the deterministic AST/IR/output foundation before broad language lowering.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m1",
+        "epic-e1"
+      ]
+    },
+    {
+      "key": "E2",
+      "title": "Primitive semantics, control flow, and UB discipline",
+      "priority": 0,
+      "milestone": "M2",
+      "description": "Deliver the first correct executable Haxe-to-C vertical slice with explicit evaluation order and no C undefined behavior.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m2",
+        "epic-e2"
+      ]
+    },
+    {
+      "key": "E3",
+      "title": "Aggregates, generics, classes, and dispatch",
+      "priority": 1,
+      "milestone": "M3",
+      "description": "Lower Haxe's structured type system into readable C layouts and calls without defaulting to a universal box.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m3",
+        "epic-e3"
+      ]
+    },
+    {
+      "key": "E4",
+      "title": "Runtime, memory, dynamic values, and exceptions",
+      "priority": 1,
+      "milestone": "M4",
+      "description": "Implement selective runtime capabilities and full portable object-graph semantics while preserving a proven runtime-free lane.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m4",
+        "epic-e4"
+      ]
+    },
+    {
+      "key": "E5",
+      "title": "Haxe standard-library parity",
+      "priority": 1,
+      "milestone": "M5",
+      "description": "Systematically support the Haxe standard library with direct lowering, target-owned adapters, and narrow runtime slices.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m5",
+        "epic-e5"
+      ]
+    },
+    {
+      "key": "E6",
+      "title": "C interop and deterministic bindgen",
+      "priority": 1,
+      "milestone": "M6",
+      "description": "Make existing C libraries easy and safe to consume from exact headers, flags, and ABI facts.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m6",
+        "epic-e6"
+      ]
+    },
+    {
+      "key": "E7",
+      "title": "Exported C ABI and shared libraries",
+      "priority": 1,
+      "milestone": "M7",
+      "description": "Make Haxe-authored code a first-class producer of stable C headers, static libraries, and shared objects.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m7",
+        "epic-e7"
+      ]
+    },
+    {
+      "key": "E8",
+      "title": "CLI, build adapters, diagnostics, and inspection",
+      "priority": 1,
+      "milestone": "M8",
+      "description": "Turn compiler components into the coherent hxc product and an automation-friendly build surface.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m8",
+        "epic-e8"
+      ]
+    },
+    {
+      "key": "E9",
+      "title": "Examples, todo CLI, documentation, and adoption",
+      "priority": 2,
+      "milestone": "M9",
+      "description": "Prove the product through honest, polished examples and a macro-powered SQLite todo CLI.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m9",
+        "epic-e9"
+      ]
+    },
+    {
+      "key": "E10",
+      "title": "Quality, performance, security, and releases",
+      "priority": 1,
+      "milestone": "M10",
+      "description": "Continuously harden correctness, ABI, security, performance, compatibility, and release provenance.",
+      "labels": [
+        "hxc-plan",
+        "milestone-m10",
+        "epic-e10"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "key": "E0.T01",
+      "epic": "E0",
+      "title": "Ratify product contracts and open ADR decisions",
+      "priority": 0,
+      "blockedBy": [],
+      "prd": [
+        "§8",
+        "§9",
+        "§28"
+      ],
+      "outcome": "Resolve the owner decisions that affect public semantics before implementation hardens accidental choices.",
+      "acceptance": [
+        "Record decisions for license, C baseline, string encoding, portable collector, exception ABI, and 1.0 platforms.",
+        "Update affected ADRs and PRD sections without contradictory language.",
+        "Create Beads discoveries for deferred experiments; do not hide undecided semantics in code."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "architecture",
+        "decision"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Resolve the owner decisions that affect public semantics before implementation hardens accidental choices.\n\nPRD: §8, §9, §28"
+    },
+    {
+      "key": "E0.T02",
+      "epic": "E0",
+      "title": "Choose license and complete third-party notices",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T01"
+      ],
+      "prd": [
+        "§22",
+        "§28"
+      ],
+      "outcome": "Replace the scaffold license placeholder with an approved repository license and auditable notices.",
+      "acceptance": [
+        "Canonical license text is checked in.",
+        "Reflaxe, Haxe-derived standard-library work, Clang tooling, and runtime dependencies have attribution/provenance entries.",
+        "CI rejects missing license/notice files in release artifacts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "governance",
+        "legal"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Replace the scaffold license placeholder with an approved repository license and auditable notices.\n\nPRD: §22, §28"
+    },
+    {
+      "key": "E0.T03",
+      "epic": "E0",
+      "title": "Pin Haxe, Reflaxe, and dependency resolution",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T01"
+      ],
+      "prd": [
+        "§2.2",
+        "§2.3",
+        "§25 M0"
+      ],
+      "outcome": "Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.",
+      "acceptance": [
+        "Fresh checkout resolves dependencies without relying on the caller's current working directory.",
+        "CompilerBootstrap runs before CompilerInit and only for C builds.",
+        "The pin and update procedure are documented and CI-verifiable."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-medium",
+        "tooling",
+        "reflaxe"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.\n\nPRD: §2.2, §2.3, §25 M0"
+    },
+    {
+      "key": "E0.T04",
+      "epic": "E0",
+      "title": "Make the bootstrap Haxe sources compile",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T03"
+      ],
+      "prd": [
+        "§10.3",
+        "§25 M0"
+      ],
+      "outcome": "Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain.",
+      "acceptance": [
+        "A dedicated HXML compiles all target-owned Haxe modules.",
+        "Macro and non-macro branches type-check where applicable.",
+        "Unsupported compiler execution ends with HXC1000 and cannot emit plausible program C."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-medium",
+        "compiler",
+        "bootstrap"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain.\n\nPRD: §10.3, §25 M0"
+    },
+    {
+      "key": "E0.T05",
+      "epic": "E0",
+      "title": "Establish CI structure and runtime smoke matrix",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T04"
+      ],
+      "prd": [
+        "§21",
+        "§25 M0"
+      ],
+      "outcome": "Run structural, JSON, Haxe, C11 runtime, C++ header, and native fixture checks on every change.",
+      "acceptance": [
+        "GCC and Clang compile runtime/fixtures with warnings as errors.",
+        "A C++ compiler consumes public C headers.",
+        "CI output identifies skipped optional tools and never reports an unrun required gate as passed."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-medium",
+        "ci",
+        "quality"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Run structural, JSON, Haxe, C11 runtime, C++ header, and native fixture checks on every change.\n\nPRD: §21, §25 M0"
+    },
+    {
+      "key": "E0.T06",
+      "epic": "E0",
+      "title": "Create stable diagnostic catalog and policy",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T01"
+      ],
+      "prd": [
+        "§20.1"
+      ],
+      "outcome": "Reserve diagnostic ranges and document wording, severity, source position, remediation, and stability rules.",
+      "acceptance": [
+        "All current diagnostics appear in a machine-readable catalog.",
+        "Tests assert IDs rather than fragile full prose where appropriate.",
+        "Internal compiler failures are distinct from unsupported-source diagnostics."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "diagnostics"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Reserve diagnostic ranges and document wording, severity, source position, remediation, and stability rules.\n\nPRD: §20.1"
+    },
+    {
+      "key": "E0.T07",
+      "epic": "E0",
+      "title": "Finalize contribution, security, and release governance",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T02"
+      ],
+      "prd": [
+        "§22",
+        "§29"
+      ],
+      "outcome": "Give human and agent contributors a single operational contract for changes, disclosures, generated files, and releases.",
+      "acceptance": [
+        "AGENTS and CONTRIBUTING agree on Beads workflow and definition of done.",
+        "SECURITY names a private reporting path and supported versions policy.",
+        "Generated files, vendoring, release signing, and provenance responsibilities are explicit."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "governance",
+        "security"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Give human and agent contributors a single operational contract for changes, disclosures, generated files, and releases.\n\nPRD: §22, §29"
+    },
+    {
+      "key": "E0.T08",
+      "epic": "E0",
+      "title": "Validate and materialize the Beads bootstrap graph",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T01"
+      ],
+      "prd": [
+        "§24"
+      ],
+      "outcome": "Prove the checked-in plan is acyclic, idempotently materializable, and useful to Codex.",
+      "acceptance": [
+        "Dry-run works without bd installed.",
+        "Apply creates epics, children, labels, descriptions, acceptance criteria, and blocking edges.",
+        "A second apply creates no duplicate issues, including after issues have been closed.",
+        "bd ready exposes parallel starter work consistent with the graph."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-medium",
+        "beads",
+        "planning"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Prove the checked-in plan is acyclic, idempotently materializable, and useful to Codex.\n\nPRD: §24"
+    },
+    {
+      "key": "E0.T09",
+      "epic": "E0",
+      "title": "Define fixture taxonomy and snapshot update policy",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T04"
+      ],
+      "prd": [
+        "§21.1",
+        "§21.2",
+        "§21.3"
+      ],
+      "outcome": "Standardize positive, negative, AST, C snapshot, runtime, differential, ABI, and performance fixtures.",
+      "acceptance": [
+        "Each fixture type has a directory, runner contract, and expected outputs.",
+        "Snapshot regeneration requires explicit command and shows semantic diffs.",
+        "Examples are not silently used as tests without declared assertions."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "testing"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Standardize positive, negative, AST, C snapshot, runtime, differential, ABI, and performance fixtures.\n\nPRD: §21.1, §21.2, §21.3"
+    },
+    {
+      "key": "E0.T10",
+      "epic": "E0",
+      "title": "Publish bootstrap capability and limitation manifest",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T04",
+        "E0.T06"
+      ],
+      "prd": [
+        "§18.5",
+        "§25 M0"
+      ],
+      "outcome": "Expose what the scaffold implements, reserves, rejects, and has not validated in machine-readable form.",
+      "acceptance": [
+        "Manifest distinguishes implemented, scaffold-only, experimental, and unsupported capabilities.",
+        "README and hxc doctor derive or agree with the manifest.",
+        "No full-stdlib, production, or performance claim appears before its gate passes."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e0",
+        "effort-small",
+        "product",
+        "manifest"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Expose what the scaffold implements, reserves, rejects, and has not validated in machine-readable form.\n\nPRD: §18.5, §25 M0"
+    },
+    {
+      "key": "E1.T01",
+      "epic": "E1",
+      "title": "Complete the C11 AST declarator and type model",
+      "priority": 0,
+      "blockedBy": [
+        "E0.T04"
+      ],
+      "prd": [
+        "§10.6",
+        "§25 M1"
+      ],
+      "outcome": "Represent all C declarator shapes structurally, including nested pointer/array/function declarations, qualifiers, attributes, and incomplete types.",
+      "acceptance": [
+        "Golden tests cover precedence-sensitive declarations in parameters, typedefs, fields, and function pointers.",
+        "No normal compiler path stores user-derived C syntax as an opaque string.",
+        "AST can represent C11 constructs needed by M2-M7 without printer-specific hacks."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-large",
+        "ast",
+        "c11"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent all C declarator shapes structurally, including nested pointer/array/function declarations, qualifiers, attributes, and incomplete types.\n\nPRD: §10.6, §25 M1"
+    },
+    {
+      "key": "E1.T02",
+      "epic": "E1",
+      "title": "Finish expression and statement printer precedence",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T01"
+      ],
+      "prd": [
+        "§10.6",
+        "§25 M1"
+      ],
+      "outcome": "Print readable C with the minimum safe parentheses and deterministic formatting.",
+      "acceptance": [
+        "Every unary/binary/conditional/call/member/cast precedence pair has tests.",
+        "Printed fixtures compile under GCC and Clang strict C11.",
+        "Printer escaping handles identifiers, strings, characters, comments, and line directives safely."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-large",
+        "printer",
+        "ast"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Print readable C with the minimum safe parentheses and deterministic formatting.\n\nPRD: §10.6, §25 M1"
+    },
+    {
+      "key": "E1.T03",
+      "epic": "E1",
+      "title": "Implement include and declaration dependency planning",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T01"
+      ],
+      "prd": [
+        "§10.10"
+      ],
+      "outcome": "Compute forward declarations, complete-type requirements, header/source placement, and deterministic include order.",
+      "acceptance": [
+        "Pointer-only cycles use forward declarations.",
+        "By-value cycles produce an actionable diagnostic.",
+        "System/local includes are deduplicated and stable.",
+        "Headers are independently compilable."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-medium",
+        "emitter",
+        "dependencies"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Compute forward declarations, complete-type requirements, header/source placement, and deterministic include order.\n\nPRD: §10.10"
+    },
+    {
+      "key": "E1.T04",
+      "epic": "E1",
+      "title": "Implement deterministic symbol registry and naming",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T01",
+        "E0.T06"
+      ],
+      "prd": [
+        "§10.8"
+      ],
+      "outcome": "Map Haxe modules/types/fields/locals/specializations to collision-free C identifiers with readable provenance.",
+      "acceptance": [
+        "C keywords and implementation-reserved identifiers are escaped.",
+        "Overloads/generic specializations remain stable across filesystem paths and discovery order.",
+        "Collision diagnostics identify both source symbols.",
+        "Public @:cName values are validated rather than rewritten silently."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-medium",
+        "naming",
+        "abi"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Map Haxe modules/types/fields/locals/specializations to collision-free C identifiers with readable provenance.\n\nPRD: §10.8"
+    },
+    {
+      "key": "E1.T05",
+      "epic": "E1",
+      "title": "Expand HxcIR semantic core",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T01"
+      ],
+      "prd": [
+        "§10.2",
+        "§10.5"
+      ],
+      "outcome": "Represent explicit evaluation order, places/values, cleanup scopes, calls, dispatch, conversion, failure edges, and initialization independently of C syntax.",
+      "acceptance": [
+        "IR invariants are documented and validated.",
+        "IR dump is deterministic and source-position aware.",
+        "Side effects and cleanup order can be tested before C emission.",
+        "Unsupported typed AST nodes become explicit diagnostics, not opaque values."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-large",
+        "ir",
+        "semantics"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent explicit evaluation order, places/values, cleanup scopes, calls, dispatch, conversion, failure edges, and initialization independently of C syntax.\n\nPRD: §10.2, §10.5"
+    },
+    {
+      "key": "E1.T06",
+      "epic": "E1",
+      "title": "Build typed-AST collection and normalization adapter",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T05",
+        "E0.T09"
+      ],
+      "prd": [
+        "§10.3",
+        "§10.4"
+      ],
+      "outcome": "Collect all relevant Reflaxe module types into per-build normalized input while preserving source metadata and ownership.",
+      "acceptance": [
+        "Compiler-server builds reset all mutable state.",
+        "Externs, abstracts, typedefs, metadata, entry point, and module ownership are classified.",
+        "Input order changes do not change normalized output.",
+        "A typed AST inventory report is available for unsupported-node planning."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-large",
+        "reflaxe",
+        "frontend"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Collect all relevant Reflaxe module types into per-build normalized input while preserving source metadata and ownership.\n\nPRD: §10.3, §10.4"
+    },
+    {
+      "key": "E1.T07",
+      "epic": "E1",
+      "title": "Implement deterministic multi-file project emitter",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T02",
+        "E1.T03",
+        "E1.T04",
+        "E1.T06"
+      ],
+      "prd": [
+        "§10.9",
+        "§25 M1"
+      ],
+      "outcome": "Emit owned headers, sources, runtime-plan, compiler manifest, ABI placeholders, and build metadata through Reflaxe OutputManager.",
+      "acceptance": [
+        "Generated-file ownership safely deletes stale files and never touches user-owned files.",
+        "Writes are content-addressed or skipped when unchanged.",
+        "Two builds in different absolute directories are byte-identical after declared path normalization.",
+        "Scaffold marker path remains fail-closed until real lowering replaces it."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-large",
+        "emitter",
+        "determinism"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Emit owned headers, sources, runtime-plan, compiler manifest, ABI placeholders, and build metadata through Reflaxe OutputManager.\n\nPRD: §10.9, §25 M1"
+    },
+    {
+      "key": "E1.T08",
+      "epic": "E1",
+      "title": "Emit CMake, Meson, and raw manifest build seeds",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T07"
+      ],
+      "prd": [
+        "§18.3",
+        "§25 M1"
+      ],
+      "outcome": "Generate optional build-system adapters from one neutral compile/link plan.",
+      "acceptance": [
+        "CMake and Meson consume the same source/include/define/library model.",
+        "Users can ignore generated adapters and read the JSON manifest.",
+        "Paths and flags are quoted safely.",
+        "Generated projects build the AST/printer fixtures."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-medium",
+        "build",
+        "cmake",
+        "meson"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Generate optional build-system adapters from one neutral compile/link plan.\n\nPRD: §18.3, §25 M1"
+    },
+    {
+      "key": "E1.T09",
+      "epic": "E1",
+      "title": "Add determinism and stale-output adversarial tests",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T07"
+      ],
+      "prd": [
+        "§21.2",
+        "§25 M1"
+      ],
+      "outcome": "Exercise changed module order, absolute paths, removed modules, renamed symbols, line endings, and cached compiler-server runs.",
+      "acceptance": [
+        "Byte-for-byte checks pass across isolated roots.",
+        "Removed output is deleted only when listed as compiler-owned.",
+        "No timestamp, random ID, map iteration, or host path leaks into normal artifacts.",
+        "Failure reports identify first differing artifact and offset."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-medium",
+        "testing",
+        "determinism"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Exercise changed module order, absolute paths, removed modules, renamed symbols, line endings, and cached compiler-server runs.\n\nPRD: §21.2, §25 M1"
+    },
+    {
+      "key": "E1.T10",
+      "epic": "E1",
+      "title": "Create AST fixture compiler and round-trip corpus",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T02",
+        "E1.T07"
+      ],
+      "prd": [
+        "§21.1"
+      ],
+      "outcome": "Allow tests to construct C AST directly, emit translation units, and compile/link/run them without Haxe language lowering.",
+      "acceptance": [
+        "Corpus covers declarations, precedence, initializers, control flow, attributes, and header/source splits.",
+        "Both GCC and Clang are supported.",
+        "Compiler invocations and outputs are recorded for reproducibility.",
+        "The harness is reusable by later lowering tasks."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e1",
+        "effort-medium",
+        "testing",
+        "ast"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Allow tests to construct C AST directly, emit translation units, and compile/link/run them without Haxe language lowering.\n\nPRD: §21.1"
+    },
+    {
+      "key": "E2.T01",
+      "epic": "E2",
+      "title": "Map primitive Haxe types and conversions",
+      "priority": 0,
+      "blockedBy": [
+        "E1.T05",
+        "E1.T06"
+      ],
+      "prd": [
+        "§12.1"
+      ],
+      "outcome": "Define exact C representations and conversion rules for Void, Bool, Int, Float, nullability, and target ABI integers.",
+      "acceptance": [
+        "Representation table is an ADR-backed machine-readable contract.",
+        "Narrowing, widening, NaN, infinity, signed/unsigned, and nullable cases have tests.",
+        "Portable and metal mappings differ only where their source contracts require it.",
+        "No host-dependent `long` assumption leaks into ABI types."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "lowering",
+        "types"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Define exact C representations and conversion rules for Void, Bool, Int, Float, nullability, and target ABI integers.\n\nPRD: §12.1"
+    },
+    {
+      "key": "E2.T02",
+      "epic": "E2",
+      "title": "Lower constants, locals, blocks, and return",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T01",
+        "E1.T02"
+      ],
+      "prd": [
+        "§12.1",
+        "§12.14"
+      ],
+      "outcome": "Produce the first real HxcIR/C lowering for literal expressions and structured function bodies.",
+      "acceptance": [
+        "Source positions survive into diagnostics and optional line mapping.",
+        "Local names are deterministic and shadowing-safe.",
+        "Void/value returns are validated.",
+        "Unsupported expressions fail at their exact source location."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-medium",
+        "lowering",
+        "core"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Produce the first real HxcIR/C lowering for literal expressions and structured function bodies.\n\nPRD: §12.1, §12.14"
+    },
+    {
+      "key": "E2.T03",
+      "epic": "E2",
+      "title": "Lower static functions, arguments, and direct calls",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T02",
+        "E1.T04"
+      ],
+      "prd": [
+        "§12.10"
+      ],
+      "outcome": "Emit prototypes/definitions and direct calls with explicit parameter/result representations.",
+      "acceptance": [
+        "Entry-point signature is correct for executable artifacts.",
+        "Default/optional/rest arguments either lower correctly or produce scoped diagnostics.",
+        "Argument conversions and evaluation are represented in HxcIR.",
+        "Recursion and mutual recursion compile through header planning."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "lowering",
+        "functions"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Emit prototypes/definitions and direct calls with explicit parameter/result representations.\n\nPRD: §12.10"
+    },
+    {
+      "key": "E2.T04",
+      "epic": "E2",
+      "title": "Serialize Haxe evaluation order explicitly",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T03",
+        "E1.T05"
+      ],
+      "prd": [
+        "§12.2"
+      ],
+      "outcome": "Introduce temporaries and sequencing so generated behavior never depends on C's unspecified operand/argument order.",
+      "acceptance": [
+        "Adversarial side-effect fixtures cover calls, assignments, fields, indexing, short circuit, ternary, and increments.",
+        "IR shows the chosen order explicitly.",
+        "Optimization passes may remove temporaries only with a proof/test.",
+        "Differential execution matches a reference Haxe target."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "semantics",
+        "evaluation-order"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Introduce temporaries and sequencing so generated behavior never depends on C's unspecified operand/argument order.\n\nPRD: §12.2"
+    },
+    {
+      "key": "E2.T05",
+      "epic": "E2",
+      "title": "Implement UB-safe integer and floating operations",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T01",
+        "E2.T04"
+      ],
+      "prd": [
+        "§11.4",
+        "§12.1"
+      ],
+      "outcome": "Preserve Haxe arithmetic semantics without signed overflow, invalid shifts, division overflow, or unchecked conversion undefined behavior.",
+      "acceptance": [
+        "INT_MIN/-1, divide-by-zero, negative shifts, overflow, modulo, and bit operations have boundary tests.",
+        "Generated code passes UBSan where supported.",
+        "Runtime helpers are used only where direct C cannot express the contract safely.",
+        "Fast paths remain inspectable under optimization."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "semantics",
+        "ub"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Preserve Haxe arithmetic semantics without signed overflow, invalid shifts, division overflow, or unchecked conversion undefined behavior.\n\nPRD: §11.4, §12.1"
+    },
+    {
+      "key": "E2.T06",
+      "epic": "E2",
+      "title": "Lower if, short-circuit, loops, switch, and jumps",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T04"
+      ],
+      "prd": [
+        "§12.14"
+      ],
+      "outcome": "Implement structured control flow while preserving expression values, break/continue targets, and cleanup obligations.",
+      "acceptance": [
+        "Nested loops/switches and labeled internal jumps are tested.",
+        "Short-circuit operands execute exactly as Haxe specifies.",
+        "No user-observable fallthrough is introduced.",
+        "Unreachable or unsupported control flow has stable diagnostics."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "lowering",
+        "control-flow"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Implement structured control flow while preserving expression values, break/continue targets, and cleanup obligations.\n\nPRD: §12.14"
+    },
+    {
+      "key": "E2.T07",
+      "epic": "E2",
+      "title": "Lower string literals and minimal trace/Sys.println",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T03",
+        "E4.T03"
+      ],
+      "prd": [
+        "§12.3",
+        "§14.4"
+      ],
+      "outcome": "Support immutable literals and the minimal hosted output path needed by hello without pulling the full object runtime.",
+      "acceptance": [
+        "Literal bytes/length and chosen encoding match the string ADR.",
+        "NUL bytes are represented explicitly.",
+        "Sys.println handles errors according to the hosted policy.",
+        "Runtime plan records only required string/I/O slices."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-medium",
+        "lowering",
+        "strings",
+        "io"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Support immutable literals and the minimal hosted output path needed by hello without pulling the full object runtime.\n\nPRD: §12.3, §14.4"
+    },
+    {
+      "key": "E2.T08",
+      "epic": "E2",
+      "title": "Lower fixed arrays and span-based iteration",
+      "priority": 1,
+      "blockedBy": [
+        "E2.T04",
+        "E2.T05"
+      ],
+      "prd": [
+        "§12.4",
+        "§17.1"
+      ],
+      "outcome": "Support compile-time fixed arrays and c.Span/c.ConstSpan without the general Haxe Array runtime.",
+      "acceptance": [
+        "Bounds behavior is explicit by profile/build mode.",
+        "Pointer arithmetic is element-scaled and overflow-aware.",
+        "For loops over spans compile to ordinary indexed/pointer loops.",
+        "Metal no-runtime fixture links no hxrt symbol."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-medium",
+        "lowering",
+        "arrays",
+        "metal"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Support compile-time fixed arrays and c.Span/c.ConstSpan without the general Haxe Array runtime.\n\nPRD: §12.4, §17.1"
+    },
+    {
+      "key": "E2.T09",
+      "epic": "E2",
+      "title": "Implement deterministic static initialization phase",
+      "priority": 1,
+      "blockedBy": [
+        "E2.T03",
+        "E2.T06"
+      ],
+      "prd": [
+        "§12.15"
+      ],
+      "outcome": "Order module/class initialization explicitly and reject unresolvable cycles.",
+      "acceptance": [
+        "Initialization graph and reasons are inspectable.",
+        "Each initializer runs once before first required use according to the selected strategy.",
+        "Cycles have a deterministic diagnostic path.",
+        "No compiler discovery order affects output or behavior."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "semantics",
+        "initialization"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Order module/class initialization explicitly and reject unresolvable cycles.\n\nPRD: §12.15"
+    },
+    {
+      "key": "E2.T10",
+      "epic": "E2",
+      "title": "Complete and run the hello vertical slice",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T03",
+        "E2.T05",
+        "E2.T06",
+        "E2.T07",
+        "E1.T07"
+      ],
+      "prd": [
+        "§19.1",
+        "§25 M2"
+      ],
+      "outcome": "Compile examples/hello from Haxe through generated C to a native executable.",
+      "acceptance": [
+        "Exact stdout is `Hello from hxc` plus one newline.",
+        "GCC and Clang builds are warning-clean.",
+        "Output is deterministic and readable against the documented baseline.",
+        "Runtime-plan contains a source reason for every selected feature and no broad object/GC/reflection slice."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-medium",
+        "vertical-slice",
+        "example"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Compile examples/hello from Haxe through generated C to a native executable.\n\nPRD: §19.1, §25 M2"
+    },
+    {
+      "key": "E2.T11",
+      "epic": "E2",
+      "title": "Create primitive differential and sanitizer suite",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T10",
+        "E0.T09"
+      ],
+      "prd": [
+        "§21.5",
+        "§21.6"
+      ],
+      "outcome": "Run generated C against a selected Haxe reference target over edge cases and randomized primitive programs.",
+      "acceptance": [
+        "Seeded randomized cases are reproducible.",
+        "Semantic mismatches minimize to stored fixtures.",
+        "ASan/UBSan are clean on supported hosts.",
+        "Known intentional divergences require explicit ledger entries and tests."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e2",
+        "effort-large",
+        "testing",
+        "differential",
+        "sanitizer"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Run generated C against a selected Haxe reference target over edge cases and randomized primitive programs.\n\nPRD: §21.5, §21.6"
+    },
+    {
+      "key": "E3.T01",
+      "epic": "E3",
+      "title": "Lower anonymous structures and value structs",
+      "priority": 1,
+      "blockedBy": [
+        "E2.T11",
+        "E1.T03"
+      ],
+      "prd": [
+        "§12.5",
+        "§17.2"
+      ],
+      "outcome": "Represent structurally known records as named/deduplicated C structs with clear value/reference behavior.",
+      "acceptance": [
+        "Field order/layout policy is deterministic.",
+        "Anonymous structural equality does not accidentally become C nominal incompatibility.",
+        "By-value copies and address-taking are explicit.",
+        "Metal @:cStruct validation rejects unsupported layout combinations."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "structs"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent structurally known records as named/deduplicated C structs with clear value/reference behavior.\n\nPRD: §12.5, §17.2"
+    },
+    {
+      "key": "E3.T02",
+      "epic": "E3",
+      "title": "Lower Haxe enums as tagged unions",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T01"
+      ],
+      "prd": [
+        "§12.6"
+      ],
+      "outcome": "Emit readable discriminants and payload unions, including recursive and generic cases.",
+      "acceptance": [
+        "Nullary constructors may optimize to enums when ABI-safe.",
+        "Payload access is tag-checked in safe/debug configurations.",
+        "Pattern matches are exhaustive and compile to structured switch code.",
+        "Recursive representation avoids illegal infinitely sized C types."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "enums"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Emit readable discriminants and payload unions, including recursive and generic cases.\n\nPRD: §12.6"
+    },
+    {
+      "key": "E3.T03",
+      "epic": "E3",
+      "title": "Implement deterministic generic monomorphization",
+      "priority": 1,
+      "blockedBy": [
+        "E2.T11",
+        "E1.T04"
+      ],
+      "prd": [
+        "§12.9"
+      ],
+      "outcome": "Specialize reachable generic code/types by normalized type arguments and share equivalent instances.",
+      "acceptance": [
+        "Specialization keys are stable and collision-free.",
+        "Recursive generic discovery terminates.",
+        "Code-size and specialization reports are emitted.",
+        "Unsupported dynamic/open generic cases have precise diagnostics or explicit runtime strategy."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "generics"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Specialize reachable generic code/types by normalized type arguments and share equivalent instances.\n\nPRD: §12.9"
+    },
+    {
+      "key": "E3.T04",
+      "epic": "E3",
+      "title": "Define and emit class instance layouts",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T01",
+        "E3.T03"
+      ],
+      "prd": [
+        "§12.7"
+      ],
+      "outcome": "Lower fields, inheritance prefix/layout, object headers, and null/reference representation according to profile/runtime needs.",
+      "acceptance": [
+        "Layout has compile-time assertions where ABI relevant.",
+        "Base/derived conversions are safe and inspectable.",
+        "Portable metadata is selective; metal value/opaque representations remain available.",
+        "Private implementation layout never leaks into exported ABI by default."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "classes"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Lower fields, inheritance prefix/layout, object headers, and null/reference representation according to profile/runtime needs.\n\nPRD: §12.7"
+    },
+    {
+      "key": "E3.T05",
+      "epic": "E3",
+      "title": "Lower constructors, super calls, and field initialization",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T04",
+        "E2.T09"
+      ],
+      "prd": [
+        "§12.7",
+        "§12.15"
+      ],
+      "outcome": "Preserve Haxe construction order, default field initialization, and failure cleanup.",
+      "acceptance": [
+        "Super/field/body ordering matches Haxe semantics.",
+        "Partially initialized objects are cleaned safely on failure.",
+        "Empty/trivial constructors optimize away where proven.",
+        "Constructor cycles and unsupported native layouts diagnose clearly."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "constructors"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Preserve Haxe construction order, default field initialization, and failure cleanup.\n\nPRD: §12.7, §12.15"
+    },
+    {
+      "key": "E3.T06",
+      "epic": "E3",
+      "title": "Implement virtual method dispatch and override validation",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T04",
+        "E3.T05"
+      ],
+      "prd": [
+        "§12.7"
+      ],
+      "outcome": "Emit minimal vtables only for reachable polymorphic calls and preserve override signatures.",
+      "acceptance": [
+        "Nonvirtual/final/direct calls remain direct.",
+        "Vtable slots are deterministic across modules.",
+        "Override variance/representation mismatches are rejected.",
+        "Dispatch reports explain each indirect call."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "dispatch"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Emit minimal vtables only for reachable polymorphic calls and preserve override signatures.\n\nPRD: §12.7"
+    },
+    {
+      "key": "E3.T07",
+      "epic": "E3",
+      "title": "Implement interface tables and casts",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T06"
+      ],
+      "prd": [
+        "§12.8"
+      ],
+      "outcome": "Represent reachable interfaces with compact itables or equivalent descriptors and safe cast checks.",
+      "acceptance": [
+        "Multiple interfaces and inherited interfaces work.",
+        "Failed casts follow Haxe semantics.",
+        "Unused interfaces emit no tables.",
+        "Interface method calls remain ABI-internal unless explicitly exported."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "interfaces"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent reachable interfaces with compact itables or equivalent descriptors and safe cast checks.\n\nPRD: §12.8"
+    },
+    {
+      "key": "E3.T08",
+      "epic": "E3",
+      "title": "Lower function values and closures",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T03",
+        "E4.T02"
+      ],
+      "prd": [
+        "§12.10"
+      ],
+      "outcome": "Represent function values as typed function/context pairs and allocate environments only when required.",
+      "acceptance": [
+        "Nonescaping captures can live on stack/region.",
+        "Escaping closures retain captured values safely.",
+        "Recursive closures work.",
+        "Calling convention and cleanup are represented explicitly."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "lowering",
+        "closures"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent function values as typed function/context pairs and allocate environments only when required.\n\nPRD: §12.10"
+    },
+    {
+      "key": "E3.T09",
+      "epic": "E3",
+      "title": "Add devirtualization and escape-analysis passes",
+      "priority": 2,
+      "blockedBy": [
+        "E3.T06",
+        "E3.T07",
+        "E3.T08"
+      ],
+      "prd": [
+        "§13.4",
+        "§21.7"
+      ],
+      "outcome": "Prove and apply direct-call, stack-allocation, scalar-replacement, and dead-metadata optimizations without changing semantics.",
+      "acceptance": [
+        "Every optimization has a reportable proof/reason and opt-out debug mode.",
+        "Differential suite runs with passes on/off.",
+        "Nonescaping closure/object benchmark performs zero heap allocations.",
+        "Optimization never changes public ABI artifacts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "optimization",
+        "analysis"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Prove and apply direct-call, stack-allocation, scalar-replacement, and dead-metadata optimizations without changing semantics.\n\nPRD: §13.4, §21.7"
+    },
+    {
+      "key": "E3.T10",
+      "epic": "E3",
+      "title": "Build aggregate/generic/class semantic corpus",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T02",
+        "E3.T03",
+        "E3.T05",
+        "E3.T07",
+        "E3.T08"
+      ],
+      "prd": [
+        "§21"
+      ],
+      "outcome": "Create positive, negative, recursive, cross-module, and differential fixtures for M3 semantics.",
+      "acceptance": [
+        "Recursive enums, generic containers, inheritance, interfaces, closures, and anonymous records are covered.",
+        "GCC/Clang warning and sanitizer gates pass.",
+        "Generated C snapshots are reviewed for readability.",
+        "M3 capability manifest is updated from evidence."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e3",
+        "effort-large",
+        "testing",
+        "m3"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Create positive, negative, recursive, cross-module, and differential fixtures for M3 semantics.\n\nPRD: §21"
+    },
+    {
+      "key": "E4.T01",
+      "epic": "E4",
+      "title": "Implement runtime feature graph and selective packaging",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T07",
+        "E0.T10"
+      ],
+      "prd": [
+        "§13.1"
+      ],
+      "outcome": "Turn runtime feature IDs/dependencies/reasons into deterministic source/header/link selection.",
+      "acceptance": [
+        "Feature closure is deterministic and cycle-checked.",
+        "Every selected feature has at least one source reason.",
+        "Unselected runtime files/symbols are absent from build plan.",
+        "Manual overrides are validated against profile/runtime policy."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-medium",
+        "runtime",
+        "planner"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Turn runtime feature IDs/dependencies/reasons into deterministic source/header/link selection.\n\nPRD: §13.1"
+    },
+    {
+      "key": "E4.T02",
+      "epic": "E4",
+      "title": "Harden allocator ABI and custom allocator integration",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T01",
+        "E0.T05"
+      ],
+      "prd": [
+        "§13.2"
+      ],
+      "outcome": "Finalize aligned allocation/reallocation/release contracts for hosted, freestanding, and exported ownership.",
+      "acceptance": [
+        "Overflow/alignment/zero-size behavior is specified and tested.",
+        "Custom allocator fixture works without libc allocation.",
+        "Allocator identity follows allocations that cross boundaries.",
+        "C and C++ ABI/layout tests pass on supported platforms."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "runtime",
+        "allocator"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Finalize aligned allocation/reallocation/release contracts for hosted, freestanding, and exported ownership.\n\nPRD: §13.2"
+    },
+    {
+      "key": "E4.T03",
+      "epic": "E4",
+      "title": "Implement string runtime and encoding contract",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T02",
+        "E0.T01"
+      ],
+      "prd": [
+        "§12.3",
+        "§13",
+        "ADR 0004"
+      ],
+      "outcome": "Provide immutable/mutable string primitives, UTF policy, hashing, comparison, slicing, conversion, and C boundary views.",
+      "acceptance": [
+        "Embedded NUL and invalid encoding policy are tested.",
+        "Borrowed CString lifetime and owned conversion are explicit.",
+        "Common literal/concat/compare paths are direct and allocation-aware.",
+        "String feature can link without object/GC/reflection when possible."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "runtime",
+        "string"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Provide immutable/mutable string primitives, UTF policy, hashing, comparison, slicing, conversion, and C boundary views.\n\nPRD: §12.3, §13, ADR 0004"
+    },
+    {
+      "key": "E4.T04",
+      "epic": "E4",
+      "title": "Implement Haxe Array runtime slice",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T02",
+        "E2.T01"
+      ],
+      "prd": [
+        "§12.4"
+      ],
+      "outcome": "Support resizable typed arrays with correct length/capacity, bounds, mutation, iteration, and element retention.",
+      "acceptance": [
+        "Primitive and reference element arrays are covered.",
+        "Growth overflow and allocation failure are safe.",
+        "Array operations preserve Haxe semantics under aliasing.",
+        "Metal fixed arrays/spans do not depend on this slice."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "runtime",
+        "array"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Support resizable typed arrays with correct length/capacity, bounds, mutation, iteration, and element retention.\n\nPRD: §12.4"
+    },
+    {
+      "key": "E4.T05",
+      "epic": "E4",
+      "title": "Implement object/type descriptor core",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T04",
+        "E4.T02"
+      ],
+      "prd": [
+        "§13.1",
+        "§12.12"
+      ],
+      "outcome": "Define minimal portable object headers/descriptors needed by collection, dispatch, reflection, and cleanup.",
+      "acceptance": [
+        "Descriptors are immutable/deterministic and only emitted when reachable.",
+        "Object size/alignment/trace/finalization information is validated.",
+        "Metal no-runtime types have no hidden header.",
+        "Descriptor ABI is internal and versioned."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "runtime",
+        "object"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Define minimal portable object headers/descriptors needed by collection, dispatch, reflection, and cleanup.\n\nPRD: §13.1, §12.12"
+    },
+    {
+      "key": "E4.T06",
+      "epic": "E4",
+      "title": "Implement selected portable collector",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T05",
+        "E0.T01"
+      ],
+      "prd": [
+        "§13.3",
+        "ADR 0005"
+      ],
+      "outcome": "Implement the ratified collector with precise roots/fields, cycles, allocation pressure, and deterministic integration points.",
+      "acceptance": [
+        "Cyclic graphs are reclaimed.",
+        "Interior/foreign pointers follow documented restrictions.",
+        "Stack/global/thread roots are correct on supported platforms.",
+        "Collector stress suite is sanitizer-clean and reports pauses/allocations."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-xlarge",
+        "runtime",
+        "gc"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Implement the ratified collector with precise roots/fields, cycles, allocation pressure, and deterministic integration points.\n\nPRD: §13.3, ADR 0005"
+    },
+    {
+      "key": "E4.T07",
+      "epic": "E4",
+      "title": "Implement dynamic value representation and operations",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T05",
+        "E4.T06",
+        "E3.T03"
+      ],
+      "prd": [
+        "§12.11"
+      ],
+      "outcome": "Box only source sites that require Dynamic/heterogeneous representation and implement conversions, fields, calls, equality, and errors.",
+      "acceptance": [
+        "Typed code paths do not route through Dynamic.",
+        "Tag/payload representation is UB-safe.",
+        "Boxing reasons appear in inspection reports.",
+        "Differential fixtures cover primitives, objects, enums, functions, and null."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-xlarge",
+        "runtime",
+        "dynamic"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Box only source sites that require Dynamic/heterogeneous representation and implement conversions, fields, calls, equality, and errors.\n\nPRD: §12.11"
+    },
+    {
+      "key": "E4.T08",
+      "epic": "E4",
+      "title": "Implement selective reflection and RTTI slices",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T07",
+        "E3.T07"
+      ],
+      "prd": [
+        "§12.12"
+      ],
+      "outcome": "Support Type/Reflect/runtime type information only for operations and types proven reachable.",
+      "acceptance": [
+        "Feature-level and type-level reflection reachability are inspectable.",
+        "Metadata not used by the program is absent.",
+        "Field lookup/call/create semantics match Haxe for supported cases.",
+        "No-runtime builds receive reasoned errors for reflective operations."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "runtime",
+        "reflection"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Support Type/Reflect/runtime type information only for operations and types proven reachable.\n\nPRD: §12.12"
+    },
+    {
+      "key": "E4.T09",
+      "epic": "E4",
+      "title": "Implement exceptions, catch, finally, and cleanup regions",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T02",
+        "E2.T06",
+        "E3.T05"
+      ],
+      "prd": [
+        "§12.13",
+        "§13.6"
+      ],
+      "outcome": "Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI.",
+      "acceptance": [
+        "Nested try/catch/finally and rethrow order matches Haxe.",
+        "Resources and partially initialized values clean up exactly once.",
+        "Result lowering is used where statically/legal and reported.",
+        "General runtime exception mechanism is portable across supported compilers or scoped by platform."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-xlarge",
+        "runtime",
+        "exceptions"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI.\n\nPRD: §12.13, §13.6"
+    },
+    {
+      "key": "E4.T10",
+      "epic": "E4",
+      "title": "Implement no-runtime eligibility proof and diagnostics",
+      "priority": 0,
+      "blockedBy": [
+        "E2.T11",
+        "E4.T01"
+      ],
+      "prd": [
+        "§9.4",
+        "§13.5"
+      ],
+      "outcome": "Decide whether a whole program can honor hxc_runtime=none and explain every blocker with source provenance.",
+      "acceptance": [
+        "Eligible primitive/span fixtures link with no hxrt symbols or files.",
+        "Ineligible programs fail before native link with sorted blockers.",
+        "No helper is selected merely because a type was seen but not used.",
+        "Proof is emitted in runtime-plan JSON."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "analysis",
+        "no-runtime"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Decide whether a whole program can honor hxc_runtime=none and explain every blocker with source provenance.\n\nPRD: §9.4, §13.5"
+    },
+    {
+      "key": "E4.T11",
+      "epic": "E4",
+      "title": "Version runtime ABI and feature manifests",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T01",
+        "E4.T02"
+      ],
+      "prd": [
+        "§13.1",
+        "§16.8"
+      ],
+      "outcome": "Define internal/public runtime ABI compatibility, feature schema versions, and generated-code checks.",
+      "acceptance": [
+        "Generated code rejects incompatible runtime major versions.",
+        "Feature manifests are machine-diffable.",
+        "Public exported APIs do not accidentally expose unstable runtime structs.",
+        "Release artifacts include runtime source/build provenance."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-medium",
+        "runtime",
+        "abi"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Define internal/public runtime ABI compatibility, feature schema versions, and generated-code checks.\n\nPRD: §13.1, §16.8"
+    },
+    {
+      "key": "E4.T12",
+      "epic": "E4",
+      "title": "Create runtime stress, failure, and sanitizer suite",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T03",
+        "E4.T04",
+        "E4.T06",
+        "E4.T09"
+      ],
+      "prd": [
+        "§21.6"
+      ],
+      "outcome": "Exercise allocation failure, cycles, deep graphs, strings/arrays, exception cleanup, threads where applicable, and corrupted inputs.",
+      "acceptance": [
+        "ASan/UBSan/LSan and platform equivalents are clean.",
+        "Deterministic fault injection reaches every allocation site class.",
+        "Stress seeds and limits are reproducible.",
+        "Runtime test failures identify selected feature/version/configuration."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e4",
+        "effort-large",
+        "testing",
+        "runtime",
+        "sanitizer"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Exercise allocation failure, cycles, deep graphs, strings/arrays, exception cleanup, threads where applicable, and corrupted inputs.\n\nPRD: §21.6"
+    },
+    {
+      "key": "E5.T01",
+      "epic": "E5",
+      "title": "Generate and maintain the stdlib ownership/parity ledger",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T09",
+        "E4.T01"
+      ],
+      "prd": [
+        "§14.2",
+        "§14.3"
+      ],
+      "outcome": "Inventory Haxe std modules/APIs and assign direct lowering, target override, runtime helper, native adapter, unsupported, and test provenance.",
+      "acceptance": [
+        "Ledger is generated/checkable against the pinned Haxe std tree.",
+        "Every unsupported/partial API has a linked Beads issue and diagnostic policy.",
+        "Rows include profile/environment/runtime/test ownership.",
+        "CI prevents unreviewed ledger drift on Haxe upgrades."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-large",
+        "stdlib",
+        "ledger"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Inventory Haxe std modules/APIs and assign direct lowering, target override, runtime helper, native adapter, unsupported, and test provenance.\n\nPRD: §14.2, §14.3"
+    },
+    {
+      "key": "E5.T02",
+      "epic": "E5",
+      "title": "Implement String and Unicode stdlib parity",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T03",
+        "E5.T01"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support String, StringBuf, Unicode/code-point operations, and encoding conversions to the agreed compatibility level.",
+      "acceptance": [
+        "Pinned upstream tests for the scope pass or have explicit ledger gaps.",
+        "ASCII fast paths and Unicode correctness are both tested.",
+        "Invalid sequences and indexing semantics are documented.",
+        "C boundary conversions expose ownership and failure."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "string",
+        "unicode"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Support String, StringBuf, Unicode/code-point operations, and encoding conversions to the agreed compatibility level.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T03",
+      "epic": "E5",
+      "title": "Implement core collection parity",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T04",
+        "E3.T03",
+        "E5.T01"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support Array, Vector, List, StringMap, IntMap, ObjectMap, EnumValueMap, and iterators with typed representations.",
+      "acceptance": [
+        "Collection semantics and mutation during iteration match Haxe where specified.",
+        "Generic specialization avoids universal boxing when types are known.",
+        "Hash/equality behavior is explicit for dynamic/object keys.",
+        "Upstream and adversarial tests pass."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "collections"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Support Array, Vector, List, StringMap, IntMap, ObjectMap, EnumValueMap, and iterators with typed representations.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T04",
+      "epic": "E5",
+      "title": "Implement Bytes, Buffer, and core I/O parity",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T04",
+        "E5.T01"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support haxe.io.Bytes/BytesBuffer/Input/Output and endian/encoding operations with safe bounds and partial I/O.",
+      "acceptance": [
+        "Binary round-trips and boundary failures match Haxe.",
+        "Large lengths cannot overflow native allocation or pointer arithmetic.",
+        "Hosted and custom stream adapters are separable.",
+        "No hidden text conversion occurs in byte APIs."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "bytes",
+        "io"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Support haxe.io.Bytes/BytesBuffer/Input/Output and endian/encoding operations with safe bounds and partial I/O.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T05",
+      "epic": "E5",
+      "title": "Implement Std, Math, Type, and Reflect parity",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T07",
+        "E4.T08",
+        "E5.T01"
+      ],
+      "prd": [
+        "§14"
+      ],
+      "outcome": "Cover core conversion, math, type inspection/creation, and reflection surfaces with selective runtime use.",
+      "acceptance": [
+        "Math edge cases follow Haxe target contract.",
+        "Std.string/parse/casts have differential tests.",
+        "Type/Reflect only retain necessary descriptors.",
+        "No-runtime diagnostics identify reflective dependency chains."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "core",
+        "reflection"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Cover core conversion, math, type inspection/creation, and reflection surfaces with selective runtime use.\n\nPRD: §14"
+    },
+    {
+      "key": "E5.T06",
+      "epic": "E5",
+      "title": "Implement JSON and serialization support",
+      "priority": 1,
+      "blockedBy": [
+        "E5.T02",
+        "E5.T03",
+        "E4.T07"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support haxe.Json parse/stringify and required serialization primitives with bounded resource behavior.",
+      "acceptance": [
+        "Round-trip and malformed-input corpus passes.",
+        "Depth/size limits and error positions are explicit.",
+        "Typed fast paths do not require reflection where generated serializers suffice.",
+        "Fuzzing hooks are available."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-large",
+        "stdlib",
+        "json"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Support haxe.Json parse/stringify and required serialization primitives with bounded resource behavior.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T07",
+      "epic": "E5",
+      "title": "Implement regular-expression support",
+      "priority": 2,
+      "blockedBy": [
+        "E5.T02",
+        "E5.T04"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Choose/integrate a regex backend or scoped implementation that meets Haxe EReg semantics on supported platforms.",
+      "acceptance": [
+        "Backend/license/feature mapping is documented.",
+        "EReg matching, groups, replace, split, and global state tests pass.",
+        "Unsupported syntax is detected deterministically.",
+        "Runtime feature and native dependency are explicit."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-large",
+        "stdlib",
+        "regex"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Choose/integrate a regex backend or scoped implementation that meets Haxe EReg semantics on supported platforms.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T08",
+      "epic": "E5",
+      "title": "Implement Date and time adapters",
+      "priority": 2,
+      "blockedBy": [
+        "E5.T01",
+        "E5.T02"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support Date/timezone/timestamp operations through portable and platform adapters.",
+      "acceptance": [
+        "UTC/local/DST boundary corpus is deterministic with controlled timezone data.",
+        "Precision/range conversions are overflow-safe.",
+        "Freestanding/WASI limitations are explicit.",
+        "Clock APIs distinguish wall and monotonic time."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-large",
+        "stdlib",
+        "time"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Support Date/timezone/timestamp operations through portable and platform adapters.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T09",
+      "epic": "E5",
+      "title": "Implement filesystem, environment, and process adapters",
+      "priority": 1,
+      "blockedBy": [
+        "E5.T04",
+        "E5.T01"
+      ],
+      "prd": [
+        "§14.4",
+        "§12.18"
+      ],
+      "outcome": "Support sys.FileSystem, sys.io.File, environment, command/process, paths, and errors on hosted targets.",
+      "acceptance": [
+        "POSIX and Windows path/error behavior has platform tests.",
+        "Argument/environment escaping does not invoke a shell unless requested.",
+        "WASI/freestanding capability errors are explicit.",
+        "Resources close on success and failure."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "sys"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Support sys.FileSystem, sys.io.File, environment, command/process, paths, and errors on hosted targets.\n\nPRD: §14.4, §12.18"
+    },
+    {
+      "key": "E5.T10",
+      "epic": "E5",
+      "title": "Implement socket/network adapters",
+      "priority": 2,
+      "blockedBy": [
+        "E5.T04",
+        "E5.T09"
+      ],
+      "prd": [
+        "§14.4"
+      ],
+      "outcome": "Support the scoped sys.net surface with portable address/error/blocking semantics.",
+      "acceptance": [
+        "TCP/UDP/local resolution fixtures run on supported CI.",
+        "Timeout/nonblocking behavior is explicit.",
+        "Windows socket initialization/cleanup is correct.",
+        "No network tests rely on external internet services."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "network"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Support the scoped sys.net surface with portable address/error/blocking semantics.\n\nPRD: §14.4"
+    },
+    {
+      "key": "E5.T11",
+      "epic": "E5",
+      "title": "Implement threads, synchronization, TLS, and atomics",
+      "priority": 2,
+      "blockedBy": [
+        "E4.T06",
+        "E4.T12",
+        "E5.T01"
+      ],
+      "prd": [
+        "§12.17",
+        "§14.4"
+      ],
+      "outcome": "Map Haxe thread primitives to C11/platform threads with collector/root and memory-model integration.",
+      "acceptance": [
+        "Mutex/condition/semaphore/thread-local/atomic semantics are tested.",
+        "Collector sees thread roots safely.",
+        "Data-race tests use TSan where available.",
+        "Single-thread/freestanding builds do not link thread support."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-xlarge",
+        "stdlib",
+        "threads",
+        "atomics"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Map Haxe thread primitives to C11/platform threads with collector/root and memory-model integration.\n\nPRD: §12.17, §14.4"
+    },
+    {
+      "key": "E5.T12",
+      "epic": "E5",
+      "title": "Integrate upstream Haxe std tests and parity dashboard",
+      "priority": 1,
+      "blockedBy": [
+        "E5.T02",
+        "E5.T03",
+        "E5.T04",
+        "E5.T05",
+        "E5.T06",
+        "E5.T09"
+      ],
+      "prd": [
+        "§14.5",
+        "§21.5"
+      ],
+      "outcome": "Run the pinned upstream suite with explicit selection, results, gaps, and differential comparisons.",
+      "acceptance": [
+        "No silent skip is possible.",
+        "Dashboard reports pass/fail/unsupported by module, profile, environment, and platform.",
+        "Every failure links to a Beads issue or approved divergence.",
+        "Release gates consume archived machine-readable results."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e5",
+        "effort-large",
+        "testing",
+        "stdlib",
+        "dashboard"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Run the pinned upstream suite with explicit selection, results, gaps, and differential comparisons.\n\nPRD: §14.5, §21.5"
+    },
+    {
+      "key": "E6.T01",
+      "epic": "E6",
+      "title": "Design and implement Clang-backed bindgen driver",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T07",
+        "E8.T01"
+      ],
+      "prd": [
+        "§15.1",
+        "§15.3"
+      ],
+      "outcome": "Invoke Clang with exact target/defines/includes/flags and capture a versioned semantic declaration model.",
+      "acceptance": [
+        "Invocation is reproducible and inspectable.",
+        "Header parse diagnostics preserve source files/lines.",
+        "Clang version/target/flags enter the binding lock.",
+        "No regex parser is authoritative for ABI facts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-xlarge",
+        "bindgen",
+        "clang"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Invoke Clang with exact target/defines/includes/flags and capture a versioned semantic declaration model.\n\nPRD: §15.1, §15.3"
+    },
+    {
+      "key": "E6.T02",
+      "epic": "E6",
+      "title": "Model preprocessor configuration and header entry sets",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T01"
+      ],
+      "prd": [
+        "§15.2",
+        "§15.3"
+      ],
+      "outcome": "Represent translation-unit inputs, defines, include ordering, target triple, language mode, sysroot, and conditional declarations.",
+      "acceptance": [
+        "Equivalent invocations normalize to stable configuration hashes.",
+        "Conflicting defines/includes are diagnosed.",
+        "Generated wrappers include only declarations reachable from configured roots.",
+        "Configuration provenance appears in generated comments/lock."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-large",
+        "bindgen",
+        "preprocessor"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Represent translation-unit inputs, defines, include ordering, target triple, language mode, sysroot, and conditional declarations.\n\nPRD: §15.2, §15.3"
+    },
+    {
+      "key": "E6.T03",
+      "epic": "E6",
+      "title": "Map C scalars, enums, typedefs, qualifiers, and constants",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T01",
+        "E2.T01"
+      ],
+      "prd": [
+        "§15.4",
+        "§15.5"
+      ],
+      "outcome": "Generate exact raw Haxe extern representations for primitive ABI declarations.",
+      "acceptance": [
+        "Integer width/signedness follows target ABI, not spelling assumptions.",
+        "Anonymous/named enums and macro constants have deterministic names.",
+        "Const/volatile/restrict and typedef identity are preserved where meaningful.",
+        "Compiled probes validate size/range/value mappings."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-large",
+        "bindgen",
+        "types"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Generate exact raw Haxe extern representations for primitive ABI declarations.\n\nPRD: §15.4, §15.5"
+    },
+    {
+      "key": "E6.T04",
+      "epic": "E6",
+      "title": "Map structs, unions, anonymous members, bitfields, and packing",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T03",
+        "E1.T01"
+      ],
+      "prd": [
+        "§15.4"
+      ],
+      "outcome": "Represent complete/incomplete aggregates and verify layout through Clang facts and generated C assertions/probes.",
+      "acceptance": [
+        "Size/alignment/offset/bitfield fixtures pass across supported targets.",
+        "Flexible arrays and packed/aligned declarations are explicit.",
+        "Unsupported nonportable layout produces a precise diagnostic.",
+        "Opaque handles remain opaque by default."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-xlarge",
+        "bindgen",
+        "layout"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Represent complete/incomplete aggregates and verify layout through Clang facts and generated C assertions/probes.\n\nPRD: §15.4"
+    },
+    {
+      "key": "E6.T05",
+      "epic": "E6",
+      "title": "Map functions, function pointers, callbacks, and variadics",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T03",
+        "E6.T04",
+        "E3.T08"
+      ],
+      "prd": [
+        "§15.4"
+      ],
+      "outcome": "Generate callable externs with correct calling convention, nullability hooks, callback lifetime, and scoped variadic support.",
+      "acceptance": [
+        "cdecl/stdcall/platform conventions are tested where available.",
+        "Callback trampolines retain/release environments safely.",
+        "Variadics require configured typed wrappers unless a safe direct form exists.",
+        "errno/out-parameter/error conventions remain available to wrapper mapping."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-xlarge",
+        "bindgen",
+        "functions",
+        "callbacks"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Generate callable externs with correct calling convention, nullability hooks, callback lifetime, and scoped variadic support.\n\nPRD: §15.4"
+    },
+    {
+      "key": "E6.T06",
+      "epic": "E6",
+      "title": "Emit deterministic raw extern modules",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T02",
+        "E6.T03",
+        "E6.T04",
+        "E6.T05"
+      ],
+      "prd": [
+        "§15.5"
+      ],
+      "outcome": "Write minimally transformed, mechanically reviewable Haxe externs plus native build metadata.",
+      "acceptance": [
+        "Regeneration from identical input is byte-identical.",
+        "User-authored wrappers live separately and are never overwritten.",
+        "Names have stable collision handling and source comments.",
+        "Generated extern package type-checks under Haxe and the target."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-large",
+        "bindgen",
+        "emitter"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Write minimally transformed, mechanically reviewable Haxe externs plus native build metadata.\n\nPRD: §15.5"
+    },
+    {
+      "key": "E6.T07",
+      "epic": "E6",
+      "title": "Implement declarative safe-wrapper mapping",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T06",
+        "E4.T03",
+        "E4.T04"
+      ],
+      "prd": [
+        "§15.6"
+      ],
+      "outcome": "Generate optional idiomatic wrappers from explicit ownership, nullability, length, error, string, handle, and lifetime mappings.",
+      "acceptance": [
+        "Mapping file is schema-validated and versioned.",
+        "Unsafe raw layer remains accessible but clearly separated.",
+        "Ownership transfer and destructor selection are checked.",
+        "Wrapper tests include allocation failure and null/error paths."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-xlarge",
+        "bindgen",
+        "wrappers",
+        "ownership"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Generate optional idiomatic wrappers from explicit ownership, nullability, length, error, string, handle, and lifetime mappings.\n\nPRD: §15.6"
+    },
+    {
+      "key": "E6.T08",
+      "epic": "E6",
+      "title": "Generate binding locks, ABI probes, and drift reports",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T06",
+        "E6.T07"
+      ],
+      "prd": [
+        "§15.5",
+        "§16.8"
+      ],
+      "outcome": "Record inputs and ABI facts so dependency/header changes are detected before runtime corruption.",
+      "acceptance": [
+        "Lock includes header digests, flags, target, Clang version, declaration/layout hashes, and mappings.",
+        "Compiled probes compare size/alignment/offset/calling assumptions.",
+        "Drift report categorizes source-only, wrapper, and ABI-breaking changes.",
+        "CI can require explicit lock update."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-large",
+        "bindgen",
+        "abi",
+        "lock"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Record inputs and ABI facts so dependency/header changes are detected before runtime corruption.\n\nPRD: §15.5, §16.8"
+    },
+    {
+      "key": "E6.T09",
+      "epic": "E6",
+      "title": "Support pkg-config and compile_commands inputs",
+      "priority": 2,
+      "blockedBy": [
+        "E6.T02",
+        "E8.T04"
+      ],
+      "prd": [
+        "§15.2"
+      ],
+      "outcome": "Resolve exact include/define/link context from common native build metadata without hiding the final command.",
+      "acceptance": [
+        "pkg-config static/dynamic modes are distinguished.",
+        "compile_commands selection is deterministic for multiple entries.",
+        "Resolved flags are normalized and inspectable.",
+        "Environment-dependent paths are recorded with reproducibility warnings."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-medium",
+        "bindgen",
+        "build-integration"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Resolve exact include/define/link context from common native build metadata without hiding the final command.\n\nPRD: §15.2"
+    },
+    {
+      "key": "E6.T10",
+      "epic": "E6",
+      "title": "Generate supported C++ extern-C shims",
+      "priority": 2,
+      "blockedBy": [
+        "E6.T05",
+        "E6.T07"
+      ],
+      "prd": [
+        "§15.8",
+        "ADR 0003"
+      ],
+      "outcome": "Wrap configured C++ constructors/methods/destructors into opaque C handles and exception-safe C functions.",
+      "acceptance": [
+        "No C++ class/template/STL/exceptions appear in generated public C header.",
+        "All C++ exceptions are caught and mapped to configured errors.",
+        "Ownership and destructor paths are tested.",
+        "Unsupported overload/template/lifetime cases are diagnosed rather than guessed."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-xlarge",
+        "bindgen",
+        "cpp",
+        "shim"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Wrap configured C++ constructors/methods/destructors into opaque C handles and exception-safe C functions.\n\nPRD: §15.8, ADR 0003"
+    },
+    {
+      "key": "E6.T11",
+      "epic": "E6",
+      "title": "Add advisory AI mapping workflow without ABI authority",
+      "priority": 2,
+      "blockedBy": [
+        "E6.T07",
+        "E6.T08"
+      ],
+      "prd": [
+        "§15.7"
+      ],
+      "outcome": "Allow an LLM to propose names/docs/ownership mappings as a reviewable patch while deterministic parsed facts remain authoritative.",
+      "acceptance": [
+        "AI is off by default and never runs during reproducible build/regeneration.",
+        "Prompt/context/output provenance is recorded when used.",
+        "Suggestions cannot alter sizes, calling conventions, layouts, or declarations without deterministic validation.",
+        "Human review diff clearly separates suggestions from facts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-medium",
+        "bindgen",
+        "ai",
+        "advisory"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Allow an LLM to propose names/docs/ownership mappings as a reviewable patch while deterministic parsed facts remain authoritative.\n\nPRD: §15.7"
+    },
+    {
+      "key": "E6.T12",
+      "epic": "E6",
+      "title": "Prove bindgen with SQLite and zlib-class fixtures",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T08",
+        "E6.T09"
+      ],
+      "prd": [
+        "§15",
+        "§25 M6"
+      ],
+      "outcome": "Regenerate and use representative stable C libraries covering opaque handles, callbacks, buffers, errors, enums, and build metadata.",
+      "acceptance": [
+        "Clean regeneration produces no diff.",
+        "Haxe examples compile/link/run against system or pinned fixture libraries.",
+        "Layout/ABI probes pass.",
+        "Unsupported platform differences are explicit in locks and CI matrix."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e6",
+        "effort-large",
+        "bindgen",
+        "examples"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Regenerate and use representative stable C libraries covering opaque handles, callbacks, buffers, errors, enums, and build metadata.\n\nPRD: §15, §25 M6"
+    },
+    {
+      "key": "E7.T01",
+      "epic": "E7",
+      "title": "Discover and validate exported declarations",
+      "priority": 1,
+      "blockedBy": [
+        "E3.T10",
+        "E0.T06"
+      ],
+      "prd": [
+        "§16.1"
+      ],
+      "outcome": "Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names.",
+      "acceptance": [
+        "Duplicate/invalid names and visibility conflicts are source-positioned.",
+        "Only explicitly exported declarations enter public ABI.",
+        "Generic/instance exports require concrete wrapper shape.",
+        "Export inventory is inspectable before C generation."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-large",
+        "export",
+        "metadata"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names.\n\nPRD: §16.1"
+    },
+    {
+      "key": "E7.T02",
+      "epic": "E7",
+      "title": "Implement ABI-safe public type checker",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T01",
+        "E6.T04"
+      ],
+      "prd": [
+        "§16.2"
+      ],
+      "outcome": "Allow fixed scalars, declared value structs/enums, pointers/spans, callbacks, opaque handles, and explicit result/error shapes while rejecting internal Haxe/runtime layouts.",
+      "acceptance": [
+        "Every public pointer has ownership and nullability.",
+        "By-value structs have stable layout assertions.",
+        "Strings/arrays/classes require explicit boundary mapping.",
+        "Diagnostics suggest a safe wrapper shape."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-xlarge",
+        "export",
+        "abi",
+        "types"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Allow fixed scalars, declared value structs/enums, pointers/spans, callbacks, opaque handles, and explicit result/error shapes while rejecting internal Haxe/runtime layouts.\n\nPRD: §16.2"
+    },
+    {
+      "key": "E7.T03",
+      "epic": "E7",
+      "title": "Emit public C headers and implementation wrappers",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T02",
+        "E1.T03",
+        "E1.T04"
+      ],
+      "prd": [
+        "§16.3",
+        "§16.4"
+      ],
+      "outcome": "Generate standalone, namespaced, documented C headers and wrappers that translate to internal calling conventions.",
+      "acceptance": [
+        "Header compiles as C11 and C++17 with extern-C guards.",
+        "Include guards, visibility, calling conventions, and integer types are portable.",
+        "No private/internal runtime symbol leaks.",
+        "C and C++ consumers need only installed public artifacts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-xlarge",
+        "export",
+        "header"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Generate standalone, namespaced, documented C headers and wrappers that translate to internal calling conventions.\n\nPRD: §16.3, §16.4"
+    },
+    {
+      "key": "E7.T04",
+      "epic": "E7",
+      "title": "Implement ownership, nullability, and error boundary adapters",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T02",
+        "E4.T09"
+      ],
+      "prd": [
+        "§16.5",
+        "§16.6"
+      ],
+      "outcome": "Translate Haxe values/failures into explicit C contracts and generated destroy/free APIs.",
+      "acceptance": [
+        "No Haxe exception crosses the C ABI.",
+        "Owned outputs have a matching release function/allocator contract.",
+        "Borrowed lifetimes are documented and testable.",
+        "Out-parameter/status/result conventions are configurable but deterministic."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-xlarge",
+        "export",
+        "ownership",
+        "errors"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Translate Haxe values/failures into explicit C contracts and generated destroy/free APIs.\n\nPRD: §16.5, §16.6"
+    },
+    {
+      "key": "E7.T05",
+      "epic": "E7",
+      "title": "Emit visibility, symbol version, and export-map files",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T03"
+      ],
+      "prd": [
+        "§16.7"
+      ],
+      "outcome": "Hide internal symbols and export only the public ABI on ELF, Mach-O, and PE/COFF targets.",
+      "acceptance": [
+        "nm/dumpbin-equivalent tests compare actual exports to manifest.",
+        "Version scripts/export lists/.def files are deterministic.",
+        "Static and shared builds use consistent public names.",
+        "Unsupported toolchain behavior is detected by doctor/build."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-large",
+        "export",
+        "visibility",
+        "platform"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Hide internal symbols and export only the public ABI on ELF, Mach-O, and PE/COFF targets.\n\nPRD: §16.7"
+    },
+    {
+      "key": "E7.T06",
+      "epic": "E7",
+      "title": "Build static and shared library artifacts",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T03",
+        "E7.T04",
+        "E7.T05",
+        "E8.T04"
+      ],
+      "prd": [
+        "§16.7"
+      ],
+      "outcome": "Produce archive/shared artifacts, import libraries where needed, and installation metadata from the neutral build plan.",
+      "acceptance": [
+        "Linux .so, macOS .dylib, and Windows .dll paths are covered according to the supported matrix.",
+        "PIC/import/export flags are correct.",
+        "CMake/Meson/pkg-config installation artifacts work.",
+        "Reproducible build metadata records toolchain and inputs."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-xlarge",
+        "export",
+        "shared-library",
+        "build"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Produce archive/shared artifacts, import libraries where needed, and installation metadata from the neutral build plan.\n\nPRD: §16.7"
+    },
+    {
+      "key": "E7.T07",
+      "epic": "E7",
+      "title": "Generate ABI manifest, hash, and compatibility diff",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T02",
+        "E7.T03"
+      ],
+      "prd": [
+        "§16.8"
+      ],
+      "outcome": "Describe public symbols/types/layout/ownership/calling convention/version in a stable schema and classify changes.",
+      "acceptance": [
+        "Manifest hash is independent of documentation/formatting-only changes.",
+        "Diff detects removed/changed symbols, layout, enum values, ownership, nullability, and calling convention.",
+        "Intentional breaks require version policy action.",
+        "CI stores before/after reports."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-large",
+        "export",
+        "abi",
+        "compatibility"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Describe public symbols/types/layout/ownership/calling convention/version in a stable schema and classify changes.\n\nPRD: §16.8"
+    },
+    {
+      "key": "E7.T08",
+      "epic": "E7",
+      "title": "Run independent C and C++ consumer matrix",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T06",
+        "E7.T07"
+      ],
+      "prd": [
+        "§16.3",
+        "§25 M7"
+      ],
+      "outcome": "Build/install/consume exported libraries outside the generator tree using multiple C/C++ compilers.",
+      "acceptance": [
+        "Consumers include only public headers and link installed artifacts.",
+        "C++ sees no name mangling issue.",
+        "Owned/error paths and repeated load/unload are tested.",
+        "Consumer failures cannot pass due to in-tree private include paths."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-large",
+        "export",
+        "consumer",
+        "testing"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Build/install/consume exported libraries outside the generator tree using multiple C/C++ compilers.\n\nPRD: §16.3, §25 M7"
+    },
+    {
+      "key": "E7.T09",
+      "epic": "E7",
+      "title": "Generate optional header-only C++ RAII wrappers",
+      "priority": 2,
+      "blockedBy": [
+        "E7.T03",
+        "E7.T04"
+      ],
+      "prd": [
+        "§16.4"
+      ],
+      "outcome": "Provide opt-in C++ convenience types over the stable C ABI without making C++ ABI part of the product contract.",
+      "acceptance": [
+        "Wrapper is header-only or otherwise explicitly versioned.",
+        "Move/copy/destruction semantics match C ownership.",
+        "Exceptions are opt-in and never cross C functions.",
+        "Raw C API remains complete and primary."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-medium",
+        "export",
+        "cpp",
+        "raii"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Provide opt-in C++ convenience types over the stable C ABI without making C++ ABI part of the product contract.\n\nPRD: §16.4"
+    },
+    {
+      "key": "E7.T10",
+      "epic": "E7",
+      "title": "Add foreign-language ABI smoke consumers",
+      "priority": 2,
+      "blockedBy": [
+        "E7.T08"
+      ],
+      "prd": [
+        "§16",
+        "§19"
+      ],
+      "outcome": "Demonstrate that ordinary C ABI artifacts load from at least Python ctypes and one additional FFI ecosystem without language-specific generator magic.",
+      "acceptance": [
+        "Consumers run against installed shared library.",
+        "String/buffer/handle/error ownership is exercised.",
+        "Examples document platform loader paths safely.",
+        "These are ABI proofs, not promises of full high-level bindings."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e7",
+        "effort-medium",
+        "export",
+        "ffi",
+        "examples"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Demonstrate that ordinary C ABI artifacts load from at least Python ctypes and one additional FFI ecosystem without language-specific generator magic.\n\nPRD: §16, §19"
+    },
+    {
+      "key": "E8.T01",
+      "epic": "E8",
+      "title": "Implement hxc.json parser, schema validation, and precedence",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T04",
+        "E0.T06"
+      ],
+      "prd": [
+        "§18.2",
+        "docs/configuration.md"
+      ],
+      "outcome": "Load strict configuration, overlays, CLI overrides, and direct defines into one provenance-aware build model.",
+      "acceptance": [
+        "Unknown keys and invalid combinations fail before compilation.",
+        "Path resolution is independent of current working directory.",
+        "Effective config and source of every value are inspectable.",
+        "Schema and parser tests stay synchronized."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-large",
+        "cli",
+        "configuration"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Load strict configuration, overlays, CLI overrides, and direct defines into one provenance-aware build model.\n\nPRD: §18.2, docs/configuration.md"
+    },
+    {
+      "key": "E8.T02",
+      "epic": "E8",
+      "title": "Build hxc command/router and JSON output conventions",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T01"
+      ],
+      "prd": [
+        "§18.1"
+      ],
+      "outcome": "Implement stable command parsing, exit codes, logging, machine-readable responses, and help/version behavior.",
+      "acceptance": [
+        "Commands share error/diagnostic formatting.",
+        "--json emits only documented JSON on stdout.",
+        "Human logs go to stderr when JSON mode is active.",
+        "Unknown/experimental flags are not silently ignored."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-large",
+        "cli",
+        "ux"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Implement stable command parsing, exit codes, logging, machine-readable responses, and help/version behavior.\n\nPRD: §18.1"
+    },
+    {
+      "key": "E8.T03",
+      "epic": "E8",
+      "title": "Implement hxc new project templates",
+      "priority": 2,
+      "blockedBy": [
+        "E8.T02",
+        "E0.T02"
+      ],
+      "prd": [
+        "§18.1",
+        "§25 M8"
+      ],
+      "outcome": "Instantiate CLI, C ABI library, and freestanding templates with deterministic substitutions and no overwrite surprises.",
+      "acceptance": [
+        "Template output validates against schema and type-checks.",
+        "Existing files require explicit force/merge behavior.",
+        "License/project name/module validation is safe.",
+        "Generated README states current target limitations honestly."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-medium",
+        "cli",
+        "templates"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Instantiate CLI, C ABI library, and freestanding templates with deterministic substitutions and no overwrite surprises.\n\nPRD: §18.1, §25 M8"
+    },
+    {
+      "key": "E8.T04",
+      "epic": "E8",
+      "title": "Create neutral native build plan and toolchain adapters",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T07",
+        "E8.T01"
+      ],
+      "prd": [
+        "§18.3"
+      ],
+      "outcome": "Translate generated sources, runtime slices, native sources, includes, defines, libraries, artifact type, and target into exact compile/link steps.",
+      "acceptance": [
+        "Plan is serializable and inspectable.",
+        "GCC/Clang/MSVC-family adapters quote arguments without shell concatenation.",
+        "Cross-compile/sysroot/target settings are explicit.",
+        "Incremental dependency keys include relevant compiler inputs."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-xlarge",
+        "build",
+        "toolchain"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Translate generated sources, runtime slices, native sources, includes, defines, libraries, artifact type, and target into exact compile/link steps.\n\nPRD: §18.3"
+    },
+    {
+      "key": "E8.T05",
+      "epic": "E8",
+      "title": "Implement build, run, test, and clean commands",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T02",
+        "E8.T04",
+        "E2.T10"
+      ],
+      "prd": [
+        "§18.1"
+      ],
+      "outcome": "Provide the normal user loop while preserving separate codegen/native phases and exact command visibility.",
+      "acceptance": [
+        "build can stop after codegen/objects/library/executable.",
+        "run forwards arguments and exit code safely.",
+        "test integrates repository/user fixtures without hiding commands.",
+        "clean removes only owned outputs/caches."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-xlarge",
+        "cli",
+        "build"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Provide the normal user loop while preserving separate codegen/native phases and exact command visibility.\n\nPRD: §18.1"
+    },
+    {
+      "key": "E8.T06",
+      "epic": "E8",
+      "title": "Complete hxc doctor capability diagnostics",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T02",
+        "E8.T04",
+        "E6.T01"
+      ],
+      "prd": [
+        "§18.4"
+      ],
+      "outcome": "Check Haxe/Reflaxe/C/C++/Clang bindgen/build tools/platform features and explain missing optional versus required capabilities.",
+      "acceptance": [
+        "Human and JSON modes are stable.",
+        "Doctor performs compile/link probes where version strings are insufficient.",
+        "Results include remediation and selected config/target context.",
+        "No network access is required for normal checks."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-medium",
+        "cli",
+        "doctor"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Check Haxe/Reflaxe/C/C++/Clang bindgen/build tools/platform features and explain missing optional versus required capabilities.\n\nPRD: §18.4"
+    },
+    {
+      "key": "E8.T07",
+      "epic": "E8",
+      "title": "Implement hxc inspect reports",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T02",
+        "E1.T07",
+        "E4.T01"
+      ],
+      "prd": [
+        "§18.5"
+      ],
+      "outcome": "Expose config, typed inventory, HxcIR, C AST, lowering decisions, runtime plan, symbols, includes, build commands, macros, ABI, and size/allocation summaries.",
+      "acceptance": [
+        "Reports have human and versioned JSON forms.",
+        "Source-to-decision links are stable.",
+        "Sensitive environment values/paths can be redacted.",
+        "Inspection does not change generated semantics."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-large",
+        "cli",
+        "inspect"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Expose config, typed inventory, HxcIR, C AST, lowering decisions, runtime plan, symbols, includes, build commands, macros, ABI, and size/allocation summaries.\n\nPRD: §18.5"
+    },
+    {
+      "key": "E8.T08",
+      "epic": "E8",
+      "title": "Implement source maps and native diagnostic remapping",
+      "priority": 2,
+      "blockedBy": [
+        "E1.T02",
+        "E2.T02",
+        "E8.T04"
+      ],
+      "prd": [
+        "§20.2"
+      ],
+      "outcome": "Map C compiler/linker errors and optional debug locations back to Haxe source and generated artifacts.",
+      "acceptance": [
+        "#line mode and sidecar map mode are supported/compared.",
+        "Generated helper errors identify originating Haxe feature where possible.",
+        "Raw native diagnostics remain available.",
+        "Paths are normalized and do not break reproducibility."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-large",
+        "diagnostics",
+        "sourcemap"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Map C compiler/linker errors and optional debug locations back to Haxe source and generated artifacts.\n\nPRD: §20.2"
+    },
+    {
+      "key": "E8.T09",
+      "epic": "E8",
+      "title": "Publish versioned JSON diagnostics and event stream",
+      "priority": 2,
+      "blockedBy": [
+        "E0.T06",
+        "E8.T02"
+      ],
+      "prd": [
+        "§20.1"
+      ],
+      "outcome": "Give IDEs/agents structured compiler, native toolchain, bindgen, ABI, and test diagnostics.",
+      "acceptance": [
+        "Schema includes ID, severity, phase, positions, notes, related locations, remediation, and command context.",
+        "Multi-line/native errors are losslessly attached.",
+        "Schema compatibility policy is documented.",
+        "CLI integration tests assert stdout/stderr discipline."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-medium",
+        "diagnostics",
+        "json"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Give IDEs/agents structured compiler, native toolchain, bindgen, ABI, and test diagnostics.\n\nPRD: §20.1"
+    },
+    {
+      "key": "E8.T10",
+      "epic": "E8",
+      "title": "Package and install reflaxe.c and hxc reproducibly",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T05",
+        "E0.T02"
+      ],
+      "prd": [
+        "§25 M8",
+        "§22"
+      ],
+      "outcome": "Create haxelib/source archives and platform-appropriate CLI installation without relying on developer paths.",
+      "acceptance": [
+        "Package contains required std/runtime/templates/schemas/docs and excludes caches/secrets.",
+        "Fresh installation builds hello.",
+        "Checksums/SBOM/provenance are generated.",
+        "Version comes from immutable release metadata."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-large",
+        "release",
+        "packaging"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Create haxelib/source archives and platform-appropriate CLI installation without relying on developer paths.\n\nPRD: §25 M8, §22"
+    },
+    {
+      "key": "E8.T11",
+      "epic": "E8",
+      "title": "Emit compile_commands and IDE/build-system integration",
+      "priority": 2,
+      "blockedBy": [
+        "E8.T04",
+        "E8.T07"
+      ],
+      "prd": [
+        "§18.3"
+      ],
+      "outcome": "Make generated/native C easy to inspect with clangd and consume from existing build systems.",
+      "acceptance": [
+        "compile_commands contains exact per-file invocations.",
+        "Manifest documents generated/public/private include roots.",
+        "No generated CMake/Meson is required for integration.",
+        "IDE paths remain useful in out-of-tree builds."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e8",
+        "effort-medium",
+        "tooling",
+        "ide"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Make generated/native C easy to inspect with clangd and consume from existing build systems.\n\nPRD: §18.3"
+    },
+    {
+      "key": "E9.T01",
+      "epic": "E9",
+      "title": "Polish hello as the canonical first-run example",
+      "priority": 2,
+      "blockedBy": [
+        "E2.T10",
+        "E8.T05"
+      ],
+      "prd": [
+        "§19.1"
+      ],
+      "outcome": "Turn hello into a documented install/build/run/inspect walkthrough with expected generated C and runtime reasoning.",
+      "acceptance": [
+        "Instructions work from fresh package install.",
+        "Generated output excerpts match current compiler.",
+        "Both portable and no-runtime-eligible variants are explained where accurate.",
+        "No raw __c__ appears."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-small",
+        "examples",
+        "hello"
+      ],
+      "effort": "small",
+      "type": "task",
+      "description": "Turn hello into a documented install/build/run/inspect walkthrough with expected generated C and runtime reasoning.\n\nPRD: §19.1"
+    },
+    {
+      "key": "E9.T02",
+      "epic": "E9",
+      "title": "Deliver metal no-runtime and embedded examples",
+      "priority": 2,
+      "blockedBy": [
+        "E2.T08",
+        "E4.T10",
+        "E8.T04"
+      ],
+      "prd": [
+        "§19.1"
+      ],
+      "outcome": "Show explicit spans/pointers/layout/volatile/sections/custom startup with zero hidden runtime for hosted and freestanding targets.",
+      "acceptance": [
+        "Binary/symbol inspection proves no hxrt/libc dependency where claimed.",
+        "Unsafe regions are scoped and documented.",
+        "At least one cross-toolchain build is reproducible.",
+        "Example uses typed SDK/native facades rather than raw injection."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "examples",
+        "metal",
+        "embedded"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Show explicit spans/pointers/layout/volatile/sections/custom startup with zero hidden runtime for hosted and freestanding targets.\n\nPRD: §19.1"
+    },
+    {
+      "key": "E9.T03",
+      "epic": "E9",
+      "title": "Publish C bindgen walkthroughs",
+      "priority": 2,
+      "blockedBy": [
+        "E6.T12",
+        "E8.T05"
+      ],
+      "prd": [
+        "§19.1"
+      ],
+      "outcome": "Document raw extern generation, safe mapping, lock/probe review, rebuild, and upgrade drift for representative C libraries.",
+      "acceptance": [
+        "All checked-in generated bindings regenerate cleanly.",
+        "Ownership/error choices are explained.",
+        "Exact Clang/native commands are inspectable.",
+        "AI assistance, if shown, is clearly optional/advisory."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-medium",
+        "examples",
+        "bindgen"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Document raw extern generation, safe mapping, lock/probe review, rebuild, and upgrade drift for representative C libraries.\n\nPRD: §19.1"
+    },
+    {
+      "key": "E9.T04",
+      "epic": "E9",
+      "title": "Publish exported shared-library and FFI examples",
+      "priority": 2,
+      "blockedBy": [
+        "E7.T10",
+        "E8.T05"
+      ],
+      "prd": [
+        "§19.1"
+      ],
+      "outcome": "Show Haxe-authored C ABI library creation, installation, ABI diff, and consumption from C/C++/other FFI.",
+      "acceptance": [
+        "Consumers build outside generator tree.",
+        "Owned handle/string/error paths are included.",
+        "Platform shared-library differences are documented.",
+        "ABI manifest/versioning workflow is demonstrated."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "examples",
+        "export",
+        "ffi"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Show Haxe-authored C ABI library creation, installation, ABI diff, and consumption from C/C++/other FFI.\n\nPRD: §19.1"
+    },
+    {
+      "key": "E9.T05",
+      "epic": "E9",
+      "title": "Publish honest C++ shim workflow and hxcpp boundary guide",
+      "priority": 2,
+      "blockedBy": [
+        "E6.T10",
+        "E7.T09"
+      ],
+      "prd": [
+        "§7.3",
+        "§7.5",
+        "§15.8"
+      ],
+      "outcome": "Explain when to choose hxc, hxcpp, an existing C API, or a generated/manual C++ shim.",
+      "acceptance": [
+        "Guide states that arbitrary C++ cannot be consumed directly from C.",
+        "Exceptions, templates, STL, ownership, and ABI stability are covered.",
+        "Example shim builds and catches all exceptions at C boundary.",
+        "No universal superiority claim is made."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-medium",
+        "docs",
+        "cpp",
+        "hxcpp"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Explain when to choose hxc, hxcpp, an existing C API, or a generated/manual C++ shim.\n\nPRD: §7.3, §7.5, §15.8"
+    },
+    {
+      "key": "E9.T06",
+      "epic": "E9",
+      "title": "Implement todo schema and migration macros",
+      "priority": 2,
+      "blockedBy": [
+        "E5.T06",
+        "E6.T12",
+        "E8.T07"
+      ],
+      "prd": [
+        "§17.6",
+        "§19.2"
+      ],
+      "outcome": "Generate typed table/column metadata, migrations, schema hash, row codecs, and inspectable artifacts from Haxe declarations.",
+      "acceptance": [
+        "Duplicate/unsupported/destructive changes have compile-time diagnostics.",
+        "Generated SQL/code is deterministic and inspectable.",
+        "No runtime reflection is required for known models.",
+        "Macro cache inputs and source positions are correct."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-xlarge",
+        "todo",
+        "macros",
+        "sqlite"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Generate typed table/column metadata, migrations, schema hash, row codecs, and inspectable artifacts from Haxe declarations.\n\nPRD: §17.6, §19.2"
+    },
+    {
+      "key": "E9.T07",
+      "epic": "E9",
+      "title": "Implement todo SQLite repository and transaction layer",
+      "priority": 2,
+      "blockedBy": [
+        "E9.T06",
+        "E6.T12",
+        "E5.T09"
+      ],
+      "prd": [
+        "§19.2"
+      ],
+      "outcome": "Use generated SQLite bindings/codecs/statements with explicit errors, resource ownership, transactions, and migrations.",
+      "acceptance": [
+        "CRUD, migration, rollback, busy/error, and corrupt-input tests pass.",
+        "Statements/database close on every path.",
+        "SQL injection is impossible through value parameters.",
+        "Generated/native allocation behavior is inspectable."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-xlarge",
+        "todo",
+        "sqlite",
+        "repository"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Use generated SQLite bindings/codecs/statements with explicit errors, resource ownership, transactions, and migrations.\n\nPRD: §19.2"
+    },
+    {
+      "key": "E9.T08",
+      "epic": "E9",
+      "title": "Implement macro-generated todo CLI parser/help/completion",
+      "priority": 2,
+      "blockedBy": [
+        "E9.T06",
+        "E8.T02"
+      ],
+      "prd": [
+        "§17.6",
+        "§19.2"
+      ],
+      "outcome": "Derive commands/options/validation/help/completion from typed declarations with Rails-like conventions and explicit generated code.",
+      "acceptance": [
+        "add/list/complete/remove/help workflows and error exit codes are tested.",
+        "Help is deterministic and readable.",
+        "No runtime method_missing/reflection dispatcher is shipped.",
+        "Generated parser is visible through hxc inspect macros."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "todo",
+        "cli",
+        "macros"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Derive commands/options/validation/help/completion from typed declarations with Rails-like conventions and explicit generated code.\n\nPRD: §17.6, §19.2"
+    },
+    {
+      "key": "E9.T09",
+      "epic": "E9",
+      "title": "Prove todo domain portability across sibling targets",
+      "priority": 2,
+      "blockedBy": [
+        "E9.T07",
+        "E5.T12"
+      ],
+      "prd": [
+        "§5 G8",
+        "§19.3"
+      ],
+      "outcome": "Keep domain/service logic free of C-only APIs and compile/run it under selected supplied sibling compilers.",
+      "acceptance": [
+        "Portable source boundary is mechanically checked.",
+        "Target-specific repository/CLI adapters are isolated.",
+        "Shared domain tests pass on C plus selected Rust/Elixir/OCaml/Ruby targets as practical.",
+        "Any source divergence is documented and minimized."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "todo",
+        "portability"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Keep domain/service logic free of C-only APIs and compile/run it under selected supplied sibling compilers.\n\nPRD: §5 G8, §19.3"
+    },
+    {
+      "key": "E9.T10",
+      "epic": "E9",
+      "title": "Benchmark generated C against hand-written baselines",
+      "priority": 2,
+      "blockedBy": [
+        "E9.T07",
+        "E3.T09",
+        "E10.T05"
+      ],
+      "prd": [
+        "§19.2",
+        "§21.7"
+      ],
+      "outcome": "Compare compile time, binary size, allocations, throughput, latency, and readability for todo and focused kernels.",
+      "acceptance": [
+        "Harness pins inputs/toolchains/flags and reports variance.",
+        "Hand-written baseline is fair and reviewed.",
+        "Regressions create Beads issues rather than marketing reinterpretation.",
+        "Results distinguish portable and metal profiles."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "benchmarks",
+        "todo",
+        "performance"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Compare compile time, binary size, allocations, throughput, latency, and readability for todo and focused kernels.\n\nPRD: §19.2, §21.7"
+    },
+    {
+      "key": "E9.T11",
+      "epic": "E9",
+      "title": "Write migration and comparison guides for Haxe/C/hxcpp users",
+      "priority": 2,
+      "blockedBy": [
+        "E9.T01",
+        "E9.T03",
+        "E9.T04",
+        "E9.T05"
+      ],
+      "prd": [
+        "§7"
+      ],
+      "outcome": "Provide practical paths from hxcpp/native C/Haxe libraries to hxc, with compatibility tables and tradeoffs.",
+      "acceptance": [
+        "Guides include code/config/build examples.",
+        "C ABI versus C++ ABI limitations are prominent.",
+        "Standard-library/profile/runtime support claims link to evidence.",
+        "TypeScript bridge positioning is framed as familiarity/migration, not source compatibility."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-medium",
+        "docs",
+        "adoption"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Provide practical paths from hxcpp/native C/Haxe libraries to hxc, with compatibility tables and tradeoffs.\n\nPRD: §7"
+    },
+    {
+      "key": "E9.T12",
+      "epic": "E9",
+      "title": "Prove a WebAssembly/TypeScript bridge",
+      "priority": 3,
+      "blockedBy": [
+        "E7.T10",
+        "E8.T04",
+        "E5.T04"
+      ],
+      "prd": [
+        "§7.4",
+        "§19.1"
+      ],
+      "outcome": "Compile a small exported C ABI module through WASI or Emscripten and consume it from TypeScript with explicit memory/ownership wrappers.",
+      "acceptance": [
+        "Build is reproducible and uses the same export ABI model.",
+        "String/buffer transfer and errors are demonstrated.",
+        "Generated JS/TS glue is scoped and documented.",
+        "Example makes no claim of general TypeScript compatibility."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e9",
+        "effort-large",
+        "examples",
+        "wasm",
+        "typescript"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Compile a small exported C ABI module through WASI or Emscripten and consume it from TypeScript with explicit memory/ownership wrappers.\n\nPRD: §7.4, §19.1"
+    },
+    {
+      "key": "E10.T01",
+      "epic": "E10",
+      "title": "Expand cross-platform compiler and architecture CI matrix",
+      "priority": 1,
+      "blockedBy": [
+        "E0.T05",
+        "E2.T10"
+      ],
+      "prd": [
+        "§21",
+        "§25 M10"
+      ],
+      "outcome": "Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering.",
+      "acceptance": [
+        "Tier-1 gates cannot be skipped silently.",
+        "Cross compile and native run responsibilities are distinguished.",
+        "Matrix metadata is archived with releases.",
+        "Unsupported combinations fail during planning with clear reason."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-xlarge",
+        "ci",
+        "platform"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering.\n\nPRD: §21, §25 M10"
+    },
+    {
+      "key": "E10.T02",
+      "epic": "E10",
+      "title": "Fuzz C AST printer and generated translation units",
+      "priority": 1,
+      "blockedBy": [
+        "E1.T10",
+        "E2.T11"
+      ],
+      "prd": [
+        "§21.6",
+        "§22"
+      ],
+      "outcome": "Generate/minimize valid ASTs and adversarial literals/declarators, compile them with multiple compilers, and detect crashes/misprints/non-determinism.",
+      "acceptance": [
+        "Seed corpus and fuzz dictionaries are checked in.",
+        "Crashes/minimized cases become regression fixtures.",
+        "Resource limits prevent CI denial of service.",
+        "Printer never emits unterminated comments/strings/directives from source data."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "fuzzing",
+        "printer"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Generate/minimize valid ASTs and adversarial literals/declarators, compile them with multiple compilers, and detect crashes/misprints/non-determinism.\n\nPRD: §21.6, §22"
+    },
+    {
+      "key": "E10.T03",
+      "epic": "E10",
+      "title": "Fuzz bindgen inputs and mapping parser",
+      "priority": 1,
+      "blockedBy": [
+        "E6.T08",
+        "E5.T06"
+      ],
+      "prd": [
+        "§15",
+        "§22"
+      ],
+      "outcome": "Exercise malformed/complex headers, preprocessor configurations, mapping files, and lock/probe parsers without trusting unbounded input.",
+      "acceptance": [
+        "No crash, uncontrolled resource use, path escape, or command injection.",
+        "Minimized findings become fixtures.",
+        "Clang subprocess time/memory/output limits are enforced.",
+        "Generated identifiers/comments cannot inject C/Haxe syntax."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "fuzzing",
+        "bindgen",
+        "security"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Exercise malformed/complex headers, preprocessor configurations, mapping files, and lock/probe parsers without trusting unbounded input.\n\nPRD: §15, §22"
+    },
+    {
+      "key": "E10.T04",
+      "epic": "E10",
+      "title": "Run sanitizer, leak, race, and static-analysis gates",
+      "priority": 1,
+      "blockedBy": [
+        "E4.T12",
+        "E5.T11",
+        "E10.T01"
+      ],
+      "prd": [
+        "§21.6"
+      ],
+      "outcome": "Continuously analyze compiler helpers, runtime, generated programs, and native adapters with appropriate dynamic/static tools.",
+      "acceptance": [
+        "ASan/UBSan/LSan are required on supported Unix CI; TSan runs scoped thread suites.",
+        "Static analyzer warnings are triaged, not blanket-suppressed.",
+        "Suppression files are minimal, documented, and reviewed.",
+        "Release evidence records tool versions and scope."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "quality",
+        "sanitizer",
+        "static-analysis"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Continuously analyze compiler helpers, runtime, generated programs, and native adapters with appropriate dynamic/static tools.\n\nPRD: §21.6"
+    },
+    {
+      "key": "E10.T05",
+      "epic": "E10",
+      "title": "Define and enforce performance/size budgets",
+      "priority": 2,
+      "blockedBy": [
+        "E2.T10",
+        "E3.T09",
+        "E4.T12"
+      ],
+      "prd": [
+        "§21.7",
+        "§26"
+      ],
+      "outcome": "Track compiler time/memory, generated C compile time, executable/library size, allocations, throughput, and startup with stable baselines.",
+      "acceptance": [
+        "Benchmarks distinguish noise from regression and record toolchain/hardware.",
+        "Budgets exist for hello, kernels, runtime slices, bindgen, export, and todo.",
+        "Portable/runtime costs are attributed by feature.",
+        "Regressions require explicit approval or blocking issue."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "performance",
+        "benchmarks"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Track compiler time/memory, generated C compile time, executable/library size, allocations, throughput, and startup with stable baselines.\n\nPRD: §21.7, §26"
+    },
+    {
+      "key": "E10.T06",
+      "epic": "E10",
+      "title": "Perform compiler/runtime/interop security review",
+      "priority": 1,
+      "blockedBy": [
+        "E10.T02",
+        "E10.T03",
+        "E10.T04",
+        "E7.T08"
+      ],
+      "prd": [
+        "§22"
+      ],
+      "outcome": "Threat-model generated-code injection, malicious headers/configs, path traversal, tool invocation, allocator/lifetime errors, shared-library boundaries, and supply chain.",
+      "acceptance": [
+        "Threat model and mitigations are documented.",
+        "Security-sensitive code has targeted tests/review owners.",
+        "No shell command construction from untrusted arguments.",
+        "Disclosure/release response process is exercised."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-xlarge",
+        "security",
+        "review"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Threat-model generated-code injection, malicious headers/configs, path traversal, tool invocation, allocator/lifetime errors, shared-library boundaries, and supply chain.\n\nPRD: §22"
+    },
+    {
+      "key": "E10.T07",
+      "epic": "E10",
+      "title": "Publish compatibility and support matrix",
+      "priority": 1,
+      "blockedBy": [
+        "E5.T12",
+        "E6.T12",
+        "E7.T08",
+        "E10.T01"
+      ],
+      "prd": [
+        "§25 M10",
+        "§26"
+      ],
+      "outcome": "Generate evidence-backed support status for Haxe features, stdlib modules, platforms, compilers, ABIs, environments, profiles, and artifacts.",
+      "acceptance": [
+        "Statuses link to tests/results and known issues.",
+        "Experimental/partial/unsupported are distinct.",
+        "README claims are generated from or reviewed against matrix.",
+        "Matrix is versioned per release."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-medium",
+        "release",
+        "compatibility"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Generate evidence-backed support status for Haxe features, stdlib modules, platforms, compilers, ABIs, environments, profiles, and artifacts.\n\nPRD: §25 M10, §26"
+    },
+    {
+      "key": "E10.T08",
+      "epic": "E10",
+      "title": "Automate signed, reproducible release artifacts",
+      "priority": 1,
+      "blockedBy": [
+        "E8.T10",
+        "E10.T01",
+        "E10.T06"
+      ],
+      "prd": [
+        "§22",
+        "§25 M10"
+      ],
+      "outcome": "Build immutable source/package artifacts with checksums, signatures, SBOM, provenance, release notes, and rollback instructions.",
+      "acceptance": [
+        "Release runs only from tagged clean commit.",
+        "Artifacts rebuild within documented reproducibility constraints.",
+        "Dependency/toolchain provenance is attached.",
+        "Install smoke tests run against downloaded artifacts."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "release",
+        "supply-chain"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Build immutable source/package artifacts with checksums, signatures, SBOM, provenance, release notes, and rollback instructions.\n\nPRD: §22, §25 M10"
+    },
+    {
+      "key": "E10.T09",
+      "epic": "E10",
+      "title": "Ratify stable public ABI and compatibility policy",
+      "priority": 1,
+      "blockedBy": [
+        "E7.T07",
+        "E7.T08",
+        "E4.T11"
+      ],
+      "prd": [
+        "§16.8",
+        "§25 M10"
+      ],
+      "outcome": "Define semantic versioning and compatibility guarantees for generated public C ABI, runtime ABI, manifests, bindings, CLI JSON, and config schema.",
+      "acceptance": [
+        "Breaking/nonbreaking classifications have examples/tests.",
+        "ABI diff gate enforces version changes.",
+        "Unstable internal layouts are clearly excluded.",
+        "Deprecation and migration windows are documented."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-medium",
+        "abi",
+        "policy",
+        "release"
+      ],
+      "effort": "medium",
+      "type": "task",
+      "description": "Define semantic versioning and compatibility guarantees for generated public C ABI, runtime ABI, manifests, bindings, CLI JSON, and config schema.\n\nPRD: §16.8, §25 M10"
+    },
+    {
+      "key": "E10.T10",
+      "epic": "E10",
+      "title": "Meet the 1.0 stdlib and semantic parity gate",
+      "priority": 0,
+      "blockedBy": [
+        "E5.T12",
+        "E10.T04",
+        "E10.T07"
+      ],
+      "prd": [
+        "§5 G2",
+        "§5 G7",
+        "§25 M10"
+      ],
+      "outcome": "Reach the ratified upstream test threshold with every remaining divergence explicit and release-approved.",
+      "acceptance": [
+        "No silent skips or unknown failures.",
+        "Tier-1 semantic/stdlib dashboard meets threshold.",
+        "Known divergences have user-visible diagnostics/docs and post-1.0 issues.",
+        "Portable source suite includes representative real applications."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-xlarge",
+        "release",
+        "stdlib",
+        "correctness"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Reach the ratified upstream test threshold with every remaining divergence explicit and release-approved.\n\nPRD: §5 G2, §5 G7, §25 M10"
+    },
+    {
+      "key": "E10.T11",
+      "epic": "E10",
+      "title": "Cut evidence-backed beta release",
+      "priority": 1,
+      "blockedBy": [
+        "E10.T07",
+        "E10.T08",
+        "E9.T11"
+      ],
+      "prd": [
+        "§25 M10"
+      ],
+      "outcome": "Ship a beta only after install/onboarding/examples/compatibility/security/ABI evidence is archived.",
+      "acceptance": [
+        "Fresh-user smoke path succeeds on tier-1 platforms.",
+        "Known limitations and support matrix are prominent.",
+        "Feedback/crash/diagnostic collection path is documented.",
+        "No 1.0 stability promise is implied."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-large",
+        "release",
+        "beta"
+      ],
+      "effort": "large",
+      "type": "task",
+      "description": "Ship a beta only after install/onboarding/examples/compatibility/security/ABI evidence is archived.\n\nPRD: §25 M10"
+    },
+    {
+      "key": "E10.T12",
+      "epic": "E10",
+      "title": "Cut 1.0 and archive release evidence",
+      "priority": 0,
+      "blockedBy": [
+        "E10.T06",
+        "E10.T08",
+        "E10.T09",
+        "E10.T10",
+        "E10.T11",
+        "E9.T10"
+      ],
+      "prd": [
+        "§25 M10",
+        "§26"
+      ],
+      "outcome": "Release 1.0 only after correctness, UB, security, ABI, performance, docs, examples, and support gates are satisfied.",
+      "acceptance": [
+        "All release blockers are closed with linked evidence.",
+        "Signed immutable artifacts and provenance are published.",
+        "Post-1.0 compatibility/maintenance policy is active.",
+        "Release report records exact source, toolchains, tests, matrices, benchmarks, and accepted residual risks."
+      ],
+      "labels": [
+        "hxc-plan",
+        "epic-e10",
+        "effort-xlarge",
+        "release",
+        "1.0"
+      ],
+      "effort": "xlarge",
+      "type": "task",
+      "description": "Release 1.0 only after correctness, UB, security, ABI, performance, docs, examples, and support gates are satisfied.\n\nPRD: §25 M10, §26"
+    }
+  ]
+}

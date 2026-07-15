@@ -1,0 +1,199 @@
+{
+  "$schema": "./stdlib-ledger.schema.json",
+  "schemaVersion": 1,
+  "sourceOfTruth": true,
+  "entries": [
+    {
+      "type": "Std",
+      "member": "trace",
+      "status": "planned",
+      "strategy": "target-owned adapter",
+      "runtimeFeatures": [
+        "io",
+        "dynamic"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "ownerBeads": "E5.T02",
+      "notes": "Metal requires explicit sink or hosted policy."
+    },
+    {
+      "type": "String",
+      "member": "core representation",
+      "status": "decision-required",
+      "strategy": "direct lowering|string runtime",
+      "runtimeFeatures": [
+        "string",
+        "alloc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "all"
+      ],
+      "ownerBeads": "E4.T04",
+      "notes": "UTF-8 is proposed; ratify ADR 0004 before freezing ABI."
+    },
+    {
+      "type": "Array",
+      "member": "typed arrays",
+      "status": "planned",
+      "strategy": "direct typed representation",
+      "runtimeFeatures": [
+        "array",
+        "alloc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "all"
+      ],
+      "ownerBeads": "E3.T02",
+      "notes": "Avoid universal boxing when element representation is known."
+    },
+    {
+      "type": "haxe.ds.Option",
+      "member": "enum",
+      "status": "planned",
+      "strategy": "tagged union",
+      "runtimeFeatures": [],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "all"
+      ],
+      "ownerBeads": "E3.T01",
+      "notes": "Direct C tag plus payload."
+    },
+    {
+      "type": "haxe.Exception",
+      "member": "throw/catch",
+      "status": "planned",
+      "strategy": "result lowering|exception runtime",
+      "runtimeFeatures": [
+        "exception"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted",
+        "wasi",
+        "emscripten"
+      ],
+      "ownerBeads": "E4.T08",
+      "notes": "No exception crosses a public C ABI."
+    },
+    {
+      "type": "Reflect",
+      "member": "general reflection",
+      "status": "planned",
+      "strategy": "selective metadata runtime",
+      "runtimeFeatures": [
+        "reflection",
+        "dynamic",
+        "object"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted",
+        "wasi",
+        "emscripten"
+      ],
+      "ownerBeads": "E4.T07",
+      "notes": "Reject or specialize under metal/runtime-none."
+    },
+    {
+      "type": "Type",
+      "member": "type inspection",
+      "status": "planned",
+      "strategy": "selective metadata runtime",
+      "runtimeFeatures": [
+        "reflection",
+        "object"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted",
+        "wasi",
+        "emscripten"
+      ],
+      "ownerBeads": "E4.T07",
+      "notes": "Whole-program reachability controls metadata."
+    },
+    {
+      "type": "Sys",
+      "member": "args/environment/process",
+      "status": "planned",
+      "strategy": "target-owned adapter",
+      "runtimeFeatures": [
+        "io",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "ownerBeads": "E5.T07",
+      "notes": "Unavailable operations get environment-specific diagnostics."
+    },
+    {
+      "type": "sys.io.File",
+      "member": "file I/O",
+      "status": "planned",
+      "strategy": "target-owned adapter",
+      "runtimeFeatures": [
+        "io",
+        "string",
+        "alloc"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "wasi"
+      ],
+      "ownerBeads": "E5.T08",
+      "notes": "Freestanding requires user adapter."
+    },
+    {
+      "type": "sys.net.Socket",
+      "member": "sockets",
+      "status": "planned",
+      "strategy": "target-owned adapter",
+      "runtimeFeatures": [
+        "io",
+        "string",
+        "alloc"
+      ],
+      "profiles": [
+        "portable"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "ownerBeads": "E5.T09",
+      "notes": "Platform matrix and errno mapping required."
+    }
+  ]
+}

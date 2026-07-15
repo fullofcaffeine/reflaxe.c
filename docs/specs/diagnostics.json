@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "stability": "Diagnostic IDs are stable once released; wording may improve without changing the ID when the remediation contract is unchanged.",
+  "ranges": [
+    {"range": "HXC0000-HXC0999", "category": "bootstrap and configuration"},
+    {"range": "HXC1000-HXC1999", "category": "language lowering"},
+    {"range": "HXC2000-HXC2999", "category": "runtime and memory policy"},
+    {"range": "HXC3000-HXC3999", "category": "C ABI and export"},
+    {"range": "HXC4000-HXC4999", "category": "interop and unsafe boundaries"},
+    {"range": "HXC5000-HXC5999", "category": "target API and macro contracts"},
+    {"range": "HXC9000-HXC9999", "category": "internal compiler failures"}
+  ],
+  "diagnostics": [
+    {
+      "id": "HXC0002",
+      "name": "framework-unavailable",
+      "defaultSeverity": "error",
+      "summary": "The Reflaxe framework could not be resolved during compiler bootstrap.",
+      "remediation": "Use the scoped library HXML, pin/vendor Reflaxe, or install the compatible library revision."
+    },
+    {
+      "id": "HXC0003",
+      "name": "invalid-configuration",
+      "defaultSeverity": "error",
+      "summary": "A profile, runtime, environment, standard, or related build option is invalid or contradictory.",
+      "remediation": "Correct the named option; use `hxc inspect build` once M8 implements configuration inspection."
+    },
+    {
+      "id": "HXC1000",
+      "name": "lowering-not-implemented",
+      "defaultSeverity": "error",
+      "summary": "The scaffold reached a language-lowering path that is intentionally not implemented.",
+      "remediation": "Implement and test the corresponding Beads task; scaffold output is never executable program output."
+    },
+    {
+      "id": "HXC1001",
+      "name": "unsupported-expression",
+      "defaultSeverity": "error",
+      "summary": "A typed Haxe expression has no supported C lowering.",
+      "remediation": "Use a supported construct or implement its typed IR and C AST lowering with semantic tests."
+    },
+    {
+      "id": "HXC2000",
+      "name": "runtime-policy-violation",
+      "defaultSeverity": "error",
+      "summary": "Source semantics require a runtime feature forbidden by the selected runtime policy.",
+      "remediation": "Remove the source requirement, select an allowed runtime policy, or provide an explicit metal implementation."
+    },
+    {
+      "id": "HXC3000",
+      "name": "invalid-abi-boundary",
+      "defaultSeverity": "error",
+      "summary": "An exported or imported declaration cannot be represented by the selected stable C ABI contract.",
+      "remediation": "Use fixed ABI types, opaque handles, views, callbacks with context, and explicit status/error outputs."
+    },
+    {
+      "id": "HXC4001",
+      "name": "raw-c-forbidden-in-example",
+      "defaultSeverity": "error",
+      "summary": "An example or snapshot uses raw `__c__()` target-code injection.",
+      "remediation": "Add a typed `c.*` facade or compiler lowering instead."
+    },
+    {
+      "id": "HXC4002",
+      "name": "raw-c-forbidden-in-strict-mode",
+      "defaultSeverity": "error",
+      "summary": "Strict mode found application-side raw `__c__()` target-code injection.",
+      "remediation": "Use typed interop, a reviewed framework macro, or disable strict mode only for an isolated migration fixture."
+    },
+    {
+      "id": "HXC5001",
+      "name": "bootstrap-macro-contract",
+      "defaultSeverity": "error",
+      "summary": "A public target macro is present as an API contract but its validated implementation is not complete.",
+      "remediation": "Complete the owning Beads milestone before using the macro in production code."
+    },
+    {
+      "id": "HXC9000",
+      "name": "internal-compiler-error",
+      "defaultSeverity": "error",
+      "summary": "A required compiler lifecycle invariant or internal object is missing.",
+      "remediation": "Report a minimized reproducer, compiler/version manifest, and stack trace; do not work around it with raw C."
+    }
+  ]
+}

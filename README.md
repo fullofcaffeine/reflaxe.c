@@ -1,0 +1,112 @@
+# reflaxe.c
+
+> Haxe's missing C target: readable output, explicit ABI control, and honest
+> runtime costs.
+
+`reflaxe.c` is an experimental [Reflaxe](https://github.com/SomeRanDev/reflaxe)
+target for compiling Haxe to C. The planned command-line interface is `hxc`.
+
+**Project status: M0 architecture scaffold.** This repository does not compile
+Haxe programs yet. Unsupported compiler paths intentionally fail closed instead
+of emitting plausible but incorrect C.
+
+## Why another native target?
+
+Haxe already has excellent native options. `reflaxe.c` is exploring a distinct
+space:
+
+- idiomatic, inspectable C as a first-class output;
+- direct access to C libraries, embedded SDKs, and WebAssembly toolchains;
+- stable C ABI exports that many languages can consume;
+- explicit layout, ownership, allocator, and calling-convention control;
+- a runtime-free subset where the source program genuinely permits one.
+
+The goal is not to disguise C++ as C or compete with hxcpp on its home turf.
+Arbitrary C++ APIs require an existing or generated `extern "C"` shim.
+
+## Design direction
+
+One compiler pipeline will serve two explicit contracts:
+
+- **`portable`** preserves Haxe semantics and pulls in narrowly scoped runtime
+  features only when needed.
+- **`metal`** exposes C-native layout and ownership constraints, rejecting
+  hidden allocation or broad runtime fallback unless explicitly enabled.
+
+Runtime policy and target environment remain independent of that profile:
+
+```text
+-D reflaxe_c_profile=portable|metal
+-D hxc_runtime=auto|minimal|none
+-D hxc_environment=hosted|freestanding|wasi|emscripten
+```
+
+The intended compiler shape is:
+
+```text
+Haxe typed AST
+  -> target-owned semantic IR
+  -> explicit evaluation, lifetime, and cleanup edges
+  -> structured C AST
+  -> deterministic C printer
+  -> C sources, headers, runtime slices, manifests, and ABI reports
+```
+
+Strict hosted C11 is the working default. Generated code must preserve Haxe
+evaluation order, avoid C undefined behavior, compile warning-clean, and remain
+deterministic across repeated builds.
+
+## What exists today
+
+The current checkout contains:
+
+- a detailed [product requirements document](docs/PRD.md);
+- [architecture](docs/architecture.md) and
+  [configuration](docs/configuration.md) contracts;
+- a minimal Reflaxe compiler adapter that fails with `HXC1000`;
+- a structured C AST and printer seed;
+- a public runtime-header seed that parses as C11 and C++17;
+- a live Beads execution graph covering the planned milestones.
+
+It does **not** yet contain the complete bootstrap, Haxe lowering pipeline,
+runtime implementation, CLI, package metadata, examples, or release tooling.
+Those capabilities are tracked as work, not presented as finished features.
+
+## Explore the scaffold
+
+Requirements for the currently available checks are `bd`, `jq`, a C compiler,
+and a C++ compiler.
+
+```sh
+bd prime
+bd list --ready --type task
+
+jq empty \
+  docs/specs/beads-plan.json \
+  docs/specs/diagnostics.json \
+  docs/specs/stdlib-ledger.json
+
+cc -std=c11 -Wall -Wextra -Werror -pedantic \
+  -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
+
+c++ -std=c++17 -Wall -Wextra -Werror -pedantic \
+  -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
+```
+
+The first implementation milestone will ratify the public contracts, pin the
+Haxe/Reflaxe toolchain, make the target-owned Haxe sources type-check, and build
+a small end-to-end C emission slice before expanding language coverage.
+
+## Project documents
+
+- [Product requirements](docs/PRD.md)
+- [Architecture](docs/architecture.md)
+- [Configuration contract](docs/configuration.md)
+- [Beads plan](docs/BEADS_PLAN.md)
+- [Contributor and agent rules](AGENTS.md)
+
+## License
+
+No public license has been ratified yet. Do not assume permission beyond the
+rights granted by the repository owner. License selection and third-party
+notices are tracked as M0 governance work.
