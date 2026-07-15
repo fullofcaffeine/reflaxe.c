@@ -210,6 +210,21 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     scripts = package.get("scripts", {})
     if not isinstance(scripts, dict) or scripts.get("postinstall") != "lix download":
         errors.append("package.json postinstall must resolve the scoped Haxe toolchain with lix download")
+    expected_all_sources_script = "python3 test/all_sources/run.py"
+    expected_toolchain_script = (
+        "npm run deps:verify && npm run test:all-sources && "
+        "npm run test:bootstrap && npm run test:typed-c"
+    )
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:all-sources") != expected_all_sources_script
+    ):
+        errors.append("package.json must retain the dedicated all-source Haxe gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:toolchain") != expected_toolchain_script
+    ):
+        errors.append("package.json test:toolchain must run the all-source Haxe gate")
 
     root_package = package_lock.get("packages", {}).get("", {}) if isinstance(package_lock.get("packages"), dict) else {}
     locked_lix = package_lock.get("packages", {}).get("node_modules/lix", {}) if isinstance(package_lock.get("packages"), dict) else {}
@@ -237,6 +252,21 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
             errors.append("reflaxe.c source library contains a caller-relative classpath")
     check_macro_order(target_hxml, errors, allow_classpaths=True)
     check_macro_order(root / "extraParams.hxml", errors, allow_classpaths=False)
+
+    all_sources_hxml = root / "test/all_sources/all_sources.hxml"
+    expected_all_sources_hxml = [
+        "-cp test/all_sources/",
+        "-lib reflaxe.c",
+        '--macro include("reflaxe.c", true)',
+        '--macro include("c", true)',
+        "-main AllSourcesProbe",
+    ]
+    if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
+        errors.append(
+            "all_sources.hxml must include every reflaxe.c and c module through the scoped target library"
+        )
+    if not (root / "test/all_sources/run.py").is_file():
+        errors.append("dedicated all-source Haxe gate runner is missing")
 
     custom_target_files = {
         root / "src/c/Init.hx": (

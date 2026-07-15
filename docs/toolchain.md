@@ -34,13 +34,17 @@ npm run test:toolchain
 
 `npm ci` installs the exact Lix artifact and `lix download` resolves the Haxe
 version in `.haxerc`. `npm run test:toolchain` then verifies every pin and the
-vendored content checksum before running compile-backed lifecycle probes.
+vendored content checksum before running compile-backed all-source and lifecycle
+probes.
 Governance CI currently runs this tooling on Node.js 24 with the current
 documented checkout/setup actions. That CI selection does not silently change
 the independently declared local package floor in `package.json`.
 
 The probes cover:
 
+- a dedicated HXML that dynamically covers every current `src/**/*.hx` and
+  `std/c/**/*.hx` module, including explicit macro and non-macro compiler
+  branches;
 - source-checkout resolution from a nested working directory;
 - production C activation through `--custom-target c=<directory>` and automatic
   `c.Init.init()` platform setup;
@@ -124,8 +128,9 @@ Treat the following as one atomic review:
    version. Update the platform snapshot and ADR when carrier semantics move.
 6. Run `npm ci`, `npm test`, `bash scripts/lint/whitespace_guard.sh`, and the
    repository pre-commit chain. A Reflaxe update is not accepted until the
-   package and lifecycle probes pass. The whitespace guard intentionally skips
-   immutable third-party paths; their exact bytes are checked separately.
+   package, all-source, and lifecycle probes pass. The whitespace guard
+   intentionally skips immutable third-party paths; their exact bytes are
+   checked separately.
 
 Do not patch vendored Reflaxe silently. A target-required framework change must
 be documented as a minimal patch with an upstream reference and included in the

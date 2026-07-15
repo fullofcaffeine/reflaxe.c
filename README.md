@@ -9,9 +9,10 @@ separately proposes an optional future `hxc` orchestration tool for project buil
 diagnostics, bindings, exports, and other end-to-end workflows; it is not a
 replacement Haxe compiler or a requirement imposed by Reflaxe.
 
-**Project status: M0 architecture scaffold.** This repository does not compile
-Haxe programs yet. Unsupported compiler paths intentionally fail closed instead
-of emitting plausible but incorrect C.
+**Project status: M0 architecture scaffold.** The complete target-owned Haxe
+source graph type-checks, but this repository does not emit Haxe programs as C
+yet. Unsupported compiler paths intentionally fail closed instead of emitting
+plausible but incorrect C.
 
 ## Why another native target?
 
@@ -137,6 +138,8 @@ The current checkout contains:
   [configuration](docs/configuration.md) contracts;
 - a minimal Reflaxe adapter and whole-program boundary that type-check and then
   deliberately stop with source-anchored `HXC1000` before emitting C;
+- a dedicated HXML gate that automatically covers every `src/**/*.hx` and
+  `std/c/**/*.hx` module plus explicit compiler-macro branches;
 - a Haxe 5.0.0-preview.1 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked
   toolchain;
 - production `CustomTarget(c)` platform setup plus target-gated
@@ -177,6 +180,7 @@ jq empty \
   docs/specs/third-party-provenance.json
 
 python3 scripts/ci/check_toolchain.py --require-tools
+python3 test/all_sources/run.py
 python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
 python3 scripts/ci/check_license_policy.py
@@ -196,9 +200,10 @@ At M0 that real production path intentionally ends at `HXC1000` with no output;
 it is documented now so `c_output`, Eval, or the future `hxc` wrapper are not
 mistaken for alternate user-program carriers.
 
-The remaining bootstrap work will make the complete target-owned Haxe graph
-type-check, preserve fail-closed unsupported lowering, and then build a small
-end-to-end C emission slice before expanding language coverage.
+The complete target-owned Haxe graph now type-checks under the dedicated
+all-source gate, while real production activation remains fail-closed at
+`HXC1000`. The next compiler work builds a small end-to-end C emission slice
+before expanding language coverage.
 
 ## Project documents
 

@@ -76,11 +76,11 @@ acceptance criteria, scaffold code, then examples/comments.
 The current checkout is a deliberately partial slice of the fuller scaffold
 described by PRD Section 32. Verify files with `rg --files` before citing or
 running them. In particular, this checkout currently lacks several documented
-assets, including `CODEX_HANDOFF.md`, some schemas, examples,
-runtime implementation sources, and most compiler lifecycle classes referenced
-by the adapter. The pinned Haxe/Reflaxe/Lix package metadata and M0 target API
-contracts are present and verified; do not repeat the older missing-metadata
-assumption.
+assets, including `CODEX_HANDOFF.md`, some schemas, examples, runtime
+implementation sources, and the CLI implementation. The pinned
+Haxe/Reflaxe/Lix package metadata, M0 target API contracts, and minimal compiler
+lifecycle are present and compile-verified; do not repeat older
+missing-metadata or missing-adapter assumptions.
 
 - A path named in the PRD is not proof that it exists here.
 - A present seed is not proof that its capability works.
@@ -211,6 +211,13 @@ assumption.
   public versus internal defines, and the typed upstream
   `String`/`StringTools`/`UnicodeString` branch. A pin or carrier change requires
   an intentional snapshot and ADR review.
+- Keep `test/all_sources/all_sources.hxml` and `test/all_sources/run.py`
+  exhaustive. The runner automatically enumerates every repository-owned
+  `src/**/*.hx` and `std/c/**/*.hx` module, checks explicit compiler-macro
+  branches under Eval, and re-enters the real custom target to prove
+  source-anchored `HXC1000` with no plausible artifact. New owned Haxe sources
+  must stay visible to this gate; never replace its dynamic inventory with a
+  frozen module count or treat its Eval pass as a production carrier.
 - The package-layout probe may flatten the pinned framework into a temporary
   classpath to prove installed resolution. It is not release assembly or
   permission to publish while `haxe_c-od2.5` remains unresolved.
@@ -359,11 +366,12 @@ bd lint --json
 bash scripts/lint/whitespace_guard.sh
 ```
 
-`npm test` verifies the exact dependency lock, vendored Reflaxe checksum,
+`npm test` verifies the exact dependency lock, vendored Reflaxe checksum, the
+complete current target-owned Haxe graph and explicit macro branches,
 source/package lifecycle behavior, cold/compiler-server C/non-C isolation,
-macro order, notices, and governance policy. It does not type-check the
-incomplete compiler adapter or claim generated-C/native-runtime success; those
-remain later Beads gates.
+macro order, notices, and governance policy. The all-source pass proves only
+that the scaffold type-checks; it does not claim semantic lowering,
+generated-C, or native-runtime success.
 
 After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
 keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks
@@ -375,9 +383,10 @@ public-header gates. Gitleaks is required; the formatter haxelib is required whe
 repository-owned Haxe files are staged. Do not bypass the hook to publish a
 failing change; record and fix the underlying gate instead.
 
-Do not claim Haxe/Reflaxe type-checking, runtime linking, generated-program
-execution, sanitizers, cross-platform CI, bindgen, export, or stdlib parity
-until the responsible issue adds a real command and that command passes.
+Claim Haxe/Reflaxe source-graph type-checking only with the dedicated all-source
+gate. Do not claim runtime linking, generated-program execution, sanitizers,
+cross-platform CI, bindgen, export, or stdlib parity until the responsible issue
+adds a real command and that command passes.
 
 ### Git and remote completion
 

@@ -7,10 +7,11 @@
   "scripts": {
     "postinstall": "lix download",
     "deps:verify": "python3 scripts/ci/check_toolchain.py --require-tools",
+    "test:all-sources": "python3 test/all_sources/run.py",
     "test:bootstrap": "python3 test/bootstrap/run.py",
     "test:typed-c": "python3 test/typed_c/run.py",
     "test:governance": "python3 scripts/ci/check_license_policy.py && python3 -m unittest discover -s test/governance -p 'test_*.py'",
-    "test:toolchain": "npm run deps:verify && npm run test:bootstrap && npm run test:typed-c",
+    "test:toolchain": "npm run deps:verify && npm run test:all-sources && npm run test:bootstrap && npm run test:typed-c",
     "test": "npm run test:toolchain && npm run test:governance"
   },
   "devDependencies": {

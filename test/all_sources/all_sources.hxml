@@ -1,0 +1,10 @@
+# Dedicated E0.T04 graph check. The runner supplies either Eval for a complete
+# non-C type-check or the real C custom target for the fail-closed HXC1000 path.
+
+-cp test/all_sources/
+-lib reflaxe.c
+
+--macro include("reflaxe.c", true)
+--macro include("c", true)
+
+-main AllSourcesProbe

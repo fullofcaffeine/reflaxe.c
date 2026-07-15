@@ -81,6 +81,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-l
 	python3 "$ROOT_DIR/scripts/ci/check_toolchain.py" --root "$ROOT_DIR"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py|vendor/reflaxe/|haxe_libraries/|extraParams\.hxml|src/.*\.hx$|std/c/.*\.hx$|test/all_sources/|.*\.hxml$)'; then
+	echo "[pre-commit] Type-checking every target-owned Haxe source..."
+	python3 "$ROOT_DIR/test/all_sources/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/c/Init\.hx|src/reflaxe/c/(BuildDetection|CCompiler|CompilationContext|CompilerBootstrap|CompilerInit|CProfile|CReflaxeCompiler|ProfileResolver|TargetPlatform)\.hx|src/reflaxe/c/emit/GeneratedFile\.hx|test/bootstrap/)'; then
 	echo "[pre-commit] Running target identity and compiler lifecycle probes..."
 	python3 "$ROOT_DIR/test/bootstrap/run.py"

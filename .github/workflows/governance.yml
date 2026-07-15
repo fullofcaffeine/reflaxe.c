@@ -24,7 +24,7 @@ jobs:
       - name: Resolve exact Haxe and Lix tools
         run: npm ci
 
-      - name: Verify pins, target identity, compiler lifecycle, and typed C contracts
+      - name: Verify pins, all sources, target lifecycle, and typed C contracts
         run: npm run test:toolchain
 
   license-and-provenance:
