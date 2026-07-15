@@ -1,0 +1,31 @@
+#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+
+#include <stdbool.h>
+#include <stdint.h>
+
+extern bool hxc_field_EvaluationFixture_callFlag;
+
+extern uint32_t hxc_field_EvaluationFixture_counter;
+
+extern bool hxc_field_EvaluationFixture_shortCircuitIntact;
+
+extern bool hxc_field_EvaluationFixture_ternaryIntact;
+
+void hxc_method_EvaluationFixture_consumePair(bool hxc_local_EvaluationFixture_consumePair_first_n0, bool hxc_local_EvaluationFixture_consumePair_second_n1);
+
+uint32_t hxc_method_EvaluationFixture_finish(uint32_t hxc_local_EvaluationFixture_finish_value_n0);
+
+uint32_t hxc_method_EvaluationFixture_keepTernary(void);
+
+void hxc_method_EvaluationFixture_main(void);
+
+uint32_t hxc_method_EvaluationFixture_run(void);
+
+bool hxc_method_EvaluationFixture_setCallFlag(bool hxc_local_EvaluationFixture_setCallFlag_value_n0);
+
+bool hxc_method_EvaluationFixture_spoilShortCircuit(void);
+
+uint32_t hxc_method_EvaluationFixture_spoilTernary(void);
+
+#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

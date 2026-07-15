@@ -14,11 +14,12 @@ import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.frontend.TypedAstNormalizer;
+import reflaxe.c.frontend.TypedProgramInput;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
 class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dynamic> {
-	var pendingModules:Array<ModuleType> = [];
-	var currentModules:Array<ModuleType> = [];
+	var pendingProgram:Null<TypedProgramInput> = null;
+	var currentProgram:Null<TypedProgramInput> = null;
 	var generatedFiles:Array<GeneratedFile> = [];
 	var compilationContext:Null<CompilationContext> = null;
 
@@ -28,11 +29,14 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 
 	override public function filterTypes(moduleTypes:Array<ModuleType>):Array<ModuleType> {
 		// This runs before Reflaxe filters callbacks, so typedefs and externs are
-		// retained even when no individual callback would compile them.
-		pendingModules = moduleTypes.copy();
+		// retained even when no individual callback would compile them. Capture
+		// expressions now as well: the framework may replace field expressions
+		// during later callback preprocessing.
+		final capturedModules = moduleTypes.copy();
 		if (Context.defined("reflaxe_c_test_reverse_typed_modules")) {
-			pendingModules.reverse();
+			capturedModules.reverse();
 		}
+		pendingProgram = TypedAstNormalizer.normalize(capturedModules, getMainModule(), getMainExpr());
 		return moduleTypes;
 	}
 
@@ -41,15 +45,18 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 		// compiler-server requests.
 		compilationContext = new CompilationContext(ProfileResolver.resolve());
 		generatedFiles = [];
-		currentModules = pendingModules;
-		pendingModules = [];
+		currentProgram = pendingProgram;
+		pendingProgram = null;
 	}
 
 	override public function onCompileEnd():Void {
 		final context = requireContext();
-		final modules = currentModules;
-		currentModules = [];
-		final program = TypedAstNormalizer.normalize(modules, getMainModule(), getMainExpr());
+		final program = currentProgram;
+		currentProgram = null;
+		if (program == null) {
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "typed-program capture was missing at compile end", Context.currentPos(), context.profile);
+			return;
+		}
 		context.setTypedProgram(program);
 		generatedFiles = new CCompiler(context).compileModules(program);
 	}

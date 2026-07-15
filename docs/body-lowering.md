@@ -1,11 +1,15 @@
 # Primitive function-body lowering
 
 E2.T02 established the first compile-backed path from real pinned-Haxe
-`TypedExpr` bodies through validated HxcIR to structural strict C11. E2.T03 now
-reuses this layer for typed parameters and direct calls and packages the admitted
-primitive graph as a production C project. This document remains the contract
-for individual body semantics; [static function lowering](function-lowering.md)
-owns graph, prototype, call, and executable-entry behavior.
+`TypedExpr` bodies through validated HxcIR to structural strict C11. E2.T03
+reuses this layer for typed parameters and direct calls and packages the
+admitted primitive graph as a production C project. E2.T04 adds explicit
+multi-block sequencing for assignments, primitive static fields, lazy Boolean
+operators, value conditionals, and unsigned increments. This document remains
+the contract for individual body semantics; [static function
+lowering](function-lowering.md) owns graph, prototype, call, and
+executable-entry behavior, while [evaluation order](evaluation-order.md) owns
+the stable-value and control-flow proof.
 
 ## Admitted subset
 
@@ -18,29 +22,36 @@ owns graph, prototype, call, and executable-entry behavior.
 - primitive parameters and direct static calls whose typed signatures are in
   the same admitted graph;
 - implicit direct primitive conversions recorded before their calls;
+- local assignment and referenced primitive static-field load/store with
+  captured constant initializers;
+- short-circuit `&&`/`||` and value-form ternary expressions through explicit
+  HxcIR blocks;
+- prefix/postfix `UInt` increment through load/operation/store;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
 The lowering preserves each typed instruction in Haxe evaluation order. Nested
-blocks can currently share one HxcIR block because this subset has no branch,
-lifetime, cleanup, or failure edge; that flattening must stop when any such
-semantic edge is admitted. Locals remain addressable HxcIR places, while
-constants and loads produce immutable values.
+lexical blocks may share a semantic block only while they introduce no edge;
+lazy and value-conditional forms create explicit branch/jump blocks and typed
+flow locals. Locals and globals remain addressable HxcIR places, while
+constants, loads, calls, and pure operators produce immutable values.
 
 Return validity is checked twice. Frontend lowering maps the typed function and
 return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Default/optional/rest parameters, indirect calls, operators, assignment, control
-flow, objects, strings, closures, allocation, exceptions, and cleanup remain
-outside this slice. The first unsupported typed node fails with `HXC1001` at
-its exact Haxe range; lowering never substitutes `Dynamic`, `Any`, reflection,
-raw C, or an invented value.
+Default/optional/rest parameters, indirect calls, general arithmetic, signed
+increment and all decrement forms, statement control flow, source array/index
+lowering, instance objects/fields, strings, closures, allocation, exceptions,
+and cleanup remain outside this slice. The first unsupported typed node fails with
+`HXC1001` at its exact Haxe range; lowering never substitutes `Dynamic`, `Any`,
+reflection, raw C, or an invented value.
 
 ## Names, source mapping, and C shape
 
-Every function and local is registered in the per-compilation
+Every function, global, local, stable-value temporary, and generated label is
+registered in the per-compilation
 `CSymbolRegistry` before names are finalized. A local request includes its
 lexical source ordinal and function namespace, so two shadowed Haxe variables
 with the same spelling receive distinct deterministic C identifiers. Input
@@ -53,7 +64,8 @@ output with typed `#line` statement/declaration nodes. It never interpolates a
 raw directive. Both forms are strict C11 and use only the required standard
 headers (`<stdbool.h>` and/or `<stdint.h>` for the admitted types).
 
-Unused local reads become explicit `(void)local` statements so source order is
+Every local/global load first becomes a typed stable-value temporary; an unused
+read then becomes an explicit `(void)temporary` statement so source order is
 retained without native warnings. The emitted body slice selects no runtime
 feature, header, source, define, library, or symbol. Portable and metal use the
 same representation for these already-ratified primitive semantics.
@@ -80,6 +92,7 @@ Run:
 
 ```sh
 npm run test:body-lowering
+npm run test:evaluation-order
 npm run snapshots:check
 ```
 

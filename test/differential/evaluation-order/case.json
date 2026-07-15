@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "explicit-evaluation-order-differential",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-COMP-003",
+    "HXC-SEM-004"
+  ],
+  "sources": [
+    "test/hxc_ir/expected/semantic.hxcir",
+    "test/hxc_ir/fixtures/SideEffectSupport.hx",
+    "test/hxc_ir/fixtures/SideEffects.hx",
+    "test/hxc_ir/oracle.hxml",
+    "test/evaluation_order/fixtures/EvaluationFixture.hx",
+    "test/evaluation_order/oracle.hxml",
+    "test/evaluation_order/expected/program.c",
+    "test/evaluation_order/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../evaluation_order/run.py"
+    ],
+    "workingDirectory": "test/differential/evaluation-order",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "Eval differential, and zero-runtime strict C passed$"
+    },
+    "oracle": "test/evaluation_order/oracle.hxml"
+  }
+}

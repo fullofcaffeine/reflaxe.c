@@ -32,7 +32,8 @@
         "hxc-ir",
         "primitive-semantics",
         "body-lowering",
-        "function-lowering"
+        "function-lowering",
+        "evaluation-order"
       ]
     },
     {
@@ -96,7 +97,8 @@
         "hxc-ir",
         "primitive-semantics",
         "body-lowering",
-        "function-lowering"
+        "function-lowering",
+        "evaluation-order"
       ]
     },
     {
@@ -112,13 +114,14 @@
       "suiteIds": [
         "native-smoke",
         "body-lowering",
-        "function-lowering"
+        "function-lowering",
+        "evaluation-order"
       ]
     },
     {
       "id": "differential",
       "directory": "test/differential",
-      "status": "seed-only",
+      "status": "active",
       "purpose": "The same Haxe semantics compared against a declared reference target or oracle.",
       "expectedOutputs": [
         "oracle identity and normalized trace",
@@ -126,7 +129,8 @@
         "reproducible seed and allowed normalizations"
       ],
       "suiteIds": [
-        "hxc-ir"
+        "hxc-ir",
+        "evaluation-order"
       ]
     },
     {
@@ -408,6 +412,27 @@
       ]
     },
     {
+      "id": "evaluation-order",
+      "directory": "test/evaluation_order",
+      "runner": [
+        "python3",
+        "test/evaluation_order/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed calls, assignments, static fields, lazy operators, ternaries, and UInt increments lower into explicit HxcIR instruction/block order",
+        "the indexed compound-assignment fixture proves receiver/index/address/load/right/store order before fixed-array representation is admitted",
+        "every effectful load and consumed call is materialized; only total pure expressions over stable values remain inline",
+        "portable, metal, and runtime-none production C is byte-stable, warning-clean at O0/O2, runtime-free, and matches the pinned Eval oracle under GCC and Clang"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -532,6 +557,21 @@
         "id": "function-lowering",
         "expectedRoots": [
           "test/function_lowering/expected"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "evaluation-order",
+        "expectedRoots": [
+          "test/evaluation_order/expected/evaluation.hxcir",
+          "test/evaluation_order/expected/program.h",
+          "test/evaluation_order/expected/program.c",
+          "test/evaluation_order/expected/symbols.json"
         ],
         "formats": [
           "c",

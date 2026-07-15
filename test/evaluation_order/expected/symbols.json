@@ -1,0 +1,1438 @@
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_field_EvaluationFixture_callFlag",
+      "semanticKey": "5:field|28:ordinary:16:translation-unit|2:17:EvaluationFixture8:callFlag|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_EvaluationFixture_callFlag",
+      "sourceSymbol": "EvaluationFixture.callFlag"
+    },
+    {
+      "overloadSignature": [
+        "bool",
+        "bool"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_consumePair",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:consumePair|2:4:bool4:bool|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_consumePair",
+      "sourceSymbol": "EvaluationFixture.consumePair(bool, bool)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_consumePair_first_n0",
+      "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:consumePair|2:4:bool4:bool|0:|0:|3:17:EvaluationFixture11:consumePair5:first|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:consumePair|2:4:bool4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_consumePair_first_n0",
+      "sourceSymbol": "EvaluationFixture.consumePair.first#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_consumePair_second_n1",
+      "semanticKey": "5:local|110:ordinary:98:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:consumePair|2:4:bool4:bool|0:|0:|3:17:EvaluationFixture11:consumePair6:second|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:consumePair|2:4:bool4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_consumePair_second_n1",
+      "sourceSymbol": "EvaluationFixture.consumePair.second#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_field_EvaluationFixture_counter",
+      "semanticKey": "5:field|28:ordinary:16:translation-unit|2:17:EvaluationFixture7:counter|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_EvaluationFixture_counter",
+      "sourceSymbol": "EvaluationFixture.counter"
+    },
+    {
+      "overloadSignature": [
+        "u32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_finish",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture6:finish|1:3:u32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_finish",
+      "sourceSymbol": "EvaluationFixture.finish(u32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_finish_value_n0",
+      "semanticKey": "5:local|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture6:finish|1:3:u32|0:|0:|3:17:EvaluationFixture6:finish5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture6:finish|1:3:u32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_finish_value_n0",
+      "sourceSymbol": "EvaluationFixture.finish.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_keepTernary",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:keepTernary|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_keepTernary",
+      "sourceSymbol": "EvaluationFixture.keepTernary"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_main",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture4:main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_main",
+      "sourceSymbol": "EvaluationFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_run",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_run",
+      "sourceSymbol": "EvaluationFixture.run"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_run_assigned_n6",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run8:assigned|0:|0:|1:6",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_run_assigned_n6",
+      "sourceSymbol": "EvaluationFixture.run.assigned#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n11",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:conditional-false|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n11",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-false#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 14,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n14",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:conditional-false|0:|0:|2:14",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n14",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-false#14"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n5",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:conditional-false|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n5",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-false#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n8",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:conditional-false|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dfalse_n8",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-false#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n12",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-join|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n12",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-join#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 15,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n15",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-join|0:|0:|2:15",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n15",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-join#15"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n6",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-join|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n6",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-join#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n9",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-join|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n9",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-join#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n10",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-true|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n10",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-true#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n13",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-true|0:|0:|2:13",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n13",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-true#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n4",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-true|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n4",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-true#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n7",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label16:conditional-true|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Dtrue_n7",
+      "sourceSymbol": "EvaluationFixture.run.block-label.conditional-true#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n1",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label18:short-circuit-join|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n1",
+      "sourceSymbol": "EvaluationFixture.run.block-label.short-circuit-join#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n3",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label18:short-circuit-join|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n3",
+      "sourceSymbol": "EvaluationFixture.run.block-label.short-circuit-join#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n0",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:short-circuit-rhs|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n0",
+      "sourceSymbol": "EvaluationFixture.run.block-label.short-circuit-rhs#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n2",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|4:17:EvaluationFixture3:run11:block-label17:short-circuit-rhs|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n2",
+      "sourceSymbol": "EvaluationFixture.run.block-label.short-circuit-rhs#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n0",
+      "sourceSymbol": "EvaluationFixture.run.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n1",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n1",
+      "sourceSymbol": "EvaluationFixture.run.call-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n2",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n2",
+      "sourceSymbol": "EvaluationFixture.run.call-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 24,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n24",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|2:24",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n24",
+      "sourceSymbol": "EvaluationFixture.run.call-result#24"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n4",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n4",
+      "sourceSymbol": "EvaluationFixture.run.call-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n7",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n7",
+      "sourceSymbol": "EvaluationFixture.run.call-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n8",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:call-result|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_callzx2Dresult_n8",
+      "sourceSymbol": "EvaluationFixture.run.call-result#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 20,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n20",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run23:conditional-load-result|0:|0:|2:20",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n20",
+      "sourceSymbol": "EvaluationFixture.run.conditional-load-result#20"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 21,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n21",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run23:conditional-load-result|0:|0:|2:21",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n21",
+      "sourceSymbol": "EvaluationFixture.run.conditional-load-result#21"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 22,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n22",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run23:conditional-load-result|0:|0:|2:22",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n22",
+      "sourceSymbol": "EvaluationFixture.run.conditional-load-result#22"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n9",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run23:conditional-load-result|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n9",
+      "sourceSymbol": "EvaluationFixture.run.conditional-load-result#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:conditional-result|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10",
+      "sourceSymbol": "EvaluationFixture.run.conditional-result#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n3",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:conditional-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n3",
+      "sourceSymbol": "EvaluationFixture.run.conditional-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n8",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:conditional-result|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n8",
+      "sourceSymbol": "EvaluationFixture.run.conditional-result#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n9",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:conditional-result|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n9",
+      "sourceSymbol": "EvaluationFixture.run.conditional-result#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_run_fresh_n5",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run5:fresh|0:|0:|1:5",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_run_fresh_n5",
+      "sourceSymbol": "EvaluationFixture.run.fresh#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 15,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n15",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:global-load-result|0:|0:|2:15",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n15",
+      "sourceSymbol": "EvaluationFixture.run.global-load-result#15"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n16",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:global-load-result|0:|0:|2:16",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n16",
+      "sourceSymbol": "EvaluationFixture.run.global-load-result#16"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 17,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n17",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:global-load-result|0:|0:|2:17",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n17",
+      "sourceSymbol": "EvaluationFixture.run.global-load-result#17"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 18,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n18",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:global-load-result|0:|0:|2:18",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n18",
+      "sourceSymbol": "EvaluationFixture.run.global-load-result#18"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n6",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run18:global-load-result|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n6",
+      "sourceSymbol": "EvaluationFixture.run.global-load-result#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run21:increment-load-result|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10",
+      "sourceSymbol": "EvaluationFixture.run.increment-load-result#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run21:increment-load-result|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11",
+      "sourceSymbol": "EvaluationFixture.run.increment-load-result#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 12,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n12",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:load-result|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n12",
+      "sourceSymbol": "EvaluationFixture.run.load-result#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 13,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n13",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:load-result|0:|0:|2:13",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n13",
+      "sourceSymbol": "EvaluationFixture.run.load-result#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 14,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n14",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:load-result|0:|0:|2:14",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n14",
+      "sourceSymbol": "EvaluationFixture.run.load-result#14"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 19,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n19",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:load-result|0:|0:|2:19",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n19",
+      "sourceSymbol": "EvaluationFixture.run.load-result#19"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 23,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n23",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run11:load-result|0:|0:|2:23",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_loadzx2Dresult_n23",
+      "sourceSymbol": "EvaluationFixture.run.load-result#23"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_run_old_n4",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run3:old|0:|0:|1:4",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_run_old_n4",
+      "sourceSymbol": "EvaluationFixture.run.old#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_run_result_n7",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run6:result|0:|0:|1:7",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_run_result_n7",
+      "sourceSymbol": "EvaluationFixture.run.result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_run_selected_n2",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run8:selected|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_run_selected_n2",
+      "sourceSymbol": "EvaluationFixture.run.selected#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n3",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run25:short-circuit-load-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n3",
+      "sourceSymbol": "EvaluationFixture.run.short-circuit-load-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n5",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run25:short-circuit-load-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n5",
+      "sourceSymbol": "EvaluationFixture.run.short-circuit-load-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n0",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run20:short-circuit-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n0",
+      "sourceSymbol": "EvaluationFixture.run.short-circuit-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n1",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:|3:17:EvaluationFixture3:run20:short-circuit-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture3:run|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n1",
+      "sourceSymbol": "EvaluationFixture.run.short-circuit-result#1"
+    },
+    {
+      "overloadSignature": [
+        "bool"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_setCallFlag",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:setCallFlag|1:4:bool|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_setCallFlag",
+      "sourceSymbol": "EvaluationFixture.setCallFlag(bool)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_EvaluationFixture_setCallFlag_value_n0",
+      "semanticKey": "5:local|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:setCallFlag|1:4:bool|0:|0:|3:17:EvaluationFixture11:setCallFlag5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture11:setCallFlag|1:4:bool|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_EvaluationFixture_setCallFlag_value_n0",
+      "sourceSymbol": "EvaluationFixture.setCallFlag.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_field_EvaluationFixture_shortCircuitIntact",
+      "semanticKey": "5:field|28:ordinary:16:translation-unit|2:17:EvaluationFixture18:shortCircuitIntact|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_EvaluationFixture_shortCircuitIntact",
+      "sourceSymbol": "EvaluationFixture.shortCircuitIntact"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_spoilShortCircuit",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture17:spoilShortCircuit|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_spoilShortCircuit",
+      "sourceSymbol": "EvaluationFixture.spoilShortCircuit"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_EvaluationFixture_spoilTernary",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:EvaluationFixture12:spoilTernary|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_EvaluationFixture_spoilTernary",
+      "sourceSymbol": "EvaluationFixture.spoilTernary"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_field_EvaluationFixture_ternaryIntact",
+      "semanticKey": "5:field|28:ordinary:16:translation-unit|2:17:EvaluationFixture13:ternaryIntact|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_EvaluationFixture_ternaryIntact",
+      "sourceSymbol": "EvaluationFixture.ternaryIntact"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "main",
+      "cName": "main",
+      "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|3:8:compiler22:executable-entry-point31:function.EvaluationFixture.main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "static-initializer",
+      "specializationArguments": [],
+      "baseName": "main",
+      "sourceSymbol": "compiler.executable-entry-point.function.EvaluationFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "cName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "semanticKey": "6:module|12:preprocessor|3:8:compiler14:program-header5:guard|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "internal",
+      "kind": "module",
+      "specializationArguments": [],
+      "baseName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "sourceSymbol": "compiler.program-header.guard"
+    }
+  ],
+  "collisions": [],
+  "algorithm": "hxc-c-symbol-v1"
+}

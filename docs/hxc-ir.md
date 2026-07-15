@@ -5,8 +5,9 @@ the structural C AST. Its schema is internal to the compiler: schema version 2
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
-narrow production C consumer. All other frontend and C lowering remains
-explicitly gated.
+narrow production C consumer. E2.T04 adds primitive global places plus explicit
+branch/jump graphs for lazy and expression-valued control flow. All other
+frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
@@ -148,6 +149,9 @@ canonical bytes.
 The direct HxcIR suite itself emits no C. The body-lowering suite generates a
 test translation unit from real typed Haxe. The function-lowering suite extends
 that evidence to parameters, conversions, calls, recursive prototypes, and the
-production private header/source-set/entry project. Both select no runtime files or
-public C ABI and compile/run as strict C11 with available GCC and Clang at
-`-O0` and `-O2`.
+production private header/source-set/entry project. The evaluation-order suite
+adds source-backed calls, assignments, static fields, short circuit, ternary,
+and increments, and deliberately reuses the representation-neutral indexed
+compound-assignment IR until E2.T08 owns source array lowering. All select no
+runtime files or public C ABI and compile/run as strict C11 with available GCC
+and Clang at `-O0` and `-O2`.

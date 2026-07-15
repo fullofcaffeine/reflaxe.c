@@ -11,11 +11,12 @@ replacement Haxe compiler or a requirement imposed by Reflaxe.
 
 **Project status: M0 architecture scaffold with a primitive executable slice.**
 The complete target-owned Haxe source graph type-checks. Typed primitive static
-functions, arguments, conversions, direct calls, and bodies now pass through
-validated HxcIR and emit an owned runtime-free strict-C11 project with a private
-header and `int main(void)`. This is not general Haxe or standard-library
-support; every broader compiler path still fails closed instead of producing
-plausible but incorrect C.
+functions, arguments, conversions, calls, assignments, static fields, lazy and
+value-conditional expressions, and unsigned increments now pass through
+explicitly sequenced validated HxcIR and emit an owned runtime-free strict-C11
+project with a private header and `int main(void)`. This is not general Haxe or
+standard-library support; every broader compiler path still fails closed
+instead of producing plausible but incorrect C.
 
 ## Why another native target?
 
@@ -113,12 +114,16 @@ canonical source-aware dumps, reordered-input goldens, matching Eval side-effect
 oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. The
 [primitive function-body lowering](docs/body-lowering.md) carries real typed
 constants, parameters, initialized locals/reads, nested blocks, calls,
-conversions, and returns through this layer to structural C, with exact source
-spans and deterministic shadow-safe names. [Static function
+conversions, assignments, primitive static storage, lazy/value control flow,
+unsigned increments, and returns through this layer to structural C, with exact
+source spans and deterministic names for globals, locals, stable temporaries,
+and labels. [Static function
 lowering](docs/function-lowering.md) collects the reachable typed graph, emits
 all prototypes before definitions, preserves ordered arguments with explicit
 temporaries, partitions compiler-proven closed recursion warning-cleanly, and
-packages the first production primitive executable project.
+packages the production primitive executable project. [Explicit evaluation
+order](docs/evaluation-order.md) documents the stable-value proof and Eval/C
+differential boundary.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI
@@ -128,9 +133,10 @@ selection. Its independently authored strict-C11 probe validates the ratified
 algorithms at O0/O2. The E2.T02 body fixture separately proves the admitted
 primitive mappings in generated strict C11.
 
-The [typed-AST input adapter](docs/typed-ast-input.md) now captures Haxe's
-complete module set before Reflaxe callback filtering, normalizes module and
-declaration ownership, retains externs/typedefs/abstracts and raw expressions,
+The [typed-AST input adapter](docs/typed-ast-input.md) now captures and
+normalizes Haxe's complete module set and original field expressions before
+Reflaxe callback filtering, records module and declaration ownership, retains
+externs/typedefs/abstracts and raw expressions,
 and records the entry point in a fresh per-request context. Its deterministic
 inventory is identical across reordered input and cold/compiler-server builds.
 The report remains a pre-lowering inventory; the body/function pipeline consumes
@@ -231,13 +237,16 @@ The current checkout contains:
   ABI integer identities, explicit scalar/reference nullability, owned machine
   snapshot, and strict-C11 O0/O2 algorithm probes without `hxrt`;
 - real primitive `TypedExpr -> HxcIR -> structural C` body
-  lowering with deterministic shadow-safe function/local names, exact source
+  lowering with deterministic global/local/temporary/label names, exact source
   diagnostics, optional structural `#line` mapping, and runtime-free GCC/Clang
   execution at O0/O2;
 - typed primitive parameters, explicit argument conversion/call order, direct
   static calls, recursive prototype planning, scoped default/optional/rest
   diagnostics, and deterministic production project/native execution without
   `hxrt`;
+- explicit calls, assignments, primitive static fields, short circuit,
+  value-form ternaries, and `UInt` increments with a stable-temporary proof and
+  Eval-versus-generated-C differential execution at O0/O2;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -250,9 +259,9 @@ The current checkout contains:
 - a live Beads execution graph covering the planned milestones.
 
 It does **not** yet contain general Haxe-to-C semantic lowering, indirect or
-instance calls, control flow beyond primitive blocks, standard-library parity,
-a complete runtime, the `hxc` implementation, executable generated examples, or
-release tooling.
+instance calls, general statement control flow/loops, source array lowering,
+standard-library parity, a complete runtime, the `hxc` implementation,
+executable generated examples, or release tooling.
 The package metadata added at M0 is a reproducible development/package-layout
 seed, not a publishable compiler. Those capabilities remain tracked work.
 
@@ -292,6 +301,8 @@ python3 test/declaration_plan/run.py
 python3 test/symbol_registry/run.py
 python3 test/hxc_ir/run.py
 python3 test/body_lowering/run.py
+python3 test/function_lowering/run.py
+python3 test/evaluation_order/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/test/snapshots.py --check
@@ -328,8 +339,9 @@ user-program carriers.
 
 The complete target-owned Haxe graph type-checks under the dedicated all-source
 gate. E2.T03 supplies static functions, arguments, direct calls, recursive
-prototypes, and executable entry emission; E2.T04 next broadens explicit Haxe
-evaluation-order serialization while unsupported constructs remain fail-closed.
+prototypes, and executable entry emission. E2.T04 now serializes the admitted
+Haxe evaluation-order forms explicitly while unsupported constructs remain
+fail-closed.
 
 ## Project documents
 
@@ -340,6 +352,7 @@ evaluation-order serialization while unsupported constructs remain fail-closed.
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Primitive function-body lowering](docs/body-lowering.md)
 - [Static function and direct-call lowering](docs/function-lowering.md)
+- [Explicit Haxe evaluation order](docs/evaluation-order.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)

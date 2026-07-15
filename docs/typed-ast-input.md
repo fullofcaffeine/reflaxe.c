@@ -11,7 +11,8 @@ Reflaxe calls `filterTypes` before its own callback filters and before
 
 ```text
 filterTypes
-  -> replace pending capture with this request's complete ModuleType array
+  -> normalize this request's complete ModuleType array, field expressions,
+     and entry point into the pending TypedProgramInput
 
 onCompileStart
   -> create a fresh CompilationContext and empty CSymbolRegistry
@@ -20,13 +21,13 @@ onCompileStart
 
 onCompileEnd
   -> clear current-request storage
-  -> normalize modules plus getMainModule()/getMainExpr()
   -> install the TypedProgramInput once in CompilationContext
   -> invoke CCompiler
 ```
 
-Capturing before Reflaxe callback filtering is important: typedefs and externs
-remain available even when no class/enum callback would otherwise present them.
+Normalizing before Reflaxe callback filtering is important: typedefs and externs
+remain available even when no class/enum callback would otherwise present them,
+and field/entry expressions cannot be replaced by later framework preprocessing.
 No later compiler stage may reconstruct the program from callback order.
 
 Every request replaces all mutable adapter state, including the later symbol
@@ -45,6 +46,11 @@ match its cold build byte for byte.
   facts;
 - fields, constructors, enum constructors, types, and metadata;
 - class initializers, field-expression roots, and the application entry point.
+
+The entry record eagerly retains the typed static target signature/body when
+Haxe exposes it through `getMainExpr()`. This keeps the existing omitted-main-
+module fallback inside the pre-filter capture boundary; `CCompiler` never asks
+a mutable `ClassField` for a later body.
 
 Semantically unordered module/declaration sets are sorted by logical
 coordinates. Field groups, enum constructors, metadata, and expression roots

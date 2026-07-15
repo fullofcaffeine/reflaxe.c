@@ -134,6 +134,20 @@ REQUIRED_GATE_FILES = (
     "test/negative/function-lowering/case.json",
     "test/snapshot/function-lowering/case.json",
     "test/runtime/function-lowering/case.json",
+    "docs/evaluation-order.md",
+    "test/evaluation_order/EvaluationOrderProbe.hx",
+    "test/evaluation_order/evaluation_order.hxml",
+    "test/evaluation_order/oracle.hxml",
+    "test/evaluation_order/fixtures/EvaluationFixture.hx",
+    "test/evaluation_order/expected/evaluation.hxcir",
+    "test/evaluation_order/expected/program.h",
+    "test/evaluation_order/expected/program.c",
+    "test/evaluation_order/expected/symbols.json",
+    "test/evaluation_order/run.py",
+    "test/positive/evaluation-order/case.json",
+    "test/snapshot/evaluation-order/case.json",
+    "test/runtime/evaluation-order/case.json",
+    "test/differential/evaluation-order/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -180,6 +194,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -235,6 +250,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:body-lowering entry point")
     if scripts.get("test:function-lowering") != "python3 test/function_lowering/run.py":
         errors.append("package.json must retain the test:function-lowering entry point")
+    if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
+        errors.append("package.json must retain the test:evaluation-order entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -261,6 +278,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:body-lowering")
     if "npm run test:function-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:function-lowering")
+    if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:evaluation-order")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -306,6 +325,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed body-lowering test")
     if "test/function_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed function-lowering test")
+    if "test/evaluation_order/run.py" not in pre_commit:
+        errors.append("pre-commit must run the explicit evaluation-order test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -403,6 +424,36 @@ def validate() -> list[str]:
     if "command identity" not in function_runner or '"--version"' not in function_runner:
         errors.append(
             "function-lowering runner must verify required compiler-family identity"
+        )
+
+    evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)
+    for required_evaluation_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-Wstrict-prototypes",
+        "-Wmissing-prototypes",
+        "-Wundef",
+        "-Wformat=2",
+        "-Wimplicit-fallthrough",
+        "-Wcast-align",
+        "-Wcast-qual",
+        "-O0",
+        "-O2",
+    ):
+        if required_evaluation_flag not in evaluation_runner:
+            errors.append(
+                "evaluation-order native runner lost strict flag "
+                + required_evaluation_flag
+            )
+    if "--native-only" not in evaluation_runner or "--toolchain" not in evaluation_runner:
+        errors.append("evaluation-order runner must expose the required native matrix seam")
+    if "compiler_identity" not in evaluation_runner or '"--version"' not in evaluation_runner:
+        errors.append(
+            "evaluation-order runner must verify required compiler-family identity"
         )
 
     return errors

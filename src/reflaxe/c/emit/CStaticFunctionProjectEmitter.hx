@@ -48,6 +48,10 @@ class CStaticFunctionProjectEmitter {
 		for (fn in lowered.functions) {
 			functionNames.set(fn.ir.id, fn.cName);
 		}
+		final globalNames:Map<String, CIdentifier> = [];
+		for (global in lowered.globals) {
+			globalNames.set(global.ir.id, global.cName);
+		}
 		final headerUnit = new CTranslationUnit();
 		final headers:Array<String> = [];
 		for (fn in lowered.functions) {
@@ -57,9 +61,26 @@ class CStaticFunctionProjectEmitter {
 				}
 			}
 		}
+		for (global in lowered.globals) {
+			for (header in bodyEmitter.requiredGlobalHeaders(global.ir)) {
+				if (headers.indexOf(header) == -1) {
+					headers.push(header);
+				}
+			}
+		}
 		headers.sort(compareStrings);
 		for (header in headers) {
 			headerUnit.includes.push({path: header, kind: System});
+		}
+		for (global in lowered.globals) {
+			headerUnit.declarations.push(DVariable({
+				storage: [SExtern],
+				alignments: [],
+				type: bodyEmitter.cType(global.ir.type),
+				declarator: DName(global.cName),
+				initializer: null,
+				attributes: []
+			}));
 		}
 		for (fn in lowered.functions) {
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
@@ -68,6 +89,16 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final programUnit = sourceUnit();
+		for (global in lowered.globals) {
+			programUnit.declarations.push(DVariable({
+				storage: [],
+				alignments: [],
+				type: bodyEmitter.cType(global.ir.type),
+				declarator: DName(global.cName),
+				initializer: bodyEmitter.globalInitializer(global.ir),
+				attributes: []
+			}));
+		}
 		final sources:Array<CStaticFunctionSourcePlan> = [];
 		var nonReturningOrdinal = 0;
 		for (fn in lowered.functions) {
@@ -77,8 +108,8 @@ class CStaticFunctionProjectEmitter {
 				functionSpecifiers: functionSpecifiers,
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
-				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, false, fn.tailArgumentNames,
-					nonReturningFunctionIds),
+				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, false,
+					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds),
 				attributes: []
 			});
 			if (nonReturningFunctionIds.exists(fn.ir.id)) {
@@ -140,8 +171,10 @@ class CStaticFunctionProjectEmitter {
 	}
 
 	/**
-		Every admitted instruction is unconditional. A closed direct-call cycle
-		therefore cannot reach its HxcIR return and may use C11 `_Noreturn`.
+		Only a one-block admitted body proves every call instruction unconditional.
+		Multi-block bodies are excluded conservatively. A closed direct-call cycle
+		in the remaining graph cannot reach its HxcIR return and may use C11
+		`_Noreturn`.
 	**/
 	static function nonReturningCallCycles(functions:Array<CLoweredBodyFunction>):Map<String, Bool> {
 		final known:Map<String, Bool> = [];
@@ -152,8 +185,8 @@ class CStaticFunctionProjectEmitter {
 		final targetsByFunction:Map<String, Array<String>> = [];
 		for (fn in functions) {
 			final targets:Array<String> = [];
-			for (block in fn.ir.blocks) {
-				for (instruction in block.instructions) {
+			if (fn.ir.blocks.length == 1) {
+				for (instruction in fn.ir.blocks[0].instructions) {
 					switch instruction.kind {
 						case IRIOCall({dispatch: IRCDDirect(targetId)}):
 							if (known.exists(targetId) && targets.indexOf(targetId) == -1) {

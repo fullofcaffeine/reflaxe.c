@@ -519,13 +519,20 @@ class CProjectEmitter {
 			diagnosticProvenance: diagnosticProvenance,
 			environment: plan.environment,
 			rootReasons: [],
-			directDecisions: ["primitive-values", "static-functions", "direct-calls", "executable-entry-point"],
+			directDecisions: [
+				"primitive-values",
+				"primitive-static-storage",
+				"static-functions",
+				"direct-calls",
+				"explicit-evaluation-order",
+				"executable-entry-point"
+			],
 			features: [],
 			artifacts: [],
 			symbols: [],
 			libraries: [],
 			defines: [],
-			noRuntimeProof: "reachable validated HxcIR contains only direct primitive static functions, conversions, and calls"
+			noRuntimeProof: "reachable validated HxcIR contains only direct primitive storage, functions, conversions, sequenced control flow, and calls"
 		};
 	}
 

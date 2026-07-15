@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "id": "explicit-evaluation-order-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-COMP-003",
+    "HXC-SEM-004"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/CReflaxeCompiler.hx",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CStaticFunctionGraph.hx",
+    "test/hxc_ir/expected/semantic.hxcir",
+    "test/hxc_ir/fixtures/SideEffectSupport.hx",
+    "test/hxc_ir/fixtures/SideEffects.hx",
+    "test/hxc_ir/oracle.hxml",
+    "test/evaluation_order/EvaluationOrderProbe.hx",
+    "test/evaluation_order/fixtures/EvaluationFixture.hx",
+    "test/evaluation_order/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../evaluation_order/run.py"
+    ],
+    "workingDirectory": "test/positive/evaluation-order",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^evaluation-order: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/evaluation_order/expected/evaluation.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/evaluation_order/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

@@ -61,6 +61,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "primitive-semantics",
                 "body-lowering",
                 "function-lowering",
+                "evaluation-order",
             ),
         )
 

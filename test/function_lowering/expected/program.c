@@ -33,14 +33,17 @@ void hxc_method_FunctionFixture_main(void)
 {
   int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n0 = hxc_method_FunctionFixture_chain(7);
   int32_t hxc_local_FunctionFixture_main_integer_n0 = hxc_temp_FunctionFixture_main_callzx2Dresult_n0;
-  (void)hxc_local_FunctionFixture_main_integer_n0;
-  double hxc_temp_FunctionFixture_main_callzx2Dresult_n1 = hxc_method_FunctionFixture_convert(9);
-  double hxc_local_FunctionFixture_main_floating_n1 = hxc_temp_FunctionFixture_main_callzx2Dresult_n1;
-  (void)hxc_local_FunctionFixture_main_floating_n1;
+  int32_t hxc_temp_FunctionFixture_main_loadzx2Dresult_n1 = hxc_local_FunctionFixture_main_integer_n0;
+  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n1;
+  double hxc_temp_FunctionFixture_main_callzx2Dresult_n2 = hxc_method_FunctionFixture_convert(9);
+  double hxc_local_FunctionFixture_main_floating_n1 = hxc_temp_FunctionFixture_main_callzx2Dresult_n2;
+  double hxc_temp_FunctionFixture_main_loadzx2Dresult_n3 = hxc_local_FunctionFixture_main_floating_n1;
+  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n3;
   hxc_method_FunctionFixture_discarded(11);
-  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n2 = hxc_method_FunctionFixture_ordered(13);
-  int32_t hxc_local_FunctionFixture_main_orderedValue_n2 = hxc_temp_FunctionFixture_main_callzx2Dresult_n2;
-  (void)hxc_local_FunctionFixture_main_orderedValue_n2;
+  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n4 = hxc_method_FunctionFixture_ordered(13);
+  int32_t hxc_local_FunctionFixture_main_orderedValue_n2 = hxc_temp_FunctionFixture_main_callzx2Dresult_n4;
+  int32_t hxc_temp_FunctionFixture_main_loadzx2Dresult_n5 = hxc_local_FunctionFixture_main_orderedValue_n2;
+  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n5;
   return;
 }
 

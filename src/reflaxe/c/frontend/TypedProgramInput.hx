@@ -5,6 +5,7 @@ import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.EnumField;
 import haxe.macro.Type.ModuleType;
+import haxe.macro.Type.Type;
 import haxe.macro.Type.TypedExpr;
 
 /** A normalized metadata entry whose arguments have stable source rendering. */
@@ -70,10 +71,22 @@ typedef TypedAstExpressionRoot = {
 }
 
 /** Entry-point facts kept independently from Reflaxe callback order. */
+typedef TypedAstEntryFunction = {
+	final modulePath:String;
+	final declarationPath:String;
+	final sourcePath:String;
+	final fieldName:String;
+	final sourceOrder:Int;
+	final fieldType:Type;
+	final expression:TypedExpr;
+}
+
+/** Entry expression plus its eagerly captured static target, when available. */
 typedef TypedAstEntryPoint = {
 	final modulePath:Null<String>;
 	final declarationPath:Null<String>;
 	final expression:TypedExpr;
+	final target:Null<TypedAstEntryFunction>;
 }
 
 /**

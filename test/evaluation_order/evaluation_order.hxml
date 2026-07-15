@@ -1,0 +1,8 @@
+-cp test/evaluation_order/
+-cp test/evaluation_order/fixtures/
+-lib reflaxe.c
+
+--macro EvaluationOrderProbe.install()
+
+-main EvaluationFixture
+--interp

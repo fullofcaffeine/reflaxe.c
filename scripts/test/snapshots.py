@@ -373,6 +373,43 @@ def function_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def evaluation_order_artifacts() -> list[Artifact]:
+    module = load_module("evaluation_order", "test/evaluation_order/run.py")
+    first_payload, report = module.render("snapshot first evaluation-order render")
+    second_payload, repeated = module.render("snapshot second evaluation-order render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input evaluation-order render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "evaluation-order snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("evaluation.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"evaluation-order report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"evaluation-order report omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/evaluation_order/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -385,6 +422,7 @@ GENERATORS: dict[str, Generator] = {
     "primitive-semantics": primitive_semantics_artifacts,
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
+    "evaluation-order": evaluation_order_artifacts,
 }
 
 

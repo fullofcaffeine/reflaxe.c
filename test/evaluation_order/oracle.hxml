@@ -1,0 +1,4 @@
+-cp test/evaluation_order/fixtures/
+-D evaluation_order_oracle
+-main EvaluationFixture
+--interp

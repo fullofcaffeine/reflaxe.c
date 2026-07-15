@@ -16,12 +16,12 @@ suite proves broader language, standard-library, public ABI, or `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body and static-function lowering |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, and evaluation-order lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported body/signature/argument boundaries |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution plus native runtime seeds; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | HxcIR side-effect oracle seed only |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -104,6 +104,7 @@ The registered snapshot selectors are:
 - `primitive-semantics`
 - `body-lowering`
 - `function-lowering`
+- `evaluation-order`
 
 List them from the executable registry with:
 
@@ -147,6 +148,16 @@ checks deterministic portable/metal renders, scoped default/optional/rest
 empty runtime/ABI/stdlib sidecars, and no `hxrt` artifact or symbol. Required CI
 lanes compile and run its checked-in and production-generated strict C under GCC
 and Clang. See [static function lowering](function-lowering.md).
+
+`test/evaluation_order` is the focused positive/snapshot/runtime/differential
+suite for E2.T04. It proves source-backed call arguments, assignments,
+primitive static fields, lazy Boolean operators, value ternaries, and unsigned
+prefix/postfix increments through explicit HxcIR and structural C. It checks
+the pre-existing indexed compound-assignment HxcIR without claiming source
+array support, verifies the stable-value temporary proof, compares an Eval
+oracle with generated projects, and runs strict GCC/Clang at O0/O2 with a
+positive zero-runtime plan. See [explicit evaluation
+order](evaluation-order.md).
 
 ## Examples are product proofs, not implicit tests
 

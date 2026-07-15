@@ -5,6 +5,7 @@ import haxe.macro.ExprTools;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
+import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryFunction;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstExpressionRoot;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstField;
@@ -54,7 +55,8 @@ class TypedAstNormalizer {
 			entryPoint = {
 				modulePath: mainModulePath,
 				declarationPath: mainDeclarationPath,
-				expression: mainExpr
+				expression: mainExpr,
+				target: captureEntryFunction(mainExpr)
 			};
 			expressionRoots.push({
 				sourceOrder: 0,
@@ -68,6 +70,38 @@ class TypedAstNormalizer {
 		}
 
 		return new TypedProgramInput(modules, declarations, expressionRoots, entryPoint, rawModules);
+	}
+
+	static function captureEntryFunction(expression:TypedExpr):Null<TypedAstEntryFunction> {
+		return switch expression.expr {
+			case TCall({expr: TField(_, FStatic(classReference, fieldReference))}, arguments) if (arguments.length == 0):
+				final owner = classReference.get();
+				final field = fieldReference.get();
+				final fieldExpression = field.expr();
+				if (field.name != "main" || fieldExpression == null) {
+					null;
+				} else {
+					final staticFields = owner.statics.get();
+					var sourceOrder = 0;
+					for (index in 0...staticFields.length) {
+						if (staticFields[index].name == field.name) {
+							sourceOrder = index;
+							break;
+						}
+					}
+					{
+						modulePath: owner.module,
+						declarationPath: declarationPath(owner),
+						sourcePath: sourcePath(owner.module),
+						fieldName: field.name,
+						sourceOrder: sourceOrder,
+						fieldType: field.type,
+						expression: fieldExpression
+					};
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): captureEntryFunction(inner);
+			case _: null;
+		};
 	}
 
 	static function normalizeDeclaration(moduleType:ModuleType, expressionRoots:Array<TypedAstExpressionRoot>):TypedAstDeclaration {

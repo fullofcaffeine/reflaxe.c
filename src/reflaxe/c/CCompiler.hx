@@ -19,6 +19,7 @@ import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.frontend.TypedAstInventory;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
+import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
 import reflaxe.c.lowering.CBodyEmissionError;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
@@ -79,14 +80,14 @@ class CCompiler {
 					'primitive executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
 					input.expression.pos, context.profile);
 			}
-			final graph = new CStaticFunctionGraphCollector().collect(input);
+			final graph = new CStaticFunctionGraphCollector().collect(input, program);
 			final entryRequest = new CSymbolRequest(CSKStaticInitializer, ["compiler", "executable-entry-point", graph.entryFunctionId],
 				CNSOrdinary("translation-unit"), CSVInternal, "main");
 			final headerGuardRequest = new CSymbolRequest(CSKModule, ["compiler", "program-header", "guard"], CNSPreprocessor, CSVInternal,
 				CDeclarationPlanner.headerGuardFor(CStaticFunctionProjectEmitter.HEADER_PATH));
 			context.symbols.register(entryRequest);
 			context.symbols.register(headerGuardRequest);
-			final lowered = new CBodyLowering(context).lower(graph.functions);
+			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals);
 			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
 				context.symbols.identifierFor(headerGuardRequest));
 			return new CProjectEmitter().emit({
@@ -201,7 +202,7 @@ class CCompiler {
 				return input;
 			}
 		}
-		return entryPointMainInput(entryPoint.expression);
+		return entryPointMainInput(entryPoint);
 	}
 
 	/**
@@ -209,35 +210,19 @@ class CCompiler {
 		unreferenced main class from the module array. The call is only an
 		ownership locator here; the reachable graph collector owns subsequent calls.
 	**/
-	static function entryPointMainInput(entryPoint:TypedExpr):Null<CBodyFunctionInput> {
-		return switch entryPoint.expr {
-			case TCall({expr: TField(_, FStatic(classReference, fieldReference))}, arguments) if (arguments.length == 0):
-				final owner = classReference.get();
-				final field = fieldReference.get();
-				final expression = field.expr();
-				if (field.name != "main" || expression == null) {
-					null;
-				} else {
-					final staticFields = owner.statics.get();
-					var sourceOrder = 0;
-					for (index in 0...staticFields.length) {
-						if (staticFields[index].name == field.name) {
-							sourceOrder = index;
-							break;
-						}
-					}
-					{
-						modulePath: owner.module,
-						declarationPath: owner.pack.concat([owner.name]).join("."),
-						sourcePath: owner.module.split(".").join("/") + ".hx",
-						fieldName: field.name,
-						sourceOrder: sourceOrder,
-						fieldType: field.type,
-						expression: expression
-					};
-				}
-			case _:
-				null;
+	static function entryPointMainInput(entryPoint:TypedAstEntryPoint):Null<CBodyFunctionInput> {
+		final target = entryPoint.target;
+		if (target == null || target.fieldName != "main") {
+			return null;
+		}
+		return {
+			modulePath: target.modulePath,
+			declarationPath: target.declarationPath,
+			sourcePath: target.sourcePath,
+			fieldName: target.fieldName,
+			sourceOrder: target.sourceOrder,
+			fieldType: target.fieldType,
+			expression: target.expression
 		};
 	}
 

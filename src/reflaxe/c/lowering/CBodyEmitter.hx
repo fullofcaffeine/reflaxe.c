@@ -10,18 +10,16 @@ class CBodyEmitter {
 	public function new() {}
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
-			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
-			tailArgumentNames:Map<String, Array<CIdentifier>>, ?nonReturningFunctionIds:Map<String, Bool>):CStmt {
-		if (fn.blocks.length != 1 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
-			fail('body lowering requires one cleanup-free entry block in `${fn.id}`');
+			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, lineDirectives:Bool,
+			tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>, ?nonReturningFunctionIds:Map<String, Bool>):CStmt {
+		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
+			fail('body lowering requires a cleanup-free entry-first block graph in `${fn.id}`');
 		}
-		final block = fn.blocks[0];
 		final values:Map<String, CExpr> = [];
 		final declared:Map<String, Bool> = [];
-		final referencedValues = referencedValueIds(block);
-		final referencedLocals = referencedLocalIds(block);
+		final referencedValues = referencedValueIds(fn);
+		final referencedLocals = referencedLocalIds(fn);
 		final statements:Array<CStmt> = [];
-		var terminatedByNonReturningCall = false;
 		var terminatedByTailLoop = false;
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
@@ -31,127 +29,225 @@ class CBodyEmitter {
 				statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(name))));
 			}
 		}
-		for (instruction in block.instructions) {
-			switch instruction.kind {
-				case IRIOConstant(value):
-					final result = requireResult(instruction, fn.id);
-					values.set(result.id, constantExpression(value));
-				case IRIOLoad(IRPLocal(localId)):
-					final result = requireResult(instruction, fn.id);
-					final expression:CExpr = EIdentifier(requireLocalName(localNames, localId, fn.id));
-					values.set(result.id, expression);
-					if (!referencedValues.exists(result.id)) {
+		for (blockIndex in 0...fn.blocks.length) {
+			final block = fn.blocks[blockIndex];
+			if (blockIndex > 0) {
+				statements.push(SLabel(requireLabelName(labelNames, block.id, fn.id), SEmpty));
+			}
+			var terminatedByNonReturningCall = false;
+			for (instruction in block.instructions) {
+				switch instruction.kind {
+					case IRIOConstant(value):
+						final result = requireResult(instruction, fn.id);
+						values.set(result.id, constantExpression(value));
+					case IRIOLoad(place):
+						emitLoad(statements, values, referencedValues, instruction, placeExpression(place, localNames, globalNames, fn.id), temporaryNames,
+							lineDirectives, fn.id);
+					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
+						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
+					case IRIOStore(place, valueId):
+						if (instruction.result != null) {
+							fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+						}
 						addLineDirective(statements, instruction.source, lineDirectives);
-						statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
-					}
-				case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
-					if (instruction.result != null) {
-						fail('initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
-					}
-					if (declared.exists(localId)) {
-						fail('local `$localId` in `${fn.id}` is initialized more than once');
-					}
-					final local = requireLocal(fn, localId);
-					addLineDirective(statements, instruction.source, lineDirectives);
-					statements.push(SDecl({
-						storage: [],
-						alignments: [],
-						type: cType(local.type),
-						declarator: DName(requireLocalName(localNames, localId, fn.id)),
-						initializer: IExpr(requireValue(values, valueId, fn.id)),
-						attributes: []
-					}));
-					declared.set(localId, true);
-					if (!referencedLocals.exists(localId)) {
-						statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
-					}
-				case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
-					final result = requireResult(instruction, fn.id);
-					final expression = switch kind {
-						case IRCNumericExact | IRCNumericWrapping:
-							ECast(cType(targetType), DName(null), requireValue(values, valueId, fn.id));
-						case _:
-							fail('conversion `${instruction.id}` in `${fn.id}` is outside the admitted direct primitive conversion subset');
-					};
-					values.set(result.id, expression);
-					if (!referencedValues.exists(result.id)) {
-						addLineDirective(statements, instruction.source, lineDirectives);
-						statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
-					}
-				case IRIOCall(call):
-					if (isNonReturningSelfCall(fn.id, call, nonReturningFunctionIds)) {
-						emitTailLoopCall(statements, values, instruction, call, fn, parameterNames, tailArgumentNames, lineDirectives);
-						terminatedByNonReturningCall = true;
-						terminatedByTailLoop = true;
-					} else {
-						terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
-							lineDirectives, nonReturningFunctionIds, fn.id);
-					}
-				case _:
-					fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the static primitive function subset');
-			}
-			if (terminatedByNonReturningCall) {
-				break;
-			}
-		}
-
-		final terminator = requireTerminator(block.terminator, fn.id);
-		if (terminatedByNonReturningCall) {
-			switch terminator.kind {
-				case IRTReturn(_, cleanup) if (cleanup.length == 0):
-					return terminatedByTailLoop ? SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]) : SBlock(statements);
-				case _:
-					fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
-			}
-		}
-		addLineDirective(statements, terminator.source, lineDirectives);
-		switch terminator.kind {
-			case IRTReturn(valueId, cleanup):
-				if (cleanup.length != 0) {
-					fail('return in `${fn.id}` unexpectedly requires cleanup');
+						statements.push(SExpr(EBinary(Assign, placeExpression(place, localNames, globalNames, fn.id), requireValue(values, valueId, fn.id))));
+					case IRIOBinary(operationId, leftValueId, rightValueId, IRIStatic):
+						final result = requireResult(instruction, fn.id);
+						final operation = binaryOperation(operationId, instruction.id, fn.id);
+						// The admitted operators are total and pure over values that loads/calls
+						// have already stabilized. The evaluation-order suite enforces that
+						// boundary before allowing this expression-level elision.
+						values.set(result.id, EBinary(operation, requireValue(values, leftValueId, fn.id), requireValue(values, rightValueId, fn.id)));
+						if (!referencedValues.exists(result.id)) {
+							addLineDirective(statements, instruction.source, lineDirectives);
+							statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, fn.id))));
+						}
+					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
+						final result = requireResult(instruction, fn.id);
+						final expression = switch kind {
+							case IRCNumericExact | IRCNumericWrapping:
+								ECast(cType(targetType), DName(null), requireValue(values, valueId, fn.id));
+							case _:
+								fail('conversion `${instruction.id}` in `${fn.id}` is outside the admitted direct primitive conversion subset');
+						};
+						values.set(result.id, expression);
+						if (!referencedValues.exists(result.id)) {
+							addLineDirective(statements, instruction.source, lineDirectives);
+							statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
+						}
+					case IRIOCall(call):
+						if (isNonReturningSelfCall(fn.id, call, nonReturningFunctionIds)) {
+							emitTailLoopCall(statements, values, instruction, call, fn, parameterNames, tailArgumentNames, lineDirectives);
+							terminatedByNonReturningCall = true;
+							terminatedByTailLoop = true;
+						} else {
+							terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
+								lineDirectives, nonReturningFunctionIds, fn.id);
+						}
+					case _:
+						fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced primitive function subset');
 				}
-				statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, fn.id)));
-			case _:
-				fail('function `${fn.id}` has a non-return terminator outside the admitted body subset');
+				if (terminatedByNonReturningCall) {
+					break;
+				}
+			}
+
+			final terminator = requireTerminator(block.terminator, fn.id);
+			if (terminatedByNonReturningCall) {
+				switch terminator.kind {
+					case IRTReturn(_, cleanup) if (cleanup.length == 0):
+					case _:
+						fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
+				}
+				continue;
+			}
+			addLineDirective(statements, terminator.source, lineDirectives);
+			emitTerminator(statements, values, terminator, labelNames, fn.id);
+		}
+		if (terminatedByTailLoop) {
+			if (fn.blocks.length != 1) {
+				fail('tail-loop lowering in `${fn.id}` requires one HxcIR block');
+			}
+			return SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]);
 		}
 		return SBlock(statements);
 	}
 
-	static function referencedValueIds(block:HxcIRBlock):Map<String, Bool> {
+	static function referencedValueIds(fn:HxcIRFunction):Map<String, Bool> {
 		final referenced:Map<String, Bool> = [];
-		for (instruction in block.instructions) {
-			switch instruction.kind {
-				case IRIOInitialize(_, valueId, _, _):
-					referenced.set(valueId, true);
-				case IRIOConvert(valueId, _, _, _, _):
-					referenced.set(valueId, true);
-				case IRIOCall(call):
-					for (argument in call.arguments) {
-						referenced.set(argument, true);
-					}
-				case _:
+		for (block in fn.blocks) {
+			for (instruction in block.instructions) {
+				switch instruction.kind {
+					case IRIOStore(_, valueId) | IRIOInitialize(_, valueId, _, _) | IRIOConvert(valueId, _, _, _, _):
+						referenced.set(valueId, true);
+					case IRIOBinary(_, leftValueId, rightValueId, _):
+						referenced.set(leftValueId, true);
+						referenced.set(rightValueId, true);
+					case IRIOCall(call):
+						for (argument in call.arguments) {
+							referenced.set(argument, true);
+						}
+					case _:
+				}
 			}
-		}
-		if (block.terminator != null) {
-			switch block.terminator.kind {
-				case IRTReturn(valueId, _) if (valueId != null):
-					referenced.set(valueId, true);
-				case _:
+			if (block.terminator != null) {
+				switch block.terminator.kind {
+					case IRTReturn(valueId, _) if (valueId != null):
+						referenced.set(valueId, true);
+					case IRTBranch(conditionValueId, _, _):
+						referenced.set(conditionValueId, true);
+					case _:
+				}
 			}
 		}
 		return referenced;
 	}
 
-	static function referencedLocalIds(block:HxcIRBlock):Map<String, Bool> {
+	static function referencedLocalIds(fn:HxcIRFunction):Map<String, Bool> {
 		final referenced:Map<String, Bool> = [];
-		for (instruction in block.instructions) {
-			switch instruction.kind {
-				case IRIOLoad(IRPLocal(localId)) | IRIOStore(IRPLocal(localId), _) | IRIOAddress(IRPLocal(localId)):
-					referenced.set(localId, true);
-				case _:
+		for (block in fn.blocks) {
+			for (instruction in block.instructions) {
+				switch instruction.kind {
+					case IRIOLoad(IRPLocal(localId)) | IRIOStore(IRPLocal(localId), _) | IRIOAddress(IRPLocal(localId)):
+						referenced.set(localId, true);
+					case _:
+				}
 			}
 		}
 		return referenced;
+	}
+
+	function emitLoad(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			sourceExpression:CExpr, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+		final result = requireResult(instruction, functionId);
+		final temporaryName = temporaryNames.get(result.id);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		if (temporaryName == null) {
+			if (referencedValues.exists(result.id)) {
+				fail('referenced load result `${result.id}` in `$functionId` has no finalized stable-value temporary');
+			}
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), sourceExpression)));
+			return;
+		}
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(result.type),
+			declarator: DName(temporaryName),
+			initializer: IExpr(sourceExpression),
+			attributes: []
+		}));
+		values.set(result.id, EIdentifier(temporaryName));
+		if (!referencedValues.exists(result.id)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporaryName))));
+		}
+	}
+
+	function emitInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+			instruction:HxcIRInstruction, localId:String, valueId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null) {
+			fail('initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+		}
+		if (declared.exists(localId)) {
+			fail('local `$localId` in `${fn.id}` is initialized more than once');
+		}
+		final local = requireLocal(fn, localId);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(local.type),
+			declarator: DName(requireLocalName(localNames, localId, fn.id)),
+			initializer: IExpr(requireValue(values, valueId, fn.id)),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
+		}
+	}
+
+	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
+			functionId:String):Void {
+		switch terminator.kind {
+			case IRTReturn(valueId, cleanup):
+				if (cleanup.length != 0) {
+					fail('return in `$functionId` unexpectedly requires cleanup');
+				}
+				statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, functionId)));
+			case IRTJump(edge):
+				requirePlainEdge(edge, functionId);
+				statements.push(SGoto(requireLabelName(labelNames, edge.targetBlockId, functionId)));
+			case IRTBranch(conditionValueId, whenTrue, whenFalse):
+				requirePlainEdge(whenTrue, functionId);
+				requirePlainEdge(whenFalse, functionId);
+				statements.push(SIf(requireValue(values, conditionValueId, functionId),
+					SGoto(requireLabelName(labelNames, whenTrue.targetBlockId, functionId)),
+					SGoto(requireLabelName(labelNames, whenFalse.targetBlockId, functionId))));
+			case _:
+				fail('function `$functionId` has a terminator outside the sequenced primitive subset');
+		}
+	}
+
+	static function requirePlainEdge(edge:HxcIRBlockEdge, functionId:String):Void {
+		if (edge.arguments.length != 0 || edge.cleanup.length != 0) {
+			fail('function `$functionId` requires block arguments or cleanup outside the sequenced primitive subset');
+		}
+	}
+
+	static function placeExpression(place:HxcIRPlace, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, functionId:String):CExpr {
+		return switch place {
+			case IRPLocal(localId): EIdentifier(requireLocalName(localNames, localId, functionId));
+			case IRPGlobal(globalId): EIdentifier(requireGlobalName(globalNames, globalId, functionId));
+			case _: fail('function `$functionId` uses a place outside the admitted local/static sequencing subset');
+		};
+	}
+
+	static function binaryOperation(operationId:String, instructionId:String, functionId:String):CBinaryOp {
+		return switch operationId {
+			case "haxe.u32.add": Add;
+			case _: fail('binary instruction `$instructionId` in `$functionId` has unsupported operation `$operationId`');
+		};
 	}
 
 	public function cType(type:HxcIRTypeRef):CType {
@@ -163,6 +259,20 @@ class CBodyEmitter {
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted primitive C body subset');
 		};
+	}
+
+	public function globalInitializer(global:HxcIRGlobal):CInitializer {
+		return switch global.initialization {
+			case IRGIConstant(value): IExpr(constantExpression(value));
+			case IRGIUninitialized | IRGIDeferred(_):
+				throw new CBodyEmissionError('primitive static global `${global.id}` requires a direct constant initializer');
+		};
+	}
+
+	public function requiredGlobalHeaders(global:HxcIRGlobal):Array<String> {
+		final headers:Array<String> = [];
+		addTypeHeaders(headers, global.type);
+		return headers;
 	}
 
 	public function requiredHeaders(fn:HxcIRFunction):Array<String> {
@@ -374,6 +484,22 @@ class CBodyEmitter {
 		final name = localNames.get(localId);
 		if (name == null) {
 			throw new CBodyEmissionError('function `$functionId` has no finalized C name for local `$localId`');
+		}
+		return name;
+	}
+
+	static function requireGlobalName(globalNames:Map<String, CIdentifier>, globalId:String, functionId:String):CIdentifier {
+		final name = globalNames.get(globalId);
+		if (name == null) {
+			throw new CBodyEmissionError('function `$functionId` has no finalized C name for global `$globalId`');
+		}
+		return name;
+	}
+
+	static function requireLabelName(labelNames:Map<String, CIdentifier>, blockId:String, functionId:String):CIdentifier {
+		final name = labelNames.get(blockId);
+		if (name == null) {
+			throw new CBodyEmissionError('function `$functionId` has no finalized C label for block `$blockId`');
 		}
 		return name;
 	}

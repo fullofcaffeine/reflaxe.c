@@ -48,11 +48,12 @@ contains every prototype before `src/program.c` or a partitioned source defines
 any function. Recursive and mutually recursive call graphs therefore compile
 without discovery-order dependencies.
 
-The current admitted bodies are one unconditional block. When the direct-call
-graph proves a closed recursive cycle, the compiler also proves that its HxcIR
-return is unreachable, marks every cycle member with the standard C11
-`_Noreturn` function specifier, and omits the unreachable C return. A direct
-self-tail call becomes a structural `while (1)` loop. Its arguments first enter
+Only a one-block admitted body is eligible for the unconditional-call proof.
+Multi-block evaluation-order bodies are excluded conservatively. When the
+remaining direct-call graph proves a closed recursive cycle, the compiler also
+proves that its HxcIR return is unreachable, marks every cycle member with the
+standard C11 `_Noreturn` function specifier, and omits the unreachable C
+return. A direct self-tail call becomes a structural `while (1)` loop. Its arguments first enter
 registry-named typed temporaries in HxcIR order and only then replace the C
 parameters, so swaps and other parameter dependencies cannot weaken Haxe's
 evaluation semantics.
@@ -122,7 +123,7 @@ output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-Source-level operators, branches, loops, objects, strings, arrays,
+General arithmetic, statement branches, loops, objects, strings, arrays,
 instance/virtual calls, closures, exceptions, allocation, public exports, user arguments, and actual
 standard-library lowering remain outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation

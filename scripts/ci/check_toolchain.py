@@ -220,6 +220,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_primitive_semantics_script = "python3 test/primitive_semantics/run.py"
     expected_body_lowering_script = "python3 test/body_lowering/run.py"
     expected_function_lowering_script = "python3 test/function_lowering/run.py"
+    expected_evaluation_order_script = "python3 test/evaluation_order/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
@@ -227,7 +228,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:hxc-ir && npm run test:primitive-semantics && npm run test:body-lowering && "
-        "npm run test:function-lowering && npm run snapshots:check"
+        "npm run test:function-lowering && npm run test:evaluation-order && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -285,6 +286,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:function-lowering") != expected_function_lowering_script
     ):
         errors.append("package.json must retain the typed function-lowering gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:evaluation-order") != expected_evaluation_order_script
+    ):
+        errors.append("package.json must retain the explicit evaluation-order gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script

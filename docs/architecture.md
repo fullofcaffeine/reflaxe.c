@@ -23,8 +23,8 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> current E2.T03: collects the reachable typed static-function graph
-  -> CBodyLowering maps admitted signatures, arguments, calls, and bodies to HxcIR
+  -> current E2.T04: collects reachable typed functions and captured primitive globals
+  -> CBodyLowering maps admitted signatures, ordered expressions, calls, and bodies
   -> validates HxcIR before CBodyEmitter constructs structural C
   -> emits a private prototype header, source definitions, and int main(void)
   -> invokes ProjectEmitter with analyzed zero-runtime primitive facts
@@ -95,14 +95,16 @@ contract](primitive-semantics.md) and [ADR
 0008](adr/0008-primitive-representations-and-conversions.md).
 
 The target-owned typed-input boundary is implemented under
-`src/reflaxe/c/frontend/`. `filterTypes` captures the complete request before
-Reflaxe suppresses callback inputs, so externs and typedefs remain available.
+`src/reflaxe/c/frontend/`. `filterTypes` captures and normalizes the complete
+request before Reflaxe suppresses or preprocesses callback inputs, so externs,
+typedefs, and original field expressions remain available.
 `TypedAstNormalizer` sorts logical module/declaration sets, preserves ordered
 field, enum-constructor, metadata, and expression-root sequences with explicit
 ordinals, records primary/secondary module ownership, retains raw compiler
 objects for lowering, and carries `getMainModule()` plus
-`getMainExpr()` as the entry point. A fresh `CompilationContext` owns the result
-once plus a fresh empty `CSymbolRegistry`; request-local captures are cleared
+`getMainExpr()` as the entry point, including an eagerly captured static target
+for the omitted-main-module fallback. A fresh `CompilationContext` owns the
+result once plus a fresh empty `CSymbolRegistry`; request-local captures are cleared
 before `CCompiler` runs. See
 [typed-AST input boundary](typed-ast-input.md).
 
@@ -139,14 +141,18 @@ primitive constants, initialized locals/reads, nested cleanup-free blocks, and
 returns. E2.T03 adds primitive parameters, explicit argument conversions, and
 direct static calls, then emits the reachable graph with a private prototype
 header, deterministic source partition, and hosted `int main(void)` wrapper.
-Within the current unconditional single-block subset, a closed direct-call cycle is compiler-proven non-returning
-and emitted with structural C11 `_Noreturn` plus no unreachable return. Direct
+E2.T04 adds captured primitive globals, stable loads, local/global assignment,
+lazy Boolean and value-conditional block graphs, and unsigned
+increment/decrement. Within the remaining unconditional single-block subset, a
+closed direct-call cycle is compiler-proven non-returning and emitted with
+structural C11 `_Noreturn` plus no unreachable return. Direct
 self-tail calls use registry-named typed argument temporaries and a structural
 loop; other closed-cycle members are isolated in deterministic translation
 units behind the shared header so strict optimized compilation remains
 warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
-lowering](function-lowering.md).
+lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
+[explicit evaluation order](evaluation-order.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function set before sealing
 the per-compilation symbol registry. Function requests use translation-unit
@@ -155,8 +161,10 @@ ordinals, so shadowing is stable without deriving C identifiers from Haxe text.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
 and builds strict structural statements plus optional typed `#line` nodes.
 Direct-call arguments remain ordered HxcIR instructions, conversions precede
-their calls, and consumed call results become typed temporaries instead of C
-subexpressions with weaker evaluation order. `CStaticFunctionProjectEmitter`
+their calls, and every load plus each consumed call result becomes a typed
+stable-value temporary instead of a C subexpression with weaker evaluation
+order. Lazy/conditional expressions remain explicit labels and edges rather
+than C operators. `CStaticFunctionProjectEmitter`
 places all prototypes before definitions, partitions proven non-returning cycle
 members, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.
