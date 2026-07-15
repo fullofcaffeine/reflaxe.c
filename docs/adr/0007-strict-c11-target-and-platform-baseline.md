@@ -92,13 +92,44 @@ fail before native compilation with the missing capability; they do not inherit
 support from a matching operating-system name. Native-run obligations are
 recorded separately from compile-only or cross-compile obligations.
 
+### M0 verification boundary: Haxe 4.3.7 has no conforming production carrier yet
+
+The pinned compiler experiment found an implementation constraint that must not
+be hidden by redefining one string:
+
+- a Reflaxe invocation without a native Haxe output target uses Haxe 4.3.7's
+  `Cross` platform configuration;
+- `Cross` initializes `target.name=cross`, `target.utf16`, `utf16`,
+  `target.sys`, and static-platform facts before initialization macros run;
+- `haxe.macro.Compiler.define` can add or overwrite a value, but Haxe 4.3.7's
+  public macro API cannot remove an existing define. `Context.getDefines()` is
+  explicitly a copy;
+- overwriting only `target.name` would therefore leave upstream and application
+  `target.utf16` branches active and violate this ADR and ADR 0004.
+
+The M0 lifecycle harness uses Eval only as an explicitly marked test carrier.
+It proves `c_output` and compiler-owned `target.name=c` activation, exactly-once
+initialization, non-C isolation, public `c`, implementation-only `reflaxe_c`,
+and the scalar branches of the pinned upstream `String`, `StringTools`, and
+`UnicodeString`. Its inherited `target.sys` and `target.threaded` values are
+Eval host observations, not C capability claims.
+
+A real Haxe 4 `Cross` invocation now fails at the compilation root with
+`HXC0003` instead of typing a plausible but contradictory program. Decision
+`haxe_c-od2.6` must select a reproducible production carrier—such as an exact
+compiler patch/fork, a Haxe version with supported custom-target configuration,
+or an explicitly reviewed alternative—before E0.T04 or String implementation
+can complete. This finding does not weaken the accepted C identity or
+Unicode-scalar contract.
+
 ## Consequences
 
 - The C AST and runtime can rely on one conservative syntax floor.
 - C17/C23 and extension flags are reproducible toolchain selections rather
   than hidden semantic profiles.
 - Haxe standard-library conditionals see one stable target identity and an
-  Eval-like non-UTF-16 Unicode model.
+  Eval-like non-UTF-16 Unicode model once the production carrier decision is
+  implemented; the M0 scaffold fails closed until then.
 - Windows is a 1.0 hosted platform without requiring the initial compiler to
   normalize every optional C11 facility to native MSVC syntax.
 - Embedded use is release-tested without overclaiming the hosted portable

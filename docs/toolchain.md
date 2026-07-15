@@ -35,8 +35,17 @@ vendored content checksum before running compile-backed lifecycle probes.
 The probes cover:
 
 - source-checkout resolution from a nested working directory;
-- C activation through `c_output=<directory>`;
+- C activation through `c_output=<directory>` and a compiler-owned
+  `target.name=c` stand-in;
 - complete non-C isolation;
+- public `c` versus implementation-only `reflaxe_c` visibility;
+- bootstrap/init count `1` under duplicate calls;
+- `target.unicode` without `target.utf16`/`utf16` and the selected typed fields
+  in upstream Haxe 4.3.7 `String`, `StringTools`, and `UnicodeString`;
+- source-anchored `HXC0003` rejection of identity, UTF-16, unproven atomic, and
+  freestanding capability conflicts;
+- explicit rejection of the real Haxe 4.3.7 `Cross` carrier, whose UTF-16
+  facts cannot be removed by a public initialization macro;
 - bootstrap-before-init failure behavior and duplicate-call idempotence;
 - back-to-back C/non-C/C builds through one Haxe compiler server;
 - a temporary package layout with Reflaxe flattened into the package classpath;
@@ -64,6 +73,16 @@ plumbing reports `target.name=c`. A caller-supplied `-D c` does not activate the
 compiler; `c` is a public target fact exposed only after valid activation.
 Initialization also exposes the implementation marker `reflaxe_c` and
 `target.unicode`, never `target.utf16`.
+
+That paragraph is the semantic target contract, not a claim that Haxe 4's
+default `Cross` carrier already satisfies it. Haxe 4.3.7 reserves command-line
+`target.*` flags and its `Cross` platform predefines `target.utf16`/`utf16`
+before macros. The checked `reflaxe_c_lifecycle_probe` uses Eval only to test
+macro lifecycle and upstream scalar branch selection; it is forbidden in
+production. A non-probe Cross build fails with `HXC0003` pending decision
+`haxe_c-od2.6`. Do not work around that failure by defining `c`, overwriting
+`target.name` alone, or treating the probe's inherited `target.sys` and
+`target.threaded` as target capabilities.
 
 The checked-in `extraParams.hxml` deliberately contains no classpaths because
 Haxelib evaluates it relative to the consumer project. Source-checkout paths in

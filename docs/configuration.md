@@ -36,6 +36,15 @@ activated, compiler initialization exposes `c` / `target.name=c`, enables
 use `#if c`, not the path-bearing `c_output` transport or the
 implementation-owned `reflaxe_c` compatibility marker.
 
+The current M0 implementation proves that logical contract only with the
+test-only Eval lifecycle carrier. Direct `-D target.name=c` is not a user
+escape hatch: Haxe 4.3.7 reserves the `target.*` namespace. Its production
+Reflaxe carrier is `Cross`, which predefines `target.utf16`/`utf16`; because an
+initialization macro cannot remove those flags, reflaxe.c rejects that carrier
+with `HXC0003` until decision `haxe_c-od2.6` supplies a conforming production
+configuration. `-D c`, the lifecycle-probe define, or a target-name-only
+rewrite must never bypass this guard.
+
 The build plan resolves a native tuple rather than assuming an OS is sufficient:
 
 ```text
@@ -48,6 +57,11 @@ is a planning diagnostic. Compile-only, cross-compile, emulated-run, and native
 run evidence remain distinct in manifests and release reports. The accepted 1.0
 lanes and tiers are in
 [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md).
+
+Target-contract snapshots include raw carrier observations for auditability.
+In particular, `target.sys` and `target.threaded` in the Eval lifecycle fixture
+describe Eval, not C. They cannot be copied into a manifest or used to claim a
+hosted C adapter capability.
 
 ## Profile and runtime resolution
 

@@ -77,8 +77,10 @@ The current checkout is a deliberately partial slice of the fuller scaffold
 described by PRD Section 32. Verify files with `rg --files` before citing or
 running them. In particular, this checkout currently lacks several documented
 assets, including `CODEX_HANDOFF.md`, some schemas, examples,
-Reflaxe/Haxe package metadata, runtime implementation sources, and most
-compiler lifecycle classes referenced by the adapter.
+runtime implementation sources, and most compiler lifecycle classes referenced
+by the adapter. The pinned Haxe/Reflaxe/Lix package metadata and M0 target API
+contracts are present and verified; do not repeat the older missing-metadata
+assumption.
 
 - A path named in the PRD is not proof that it exists here.
 - A present seed is not proof that its capability works.
@@ -181,8 +183,24 @@ compiler lifecycle classes referenced by the adapter.
   `c`, `reflaxe_c`, and `target.unicode`; reject `target.utf16` and do not invent
   other target capability defines.
 - `reflaxe_c_lifecycle_probe` is an internal test seam that avoids entering the
-  still-incomplete adapter during E0 bootstrap tests. Never document it as a
-  user option or let it bypass a production compilation.
+  still-incomplete adapter during E0 bootstrap tests. It uses Haxe Eval as a
+  lifecycle carrier; its `target.sys`/`target.threaded` observations are Eval
+  facts, not C capabilities. Never document it as a user option, copy its host
+  facts into a manifest, or let it bypass a production compilation.
+- Haxe 4.3.7 reserves command-line `target.*` flags. Tests may use
+  `TargetPrelude` only to emulate compiler-owned facts; application or build
+  documentation must not recommend `-D target.name=c`.
+- Haxe 4.3.7's real Reflaxe `Cross` carrier predefines
+  `target.name=cross`, `target.utf16`, and `utf16` before macros, and its public
+  macro API has no undefine operation. Until decision `haxe_c-od2.6` supplies a
+  conforming production carrier, preserve the source-anchored `HXC0003`
+  failure. Never relabel Cross by changing only `target.name`, patch upstream
+  conditionals ad hoc, or weaken the UTF-8 scalar contract to make E0.T04 pass.
+- Keep `test/bootstrap/expected/target-contract.json` structural and
+  path-stable. It must prove cold/package/server behavior, exactly-once counts,
+  public versus internal defines, and the typed upstream
+  `String`/`StringTools`/`UnicodeString` branch. A pin or carrier change requires
+  an intentional snapshot and ADR review.
 - The package-layout probe may flatten the pinned framework into a temporary
   classpath to prove installed resolution. It is not release assembly or
   permission to publish while `haxe_c-od2.5` remains unresolved.

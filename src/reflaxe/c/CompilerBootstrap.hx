@@ -15,6 +15,7 @@ import sys.FileSystem;
 **/
 class CompilerBootstrap {
 	public static inline final READY_DEFINE = "reflaxe_c_bootstrap_ready";
+	public static inline final COUNT_DEFINE = "reflaxe_c_bootstrap_count";
 
 	#if macro
 	static var bootstrapped = false;
@@ -23,8 +24,6 @@ class CompilerBootstrap {
 		if (!BuildDetection.isCBuild() || bootstrapped) {
 			return;
 		}
-		bootstrapped = true;
-
 		if (!canResolveReflaxe()) {
 			final root = findLibraryRoot();
 			final vendoredSource = Path.normalize(Path.join([root, "vendor", "reflaxe", "src"]));
@@ -34,10 +33,12 @@ class CompilerBootstrap {
 		}
 
 		if (!canResolveReflaxe()) {
-			Context.fatalError("reflaxe.c could not resolve its pinned Reflaxe framework; run `npm ci` and use the checked-in scoped library configuration.",
+			Context.fatalError("HXC0002: reflaxe.c could not resolve its pinned Reflaxe framework; run `npm ci` and use the checked-in scoped library configuration.",
 				Context.currentPos());
 		}
 
+		bootstrapped = true;
+		Compiler.define(COUNT_DEFINE, "1");
 		Compiler.define(READY_DEFINE);
 	}
 

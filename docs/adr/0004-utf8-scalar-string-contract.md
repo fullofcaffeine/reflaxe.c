@@ -24,6 +24,12 @@ custom target. A local `--interp` probe observed:
 This agrees with Haxe's documented target-specific representation model and
 with the project's choice to enable `target.unicode` without `target.utf16`.
 
+The later pinned-carrier probe found that Haxe 4.3.7's default Reflaxe `Cross`
+configuration predefines `target.utf16`/`utf16` and cannot remove them through
+the public initialization-macro API. ADR 0007 records the executable failure
+and decision `haxe_c-od2.6` owns the production carrier. Eval remains an oracle
+and lifecycle fixture only; the mismatch does not change this String contract.
+
 ## Decision
 
 ### Portable `String` is immutable, valid UTF-8

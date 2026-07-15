@@ -77,8 +77,13 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/reflaxe/c/(BuildDetection|CompilerBootstrap|CompilerInit)\.hx|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py)'; then
-  echo "[pre-commit] Verifying pinned toolchain and bootstrap policy..."
-  python3 "$ROOT_DIR/scripts/ci/check_toolchain.py" --root "$ROOT_DIR"
+	echo "[pre-commit] Verifying pinned toolchain and bootstrap policy..."
+	python3 "$ROOT_DIR/scripts/ci/check_toolchain.py" --root "$ROOT_DIR"
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/reflaxe/c/(BuildDetection|CompilerBootstrap|CompilerInit)\.hx|test/bootstrap/)'; then
+	echo "[pre-commit] Running target identity and compiler lifecycle probes..."
+	python3 "$ROOT_DIR/test/bootstrap/run.py"
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/|src/reflaxe/c/(contract|macros)/|test/typed_c/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then

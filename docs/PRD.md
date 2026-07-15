@@ -207,6 +207,15 @@ The supplied targets separate two concerns:
 
 `reflaxe.c` MUST preserve this split. Standard-library precedence cannot be repaired reliably by a macro that runs after colliding modules have already been typed.
 
+The pinned Haxe 4.3.7 experiment also proves that phase separation cannot repair
+compiler platform facts. Its default Reflaxe `Cross` carrier installs
+`target.name=cross`, `target.utf16`/`utf16`, and generic platform capabilities
+before initialization macros, while the public macro API has no undefine
+operation. The current lifecycle fixture uses Eval only to prove macro behavior
+and the desired upstream scalar-Unicode branches. Production Cross typing fails
+with `HXC0003` until the explicitly tracked carrier decision supplies a static,
+C-appropriate configuration; changing `target.name` alone is forbidden.
+
 ### 2.3 Reflaxe registration contract
 
 The repeated registration fields are:
@@ -1058,6 +1067,12 @@ Ordinary decoding replaces each maximal subpart of an ill-formed UTF-8 sequence
 with U+FFFD;
 checked target APIs return an explicit validation result, and lossless arbitrary
 data remains `Bytes`.
+
+This semantic decision is unchanged by the M0 carrier discovery. Haxe 4.3.7
+`Cross` would select the wrong UTF-16 branches and is therefore rejected rather
+than treated as implementation evidence. String/runtime work must wait for a
+production carrier whose structural `String`, `StringTools`, and
+`UnicodeString` snapshot matches this contract.
 
 Requirements:
 
@@ -4847,7 +4862,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Area | Existing assets | Status | What Codex must understand |
 | --- | --- | --- | --- |
 | Toolchain and package metadata (`toolchain-metadata`) | `.haxerc`, `haxelib.json`, `extraParams.hxml`, `haxe_libraries/`, `package.json`, `package-lock.json`, `toolchain-lock.json` | Verified dependency seed | Haxe 4.3.7, Lix 17.0.2, and Reflaxe commit `73a983112e039daad46b37912ab238df6bf0cf53` are exact and checksum-verified. Source-checkout and temporary flattened-package probes are CWD-independent. A real all-source Haxe type-check and release assembly remain separate M0/later work. |
-| Target activation (`target-activation`) | `BuildDetection.hx`, `CompilerBootstrap.hx`, `CompilerInit.hx` | Lifecycle verified seed | Cold and back-to-back compiler-server probes prove bootstrap-before-init, duplicate-call idempotence, `c_output` activation, and non-C isolation under the pinned framework. Production registration still reaches the deliberately incomplete adapter; macro/non-macro whole-tree typing remains E0.T04 work. |
+| Target activation (`target-activation`) | `BuildDetection.hx`, `CompilerBootstrap.hx`, `CompilerInit.hx`, `test/bootstrap/**` | Lifecycle verified, production carrier blocked | Cold, package, and back-to-back compiler-server probes prove `c_output` plus compiler-owned `target.name=c` activation, non-C isolation, exactly-once counts, public/internal define visibility, source-anchored conflicts, and typed upstream scalar-Unicode branches under the test-only Eval carrier. The real Haxe 4.3.7 Cross carrier is an executable `HXC0003` negative because it predefines unremovable UTF-16 facts. Production typing and E0.T04 wait on the dedicated carrier decision; the fixture is not a working compiler path. |
 | Profiles, runtime policy, and environment (`configuration-policies`) | `CProfile.hx`, `CRuntimePolicy.hx`, `CEnvironment.hx`, `ProfileResolver.hx`, config schema/template | Seeded | `portable|metal`, `auto|minimal|none`, and environment presets are represented. Define/project precedence, capability matrices, canonical reports, and conflict diagnostics remain incomplete. |
 | Per-build compiler state (`per-build-context`) | `CompilationContext.hx` | Seeded | Resolved policy and runtime-reason seeds exist. Symbol/type/layout registries, pass state, diagnostics, outputs, caches, and repeated-build isolation still need implementation and tests. |
 | Reflaxe adapter (`reflaxe-adapter`) | `CReflaxeCompiler.hx` | Seeded | It collects typed modules, creates a fresh context, delegates whole-program work, and owns output saving. Callback/generic contracts, provenance capture, and real deterministic multi-file output must be proven. |
@@ -5433,7 +5448,7 @@ analysis; evidence may justify a different accepted result.
 | Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; the checked inventory rejects unowned vendor/runtime files and unlisted `_std` work | E0.T02 / `third-party-provenance.json` | Repository licensing and current provenance are resolved; `haxe_c-od2.5` still blocks release packaging until generated-output/runtime redistribution treatment is ratified. |
 | Exact Haxe and Reflaxe baseline | Accepted M0 pin: Haxe 4.3.7 at `e0b355c6be312c1b17382603f018cf52522ec651`, Reflaxe 4.0.0-beta-compatible commit `73a983112e039daad46b37912ab238df6bf0cf53`, and Lix 17.0.2; broaden only through explicit CI evidence | E0.T03 / `toolchain-lock.json` | Compiler API work uses one checksum-verified framework surface. |
 | Default C dialect | Accepted: strict ISO C11/no extensions is the normative source and public-header floor; C17 preserves it, while C23 internal syntax remains experimental and ABI-neutral | ADR 0007 / E0.T01 | AST, printer, runtime, header, and compiler gates share one floor. |
-| Target define name | Accepted: `c_output` is the Haxe 4/Reflaxe activation/output signal, `c`/`target.name=c` is target identity, and `reflaxe_c` is implementation-owned; enable `target.unicode`, not `target.utf16` | ADR 0007 / E0.T01/E0.T03 | Bootstrap conflict probes and stdlib typing must implement the ratified identity. |
+| Target define name | Accepted semantic contract: `c_output` is the Reflaxe activation/output signal, `c`/`target.name=c` is target identity, and `reflaxe_c` is implementation-owned; enable `target.unicode`, not `target.utf16`. M0 evidence shows Haxe 4.3.7 Cross cannot satisfy this through public macros. | ADR 0007 / E0.T01/E0.T03 / `haxe_c-od2.6` | Lifecycle probes implement and snapshot the logical contract; production bootstrap and String work fail closed until the carrier decision supplies matching compiler platform facts. |
 | Direct C and runtime fallback | Owner accepted direct C/local specialization before selective `hxrt`; portable defaults to `auto + summary`, metal to `minimal + warn`, and explicit `none` proves complete absence | ADR 0001 / E0.T01 / E4.T01 / E4.T10 | Runtime planner, diagnostics, manifests, and no-runtime fixtures use one reason ledger. |
 | Typed C authoring and DSL admission | Owner accepted Haxe-first declarations, typed `c.*`, validated metadata/macros, narrow justified DSLs, and explicit raw authority in that order | ADR 0002 / `haxe_c-od2.3` | Blocks bootstrap completion of the absent `c.*` scaffold and informs E3/E6/E7/E9. |
 | String representation | Accepted: immutable valid UTF-8, Unicode-scalar indices, no normalization, deterministic U+FFFD decoding, and separate `Bytes`/`CString`/ABI-view contracts | ADR 0004 / E0.T01/E4.T03 | String/std/FFI implementation now has an observable contract. |

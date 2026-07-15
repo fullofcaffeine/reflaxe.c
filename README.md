@@ -119,6 +119,14 @@ See [ADR 0007](docs/adr/0007-strict-c11-target-and-platform-baseline.md),
 [ADR 0005](docs/adr/0005-precise-nonmoving-collector.md), and
 [ADR 0006](docs/adr/0006-explicit-failure-edges-and-contained-unwinding.md).
 
+One bootstrap constraint is deliberately visible: Haxe 4.3.7's default
+Reflaxe `Cross` carrier preselects UTF-16 conditionals that contradict the C
+string contract, and public initialization macros cannot remove them. The M0
+test carrier proves target identity and the correct upstream scalar branches;
+an actual Cross request fails with `HXC0003` until the production carrier
+decision is implemented. The project will not call a target working by merely
+renaming contradictory compiler state.
+
 ## What exists today
 
 The current checkout contains:
@@ -129,7 +137,8 @@ The current checkout contains:
 - a partial Reflaxe compiler adapter whose missing whole-program dependencies
   are explicitly tracked for the next bootstrap task;
 - a Haxe 4.3.7 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked toolchain;
-- target-gated `CompilerBootstrap` and `CompilerInit` lifecycle probes;
+- target-gated `CompilerBootstrap` and `CompilerInit` lifecycle, identity,
+  upstream stdlib-branch, conflict, package, and compiler-server probes;
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
 - a structured C AST and printer seed;

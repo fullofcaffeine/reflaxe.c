@@ -1,0 +1,26 @@
+{
+  "schemaVersion": 1,
+  "haxeVersion": "4.3.7",
+  "carrier": "eval",
+  "defines": {
+    "bootstrapCount": "1",
+    "initCount": "1",
+    "cOutput": true,
+    "c": true,
+    "reflaxeC": true,
+    "targetName": "c",
+    "targetUnicode": true,
+    "targetUtf16": false,
+    "utf16": false,
+    "targetSys": true,
+    "targetThreaded": true,
+    "targetAtomics": false
+  },
+  "stdlib": {
+    "stringSource": "haxe-4.3.7-std/String.hx",
+    "stringToolsSource": "haxe-4.3.7-std/StringTools.hx",
+    "unicodeStringSource": "haxe-4.3.7-std/UnicodeString.hx",
+    "stringToolsUtf16Helpers": false,
+    "unicodeStringUtf16Adapters": false
+  }
+}

@@ -66,6 +66,15 @@ The target enables `target.unicode` without `target.utf16`. Other platform
 defines are capability facts: `target.sys`, `target.threaded`, and
 `target.atomics` are enabled only by adapters that implement them.
 
+The pinned Haxe 4.3.7 implementation currently has a verified carrier gap.
+Its default Reflaxe `Cross` configuration installs `target.utf16`/`utf16`
+before macros and offers no public undefine operation. `CompilerInit` therefore
+normalizes identity and scalar-Unicode branches only under the explicit
+lifecycle fixture, while a real Cross request fails with `HXC0003`. Decision
+`haxe_c-od2.6` blocks production bootstrap and String work; relabeling Cross or
+copying Eval's `target.sys`/`target.threaded` observations is not an
+architectural substitute.
+
 Strict ISO C11 without extensions is the generated-source, runtime, fixture, and
 public-header floor. C17 preserves the same contract; C23 syntax remains an
 opt-in internal experiment and may not change ABI. Support is resolved from an

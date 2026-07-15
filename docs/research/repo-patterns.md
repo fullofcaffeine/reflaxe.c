@@ -130,6 +130,23 @@ Concrete responsibilities observed:
 - call `ReflectCompiler.Start()`;
 - call `ReflectCompiler.AddCompiler(...)` once.
 
+The pinned C experiment exposes a family-level trap beneath that common shape.
+On Haxe 4.3.7, an output-define Reflaxe compiler with no native Haxe target uses
+the compiler's `Cross` platform configuration. `Cross` installs
+`target.name=cross`, `target.utf16`/`utf16`, `target.sys`, and static facts
+before initialization macros. Sibling targets may compensate with extensive
+`_std` overrides, but that does not remove the global conditionals seen by
+portable application source. C therefore records the raw carrier, snapshots
+typed upstream branches, and fails closed instead of copying output-define
+activation as proof of correct platform semantics.
+
+The exact Haxe source authority at the locked revision is
+`src/context/common.ml` (`default_config` and `init_platform`) plus
+`std/haxe/macro/Compiler.hx` and `Context.hx`: the first installs the Cross
+facts, the second exposes `define` but no removal operation, and the latter
+documents `getDefines()` as a non-mutable copy. Re-run this source/API audit on
+every Haxe pin change.
+
 The C target adopts:
 
 ```text
@@ -285,6 +302,14 @@ offsets. That is the strongest family precedent for a native UTF-8 target: use
 one scalar-indexed Haxe model, keep byte operations explicitly typed, and avoid
 a second representation for `UnicodeString`. ADR 0004 adopts that contract for
 C and adds deterministic malformed-input and `CString` boundary rules.
+
+The structural M0 probe confirms that Eval plus the guarded C lifecycle selects
+the root Haxe 4.3.7 `String.hx`, `StringTools.hx`, and `UnicodeString.hx` with no
+UTF-16 helper/adaptor fields. Eval is only an oracle and lifecycle carrier: its
+`target.sys` and `target.threaded` flags are not C capability evidence. The
+actual Haxe 4 `Cross` branch is rejected because its UTF-16 flags cannot be
+removed through `haxe.macro.Compiler`; decision `haxe_c-od2.6` owns the
+production carrier rather than moving this mismatch into String lowering.
 
 ## Output management
 

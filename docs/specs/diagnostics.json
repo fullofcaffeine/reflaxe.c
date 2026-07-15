@@ -22,8 +22,8 @@
       "id": "HXC0003",
       "name": "invalid-configuration",
       "defaultSeverity": "error",
-      "summary": "A profile, runtime, environment, standard, or related build option is invalid or contradictory.",
-      "remediation": "Correct the named option; use `hxc inspect build` once M8 implements configuration inspection."
+      "summary": "A target identity, carrier capability, profile, runtime, environment, standard, or related build option is invalid or contradictory.",
+      "remediation": "Correct the named option or carrier mismatch; use `hxc inspect build` once M8 implements configuration inspection."
     },
     {
       "id": "HXC1000",
