@@ -4,7 +4,10 @@
 > runtime costs.
 
 `reflaxe.c` is an experimental [Reflaxe](https://github.com/SomeRanDev/reflaxe)
-target for compiling Haxe to C. The planned command-line interface is `hxc`.
+target for compiling Haxe to C through the normal Haxe/HXML workflow. The PRD
+separately proposes an optional future `hxc` orchestration tool for project builds,
+diagnostics, bindings, exports, and other end-to-end workflows; it is not a
+replacement Haxe compiler or a requirement imposed by Reflaxe.
 
 **Project status: M0 architecture scaffold.** This repository does not compile
 Haxe programs yet. Unsupported compiler paths intentionally fail closed instead
@@ -40,6 +43,19 @@ Runtime policy and target environment remain independent of that profile:
 -D hxc_runtime=auto|minimal|none
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 ```
+
+### CLI bootstrap
+
+Direct Haxe/HXML compilation remains the canonical path. During bootstrap, the
+shared `hxc` CLI core will run on Haxe's built-in Eval target through
+`haxe --run` or `haxelib run reflaxe.c`, so development requires no additional
+host runtime.
+
+Once `reflaxe.c` supports the files, processes, configuration, strings, errors,
+and cleanup behavior the CLI needs, that same core will be compiled through the
+C target into a native `hxc` executable. Eval remains the recovery path and a
+differential test oracle; an existing native `hxc` must never be required to
+build its replacement.
 
 The intended compiler shape is:
 

@@ -78,3 +78,17 @@ The internal object representation is not the public ABI. Export lowering maps H
 ## Build boundary
 
 The compiler emits a tool-neutral `hxc.manifest.json`. CMake and Meson are adapters. Existing build systems can consume the manifest and generated source tree directly.
+
+## CLI bootstrap boundary
+
+The optional `hxc` orchestration layer is one target-neutral Haxe core with
+narrow host-service seams for files, processes, environment, and terminal I/O.
+It is not part of Reflaxe compiler registration and cannot be required for
+direct Haxe/HXML compilation.
+
+The bootstrap host is Haxe Eval, exposed through `haxe --run` and
+`haxelib run reflaxe.c`. Once the C target supports the CLI's required semantic
+and `sys` surface, the same core is compiled through `reflaxe.c` into the native
+release executable. Eval remains the recovery implementation and differential
+oracle. Native `hxc` must be rebuildable from direct Haxe/HXML plus the C
+toolchain, never only by invoking an existing native `hxc`.

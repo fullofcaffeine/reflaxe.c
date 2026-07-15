@@ -1739,6 +1739,32 @@ Every macro library needs:
 
 ## 18. `hxc` command-line product
 
+`hxc` is an optional product-level orchestration layer, not a replacement Haxe
+compiler and not a requirement imposed by Reflaxe. Direct Haxe/HXML invocation
+MUST remain supported and authoritative. The CLI exists because C workflows
+span native compiler/linker selection, sysroots and SDKs, build manifests,
+Clang-backed binding generation, public-ABI export, runtime inspection, and ABI
+verification without one universal ecosystem driver. It MUST expose the exact
+commands and manifests it coordinates and MUST NOT become an opaque custom
+build system.
+
+The CLI has a two-stage bootstrap contract:
+
+1. The development and recovery entry point runs the shared target-neutral Haxe
+   CLI core on Haxe's built-in Eval target through `haxe --run Run` or
+   `haxelib run reflaxe.c`. This path requires Haxe but no separate Neko,
+   HashLink, or prebuilt `hxc` runtime.
+2. After `reflaxe.c` supports the `sys`, string, configuration, process, error,
+   and cleanup surface used by the CLI, the same core is compiled through
+   `reflaxe.c` and a native C compiler into the packaged `hxc` executable.
+
+The native artifact is a dogfood and release gate, not a circular bootstrap
+dependency. A clean checkout MUST be able to build it using direct Haxe/HXML
+invocation plus the selected C toolchain without an existing native `hxc`.
+Eval MUST remain tested as a bootstrap/recovery path and as a differential
+oracle for native CLI behavior. Command parsing, configuration, build planning,
+diagnostics, and JSON output MUST be shared rather than reimplemented per host.
+
 ### 18.1 Commands
 
 ```text
