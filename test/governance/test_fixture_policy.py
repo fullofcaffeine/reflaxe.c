@@ -56,6 +56,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "c-ast",
                 "declaration-plan",
                 "symbol-registry",
+                "project-emitter",
                 "hxc-ir",
             ),
         )

@@ -19,7 +19,7 @@ CReflaxeCompiler
   -> resets CompilationContext and request-local adapter state
   -> invokes TypedAstNormalizer
   -> invokes CCompiler
-  -> writes GeneratedFile records through OutputManager
+  -> validates and writes GeneratedFile records through Reflaxe OutputManager
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
@@ -35,13 +35,25 @@ ProjectEmitter
   -> source files
   -> boot/export/reflection units
   -> runtime slices
-  -> CMake/Meson/tool-neutral manifest
+  -> tool-neutral manifest and typed build facts
   -> runtime, symbol, stdlib, ABI, and lowering reports
+
+Build adapters (future E1.T08/E8)
+  -> consume the one neutral manifest
+  -> CMake/Meson/direct compiler plans
 ```
 
 ## Why `Manual` Reflaxe output
 
-A compilation produces multiple file categories and sidecar reports. `Manual` lets the compiler control paths while retaining Reflaxe's changed-file and stale-file ownership behavior.
+A compilation produces multiple file categories and sidecar reports. `Manual`
+lets the compiler control paths while retaining Reflaxe's changed-file and
+stale-file ownership behavior. `GeneratedFile` admits only normalized relative
+paths, closed artifact kinds, canonical text, and verified SHA-256 content.
+`ReflaxeOutputWriter` validates both the old ownership set and the new file set
+before the first write, rejects descendant symlinks or unowned destinations,
+then delegates every save and stale deletion to `OutputManager`. The pure typed
+emitter contains no output root or host fact. See [project-emission
+boundary](project-emission.md).
 
 ## IR boundary
 
@@ -284,9 +296,11 @@ writes no files. Schema 2 build facts preserve sorted declaration owners so
 `CDeclarationPlanner` can keep headers minimal and retain source reasons. The
 planner is likewise pure: complete edges order or include definitions,
 pointer-only edges forward-declare, and authoritative external opaque includes
-are propagated. Its report/header adapter is test-only; the future emitter must
-route manifests and files through Reflaxe output ownership. See [typed C
-authoring](typed-c-authoring.md).
+are propagated. Its report/header adapter remains test-only. The implemented
+project emitter can package finalized structural header/source artifacts and
+typed build facts through Reflaxe ownership, but production declaration/HxcIR
+lowering still does not reach it. See [typed C authoring](typed-c-authoring.md)
+and [project emission](project-emission.md).
 
 ## ABI boundary
 

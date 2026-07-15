@@ -15,7 +15,7 @@ native C/C++ inputs do not prove that typed Haxe currently emits C.
 | --- | --- | --- | --- |
 | Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including typed-input acceptance before lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through mapped M0 suites, including the honest `HXC1000` typed-input boundary |
-| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, and `hxc_ir` |
+| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, and `hxc_ir` |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Native seed only; no generated-Haxe runtime proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | HxcIR side-effect oracle seed only |
@@ -95,6 +95,8 @@ The registered snapshot selectors are:
 - `typed-ast`
 - `c-ast`
 - `declaration-plan`
+- `symbol-registry`
+- `project-emitter`
 - `hxc-ir`
 
 List them from the executable registry with:
@@ -144,3 +146,14 @@ declaration discovery order inside the Haxe fixture, validates exact-name
 failures and both collision origins, feeds finalized defaults into declaration
 planning, rejects host paths, and asserts an empty typed-contract runtime feature
 set. It proves naming analysis only; it does not claim production C emission.
+
+`test/project_emitter` is the negative/AST/snapshot suite for typed schema-1
+project packaging and the Reflaxe ownership boundary. It renders fresh projects
+under unrelated absolute roots and reversed discovery order, validates every
+SHA-256, verifies unchanged artifact mtimes, removes a listed stale header while
+preserving an unlisted user file, and rejects traversal, descendant symlinks,
+unowned destinations, duplicate paths, malformed ownership JSON, and premature
+lowered-program status before any partial write. Its checked-in headers and C
+sources compile and run in the native matrix. They are built directly by a test
+macro, so the suite does not weaken or bypass the production `HXC1000` no-output
+boundary. See [project-emission boundary](project-emission.md).

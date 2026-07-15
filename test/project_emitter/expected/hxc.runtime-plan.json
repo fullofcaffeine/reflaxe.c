@@ -1,0 +1,14 @@
+{
+  "environment": "hosted",
+  "noRuntimeProof": null,
+  "features": [],
+  "status": "placeholder-no-runtime-analysis",
+  "schemaVersion": 1,
+  "symbols": [],
+  "diagnosticMode": "off",
+  "artifacts": [],
+  "libraries": [],
+  "rootReasons": [],
+  "requestedPolicy": "none",
+  "defines": []
+}

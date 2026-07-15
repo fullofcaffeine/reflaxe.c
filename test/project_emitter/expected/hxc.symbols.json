@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_api_export_fixture_Api_value",
+      "semanticKey": "6:export|28:ordinary:16:translation-unit|3:7:fixture3:Api5:value|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "public",
+      "kind": "export",
+      "specializationArguments": [],
+      "baseName": "hxc_api_export_fixture_Api_value",
+      "sourceSymbol": "fixture.Api.value"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_init_fixture_Main",
+      "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|2:7:fixture4:Main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "static-initializer",
+      "specializationArguments": [],
+      "baseName": "hxc_init_fixture_Main",
+      "sourceSymbol": "fixture.Main"
+    }
+  ],
+  "collisions": [],
+  "algorithm": "hxc-c-symbol-v1"
+}

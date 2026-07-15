@@ -1,0 +1,6 @@
+#ifndef HXC_REMOVED_MODULE_H
+#define HXC_REMOVED_MODULE_H
+
+enum { HXC_REMOVED_MODULE_MARKER = 1 };
+
+#endif

@@ -1,0 +1,8 @@
+{
+  "stability": "experimental",
+  "profile": "portable",
+  "status": "placeholder-no-export-analysis",
+  "schemaVersion": 1,
+  "types": [],
+  "exports": []
+}

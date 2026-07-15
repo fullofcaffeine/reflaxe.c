@@ -204,6 +204,24 @@ def symbol_registry_artifacts() -> list[Artifact]:
     ]
 
 
+def project_emitter_artifacts() -> list[Artifact]:
+    module = load_module("project_emitter", "test/project_emitter/run.py")
+    first = module.render_snapshot()
+    second = module.render_snapshot()
+    if first != second:
+        raise SnapshotFailure(
+            "two project-emitter snapshot renders were not byte-identical"
+        )
+    return [
+        Artifact(
+            Path("test/project_emitter/expected") / artifact.relative_path,
+            artifact.format,
+            artifact.value,
+        )
+        for artifact in first
+    ]
+
+
 def hxc_ir_artifacts() -> list[Artifact]:
     module = load_module("hxc_ir", "test/hxc_ir/run.py")
     module.check_oracle()
@@ -239,6 +257,7 @@ GENERATORS: dict[str, Generator] = {
     "c-ast": c_ast_artifacts,
     "declaration-plan": declaration_plan_artifacts,
     "symbol-registry": symbol_registry_artifacts,
+    "project-emitter": project_emitter_artifacts,
     "hxc-ir": hxc_ir_artifacts,
 }
 

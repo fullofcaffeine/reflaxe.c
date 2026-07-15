@@ -57,6 +57,17 @@ REQUIRED_GATE_FILES = (
     "test/symbol_registry/symbol_registry.hxml",
     "test/symbol_registry/expected/symbol-registry.json",
     "test/symbol_registry/run.py",
+    "test/project_emitter/ProjectEmitterGolden.hx",
+    "test/project_emitter/ProjectEmitterProbe.hx",
+    "test/project_emitter/project_emitter.hxml",
+    "test/project_emitter/expected/hxc.manifest.json",
+    "test/project_emitter/expected/hxc.runtime-plan.json",
+    "test/project_emitter/expected/hxc.abi.json",
+    "test/project_emitter/expected/hxc.symbols.json",
+    "test/project_emitter/expected/include/hxc/emitter_fixture.h",
+    "test/project_emitter/expected/src/emitter_fixture.c",
+    "test/project_emitter/expected/src/hxc_boot.c",
+    "test/project_emitter/run.py",
     "test/hxc_ir/HxcIRGolden.hx",
     "test/hxc_ir/hxc_ir.hxml",
     "test/hxc_ir/oracle.hxml",
@@ -155,6 +166,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:symbol-registry") != "python3 test/symbol_registry/run.py":
         errors.append("package.json must retain the test:symbol-registry entry point")
+    if scripts.get("test:project-emitter") != "python3 test/project_emitter/run.py":
+        errors.append("package.json must retain the test:project-emitter entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
@@ -173,6 +186,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:declaration-plan")
     if "npm run test:symbol-registry" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:symbol-registry")
+    if "npm run test:project-emitter" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
@@ -210,6 +225,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/symbol_registry/run.py" not in pre_commit:
         errors.append("pre-commit must run the deterministic symbol registry test")
+    if "test/project_emitter/run.py" not in pre_commit:
+        errors.append("pre-commit must run the deterministic project emitter test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/typed_ast/run.py" not in pre_commit:
@@ -231,6 +248,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must compile and execute the expression C AST golden")
     if "declaration-header-independent-compile" not in runner or "declaration-plan-header-run" not in runner:
         errors.append("native smoke runner must independently compile and execute declaration-plan headers")
+    if "project-emitter-header-independent-compile" not in runner or "project-emitter-structural-run" not in runner:
+        errors.append("native smoke runner must independently compile and execute project-emitter output")
 
     return errors
 

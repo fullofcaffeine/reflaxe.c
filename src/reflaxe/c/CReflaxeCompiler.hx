@@ -11,6 +11,8 @@ import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.emit.ProjectEmissionError;
+import reflaxe.c.emit.ReflaxeOutputWriter;
 import reflaxe.c.frontend.TypedAstNormalizer;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
@@ -58,8 +60,10 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 			return;
 		}
 
-		for (file in generatedFiles) {
-			output.saveFile(file.relativePath, file.contents);
+		try {
+			new ReflaxeOutputWriter().write(output, generatedFiles);
+		} catch (error:ProjectEmissionError) {
+			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
 	}
 

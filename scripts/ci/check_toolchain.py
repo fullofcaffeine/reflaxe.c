@@ -215,13 +215,15 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_c_ast_script = "python3 test/c_ast/run.py"
     expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
+    expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:diagnostics && npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
-        "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:hxc-ir && npm run snapshots:check"
+        "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
+        "npm run test:hxc-ir && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -253,6 +255,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:symbol-registry") != expected_symbol_registry_script
     ):
         errors.append("package.json must retain the deterministic symbol registry gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:project-emitter") != expected_project_emitter_script
+    ):
+        errors.append("package.json must retain the deterministic project emitter gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:hxc-ir") != expected_hxc_ir_script

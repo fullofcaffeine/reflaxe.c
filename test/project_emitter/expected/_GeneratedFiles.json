@@ -1,0 +1,17 @@
+{
+  "filesGenerated": [
+    "hxc.abi.json",
+    "hxc.manifest.json",
+    "hxc.runtime-plan.json",
+    "hxc.stdlib-report.json",
+    "hxc.symbols.json",
+    "include/hxc/detail/emitter_fixture_internal.h",
+    "include/hxc/emitter_fixture.h",
+    "include/hxc/removed_module.h",
+    "src/emitter_fixture.c",
+    "src/hxc_boot.c"
+  ],
+  "version": 1,
+  "id": 1,
+  "wasCached": false
+}

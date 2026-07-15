@@ -99,6 +99,18 @@ missing-metadata or missing-adapter assumptions.
   implemented or restored.
 - `CReflaxeCompiler` is an adapter. Whole-program semantics belong behind
   `CompilationContext` and `CCompiler`, with fresh mutable state per build.
+- Use Haxe's type system as a compiler correctness boundary. Represent compiler
+  state, configuration, IR, plans, manifests, and diagnostics with explicit
+  target-owned classes, enums/enum abstracts, and typedefs; use exhaustive
+  pattern matching for closed variants. Do not introduce `Dynamic`, `Any`,
+  `Reflect`, `untyped`, anonymous open-ended maps, or unchecked casts as a
+  substitute for a missing semantic model. When an external API is inherently
+  untyped (for example JSON decoding, a compiler-preview API, or a foreign
+  interface), isolate it in the smallest adapter, validate every admitted
+  shape/value immediately, convert it to a typed target-owned model, add
+  malformed-input tests, and never let the untyped value escape that boundary.
+  Existing upstream generic signatures are boundary facts, not precedent for
+  untyped compiler internals.
 - Preserve fail-closed behavior. `HXC1000` is the deliberate scaffold result,
   not a failure to hide, weaken, or report as successful compilation.
 - Lower Haxe semantics into an explicit target-owned HxcIR before choosing C
@@ -143,6 +155,16 @@ missing-metadata or missing-adapter assumptions.
   the printer's own precedence table.
 - Write generated artifacts only through Reflaxe output ownership. Never
   hand-manage stale output outside its generated-file manifest.
+- Construct every project artifact as a validated, typed `GeneratedFile` and
+  package it through `CProjectEmitter`; do not pass output roots into the pure
+  plan or add a parallel file writer. `ReflaxeOutputWriter` must validate the
+  complete prior ownership set and complete new artifact set before the first
+  save, reject traversal, descendant symlinks, duplicates, and unowned existing
+  destinations, then delegate saves and stale deletion to `OutputManager`.
+  `_GeneratedFiles.json` is Reflaxe activity/ownership metadata, not a normal
+  compiler artifact. Runtime/ABI/stdlib placeholder sidecars must remain
+  explicitly unproven, and `lowered-program` emission stays rejected until
+  real semantic analyses can populate them.
 - Preserve Haxe evaluation order explicitly and never depend on C undefined
   behavior, including signed overflow, invalid shifts, aliasing violations,
   misalignment, uninitialized reads, or lifetime bugs.

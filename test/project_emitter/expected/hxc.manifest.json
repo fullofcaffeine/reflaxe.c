@@ -1,0 +1,103 @@
+{
+  "configuration": {
+    "profile": "portable",
+    "environment": "hosted",
+    "cStandard": "c11",
+    "runtimePolicy": "none",
+    "runtimeDiagnostics": "off"
+  },
+  "ownershipManifest": "_GeneratedFiles.json",
+  "build": {
+    "publicHeaders": [
+      "include/hxc/emitter_fixture.h",
+      "include/hxc/removed_module.h"
+    ],
+    "sources": [
+      "src/emitter_fixture.c",
+      "src/hxc_boot.c"
+    ],
+    "requirements": [
+      {
+        "ownerModulePaths": [
+          "fixture.Main"
+        ],
+        "name": "HXC_EMITTER_FIXTURE",
+        "valueKind": "integer",
+        "kind": "define",
+        "value": "1"
+      },
+      {
+        "ownerModulePaths": [
+          "fixture.Api",
+          "fixture.Main"
+        ],
+        "name": "stdio.h",
+        "valueKind": "enum",
+        "kind": "include",
+        "value": "system"
+      }
+    ],
+    "privateHeaders": [
+      "include/hxc/detail/emitter_fixture_internal.h"
+    ],
+    "includeDirectories": [
+      "include"
+    ],
+    "runtimeHeaders": []
+  },
+  "schemaVersion": 1,
+  "compilationStatus": "structural-fixture-no-haxe-lowering",
+  "generator": "reflaxe.c",
+  "artifacts": [
+    {
+      "sha256": "fa47ca7dc21884d5a936d0d67dcac41143571c731c683ddf30ed37f333610838",
+      "path": "hxc.abi.json",
+      "kind": "abi-manifest"
+    },
+    {
+      "sha256": "0057c9f340a5beb6a8944577904c8e70983694dc6ec7dea17b905f38f4ab6155",
+      "path": "hxc.runtime-plan.json",
+      "kind": "runtime-plan"
+    },
+    {
+      "sha256": "ab9bf46f0e34d824591a6be8a4758db6661e677ab4016d2132c15a60d54b33bd",
+      "path": "hxc.stdlib-report.json",
+      "kind": "stdlib-report"
+    },
+    {
+      "sha256": "26435334fd956dddb0bc025d9bb7a92bc8d9843d112999fb7b843749e811e28f",
+      "path": "hxc.symbols.json",
+      "kind": "symbol-table"
+    },
+    {
+      "sha256": "3a73ab2337de2a45ed6cd7c83239e1997deff3f0114fdf8caea51687353670a8",
+      "path": "include/hxc/detail/emitter_fixture_internal.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "adbbc66dec79c8c79ad9588b15ebd71f5b09845320f1d33a4e44e1fe7cfc51cb",
+      "path": "include/hxc/emitter_fixture.h",
+      "kind": "public-header"
+    },
+    {
+      "sha256": "828248baf11361244c2a258f3235dd0a0e83513faa4a1431e0be1aaffa595774",
+      "path": "include/hxc/removed_module.h",
+      "kind": "public-header"
+    },
+    {
+      "sha256": "f7def93e6a119b88beb34f9f85157a256b82779218be78d08954a4877816f072",
+      "path": "src/emitter_fixture.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "2dd640a159b5f2065cc46c4c3d541febfaf4ff7e227ed6b8d1a227063b09e6dc",
+      "path": "src/hxc_boot.c",
+      "kind": "source"
+    }
+  ],
+  "contentAddressing": {
+    "scope": "all compiler artifacts except hxc.manifest.json and _GeneratedFiles.json",
+    "algorithm": "sha256"
+  },
+  "projectName": "emitter-fixture"
+}

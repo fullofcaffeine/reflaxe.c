@@ -74,10 +74,15 @@ that contract into stable header/source placement, complete-type ordering,
 minimal includes, forward declarations, and portable guards. The deterministic
 symbol registry finalizes exact or generated names across real C namespaces,
 keeps overloads and specializations stable across discovery order, and exposes
-the future `hxc.symbols.json` table/collision-ledger shape. A test-only C AST
-adapter proves the planned headers independently under strict GCC and Clang;
-production Haxe lowering/header emission and native layout proof do not exist
-yet. The exact boundary and examples are in
+the `hxc.symbols.json` table/collision-ledger shape. A typed project emitter now
+packages structural headers and sources with content hashes, neutral build
+facts, symbol output, and honest runtime/ABI/stdlib placeholders. Its guarded
+Reflaxe adapter skips unchanged artifacts, safely removes only owned stale
+paths, rejects unowned collisions and path/symlink escapes, and produces
+byte-identical fresh projects across absolute roots. The emitted structural
+corpus compiles and runs under strict GCC and Clang; it is not typed-Haxe
+lowering, so production still stops at `HXC1000` with no output. See
+[project emission](docs/project-emission.md). The C authoring boundary is in
 [typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
 [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).

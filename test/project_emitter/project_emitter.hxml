@@ -1,0 +1,7 @@
+# Dedicated E1.T07 deterministic multi-file project ownership test.
+
+-cp test/project_emitter/
+-lib reflaxe.c
+
+-main ProjectEmitterProbe
+--interp

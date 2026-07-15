@@ -29,6 +29,17 @@ DECLARATION_PLAN_HEADERS = (
     "types/value.h",
 )
 DECLARATION_PLAN_SMOKE = DECLARATION_PLAN / "smoke.c"
+PROJECT_EMITTER = ROOT / "test/project_emitter/expected"
+PROJECT_EMITTER_INCLUDE = PROJECT_EMITTER / "include"
+PROJECT_EMITTER_HEADERS = (
+    "hxc/detail/emitter_fixture_internal.h",
+    "hxc/emitter_fixture.h",
+    "hxc/removed_module.h",
+)
+PROJECT_EMITTER_SOURCES = (
+    PROJECT_EMITTER / "src/emitter_fixture.c",
+    PROJECT_EMITTER / "src/hxc_boot.c",
+)
 C_AST_GOLDENS = (
     (
         "declarator",
@@ -295,6 +306,47 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         label=f"{family} declaration-plan header execution",
     )
     lanes.append("declaration-plan-header-run")
+
+    for index, header in enumerate(PROJECT_EMITTER_HEADERS):
+        header_probe = build / f"project_emitter_header_{index}.c"
+        header_probe.write_text(
+            f'#include "{header}"\n#include "{header}"\n', encoding="utf-8"
+        )
+        compile_object(
+            toolchain.cc,
+            C_STRICT_FLAGS,
+            header_probe,
+            build / f"project_emitter_header_{index}.o",
+            includes=(PROJECT_EMITTER_INCLUDE,),
+            label=f"{family} independent project-emitter header {header}",
+        )
+    lanes.append("project-emitter-header-independent-compile")
+
+    project_objects: list[Path] = []
+    for index, source in enumerate(PROJECT_EMITTER_SOURCES):
+        project_object = build / f"project_emitter_{index}.o"
+        compile_object(
+            toolchain.cc,
+            C_STRICT_FLAGS,
+            source,
+            project_object,
+            includes=(PROJECT_EMITTER_INCLUDE,),
+            label=f"{family} project-emitter source {source.name}",
+        )
+        project_objects.append(project_object)
+    project_executable = build / "project_emitter"
+    link_executable(
+        toolchain.cc,
+        tuple(project_objects),
+        project_executable,
+        label=f"{family} project-emitter link",
+    )
+    run_executable(
+        project_executable,
+        "project-emitter: OK",
+        label=f"{family} project-emitter execution",
+    )
+    lanes.append("project-emitter-structural-run")
 
     runtime_object = build / "hxc_runtime.o"
     runtime_smoke_object = build / "runtime_smoke.o"

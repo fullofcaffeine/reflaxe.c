@@ -49,6 +49,7 @@
         "typed-c",
         "typed-ast",
         "symbol-registry",
+        "project-emitter",
         "hxc-ir"
       ]
     },
@@ -65,6 +66,7 @@
       "suiteIds": [
         "c-ast",
         "declaration-plan",
+        "project-emitter",
         "hxc-ir"
       ]
     },
@@ -85,6 +87,7 @@
         "c-ast",
         "declaration-plan",
         "symbol-registry",
+        "project-emitter",
         "hxc-ir"
       ]
     },
@@ -293,6 +296,25 @@
       ]
     },
     {
+      "id": "project-emitter",
+      "directory": "test/project_emitter",
+      "runner": [
+        "python3",
+        "test/project_emitter/run.py"
+      ],
+      "types": [
+        "negative",
+        "ast",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed multi-file project artifacts and manifests are deterministic across roots and discovery order",
+        "Reflaxe ownership removes only listed stale outputs and skips unchanged artifact writes",
+        "path traversal, symlinks, unowned collisions, malformed ownership JSON, and premature lowered-program claims fail closed"
+      ]
+    },
+    {
       "id": "hxc-ir",
       "directory": "test/hxc_ir",
       "runner": [
@@ -391,6 +413,17 @@
         ],
         "formats": [
           "json"
+        ]
+      },
+      {
+        "id": "project-emitter",
+        "expectedRoots": [
+          "test/project_emitter/expected"
+        ],
+        "formats": [
+          "json",
+          "header",
+          "c"
         ]
       },
       {
