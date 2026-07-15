@@ -60,6 +60,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "hxc-ir",
                 "primitive-semantics",
                 "body-lowering",
+                "function-lowering",
             ),
         )
 

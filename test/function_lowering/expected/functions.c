@@ -1,0 +1,88 @@
+#include "hxc/program.h"
+
+double hxc_method_FunctionFixture_asFloat(double hxc_local_FunctionFixture_asFloat_value_n0)
+{
+  return hxc_local_FunctionFixture_asFloat_value_n0;
+}
+
+int32_t hxc_method_FunctionFixture_chain(int32_t hxc_local_FunctionFixture_chain_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_chain_callzx2Dresult_n0 = hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_chain_value_n0);
+  return hxc_temp_FunctionFixture_chain_callzx2Dresult_n0;
+}
+
+double hxc_method_FunctionFixture_convert(int32_t hxc_local_FunctionFixture_convert_value_n0)
+{
+  double hxc_temp_FunctionFixture_convert_callzx2Dresult_n0 = hxc_method_FunctionFixture_asFloat((double)hxc_local_FunctionFixture_convert_value_n0);
+  return hxc_temp_FunctionFixture_convert_callzx2Dresult_n0;
+}
+
+void hxc_method_FunctionFixture_discarded(int32_t hxc_local_FunctionFixture_discarded_value_n0)
+{
+  hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_discarded_value_n0);
+  return;
+}
+
+int32_t hxc_method_FunctionFixture_first(int32_t hxc_local_FunctionFixture_first_left_n0, int32_t hxc_local_FunctionFixture_first_right_n1)
+{
+  (void)hxc_local_FunctionFixture_first_right_n1;
+  return hxc_local_FunctionFixture_first_left_n0;
+}
+
+void hxc_method_FunctionFixture_main(void)
+{
+  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n0 = hxc_method_FunctionFixture_chain(7);
+  int32_t hxc_local_FunctionFixture_main_integer_n0 = hxc_temp_FunctionFixture_main_callzx2Dresult_n0;
+  (void)hxc_local_FunctionFixture_main_integer_n0;
+  double hxc_temp_FunctionFixture_main_callzx2Dresult_n1 = hxc_method_FunctionFixture_convert(9);
+  double hxc_local_FunctionFixture_main_floating_n1 = hxc_temp_FunctionFixture_main_callzx2Dresult_n1;
+  (void)hxc_local_FunctionFixture_main_floating_n1;
+  hxc_method_FunctionFixture_discarded(11);
+  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n2 = hxc_method_FunctionFixture_ordered(13);
+  int32_t hxc_local_FunctionFixture_main_orderedValue_n2 = hxc_temp_FunctionFixture_main_callzx2Dresult_n2;
+  (void)hxc_local_FunctionFixture_main_orderedValue_n2;
+  return;
+}
+
+int32_t hxc_method_FunctionFixture_mutualLeft(int32_t hxc_local_FunctionFixture_mutualLeft_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_mutualLeft_callzx2Dresult_n0 = hxc_method_FunctionFixture_mutualRight(hxc_local_FunctionFixture_mutualLeft_value_n0);
+  return hxc_temp_FunctionFixture_mutualLeft_callzx2Dresult_n0;
+}
+
+int32_t hxc_method_FunctionFixture_mutualRight(int32_t hxc_local_FunctionFixture_mutualRight_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_mutualRight_callzx2Dresult_n0 = hxc_method_FunctionFixture_mutualLeft(hxc_local_FunctionFixture_mutualRight_value_n0);
+  return hxc_temp_FunctionFixture_mutualRight_callzx2Dresult_n0;
+}
+
+int32_t hxc_method_FunctionFixture_ordered(int32_t hxc_local_FunctionFixture_ordered_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0 = hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_ordered_value_n0);
+  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1 = hxc_method_FunctionFixture_chain(hxc_local_FunctionFixture_ordered_value_n0);
+  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2 = hxc_method_FunctionFixture_first(hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0, hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1);
+  return hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2;
+}
+
+int32_t hxc_method_FunctionFixture_passthrough(int32_t hxc_local_FunctionFixture_passthrough_value_n0)
+{
+  return hxc_local_FunctionFixture_passthrough_value_n0;
+}
+
+int32_t hxc_method_FunctionFixture_recursive(int32_t hxc_local_FunctionFixture_recursive_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_recursive_callzx2Dresult_n0 = hxc_method_FunctionFixture_recursiveStep(hxc_local_FunctionFixture_recursive_value_n0);
+  return hxc_temp_FunctionFixture_recursive_callzx2Dresult_n0;
+}
+
+int32_t hxc_method_FunctionFixture_recursiveStep(int32_t hxc_local_FunctionFixture_recursiveStep_value_n0)
+{
+  int32_t hxc_temp_FunctionFixture_recursiveStep_callzx2Dresult_n0 = hxc_method_FunctionFixture_recursive(hxc_local_FunctionFixture_recursiveStep_value_n0);
+  return hxc_temp_FunctionFixture_recursiveStep_callzx2Dresult_n0;
+}
+
+int main(void)
+{
+  hxc_method_FunctionFixture_main();
+  return 0;
+}

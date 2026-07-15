@@ -153,12 +153,12 @@ signed/unsigned bit interpretation, NaN, infinities, overflow, negative zero,
 and scalar nullability in strict C11 at `-O0` and `-O2`.
 
 That native C fixture is independent executable evidence for the ratified
-algorithms and target prerequisites. It is not generated Haxe output. This ADR
-does not implement expression lowering: production compilation continues to
-fail closed at `HXC1000` until E2.T02 connects typed expressions to HxcIR and C
-emission. E2.T05 still owns arithmetic, division, modulo, and shift
-undefined-behavior discipline; E2.T11 owns generated-program differential and
-sanitizer evidence.
+algorithms and target prerequisites. E2.T02 now consumes the ordinary mappings
+for real typed bodies, and E2.T03 records admitted implicit argument conversions
+in HxcIR before emitting direct structural C calls. The independent fixture is
+still not generated Haxe output. E2.T05 owns arithmetic, division, modulo, and
+shift undefined-behavior discipline; E2.T11 owns broader generated-program
+differential and sanitizer evidence.
 
 ## Consequences
 

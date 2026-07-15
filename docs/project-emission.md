@@ -6,14 +6,15 @@ artifacts; it never receives an output directory. `ReflaxeOutputWriter` is the
 separate ownership adapter that validates the destination and delegates every
 artifact write and stale deletion to Reflaxe's `OutputManager`.
 
-This boundary does not make the scaffold a usable Haxe-to-C compiler. E2.T02
-can lower an admitted typed main body through HxcIR and structural C, but
-production still creates no artifact: unsupported nodes stop at exact `HXC1001`,
-and a supported body stops later at `HXC1000` before static-function, call,
-entry-point, and project emission. The checked-in project corpus is constructed
-directly in a test macro, independently of the real body-lowering fixture. A
-`lowered-program` emission request is rejected until real semantic runtime and
-ABI analyses can replace the honest placeholders.
+This boundary still does not make the scaffold a general Haxe-to-C compiler.
+E2.T03 admits one production status only for a validated, reachable primitive
+static-function graph. That path emits its structural private header, source,
+and `int main(void)` entry with analyzed empty runtime/ABI/stdlib results.
+Unsupported nodes stop at exact `HXC1001` without output. The broader generic
+`lowered-program` status remains rejected until real semantic runtime, ABI, and
+stdlib analyses exist for those programs. The checked-in structural project
+corpus remains independently constructed by a test macro and retains honest
+placeholders; it is not relabeled as generated-Haxe semantic evidence.
 
 ## Typed model and layout
 
@@ -45,10 +46,14 @@ The emitter owns these schema-1 sidecars:
 - `hxc.manifest.json`: resolved logical configuration, typed build
   requirements, layout groups, artifact kinds, and SHA-256 digests;
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
-- `hxc.runtime-plan.json`: an explicit `placeholder-no-runtime-analysis`
-  record, with no feature selection and no fabricated no-runtime proof;
-- `hxc.abi.json`: an experimental `placeholder-no-export-analysis` record;
-- `hxc.stdlib-report.json`: a `placeholder-no-stdlib-analysis` record.
+- `hxc.runtime-plan.json`: either the structural fixture's explicit
+  `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
+  primitive executable's `analyzed-runtime-free` record with resolved policy,
+  provenance, direct decisions, and a positive empty-runtime proof;
+- `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive
+  executable's `analyzed-no-public-exports` plus its C `main` entry;
+- `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
+  primitive executable's `analyzed-no-stdlib-use`.
 
 The compiler manifest cannot contain its own digest without a recursive
 definition, so its declared hash scope is every compiler artifact except
@@ -115,10 +120,12 @@ preserving an unlisted neighboring source. Reflaxe's `_GeneratedFiles.json`
 invocation/activity fields are validated separately and excluded from the
 normal-artifact server comparison. The suite also rejects unowned collisions,
 invalid paths, existing or dangling symlinks, malformed ownership JSON, and
-non-canonical line endings before a partial write, while preserving both the
-production exact-`HXC1001` unsupported-body boundary and the later `HXC1000`
-no-output capability boundary. The native matrix independently
-compiles every emitted header and links/runs the emitted strict-C11 structural
-project under GCC and Clang. This is emitted-C shape and ownership evidence,
-not generated-Haxe semantic evidence or a public ABI, runtime, standard-library,
-or generated-output licensing claim.
+non-canonical line endings before a partial write, while preserving the
+production exact-`HXC1001` unsupported boundary and rejection of unproven generic
+lowered-program status. The native matrix independently compiles every emitted
+header and links/runs the emitted strict-C11 structural project under GCC and
+Clang. The separate function-lowering suite proves that the narrow primitive
+production path passes through this ownership boundary with analyzed empty
+runtime/ABI/stdlib records. The structural corpus itself remains emitted-C shape
+and ownership evidence, not generated-Haxe semantic evidence or a public ABI,
+runtime, standard-library, or generated-output licensing claim.

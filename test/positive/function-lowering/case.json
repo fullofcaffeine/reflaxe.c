@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-function-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-004",
+    "HXC-SEM-011"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/emit/CProjectEmitter.hx",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CStaticFunctionGraph.hx",
+    "src/reflaxe/c/plan/CDeclarationPlanner.hx",
+    "test/function_lowering/FunctionLoweringProbe.hx",
+    "test/function_lowering/fixtures/positive/FunctionFixture.hx",
+    "test/function_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../function_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/function-lowering",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^function-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/function_lowering/expected/functions.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/functions.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

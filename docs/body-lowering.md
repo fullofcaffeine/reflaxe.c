@@ -1,18 +1,23 @@
 # Primitive function-body lowering
 
-E2.T02 is the first compile-backed path from real pinned-Haxe `TypedExpr`
-bodies through validated HxcIR to structural strict C11. It deliberately admits
-only the semantic slice needed to establish the pipeline; it does not yet emit
-a production C project or claim that `reflaxe.c` can build an executable.
+E2.T02 established the first compile-backed path from real pinned-Haxe
+`TypedExpr` bodies through validated HxcIR to structural strict C11. E2.T03 now
+reuses this layer for typed parameters and direct calls and packages the admitted
+primitive graph as a production C project. This document remains the contract
+for individual body semantics; [static function lowering](function-lowering.md)
+owns graph, prototype, call, and executable-entry behavior.
 
 ## Admitted subset
 
-`CBodyLowering` accepts parameter-free typed functions containing:
+`CBodyLowering` accepts typed functions containing:
 
 - `Void`, `Bool`, `Int`, `UInt`, and `Float` return/local/value types;
 - compiler-typed `TInt`, `TFloat`, and `TBool` constants (unary operators are
   still outside this slice);
 - initialized automatic locals and local reads;
+- primitive parameters and direct static calls whose typed signatures are in
+  the same admitted graph;
+- implicit direct primitive conversions recorded before their calls;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
@@ -27,10 +32,11 @@ return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Arguments, calls, operators, assignment, control flow, objects, strings,
-closures, allocation, exceptions, and cleanup are outside this slice. The first
-unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
-never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
+Default/optional/rest parameters, indirect calls, operators, assignment, control
+flow, objects, strings, closures, allocation, exceptions, and cleanup remain
+outside this slice. The first unsupported typed node fails with `HXC1001` at
+its exact Haxe range; lowering never substitutes `Dynamic`, `Any`, reflection,
+raw C, or an invented value.
 
 ## Names, source mapping, and C shape
 
@@ -54,22 +60,19 @@ same representation for these already-ratified primitive semantics.
 
 ## Production boundary
 
-`CCompiler` now locates the real typed static `main` body, including the Haxe
-case where the module array omits the main class but retains the typed
-entry-point call. That call is used only to locate the static field; call and
-entry-point emission remain E2.T03 work.
+`CCompiler` locates the real typed static `main`, including the Haxe case where
+the normalized module array omits its class but retains the typed entry-point
+call. It then collects the reachable direct-static graph before lowering any
+body. A wholly admitted primitive graph now emits an owned private header,
+source, `int main(void)` wrapper, and analyzed runtime/ABI/stdlib sidecars.
 
-Production behavior is fail-closed:
-
-- an unsupported body node emits exact source-positioned `HXC1001` and no
-  artifact;
-- a fully supported body passes HxcIR validation and structural C lowering,
-  then emits `HXC1000` and no artifact because static-function, call, and
-  executable entry-point/project emission are not implemented by E2.T02.
-
-Thus the reviewed C fixture is generated from real typed Haxe by the body
-pipeline, but its test-only translation-unit envelope and native `main` harness
-are not production output.
+Production remains fail-closed outside that exact slice. An unsupported body,
+signature, or call emits source-positioned `HXC1001` and no artifact. The broad
+`HXC1000` scaffold diagnostic remains a distinct capability family but is no
+longer the successful primitive-body terminus. The focused body fixture's
+translation-unit render is still useful snapshot evidence; the production
+project and entry point are independently checked by both this suite and the
+function-lowering suite.
 
 ## Evidence and compatibility
 
@@ -88,7 +91,7 @@ available GCC and Clang at `-O0` and `-O2` under
 `-pedantic-errors`. Required CI lanes pin each compiler family and verify its
 command identity before compiling the checked-in generated snapshots.
 
-This slice has no public C ABI, environment-specific behavior, standard-library
-support, allocation, or `hxrt` dependency. Standard-library parity remains the
-E5 feature graph: direct idiomatic C first, program-local specialization next,
-and only the narrowest justified optimized runtime slice last.
+This slice has no public C ABI, standard-library support, allocation, or `hxrt`
+dependency. Standard-library parity remains the E5 feature graph: direct
+idiomatic C first, program-local specialization next, and only the narrowest
+justified optimized runtime slice last.

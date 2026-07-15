@@ -1,0 +1,30 @@
+#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+
+#include <stdint.h>
+
+double hxc_method_FunctionFixture_asFloat(double hxc_local_FunctionFixture_asFloat_value_n0);
+
+int32_t hxc_method_FunctionFixture_chain(int32_t hxc_local_FunctionFixture_chain_value_n0);
+
+double hxc_method_FunctionFixture_convert(int32_t hxc_local_FunctionFixture_convert_value_n0);
+
+void hxc_method_FunctionFixture_discarded(int32_t hxc_local_FunctionFixture_discarded_value_n0);
+
+int32_t hxc_method_FunctionFixture_first(int32_t hxc_local_FunctionFixture_first_left_n0, int32_t hxc_local_FunctionFixture_first_right_n1);
+
+void hxc_method_FunctionFixture_main(void);
+
+int32_t hxc_method_FunctionFixture_mutualLeft(int32_t hxc_local_FunctionFixture_mutualLeft_value_n0);
+
+int32_t hxc_method_FunctionFixture_mutualRight(int32_t hxc_local_FunctionFixture_mutualRight_value_n0);
+
+int32_t hxc_method_FunctionFixture_ordered(int32_t hxc_local_FunctionFixture_ordered_value_n0);
+
+int32_t hxc_method_FunctionFixture_passthrough(int32_t hxc_local_FunctionFixture_passthrough_value_n0);
+
+int32_t hxc_method_FunctionFixture_recursive(int32_t hxc_local_FunctionFixture_recursive_value_n0);
+
+int32_t hxc_method_FunctionFixture_recursiveStep(int32_t hxc_local_FunctionFixture_recursiveStep_value_n0);
+
+#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

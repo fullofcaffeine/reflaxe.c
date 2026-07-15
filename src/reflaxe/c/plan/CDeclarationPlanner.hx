@@ -21,6 +21,16 @@ class CDeclarationPlanner {
 
 	public function plan(snapshot:TypedCContractSnapshot):CDeclarationPlan
 		return new PlanningState(snapshot).build();
+
+	/** Collision-free C identifier derived from the normalized logical header path. */
+	public static function headerGuardFor(path:String):String {
+		final bytes = Bytes.ofString(path);
+		final encoded = new StringBuf();
+		for (index in 0...bytes.length) {
+			encoded.add(StringTools.hex(bytes.get(index), 2));
+		}
+		return 'HXC_GENERATED_PATH_${encoded.toString()}_INCLUDED';
+	}
 }
 
 private class PlanningState {
@@ -462,12 +472,7 @@ private class PlanningState {
 		return declaration.headerVisibility == "public" ? PHVPublic : PHVPrivate;
 
 	function guardFor(path:String):String {
-		final bytes = Bytes.ofString(path);
-		final encoded = new StringBuf();
-		for (index in 0...bytes.length) {
-			encoded.add(StringTools.hex(bytes.get(index), 2));
-		}
-		return 'HXC_GENERATED_PATH_${encoded.toString()}_INCLUDED';
+		return CDeclarationPlanner.headerGuardFor(path);
 	}
 
 	function validatePath(path:String, requireHeaderSuffix:Bool, label:String):Void {

@@ -23,12 +23,11 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> current E2.T02: CBodyLowering maps admitted typed main bodies to HxcIR
+  -> current E2.T03: collects the reachable typed static-function graph
+  -> CBodyLowering maps admitted signatures, arguments, calls, and bodies to HxcIR
   -> validates HxcIR before CBodyEmitter constructs structural C
-  -> runs analyses and HxcIR passes
-  -> lowers to C AST
-  -> runs C passes
-  -> invokes ProjectEmitter
+  -> emits a private prototype header, source definitions, and int main(void)
+  -> invokes ProjectEmitter with analyzed zero-runtime primitive facts
 
 ProjectEmitter
   -> public/private headers
@@ -114,7 +113,7 @@ Reflaxe-injected build-cache hook is excluded from the normalized metadata view
 because it appears only after cache reuse; source-authored metadata and the raw
 declaration remain intact. Forward/reversed input and cold/compiler-server
 fixtures are byte-identical. The inventory itself still performs no semantic
-lowering; its report is emitted immediately before the E2.T02 body pipeline
+lowering; its report is emitted immediately before the E2 body pipeline
 consumes the retained raw typed expression.
 
 `CDiagnostic` is the single target-owned diagnostic boundary. Its typed ID
@@ -135,21 +134,25 @@ primitive runtime fallback, or checked/nullable unwraps without a failure
 edge. It also checks constant/result and return types plus load, initialization,
 store, and address types whenever the place type is structurally resolvable;
 the E2.T02 slice uses local places. Unsupported typed nodes use exact
-source-positioned `HXC1001`; they never become an opaque value. E2.T02 now
-lowers parameter-free primitive constants, initialized locals/reads, nested
-cleanup-free blocks, and returns from real typed Haxe through validated HxcIR
-to structural C. A supported body
-reaches the later `HXC1000` static-function/call/entry-point boundary with no
-production artifact. See [primitive function-body lowering](body-lowering.md).
+source-positioned `HXC1001`; they never become an opaque value. E2.T02 lowers
+primitive constants, initialized locals/reads, nested cleanup-free blocks, and
+returns. E2.T03 adds primitive parameters, explicit argument conversions, and
+direct static calls, then emits the reachable graph with a private prototype
+header and hosted `int main(void)` wrapper. See [primitive function-body
+lowering](body-lowering.md) and [static function
+lowering](function-lowering.md).
 
-`CBodyLowering` builds the complete admitted HxcIR function set before sealing
+`CBodyLowering` prepares the complete admitted HxcIR function set before sealing
 the per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
 ordinals, so shadowing is stable without deriving C identifiers from Haxe text.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
-and builds strict structural statements plus optional typed `#line` nodes. It
-cannot select `hxrt`; the generated test translation unit is runtime-free in
-both portable and metal.
+and builds strict structural statements plus optional typed `#line` nodes.
+Direct-call arguments remain ordered HxcIR instructions, conversions precede
+their calls, and consumed call results become typed temporaries instead of C
+subexpressions with weaker evaluation order. `CStaticFunctionProjectEmitter`
+places all prototypes before definitions and produces a runtime-free project in
+both portable and metal. None of these stages can select `hxrt`.
 
 The type model normalizes base specifiers and keeps them separate from a
 grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and
@@ -206,7 +209,7 @@ The exact Haxe 5.0.0-preview.1 carrier installs a static, scalar-Unicode
 facts remain disabled until adapters prove them. The lifecycle snapshot uses
 that real custom target. Full registration now reports exact `HXC1001` at the
 bootstrap fixture's first unsupported typed call without output; a completely
-admitted primitive body reaches the later `HXC1000` no-output boundary. Legacy
+admitted primitive static graph emits an owned runtime-free C project. Legacy
 Cross remains an `HXC0003` negative because relabeling its UTF-16 state is not
 an architectural substitute. Eval remains only the future CLI bootstrap host,
 an oracle, and a non-C isolation target.

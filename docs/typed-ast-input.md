@@ -97,4 +97,5 @@ to agree where their source programs agree. Its deliberately unsupported bodies
 must now fail with exact source-anchored `HXC1001` and an empty output tree.
 Passing this suite proves collection and normalization only; the separate
 [body-lowering suite](body-lowering.md) proves the admitted TypedExpr-to-HxcIR/C
-path.
+path and [function lowering](function-lowering.md) proves its narrow production
+static-function consumer.

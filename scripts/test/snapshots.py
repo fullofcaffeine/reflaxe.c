@@ -313,6 +313,59 @@ def body_lowering_artifacts() -> list[Artifact]:
     ]
 
 
+def function_lowering_artifacts() -> list[Artifact]:
+    module = load_module("function_lowering", "test/function_lowering/run.py")
+    first_payload, report = module.render("snapshot first function render")
+    second_payload, repeated = module.render("snapshot second function render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input function render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "function-lowering snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    hxcir = values.get("functions.hxcir")
+    header = values.get("functions.h")
+    source = values.get("functions.c")
+    symbols = values.get("symbols.json")
+    if (
+        not isinstance(hxcir, str)
+        or not isinstance(header, str)
+        or not isinstance(source, str)
+        or not isinstance(symbols, dict)
+    ):
+        raise SnapshotFailure("function-lowering report omitted a managed artifact")
+    return [
+        Artifact(
+            Path("test/function_lowering/expected/functions.hxcir"),
+            "hxcir",
+            hxcir,
+        ),
+        Artifact(
+            Path("test/function_lowering/expected/functions.h"),
+            "header",
+            header,
+        ),
+        Artifact(
+            Path("test/function_lowering/expected/functions.c"),
+            "c",
+            source,
+        ),
+        Artifact(
+            Path("test/function_lowering/expected/symbols.json"),
+            "json",
+            symbols,
+        ),
+    ]
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -324,6 +377,7 @@ GENERATORS: dict[str, Generator] = {
     "hxc-ir": hxc_ir_artifacts,
     "primitive-semantics": primitive_semantics_artifacts,
     "body-lowering": body_lowering_artifacts,
+    "function-lowering": function_lowering_artifacts,
 }
 
 

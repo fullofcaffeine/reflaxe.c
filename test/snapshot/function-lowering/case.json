@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-function-lowering-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-004",
+    "HXC-SEM-011"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/function_lowering/expected/functions.c",
+    "test/function_lowering/expected/functions.h",
+    "test/function_lowering/expected/functions.hxcir",
+    "test/function_lowering/expected/symbols.json",
+    "test/function_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "function-lowering"
+    ],
+    "workingDirectory": "test/snapshot/function-lowering",
+    "timeoutSeconds": 60,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/function_lowering/expected/functions.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/functions.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/functions.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

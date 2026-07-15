@@ -113,6 +113,24 @@ REQUIRED_GATE_FILES = (
     "test/negative/body-lowering/case.json",
     "test/snapshot/body-lowering/case.json",
     "test/runtime/body-lowering/case.json",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "src/reflaxe/c/lowering/CStaticFunctionGraph.hx",
+    "docs/function-lowering.md",
+    "test/function_lowering/FunctionLoweringProbe.hx",
+    "test/function_lowering/function_lowering.hxml",
+    "test/function_lowering/fixtures/positive/FunctionFixture.hx",
+    "test/function_lowering/fixtures/default/Main.hx",
+    "test/function_lowering/fixtures/optional/Main.hx",
+    "test/function_lowering/fixtures/rest/Main.hx",
+    "test/function_lowering/expected/functions.c",
+    "test/function_lowering/expected/functions.h",
+    "test/function_lowering/expected/functions.hxcir",
+    "test/function_lowering/expected/symbols.json",
+    "test/function_lowering/run.py",
+    "test/positive/function-lowering/case.json",
+    "test/negative/function-lowering/case.json",
+    "test/snapshot/function-lowering/case.json",
+    "test/runtime/function-lowering/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -158,6 +176,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -211,6 +230,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:primitive-semantics entry point")
     if scripts.get("test:body-lowering") != "python3 test/body_lowering/run.py":
         errors.append("package.json must retain the test:body-lowering entry point")
+    if scripts.get("test:function-lowering") != "python3 test/function_lowering/run.py":
+        errors.append("package.json must retain the test:function-lowering entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -235,6 +256,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:primitive-semantics")
     if "npm run test:body-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:body-lowering")
+    if "npm run test:function-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:function-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -278,6 +301,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed primitive semantic test")
     if "test/body_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed body-lowering test")
+    if "test/function_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed function-lowering test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -345,6 +370,36 @@ def validate() -> list[str]:
     if "command identity mismatch" not in body_runner or '"--version"' not in body_runner:
         errors.append(
             "body-lowering runner must verify required compiler-family identity"
+        )
+
+    function_runner = read_text(ROOT / "test/function_lowering/run.py", errors)
+    for required_function_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-Wstrict-prototypes",
+        "-Wmissing-prototypes",
+        "-Wundef",
+        "-Wformat=2",
+        "-Wimplicit-fallthrough",
+        "-Wcast-align",
+        "-Wcast-qual",
+        "-O0",
+        "-O2",
+    ):
+        if required_function_flag not in function_runner:
+            errors.append(
+                "function-lowering native runner lost strict flag "
+                + required_function_flag
+            )
+    if "--native-only" not in function_runner or "--toolchain" not in function_runner:
+        errors.append("function-lowering runner must expose the required native matrix seam")
+    if "command identity" not in function_runner or '"--version"' not in function_runner:
+        errors.append(
+            "function-lowering runner must verify required compiler-family identity"
         )
 
     return errors

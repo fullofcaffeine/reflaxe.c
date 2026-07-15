@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-function-argument-diagnostics",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-004",
+    "HXC-SEM-011"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/function_lowering/fixtures/default/Main.hx",
+    "test/function_lowering/fixtures/optional/Main.hx",
+    "test/function_lowering/fixtures/rest/Main.hx",
+    "test/function_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../function_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/function-lowering",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1000",
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "exact argument diagnostics"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-function-lowering-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-004",
+    "HXC-SEM-011"
+  ],
+  "sources": [
+    "test/function_lowering/expected/functions.c",
+    "test/function_lowering/expected/functions.h",
+    "test/function_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../function_lowering/run.py"
+    ],
+    "workingDirectory": "test/runtime/function-lowering",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "zero-runtime production artifacts passed$"
+    },
+    "artifacts": [
+      {
+        "path": "test/function_lowering/expected/functions.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/functions.h",
+        "format": "header",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

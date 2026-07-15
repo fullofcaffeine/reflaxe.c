@@ -9,12 +9,13 @@ separately proposes an optional future `hxc` orchestration tool for project buil
 diagnostics, bindings, exports, and other end-to-end workflows; it is not a
 replacement Haxe compiler or a requirement imposed by Reflaxe.
 
-**Project status: M0 architecture scaffold with a first body-lowering slice.**
-The complete target-owned Haxe source graph type-checks, and parameter-free
-primitive function bodies now reach validated HxcIR and structural C in a
-compile-backed fixture. Production still emits no Haxe program or executable;
-unsupported compiler paths fail closed instead of producing plausible but
-incorrect C.
+**Project status: M0 architecture scaffold with a primitive executable slice.**
+The complete target-owned Haxe source graph type-checks. Typed primitive static
+functions, arguments, conversions, direct calls, and bodies now pass through
+validated HxcIR and emit an owned runtime-free strict-C11 project with a private
+header and `int main(void)`. This is not general Haxe or standard-library
+support; every broader compiler path still fails closed instead of producing
+plausible but incorrect C.
 
 ## Why another native target?
 
@@ -87,16 +88,17 @@ symbol registry finalizes exact or generated names across real C namespaces,
 keeps overloads and specializations stable across discovery order, and exposes
 the `hxc.symbols.json` table/collision-ledger shape. A typed project emitter now
 packages structural headers and sources with content hashes, neutral build
-facts, symbol output, and honest runtime/ABI/stdlib placeholders. Its guarded
+facts, and symbol output. Direct structural fixtures retain honest
+runtime/ABI/stdlib placeholders; the admitted primitive production path records
+analyzed empty results and a positive no-runtime proof. Its guarded
 Reflaxe adapter skips unchanged artifacts, safely removes only owned stale
 paths, rejects unowned collisions and path/symlink escapes, and produces
 byte-identical projects across absolute roots, discovery orders, locales, CRLF
 inputs, and warm compiler-server reuse. Renamed-symbol tests remove only prior
 owned paths, and failures identify the first differing artifact and byte. The
-emitted structural corpus compiles and runs under strict GCC and Clang; that
-project corpus is not typed-Haxe lowering. Production unsupported bodies stop
-at exact `HXC1001`, while an admitted body stops later at `HXC1000`, both with
-no output.
+emitted structural corpus compiles and runs under strict GCC and Clang. The
+separate typed-function suite proves production primitive output; unsupported
+signatures and bodies stop at exact `HXC1001` without output.
 See [project emission](docs/project-emission.md). The C authoring boundary is in
 [typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
@@ -108,12 +110,14 @@ all call dispatch forms, ABI integer and nullable identities, explicit
 exact/wrapping/checked/saturating conversions, allocation intent, failure successors,
 and reverse inner-to-outer cleanup paths before C syntax exists. Its validator,
 canonical source-aware dumps, reordered-input goldens, matching Eval side-effect
-oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. The first
-[primitive function-body lowering](docs/body-lowering.md) now carries real
-typed constants, initialized locals/reads, nested blocks, and returns through
-this layer to structural C, with exact source spans and deterministic
-shadow-safe names. Static functions, calls, entry points, and production project
-emission remain the next boundary.
+oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. The
+[primitive function-body lowering](docs/body-lowering.md) carries real typed
+constants, parameters, initialized locals/reads, nested blocks, calls,
+conversions, and returns through this layer to structural C, with exact source
+spans and deterministic shadow-safe names. [Static function
+lowering](docs/function-lowering.md) collects the reachable typed graph, emits
+all prototypes before definitions, preserves ordered arguments with explicit
+temporaries, and packages the first production primitive executable project.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI
@@ -128,9 +132,10 @@ complete module set before Reflaxe callback filtering, normalizes module and
 declaration ownership, retains externs/typedefs/abstracts and raw expressions,
 and records the entry point in a fresh per-request context. Its deterministic
 inventory is identical across reordered input and cold/compiler-server builds.
-The report remains a pre-lowering inventory; the body pipeline consumes its
-retained raw typed expressions afterward. Unsupported nodes report exact
-`HXC1001`, and a supported body reaches the later `HXC1000` no-artifact boundary.
+The report remains a pre-lowering inventory; the body/function pipeline consumes
+its retained raw typed expressions afterward. Unsupported nodes report exact
+`HXC1001`; a wholly admitted primitive static graph emits the owned runtime-free
+project.
 
 ### CLI bootstrap
 
@@ -197,8 +202,9 @@ The current checkout contains:
   exhaustive reserved ranges, schema-validated records, and registry-drift
   enforcement;
 - a minimal Reflaxe adapter and whole-program boundary that lowers an admitted
-  static-main body, reports exact `HXC1001` for unsupported typed nodes, and
-  then deliberately stops at `HXC1000` before function/call/entry-point output;
+  reachable primitive static-function graph, reports exact `HXC1001` for
+  unsupported typed nodes/signatures, and emits an owned runtime-free private
+  header/source project with `int main(void)` when wholly admitted;
 - a deterministic typed-AST adapter and reviewed inventory covering complete
   module ownership, declarations, fields, metadata, expressions, entry points,
   reordered input, and compiler-server isolation;
@@ -223,10 +229,14 @@ The current checkout contains:
 - a typed primitive mapping/conversion contract with profile-invariant exact and
   ABI integer identities, explicit scalar/reference nullability, owned machine
   snapshot, and strict-C11 O0/O2 algorithm probes without `hxrt`;
-- real parameter-free primitive `TypedExpr -> HxcIR -> structural C` body
+- real primitive `TypedExpr -> HxcIR -> structural C` body
   lowering with deterministic shadow-safe function/local names, exact source
   diagnostics, optional structural `#line` mapping, and runtime-free GCC/Clang
   execution at O0/O2;
+- typed primitive parameters, explicit argument conversion/call order, direct
+  static calls, recursive prototype planning, scoped default/optional/rest
+  diagnostics, and deterministic production project/native execution without
+  `hxrt`;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -238,9 +248,10 @@ The current checkout contains:
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
-It does **not** yet contain general Haxe-to-C semantic lowering, production
-function/call/entry-point emission, standard-library parity, a complete runtime,
-the `hxc` implementation, executable generated examples, or release tooling.
+It does **not** yet contain general Haxe-to-C semantic lowering, indirect or
+instance calls, control flow beyond primitive blocks, standard-library parity,
+a complete runtime, the `hxc` implementation, executable generated examples, or
+release tooling.
 The package metadata added at M0 is a reproducible development/package-layout
 seed, not a publishable compiler. Those capabilities remain tracked work.
 
@@ -299,7 +310,8 @@ lanes, case manifests, current mapped suites, and example assertion rules.
 
 See the [pinned toolchain guide](docs/toolchain.md) for the exact dependency,
 package-layout, bootstrap-order, and update contracts. The compile-backed probes
-do not claim that ordinary Haxe programs can be emitted as C yet.
+claim only the documented primitive subset; they do not claim broad
+ordinary-Haxe or standard-library compatibility.
 
 The eventual direct compiler invocation is:
 
@@ -307,15 +319,16 @@ The eventual direct compiler invocation is:
 haxe -lib reflaxe.c --custom-target c=build/c -main Main
 ```
 
-At M0 that real production path intentionally reports exact `HXC1001` for the
-first unsupported typed body node, or reaches `HXC1000` after an admitted body,
-with no output in either case. It is documented now so `c_output`, Eval, or the
-future `hxc` wrapper are not mistaken for alternate user-program carriers.
+At M0 that real production path emits an owned C project only for the admitted
+primitive static-function subset and reports exact `HXC1001` without output at
+the first unsupported signature or expression. It is documented now so
+`c_output`, Eval, or the future `hxc` wrapper are not mistaken for alternate
+user-program carriers.
 
-The complete target-owned Haxe graph now type-checks under the dedicated
-all-source gate, while real production activation remains fail-closed at exact
-`HXC1001` or the later `HXC1000`. E2.T03 next adds static functions, arguments,
-direct calls, and executable entry-point emission.
+The complete target-owned Haxe graph type-checks under the dedicated all-source
+gate. E2.T03 supplies static functions, arguments, direct calls, recursive
+prototypes, and executable entry emission; E2.T04 next broadens explicit Haxe
+evaluation-order serialization while unsupported constructs remain fail-closed.
 
 ## Project documents
 
@@ -325,6 +338,7 @@ direct calls, and executable entry-point emission.
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Primitive function-body lowering](docs/body-lowering.md)
+- [Static function and direct-call lowering](docs/function-lowering.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)

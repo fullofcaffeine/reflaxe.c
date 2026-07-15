@@ -24,7 +24,10 @@ NON_C_EXPECTED = "bootstrap=0 init=0 c=0 reflaxe_c=0 unicode=1 utf16=0"
 CALLER_C_EXPECTED = "bootstrap=0 init=0 c=1 reflaxe_c=0 unicode=1 utf16=0"
 CONFIGURATION_DIAGNOSTIC_ID = "HXC0003"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
-LOWERING_DETAIL = "Unsupported typed Haxe node `TCall`"
+LOWERING_DETAIL = (
+    "Unsupported typed Haxe node "
+    "`TCall(unavailable-static-target:function.Sys.println)`"
+)
 LOWERING_SOURCE = "BootstrapProbe.hx:40: lines 40-47"
 DIAGNOSTIC_PROFILE = re.compile(r"\[profile=(?:portable|metal|unresolved)\]")
 

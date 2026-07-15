@@ -7,9 +7,10 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 
-/** Input status distinguishes direct structural fixtures from future lowered programs. */
+/** Input status distinguishes structural fixtures, the admitted primitive slice, and unproven broader programs. */
 enum abstract CProjectCompilationStatus(String) to String {
 	var StructuralFixture = "structural-fixture-no-haxe-lowering";
+	var PrimitiveExecutable = "lowered-primitive-executable";
 	var LoweredProgram = "lowered-program";
 }
 
@@ -48,6 +49,8 @@ typedef CProjectEmissionPlan = {
 	final cStandard:CProjectStandard;
 	final runtimePolicy:CProjectRuntimePolicy;
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
+	final ?runtimePolicyProvenance:String;
+	final ?runtimeDiagnosticsProvenance:String;
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final symbolTable:CSymbolTableSnapshot;
@@ -73,6 +76,12 @@ private enum abstract PlaceholderStatus(String) to String {
 	var RuntimeNotAnalyzed = "placeholder-no-runtime-analysis";
 	var AbiNotAnalyzed = "placeholder-no-export-analysis";
 	var StdlibNotAnalyzed = "placeholder-no-stdlib-analysis";
+}
+
+private enum abstract ResolvedAnalysisStatus(String) to String {
+	var RuntimeFree = "analyzed-runtime-free";
+	var NoExports = "analyzed-no-public-exports";
+	var NoStdlib = "analyzed-no-stdlib-use";
 }
 
 private enum abstract AbiStability(String) to String {
@@ -142,6 +151,26 @@ private typedef RuntimePlanPlaceholder = {
 	final noRuntimeProof:Null<String>;
 }
 
+private typedef RuntimePlanResolved = {
+	final schemaVersion:Int;
+	final status:ResolvedAnalysisStatus;
+	final profile:CProfile;
+	final requestedPolicy:CProjectRuntimePolicy;
+	final resolvedPolicy:CProjectRuntimePolicy;
+	final policyProvenance:String;
+	final diagnosticMode:CProjectRuntimeDiagnostics;
+	final diagnosticProvenance:String;
+	final environment:CProjectEnvironment;
+	final rootReasons:Array<String>;
+	final directDecisions:Array<String>;
+	final features:Array<String>;
+	final artifacts:Array<String>;
+	final symbols:Array<String>;
+	final libraries:Array<String>;
+	final defines:Array<String>;
+	final noRuntimeProof:String;
+}
+
 private typedef AbiPlaceholder = {
 	final schemaVersion:Int;
 	final status:PlaceholderStatus;
@@ -151,9 +180,27 @@ private typedef AbiPlaceholder = {
 	final types:Array<String>;
 }
 
+private typedef AbiResolved = {
+	final schemaVersion:Int;
+	final status:ResolvedAnalysisStatus;
+	final stability:AbiStability;
+	final profile:CProfile;
+	final exports:Array<String>;
+	final types:Array<String>;
+	final executableEntryPoint:String;
+}
+
 private typedef StdlibPlaceholder = {
 	final schemaVersion:Int;
 	final status:PlaceholderStatus;
+	final profile:CProfile;
+	final modules:Array<String>;
+	final capabilities:Array<String>;
+}
+
+private typedef StdlibResolved = {
+	final schemaVersion:Int;
+	final status:ResolvedAnalysisStatus;
 	final profile:CProfile;
 	final modules:Array<String>;
 	final capabilities:Array<String>;
@@ -180,9 +227,20 @@ class CProjectEmitter {
 		final files = units.copy();
 
 		files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, plan.symbolTable));
-		files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlan(plan)));
-		files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiPlaceholder(plan)));
-		files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibPlaceholder(plan)));
+		switch plan.compilationStatus {
+			case StructuralFixture:
+				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanPlaceholder(plan)));
+				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiPlaceholder(plan)));
+				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibPlaceholder(plan)));
+			case PrimitiveExecutable:
+				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanResolved(plan)));
+				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiResolved(plan)));
+				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibResolved(plan)));
+			case LoweredProgram:
+				throw new ProjectEmissionError("unreachable generic lowered-program plan passed validation");
+			case _:
+				throw new ProjectEmissionError('unreachable project compilation status `${Std.string(plan.compilationStatus)}`');
+		}
 
 		files.sort(compareFiles);
 		final addressedArtifacts:Array<AddressedArtifact> = files.map(file -> {
@@ -225,6 +283,8 @@ class CProjectEmitter {
 		}
 		switch plan.compilationStatus {
 			case StructuralFixture:
+			case PrimitiveExecutable:
+				validatePrimitiveExecutablePlan(plan);
 			case LoweredProgram:
 				fail("lowered-program project emission remains unavailable until semantic runtime and ABI analyses replace the honest placeholders");
 			case _:
@@ -257,6 +317,47 @@ class CProjectEmitter {
 		}
 		if (plan.symbolTable.schemaVersion != 1 || plan.symbolTable.algorithm != "hxc-c-symbol-v1") {
 			fail("project emission requires the finalized schema-1 hxc-c-symbol-v1 symbol table");
+		}
+	}
+
+	function validatePrimitiveExecutablePlan(plan:CProjectEmissionPlan):Void {
+		if (plan.runtimePolicyProvenance == null || plan.runtimeDiagnosticsProvenance == null) {
+			fail("primitive executable emission requires resolved runtime-policy provenance");
+		}
+		if (plan.environment != CProjectEnvironment.Hosted) {
+			fail('primitive executable emission requires the hosted environment; found `${plan.environment}`');
+		}
+		if (plan.buildFacts.length != 0) {
+			fail("the primitive executable slice cannot carry external build requirements");
+		}
+		var sources = 0;
+		var privateHeaders = 0;
+		for (unit in plan.units) {
+			switch unit.kind {
+				case Source:
+					sources++;
+				case PrivateHeader:
+					privateHeaders++;
+				case PublicHeader | RuntimeHeader | RuntimeSource:
+					fail('primitive executable emission cannot package `${Std.string(unit.kind)}` `${unit.relativePath}`', [unit.relativePath]);
+				case _:
+					fail('primitive executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
+			}
+		}
+		if (sources != 1 || privateHeaders != 1) {
+			fail('primitive executable emission requires exactly one source and one private prototype header; found $sources source(s) and $privateHeaders header(s)');
+		}
+		var entryPoints = 0;
+		for (symbol in plan.symbolTable.symbols) {
+			if (symbol.cName == "main" && symbol.requestedName == "main") {
+				entryPoints++;
+			}
+			if (StringTools.startsWith(symbol.cName, "hxrt_")) {
+				fail('primitive executable symbol table contains runtime symbol `${symbol.cName}`');
+			}
+		}
+		if (entryPoints != 1) {
+			fail('primitive executable symbol table requires exactly one compiler-owned exact `main`; found $entryPoints');
 		}
 	}
 
@@ -384,7 +485,7 @@ class CProjectEmitter {
 		}
 	}
 
-	function runtimePlan(plan:CProjectEmissionPlan):RuntimePlanPlaceholder {
+	function runtimePlanPlaceholder(plan:CProjectEmissionPlan):RuntimePlanPlaceholder {
 		return {
 			schemaVersion: SCHEMA_VERSION,
 			status: PlaceholderStatus.RuntimeNotAnalyzed,
@@ -401,6 +502,33 @@ class CProjectEmitter {
 		};
 	}
 
+	function runtimePlanResolved(plan:CProjectEmissionPlan):RuntimePlanResolved {
+		final policyProvenance = plan.runtimePolicyProvenance;
+		final diagnosticProvenance = plan.runtimeDiagnosticsProvenance;
+		if (policyProvenance == null || diagnosticProvenance == null) {
+			throw new ProjectEmissionError("primitive executable lost validated runtime-policy provenance");
+		}
+		return {
+			schemaVersion: SCHEMA_VERSION,
+			status: ResolvedAnalysisStatus.RuntimeFree,
+			profile: plan.profile,
+			requestedPolicy: plan.runtimePolicy,
+			resolvedPolicy: plan.runtimePolicy,
+			policyProvenance: policyProvenance,
+			diagnosticMode: plan.runtimeDiagnostics,
+			diagnosticProvenance: diagnosticProvenance,
+			environment: plan.environment,
+			rootReasons: [],
+			directDecisions: ["primitive-values", "static-functions", "direct-calls", "executable-entry-point"],
+			features: [],
+			artifacts: [],
+			symbols: [],
+			libraries: [],
+			defines: [],
+			noRuntimeProof: "reachable validated HxcIR contains only direct primitive static functions, conversions, and calls"
+		};
+	}
+
 	function abiPlaceholder(plan:CProjectEmissionPlan):AbiPlaceholder {
 		return {
 			schemaVersion: SCHEMA_VERSION,
@@ -412,10 +540,32 @@ class CProjectEmitter {
 		};
 	}
 
+	function abiResolved(plan:CProjectEmissionPlan):AbiResolved {
+		return {
+			schemaVersion: SCHEMA_VERSION,
+			status: ResolvedAnalysisStatus.NoExports,
+			stability: AbiStability.Experimental,
+			profile: plan.profile,
+			exports: [],
+			types: [],
+			executableEntryPoint: "main"
+		};
+	}
+
 	function stdlibPlaceholder(plan:CProjectEmissionPlan):StdlibPlaceholder {
 		return {
 			schemaVersion: SCHEMA_VERSION,
 			status: PlaceholderStatus.StdlibNotAnalyzed,
+			profile: plan.profile,
+			modules: [],
+			capabilities: []
+		};
+	}
+
+	function stdlibResolved(plan:CProjectEmissionPlan):StdlibResolved {
+		return {
+			schemaVersion: SCHEMA_VERSION,
+			status: ResolvedAnalysisStatus.NoStdlib,
 			profile: plan.profile,
 			modules: [],
 			capabilities: []

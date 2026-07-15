@@ -7,7 +7,15 @@ import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import haxe.Json;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.emit.CProjectEmitter;
+import reflaxe.c.emit.CProjectEmitter.CProjectCompilationStatus;
+import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
+import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
+import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
+import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
+import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.frontend.TypedAstInventory;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.frontend.TypedProgramInput.TypedAstDeclaration;
@@ -15,9 +23,32 @@ import reflaxe.c.lowering.CBodyEmissionError;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLoweringError;
+import reflaxe.c.lowering.CStaticFunctionGraph;
+import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.ir.HxcIRValidationError;
+import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.plan.CDeclarationPlanner;
 
-/** Whole-program adapter into the first typed HxcIR/C body-lowering slice. */
+private typedef ResolvedRuntimePolicy = {
+	final value:CProjectRuntimePolicy;
+	final provenance:String;
+}
+
+private typedef ResolvedRuntimeDiagnostics = {
+	final value:CProjectRuntimeDiagnostics;
+	final provenance:String;
+}
+
+private typedef ResolvedProjectConfiguration = {
+	final environment:CProjectEnvironment;
+	final cStandard:CProjectStandard;
+	final runtimePolicy:CProjectRuntimePolicy;
+	final runtimePolicyProvenance:String;
+	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
+	final runtimeDiagnosticsProvenance:String;
+}
+
+/** Whole-program adapter into the primitive static-function executable slice. */
 class CCompiler {
 	final context:CompilationContext;
 
@@ -42,7 +73,37 @@ class CCompiler {
 				value;
 		};
 		try {
-			new CBodyLowering(context).lower([input]);
+			final configuration = resolveProjectConfiguration(context.profile);
+			if (configuration.environment != CProjectEnvironment.Hosted) {
+				CDiagnostic.fatal(CDiagnosticId.LoweringNotImplemented,
+					'primitive executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
+					input.expression.pos, context.profile);
+			}
+			final graph = new CStaticFunctionGraphCollector().collect(input);
+			final entryRequest = new CSymbolRequest(CSKStaticInitializer, ["compiler", "executable-entry-point", graph.entryFunctionId],
+				CNSOrdinary("translation-unit"), CSVInternal, "main");
+			final headerGuardRequest = new CSymbolRequest(CSKModule, ["compiler", "program-header", "guard"], CNSPreprocessor, CSVInternal,
+				CDeclarationPlanner.headerGuardFor(CStaticFunctionProjectEmitter.HEADER_PATH));
+			context.symbols.register(entryRequest);
+			context.symbols.register(headerGuardRequest);
+			final lowered = new CBodyLowering(context).lower(graph.functions);
+			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
+				context.symbols.identifierFor(headerGuardRequest));
+			return new CProjectEmitter().emit({
+				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
+				projectName: input.declarationPath,
+				compilationStatus: CProjectCompilationStatus.PrimitiveExecutable,
+				profile: context.profile,
+				environment: configuration.environment,
+				cStandard: configuration.cStandard,
+				runtimePolicy: configuration.runtimePolicy,
+				runtimeDiagnostics: configuration.runtimeDiagnostics,
+				runtimePolicyProvenance: configuration.runtimePolicyProvenance,
+				runtimeDiagnosticsProvenance: configuration.runtimeDiagnosticsProvenance,
+				units: units,
+				buildFacts: [],
+				symbolTable: lowered.symbolTable
+			});
 		} catch (error:CBodyLoweringError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:HxcIRValidationError) {
@@ -50,11 +111,79 @@ class CCompiler {
 			CDiagnostic.fatal(diagnostic.id, diagnostic.message, input.expression.pos, context.profile);
 		} catch (error:CBodyEmissionError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
+		} catch (error:ProjectEmissionError) {
+			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
 		}
-		CDiagnostic.fatal(CDiagnosticId.LoweringNotImplemented,
-			"the typed main body lowered through validated HxcIR and structural C, but static-function, call, and executable entry-point emission are owned by E2.T03; no C was emitted.",
-			input.expression.pos, context.profile);
 		return [];
+	}
+
+	static function resolveProjectConfiguration(profile:CProfile):ResolvedProjectConfiguration {
+		final runtime = resolveRuntimePolicy(profile);
+		final diagnostics = resolveRuntimeDiagnostics(profile);
+		return {
+			environment: resolveEnvironment(),
+			cStandard: resolveCStandard(),
+			runtimePolicy: runtime.value,
+			runtimePolicyProvenance: runtime.provenance,
+			runtimeDiagnostics: diagnostics.value,
+			runtimeDiagnosticsProvenance: diagnostics.provenance
+		};
+	}
+
+	static function resolveRuntimePolicy(profile:CProfile):ResolvedRuntimePolicy {
+		final raw = Context.definedValue("hxc_runtime");
+		return switch raw {
+			case null | "":
+				profile == CProfile.Portable ? {value: CProjectRuntimePolicy.Auto, provenance: "profile-preset:portable"} : {
+					value: CProjectRuntimePolicy.Minimal,
+					provenance: "profile-preset:metal"
+				};
+			case "auto": {value: CProjectRuntimePolicy.Auto, provenance: "direct-define:hxc_runtime"};
+			case "minimal": {value: CProjectRuntimePolicy.Minimal, provenance: "direct-define:hxc_runtime"};
+			case "none": {value: CProjectRuntimePolicy.None, provenance: "direct-define:hxc_runtime"};
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_runtime `$invalid`; expected auto, minimal, or none.',
+					compilationPosition(), profile);
+		};
+	}
+
+	static function resolveRuntimeDiagnostics(profile:CProfile):ResolvedRuntimeDiagnostics {
+		final raw = Context.definedValue("hxc_runtime_diagnostics");
+		return switch raw {
+			case null | "":
+				profile == CProfile.Portable ? {value: CProjectRuntimeDiagnostics.Summary, provenance: "profile-preset:portable"} : {
+					value: CProjectRuntimeDiagnostics.Warn,
+					provenance: "profile-preset:metal"
+				};
+			case "off": {value: CProjectRuntimeDiagnostics.Off, provenance: "direct-define:hxc_runtime_diagnostics"};
+			case "summary": {value: CProjectRuntimeDiagnostics.Summary, provenance: "direct-define:hxc_runtime_diagnostics"};
+			case "warn": {value: CProjectRuntimeDiagnostics.Warn, provenance: "direct-define:hxc_runtime_diagnostics"};
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_runtime_diagnostics `$invalid`; expected off, summary, or warn.',
+					compilationPosition(), profile);
+		};
+	}
+
+	static function resolveEnvironment():CProjectEnvironment {
+		return switch Context.definedValue(TargetPlatform.ENVIRONMENT_DEFINE) {
+			case "hosted": CProjectEnvironment.Hosted;
+			case "freestanding": CProjectEnvironment.Freestanding;
+			case "wasi": CProjectEnvironment.Wasi;
+			case "emscripten": CProjectEnvironment.Emscripten;
+			case value:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'C platform has unresolved environment `${value == null ? "null" : value}`.',
+					compilationPosition(), "unresolved");
+		};
+	}
+
+	static function resolveCStandard():CProjectStandard {
+		return switch Context.definedValue("hxc_c_standard") {
+			case null | "" | "c11": CProjectStandard.C11;
+			case "c17": CProjectStandard.C17;
+			case "c23": CProjectStandard.C23Experimental;
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_c_standard `$invalid`; expected c11, c17, or c23.', compilationPosition());
+		};
 	}
 
 	static function mainBodyInput(program:TypedProgramInput):Null<CBodyFunctionInput> {
@@ -78,7 +207,7 @@ class CCompiler {
 	/**
 		Haxe may retain the typed entry-point call while omitting an otherwise
 		unreferenced main class from the module array. The call is only an
-		ownership locator here: E2.T03 still owns call and entry-point emission.
+		ownership locator here; the reachable graph collector owns subsequent calls.
 	**/
 	static function entryPointMainInput(entryPoint:TypedExpr):Null<CBodyFunctionInput> {
 		return switch entryPoint.expr {
@@ -103,6 +232,7 @@ class CCompiler {
 						sourcePath: owner.module.split(".").join("/") + ".hx",
 						fieldName: field.name,
 						sourceOrder: sourceOrder,
+						fieldType: field.type,
 						expression: expression
 					};
 				}
@@ -122,6 +252,10 @@ class CCompiler {
 				sourcePath: declaration.sourcePath,
 				fieldName: field.name,
 				sourceOrder: field.sourceOrder,
+				fieldType: switch field.rawClassField {
+					case null: throw "normalized static main field lost its typed ClassField";
+					case raw: raw.type;
+				},
 				expression: field.expression
 			};
 		}

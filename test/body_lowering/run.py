@@ -462,18 +462,107 @@ def check_production_boundaries() -> None:
 
         supported_output = root / "supported"
         supported = custom_target(POSITIVE, "BodyFixture", supported_output)
-        supported_text = supported.stdout + supported.stderr
-        if (
-            supported.returncode != 1
-            or "HXC1000" not in supported_text
-            or "lowered through validated HxcIR and structural C" not in supported_text
-            or "BodyFixture.hx:45:" not in supported_text
-        ):
+        if supported.returncode != 0 or supported.stdout or supported.stderr:
             raise BodyLoweringFailure(
-                "supported body did not reach the scoped E2.T03 function-emission boundary\n"
+                "supported body did not emit the E2.T03 runtime-free executable project\n"
                 f"stdout:\n{supported.stdout}\nstderr:\n{supported.stderr}"
             )
-        assert_no_output(supported_output, "post-body HXC1000")
+        required = {
+            "_GeneratedFiles.json",
+            "hxc.abi.json",
+            "hxc.manifest.json",
+            "hxc.runtime-plan.json",
+            "hxc.stdlib-report.json",
+            "hxc.symbols.json",
+            "include/hxc/program.h",
+            "src/program.c",
+        }
+        actual = {
+            path.relative_to(supported_output).as_posix()
+            for path in supported_output.rglob("*")
+            if path.is_file()
+        }
+        if actual != required:
+            raise BodyLoweringFailure(
+                f"supported production artifact set drifted: {sorted(actual)!r}"
+            )
+        header = (supported_output / "include/hxc/program.h").read_text(
+            encoding="utf-8"
+        )
+        source = (supported_output / "src/program.c").read_text(encoding="utf-8")
+        runtime_plan = json.loads(
+            (supported_output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+        )
+        abi = json.loads(
+            (supported_output / "hxc.abi.json").read_text(encoding="utf-8")
+        )
+        stdlib = json.loads(
+            (supported_output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
+        )
+        if (
+            "void hxc_method_BodyFixture_main(void);" not in header
+            or '#include "hxc/program.h"' not in source
+            or "int main(void)" not in source
+            or "hxc_method_BodyFixture_main();" not in source
+            or runtime_plan.get("status") != "analyzed-runtime-free"
+            or runtime_plan.get("features") != []
+            or not runtime_plan.get("noRuntimeProof")
+            or abi.get("status") != "analyzed-no-public-exports"
+            or abi.get("executableEntryPoint") != "main"
+            or stdlib.get("status") != "analyzed-no-stdlib-use"
+        ):
+            raise BodyLoweringFailure(
+                "supported production project lost its entry/runtime/ABI/stdlib proof"
+            )
+        combined = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in supported_output.rglob("*")
+            if path.is_file() and path.name != "_GeneratedFiles.json"
+        ).lower()
+        if "hxrt" in combined:
+            raise BodyLoweringFailure("supported primitive project selected hxrt")
+
+        compiler = available_compilers()[0]
+        executable = root / "supported-program"
+        compiled = subprocess.run(
+            [
+                compiler.compiler,
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-Wconversion",
+                "-Wsign-conversion",
+                "-pedantic-errors",
+                "-I",
+                str(supported_output / "include"),
+                str(supported_output / "src/program.c"),
+                "-o",
+                str(executable),
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+            raise BodyLoweringFailure(
+                "strict compiler rejected supported production project\n"
+                f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+            )
+        ran = subprocess.run(
+            [str(executable)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if ran.returncode != 0 or ran.stdout or ran.stderr:
+            raise BodyLoweringFailure(
+                "supported production executable did not exit silently with zero"
+            )
 
 
 def snapshot_native_report() -> dict[str, object]:
@@ -549,7 +638,8 @@ def main(arguments: Iterable[str] = ()) -> int:
 
     print(
         "body-lowering: OK: typed constants/locals/blocks/returns, shadow-safe names, "
-        "exact HXC1001 spans, optional #line mapping, runtime-free GCC/Clang behavior"
+        "exact HXC1001 spans, optional #line mapping, runtime-free production and "
+        "GCC/Clang behavior"
     )
     return 0
 

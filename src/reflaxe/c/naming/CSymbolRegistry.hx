@@ -304,11 +304,8 @@ class CSymbolRegistry {
 
 	public function identifierFor(request:CSymbolRequest):CIdentifier {
 		finalizeSymbols();
-		final identifier = identifiersByKey.get(request.stableKey());
-		if (identifier == null) {
-			internalFailure('C symbol `${request.sourceSymbol()}` was not registered before finalization', [request.sourceSymbol()]);
-		}
-		return cast identifier;
+		return identifiersByKey.get(request.stableKey()) ?? internalFailure('C symbol `${request.sourceSymbol()}` was not registered before finalization',
+			[request.sourceSymbol()]);
 	}
 
 	public function toJson():String
@@ -463,11 +460,9 @@ class CSymbolRegistry {
 			event.requests.sort(compareRequests);
 			final symbols:Array<CSymbolCollisionEntry> = [];
 			for (request in event.requests) {
-				final cName = finalNamesByKey.get(request.stableKey());
-				if (cName == null) {
-					internalFailure('collision ledger lost finalized C symbol `${request.sourceSymbol()}`', [request.sourceSymbol()]);
-				}
-				symbols.push({sourceSymbol: request.sourceSymbol(), cName: cast cName});
+				final cName:String = finalNamesByKey.get(request.stableKey()) ?? internalFailure('collision ledger lost finalized C symbol `${request.sourceSymbol()}`',
+					[request.sourceSymbol()]);
+				symbols.push({sourceSymbol: request.sourceSymbol(), cName: cName});
 			}
 			records.push({
 				namespace: namespaceRecord(event.namespace),
@@ -663,9 +658,9 @@ class CSymbolRegistry {
 	static function isIdentifierPart(code:Null<Int>):Bool
 		return isIdentifierStart(code) || code != null && code >= 0x30 && code <= 0x39;
 
-	static function contractFailure(detail:String, sources:Array<String>):Dynamic
+	static function contractFailure<T>(detail:String, sources:Array<String>):T
 		throw new CSymbolRegistryError(CDiagnosticId.InvalidTypedCContract, detail, sources);
 
-	static function internalFailure(detail:String, sources:Array<String>):Dynamic
+	static function internalFailure<T>(detail:String, sources:Array<String>):T
 		throw new CSymbolRegistryError(CDiagnosticId.InternalCompilerError, detail, sources);
 }

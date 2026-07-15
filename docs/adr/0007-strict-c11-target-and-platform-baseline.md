@@ -138,9 +138,10 @@ The lifecycle harness now exercises the real `CustomTarget(c)` platform and
 uses its probe switch only to stop before the intentionally unimplemented
 lowering boundary. It snapshots the exact platform configuration, target
 defines, upstream `String`/`StringTools`/`UnicodeString` branches, package
-layout, and compiler-server isolation. A non-probe production request reaches
-the target-owned compiler and then fails at the source root with `HXC1000`,
-without emitting an artifact. Eval remains a target-neutral host for future
+layout, and compiler-server isolation. A non-probe unsupported request reaches
+the target-owned compiler and fails with a source-anchored `HXC1001` without an
+artifact; the separately admitted primitive E2.T03 subset may emit strict C11.
+Eval remains a target-neutral host for future
 `hxc` bootstrap code, a non-C isolation test, and a differential semantic
 oracle; it is never the production carrier for a user program.
 

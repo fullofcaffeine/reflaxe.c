@@ -3,9 +3,10 @@
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
 the structural C AST. Its schema is internal to the compiler: schema version 2
 is deterministic and validation-backed, but it is not a public file format or
-ABI promise. E2.T02 now connects real parameter-free primitive `TypedExpr`
-bodies to this layer and then to structural C; all other frontend and C
-lowering remains explicitly gated.
+ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
+typed parameters, ordered direct calls, explicit argument conversions, and a
+narrow production C consumer. All other frontend and C lowering remains
+explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
@@ -105,10 +106,11 @@ The body frontend calls
 `HxcIRDiagnostic.unsupportedTypedAstNode(profile, nodeKind, context, span)` and
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
-of an unsupported node. A fully admitted main body reaches validated HxcIR and
-structural C, then production deliberately stops at `HXC1000` with no artifact
-because E2.T03 owns static-function, call, and executable entry-point emission.
-See [primitive function-body lowering](body-lowering.md).
+of an unsupported node. A fully admitted primitive static graph reaches
+validated HxcIR, structural C, and an owned runtime-free executable project;
+unimplemented signatures or expressions still stop without output. See
+[primitive function-body lowering](body-lowering.md) and [static function
+lowering](function-lowering.md).
 
 ## Canonical dump
 
@@ -143,8 +145,9 @@ void/value return mismatches, return-type mismatch, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
-The direct HxcIR suite itself emits no C. The separate body-lowering suite
-generates a test translation unit from real typed Haxe, selects no runtime
-files, changes no public C ABI, and is independent of hosted/freestanding
-environment capability. Its mapped and unmapped strict-C11 output is compiled
-and run with available GCC and Clang at `-O0` and `-O2`.
+The direct HxcIR suite itself emits no C. The body-lowering suite generates a
+test translation unit from real typed Haxe. The function-lowering suite extends
+that evidence to parameters, conversions, calls, recursive prototypes, and the
+production private header/source/entry project. Both select no runtime files or
+public C ABI and compile/run as strict C11 with available GCC and Clang at
+`-O0` and `-O2`.

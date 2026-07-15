@@ -1,5 +1,5 @@
 # Dedicated E0.T04 graph check. The runner supplies either Eval for a complete
-# non-C type-check or the real C custom target for the fail-closed HXC1000 path.
+# non-C type-check or the real C custom target for the fail-closed HXC1001 path.
 
 -cp test/all_sources/
 -lib reflaxe.c

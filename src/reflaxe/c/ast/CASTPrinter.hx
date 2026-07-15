@@ -50,6 +50,12 @@ class CASTPrinter {
 		return out.join("\n") + "\n";
 	}
 
+	public function printHeader(unit:CHeaderUnit):String {
+		final guard = identifier(unit.guard);
+		final body = printTranslationUnit(unit.translationUnit);
+		return '#ifndef $guard\n#define $guard\n\n$body\n#endif /* $guard */\n';
+	}
+
 	public function printDecl(decl:CDecl):String {
 		return switch decl {
 			case DComment(text): printComment(text);

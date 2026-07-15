@@ -76,6 +76,7 @@ class BodyLoweringProbe {
 				sourcePath: "test/body_lowering/fixtures/positive/BodyFixture.hx",
 				fieldName: field.name,
 				sourceOrder: sourceOrder,
+				fieldType: field.type,
 				expression: typedExpression
 			});
 		}
@@ -147,7 +148,7 @@ class BodyLoweringProbe {
 				storage: [SStatic],
 				functionSpecifiers: [],
 				returnType: emitter.cType(fn.ir.returnType),
-				declarator: DFunction(DName(fn.cName), FPPrototype([], false)),
+				declarator: DFunction(DName(fn.cName), FPPrototype(emitter.parameters(fn.ir, fn.parameterNames), false)),
 				body: lineDirectives ? fn.lineMappedBody : fn.body,
 				attributes: []
 			}));

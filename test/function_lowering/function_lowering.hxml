@@ -1,0 +1,8 @@
+-cp test/function_lowering/
+-cp test/function_lowering/fixtures/positive/
+-lib reflaxe.c
+
+--macro FunctionLoweringProbe.install()
+
+-main FunctionFixture
+--interp

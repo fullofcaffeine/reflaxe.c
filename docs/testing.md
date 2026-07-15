@@ -8,16 +8,17 @@ use [`fixture-case.schema.json`](specs/fixture-case.schema.json).
 The taxonomy describes evidence. It does not promote a seed into a supported
 compiler capability. Direct HxcIR/C AST fixtures and independent native C/C++
 inputs do not prove typed-Haxe lowering. The body-lowering suite is narrower
-real TypedExpr-to-HxcIR/C evidence, but its test translation-unit envelope does
-not prove production project, call, entry-point, runtime, or ABI emission.
+real TypedExpr-to-HxcIR/C evidence. The function-lowering suite extends it to a
+production-emitted primitive private header/source/entry project, but neither
+suite proves broader language, standard-library, public ABI, or `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including the primitive body-lowering slice |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported-body and later `HXC1000` capability boundaries |
-| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and body-lowering snapshots |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body and static-function lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported body/signature/argument boundaries |
+| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution plus native runtime seeds; no generated-Haxe `hxrt` proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | HxcIR side-effect oracle seed only |
@@ -102,6 +103,7 @@ The registered snapshot selectors are:
 - `hxc-ir`
 - `primitive-semantics`
 - `body-lowering`
+- `function-lowering`
 
 List them from the executable registry with:
 
@@ -132,9 +134,18 @@ the first real pinned-Haxe `TypedExpr -> HxcIR -> structural C` path. It renders
 twice, reverses discovery order, compares portable and metal, asserts exact
 source spans and shadow-safe finalized names, and compiles/runs both optional
 line-mapped and ordinary strict C11 at O0/O2. Unsupported bodies fail at the
-first typed node with `HXC1001`; supported production bodies stop later at
-`HXC1000` because E2.T03 owns function/call/entry-point emission. See
+first typed node with `HXC1001`; an admitted production body now emits the
+runtime-free E2.T03 project. See
 [primitive function-body lowering](body-lowering.md).
+
+`test/function_lowering` is the focused positive/negative/snapshot/runtime suite
+for typed primitive parameters, explicit HxcIR conversion/call order, direct
+static calls, recursive prototype planning, and executable entry emission. It
+checks deterministic portable/metal renders, scoped default/optional/rest
+`HXC1001`, byte-identical production roots, explicit `hxc_runtime=none`, analyzed
+empty runtime/ABI/stdlib sidecars, and no `hxrt` artifact or symbol. Required CI
+lanes compile and run its checked-in and production-generated strict C under GCC
+and Clang. See [static function lowering](function-lowering.md).
 
 ## Examples are product proofs, not implicit tests
 
@@ -184,6 +195,6 @@ non-canonical line endings, and premature lowered-program status before any
 partial write. Reflaxe invocation/activity metadata is validated separately.
 Its checked-in headers and C sources compile and run in the native matrix. They
 are built directly by a test macro, so the suite remains separate from the
-production exact-`HXC1001` unsupported-body and later `HXC1000` no-output
+production generated-Haxe primitive project and exact-`HXC1001` unsupported
 boundaries. See [project-emission
 boundary](project-emission.md).

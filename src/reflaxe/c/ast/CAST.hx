@@ -8,6 +8,17 @@ class CTranslationUnit {
 	public function new() {}
 }
 
+/** A guarded C header whose preprocessor identifier is already finalized. */
+class CHeaderUnit {
+	public final guard:CIdentifier;
+	public final translationUnit:CTranslationUnit;
+
+	public function new(guard:CIdentifier, translationUnit:CTranslationUnit) {
+		this.guard = guard;
+		this.translationUnit = translationUnit;
+	}
+}
+
 /**
 	One already-finalized C identifier token.
 

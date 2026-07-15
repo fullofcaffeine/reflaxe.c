@@ -87,10 +87,12 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 	}
 
 	function requireContext():CompilationContext {
-		if (compilationContext == null) {
-			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "missing per-build CompilationContext", Context.currentPos());
-		}
-		return cast compilationContext;
+		return switch compilationContext {
+			case null:
+				CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "missing per-build CompilationContext", Context.currentPos());
+			case context:
+				context;
+		};
 	}
 }
 #else
