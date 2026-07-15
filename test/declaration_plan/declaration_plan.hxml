@@ -1,0 +1,7 @@
+# Dedicated E1.T03 declaration/include planning and header golden test.
+
+-cp test/declaration_plan/
+-lib reflaxe.c
+
+-main DeclarationPlanGolden
+--interp

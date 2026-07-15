@@ -174,6 +174,7 @@ Haxe declarations and types
   -> typed c.* abstractions
   -> validated metadata/macros
   -> deterministic TypedCContractSnapshot
+  -> CDeclarationPlanner (complete/forward/include/header decisions)
   -> declaration, header, layout, ownership, and build facts
   -> HxcIR / C AST / neutral manifest
 ```
@@ -193,9 +194,13 @@ unsafe, portability, and runtime effects. See
 
 The M0 collector is installed once per C compilation and rebuilds its snapshot
 from that compilation's typed module set. It owns no cross-build registry and
-writes no files. Its report seam is test-only; the future compiler consumes the
-snapshot and routes manifests and headers through Reflaxe output ownership. See
-[typed C authoring](typed-c-authoring.md).
+writes no files. Schema 2 build facts preserve sorted declaration owners so
+`CDeclarationPlanner` can keep headers minimal and retain source reasons. The
+planner is likewise pure: complete edges order or include definitions,
+pointer-only edges forward-declare, and authoritative external opaque includes
+are propagated. Its report/header adapter is test-only; the future emitter must
+route manifests and files through Reflaxe output ownership. See [typed C
+authoring](typed-c-authoring.md).
 
 ## ABI boundary
 

@@ -1,0 +1,6 @@
+#ifndef HXC_TEST_PROJECT_CONFIG_H_INCLUDED
+#define HXC_TEST_PROJECT_CONFIG_H_INCLUDED
+
+typedef int project_config_tag;
+
+#endif /* HXC_TEST_PROJECT_CONFIG_H_INCLUDED */

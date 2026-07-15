@@ -26,6 +26,17 @@ REQUIRED_NATIVE_FILES = (
     "test/c_ast/expected/declarators.c",
     "test/c_ast/expected/expressions.c",
     "test/c_ast/run.py",
+    "test/declaration_plan/DeclarationPlanGolden.hx",
+    "test/declaration_plan/declaration_plan.hxml",
+    "test/declaration_plan/expected/plan.json",
+    "test/declaration_plan/expected/include/api.h",
+    "test/declaration_plan/expected/include/detail/state.h",
+    "test/declaration_plan/expected/include/nodes.h",
+    "test/declaration_plan/expected/include/types/value.h",
+    "test/declaration_plan/support/include/clock_api.h",
+    "test/declaration_plan/support/include/project/config.h",
+    "test/declaration_plan/smoke.c",
+    "test/declaration_plan/run.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -83,8 +94,12 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:native entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
         errors.append("package.json must retain the test:c-ast entry point")
+    if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
+        errors.append("package.json must retain the test:declaration-plan entry point")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
+    if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:declaration-plan")
     if "npm run test:native" not in str(scripts.get("test", "")):
         errors.append("package.json test must execute test:native")
     if "python3 scripts/ci/check_ci_policy.py" not in str(
@@ -104,6 +119,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must validate required CI wiring")
     if "test/c_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the structural C AST golden test")
+    if "test/declaration_plan/run.py" not in pre_commit:
+        errors.append("pre-commit must run the declaration planning golden test")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):
@@ -115,6 +132,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must compile and execute the declarator C AST golden")
     if "expression-precedence-golden-run" not in runner or "expressions.c" not in runner:
         errors.append("native smoke runner must compile and execute the expression C AST golden")
+    if "declaration-header-independent-compile" not in runner or "declaration-plan-header-run" not in runner:
+        errors.append("native smoke runner must independently compile and execute declaration-plan headers")
 
     return errors
 

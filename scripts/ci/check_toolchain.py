@@ -212,9 +212,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json postinstall must resolve the scoped Haxe toolchain with lix download")
     expected_all_sources_script = "python3 test/all_sources/run.py"
     expected_c_ast_script = "python3 test/c_ast/run.py"
+    expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:all-sources && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-ast"
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-ast && "
+        "npm run test:declaration-plan"
     )
     if (
         not isinstance(scripts, dict)
@@ -231,6 +233,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:c-ast") != expected_c_ast_script
     ):
         errors.append("package.json must retain the structural C AST golden gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:declaration-plan") != expected_declaration_plan_script
+    ):
+        errors.append("package.json must retain the declaration planning gate")
 
     root_package = package_lock.get("packages", {}).get("", {}) if isinstance(package_lock.get("packages"), dict) else {}
     locked_lix = package_lock.get("packages", {}).get("node_modules/lix", {}) if isinstance(package_lock.get("packages"), dict) else {}

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "status": "contract-seed-no-lowering",
   "declarations": [
     {
@@ -220,10 +220,10 @@
     }
   ],
   "buildFacts": [
-    {"kind": "define", "name": "SQLITE_THREADSAFE", "value": "1", "valueKind": "integer"},
-    {"kind": "include", "name": "sqlite3.h", "value": "system", "valueKind": "enum"},
-    {"kind": "link", "name": "sqlite3", "value": null, "valueKind": null},
-    {"kind": "pkg-config", "name": "sqlite3", "value": null, "valueKind": null}
+    {"kind": "define", "name": "SQLITE_THREADSAFE", "value": "1", "valueKind": "integer", "ownerModulePaths": ["SQLite3"]},
+    {"kind": "include", "name": "sqlite3.h", "value": "system", "valueKind": "enum", "ownerModulePaths": ["SQLite3"]},
+    {"kind": "link", "name": "sqlite3", "value": null, "valueKind": null, "ownerModulePaths": ["SQLite3"]},
+    {"kind": "pkg-config", "name": "sqlite3", "value": null, "valueKind": null, "ownerModulePaths": ["SQLite3"]}
   ],
   "effects": {
     "allocation": "none",

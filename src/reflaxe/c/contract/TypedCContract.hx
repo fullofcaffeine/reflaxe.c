@@ -53,6 +53,9 @@ typedef TypedCBuildFact = {
 	final name:String;
 	final value:Null<String>;
 	final valueKind:Null<String>;
+
+	/** Sorted declaration provenance retained when identical facts are merged. */
+	final ownerModulePaths:Array<String>;
 }
 
 /** Explicit effects of the M0 metadata/contract expansion. */

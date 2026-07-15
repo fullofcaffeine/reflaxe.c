@@ -69,8 +69,12 @@ a DSL must justify a real language gap, and raw C stays explicit and unsafe.
 
 The M0 intrinsic types and namespaced declaration metadata now type-check, and a
 compile-backed validator produces a deterministic structural contract report
-with source-positioned negative diagnostics. They do not lower to C or prove
-native layouts yet. The exact boundary and examples are in
+with source-positioned negative diagnostics. A target-owned planner now turns
+that contract into stable header/source placement, complete-type ordering,
+minimal includes, forward declarations, and portable guards. A test-only C AST
+adapter proves the planned headers independently under strict GCC and Clang;
+production Haxe lowering/header emission and native layout proof do not exist
+yet. The exact boundary and examples are in
 [typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
 [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).
@@ -147,6 +151,9 @@ The current checkout contains:
   stdlib-branch, conflict, package, and compiler-server probes;
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
+- a deterministic declaration planner with declaration-owned include
+  provenance, complete-type diagnostics, pointer-cycle forward declarations,
+  public/private separation, and independently compiled header goldens;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -192,6 +199,7 @@ python3 test/all_sources/run.py
 python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
 python3 test/c_ast/run.py
+python3 test/declaration_plan/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_license_policy.py
 ```

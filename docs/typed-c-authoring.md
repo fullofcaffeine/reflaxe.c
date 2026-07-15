@@ -1,26 +1,61 @@
 # Typed C authoring contract
 
 This document defines the first executable Haxe-facing contract for authoring C
-declarations in `reflaxe.c`. It refines [ADR 0002](adr/0002-haxe-first-typed-c-authoring.md)
-without claiming that declaration lowering or header emission exists yet.
+declarations in `reflaxe.c` and its first target-owned dependency planner. It
+refines [ADR 0002](adr/0002-haxe-first-typed-c-authoring.md) without claiming
+that Haxe lowering or production multi-file header emission exists yet.
 
-## M0 status
+## Current status
 
-The current seed does four things:
+The M0 contract plus M1 declaration-planning slice do five things:
 
 1. type-checks zero-runtime `c.*` contracts for exact-width integers, pointers,
    references, spans, arrays, C strings, ownership, allocators, volatility, and
    atomics;
 2. validates canonical `@:c.*` declaration and build metadata after Haxe typing;
-3. produces a deterministic structural `TypedCContractSnapshot` for the future
-   declaration planner; and
+3. produces a deterministic structural `TypedCContractSnapshot` whose schema 2
+   build facts retain sorted declaration provenance;
 4. reports `HXC5002` at the originating Haxe span for the validation slice it
-   understands.
+   understands; and
+5. computes a typed, deterministic `CDeclarationPlan` for header/source
+   placement, includes, portable guards, forward declarations, and complete-type
+   ordering before any file is emitted.
 
 It does **not** lower those types, emit C, prove an ABI layout, expose raw C, or
 make `c.Unsafe` operational. `c.Syntax` and `c.Unsafe` are deliberately empty
 authority markers until their owning safety and inspection work is complete.
 The explicit report status is `contract-seed-no-lowering`.
+
+## Declaration planning boundary
+
+`CDeclarationPlanner` consumes the snapshot without consulting filesystem,
+process, locale, runtime, or compiler-server state. It applies these rules:
+
+- a complete-type edge orders declarations in one header or adds the target's
+  generated header when the definitions are separated;
+- a pointer-only edge adds a typed struct/union/opaque forward declaration and
+  never adds an include merely for convenience;
+- a headerless opaque declaration with an authored include is treated as an
+  external authority, so that include is propagated to consumers instead of
+  guessing the foreign tag/typedef shape;
+- identical includes and source reasons are merged, with system includes before
+  local includes and both groups sorted by UTF-8 bytes;
+- public headers cannot acquire complete private definitions, while an opaque
+  pointer may intentionally hide a private implementation; and
+- public guards use an injective uppercase hexadecimal encoding of the UTF-8
+  header path under `HXC_GENERATED_PATH_*_INCLUDED`.
+
+Impossible complete-type cycles, complete source-only dependencies from a
+header, missing finalized forward names, mixed header visibility, and conflicting
+include kinds fail with actionable `HXC5002` errors. The plan retains every
+include reason so later inspection can explain both authored build facts and
+derived complete/external dependencies.
+
+The checked-in `test/declaration_plan` adapter renders a narrow structural C AST
+corpus from this plan. Its headers are compiled independently and together by
+the native matrix. That is executable planning evidence, not the production
+E1.T07 output writer, export ABI, or proof of arbitrary Haxe declaration
+lowering. Planning selects no `hxrt` feature.
 
 ## C concepts expressed in Haxe
 
@@ -101,9 +136,12 @@ power-of-two pack/alignment syntax, duplicate explicit symbols, opaque values
 embedded by value, and impossible by-value declaration cycles. It also derives
 typed declaration dependencies, including forward-declarable pointer edges.
 
-Later compiler analyses own qualifier and ownership consistency, complete-type
-planning, callback lifetime, public/private leakage, variadics, target
-capabilities, and build-fact conflicts. Native authority remains separate:
+The declaration planner now owns complete-versus-forward dependency structure,
+header/source grouping, include provenance, and the complete-type/public-private
+conflicts described above. Later compiler analyses still own qualifier and
+ownership consistency, callback lifetime, exported-ABI leakage, variadics,
+target capabilities, and non-include build-fact conflicts. Native authority
+remains separate:
 
 - Clang-derived facts define imported declarations and layouts;
 - generated `_Static_assert` checks size, alignment, offset, and configuration;
@@ -143,8 +181,9 @@ inspection, and no-runtime evidence; and document ownership and unsafe effects.
 
 - E0.T04 integrates the complete compiler/macro and non-macro type-check gate;
   E0.T06 owns diagnostic catalog machinery.
-- E1.T01 and E1.T03 own structural C declarators plus include/forward-declaration
-  planning.
+- E1.T01 and E1.T03 provide structural C declarators plus typed
+  include/forward/complete declaration planning; E1.T04 finalizes default names
+  and E1.T07 owns production multi-file emission.
 - E3 owns aggregate representation, pointer/ownership operations, and unsafe
   lexical enforcement.
 - E6 owns imported qualifiers, constants, layouts, functions, and exact external

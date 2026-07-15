@@ -19,6 +19,16 @@ RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCE = ROOT / "runtime/hxrt/src/hxc_runtime.c"
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
+DECLARATION_PLAN = ROOT / "test/declaration_plan"
+DECLARATION_PLAN_INCLUDE = DECLARATION_PLAN / "expected/include"
+DECLARATION_PLAN_SUPPORT_INCLUDE = DECLARATION_PLAN / "support/include"
+DECLARATION_PLAN_HEADERS = (
+    "api.h",
+    "detail/state.h",
+    "nodes.h",
+    "types/value.h",
+)
+DECLARATION_PLAN_SMOKE = DECLARATION_PLAN / "smoke.c"
 C_AST_GOLDENS = (
     (
         "declarator",
@@ -243,6 +253,48 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
             label=f"{family} {golden_name} C AST golden execution",
         )
         lanes.append(lane)
+
+    declaration_includes = (
+        DECLARATION_PLAN_INCLUDE,
+        DECLARATION_PLAN_SUPPORT_INCLUDE,
+    )
+    for index, header in enumerate(DECLARATION_PLAN_HEADERS):
+        header_probe = build / f"declaration_header_{index}.c"
+        header_probe.write_text(
+            f'#include "{header}"\n#include "{header}"\n', encoding="utf-8"
+        )
+        compile_object(
+            toolchain.cc,
+            C_STRICT_FLAGS,
+            header_probe,
+            build / f"declaration_header_{index}.o",
+            includes=declaration_includes,
+            label=f"{family} independent declaration header {header}",
+        )
+    lanes.append("declaration-header-independent-compile")
+
+    declaration_smoke_object = build / "declaration_plan_smoke.o"
+    declaration_smoke_executable = build / "declaration_plan_smoke"
+    compile_object(
+        toolchain.cc,
+        C_STRICT_FLAGS,
+        DECLARATION_PLAN_SMOKE,
+        declaration_smoke_object,
+        includes=declaration_includes,
+        label=f"{family} declaration-plan header consumer",
+    )
+    link_executable(
+        toolchain.cc,
+        (declaration_smoke_object,),
+        declaration_smoke_executable,
+        label=f"{family} declaration-plan header link",
+    )
+    run_executable(
+        declaration_smoke_executable,
+        "declaration-plan-headers: OK",
+        label=f"{family} declaration-plan header execution",
+    )
+    lanes.append("declaration-plan-header-run")
 
     runtime_object = build / "hxc_runtime.o"
     runtime_smoke_object = build / "runtime_smoke.o"

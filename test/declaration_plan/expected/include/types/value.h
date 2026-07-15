@@ -1,0 +1,14 @@
+#ifndef HXC_GENERATED_PATH_74797065732F76616C75652E68_INCLUDED
+#define HXC_GENERATED_PATH_74797065732F76616C75652E68_INCLUDED
+
+#include <stdint.h>
+
+struct value;
+
+typedef struct value value;
+
+struct value {
+  int32_t scalar;
+};
+
+#endif /* HXC_GENERATED_PATH_74797065732F76616C75652E68_INCLUDED */

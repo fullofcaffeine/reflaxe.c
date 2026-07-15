@@ -178,7 +178,7 @@ class TypedCContractMacro {
 		validateByValueGraph(drafts, layouts);
 		deduplicateAndSortBuildFacts(buildFacts);
 		return {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			status: "contract-seed-no-lowering",
 			declarations: declarations,
 			buildFacts: buildFacts,
@@ -393,17 +393,18 @@ class TypedCContractMacro {
 				kind: "include",
 				name: path,
 				value: includeKind,
-				valueKind: "enum"
+				valueKind: "enum",
+				ownerModulePaths: [shell.path]
 			});
 		}
 		for (entry in entries(shell.meta, "c.link")) {
-			addNamedBuildFact(entry, "link", "logical library", buildFacts);
+			addNamedBuildFact(shell.path, entry, "link", "logical library", buildFacts);
 		}
 		for (entry in entries(shell.meta, "c.pkgConfig")) {
-			addNamedBuildFact(entry, "pkg-config", "pkg-config package", buildFacts);
+			addNamedBuildFact(shell.path, entry, "pkg-config", "pkg-config package", buildFacts);
 		}
 		for (entry in entries(shell.meta, "c.framework")) {
-			addNamedBuildFact(entry, "framework", "framework", buildFacts);
+			addNamedBuildFact(shell.path, entry, "framework", "framework", buildFacts);
 		}
 		for (entry in entries(shell.meta, "c.define")) {
 			requireArity(entry, 2);
@@ -413,12 +414,13 @@ class TypedCContractMacro {
 				kind: "define",
 				name: name,
 				value: value.value,
-				valueKind: value.kind
+				valueKind: value.kind,
+				ownerModulePaths: [shell.path]
 			});
 		}
 	}
 
-	static function addNamedBuildFact(entry:MetadataEntry, kind:String, label:String, buildFacts:Array<TypedCBuildFact>):Void {
+	static function addNamedBuildFact(ownerModulePath:String, entry:MetadataEntry, kind:String, label:String, buildFacts:Array<TypedCBuildFact>):Void {
 		requireArity(entry, 1);
 		final name = readString(entry, 0, '$label name');
 		validateBuildName(name, label, entry.params[0].pos);
@@ -426,7 +428,8 @@ class TypedCContractMacro {
 			kind: kind,
 			name: name,
 			value: null,
-			valueKind: null
+			valueKind: null,
+			ownerModulePaths: [ownerModulePath]
 		});
 	}
 
@@ -871,9 +874,17 @@ class TypedCContractMacro {
 		var index = facts.length - 1;
 		while (index > 0) {
 			if (buildFactKey(facts[index]) == buildFactKey(facts[index - 1])) {
+				for (owner in facts[index].ownerModulePaths) {
+					if (facts[index - 1].ownerModulePaths.indexOf(owner) == -1) {
+						facts[index - 1].ownerModulePaths.push(owner);
+					}
+				}
 				facts.splice(index, 1);
 			}
 			index--;
+		}
+		for (fact in facts) {
+			fact.ownerModulePaths.sort(compareStrings);
 		}
 	}
 

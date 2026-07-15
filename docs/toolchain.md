@@ -69,6 +69,9 @@ The probes cover:
   expression/statement corpora, matched against
   `test/c_ast/expected/declarators.c` and `expressions.c`, with no runtime
   selection;
+- two byte-identical declaration plans and planned-header renders, matched
+  against `test/declaration_plan/expected/**`, including actionable complete
+  cycle/source-placement diagnostics and no runtime selection;
 - a temporary package layout with Reflaxe flattened into the package classpath;
 - required license and provenance files in that staged package.
 
@@ -87,11 +90,13 @@ GitHub CI does not use that optional discovery contract. Its independent matrix
 invokes `--toolchain gcc` and `--toolchain clang`; each named C11/C++17 pair is
 required and a missing or mismatched executable is an error. Both lanes compile
 with warnings as errors, compile and execute both structural C AST goldens, run
-the hosted runtime seed and native fixtures, compile the freestanding runtime
-path, and link a C++17 consumer of the public C header. The declarator and
-expression/statement goldens are rendered from target-owned AST by Haxe test
-fixtures. Both are runtime-free direct printer proofs; they are not evidence
-that Haxe application lowering exists. The remaining native lanes are
+the hosted runtime seed and native fixtures, independently compile each planned
+declaration header, run their combined C consumer, compile the freestanding
+runtime path, and link a C++17 consumer of the runtime public header. The
+declarator, expression/statement, and declaration-header goldens are rendered
+from target-owned structures by Haxe test fixtures. They are runtime-free
+printer/planner proofs; they are not evidence that Haxe application lowering or
+production multi-file emission exists. The remaining native lanes are
 seed/interop checks, not runtime feature-selection claims.
 
 ## Activation sequence

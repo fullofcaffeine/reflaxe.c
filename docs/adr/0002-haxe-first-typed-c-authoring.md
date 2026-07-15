@@ -2,7 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-14
-- Last amended: 2026-07-15 (ratified M0 source vocabulary and admission evidence)
+- Last amended: 2026-07-15 (ratified M0 vocabulary and structural declaration planning)
 - Decision owners: project owner and compiler maintainers
 - Related requirements: HXC-PROD-004, HXC-PROD-008, HXC-PROD-012,
   HXC-MAC-001 through HXC-MAC-012
@@ -101,6 +101,22 @@ lowering. Native layout, calling-convention, section, and visibility support
 remains capability-gated and authoritative only after C/Clang probes. See
 [the typed C authoring contract](../typed-c-authoring.md) for exact M0 status,
 effects, examples, and downstream ownership.
+
+### Implemented declaration-planning slice
+
+The first compiler-owned planner consumes schema-2 contract snapshots. Identical
+build facts remain merged but retain sorted declaration owners, allowing includes
+to be placed only where their declarations are emitted. Complete-type edges
+drive topological declaration order or local header includes; pointer-only
+cycles use typed forward declarations; external opaque declarations retain
+their authoritative system/local includes. Portable, collision-free include
+guards derive from normalized header paths.
+
+Planning is deterministic and selects no runtime support. Its strict-C11 header
+goldens are executable evidence for the dependency algorithm, not a stable ABI
+or production output pipeline; naming finalization, C/C++ export policy, native
+layout authority, and Reflaxe-owned multi-file emission retain their existing
+owners.
 
 ### Compile-time verification is layered
 

@@ -10,10 +10,11 @@
     "test:all-sources": "python3 test/all_sources/run.py",
     "test:bootstrap": "python3 test/bootstrap/run.py",
     "test:c-ast": "python3 test/c_ast/run.py",
+    "test:declaration-plan": "python3 test/declaration_plan/run.py",
     "test:typed-c": "python3 test/typed_c/run.py",
     "test:native": "python3 scripts/ci/runtime_smoke.py",
     "test:governance": "python3 scripts/ci/check_ci_policy.py && python3 scripts/ci/check_license_policy.py && python3 -m unittest discover -s test/governance -p 'test_*.py'",
-    "test:toolchain": "npm run deps:verify && npm run test:all-sources && npm run test:bootstrap && npm run test:typed-c && npm run test:c-ast",
+    "test:toolchain": "npm run deps:verify && npm run test:all-sources && npm run test:bootstrap && npm run test:typed-c && npm run test:c-ast && npm run test:declaration-plan",
     "test": "npm run test:toolchain && npm run test:native && npm run test:governance"
   },
   "devDependencies": {

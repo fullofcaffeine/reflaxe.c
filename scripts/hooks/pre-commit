@@ -101,7 +101,12 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ast/|test/c_ast/|ha
   python3 "$ROOT_DIR/test/c_ast/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|test/native/|test/c_ast/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ast|contract|plan)/|test/declaration_plan/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running declaration/include planning probes..."
+  python3 "$ROOT_DIR/test/declaration_plan/run.py"
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|test/native/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"
