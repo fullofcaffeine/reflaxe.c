@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+cd "$ROOT_DIR"
+
+if [ "${BD_GIT_HOOK:-}" = "1" ]; then
+  exit 0
+fi
+
+if [ -d "$ROOT_DIR/.beads" ] && command -v bd >/dev/null 2>&1; then
+  if bd -C "$ROOT_DIR" context >/dev/null 2>&1; then
+    echo "[pre-commit] Exporting Beads issues to JSONL..."
+    BEADS_EXPORT_TMP="$(mktemp)"
+    trap 'rm -f "$BEADS_EXPORT_TMP"' EXIT
+    bd -C "$ROOT_DIR" export > "$BEADS_EXPORT_TMP"
+    mv -f "$BEADS_EXPORT_TMP" "$ROOT_DIR/.beads/issues.jsonl"
+    git -C "$ROOT_DIR" add .beads/issues.jsonl
+    trap - EXIT
+  else
+    echo "[pre-commit] WARN: Beads database is not bootstrapped; skipping export."
+  fi
+fi
+
+STAGED_HX_FILES=()
+while IFS= read -r staged_file; do
+  if [ -n "$staged_file" ] && [ -f "$ROOT_DIR/$staged_file" ]; then
+    STAGED_HX_FILES+=("$staged_file")
+  fi
+done < <(git diff --cached --name-only --diff-filter=ACMR | grep -E '\.hx$' || true)
+
+if [ "${#STAGED_HX_FILES[@]}" -gt 0 ]; then
+  if ! haxelib run formatter --help >/dev/null 2>&1; then
+    echo "[pre-commit] ERROR: staged Haxe requires the formatter haxelib." >&2
+    echo "[pre-commit] Install: haxelib install formatter" >&2
+    exit 1
+  fi
+
+  echo "[pre-commit] Formatting staged Haxe files..."
+  FORMAT_ARGS=()
+  for hx_file in "${STAGED_HX_FILES[@]}"; do
+    FORMAT_ARGS+=("-s" "$ROOT_DIR/$hx_file")
+  done
+  haxelib run formatter "${FORMAT_ARGS[@]}"
+  git add -- "${STAGED_HX_FILES[@]}"
+fi
+
+echo "[pre-commit] Running local path guard..."
+bash "$ROOT_DIR/scripts/lint/local_path_guard_staged.sh"
+
+echo "[pre-commit] Checking staged whitespace..."
+git diff --cached --check
+
+echo "[pre-commit] Running staged secret scan..."
+bash "$ROOT_DIR/scripts/security/run-gitleaks.sh" --staged
+
+STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR || true)"
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "[pre-commit] ERROR: jq is required to validate staged JSON specs." >&2
+    exit 1
+  fi
+  echo "[pre-commit] Validating JSON specs..."
+  while IFS= read -r json_file; do
+    if [ -n "$json_file" ] && [ -f "$json_file" ]; then
+      jq empty "$json_file"
+    fi
+  done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -qx 'runtime/hxrt/include/hxc_runtime.h'; then
+  echo "[pre-commit] Validating the public runtime header as C11 and C++17..."
+  cc -std=c11 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
+  c++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
+fi
+
+if [ ! -s "$ROOT_DIR/LICENSE" ]; then
+  echo "[pre-commit] ERROR: canonical LICENSE file is missing or empty." >&2
+  exit 1
+fi
+
+echo "[pre-commit] OK"

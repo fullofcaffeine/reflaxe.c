@@ -2059,6 +2059,9 @@ Performance claims in the README require reproducible benchmark definitions and 
 - Build manifests record compiler, target triple, flags, libraries, and runtime features.
 - Generated bindings record header hashes and parser version.
 - Release artifacts include checksums and provenance.
+- Repository-owned code is licensed under `GPL-3.0-only`; copied or adapted
+  third-party code retains compatible notices, SPDX/provenance, and license
+  review evidence.
 - Third-party runtime code has license and provenance records.
 - Fuzzing covers untrusted binding configuration and manifest parsing.
 - Exported ABI functions validate lengths, overflows, and nullability at trust boundaries according to policy.
@@ -2502,7 +2505,9 @@ Classes, GC, closures, exceptions, dynamic values, reflection, and Unicode requi
 
 The PRD proceeds with these defaults unless changed by ADR:
 
-1. **Project/license:** repository named `reflaxe.c`, CLI named `hxc`, initial manifest license matching the supplied GPL target family. Confirm before publication.
+1. **Project/license (owner-confirmed 2026-07-15):** repository named
+   `reflaxe.c`; optional orchestration CLI named `hxc`; repository-owned code
+   licensed `GPL-3.0-only`. Third-party notices/provenance remain an M0 gate.
 2. **Profiles:** `portable` default plus `metal`; no third “idiomatic” profile.
 3. **Runtime policy:** `auto|minimal|none` orthogonal to profile.
 4. **C dialect:** strict C11 default, C17/C23 opt-in.
@@ -4498,7 +4503,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 
 | Area | Existing assets | Status | What Codex must understand |
 | --- | --- | --- | --- |
-| Toolchain and package metadata (`toolchain-metadata`) | `.haxerc`, `haxelib.json`, `extraParams.hxml`, `haxe_libraries/`, `package.json` | Seeded | Haxe 4.3.7 and a Reflaxe-compatible package shape are named, but an immutable Reflaxe revision, final package URL/license, clean-checkout dependency resolution, and real Haxe type-check remain M0 work. |
+| Toolchain and package metadata (`toolchain-metadata`) | `.haxerc`, `haxelib.json`, `extraParams.hxml`, `haxe_libraries/`, `package.json` | Seeded | Haxe 4.3.7 and a Reflaxe-compatible package shape are named and GPL-3.0-only is owner-confirmed, but an immutable Reflaxe revision, final package URL, clean-checkout dependency resolution, and real Haxe type-check remain M0 work. |
 | Target activation (`target-activation`) | `BuildDetection.hx`, `CompilerBootstrap.hx`, `CompilerInit.hx` | Seeded | The two-stage activation pattern exists. Codex must prove exactly-once activation, non-C-target isolation, macro/non-macro behavior, and compiler-server safety against the pinned framework. |
 | Profiles, runtime policy, and environment (`configuration-policies`) | `CProfile.hx`, `CRuntimePolicy.hx`, `CEnvironment.hx`, `ProfileResolver.hx`, config schema/template | Seeded | `portable|metal`, `auto|minimal|none`, and environment presets are represented. Define/project precedence, capability matrices, canonical reports, and conflict diagnostics remain incomplete. |
 | Per-build compiler state (`per-build-context`) | `CompilationContext.hx` | Seeded | Resolved policy and runtime-reason seeds exist. Symbol/type/layout registries, pass state, diagnostics, outputs, caches, and repeated-build isolation still need implementation and tests. |
@@ -4519,7 +4524,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Deterministic import tooling (`bindgen`) | `tools/` placeholder, pointlib extern/example contracts, PRD/task graph | Planned | No Clang parser or binding generator exists. Implement exact preprocessing/target capture, normalized ABI model, raw externs, optional ergonomic wrappers, lock/provenance files, layout probes, drift reports, callbacks, and constrained C++ shims. |
 | Public C ABI and library production (`c-export`) | `std/c/Export.hx`, `examples/shared-library` | Planned | Export intent and consumer fixtures are seeded, but no Haxe export analyzer/generator exists. Build stable headers/wrappers, ownership/error adapters, visibility/version maps, install metadata, ABI manifests/diffs, and independent consumers. |
 | Portable runtime and standard library (`portable-runtime-and-stdlib`) | Minimal `runtime/hxrt` seed and `stdlib-ledger.json` | Planned | Full portable Haxe semantics and standard-library parity are product requirements, not current capabilities. Ratify strings, memory, exceptions, and platform contracts before implementing selective runtime facilities and ledger-driven conformance. |
-| Governance, compatibility, and releases (`governance-release`) | `LICENSE-PENDING.md`, `SECURITY.md`, `CHANGELOG.md`, `VALIDATION.md` | Placeholder | Provisional documents expose unresolved publication and compatibility work. Choose the license, record ADRs/provenance, define supported versions and ABI/semantic policy, and produce reproducible release evidence before public claims. |
+| Governance, compatibility, and releases (`governance-release`) | `LICENSE`, `SECURITY.md`, `CHANGELOG.md`, `VALIDATION.md` | Partial | GPL-3.0-only is ratified and the canonical text is checked in. Record third-party notices/provenance, define supported versions and ABI/semantic policy, and produce reproducible release evidence before public claims. |
 
 ### 32.3 Immediate scaffold audit acceptance
 
@@ -5076,7 +5081,7 @@ These are design gates, not invitations to restart the whole product discussion.
 
 | Decision | Recommended default | Owner artifact | Planning effect |
 | --- | --- | --- | --- |
-| Repository license and upstream-derived stdlib policy | Choose an owner-approved license before publication; maintain SPDX/provenance per copied or adapted file | E0.T02 / ADR | Blocks release and broad code import, not local AST experiments. |
+| Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; maintain compatible notices and SPDX/provenance per copied or adapted file | E0.T02 / ADR | License choice is resolved; notices/provenance still block release and broad code import, not local AST experiments. |
 | Exact Haxe and Reflaxe baseline | Start with Haxe 4.3.7 and a pinned Reflaxe revision proven by scaffold compilation; broaden later through CI | E0.T03 / ADR | Blocks compiler API work. |
 | Default C dialect | Strict C11 default; allow C17/C23 feature gates after compiler-matrix evidence | E0.T01 / ADR | Blocks AST/printer extension choices. |
 | Target define name | Use documented `c`/`target.name=c` activation only after conflict testing; keep `reflaxe_c` internal compatibility define | E0.T01 / ADR | Blocks target-conditional stdlib behavior. |

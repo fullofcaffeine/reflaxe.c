@@ -91,9 +91,14 @@ Those capabilities are tracked as work, not presented as finished features.
 ## Explore the scaffold
 
 Requirements for the currently available checks are `bd`, `jq`, a C compiler,
-and a C++ compiler.
+and a C++ compiler. Contributors should also install
+[Gitleaks](https://github.com/gitleaks/gitleaks) and the Haxe formatter, then
+activate the tracked pre-commit chain:
 
 ```sh
+haxelib install formatter
+scripts/hooks/install.sh
+
 bd prime
 bd list --ready --type task
 
@@ -123,6 +128,5 @@ a small end-to-end C emission slice before expanding language coverage.
 
 ## License
 
-No public license has been ratified yet. Do not assume permission beyond the
-rights granted by the repository owner. License selection and third-party
-notices are tracked as M0 governance work.
+Licensed under [GPL-3.0-only](LICENSE). Third-party attribution and provenance
+remain tracked M0 governance work and must be complete before a public release.

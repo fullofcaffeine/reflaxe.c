@@ -1,0 +1,8 @@
+title = "reflaxe.c gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+# Keep this empty until a deterministic, non-secret fixture demonstrably needs
+# an exception. Every future entry must include a narrow justification.

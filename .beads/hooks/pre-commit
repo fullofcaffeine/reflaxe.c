@@ -1,4 +1,14 @@
 #!/usr/bin/env sh
+
+if [ "${BD_GIT_HOOK:-}" = "1" ]; then
+  exit 0
+fi
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+if [ -x "$ROOT_DIR/scripts/hooks/pre-commit" ]; then
+  "$ROOT_DIR/scripts/hooks/pre-commit" "$@"
+fi
+
 # --- BEGIN BEADS INTEGRATION v1.0.4 ---
 # This section is managed by beads. Do not remove these markers.
 if command -v bd >/dev/null 2>&1; then

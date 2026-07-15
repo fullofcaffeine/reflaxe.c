@@ -189,6 +189,14 @@ bd lint --json
 git diff --check
 ```
 
+After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
+keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks
+remain active while repository checks run first. It exports/stages Beads JSONL,
+formats staged Haxe, rejects staged secrets and machine-local paths, checks
+whitespace, and runs relevant JSON or public-header gates. Gitleaks is required;
+the formatter haxelib is required when Haxe files are staged. Do not bypass the
+hook to publish a failing change; record and fix the underlying gate instead.
+
 Do not claim Haxe/Reflaxe type-checking, runtime linking, generated-program
 execution, sanitizers, cross-platform CI, bindgen, export, or stdlib parity
 until the responsible issue adds a real command and that command passes.
