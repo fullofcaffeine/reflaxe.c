@@ -148,6 +148,6 @@ canonical bytes.
 The direct HxcIR suite itself emits no C. The body-lowering suite generates a
 test translation unit from real typed Haxe. The function-lowering suite extends
 that evidence to parameters, conversions, calls, recursive prototypes, and the
-production private header/source/entry project. Both select no runtime files or
+production private header/source-set/entry project. Both select no runtime files or
 public C ABI and compile/run as strict C11 with available GCC and Clang at
 `-O0` and `-O2`.

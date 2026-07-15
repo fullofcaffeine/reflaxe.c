@@ -138,9 +138,13 @@ source-positioned `HXC1001`; they never become an opaque value. E2.T02 lowers
 primitive constants, initialized locals/reads, nested cleanup-free blocks, and
 returns. E2.T03 adds primitive parameters, explicit argument conversions, and
 direct static calls, then emits the reachable graph with a private prototype
-header and hosted `int main(void)` wrapper. Within the current unconditional
-single-block subset, a closed direct-call cycle is compiler-proven non-returning
-and emitted with structural C11 `_Noreturn` plus no unreachable return. See
+header, deterministic source partition, and hosted `int main(void)` wrapper.
+Within the current unconditional single-block subset, a closed direct-call cycle is compiler-proven non-returning
+and emitted with structural C11 `_Noreturn` plus no unreachable return. Direct
+self-tail calls use registry-named typed argument temporaries and a structural
+loop; other closed-cycle members are isolated in deterministic translation
+units behind the shared header so strict optimized compilation remains
+warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md).
 
@@ -153,7 +157,8 @@ and builds strict structural statements plus optional typed `#line` nodes.
 Direct-call arguments remain ordered HxcIR instructions, conversions precede
 their calls, and consumed call results become typed temporaries instead of C
 subexpressions with weaker evaluation order. `CStaticFunctionProjectEmitter`
-places all prototypes before definitions and produces a runtime-free project in
+places all prototypes before definitions, partitions proven non-returning cycle
+members, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.
 
 The type model normalizes base specifiers and keeps them separate from a

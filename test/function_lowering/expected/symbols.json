@@ -627,6 +627,7 @@
     },
     {
       "overloadSignature": [
+        "i32",
         "i32"
       ],
       "collisionResolved": false,
@@ -634,7 +635,7 @@
       "sourceOrdinal": null,
       "requestedName": null,
       "cName": "hxc_method_FunctionFixture_recursive",
-      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
@@ -644,7 +645,7 @@
       "kind": "method",
       "specializationArguments": [],
       "baseName": "hxc_method_FunctionFixture_recursive",
-      "sourceSymbol": "FunctionFixture.recursive(i32)"
+      "sourceSymbol": "FunctionFixture.recursive(i32, i32)"
     },
     {
       "overloadSignature": [],
@@ -652,58 +653,79 @@
       "naming": "generated",
       "sourceOrdinal": 0,
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_recursive_value_n0",
-      "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:|3:15:FunctionFixture9:recursive5:value|0:|0:|1:0",
+      "cName": "hxc_local_FunctionFixture_recursive_left_n0",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|1:3:i32|0:|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_recursive_value_n0",
-      "sourceSymbol": "FunctionFixture.recursive.value#0"
+      "baseName": "hxc_local_FunctionFixture_recursive_left_n0",
+      "sourceSymbol": "FunctionFixture.recursive.left#0"
     },
     {
-      "overloadSignature": [
-        "i32"
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_FunctionFixture_recursive_right_n1",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_FunctionFixture_recursive_right_n1",
+      "sourceSymbol": "FunctionFixture.recursive.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive13:tail-argument|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
       ],
-      "collisionResolved": false,
-      "naming": "generated",
-      "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_recursiveStep",
-      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture13:recursiveStep|1:3:i32|0:|0:",
-      "escapeReasons": [],
       "namespace": {
-        "scope": "translation-unit",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
-      "kind": "method",
+      "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_recursiveStep",
-      "sourceSymbol": "FunctionFixture.recursiveStep(i32)"
+      "baseName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0",
+      "sourceSymbol": "FunctionFixture.recursive.tail-argument#0"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 0,
+      "sourceOrdinal": 1,
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_recursiveStep_value_n0",
-      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture13:recursiveStep|1:3:i32|0:|0:|3:15:FunctionFixture13:recursiveStep5:value|0:|0:|1:0",
-      "escapeReasons": [],
+      "cName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive13:tail-argument|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
       "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture13:recursiveStep|1:3:i32|0:|0:",
+        "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
         "kind": "ordinary"
       },
       "visibility": "internal",
-      "kind": "local",
+      "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_recursiveStep_value_n0",
-      "sourceSymbol": "FunctionFixture.recursiveStep.value#0"
+      "baseName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1",
+      "sourceSymbol": "FunctionFixture.recursive.tail-argument#1"
     },
     {
       "overloadSignature": [],

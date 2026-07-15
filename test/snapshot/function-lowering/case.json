@@ -11,9 +11,12 @@
   ],
   "sources": [
     "scripts/test/snapshots.py",
-    "test/function_lowering/expected/functions.c",
     "test/function_lowering/expected/functions.h",
     "test/function_lowering/expected/functions.hxcir",
+    "test/function_lowering/expected/nonreturn_0000.c",
+    "test/function_lowering/expected/nonreturn_0001.c",
+    "test/function_lowering/expected/nonreturn_0002.c",
+    "test/function_lowering/expected/program.c",
     "test/function_lowering/expected/symbols.json",
     "test/function_lowering/run.py"
   ],
@@ -33,7 +36,22 @@
     "exitCode": 0,
     "artifacts": [
       {
-        "path": "test/function_lowering/expected/functions.c",
+        "path": "test/function_lowering/expected/nonreturn_0000.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/nonreturn_0001.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/nonreturn_0002.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/program.c",
         "format": "c",
         "comparison": "exact"
       },

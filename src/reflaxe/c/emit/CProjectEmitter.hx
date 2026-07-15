@@ -344,8 +344,8 @@ class CProjectEmitter {
 					fail('primitive executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
 			}
 		}
-		if (sources != 1 || privateHeaders != 1) {
-			fail('primitive executable emission requires exactly one source and one private prototype header; found $sources source(s) and $privateHeaders header(s)');
+		if (sources < 1 || privateHeaders != 1) {
+			fail('primitive executable emission requires at least one source and exactly one private prototype header; found $sources source(s) and $privateHeaders header(s)');
 		}
 		var entryPoints = 0;
 		for (symbol in plan.symbolTable.symbols) {

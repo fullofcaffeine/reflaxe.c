@@ -39,13 +39,14 @@ class CLoweredBodyFunction {
 	public final parameterNames:Map<String, CIdentifier>;
 	public final localNames:Map<String, CIdentifier>;
 	public final temporaryNames:Map<String, CIdentifier>;
+	public final tailArgumentNames:Map<String, Array<CIdentifier>>;
 	public final requiredHeaders:Array<String>;
 	public final body:CStmt;
 	public final lineMappedBody:CStmt;
 
 	public function new(modulePath:String, declarationPath:String, fieldName:String, ir:HxcIRFunction, cName:CIdentifier,
 			parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>, temporaryNames:Map<String, CIdentifier>,
-			requiredHeaders:Array<String>, body:CStmt, lineMappedBody:CStmt) {
+			tailArgumentNames:Map<String, Array<CIdentifier>>, requiredHeaders:Array<String>, body:CStmt, lineMappedBody:CStmt) {
 		this.modulePath = modulePath;
 		this.declarationPath = declarationPath;
 		this.fieldName = fieldName;
@@ -54,6 +55,7 @@ class CLoweredBodyFunction {
 		this.parameterNames = parameterNames;
 		this.localNames = localNames;
 		this.temporaryNames = temporaryNames;
+		this.tailArgumentNames = tailArgumentNames;
 		this.requiredHeaders = requiredHeaders.copy();
 		this.body = body;
 		this.lineMappedBody = lineMappedBody;
@@ -123,11 +125,16 @@ class CBodyLowering {
 			for (valueId => request in item.temporaryRequests) {
 				temporaryNames.set(valueId, context.symbols.identifierFor(request));
 			}
+			final tailArgumentNames:Map<String, Array<CIdentifier>> = [];
+			for (instructionId => requests in item.tailArgumentRequests) {
+				tailArgumentNames.set(instructionId, requests.map(request -> context.symbols.identifierFor(request)));
+			}
 			final input = item.prepared.input;
 			lowered.push(new CLoweredBodyFunction(input.modulePath, input.declarationPath, input.fieldName, item.ir,
-				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, temporaryNames, emitter.requiredHeaders(item.ir),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, false),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, true)));
+				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, temporaryNames, tailArgumentNames,
+				emitter.requiredHeaders(item.ir),
+				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, false, tailArgumentNames),
+				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, true, tailArgumentNames)));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
 		return new CBodyLoweringResult(program, lowered, symbolTable);
@@ -217,6 +224,7 @@ private typedef BuiltBodyFunction = {
 	final ir:HxcIRFunction;
 	final localRequests:Map<String, CSymbolRequest>;
 	final temporaryRequests:Map<String, CSymbolRequest>;
+	final tailArgumentRequests:Map<String, Array<CSymbolRequest>>;
 }
 
 private typedef LoweredValue = {
@@ -385,6 +393,7 @@ private class FunctionBuilder {
 	final localIdsByCompilerId:Map<Int, String> = [];
 	final localRequests:Map<String, CSymbolRequest> = [];
 	final temporaryRequests:Map<String, CSymbolRequest> = [];
+	final tailArgumentRequests:Map<String, Array<CSymbolRequest>> = [];
 	final locals:Array<HxcIRLocal> = [];
 	final instructions:Array<HxcIRInstruction> = [];
 	var localOrdinal = 0;
@@ -436,7 +445,8 @@ private class FunctionBuilder {
 			prepared: prepared,
 			ir: ir,
 			localRequests: localRequests,
-			temporaryRequests: temporaryRequests
+			temporaryRequests: temporaryRequests,
+			tailArgumentRequests: tailArgumentRequests
 		};
 	}
 
@@ -614,21 +624,25 @@ private class FunctionBuilder {
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final returnType = target.returnMapping.irType;
 		if (returnType == IRTVoid) {
-			instructions.push(instruction(null, IRIOCall({
+			final callInstruction = instruction(null, IRIOCall({
 				dispatch: IRCDDirect(targetId),
 				arguments: arguments,
 				returnType: returnType,
 				failure: null
-			}), source, "call"));
+			}), source, "call");
+			instructions.push(callInstruction);
+			registerTailArguments(targetId, callInstruction.id, arguments.length);
 			return null;
 		}
 		final result:HxcIRResult = {id: nextValueId(), type: returnType};
-		instructions.push(instruction(result, IRIOCall({
+		final callInstruction = instruction(result, IRIOCall({
 			dispatch: IRCDDirect(targetId),
 			arguments: arguments,
 			returnType: returnType,
 			failure: null
-		}), source, "call"));
+		}), source, "call");
+		instructions.push(callInstruction);
+		registerTailArguments(targetId, callInstruction.id, arguments.length);
 		if (materializeResult) {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "call-result"]),
@@ -637,6 +651,21 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function registerTailArguments(targetId:String, instructionId:String, argumentCount:Int):Void {
+		if (targetId != prepared.irId) {
+			return;
+		}
+		final requests:Array<CSymbolRequest> = [];
+		for (index in 0...argumentCount) {
+			final ordinal = temporaryOrdinal++;
+			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "tail-argument"]),
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+			context.symbols.register(request);
+			requests.push(request);
+		}
+		tailArgumentRequests.set(instructionId, requests);
 	}
 
 	function coerce(value:LoweredValue, target:CPrimitiveTypeMapping, position:Position, node:String):LoweredValue {

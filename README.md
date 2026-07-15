@@ -117,7 +117,8 @@ conversions, and returns through this layer to structural C, with exact source
 spans and deterministic shadow-safe names. [Static function
 lowering](docs/function-lowering.md) collects the reachable typed graph, emits
 all prototypes before definitions, preserves ordered arguments with explicit
-temporaries, and packages the first production primitive executable project.
+temporaries, partitions compiler-proven closed recursion warning-cleanly, and
+packages the first production primitive executable project.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI

@@ -1,5 +1,5 @@
 hxcir schema=2
-module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":2:45-57:3
+module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":2:45-53:3
   function "function.FunctionFixture.asFloat" name="FunctionFixture.asFloat" returns=f64 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":6:45-8:3
     parameter "parameter.0" type=f64 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":6:45-8:3
     block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":6:45-8:3
@@ -35,40 +35,40 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":25:3-25:14
     end block "entry"
   end function "function.FunctionFixture.first"
-  function "function.FunctionFixture.main" name="FunctionFixture.main" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":48:30-57:3
-    local "local.0" type=i32 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:3-49:30
-    local "local.1" type=f64 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":51:3-51:35
-    local "local.2" type=i32 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":54:3-54:38
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":48:30-57:3
-      instruction "instruction.0.constant" result="value.0":i32 constant value=int(7) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:27-49:28
-      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.FunctionFixture.chain") arguments=["value.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:21-49:29
-      instruction "instruction.2.initialize" result=- initialize place=local("local.0") value="value.1" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:3-49:30
-      instruction "instruction.3.load" result="value.2":i32 load place=local("local.0") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":50:3-50:10
-      instruction "instruction.4.constant" result="value.3":i32 constant value=int(9) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":51:32-51:33
-      instruction "instruction.5.call" result="value.4":f64 call dispatch=direct("function.FunctionFixture.convert") arguments=["value.3"] returns=f64 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":51:24-51:34
-      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.4" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":51:3-51:35
-      instruction "instruction.7.load" result="value.5":f64 load place=local("local.1") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":52:3-52:11
-      instruction "instruction.8.constant" result="value.6":i32 constant value=int(11) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":53:13-53:15
-      instruction "instruction.9.call" result=- call dispatch=direct("function.FunctionFixture.discarded") arguments=["value.6"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":53:3-53:16
-      instruction "instruction.10.constant" result="value.7":i32 constant value=int(13) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":54:34-54:36
-      instruction "instruction.11.call" result="value.8":i32 call dispatch=direct("function.FunctionFixture.ordered") arguments=["value.7"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":54:26-54:37
-      instruction "instruction.12.initialize" result=- initialize place=local("local.2") value="value.8" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":54:3-54:38
-      instruction "instruction.13.load" result="value.9":i32 load place=local("local.2") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":55:3-55:15
-      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":56:3-56:9
+  function "function.FunctionFixture.main" name="FunctionFixture.main" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:30-53:3
+    local "local.0" type=i32 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:3-45:30
+    local "local.1" type=f64 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:3-47:35
+    local "local.2" type=i32 storage=automatic state=uninitialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":50:3-50:38
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:30-53:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(7) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:27-45:28
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.FunctionFixture.chain") arguments=["value.0"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:21-45:29
+      instruction "instruction.2.initialize" result=- initialize place=local("local.0") value="value.1" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:3-45:30
+      instruction "instruction.3.load" result="value.2":i32 load place=local("local.0") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":46:3-46:10
+      instruction "instruction.4.constant" result="value.3":i32 constant value=int(9) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:32-47:33
+      instruction "instruction.5.call" result="value.4":f64 call dispatch=direct("function.FunctionFixture.convert") arguments=["value.3"] returns=f64 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:24-47:34
+      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.4" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":47:3-47:35
+      instruction "instruction.7.load" result="value.5":f64 load place=local("local.1") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":48:3-48:11
+      instruction "instruction.8.constant" result="value.6":i32 constant value=int(11) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:13-49:15
+      instruction "instruction.9.call" result=- call dispatch=direct("function.FunctionFixture.discarded") arguments=["value.6"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":49:3-49:16
+      instruction "instruction.10.constant" result="value.7":i32 constant value=int(13) @"test/function_lowering/fixtures/positive/FunctionFixture.hx":50:34-50:36
+      instruction "instruction.11.call" result="value.8":i32 call dispatch=direct("function.FunctionFixture.ordered") arguments=["value.7"] returns=i32 failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":50:26-50:37
+      instruction "instruction.12.initialize" result=- initialize place=local("local.2") value="value.8" transition=uninitialized->initialized @"test/function_lowering/fixtures/positive/FunctionFixture.hx":50:3-50:38
+      instruction "instruction.13.load" result="value.9":i32 load place=local("local.2") @"test/function_lowering/fixtures/positive/FunctionFixture.hx":51:3-51:15
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":52:3-52:9
     end block "entry"
   end function "function.FunctionFixture.main"
-  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
-      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualRight") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":41:3-41:21
-      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:45-42:3
+  function "function.FunctionFixture.mutualLeft" name="FunctionFixture.mutualLeft" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:45-38:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:45-38:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:45-38:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualRight") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":37:3-37:21
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:45-38:3
     end block "entry"
   end function "function.FunctionFixture.mutualLeft"
-  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
-      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualLeft") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":45:3-45:20
-      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":44:46-46:3
+  function "function.FunctionFixture.mutualRight" name="FunctionFixture.mutualRight" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:46-42:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:46-42:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:46-42:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.mutualLeft") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":41:3-41:20
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":40:46-42:3
     end block "entry"
   end function "function.FunctionFixture.mutualRight"
   function "function.FunctionFixture.ordered" name="FunctionFixture.ordered" returns=i32 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":28:41-30:3
@@ -86,18 +86,12 @@ module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixt
       terminator return value="parameter.0" cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":3:3-3:15
     end block "entry"
   end function "function.FunctionFixture.passthrough"
-  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
-      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.recursiveStep") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:3-33:23
-      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:44-34:3
+  function "function.FunctionFixture.recursive" name="FunctionFixture.recursive" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:54-34:3
+    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:54-34:3
+    parameter "parameter.1" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:54-34:3
+    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:54-34:3
+      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.recursive") arguments=["parameter.1","parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":33:3-33:25
+      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":32:54-34:3
     end block "entry"
   end function "function.FunctionFixture.recursive"
-  function "function.FunctionFixture.recursiveStep" name="FunctionFixture.recursiveStep" returns=void entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
-    parameter "parameter.0" type=i32 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
-    block "entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
-      instruction "instruction.0.call" result=- call dispatch=direct("function.FunctionFixture.recursive") arguments=["parameter.0"] returns=void failure=none @"test/function_lowering/fixtures/positive/FunctionFixture.hx":37:3-37:19
-      terminator return value=none cleanup=[] @"test/function_lowering/fixtures/positive/FunctionFixture.hx":36:48-38:3
-    end block "entry"
-  end function "function.FunctionFixture.recursiveStep"
 end module "FunctionFixture"

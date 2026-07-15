@@ -43,7 +43,22 @@
         "comparison": "exact"
       },
       {
-        "path": "test/function_lowering/expected/functions.c",
+        "path": "test/function_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/nonreturn_0000.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/nonreturn_0001.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/function_lowering/expected/nonreturn_0002.c",
         "format": "c",
         "comparison": "exact"
       }

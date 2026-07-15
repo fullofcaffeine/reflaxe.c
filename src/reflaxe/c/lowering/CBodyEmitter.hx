@@ -11,7 +11,7 @@ class CBodyEmitter {
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
-			?nonReturningFunctionIds:Map<String, Bool>):CStmt {
+			tailArgumentNames:Map<String, Array<CIdentifier>>, ?nonReturningFunctionIds:Map<String, Bool>):CStmt {
 		if (fn.blocks.length != 1 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
 			fail('body lowering requires one cleanup-free entry block in `${fn.id}`');
 		}
@@ -22,6 +22,7 @@ class CBodyEmitter {
 		final referencedLocals = referencedLocalIds(block);
 		final statements:Array<CStmt> = [];
 		var terminatedByNonReturningCall = false;
+		var terminatedByTailLoop = false;
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
 			values.set(parameter.id, EIdentifier(name));
@@ -78,8 +79,14 @@ class CBodyEmitter {
 						statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
 					}
 				case IRIOCall(call):
-					terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
-						lineDirectives, nonReturningFunctionIds, fn.id);
+					if (isNonReturningSelfCall(fn.id, call, nonReturningFunctionIds)) {
+						emitTailLoopCall(statements, values, instruction, call, fn, parameterNames, tailArgumentNames, lineDirectives);
+						terminatedByNonReturningCall = true;
+						terminatedByTailLoop = true;
+					} else {
+						terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
+							lineDirectives, nonReturningFunctionIds, fn.id);
+					}
 				case _:
 					fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the static primitive function subset');
 			}
@@ -92,7 +99,7 @@ class CBodyEmitter {
 		if (terminatedByNonReturningCall) {
 			switch terminator.kind {
 				case IRTReturn(_, cleanup) if (cleanup.length == 0):
-					return SBlock(statements);
+					return terminatedByTailLoop ? SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]) : SBlock(statements);
 				case _:
 					fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
 			}
@@ -284,6 +291,51 @@ class CBodyEmitter {
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
 		return doesNotReturn;
+	}
+
+	static function isNonReturningSelfCall(functionId:String, call:HxcIRCall, nonReturningFunctionIds:Null<Map<String, Bool>>):Bool {
+		if (nonReturningFunctionIds == null || !nonReturningFunctionIds.exists(functionId)) {
+			return false;
+		}
+		return switch call.dispatch {
+			case IRCDDirect(targetId): targetId == functionId;
+			case _: false;
+		};
+	}
+
+	function emitTailLoopCall(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, fn:HxcIRFunction,
+			parameterNames:Map<String, CIdentifier>, tailArgumentNames:Map<String, Array<CIdentifier>>, lineDirectives:Bool):Void {
+		if (call.arguments.length != fn.parameters.length) {
+			fail('self-tail call `${instruction.id}` in `${fn.id}` has ${call.arguments.length} arguments for ${fn.parameters.length} parameters');
+		}
+		var names:Array<CIdentifier> = [];
+		var foundNames = false;
+		for (candidateId => candidateNames in tailArgumentNames) {
+			if (candidateId == instruction.id) {
+				names = candidateNames;
+				foundNames = true;
+				break;
+			}
+		}
+		if (!foundNames || names.length != call.arguments.length) {
+			fail('self-tail call `${instruction.id}` in `${fn.id}` has no complete finalized tail-argument names');
+		}
+		addLineDirective(statements, instruction.source, lineDirectives);
+		for (index in 0...call.arguments.length) {
+			statements.push(SDecl({
+				storage: [],
+				alignments: [],
+				type: cType(fn.parameters[index].type),
+				declarator: DName(names[index]),
+				initializer: IExpr(requireValue(values, call.arguments[index], fn.id)),
+				attributes: []
+			}));
+		}
+		for (index in 0...fn.parameters.length) {
+			statements.push(SExpr(EBinary(Assign, EIdentifier(requireParameterName(parameterNames, fn.parameters[index].id, fn.id)),
+				EIdentifier(names[index]))));
+		}
+		statements.push(SContinue);
 	}
 
 	static function requireResult(instruction:HxcIRInstruction, functionId:String):HxcIRResult {

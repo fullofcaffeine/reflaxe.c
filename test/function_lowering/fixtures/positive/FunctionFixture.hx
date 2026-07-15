@@ -29,12 +29,8 @@ class FunctionFixture {
 		return first(passthrough(value), chain(value));
 	}
 
-	static function recursive(value:Int):Void {
-		recursiveStep(value);
-	}
-
-	static function recursiveStep(value:Int):Void {
-		recursive(value);
+	static function recursive(left:Int, right:Int):Void {
+		recursive(right, left);
 	}
 
 	static function mutualLeft(value:Int):Void {

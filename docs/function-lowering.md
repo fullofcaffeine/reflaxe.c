@@ -3,8 +3,8 @@
 E2.T03 extends the primitive body pipeline into the first production-emitted
 Haxe-to-C executable slice. The compiler collects the reachable typed static
 function graph, lowers signatures and bodies through validated HxcIR, emits a
-private prototype header plus one structural C translation unit, and packages
-the result through Reflaxe output ownership. This is deliberately a narrow
+private prototype header plus deterministic structural C translation units,
+and packages the result through Reflaxe output ownership. This is deliberately a narrow
 primitive capability, not a claim of general Haxe or standard-library support.
 
 ## Typed function boundary
@@ -44,16 +44,26 @@ remains an explicit expression statement.
 
 All admitted signatures and symbol requests are prepared before the registry is
 finalized or any body is emitted. The private `include/hxc/program.h` header
-contains every prototype before `src/program.c` defines any function. Recursive
-and mutually recursive call graphs therefore compile without discovery-order
-dependencies.
+contains every prototype before `src/program.c` or a partitioned source defines
+any function. Recursive and mutually recursive call graphs therefore compile
+without discovery-order dependencies.
 
 The current admitted bodies are one unconditional block. When the direct-call
 graph proves a closed recursive cycle, the compiler also proves that its HxcIR
 return is unreachable, marks every cycle member with the standard C11
-`_Noreturn` function specifier, and omits the unreachable C return. This makes
-closed recursive cycles explicit to optimizing C compilers; the native gate
-keeps `-Winfinite-recursion` enabled rather than hiding the warning.
+`_Noreturn` function specifier, and omits the unreachable C return. A direct
+self-tail call becomes a structural `while (1)` loop. Its arguments first enter
+registry-named typed temporaries in HxcIR order and only then replace the C
+parameters, so swaps and other parameter dependencies cannot weaken Haxe's
+evaluation semantics.
+
+Every remaining member of a closed multi-function cycle receives its own
+deterministically ordered `src/nonreturn_NNNN.c` translation unit and continues
+to call the next member directly through the shared prototype header. That
+partition prevents a single optimizing C compilation from diagnosing the
+whole closed cycle while preserving ordinary direct calls, strict C11, and
+zero runtime support. The native gate keeps `-Winfinite-recursion` enabled at
+both `-O0` and `-O2`.
 
 The Haxe entry function for this slice must be `static function main():Void`.
 It keeps its compiler-owned internal C name. The executable wrapper is the exact
@@ -103,16 +113,17 @@ npm run snapshots:check
 ```
 
 The suite renders twice, reverses discovery order, compares portable and metal,
-checks exact HxcIR/header/C/symbol snapshots, proves explicit argument
-conversion order, verifies recursive prototypes, and exercises the scoped
+checks exact HxcIR/header/C-source-set/symbol snapshots, proves explicit
+argument conversion order, verifies direct and mutual recursion planning, and
+exercises the scoped
 default/optional/rest plus non-hosted-entry diagnostics. It also runs portable,
 metal, and explicit `hxc_runtime=none` production builds, compares isolated
 output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-Operators, branches, loops, objects, strings, arrays, instance/virtual calls,
-closures, exceptions, allocation, public exports, user arguments, and actual
+Source-level operators, branches, loops, objects, strings, arrays,
+instance/virtual calls, closures, exceptions, allocation, public exports, user arguments, and actual
 standard-library lowering remain outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation
 emits the owned C project but does not replace the C compiler invocation.

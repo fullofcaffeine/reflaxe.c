@@ -402,7 +402,7 @@
       "status": "active",
       "assertions": [
         "typed primitive parameters, left-to-right direct-call arguments, and implicit conversions are explicit in validated HxcIR",
-        "all reachable static functions receive deterministic prototypes before definitions and recursive call graphs compile as strict C11",
+        "all reachable static functions receive deterministic prototypes before definitions; direct self-tail recursion uses typed temporaries and a loop while mutual cycles compile from deterministic private translation units with -Winfinite-recursion active",
         "default, optional, and rest parameters fail with exact source-positioned HXC1001, while non-hosted executable entry remains scoped HXC1000",
         "portable, metal, and explicit runtime-none production builds emit int main(void), analyzed empty runtime/ABI/stdlib plans, and no hxrt artifact or symbol"
       ]

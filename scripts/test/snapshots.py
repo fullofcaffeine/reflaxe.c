@@ -333,16 +333,14 @@ def function_lowering_artifacts() -> list[Artifact]:
     values = module.snapshot_values(report)
     hxcir = values.get("functions.hxcir")
     header = values.get("functions.h")
-    source = values.get("functions.c")
     symbols = values.get("symbols.json")
     if (
         not isinstance(hxcir, str)
         or not isinstance(header, str)
-        or not isinstance(source, str)
         or not isinstance(symbols, dict)
     ):
         raise SnapshotFailure("function-lowering report omitted a managed artifact")
-    return [
+    artifacts = [
         Artifact(
             Path("test/function_lowering/expected/functions.hxcir"),
             "hxcir",
@@ -354,16 +352,25 @@ def function_lowering_artifacts() -> list[Artifact]:
             header,
         ),
         Artifact(
-            Path("test/function_lowering/expected/functions.c"),
-            "c",
-            source,
-        ),
-        Artifact(
             Path("test/function_lowering/expected/symbols.json"),
             "json",
             symbols,
         ),
     ]
+    for snapshot_name in module.SOURCE_SNAPSHOTS:
+        source = values.get(snapshot_name)
+        if not isinstance(source, str):
+            raise SnapshotFailure(
+                f"function-lowering report omitted source snapshot {snapshot_name}"
+            )
+        artifacts.append(
+            Artifact(
+                Path("test/function_lowering/expected") / snapshot_name,
+                "c",
+                source,
+            )
+        )
+    return artifacts
 
 
 GENERATORS: dict[str, Generator] = {

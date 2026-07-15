@@ -20,13 +20,18 @@ typedef FunctionLoweringRecord = {
 	final temporaries:Array<String>;
 }
 
+typedef FunctionSourceRecord = {
+	final path:String;
+	final content:String;
+}
+
 typedef FunctionLoweringReport = {
 	final schemaVersion:Int;
 	final status:String;
 	final profile:String;
 	final hxcir:String;
 	final header:String;
-	final source:String;
+	final sources:Array<FunctionSourceRecord>;
 	final functions:Array<FunctionLoweringRecord>;
 	final symbols:reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 	final runtimeFeatures:Array<String>;
@@ -94,13 +99,17 @@ class FunctionLoweringProbe {
 		}
 		records.sort((left, right) -> compareStrings(left.field, right.field));
 		final printer = new CASTPrinter();
+		final sources:Array<FunctionSourceRecord> = [];
+		for (source in project.sources) {
+			sources.push({path: source.path, content: printer.printTranslationUnit(source.unit)});
+		}
 		final report:FunctionLoweringReport = {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			status: "typed-static-functions-direct-calls-runtime-free",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),
 			header: printer.printHeader(project.header),
-			source: printer.printTranslationUnit(project.source),
+			sources: sources,
 			functions: records,
 			symbols: lowered.symbolTable,
 			runtimeFeatures: [],

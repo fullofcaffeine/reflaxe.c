@@ -10,25 +10,29 @@ import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 
 /** Structural function prototype/definition plan for the first executable slice. */
+typedef CStaticFunctionSourcePlan = {
+	final path:String;
+	final unit:CTranslationUnit;
+}
+
 class CStaticFunctionDeclarationPlan {
 	public final headerPath:String;
-	public final sourcePath:String;
 	public final header:CHeaderUnit;
-	public final source:CTranslationUnit;
+	public final sources:Array<CStaticFunctionSourcePlan>;
 
-	public function new(headerPath:String, sourcePath:String, header:CHeaderUnit, source:CTranslationUnit) {
+	public function new(headerPath:String, header:CHeaderUnit, sources:Array<CStaticFunctionSourcePlan>) {
 		this.headerPath = headerPath;
-		this.sourcePath = sourcePath;
 		this.header = header;
-		this.source = source;
+		this.sources = sources.copy();
 	}
 }
 
-/** Emits a runtime-free private prototype header and one strict-C11 source unit. */
+/** Emits a runtime-free private prototype header and strict-C11 source units. */
 class CStaticFunctionProjectEmitter {
 	public static inline final HEADER_PATH = "include/hxc/program.h";
 	public static inline final HEADER_INCLUDE = "hxc/program.h";
 	public static inline final SOURCE_PATH = "src/program.c";
+	public static inline final NON_RETURNING_SOURCE_PREFIX = "src/nonreturn_";
 
 	public function new() {}
 
@@ -63,20 +67,29 @@ class CStaticFunctionProjectEmitter {
 				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)), []));
 		}
 
-		final sourceUnit = new CTranslationUnit();
-		sourceUnit.includes.push({path: HEADER_INCLUDE, kind: Local});
+		final programUnit = sourceUnit();
+		final sources:Array<CStaticFunctionSourcePlan> = [];
+		var nonReturningOrdinal = 0;
 		for (fn in lowered.functions) {
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-			sourceUnit.declarations.push(DFunction({
+			final definition:CDecl = DFunction({
 				storage: [],
 				functionSpecifiers: functionSpecifiers,
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
-				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, false, nonReturningFunctionIds),
+				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, false, fn.tailArgumentNames,
+					nonReturningFunctionIds),
 				attributes: []
-			}));
+			});
+			if (nonReturningFunctionIds.exists(fn.ir.id)) {
+				final unit = sourceUnit();
+				unit.declarations.push(definition);
+				sources.push({path: nonReturningSourcePath(nonReturningOrdinal++), unit: unit});
+			} else {
+				programUnit.declarations.push(definition);
+			}
 		}
-		sourceUnit.declarations.push(DFunction({
+		programUnit.declarations.push(DFunction({
 			storage: [],
 			functionSpecifiers: [],
 			returnType: new CType(TNativeInt(IRInt, true)),
@@ -87,16 +100,34 @@ class CStaticFunctionProjectEmitter {
 			]),
 			attributes: []
 		}));
-		return new CStaticFunctionDeclarationPlan(HEADER_PATH, SOURCE_PATH, new CHeaderUnit(headerGuard, headerUnit), sourceUnit);
+		sources.push({path: SOURCE_PATH, unit: programUnit});
+		sources.sort((left, right) -> compareStrings(left.path, right.path));
+		return new CStaticFunctionDeclarationPlan(HEADER_PATH, new CHeaderUnit(headerGuard, headerUnit), sources);
 	}
 
 	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier):Array<GeneratedFile> {
 		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard);
 		final printer = new CASTPrinter();
-		return [
-			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader),
-			new GeneratedFile(declarationPlan.sourcePath, printer.printTranslationUnit(declarationPlan.source), GeneratedFileKind.Source)
+		final files = [
+			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader)
 		];
+		for (source in declarationPlan.sources) {
+			files.push(new GeneratedFile(source.path, printer.printTranslationUnit(source.unit), GeneratedFileKind.Source));
+		}
+		return files;
+	}
+
+	static function sourceUnit():CTranslationUnit {
+		final unit = new CTranslationUnit();
+		unit.includes.push({path: HEADER_INCLUDE, kind: Local});
+		return unit;
+	}
+
+	static function nonReturningSourcePath(index:Int):String {
+		if (index < 0 || index > 9999) {
+			throw new ProjectEmissionError('static function project cannot address non-returning source ordinal `$index`');
+		}
+		return NON_RETURNING_SOURCE_PREFIX + StringTools.lpad(Std.string(index), "0", 4) + ".c";
 	}
 
 	static function findFunction(functions:Array<CLoweredBodyFunction>, id:String):CLoweredBodyFunction {

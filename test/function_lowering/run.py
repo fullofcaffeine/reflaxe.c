@@ -23,11 +23,11 @@ FIXTURES = Path(__file__).with_name("fixtures")
 POSITIVE = FIXTURES / "positive"
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
-SNAPSHOTS = {
-    "functions.hxcir": "hxcir",
-    "functions.h": "header",
-    "functions.c": "source",
-    "symbols.json": "symbols",
+SOURCE_SNAPSHOTS = {
+    "nonreturn_0000.c": "src/nonreturn_0000.c",
+    "nonreturn_0001.c": "src/nonreturn_0001.c",
+    "nonreturn_0002.c": "src/nonreturn_0002.c",
+    "program.c": "src/program.c",
 }
 STRICT_FLAGS = (
     "-std=c11",
@@ -110,19 +110,68 @@ def required_text(report: dict[str, object], key: str) -> str:
     return value
 
 
+def source_records(report: dict[str, object]) -> dict[str, str]:
+    value = report.get("sources")
+    if not isinstance(value, list):
+        raise FunctionLoweringFailure("function report field sources is not an array")
+    result: dict[str, str] = {}
+    ordered_paths: list[str] = []
+    for entry in value:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("path"), str)
+            or not isinstance(entry.get("content"), str)
+        ):
+            raise FunctionLoweringFailure(f"invalid function source record: {entry!r}")
+        path = entry["path"]
+        if (
+            path in result
+            or path.startswith("/")
+            or "\\" in path
+            or any(part in ("", ".", "..") for part in path.split("/"))
+        ):
+            raise FunctionLoweringFailure(f"invalid or duplicate function source path {path!r}")
+        result[path] = entry["content"]
+        ordered_paths.append(path)
+    if ordered_paths != sorted(ordered_paths):
+        raise FunctionLoweringFailure("function source records are not path-sorted")
+    return result
+
+
+def required_source(report: dict[str, object], path: str) -> str:
+    value = source_records(report).get(path)
+    if value is None:
+        raise FunctionLoweringFailure(f"function report omitted source {path}")
+    return value
+
+
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
-        report.get("schemaVersion") != 1
+        report.get("schemaVersion") != 2
         or report.get("status") != "typed-static-functions-direct-calls-runtime-free"
         or report.get("profile") != profile
         or report.get("runtimeFeatures") != []
         or report.get("runtimeArtifacts") != []
     ):
         raise FunctionLoweringFailure("function-lowering schema/status/profile drifted")
-    for key in ("hxcir", "header", "source"):
+    for key in ("hxcir", "header"):
         value = required_text(report, key)
         if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
             raise FunctionLoweringFailure(f"{key} leaked a host path or runtime dependency")
+    sources = source_records(report)
+    if set(sources) != set(SOURCE_SNAPSHOTS.values()):
+        raise FunctionLoweringFailure(
+            f"function source partition drifted: {sorted(sources)!r}"
+        )
+    for path, value in sources.items():
+        if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
+            raise FunctionLoweringFailure(
+                f"source {path} leaked a host path or runtime dependency"
+            )
+        if not value.startswith('#include "hxc/program.h"\n'):
+            raise FunctionLoweringFailure(
+                f"source {path} omitted the private prototype header"
+            )
 
     hxcir = required_text(report, "hxcir")
     conversion = hxcir.find('instruction "instruction.0.convert"')
@@ -156,7 +205,6 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "two-argument nested calls lost left-to-right HxcIR evaluation order"
         )
     for marker in (
-        'direct("function.FunctionFixture.recursiveStep")',
         'direct("function.FunctionFixture.recursive")',
         'direct("function.FunctionFixture.mutualLeft")',
         'direct("function.FunctionFixture.mutualRight")',
@@ -165,20 +213,27 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise FunctionLoweringFailure(f"recursive call graph omitted {marker}")
 
     header = required_text(report, "header")
-    source = required_text(report, "source")
+    program_source = sources["src/program.c"]
+    mutual_left_source = sources["src/nonreturn_0000.c"]
+    mutual_right_source = sources["src/nonreturn_0001.c"]
+    recursive_source = sources["src/nonreturn_0002.c"]
     if (
         not header.startswith("#ifndef HXC_GENERATED_PATH_")
         or "_Noreturn void hxc_method_FunctionFixture_recursive(" not in header
-        or "_Noreturn void hxc_method_FunctionFixture_recursiveStep(" not in header
         or "_Noreturn void hxc_method_FunctionFixture_mutualLeft(" not in header
         or "_Noreturn void hxc_method_FunctionFixture_mutualRight(" not in header
-        or '#include "hxc/program.h"' not in source
-        or "int main(void)" not in source
-        or "hxc_method_FunctionFixture_main();" not in source
-        or "return 0;" not in source
+        or "recursiveStep" in header
+        or "int main(void)" not in program_source
+        or "hxc_method_FunctionFixture_main();" not in program_source
+        or "return 0;" not in program_source
     ):
         raise FunctionLoweringFailure("prototype plan or executable entry shape drifted")
-    for field in ("recursive", "recursiveStep", "mutualLeft", "mutualRight"):
+    cycle_sources = {
+        "mutualLeft": mutual_left_source,
+        "mutualRight": mutual_right_source,
+        "recursive": recursive_source,
+    }
+    for field, source in cycle_sources.items():
         definition_start = source.find(
             f"_Noreturn void hxc_method_FunctionFixture_{field}("
         )
@@ -192,15 +247,54 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise FunctionLoweringFailure(
                 f"closed recursive cycle {field} lost its no-return C proof"
             )
+        other_definitions = [
+            other
+            for other in cycle_sources
+            if other != field
+            and f"_Noreturn void hxc_method_FunctionFixture_{other}(" in source
+        ]
+        if other_definitions:
+            raise FunctionLoweringFailure(
+                f"closed recursive definitions shared one translation unit: "
+                f"{field}, {other_definitions!r}"
+            )
+    if (
+        "hxc_method_FunctionFixture_mutualRight(" not in mutual_left_source
+        or "hxc_method_FunctionFixture_mutualLeft(" not in mutual_right_source
+        or "while (1)" not in recursive_source
+        or "continue;" not in recursive_source
+        or "tailzx2Dargument" not in recursive_source
+        or recursive_source.count("hxc_method_FunctionFixture_recursive(") != 1
+    ):
+        raise FunctionLoweringFailure(
+            "direct/mutual recursion did not retain calls or typed self-tail lowering"
+        )
+    tail_steps = [
+        recursive_source.find(marker)
+        for marker in (
+            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0 = "
+            "hxc_local_FunctionFixture_recursive_right_n1;",
+            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1 = "
+            "hxc_local_FunctionFixture_recursive_left_n0;",
+            "hxc_local_FunctionFixture_recursive_left_n0 = "
+            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0;",
+            "hxc_local_FunctionFixture_recursive_right_n1 = "
+            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1;",
+        )
+    ]
+    if any(index == -1 for index in tail_steps) or tail_steps != sorted(tail_steps):
+        raise FunctionLoweringFailure(
+            "self-tail parameter swap was not materialized before ordered assignment"
+        )
     left_prototype = header.find("hxc_method_FunctionFixture_mutualLeft")
     right_prototype = header.find("hxc_method_FunctionFixture_mutualRight")
-    left_definition = source.find("hxc_method_FunctionFixture_mutualLeft")
-    right_definition = source.find("hxc_method_FunctionFixture_mutualRight")
+    left_definition = mutual_left_source.find("hxc_method_FunctionFixture_mutualLeft")
+    right_definition = mutual_right_source.find("hxc_method_FunctionFixture_mutualRight")
     if min(left_prototype, right_prototype, left_definition, right_definition) < 0:
         raise FunctionLoweringFailure("recursive prototype/definition evidence is incomplete")
-    ordered_source_start = source.find("int32_t hxc_method_FunctionFixture_ordered(")
-    ordered_source_end = source.find("\n}\n", ordered_source_start)
-    ordered_source = source[ordered_source_start:ordered_source_end]
+    ordered_source_start = program_source.find("int32_t hxc_method_FunctionFixture_ordered(")
+    ordered_source_end = program_source.find("\n}\n", ordered_source_start)
+    ordered_source = program_source[ordered_source_start:ordered_source_end]
     ordered_c_calls = [
         ordered_source.find(f"hxc_method_FunctionFixture_{target}(")
         for target in ("passthrough", "chain", "first")
@@ -216,7 +310,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 12:
+    if not isinstance(functions, list) or len(functions) != 11:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -224,9 +318,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 12
+        len(by_field) != 11
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
+        or len(by_field.get("recursive", {}).get("parameters", [])) != 2
     ):
         raise FunctionLoweringFailure("function parameter records drifted")
     if not by_field.get("convert", {}).get("temporaries"):
@@ -265,12 +360,14 @@ def difference(expected: str, actual: str, name: str) -> str:
 
 
 def snapshot_values(report: dict[str, object]) -> dict[str, object]:
-    return {
+    values: dict[str, object] = {
         "functions.hxcir": required_text(report, "hxcir"),
         "functions.h": required_text(report, "header"),
-        "functions.c": required_text(report, "source"),
         "symbols.json": report.get("symbols"),
     }
+    for snapshot_name, source_path in SOURCE_SNAPSHOTS.items():
+        values[snapshot_name] = required_source(report, source_path)
+    return values
 
 
 def check_snapshots(report: dict[str, object]) -> None:
@@ -348,13 +445,17 @@ def available_compilers(selected: str | None = None) -> list[NativeToolchain]:
     return result
 
 
-def write_native_project(report: dict[str, object], root: Path) -> None:
+def write_native_project(report: dict[str, object], root: Path) -> list[Path]:
     header = root / "include/hxc/program.h"
-    source = root / "src/program.c"
     header.parent.mkdir(parents=True)
-    source.parent.mkdir(parents=True)
     header.write_text(required_text(report, "header"), encoding="utf-8", newline="\n")
-    source.write_text(required_text(report, "source"), encoding="utf-8", newline="\n")
+    paths: list[Path] = []
+    for relative, content in source_records(report).items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8", newline="\n")
+        paths.append(path)
+    return paths
 
 
 def check_native(
@@ -362,9 +463,8 @@ def check_native(
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-function-native-") as temporary:
         root = Path(temporary)
-        write_native_project(report, root)
+        sources = write_native_project(report, root)
         header = root / "include/hxc/program.h"
-        source = root / "src/program.c"
         for toolchain in available_compilers(selected):
             header_result = subprocess.run(
                 [
@@ -397,7 +497,7 @@ def check_native(
                         optimization,
                         "-I",
                         str(root / "include"),
-                        str(source),
+                        *(str(source) for source in sources),
                         "-o",
                         str(executable),
                     ],
@@ -544,13 +644,16 @@ def check_production() -> None:
 
         compiler = available_compilers()[0]
         executable = root / "production-program"
+        production_sources = sorted((first / "src").glob("*.c"))
+        if not production_sources:
+            raise FunctionLoweringFailure("production project emitted no C sources")
         compiled = subprocess.run(
             [
                 compiler.compiler,
                 *STRICT_FLAGS,
                 "-I",
                 str(first / "include"),
-                str(first / "src/program.c"),
+                *(str(source) for source in production_sources),
                 "-o",
                 str(executable),
             ],
@@ -604,7 +707,13 @@ def check_argument_diagnostics() -> None:
 def snapshot_native_report() -> dict[str, object]:
     return {
         "header": expected_text("functions.h"),
-        "source": expected_text("functions.c"),
+        "sources": [
+            {
+                "path": source_path,
+                "content": expected_text(snapshot_name),
+            }
+            for snapshot_name, source_path in SOURCE_SNAPSHOTS.items()
+        ],
     }
 
 
@@ -654,8 +763,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed parameters/calls/conversions, recursive private "
-        "prototypes, exact argument diagnostics, strict int main(void), and zero-runtime "
-        "production artifacts passed"
+        "prototypes/source partitions, exact argument diagnostics, strict int main(void), "
+        "and zero-runtime production artifacts passed"
     )
     return 0
 

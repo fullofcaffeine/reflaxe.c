@@ -8,8 +8,9 @@ artifact write and stale deletion to Reflaxe's `OutputManager`.
 
 This boundary still does not make the scaffold a general Haxe-to-C compiler.
 E2.T03 admits one production status only for a validated, reachable primitive
-static-function graph. That path emits its structural private header, source,
-and `int main(void)` entry with analyzed empty runtime/ABI/stdlib results.
+static-function graph. That path emits its structural private header, one or
+more deterministic sources, and `int main(void)` entry with analyzed empty
+runtime/ABI/stdlib results.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project

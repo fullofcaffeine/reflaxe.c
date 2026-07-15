@@ -140,7 +140,8 @@ runtime-free E2.T03 project. See
 
 `test/function_lowering` is the focused positive/negative/snapshot/runtime suite
 for typed primitive parameters, explicit HxcIR conversion/call order, direct
-static calls, recursive prototype planning, and executable entry emission. It
+static calls, direct self-tail lowering, mutually recursive source partitioning,
+recursive prototype planning, and executable entry emission. It
 checks deterministic portable/metal renders, scoped default/optional/rest
 `HXC1001`, byte-identical production roots, explicit `hxc_runtime=none`, analyzed
 empty runtime/ABI/stdlib sidecars, and no `hxrt` artifact or symbol. Required CI
