@@ -1,0 +1,8 @@
+-cp test/body_lowering/
+-cp test/body_lowering/fixtures/positive/
+-lib reflaxe.c
+
+--macro BodyLoweringProbe.install()
+
+-main BodyFixture
+--interp

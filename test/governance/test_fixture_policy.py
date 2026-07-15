@@ -59,6 +59,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "project-emitter",
                 "hxc-ir",
                 "primitive-semantics",
+                "body-lowering",
             ),
         )
 

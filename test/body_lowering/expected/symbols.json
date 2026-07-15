@@ -1,0 +1,292 @@
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_booleanValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:booleanValue|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_booleanValue",
+      "sourceSymbol": "BodyFixture.booleanValue"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_booleanValue_value_n0",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:booleanValue|0:|0:|0:|3:11:BodyFixture12:booleanValue5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:booleanValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_booleanValue_value_n0",
+      "sourceSymbol": "BodyFixture.booleanValue.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_directInteger",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:directInteger|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_directInteger",
+      "sourceSymbol": "BodyFixture.directInteger"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_explicitVoid",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:explicitVoid|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_explicitVoid",
+      "sourceSymbol": "BodyFixture.explicitVoid"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_explicitVoid_first_n0",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:explicitVoid|0:|0:|0:|3:11:BodyFixture12:explicitVoid5:first|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:explicitVoid|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_explicitVoid_first_n0",
+      "sourceSymbol": "BodyFixture.explicitVoid.first#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_explicitVoid_second_n1",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:explicitVoid|0:|0:|0:|3:11:BodyFixture12:explicitVoid6:second|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:explicitVoid|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_explicitVoid_second_n1",
+      "sourceSymbol": "BodyFixture.explicitVoid.second#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_floatingValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:floatingValue|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_floatingValue",
+      "sourceSymbol": "BodyFixture.floatingValue"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_floatingValue_value_n0",
+      "semanticKey": "5:local|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:floatingValue|0:|0:|0:|3:11:BodyFixture13:floatingValue5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:floatingValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_floatingValue_value_n0",
+      "sourceSymbol": "BodyFixture.floatingValue.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_implicitVoid",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:implicitVoid|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_implicitVoid",
+      "sourceSymbol": "BodyFixture.implicitVoid"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_implicitVoid_value_n0",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:implicitVoid|0:|0:|0:|3:11:BodyFixture12:implicitVoid5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:implicitVoid|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_implicitVoid_value_n0",
+      "sourceSymbol": "BodyFixture.implicitVoid.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_integerValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:integerValue|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_integerValue",
+      "sourceSymbol": "BodyFixture.integerValue"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_integerValue_value_n0",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:integerValue|0:|0:|0:|3:11:BodyFixture12:integerValue5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:integerValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_integerValue_value_n0",
+      "sourceSymbol": "BodyFixture.integerValue.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_integerValue_value_n1",
+      "semanticKey": "5:local|93:ordinary:81:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:integerValue|0:|0:|0:|3:11:BodyFixture12:integerValue5:value|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture12:integerValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_integerValue_value_n1",
+      "sourceSymbol": "BodyFixture.integerValue.value#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_BodyFixture_unsignedValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:unsignedValue|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_BodyFixture_unsignedValue",
+      "sourceSymbol": "BodyFixture.unsignedValue"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_BodyFixture_unsignedValue_value_n0",
+      "semanticKey": "5:local|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:unsignedValue|0:|0:|0:|3:11:BodyFixture13:unsignedValue5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:BodyFixture13:unsignedValue|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_BodyFixture_unsignedValue_value_n0",
+      "sourceSymbol": "BodyFixture.unsignedValue.value#0"
+    }
+  ],
+  "collisions": [],
+  "algorithm": "hxc-c-symbol-v1"
+}

@@ -94,6 +94,25 @@ REQUIRED_GATE_FILES = (
     "test/primitive_semantics/run.py",
     "test/positive/primitive-semantics/case.json",
     "test/snapshot/primitive-semantics/case.json",
+    "src/reflaxe/c/lowering/CBodyEmissionError.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyLoweringError.hx",
+    "src/reflaxe/c/lowering/HaxeSourceSpan.hx",
+    "docs/body-lowering.md",
+    "test/body_lowering/BodyLoweringProbe.hx",
+    "test/body_lowering/body_lowering.hxml",
+    "test/body_lowering/fixtures/positive/BodyFixture.hx",
+    "test/body_lowering/fixtures/unsupported/Main.hx",
+    "test/body_lowering/expected/body.c",
+    "test/body_lowering/expected/body-lines.c",
+    "test/body_lowering/expected/body.hxcir",
+    "test/body_lowering/expected/symbols.json",
+    "test/body_lowering/run.py",
+    "test/positive/body-lowering/case.json",
+    "test/negative/body-lowering/case.json",
+    "test/snapshot/body-lowering/case.json",
+    "test/runtime/body-lowering/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -138,6 +157,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "          - clang\n",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -189,6 +209,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
         errors.append("package.json must retain the test:primitive-semantics entry point")
+    if scripts.get("test:body-lowering") != "python3 test/body_lowering/run.py":
+        errors.append("package.json must retain the test:body-lowering entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -211,6 +233,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:primitive-semantics")
+    if "npm run test:body-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:body-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -252,6 +276,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed primitive semantic test")
+    if "test/body_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed body-lowering test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -298,6 +324,27 @@ def validate() -> list[str]:
     ):
         errors.append(
             "primitive semantic runner must verify required compiler-family identity"
+        )
+
+    body_runner = read_text(ROOT / "test/body_lowering/run.py", errors)
+    for required_body_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-O0",
+        "-O2",
+    ):
+        if required_body_flag not in body_runner:
+            errors.append(
+                "body-lowering native runner lost strict flag " + required_body_flag
+            )
+    if "--native-only" not in body_runner or "--toolchain" not in body_runner:
+        errors.append("body-lowering runner must expose the required native matrix seam")
+    if "command identity mismatch" not in body_runner or '"--version"' not in body_runner:
+        errors.append(
+            "body-lowering runner must verify required compiler-family identity"
         )
 
     return errors

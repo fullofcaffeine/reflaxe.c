@@ -3086,7 +3086,7 @@
       ]
     }
   ],
-  "status": "normalized-typed-input-no-lowering",
+  "status": "normalized-typed-input-before-body-lowering",
   "schemaVersion": 1,
   "totals": {
     "fields": 120,

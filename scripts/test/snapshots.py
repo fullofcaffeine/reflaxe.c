@@ -275,6 +275,44 @@ def primitive_semantics_artifacts() -> list[Artifact]:
     ]
 
 
+def body_lowering_artifacts() -> list[Artifact]:
+    module = load_module("body_lowering", "test/body_lowering/run.py")
+    first_payload, report = module.render("snapshot first body-lowering render")
+    second_payload, repeated = module.render("snapshot second body-lowering render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input body-lowering render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "body-lowering snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    hxcir = report.get("hxcir")
+    c_source = report.get("cSource")
+    line_mapped = report.get("lineMappedCSource")
+    symbols = report.get("symbols")
+    if (
+        not isinstance(hxcir, str)
+        or not isinstance(c_source, str)
+        or not isinstance(line_mapped, str)
+        or not isinstance(symbols, dict)
+    ):
+        raise SnapshotFailure("body-lowering report omitted a managed artifact")
+    return [
+        Artifact(Path("test/body_lowering/expected/body.hxcir"), "hxcir", hxcir),
+        Artifact(Path("test/body_lowering/expected/body.c"), "c", c_source),
+        Artifact(
+            Path("test/body_lowering/expected/body-lines.c"), "c", line_mapped
+        ),
+        Artifact(Path("test/body_lowering/expected/symbols.json"), "json", symbols),
+    ]
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -285,6 +323,7 @@ GENERATORS: dict[str, Generator] = {
     "project-emitter": project_emitter_artifacts,
     "hxc-ir": hxc_ir_artifacts,
     "primitive-semantics": primitive_semantics_artifacts,
+    "body-lowering": body_lowering_artifacts,
 }
 
 

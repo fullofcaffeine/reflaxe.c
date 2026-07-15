@@ -3,8 +3,9 @@
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
 the structural C AST. Its schema is internal to the compiler: schema version 2
 is deterministic and validation-backed, but it is not a public file format or
-ABI promise. Typed-AST collection is owned by E1.T06 and C lowering by later
-tasks; neither is implied by the presence of this core.
+ABI promise. E2.T02 now connects real parameter-free primitive `TypedExpr`
+bodies to this layer and then to structural C; all other frontend and C
+lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
@@ -54,6 +55,11 @@ need to recover intent from target syntax.
 - every value-producing instruction has exactly one typed result, every
   effect-only instruction has none, every block terminates, and every branch,
   switch, failure, and `finally` target exists;
+- constant families match their result types; for structurally resolvable
+  places, loads match the place type, initialization/store values match their
+  destination, and address results are pointers to the addressed type;
+- return terminators carry no value for `Void`, carry exactly one value for a
+  non-`Void` function, and match the declared return type;
 - calls, conversions, allocation, deallocation, retain, and trace operations
   identify their implementation as static/direct, program-local specialized,
   or a named runtime feature;
@@ -95,13 +101,14 @@ runtime slice to make validation pass.
 
 ## Unsupported typed AST nodes
 
-The frontend boundary calls
+The body frontend calls
 `HxcIRDiagnostic.unsupportedTypedAstNode(profile, nodeKind, context, span)` and
-stops that lowering path with stable diagnostic `HXC1001`. It must not insert a
-`Dynamic`, null, raw C string, or invented constant in place of an unsupported
-node. E1.T06 will connect this boundary to normalized Reflaxe typed modules;
-until then the production compiler deliberately retains its broader `HXC1000`
-no-output boundary.
+stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
+must not insert a `Dynamic`, null, raw C string, or invented constant in place
+of an unsupported node. A fully admitted main body reaches validated HxcIR and
+structural C, then production deliberately stops at `HXC1000` with no artifact
+because E2.T03 owns static-function, call, and executable entry-point emission.
+See [primitive function-body lowering](body-lowering.md).
 
 ## Canonical dump
 
@@ -130,12 +137,14 @@ dispatch forms plus ABI integers, tagged/pointer nullability, explicit primitive
 conversion/failure forms, aggregate/tag, allocation, retain/trace, and lifetime
 forms. Its named runtime requests are explicit non-primitive coverage.
 `diagnostics.json` covers missing termination, use-before-definition, invalid
-cleanup order, path redaction, primitive runtime rejection, missing
-nullable-unwrap failure, and `HXC1001`.
+cleanup order, path redaction, constant/load/address/store/initializer type
+mismatches, primitive runtime rejection, missing nullable-unwrap failure,
+void/value return mismatches, return-type mismatch, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
-This task emits no C, changes no public C ABI, selects no runtime files, and is
-independent of hosted/freestanding environment capability. Existing strict GCC
-and Clang lanes remain the applicable regression proof for already implemented
-C AST, header-planning, runtime-seed, and interop surfaces.
+The direct HxcIR suite itself emits no C. The separate body-lowering suite
+generates a test translation unit from real typed Haxe, selects no runtime
+files, changes no public C ABI, and is independent of hosted/freestanding
+environment capability. Its mapped and unmapped strict-C11 output is compiled
+and run with available GCC and Clang at `-O0` and `-O2`.

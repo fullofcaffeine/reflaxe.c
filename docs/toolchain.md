@@ -63,8 +63,9 @@ The probes cover:
   contradict the C platform contract;
 - bootstrap-before-init failure behavior and duplicate-call idempotence;
 - back-to-back C/non-C/C builds through one Haxe compiler server;
-- full Reflaxe registration followed by source-anchored `HXC1000`, with no
-  plausible generated artifact, in cold and compiler-server builds;
+- full Reflaxe registration followed by exact source-anchored `HXC1001` at the
+  bootstrap fixture's first unsupported typed call, with no plausible generated
+  artifact, in cold and compiler-server builds;
 - two byte-identical renders apiece of the structural C11 declarator and
   expression/statement corpora, matched against
   `test/c_ast/expected/declarators.c` and `expressions.c`, with no runtime

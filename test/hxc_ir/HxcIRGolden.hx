@@ -33,6 +33,14 @@ class HxcIRGolden {
 			coverage: coverageDump,
 			diagnostics: {
 				missingTerminator: invalidDiagnostics(missingTerminatorProgram()),
+				constantTypeMismatch: invalidDiagnostics(constantTypeMismatchProgram()),
+				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
+				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
+				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
+				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
+				voidReturnWithValue: invalidDiagnostics(voidReturnWithValueProgram()),
+				valueReturnWithoutValue: invalidDiagnostics(valueReturnWithoutValueProgram()),
+				returnTypeMismatch: invalidDiagnostics(returnTypeMismatchProgram()),
 				useBeforeDefinition: invalidDiagnostics(useBeforeDefinitionProgram()),
 				cleanupOrder: invalidDiagnostics(cleanupOrderProgram()),
 				absoluteSource: invalidDiagnostics(absoluteSourceProgram()),
@@ -484,7 +492,7 @@ class HxcIRGolden {
 	}
 
 	static function missingTerminatorProgram():HxcIRProgram {
-		return minimalProgram("invalid.MissingTerminator", [], cast null, [], [], "test/negative/MissingTerminator.hx");
+		return minimalProgram("invalid.MissingTerminator", [], null, [], [], "test/negative/MissingTerminator.hx");
 	}
 
 	static function useBeforeDefinitionProgram():HxcIRProgram {
@@ -494,6 +502,68 @@ class HxcIRGolden {
 			instruction("bad.constant", result("value.later", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 3)
 		],
 			terminator(IRTReturn(null, []), file, 4), [local("local.target", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function constantTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/ConstantTypeMismatch.hx";
+		return minimalProgram("invalid.ConstantTypeMismatch", [
+			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function loadTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/LoadTypeMismatch.hx";
+		return minimalProgram("invalid.LoadTypeMismatch", [
+			instruction("bad.load", result("value.bad", IRTBool), IRIOLoad(IRPLocal("local.value")), file, 2)
+		],
+			terminator(IRTReturn(null, []), file, 3), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function addressTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/AddressTypeMismatch.hx";
+		return minimalProgram("invalid.AddressTypeMismatch", [
+			instruction("bad.address", result("value.bad", IRTPointer(IRTBool, false)), IRIOAddress(IRPLocal("local.value")), file, 2)
+		],
+			terminator(IRTReturn(null, []), file, 3), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function storeTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/StoreTypeMismatch.hx";
+		return minimalProgram("invalid.StoreTypeMismatch", [
+			instruction("bad.constant", result("value.bad", IRTBool), IRIOConstant(IRCBool(true)), file, 2),
+			instruction("bad.store", null, IRIOStore(IRPLocal("local.value"), "value.bad"), file, 3)
+		],
+			terminator(IRTReturn(null, []), file, 4), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function initializerTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/InitializerTypeMismatch.hx";
+		return minimalProgram("invalid.InitializerTypeMismatch", [
+			instruction("bad.constant", result("value.bad", IRTBool), IRIOConstant(IRCBool(true)), file, 2),
+			instruction("bad.initialize", null, IRIOInitialize(IRPLocal("local.value"), "value.bad", IRISUninitialized, IRISInitialized), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [
+			local("local.value", IRTInt(32, true), IRLSAutomatic, IRISUninitialized, file, 1)
+		], [], file);
+	}
+
+	static function voidReturnWithValueProgram():HxcIRProgram {
+		final file = "test/negative/VoidReturnWithValue.hx";
+		return minimalProgram("invalid.VoidReturnWithValue", [
+			instruction("bad.value", result("value.return", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2)
+		], terminator(IRTReturn("value.return", []), file, 3), [], [], file);
+	}
+
+	static function valueReturnWithoutValueProgram():HxcIRProgram {
+		final file = "test/negative/ValueReturnWithoutValue.hx";
+		return minimalProgram("invalid.ValueReturnWithoutValue", [], terminator(IRTReturn(null, []), file, 2), [], [], file, IRTInt(32, true));
+	}
+
+	static function returnTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/ReturnTypeMismatch.hx";
+		return minimalProgram("invalid.ReturnTypeMismatch", [
+			instruction("bad.value", result("value.return", IRTBool), IRIOConstant(IRCBool(true)), file, 2)
+		], terminator(IRTReturn("value.return", []), file, 3), [], [], file,
+			IRTInt(32, true));
 	}
 
 	static function cleanupOrderProgram():HxcIRProgram {
@@ -552,7 +622,8 @@ class HxcIRGolden {
 	}
 
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
-			regions:Array<HxcIRCleanupRegion>, file:String):HxcIRProgram {
+			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef):HxcIRProgram {
+		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		return {
 			schemaVersion: 2,
 			modules: [
@@ -567,7 +638,7 @@ class HxcIRGolden {
 							displayName: '$moduleId.main',
 							parameters: [],
 							locals: locals,
-							returnType: IRTVoid,
+							returnType: functionReturnType,
 							entryBlockId: "entry",
 							blocks: [
 								{

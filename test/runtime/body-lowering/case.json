@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-body-lowering-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-004",
+    "HXC-COMP-002",
+    "HXC-SEM-022"
+  ],
+  "sources": [
+    "test/body_lowering/expected/body-lines.c",
+    "test/body_lowering/expected/body.c",
+    "test/body_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../body_lowering/run.py"
+    ],
+    "workingDirectory": "test/runtime/body-lowering",
+    "timeoutSeconds": 90,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "runtime-free GCC/Clang behavior$"
+    },
+    "artifacts": [
+      {
+        "path": "test/body_lowering/expected/body.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

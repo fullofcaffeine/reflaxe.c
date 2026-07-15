@@ -121,7 +121,7 @@ class TypedAstInventory {
 		};
 		return {
 			schemaVersion: 1,
-			status: "normalized-typed-input-no-lowering",
+			status: "normalized-typed-input-before-body-lowering",
 			entryPoint: entryPoint,
 			totals: {
 				modules: program.modules.length,

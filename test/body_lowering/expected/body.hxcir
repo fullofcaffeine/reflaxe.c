@@ -1,0 +1,71 @@
+hxcir schema=2
+module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-43:3
+  function "function.BodyFixture.booleanValue" name="BodyFixture.booleanValue" returns=bool entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
+    local "local.0" type=bool storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:3-21:25
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:20-21:24
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:3-21:25
+      instruction "instruction.2.load" result="value.1":bool load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":22:10-22:15
+      terminator return value="value.1" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":22:3-22:15
+    end block "entry"
+  end function "function.BodyFixture.booleanValue"
+  function "function.BodyFixture.directInteger" name="BodyFixture.directInteger" returns=i32 entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":11:38-13:3
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":11:38-13:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(23) @"test/body_lowering/fixtures/positive/BodyFixture.hx":12:10-12:12
+      terminator return value="value.0" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":12:3-12:12
+    end block "entry"
+  end function "function.BodyFixture.directInteger"
+  function "function.BodyFixture.explicitVoid" name="BodyFixture.explicitVoid" returns=void entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":25:38-33:3
+    local "local.0" type=i32 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":26:3-26:21
+    local "local.1" type=i32 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":29:4-29:23
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":25:38-33:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(1) @"test/body_lowering/fixtures/positive/BodyFixture.hx":26:19-26:20
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":26:3-26:21
+      instruction "instruction.2.load" result="value.1":i32 load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":27:3-27:8
+      instruction "instruction.3.constant" result="value.2":i32 constant value=int(2) @"test/body_lowering/fixtures/positive/BodyFixture.hx":29:21-29:22
+      instruction "instruction.4.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":29:4-29:23
+      instruction "instruction.5.load" result="value.3":i32 load place=local("local.1") @"test/body_lowering/fixtures/positive/BodyFixture.hx":30:4-30:10
+      terminator return value=none cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":32:3-32:9
+    end block "entry"
+  end function "function.BodyFixture.explicitVoid"
+  function "function.BodyFixture.floatingValue" name="BodyFixture.floatingValue" returns=f64 entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":15:40-18:3
+    local "local.0" type=f64 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":16:3-16:25
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":15:40-18:3
+      instruction "instruction.0.constant" result="value.0":f64 constant value=float(1.5) @"test/body_lowering/fixtures/positive/BodyFixture.hx":16:21-16:24
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":16:3-16:25
+      instruction "instruction.2.load" result="value.1":f64 load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":17:10-17:15
+      terminator return value="value.1" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":17:3-17:15
+    end block "entry"
+  end function "function.BodyFixture.floatingValue"
+  function "function.BodyFixture.implicitVoid" name="BodyFixture.implicitVoid" returns=void entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
+    local "local.0" type=bool storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":36:3-36:26
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/body_lowering/fixtures/positive/BodyFixture.hx":36:20-36:25
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":36:3-36:26
+      instruction "instruction.2.load" result="value.1":bool load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":37:3-37:8
+      terminator return value=none cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":35:38-38:3
+    end block "entry"
+  end function "function.BodyFixture.implicitVoid"
+  function "function.BodyFixture.integerValue" name="BodyFixture.integerValue" returns=i32 entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-9:3
+    local "local.0" type=i32 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":3:3-3:22
+    local "local.1" type=i32 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":6:4-6:23
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-9:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(17) @"test/body_lowering/fixtures/positive/BodyFixture.hx":3:19-3:21
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":3:3-3:22
+      instruction "instruction.2.load" result="value.1":i32 load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":4:3-4:8
+      instruction "instruction.3.constant" result="value.2":i32 constant value=int(42) @"test/body_lowering/fixtures/positive/BodyFixture.hx":6:20-6:22
+      instruction "instruction.4.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":6:4-6:23
+      instruction "instruction.5.load" result="value.3":i32 load place=local("local.1") @"test/body_lowering/fixtures/positive/BodyFixture.hx":7:11-7:16
+      terminator return value="value.3" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":7:4-7:16
+    end block "entry"
+  end function "function.BodyFixture.integerValue"
+  function "function.BodyFixture.unsignedValue" name="BodyFixture.unsignedValue" returns=u32 entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":40:39-43:3
+    local "local.0" type=u32 storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":41:3-41:23
+    block "entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":40:39-43:3
+      instruction "instruction.0.constant" result="value.0":u32 constant value=int(29) @"test/body_lowering/fixtures/positive/BodyFixture.hx":41:20-41:22
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":41:3-41:23
+      instruction "instruction.2.load" result="value.1":u32 load place=local("local.0") @"test/body_lowering/fixtures/positive/BodyFixture.hx":42:10-42:15
+      terminator return value="value.1" cleanup=[] @"test/body_lowering/fixtures/positive/BodyFixture.hx":42:3-42:15
+    end block "entry"
+  end function "function.BodyFixture.unsignedValue"
+end module "BodyFixture"

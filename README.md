@@ -9,10 +9,12 @@ separately proposes an optional future `hxc` orchestration tool for project buil
 diagnostics, bindings, exports, and other end-to-end workflows; it is not a
 replacement Haxe compiler or a requirement imposed by Reflaxe.
 
-**Project status: M0 architecture scaffold.** The complete target-owned Haxe
-source graph type-checks, but this repository does not emit Haxe programs as C
-yet. Unsupported compiler paths intentionally fail closed instead of emitting
-plausible but incorrect C.
+**Project status: M0 architecture scaffold with a first body-lowering slice.**
+The complete target-owned Haxe source graph type-checks, and parameter-free
+primitive function bodies now reach validated HxcIR and structural C in a
+compile-backed fixture. Production still emits no Haxe program or executable;
+unsupported compiler paths fail closed instead of producing plausible but
+incorrect C.
 
 ## Why another native target?
 
@@ -52,6 +54,15 @@ fallback and is selected feature by feature with source reasons. There is no
 unconditional runtime core. A proven runtime-free build contains no `hxrt`
 header, source, define, library, or symbol.
 
+This hierarchy is also the hard standard-library rule. Statically knowable work
+belongs in `hxc`: representation selection, specialization, constant/static
+dispatch, escape/lifetime analysis, layout/table construction, and dead-feature
+elimination. Standard-library operations lower to idiomatic C or a compatible C
+library/intrinsic first, a program-local specialized helper second, and only a
+narrow justified optimized `hxrt` feature last. The planned E5 stdlib epic owns
+the generated parity ledger and String/Unicode, collections, Bytes/I/O,
+Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading slices.
+
 With no explicit override, portable uses `auto` plus an aggregate runtime
 summary; metal uses the narrow `minimal` allowlist and warns at each root runtime
 requirement. `hxc_runtime=none` turns runtime freedom into a hard whole-program
@@ -82,8 +93,10 @@ paths, rejects unowned collisions and path/symlink escapes, and produces
 byte-identical projects across absolute roots, discovery orders, locales, CRLF
 inputs, and warm compiler-server reuse. Renamed-symbol tests remove only prior
 owned paths, and failures identify the first differing artifact and byte. The
-emitted structural corpus compiles and runs under strict GCC and Clang; it is
-not typed-Haxe lowering, so production still stops at `HXC1000` with no output.
+emitted structural corpus compiles and runs under strict GCC and Clang; that
+project corpus is not typed-Haxe lowering. Production unsupported bodies stop
+at exact `HXC1001`, while an admitted body stops later at `HXC1000`, both with
+no output.
 See [project emission](docs/project-emission.md). The C authoring boundary is in
 [typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
@@ -95,26 +108,29 @@ all call dispatch forms, ABI integer and nullable identities, explicit
 exact/wrapping/checked/saturating conversions, allocation intent, failure successors,
 and reverse inner-to-outer cleanup paths before C syntax exists. Its validator,
 canonical source-aware dumps, reordered-input goldens, matching Eval side-effect
-oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. This is an
-independently testable compiler layer, not a claim that typed Haxe reaches it in
-production or that C is emitted; `HXC1000` remains the honest whole-program
-boundary.
+oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. The first
+[primitive function-body lowering](docs/body-lowering.md) now carries real
+typed constants, initialized locals/reads, nested blocks, and returns through
+this layer to structural C, with exact source spans and deterministic
+shadow-safe names. Static functions, calls, entry points, and production project
+emission remain the next boundary.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI
 identities, records scalar/reference nullability, and defines widening,
 wrapping, checked, NaN/infinity, and `Std.int` behavior without hidden runtime
 selection. Its independently authored strict-C11 probe validates the ratified
-algorithms at O0/O2; this is contract evidence, not generated Haxe-to-C output.
+algorithms at O0/O2. The E2.T02 body fixture separately proves the admitted
+primitive mappings in generated strict C11.
 
 The [typed-AST input adapter](docs/typed-ast-input.md) now captures Haxe's
 complete module set before Reflaxe callback filtering, normalizes module and
 declaration ownership, retains externs/typedefs/abstracts and raw expressions,
 and records the entry point in a fresh per-request context. Its deterministic
 inventory is identical across reordered input and cold/compiler-server builds.
-This is the production frontend boundary for future Haxe-to-HxcIR work, not a
-claim that lowering exists; the same build still stops at `HXC1000` without an
-artifact.
+The report remains a pre-lowering inventory; the body pipeline consumes its
+retained raw typed expressions afterward. Unsupported nodes report exact
+`HXC1001`, and a supported body reaches the later `HXC1000` no-artifact boundary.
 
 ### CLI bootstrap
 
@@ -180,8 +196,9 @@ The current checkout contains:
 - a [typed diagnostic contract](docs/diagnostics.md) with 12 registered IDs,
   exhaustive reserved ranges, schema-validated records, and registry-drift
   enforcement;
-- a minimal Reflaxe adapter and whole-program boundary that type-check and then
-  deliberately stop with source-anchored `HXC1000` before emitting C;
+- a minimal Reflaxe adapter and whole-program boundary that lowers an admitted
+  static-main body, reports exact `HXC1001` for unsupported typed nodes, and
+  then deliberately stops at `HXC1000` before function/call/entry-point output;
 - a deterministic typed-AST adapter and reviewed inventory covering complete
   module ownership, declarations, fields, metadata, expressions, entry points,
   reordered input, and compiler-server isolation;
@@ -206,6 +223,10 @@ The current checkout contains:
 - a typed primitive mapping/conversion contract with profile-invariant exact and
   ABI integer identities, explicit scalar/reference nullability, owned machine
   snapshot, and strict-C11 O0/O2 algorithm probes without `hxrt`;
+- real parameter-free primitive `TypedExpr -> HxcIR -> structural C` body
+  lowering with deterministic shadow-safe function/local names, exact source
+  diagnostics, optional structural `#line` mapping, and runtime-free GCC/Clang
+  execution at O0/O2;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -217,10 +238,11 @@ The current checkout contains:
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
-It does **not** yet contain Haxe-to-C semantic lowering, a complete runtime, the
-`hxc` implementation, executable generated examples, or release tooling. The
-package metadata added at M0 is a reproducible development/package-layout seed,
-not a publishable compiler. Those capabilities remain tracked work.
+It does **not** yet contain general Haxe-to-C semantic lowering, production
+function/call/entry-point emission, standard-library parity, a complete runtime,
+the `hxc` implementation, executable generated examples, or release tooling.
+The package metadata added at M0 is a reproducible development/package-layout
+seed, not a publishable compiler. Those capabilities remain tracked work.
 
 ## Explore the scaffold
 
@@ -257,6 +279,7 @@ python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
 python3 test/symbol_registry/run.py
 python3 test/hxc_ir/run.py
+python3 test/body_lowering/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/test/snapshots.py --check
@@ -284,14 +307,15 @@ The eventual direct compiler invocation is:
 haxe -lib reflaxe.c --custom-target c=build/c -main Main
 ```
 
-At M0 that real production path intentionally ends at `HXC1000` with no output;
-it is documented now so `c_output`, Eval, or the future `hxc` wrapper are not
-mistaken for alternate user-program carriers.
+At M0 that real production path intentionally reports exact `HXC1001` for the
+first unsupported typed body node, or reaches `HXC1000` after an admitted body,
+with no output in either case. It is documented now so `c_output`, Eval, or the
+future `hxc` wrapper are not mistaken for alternate user-program carriers.
 
 The complete target-owned Haxe graph now type-checks under the dedicated
-all-source gate, while real production activation remains fail-closed at
-`HXC1000`. The next compiler work builds a small end-to-end C emission slice
-before expanding language coverage.
+all-source gate, while real production activation remains fail-closed at exact
+`HXC1001` or the later `HXC1000`. E2.T03 next adds static functions, arguments,
+direct calls, and executable entry-point emission.
 
 ## Project documents
 
@@ -300,6 +324,7 @@ before expanding language coverage.
 - [Configuration contract](docs/configuration.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
+- [Primitive function-body lowering](docs/body-lowering.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)

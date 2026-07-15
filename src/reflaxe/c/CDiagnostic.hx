@@ -310,9 +310,10 @@ class CDiagnostic {
 	}
 
 	#if macro
-	public static function fatal(id:CDiagnosticId, detail:String, pos:Position, ?profile:String):Dynamic {
+	public static function fatal<T>(id:CDiagnosticId, detail:String, pos:Position, ?profile:String):T {
 		requireAllowedSeverity(definition(id), Error);
-		return Context.fatalError(humanMessage(id, detail, profile), pos);
+		Context.fatalError(humanMessage(id, detail, profile), pos);
+		throw new haxe.Exception("Context.fatalError returned after a fatal compiler diagnostic");
 	}
 
 	public static function error(id:CDiagnosticId, detail:String, pos:Position, ?profile:String):Void {

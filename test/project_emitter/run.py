@@ -1030,7 +1030,7 @@ def main() -> int:
     print(
         "project-emitter: OK: precise byte-difference reports, isolated-root/order/"
         "locale/CRLF/server determinism, renamed-symbol stale ownership, skipped "
-        "writes, path guards, strict placeholders, and HXC1000 no-output passed"
+        "writes, path guards, strict placeholders, and exact HXC1001 no-output passed"
     )
     return 0
 

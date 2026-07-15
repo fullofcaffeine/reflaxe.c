@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-body-lowering-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-004",
+    "HXC-COMP-002",
+    "HXC-SEM-022"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/body_lowering/expected/body-lines.c",
+    "test/body_lowering/expected/body.c",
+    "test/body_lowering/expected/body.hxcir",
+    "test/body_lowering/expected/symbols.json",
+    "test/body_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "body-lowering"
+    ],
+    "workingDirectory": "test/snapshot/body-lowering",
+    "timeoutSeconds": 60,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/body_lowering/expected/body-lines.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/body_lowering/expected/body.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/body_lowering/expected/body.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/body_lowering/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

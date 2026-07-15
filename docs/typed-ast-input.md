@@ -1,8 +1,8 @@
 # Typed-AST input boundary
 
 The frontend adapter owns a deterministic view of the complete typed module set
-that Haxe gives Reflaxe. This is the input to future Haxe-to-HxcIR lowering; it
-is not itself a semantic IR and does not emit C.
+that Haxe gives Reflaxe. It is the input to Haxe-to-HxcIR lowering, but it is not
+itself a semantic IR and does not emit C.
 
 ## Lifecycle and ownership
 
@@ -53,8 +53,9 @@ not erase initialization, enum-index, or annotation order. Inventory count
 tables are sorted by kind. Source paths are derived from Haxe module paths
 (`example.Widget` becomes
 `example/Widget.hx`); raw host paths and compiler positions are never serialized
-by the inventory report. Later source-span normalization remains part of actual
-HxcIR lowering.
+by the inventory report. E2.T02 body lowering converts the original compiler
+positions to normalized, repository-relative HxcIR spans; the report continues
+to omit raw positions.
 
 Reflaxe adds the exact transient metadata
 `@:build(reflaxe.ReflectCompiler.addToBuildCache())` after compiler-server cache
@@ -65,11 +66,12 @@ is retained unchanged, and all source-authored metadata remains visible.
 ## Inventory report
 
 Defining `reflaxe_c_typed_ast_report` prints one path-stable JSON record prefixed
-with `HXC_TYPED_AST_INVENTORY=` immediately before the current `HXC1000`
-boundary. It contains entry-point facts, module/declaration/field records,
-owned expression-root records with ordinals, and sorted counts for declaration,
-class, field, expression, type, and metadata kinds. Its purpose is
-unsupported-node planning and regression evidence.
+with `HXC_TYPED_AST_INVENTORY=` immediately before body lowering. Its status is
+`normalized-typed-input-before-body-lowering`. It contains entry-point facts,
+module/declaration/field records, owned expression-root records with ordinals,
+and sorted counts for declaration, class, field, expression, type, and metadata
+kinds. Its purpose is unsupported-node planning and regression evidence; it is
+not the body-lowering result.
 
 The report define is an implementation diagnostic, not application
 configuration or a supported `hxc` flag. Likewise,
@@ -91,6 +93,8 @@ npm run snapshots:update -- --suite typed-ast
 ```
 
 The suite requires forward, reversed, repeated-cold, and compiler-server reports
-to agree where their source programs agree. It also requires source-anchored
-`HXC1000` and an empty output tree. Passing it proves collection and
-normalization only; typed Haxe still does not reach HxcIR or C.
+to agree where their source programs agree. Its deliberately unsupported bodies
+must now fail with exact source-anchored `HXC1001` and an empty output tree.
+Passing this suite proves collection and normalization only; the separate
+[body-lowering suite](body-lowering.md) proves the admitted TypedExpr-to-HxcIR/C
+path.

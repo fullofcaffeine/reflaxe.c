@@ -368,11 +368,32 @@ private class HxcIRValidationState {
 				validateText(label, '$path.label', instruction.source);
 			case IRIOConstant(value):
 				validateConstant(value, '$path.constant', instruction.source);
-			case IRIOLoad(place) | IRIOAddress(place):
+				if (instruction.result != null && !constantMatchesType(value, instruction.result.type)) {
+					add(path, "constant result type does not match its literal family", instruction.source);
+				}
+			case IRIOLoad(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
+				final loadedType = knownPlaceType(place, available, locals);
+				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
+					add(path, "load result type does not match its place type", instruction.source);
+				}
+			case IRIOAddress(place):
+				validatePlace(place, '$path.place', instruction.source, available, locals);
+				final addressedType = knownPlaceType(place, available, locals);
+				if (instruction.result != null && addressedType != null) {
+					switch instruction.result.type {
+						case IRTPointer(pointee, false) if (typeKey(pointee) == typeKey(addressedType)):
+						case _:
+							add(path, "address result must be a non-null pointer to its place type", instruction.source);
+					}
+				}
 			case IRIOStore(place, valueId):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
-				requireValue(valueId, '$path.value', instruction.source, available);
+				final storedType = requireValue(valueId, '$path.value', instruction.source, available);
+				final storePlaceType = knownPlaceType(place, available, locals);
+				if (storedType != null && storePlaceType != null && typeKey(storedType) != typeKey(storePlaceType)) {
+					add(path, "stored value type does not match its place type", instruction.source);
+				}
 			case IRIOUnary(operationId, valueId, implementation):
 				validateStableId(operationId, '$path.operation', instruction.source);
 				requireValue(valueId, '$path.value', instruction.source, available);
@@ -441,7 +462,11 @@ private class HxcIRValidationState {
 				validateImplementation(implementation, '$path.implementation', instruction.source);
 			case IRIOInitialize(place, valueId, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
-				requireValue(valueId, '$path.value', instruction.source, available);
+				final initializedType = requireValue(valueId, '$path.value', instruction.source, available);
+				final initializePlaceType = knownPlaceType(place, available, locals);
+				if (initializedType != null && initializePlaceType != null && typeKey(initializedType) != typeKey(initializePlaceType)) {
+					add(path, "initializer value type does not match its place type", instruction.source);
+				}
 				validateTransition(from, to, '$path.transition', instruction.source);
 				if (to != IRISInitialized) {
 					add(path, "initialize instruction must end in initialized state", instruction.source);
@@ -686,6 +711,24 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function knownPlaceType(place:HxcIRPlace, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>):Null<HxcIRTypeRef> {
+		return switch place {
+			case IRPLocal(localId):
+				final local = locals.get(localId);
+				local == null ? null : local.type;
+			case IRPGlobal(globalId):
+				final global = globals.get(globalId);
+				global == null ? null : global.type;
+			case IRPDereference(pointerValueId):
+				switch available.get(pointerValueId) {
+					case IRTPointer(pointee, _): pointee;
+					case _: null;
+				}
+			case IRPField(_, _) | IRPIndex(_, _):
+				null;
+		};
+	}
+
 	function validateStableCleanupPlace(place:HxcIRPlace, path:String, source:HxcSourceSpan, locals:Map<String, HxcIRLocal>):Void {
 		switch place {
 			case IRPLocal(localId):
@@ -893,6 +936,32 @@ private class HxcIRValidationState {
 				}
 			case IRCBool(_) | IRCString(_) | IRCNull:
 		}
+	}
+
+	static function constantMatchesType(value:HxcIRConstant, type:HxcIRTypeRef):Bool {
+		return switch value {
+			case IRCInt(_):
+				switch type {
+					case IRTInt(_, _) | IRTAbiInteger(_): true;
+					case _: false;
+				}
+			case IRCFloat(_):
+				switch type {
+					case IRTFloat(_): true;
+					case _: false;
+				}
+			case IRCBool(_): type == IRTBool;
+			case IRCString(_):
+				switch type {
+					case IRTInstance(_): true;
+					case _: false;
+				}
+			case IRCNull:
+				switch type {
+					case IRTPointer(_, true) | IRTNullable(_, _): true;
+					case _: false;
+				}
+		};
 	}
 
 	function validateSpan(span:HxcSourceSpan, path:String):Void {

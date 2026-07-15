@@ -17,8 +17,17 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
-LOWERING_DIAGNOSTIC_ID = "HXC1000"
-LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
+LOWERING_DIAGNOSTIC_ID = "HXC1001"
+LOWERING_EXPECTATIONS = {
+    "rich": (
+        "Unsupported typed Haxe node `TVar(box:type):reference-FixtureBox-non-null`",
+        "Main.hx:8: characters 3-38",
+    ),
+    "isolation": (
+        "Unsupported typed Haxe node `TIf`",
+        "Main.hx:4: lines 4-6",
+    ),
+}
 
 
 class TypedAstProbeFailure(RuntimeError):
@@ -79,19 +88,20 @@ def compile_fixture(
         emitted = [path for path in Path(temporary).rglob("*") if path.is_file()]
         if emitted:
             raise TypedAstProbeFailure(
-                f"{fixture} HXC1000 boundary emitted files: "
+                f"{fixture} HXC1001 boundary emitted files: "
                 + ", ".join(path.relative_to(temporary).as_posix() for path in emitted)
             )
 
     combined = process.stdout + process.stderr
+    lowering_detail, lowering_source = LOWERING_EXPECTATIONS[fixture]
     if (
         process.returncode == 0
         or LOWERING_DIAGNOSTIC_ID not in combined
-        or LOWERING_DETAIL not in combined
-        or "Main.hx" not in combined
+        or lowering_detail not in combined
+        or lowering_source not in combined
     ):
         raise TypedAstProbeFailure(
-            f"{fixture} missed its source-anchored HXC1000 boundary\n"
+            f"{fixture} missed its exact source-anchored HXC1001 boundary\n"
             f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"
         )
     lines = [
@@ -128,7 +138,7 @@ def count_map(report: dict[str, object], category: str) -> dict[str, int]:
 
 
 def assert_fixture_classification(report: dict[str, object]) -> None:
-    if report.get("schemaVersion") != 1 or report.get("status") != "normalized-typed-input-no-lowering":
+    if report.get("schemaVersion") != 1 or report.get("status") != "normalized-typed-input-before-body-lowering":
         raise TypedAstProbeFailure("typed-AST report schema/status drifted")
     entry = report.get("entryPoint")
     if not isinstance(entry, dict) or entry.get("modulePath") != "Main" or entry.get("declarationPath") != "Main":
@@ -316,7 +326,7 @@ def main() -> int:
         return 1
     print(
         "typed-ast: OK: declarations/metadata/entry ownership, order determinism, "
-        "inventory coverage, HXC1000 no-output, and compiler-server isolation"
+        "inventory coverage, exact HXC1001 no-output, and compiler-server isolation"
     )
     return 0
 

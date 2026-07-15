@@ -58,7 +58,12 @@ independent native semantic probe as strict C11 with GCC and Clang at `-O0` and
 `-O2`. The native probe demonstrates the accepted algorithms and platform
 facts; it is not generated C.
 
-Production Haxe-to-HxcIR/C lowering remains deliberately unavailable at this
-stage and still reports `HXC1000`. E2.T02 owns the first expression/body
-lowering, E2.T05 owns the remaining arithmetic undefined-behavior rules, and
-E2.T11 owns generated-program differential and sanitizer proof.
+E2.T02 now applies the ordinary `Void`/`Bool`/`Int`/`UInt`/`Float` mappings to
+parameter-free constants, initialized locals/reads, primitive blocks, and
+returns in the first real TypedExpr-to-HxcIR/C body slice. It remains
+runtime-free and identical in portable and metal. Unsupported body nodes report
+exact `HXC1001`; an admitted production body then reaches `HXC1000` because
+E2.T03 owns functions, calls, and entry-point emission. E2.T05 owns the
+remaining arithmetic undefined-behavior rules, and E2.T11 owns
+generated-program differential and sanitizer proof. See
+[primitive function-body lowering](body-lowering.md).

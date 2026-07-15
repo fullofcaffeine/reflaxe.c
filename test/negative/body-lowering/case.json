@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-body-lowering-unsupported",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-004",
+    "HXC-COMP-002",
+    "HXC-SEM-022"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/body_lowering/fixtures/unsupported/Main.hx",
+    "test/body_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../body_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/body-lowering",
+    "timeoutSeconds": 90,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "exact HXC1001 spans"
+    }
+  }
+}

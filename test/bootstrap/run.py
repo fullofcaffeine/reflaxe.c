@@ -23,8 +23,9 @@ TARGET_REPORT_PREFIX = "HXC_TARGET_CONTRACT="
 NON_C_EXPECTED = "bootstrap=0 init=0 c=0 reflaxe_c=0 unicode=1 utf16=0"
 CALLER_C_EXPECTED = "bootstrap=0 init=0 c=1 reflaxe_c=0 unicode=1 utf16=0"
 CONFIGURATION_DIAGNOSTIC_ID = "HXC0003"
-LOWERING_DIAGNOSTIC_ID = "HXC1000"
-LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
+LOWERING_DIAGNOSTIC_ID = "HXC1001"
+LOWERING_DETAIL = "Unsupported typed Haxe node `TCall`"
+LOWERING_SOURCE = "BootstrapProbe.hx:40: lines 40-47"
 DIAGNOSTIC_PROFILE = re.compile(r"\[profile=(?:portable|metal|unresolved)\]")
 
 
@@ -399,15 +400,19 @@ def check_production_carrier_fails_closed() -> None:
             label="production custom-target lowering boundary probe",
         )
         combined = result.stdout + result.stderr
-        if LOWERING_DIAGNOSTIC_ID not in combined or LOWERING_DETAIL not in combined:
-            raise ProbeFailure("production custom target did not stop at HXC1000")
+        if (
+            LOWERING_DIAGNOSTIC_ID not in combined
+            or LOWERING_DETAIL not in combined
+            or LOWERING_SOURCE not in combined
+        ):
+            raise ProbeFailure("production custom target did not stop at the exact HXC1001 boundary")
         if "[profile=portable]" not in combined or "Remediation:" not in combined:
-            raise ProbeFailure("production HXC1000 lost its profile or remediation field")
+            raise ProbeFailure("production HXC1001 lost its profile or remediation field")
         assert_target_contract(
             result, expected, "production custom-target lowering boundary probe"
         )
         if output.exists() and any(output.rglob("*")):
-            raise ProbeFailure("HXC1000 production probe left a plausible generated artifact")
+            raise ProbeFailure("HXC1001 production probe left a plausible generated artifact")
 
 
 def available_port() -> int:
@@ -496,26 +501,31 @@ def check_compiler_server_isolation() -> None:
                 label="compiler-server production lowering boundary",
                 no_server=False,
             )
-            if LOWERING_DIAGNOSTIC_ID not in production.stdout + production.stderr:
-                raise ProbeFailure("compiler-server production request missed HXC1000")
+            production_output = production.stdout + production.stderr
+            if (
+                LOWERING_DIAGNOSTIC_ID not in production_output
+                or LOWERING_DETAIL not in production_output
+                or LOWERING_SOURCE not in production_output
+            ):
+                raise ProbeFailure("compiler-server production request missed exact HXC1001")
             assert_target_contract(
                 production,
                 expected_contract,
                 "compiler-server production lowering boundary",
             )
             if output.exists() and any(output.rglob("*")):
-                raise ProbeFailure("compiler-server HXC1000 request emitted an artifact")
+                raise ProbeFailure("compiler-server HXC1001 request emitted an artifact")
 
         recovery_command = source_command(c_build=True, target_report=True)
         recovery_command[1:1] = ["--connect", endpoint]
         recovery = run(
             recovery_command,
             cwd=FIXTURE,
-            label="compiler-server recovery after HXC1000",
+            label="compiler-server recovery after HXC1001",
             no_server=False,
         )
         assert_target_contract(
-            recovery, expected_contract, "compiler-server recovery after HXC1000"
+            recovery, expected_contract, "compiler-server recovery after HXC1001"
         )
     finally:
         server.terminate()

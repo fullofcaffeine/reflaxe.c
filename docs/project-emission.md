@@ -6,10 +6,12 @@ artifacts; it never receives an output directory. `ReflaxeOutputWriter` is the
 separate ownership adapter that validates the destination and delegates every
 artifact write and stale deletion to Reflaxe's `OutputManager`.
 
-This boundary does not make the scaffold a Haxe-to-C compiler. Production
-typed-Haxe compilation still stops at source-anchored `HXC1000` before creating
-an artifact. The checked-in project corpus is constructed directly in a test
-macro, just like the direct C AST and planned-header fixtures. A
+This boundary does not make the scaffold a usable Haxe-to-C compiler. E2.T02
+can lower an admitted typed main body through HxcIR and structural C, but
+production still creates no artifact: unsupported nodes stop at exact `HXC1001`,
+and a supported body stops later at `HXC1000` before static-function, call,
+entry-point, and project emission. The checked-in project corpus is constructed
+directly in a test macro, independently of the real body-lowering fixture. A
 `lowered-program` emission request is rejected until real semantic runtime and
 ABI analyses can replace the honest placeholders.
 
@@ -113,8 +115,9 @@ preserving an unlisted neighboring source. Reflaxe's `_GeneratedFiles.json`
 invocation/activity fields are validated separately and excluded from the
 normal-artifact server comparison. The suite also rejects unowned collisions,
 invalid paths, existing or dangling symlinks, malformed ownership JSON, and
-non-canonical line endings before a partial write, while preserving the
-production `HXC1000` no-output boundary. The native matrix independently
+non-canonical line endings before a partial write, while preserving both the
+production exact-`HXC1001` unsupported-body boundary and the later `HXC1000`
+no-output capability boundary. The native matrix independently
 compiles every emitted header and links/runs the emitted strict-C11 structural
 project under GCC and Clang. This is emitted-C shape and ownership evidence,
 not generated-Haxe semantic evidence or a public ABI, runtime, standard-library,

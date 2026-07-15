@@ -14,8 +14,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HXML = Path(__file__).with_name("all_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
-LOWERING_DIAGNOSTIC_ID = "HXC1000"
-LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
+LOWERING_DIAGNOSTIC_ID = "HXC1001"
+LOWERING_DETAIL = "Unsupported typed Haxe node `TCall`"
+LOWERING_SOURCE = "AllSourcesProbe.hx:16: characters 3-28"
 MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CompilerBootstrap.Start",
     "Typing macro reflaxe.c.BuildDetection.isCBuild",
@@ -113,16 +114,16 @@ def check_production_boundary() -> None:
         if (
             LOWERING_DIAGNOSTIC_ID not in combined
             or LOWERING_DETAIL not in combined
-            or "AllSourcesProbe.hx" not in combined
+            or LOWERING_SOURCE not in combined
         ):
             raise AllSourcesFailure(
-                "production HXML missed its source-anchored HXC1000 boundary\n"
+                "production HXML missed its exact source-anchored HXC1001 boundary\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
         emitted_files = [path for path in Path(temporary).rglob("*") if path.is_file()]
         if emitted_files:
             raise AllSourcesFailure(
-                "HXC1000 left plausible generated artifacts:\n"
+                "HXC1001 left plausible generated artifacts:\n"
                 + "\n".join(f"- {path.relative_to(temporary)}" for path in emitted_files)
             )
 
@@ -143,7 +144,7 @@ def main() -> int:
         return 1
 
     print(
-        f"all-sources: OK: {len(owned_haxe_sources())} owned modules, macro/non-macro branches, and HXC1000 no-output boundary passed"
+        f"all-sources: OK: {len(owned_haxe_sources())} owned modules, macro/non-macro branches, and exact HXC1001 no-output boundary passed"
     )
     return 0
 

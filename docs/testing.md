@@ -6,18 +6,20 @@ and HXC-QA-007. The machine-readable join point is
 use [`fixture-case.schema.json`](specs/fixture-case.schema.json).
 
 The taxonomy describes evidence. It does not promote a seed into a supported
-compiler capability. In particular, direct HxcIR/C AST fixtures and independent
-native C/C++ inputs do not prove that typed Haxe currently emits C.
+compiler capability. Direct HxcIR/C AST fixtures and independent native C/C++
+inputs do not prove typed-Haxe lowering. The body-lowering suite is narrower
+real TypedExpr-to-HxcIR/C evidence, but its test translation-unit envelope does
+not prove production project, call, entry-point, runtime, or ABI emission.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including typed-input acceptance before lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through mapped M0 suites, including the honest `HXC1000` typed-input boundary |
-| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, and `hxc_ir` |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including the primitive body-lowering slice |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported-body and later `HXC1000` capability boundaries |
+| AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and body-lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Native seed only; no generated-Haxe runtime proof yet |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution plus native runtime seeds; no generated-Haxe `hxrt` proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | HxcIR side-effect oracle seed only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
@@ -99,6 +101,7 @@ The registered snapshot selectors are:
 - `project-emitter`
 - `hxc-ir`
 - `primitive-semantics`
+- `body-lowering`
 
 List them from the executable registry with:
 
@@ -109,10 +112,10 @@ python3 scripts/test/snapshots.py --list
 The `typed-ast` suite is the compile-backed frontend boundary. It captures real
 custom-target input, classifies modules/declarations/externs/typedefs/abstracts,
 metadata, fields, expressions, and the entry point, and compares forward,
-reversed, repeated, cold, and compiler-server reports. Its expected JSON is an
-unsupported-node inventory; it does not prove HxcIR or C lowering. The internal
-report and reverse-order defines are test/diagnostic seams, not user-facing
-compiler configuration. See [typed-AST input boundary](typed-ast-input.md).
+reversed, repeated, cold, and compiler-server reports. Its expected JSON is a
+pre-body-lowering inventory; it does not itself prove HxcIR or C lowering. The
+internal report and reverse-order defines are test/diagnostic seams, not
+user-facing compiler configuration. See [typed-AST input boundary](typed-ast-input.md).
 
 `test/primitive_semantics` is the focused positive/snapshot contract for
 ADR 0008. A typed initialization macro classifies real pinned-compiler fields
@@ -120,8 +123,18 @@ in portable and metal, while a second typed fixture renders the exact mapping,
 conversion, floating, nullability, and zero-runtime table twice. Its independent
 strict-C11 probe runs under available GCC and Clang at O0/O2. That probe proves
 the accepted algorithms and target prerequisites only; it is not generated
-Haxe output and does not advance the production `HXC1000` boundary. See the
+Haxe output. E2.T02 separately wires the admitted primitives into real bodies.
+See the
 [primitive semantic contract](primitive-semantics.md).
+
+`test/body_lowering` is the focused positive/negative/snapshot/runtime suite for
+the first real pinned-Haxe `TypedExpr -> HxcIR -> structural C` path. It renders
+twice, reverses discovery order, compares portable and metal, asserts exact
+source spans and shadow-safe finalized names, and compiles/runs both optional
+line-mapped and ordinary strict C11 at O0/O2. Unsupported bodies fail at the
+first typed node with `HXC1001`; supported production bodies stop later at
+`HXC1000` because E2.T03 owns function/call/entry-point emission. See
+[primitive function-body lowering](body-lowering.md).
 
 ## Examples are product proofs, not implicit tests
 
@@ -170,6 +183,7 @@ symlinks, unowned destinations, duplicate paths, malformed ownership JSON,
 non-canonical line endings, and premature lowered-program status before any
 partial write. Reflaxe invocation/activity metadata is validated separately.
 Its checked-in headers and C sources compile and run in the native matrix. They
-are built directly by a test macro, so the suite does not weaken or bypass the
-production `HXC1000` no-output boundary. See [project-emission
+are built directly by a test macro, so the suite remains separate from the
+production exact-`HXC1001` unsupported-body and later `HXC1000` no-output
+boundaries. See [project-emission
 boundary](project-emission.md).

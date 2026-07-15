@@ -1,9 +1,10 @@
 # Typed-AST input adapter fixtures
 
 This suite compiles real Haxe through the custom C target and inspects the
-implementation-only `reflaxe_c_typed_ast_report` inventory before the current
-`HXC1000` lowering boundary. It proves classification and deterministic input
-normalization; it does not claim that Haxe-to-C lowering exists.
+implementation-only `reflaxe_c_typed_ast_report` inventory immediately before
+body lowering. Its unsupported fixtures stop at exact source-positioned
+`HXC1001`. It proves classification and deterministic input normalization; the
+separate `test/body_lowering` suite owns TypedExpr-to-HxcIR/C evidence.
 
 The rich fixture covers primary and secondary module ownership, classes,
 interfaces, externs, enums, typedefs, abstracts, metadata, entry-point facts,

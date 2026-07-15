@@ -66,11 +66,14 @@ Unsupported source and compiler defects are deliberately different:
   typed construct whose lowering is not yet admitted.
 - `HXC9000` is `internal` / `internal-compiler-failure`: a compiler invariant
   or internal model is missing or malformed.
-- `HXC1000` is `compiler-capability`: the honest scaffold boundary before the
-  first production lowering slice, not an internal crash and not executable
-  output.
+- `HXC1000` is `compiler-capability`: the next honest unimplemented compiler
+  boundary after all admitted work has succeeded. For E2.T02, a supported main
+  body has reached validated HxcIR and structural C, but static-function, call,
+  executable entry-point, and project emission remain unavailable. It is not
+  an internal crash or executable output.
 
-Do not turn malformed internal IR into `HXC1001`, and do not use `HXC9000` to
+Do not turn malformed internal IR into `HXC1001`, use `HXC1000` for a typed node
+that should instead identify itself as unsupported source, or use `HXC9000` to
 hide a known unsupported source construct.
 
 ## Contributor workflow
@@ -79,6 +82,11 @@ Production Haxe code uses `CDiagnosticId` plus `CDiagnostic.error`,
 `CDiagnostic.fatal`, or another typed emission method. Raw `"HXCdddd: ..."`
 prefixes outside `CDiagnostic.hx` are rejected. Exception/report models may use
 `CDiagnostic.codeMessage` while retaining the typed ID.
+
+`CDiagnostic.fatal<T>` is the typed never-return adapter around Haxe's
+compiler API. Callers must not widen their surrounding compiler state to
+`Dynamic` merely because the upstream fatal primitive has an untyped return
+signature.
 
 Run:
 

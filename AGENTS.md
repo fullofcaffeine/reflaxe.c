@@ -111,8 +111,11 @@ missing-metadata or missing-adapter assumptions.
   malformed-input tests, and never let the untyped value escape that boundary.
   Existing upstream generic signatures are boundary facts, not precedent for
   untyped compiler internals.
-- Preserve fail-closed behavior. `HXC1000` is the deliberate scaffold result,
-  not a failure to hide, weaken, or report as successful compilation.
+- Preserve fail-closed behavior. Unsupported admitted-body paths report exact
+  source-positioned `HXC1001`; a body that lowers successfully still reaches
+  the deliberate `HXC1000` static-function/call/entry-point boundary until
+  E2.T03. Neither result is a failure to hide, weaken, or report as successful
+  compilation, and neither may leave a plausible production artifact.
 - Lower Haxe semantics into an explicit target-owned HxcIR before choosing C
   syntax when evaluation order, lifetime, ownership, cleanup, dispatch,
   boxing, or failure edges matter.
@@ -304,9 +307,11 @@ missing-metadata or missing-adapter assumptions.
   exhaustive. The runner automatically enumerates every repository-owned
   `src/**/*.hx` and `std/c/**/*.hx` module, checks explicit compiler-macro
   branches under Eval, and re-enters the real custom target to prove
-  source-anchored `HXC1000` with no plausible artifact. New owned Haxe sources
-  must stay visible to this gate; never replace its dynamic inventory with a
-  frozen module count or treat its Eval pass as a production carrier.
+  exact source-anchored `HXC1001` for its first unsupported call with no
+  plausible artifact. The supported-body fixture separately proves the later
+  `HXC1000` no-output boundary. New owned Haxe sources must stay visible to this
+  gate; never replace its dynamic inventory with a frozen module count or treat
+  its Eval pass as a production carrier.
 - The package-layout probe may flatten the pinned framework into a temporary
   classpath to prove installed resolution. It is not release assembly or
   permission to publish while `haxe_c-od2.5` remains unresolved.
@@ -345,9 +350,11 @@ missing-metadata or missing-adapter assumptions.
   input/report change updates `docs/typed-ast-input.md`, the fixture catalog,
   and `test/typed_ast/expected/`, then runs `npm run test:typed-ast`, the central
   snapshot check, and the exhaustive all-source gate.
-- Typed-input collection is not Haxe-to-HxcIR lowering. Preserve the
-  source-anchored `HXC1000` no-output boundary until E1.T07 implements and tests
-  actual semantic lowering.
+- Typed-input collection is not itself Haxe-to-HxcIR lowering. The E2.T02
+  parameter-free primitive body slice consumes retained raw `TypedExpr` values;
+  the inventory report remains a pre-lowering view. Preserve exact `HXC1001`
+  for the first unsupported body node and the later `HXC1000` no-output boundary
+  until static-function, call, and executable entry-point emission is admitted.
 
 ### Diagnostic boundary
 
@@ -377,6 +384,12 @@ missing-metadata or missing-adapter assumptions.
 
 ### HxcIR semantic boundary
 
+- For the E2.T02 body slice, lower real parameter-free typed function bodies as
+  `TypedExpr -> HxcIR -> HxcIRValidator -> structural CAST`; never emit C first
+  and reconstruct semantics afterward. Admit only typed primitive constants,
+  initialized locals/reads, cleanup-free nested blocks, and validated returns.
+  Function/local names still go through the complete `CSymbolRegistry` batch,
+  and optional source mapping uses structured line-directive nodes.
 - Treat HxcIR instruction arrays as semantic evaluation order. Never reorder
   them or fuse side-effecting instructions into a C expression whose operand or
   argument order is weaker. Canonicalization may sort only collections that the

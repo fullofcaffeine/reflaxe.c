@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "typed-body-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-004",
+    "HXC-COMP-002",
+    "HXC-SEM-022"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/HaxeSourceSpan.hx",
+    "test/body_lowering/BodyLoweringProbe.hx",
+    "test/body_lowering/fixtures/positive/BodyFixture.hx",
+    "test/body_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../body_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/body-lowering",
+    "timeoutSeconds": 90,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^body-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/body_lowering/expected/body.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/body_lowering/expected/body.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

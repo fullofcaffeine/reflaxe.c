@@ -3,9 +3,10 @@
 `CSymbolRegistry` is the target-owned naming boundary between normalized Haxe
 semantics and `CIdentifier`. It assigns names as one per-compilation batch and
 produces the structural schema-1 payload that the production emitter will write
-as `hxc.symbols.json`. E1.T07 still owns that file emission; the current
-`test/symbol_registry` report is executable naming evidence, not generated
-application C.
+as `hxc.symbols.json`. The E2.T02 body slice now uses it for real typed functions
+and lexical locals; production symbol-file/project emission remains a later
+boundary. The focused `test/symbol_registry` report is naming evidence, not
+generated application C.
 
 ## Identity and determinism
 
@@ -98,8 +99,9 @@ whether collision resolution was required. A separate collision ledger groups
 the readable base with both source and resolved names.
 
 Naming is a pure compile-time operation. It allocates no generated-program
-object, selects no `hxrt` feature, emits no C by itself, and does not imply that
-Haxe-to-HxcIR or HxcIR-to-C lowering exists. Verify the contract with:
+object, selects no `hxrt` feature, and emits no C by itself. E2.T02 consumes its
+finalized names after validated HxcIR for the admitted body fixture, without
+changing those properties. Verify the contract with:
 
 ```sh
 npm run test:symbol-registry

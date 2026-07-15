@@ -30,7 +30,8 @@
         "typed-ast",
         "symbol-registry",
         "hxc-ir",
-        "primitive-semantics"
+        "primitive-semantics",
+        "body-lowering"
       ]
     },
     {
@@ -51,7 +52,8 @@
         "typed-ast",
         "symbol-registry",
         "project-emitter",
-        "hxc-ir"
+        "hxc-ir",
+        "body-lowering"
       ]
     },
     {
@@ -90,7 +92,8 @@
         "symbol-registry",
         "project-emitter",
         "hxc-ir",
-        "primitive-semantics"
+        "primitive-semantics",
+        "body-lowering"
       ]
     },
     {
@@ -104,7 +107,8 @@
         "strict compiler and sanitizer results where eligible"
       ],
       "suiteIds": [
-        "native-smoke"
+        "native-smoke",
+        "body-lowering"
       ]
     },
     {
@@ -163,8 +167,8 @@
       "status": "active",
       "assertions": [
         "all owned Haxe sources and macro branches type-check under Eval",
-        "production custom-target activation stops at source-anchored HXC1000",
-        "HXC1000 leaves no generated artifact"
+        "production custom-target activation stops at exact source-anchored HXC1001 for the first unsupported typed call",
+        "HXC1001 leaves no generated artifact"
       ]
     },
     {
@@ -183,7 +187,8 @@
       "assertions": [
         "custom-target lifecycle and platform snapshot",
         "configuration conflicts and legacy Cross fail closed",
-        "compiler-server and package-layout isolation"
+        "compiler-server and package-layout isolation",
+        "production body lowering reports the first unsupported call as exact source-anchored HXC1001 without output"
       ]
     },
     {
@@ -239,7 +244,7 @@
       "assertions": [
         "complete typed modules, declarations, ownership, metadata, fields, and entry point are classified",
         "normalized inventory is byte-identical across captured input order and compiler-server requests",
-        "the implementation-only report reaches source-anchored HXC1000 without emitting C"
+        "the implementation-only report precedes body lowering, which reaches exact source-anchored HXC1001 without emitting C"
       ]
     },
     {
@@ -357,6 +362,27 @@
       ]
     },
     {
+      "id": "body-lowering",
+      "directory": "test/body_lowering",
+      "runner": [
+        "python3",
+        "test/body_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "real pinned-compiler TypedExpr constants, locals, primitive blocks, and returns lower through validated HxcIR before structural C",
+        "local names are deterministic and shadowing-safe across discovery order while unsupported nodes emit exact source-positioned HXC1001",
+        "portable and metal produce identical runtime-free strict C11 bodies with optional structured #line directives",
+        "available local and separately required GCC/Clang CI lanes compile and execute both mapped and unmapped generated-body fixtures at O0 and O2 without warnings"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -463,6 +489,17 @@
           "docs/specs/primitive-semantics.json"
         ],
         "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "body-lowering",
+        "expectedRoots": [
+          "test/body_lowering/expected"
+        ],
+        "formats": [
+          "c",
+          "hxcir",
           "json"
         ]
       }

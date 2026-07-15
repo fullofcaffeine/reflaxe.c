@@ -23,8 +23,8 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> validates semantic contract
-  -> lowers typed AST to HxcIR
+  -> current E2.T02: CBodyLowering maps admitted typed main bodies to HxcIR
+  -> validates HxcIR before CBodyEmitter constructs structural C
   -> runs analyses and HxcIR passes
   -> lowers to C AST
   -> runs C passes
@@ -113,8 +113,9 @@ types, and metadata without serializing raw host positions. The exact
 Reflaxe-injected build-cache hook is excluded from the normalized metadata view
 because it appears only after cache reuse; source-authored metadata and the raw
 declaration remain intact. Forward/reversed input and cold/compiler-server
-fixtures are byte-identical. This boundary still performs no Haxe-to-HxcIR
-lowering, so production compilation deliberately ends at `HXC1000`.
+fixtures are byte-identical. The inventory itself still performs no semantic
+lowering; its report is emitted immediately before the E2.T02 body pipeline
+consumes the retained raw typed expression.
 
 `CDiagnostic` is the single target-owned diagnostic boundary. Its typed ID
 registry is checked against the schema-2 catalog, while `CDiagnosticRecord`
@@ -131,9 +132,24 @@ ordered instructions, edge arguments, and cleanup steps with repository-relative
 source spans. `HxcIRValidator` rejects missing targets/results/terminators,
 use-before-definition, illegal lifetime transitions, malformed cleanup paths,
 primitive runtime fallback, or checked/nullable unwraps without a failure
-edge. Unsupported typed nodes use source-positioned `HXC1001`; they never
-become an opaque value. Typed-Haxe-to-HxcIR and HxcIR-to-C lowering are still
-absent, so the production compiler remains at its `HXC1000` boundary.
+edge. It also checks constant/result and return types plus load, initialization,
+store, and address types whenever the place type is structurally resolvable;
+the E2.T02 slice uses local places. Unsupported typed nodes use exact
+source-positioned `HXC1001`; they never become an opaque value. E2.T02 now
+lowers parameter-free primitive constants, initialized locals/reads, nested
+cleanup-free blocks, and returns from real typed Haxe through validated HxcIR
+to structural C. A supported body
+reaches the later `HXC1000` static-function/call/entry-point boundary with no
+production artifact. See [primitive function-body lowering](body-lowering.md).
+
+`CBodyLowering` builds the complete admitted HxcIR function set before sealing
+the per-compilation symbol registry. Function requests use translation-unit
+ordinary namespace; locals use the finalized function scope plus lexical source
+ordinals, so shadowing is stable without deriving C identifiers from Haxe text.
+`CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
+and builds strict structural statements plus optional typed `#line` nodes. It
+cannot select `hxrt`; the generated test translation unit is runtime-free in
+both portable and metal.
 
 The type model normalizes base specifiers and keeps them separate from a
 grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and
@@ -158,8 +174,9 @@ explicit extension nodes and require an explicit GNU or Clang mode. The
 expression/statement goldens. The latter includes a literal 6×6 ordered
 precedence-family matrix, every unary and binary operator, adversarial escaping,
 and all statement shapes. Required GCC and Clang lanes compile and execute both
-checked-in C files with no `hxrt` selection. This is a direct AST/printer proof
-only; Haxe-to-HxcIR-to-C lowering remains fail-closed.
+checked-in C files with no `hxrt` selection. Those broad printer fixtures remain
+direct AST proofs; the separate body suite exercises only the admitted real
+TypedExpr-to-HxcIR/C subset. Broader lowering remains fail-closed.
 
 `CSymbolRegistry` owns the boundary before any finalized name reaches that C
 AST. It batch-finalizes path-independent semantic requests against C's ordinary,
@@ -187,11 +204,12 @@ defines are capability facts: `target.sys`, `target.threaded`, and
 The exact Haxe 5.0.0-preview.1 carrier installs a static, scalar-Unicode
 `PlatformConfig`. Hosted owns `target.sys`; other environment and concurrency
 facts remain disabled until adapters prove them. The lifecycle snapshot uses
-that real custom target, and full registration deliberately reaches `HXC1000`
-without output while lowering is absent. Legacy Cross remains an `HXC0003`
-negative because relabeling its UTF-16 state is not an architectural substitute.
-Eval remains only the future CLI bootstrap host, an oracle, and a non-C
-isolation target.
+that real custom target. Full registration now reports exact `HXC1001` at the
+bootstrap fixture's first unsupported typed call without output; a completely
+admitted primitive body reaches the later `HXC1000` no-output boundary. Legacy
+Cross remains an `HXC0003` negative because relabeling its UTF-16 state is not
+an architectural substitute. Eval remains only the future CLI bootstrap host,
+an oracle, and a non-C isolation target.
 
 Strict ISO C11 without extensions is the generated-source, runtime, fixture, and
 public-header floor. C17 preserves the same contract; C23 syntax remains an
