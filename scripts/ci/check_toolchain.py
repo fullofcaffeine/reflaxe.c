@@ -14,8 +14,13 @@ from pathlib import Path, PurePosixPath
 from typing import Any, Iterable
 
 
-HAXE_VERSION = "4.3.7"
-HAXE_REVISION = "e0b355c6be312c1b17382603f018cf52522ec651"
+HAXE_VERSION = "5.0.0-preview.1"
+HAXE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
+HAXE_ARTIFACTS = {
+    "linux64": "sha256:57710c7219c2d23bbd490cc5ed49e43686a946ab3a4910a7983a9d15fb078732",
+    "macUniversal": "sha256:aeb033a1500ba971d0428db5bd8ef58a32266f900edcfc367b6c6851213d5d61",
+    "windows64": "sha256:c223025518c6a527c66bd6c9ca51b4eff848ffcac97fc6c1833d1338cef1622e",
+}
 REFLAXE_VERSION = "4.0.0-beta"
 REFLAXE_REVISION = "73a983112e039daad46b37912ab238df6bf0cf53"
 REFLAXE_GIT_TREE = "05ab4abc670b6e3ed5424e78c622b92979b5affb"
@@ -152,9 +157,13 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     if not isinstance(haxe, dict) or haxe.get("version") != HAXE_VERSION:
         errors.append(f"toolchain lock must pin Haxe {HAXE_VERSION}")
     if not isinstance(haxe, dict) or haxe.get("sourceRevision") != HAXE_REVISION:
-        errors.append("toolchain lock must pin the Haxe 4.3.7 tag revision")
+        errors.append("toolchain lock must pin the Haxe 5 preview tag revision")
+    if not isinstance(haxe, dict) or haxe.get("releaseChannel") != "preview":
+        errors.append("toolchain lock must identify the accepted Haxe preview channel")
+    if not isinstance(haxe, dict) or haxe.get("artifacts") != HAXE_ARTIFACTS:
+        errors.append("toolchain lock Haxe artifact digests do not match the official release")
     if haxerc != {"version": HAXE_VERSION, "resolveLibs": "scoped"}:
-        errors.append(".haxerc must pin Haxe 4.3.7 with scoped library resolution")
+        errors.append(".haxerc must pin Haxe 5.0.0-preview.1 with scoped library resolution")
 
     reflaxe = lock.get("reflaxe", {})
     expected_reflaxe = {
@@ -228,6 +237,32 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
             errors.append("reflaxe.c source library contains a caller-relative classpath")
     check_macro_order(target_hxml, errors, allow_classpaths=True)
     check_macro_order(root / "extraParams.hxml", errors, allow_classpaths=False)
+
+    custom_target_files = {
+        root / "src/c/Init.hx": (
+            "class Init",
+            "reflaxe.c.TargetPlatform.configure()",
+        ),
+        root / "src/reflaxe/c/TargetPlatform.hx": (
+            "Compiler.setPlatformConfiguration(config)",
+            "staticTypeSystem: true",
+            "usesUtf16: false",
+            "supportsUnicode: true",
+            "supportsThreads: false",
+            "supportsAtomics: false",
+        ),
+    }
+    for path, required_snippets in custom_target_files.items():
+        try:
+            contents = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeError) as error:
+            errors.append(f"cannot read {path.relative_to(root)}: {error}")
+            continue
+        for snippet in required_snippets:
+            if snippet not in contents:
+                errors.append(
+                    f"{path.relative_to(root)} must retain custom-target contract `{snippet}`"
+                )
 
     if require_tools:
         if command_output(["haxe", "-version"], errors, root) != HAXE_VERSION:

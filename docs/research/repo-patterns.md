@@ -46,7 +46,7 @@ Not every target has every directory, but this is the stable family shape.
 
 ### Haxe pin
 
-All supplied target roots pin:
+The supplied sibling target roots pin:
 
 ```json
 {
@@ -55,7 +55,12 @@ All supplied target roots pin:
 }
 ```
 
-The C scaffold follows that exact initial contract.
+The C scaffold initially followed that contract. Its Haxe 4 experiment exposed
+a target-family difference: Cross installs unremovable UTF-16 platform facts,
+while C's accepted String contract is scalar-indexed UTF-8. The production C
+scaffold therefore pins the official `5.0.0-preview.1` release and uses its
+custom-target platform hook. The divergence is narrow, exact, and
+compile-tested rather than a general Haxe 5 compatibility claim.
 
 For the M0 implementation, Lix is pinned to npm artifact `17.0.2` and Reflaxe
 is vendored from commit `73a983112e039daad46b37912ab238df6bf0cf53`.
@@ -95,7 +100,7 @@ The self-referential target HXML consistently:
 
 1. adds `src/`;
 2. adds `std/`;
-3. adds the target `_std` root after `std/` so it wins effective Haxe 4 precedence;
+3. adds the target `_std` root after `std/` so it wins effective Haxe classpath precedence;
 4. loads `-lib reflaxe`;
 5. defines a development library version;
 6. calls bootstrap and init macros.
@@ -130,22 +135,29 @@ Concrete responsibilities observed:
 - call `ReflectCompiler.Start()`;
 - call `ReflectCompiler.AddCompiler(...)` once.
 
-The pinned C experiment exposes a family-level trap beneath that common shape.
+The original pinned C experiment exposed a family-level trap beneath that common shape.
 On Haxe 4.3.7, an output-define Reflaxe compiler with no native Haxe target uses
 the compiler's `Cross` platform configuration. `Cross` installs
 `target.name=cross`, `target.utf16`/`utf16`, `target.sys`, and static facts
 before initialization macros. Sibling targets may compensate with extensive
 `_std` overrides, but that does not remove the global conditionals seen by
-portable application source. C therefore records the raw carrier, snapshots
-typed upstream branches, and fails closed instead of copying output-define
-activation as proof of correct platform semantics.
+portable application source. C therefore retained this case as a negative
+instead of copying output-define activation as proof of correct platform
+semantics.
 
-The exact Haxe source authority at the locked revision is
+The exact Haxe 4 source authority used for that negative is
 `src/context/common.ml` (`default_config` and `init_platform`) plus
 `std/haxe/macro/Compiler.hx` and `Context.hx`: the first installs the Cross
 facts, the second exposes `define` but no removal operation, and the latter
-documents `getDefines()` as a non-mutable copy. Re-run this source/API audit on
-every Haxe pin change.
+documents `getDefines()` as a non-mutable copy.
+
+The accepted production resolution pins Haxe `5.0.0-preview.1` at revision
+`2c1e544e0a2c7524ef4c8e103f1b0580362ea538`. Its custom-target protocol invokes
+`c.Init.init()` before platform finalization, allowing
+`Compiler.setPlatformConfiguration(...)` to establish static, scalar-Unicode,
+environment-derived C facts. `CompilerInit` then derives the Reflaxe
+`c_output` transport from that custom-target output. Re-run both the old Cross
+audit and the Haxe 5 custom-target/API audit on every Haxe pin change.
 
 The C target adopts:
 
@@ -303,13 +315,13 @@ one scalar-indexed Haxe model, keep byte operations explicitly typed, and avoid
 a second representation for `UnicodeString`. ADR 0004 adopts that contract for
 C and adds deterministic malformed-input and `CString` boundary rules.
 
-The structural M0 probe confirms that Eval plus the guarded C lifecycle selects
-the root Haxe 4.3.7 `String.hx`, `StringTools.hx`, and `UnicodeString.hx` with no
-UTF-16 helper/adaptor fields. Eval is only an oracle and lifecycle carrier: its
-`target.sys` and `target.threaded` flags are not C capability evidence. The
-actual Haxe 4 `Cross` branch is rejected because its UTF-16 flags cannot be
-removed through `haxe.macro.Compiler`; decision `haxe_c-od2.6` owns the
-production carrier rather than moving this mismatch into String lowering.
+The structural M0 probe now confirms that the real Haxe 5 `CustomTarget(c)`
+selects the upstream `String.hx`, `StringTools.hx`, and `UnicodeString.hx`
+scalar branches with no UTF-16 helper/adaptor fields. It also snapshots the
+target-owned platform configuration for hosted and freestanding environments.
+Eval remains an independent oracle and future CLI bootstrap host, not a
+user-program carrier. The Haxe 4 Cross branch remains rejected because its
+UTF-16 flags cannot be removed through its public macro API.
 
 ## Output management
 

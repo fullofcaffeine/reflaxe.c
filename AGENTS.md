@@ -167,6 +167,11 @@ assumption.
   `vendor/reflaxe` as one reviewed dependency contract. Never float Haxe,
   Reflaxe, or Lix versions and never refresh one pin without its checksums,
   provenance, notices, and lifecycle evidence.
+- The production typing carrier is exactly Haxe `5.0.0-preview.1` at the
+  revision and official artifact hashes in `toolchain-lock.json`. Its custom-
+  target `PlatformConfig` API is preview surface. A pin change requires a source
+  API audit, intentional platform/stdlib snapshot review, full package/server
+  probes, provenance updates, and ADR review; do not broaden the version range.
 - The reviewed Reflaxe bundle is compiler-only source. It must not appear in
   generated C, become an `hxrt` feature, or be described as a generated-program
   runtime dependency. Do not patch it silently; document target-required patches
@@ -178,24 +183,29 @@ assumption.
   and `CompilerBootstrap.Start()` must precede `CompilerInit.Start()`. Scoped
   source-checkout paths use `${SCOPE_DIR}` and precedence-sensitive `_std` roots
   must exist on the initial classpath rather than being injected late.
-- Only `c_output=<non-empty directory>` or real custom-target identity activates
-  the compiler. A caller's `-D c` is not activation. On valid activation expose
-  `c`, `reflaxe_c`, and `target.unicode`; reject `target.utf16` and do not invent
-  other target capability defines.
+- Production builds use `--custom-target c=<output>`. Haxe must invoke
+  `c.Init.init()` and `TargetPlatform.configure()` before target facts are
+  finalized. Validate a static, scalar-Unicode platform snapshot before
+  registration; derive `target.sys` from the resolved environment and advertise
+  no threading or atomics until the owning adapter has evidence.
+- `c_output` is the internal Reflaxe output transport and legacy early detector.
+  Derive it from `Compiler.getOutput()`; if explicitly supplied it must
+  normalize to the same path. `c_output` alone, `-D c`, or a rewritten
+  `target.name` is not a supported production carrier. On valid activation
+  expose `c`, `reflaxe_c`, and `target.unicode`; reject `target.utf16` and do not
+  invent other target capability defines.
 - `reflaxe_c_lifecycle_probe` is an internal test seam that avoids entering the
-  still-incomplete adapter during E0 bootstrap tests. It uses Haxe Eval as a
-  lifecycle carrier; its `target.sys`/`target.threaded` observations are Eval
-  facts, not C capabilities. Never document it as a user option, copy its host
-  facts into a manifest, or let it bypass a production compilation.
-- Haxe 4.3.7 reserves command-line `target.*` flags. Tests may use
-  `TargetPrelude` only to emulate compiler-owned facts; application or build
-  documentation must not recommend `-D target.name=c`.
-- Haxe 4.3.7's real Reflaxe `Cross` carrier predefines
-  `target.name=cross`, `target.utf16`, and `utf16` before macros, and its public
-  macro API has no undefine operation. Until decision `haxe_c-od2.6` supplies a
-  conforming production carrier, preserve the source-anchored `HXC0003`
-  failure. Never relabel Cross by changing only `target.name`, patch upstream
-  conditionals ad hoc, or weaken the UTF-8 scalar contract to make E0.T04 pass.
+  incomplete lowering boundary during E0 bootstrap tests. It must retain the
+  real `CustomTarget(c)` platform and may skip only Reflaxe registration/
+  lowering. Never document it as a user option or let it bypass a production
+  compilation claim.
+- Eval is only a target-neutral future `hxc` host, a differential oracle, and a
+  non-C isolation test. It is never a user-program production carrier, and its
+  host capabilities must never be copied into C manifests.
+- Legacy Reflaxe `Cross` predefines `target.name=cross`, `target.utf16`, and
+  `utf16`. Preserve its source-anchored `HXC0003` regression failure. Never
+  relabel Cross, patch upstream conditionals ad hoc, maintain an implicit Haxe
+  fork, or weaken the UTF-8 scalar contract to make bootstrap work.
 - Keep `test/bootstrap/expected/target-contract.json` structural and
   path-stable. It must prove cold/package/server behavior, exactly-once counts,
   public versus internal defines, and the typed upstream
@@ -252,9 +262,10 @@ assumption.
 - Strict ISO C11 with no extensions is the normative generated-source, runtime,
   fixture, and public-header floor. C17 preserves that contract; C23 internal
   syntax remains experimental and cannot silently alter semantics or ABI.
-- Direct Haxe/Reflaxe builds activate through `c_output=<directory>` and expose
-  the public `c` target conditional. Use `target.name=c` when available,
-  `target.unicode` without `target.utf16`, and set `target.sys`,
+- Direct Haxe/Reflaxe builds activate through
+  `--custom-target c=<directory>` and expose the public `c` target conditional.
+  The compiler owns `target.name=c`; use `target.unicode` without
+  `target.utf16`, and set `target.sys`,
   `target.threaded`, or `target.atomics` only from proven adapter capabilities.
   Do not use `reflaxe_c` as the recommended application portability condition.
 - A platform support claim names the whole environment/runtime/architecture/

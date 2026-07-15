@@ -36,6 +36,7 @@ class BootstrapProbe {
 	#end
 
 	static function main():Void {
+		#if target.sys
 		Sys.println([
 			"bootstrap=" + bootstrap,
 			"init=" + initialized,
@@ -44,5 +45,6 @@ class BootstrapProbe {
 			"unicode=" + unicode,
 			"utf16=" + utf16
 		].join(" "));
+		#end
 	}
 }

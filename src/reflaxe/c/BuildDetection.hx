@@ -18,7 +18,7 @@ class BuildDetection {
 			return true;
 		}
 
-		#if (haxe >= version("5.0.0"))
+		#if (haxe >= version("5.0.0-preview.1"))
 		final configuration = Compiler.getConfiguration();
 		if (configuration != null) {
 			switch (configuration.platform) {

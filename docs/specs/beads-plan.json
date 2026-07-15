@@ -221,7 +221,7 @@
         "§25 M0",
         "ADR 0007"
       ],
-      "outcome": "Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.",
+      "outcome": "Create a reproducible source-checkout and package build using the exact accepted Haxe 5 custom-target carrier and a known Reflaxe revision/version.",
       "acceptance": [
         "Fresh checkout resolves dependencies without relying on the caller's current working directory.",
         "CompilerBootstrap runs before CompilerInit and only for C builds.",
@@ -236,7 +236,7 @@
       ],
       "effort": "medium",
       "type": "task",
-      "description": "Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.\n\nPRD: §2.2, §2.3, §25 M0"
+      "description": "Create a reproducible source-checkout and package build using Haxe 5.0.0-preview.1, its locked platform artifacts, and a known Reflaxe revision/version.\n\nPRD: §2.2, §2.3, §25 M0"
     },
     {
       "key": "E0.T04",

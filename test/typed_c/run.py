@@ -35,19 +35,19 @@ def compile_fixture(
         command.extend(["--connect", connect])
     command.extend(
         [
-        "-cp",
-        str(FIXTURES / directory),
-        "-lib",
-        "reflaxe.c",
-        "-D",
-        "reflaxe_c_lifecycle_probe",
-        "-D",
-        "c_output=typed-c-contract-probe",
+            "-cp",
+            str(FIXTURES / directory),
+            "-lib",
+            "reflaxe.c",
+            "-D",
+            "reflaxe_c_lifecycle_probe",
         ]
     )
     if report:
         command.extend(["-D", "reflaxe_c_contract_report"])
-    command.extend(["-main", main, "--interp"])
+    command.extend(
+        ["-main", main, "--custom-target", "c=typed-c-contract-probe"]
+    )
     environment = os.environ.copy()
     if connect is None:
         environment["HAXE_NO_SERVER"] = "1"

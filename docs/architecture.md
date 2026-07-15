@@ -57,23 +57,25 @@ A compilation produces multiple file categories and sidecar reports. `Manual` le
 
 ## Target and native baseline
 
-The Haxe target identity is `c`: `c_output=<directory>` is the reliable Haxe 4
-bootstrap/output signal, `target.name=c` is used where custom-target plumbing
-supplies it, and initialization exposes the `c` conditional. `reflaxe_c` is an
-implementation compatibility marker, not the application portability contract.
+The Haxe target identity is `c`: production typing uses
+`--custom-target c=<directory>`, Haxe automatically runs `c.Init.init()`, and
+the target installs its platform configuration before standard-library and user
+typing. Initialization exposes the `c` conditional. `reflaxe_c` is an
+implementation compatibility marker, not the application portability contract;
+`c_output` is derived internal Reflaxe transport, not an application identity.
 
 The target enables `target.unicode` without `target.utf16`. Other platform
 defines are capability facts: `target.sys`, `target.threaded`, and
 `target.atomics` are enabled only by adapters that implement them.
 
-The pinned Haxe 4.3.7 implementation currently has a verified carrier gap.
-Its default Reflaxe `Cross` configuration installs `target.utf16`/`utf16`
-before macros and offers no public undefine operation. `CompilerInit` therefore
-normalizes identity and scalar-Unicode branches only under the explicit
-lifecycle fixture, while a real Cross request fails with `HXC0003`. Decision
-`haxe_c-od2.6` blocks production bootstrap and String work; relabeling Cross or
-copying Eval's `target.sys`/`target.threaded` observations is not an
-architectural substitute.
+The exact Haxe 5.0.0-preview.1 carrier installs a static, scalar-Unicode
+`PlatformConfig`. Hosted owns `target.sys`; other environment and concurrency
+facts remain disabled until adapters prove them. The lifecycle snapshot uses
+that real custom target, and full registration deliberately reaches `HXC1000`
+without output while lowering is absent. Legacy Cross remains an `HXC0003`
+negative because relabeling its UTF-16 state is not an architectural substitute.
+Eval remains only the future CLI bootstrap host, an oracle, and a non-C
+isolation target.
 
 Strict ISO C11 without extensions is the generated-source, runtime, fixture, and
 public-header floor. C17 preserves the same contract; C23 syntax remains an

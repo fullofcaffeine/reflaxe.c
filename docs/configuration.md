@@ -24,26 +24,25 @@ config provenance in `hxc.manifest.json`, and secret-free reproducible reports.
 
 ## Target activation and native tuple
 
-Direct Haxe/HXML builds use the Reflaxe output define:
+Direct Haxe/HXML builds use Haxe's custom-target output:
 
 ```text
--D c_output=<generated-directory>
+--custom-target c=<generated-directory>
 ```
 
-It is both the output location and the reliable Haxe 4 bootstrap signal. Once
-activated, compiler initialization exposes `c` / `target.name=c`, enables
-`target.unicode`, and leaves `target.utf16` disabled. Application source should
-use `#if c`, not the path-bearing `c_output` transport or the
-implementation-owned `reflaxe_c` compatibility marker.
+The exact pinned Haxe 5 compiler invokes `c.Init.init()` first. That hook
+installs a static, scalar-Unicode platform configuration; initialization then
+exposes `c` / `target.name=c`, retains `target.unicode`, and leaves
+`target.utf16` disabled. Application source should use `#if c`, not the
+path-bearing internal `c_output` transport or the implementation-owned
+`reflaxe_c` compatibility marker.
 
-The current M0 implementation proves that logical contract only with the
-test-only Eval lifecycle carrier. Direct `-D target.name=c` is not a user
-escape hatch: Haxe 4.3.7 reserves the `target.*` namespace. Its production
-Reflaxe carrier is `Cross`, which predefines `target.utf16`/`utf16`; because an
-initialization macro cannot remove those flags, reflaxe.c rejects that carrier
-with `HXC0003` until decision `haxe_c-od2.6` supplies a conforming production
-configuration. `-D c`, the lifecycle-probe define, or a target-name-only
-rewrite must never bypass this guard.
+`CompilerInit` derives `c_output` from the custom-target output because the
+reviewed Reflaxe registration API still consumes that define. An expert may
+supply the same normalized value explicitly, but a mismatch is `HXC0003` and
+`-D c_output=...` by itself is not a conforming production invocation.
+Likewise, `-D c`, a lifecycle-probe define, Eval, legacy Cross, or a target-name-
+only rewrite must never bypass the platform guard.
 
 The build plan resolves a native tuple rather than assuming an OS is sufficient:
 
@@ -58,10 +57,11 @@ run evidence remain distinct in manifests and release reports. The accepted 1.0
 lanes and tiers are in
 [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md).
 
-Target-contract snapshots include raw carrier observations for auditability.
-In particular, `target.sys` and `target.threaded` in the Eval lifecycle fixture
-describe Eval, not C. They cannot be copied into a manifest or used to claim a
-hosted C adapter capability.
+Target-contract snapshots include the complete custom-target platform
+configuration for auditability. Hosted currently enables `sys`; freestanding,
+WASI, and Emscripten do not until their adapters prove the relevant surface.
+Threads and atomics remain false in every M0 environment. Eval observations are
+oracle/host facts and cannot be copied into a C manifest.
 
 ## Profile and runtime resolution
 

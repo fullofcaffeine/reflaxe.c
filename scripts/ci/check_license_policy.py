@@ -300,10 +300,10 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
     haxe_compiler = component_map.get("haxe-compiler", {})
     haxe_stdlib = component_map.get("haxe-standard-library", {})
     for component_id, component in (("haxe-compiler", haxe_compiler), ("haxe-standard-library", haxe_stdlib)):
-        if component and component.get("version") != "4.3.7":
-            errors.append(f"{component_id} version must be 4.3.7")
-        if component and component.get("sourceRevision") != "e0b355c6be312c1b17382603f018cf52522ec651":
-            errors.append(f"{component_id} must resolve the Haxe 4.3.7 tag commit")
+        if component and component.get("version") != "5.0.0-preview.1":
+            errors.append(f"{component_id} version must be 5.0.0-preview.1")
+        if component and component.get("sourceRevision") != "2c1e544e0a2c7524ef4c8e103f1b0580362ea538":
+            errors.append(f"{component_id} must resolve the Haxe 5.0.0-preview.1 tag commit")
 
     raw_runtime = data.get("runtimeDependencies")
     runtime_dependencies: list[Any] = raw_runtime if isinstance(raw_runtime, list) else []

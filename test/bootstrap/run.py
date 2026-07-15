@@ -20,9 +20,6 @@ FIXTURE = Path(__file__).resolve().parent
 EXPECTED_TARGET_CONTRACT = FIXTURE / "expected/target-contract.json"
 PROBE_DEFINE = "reflaxe_c_lifecycle_probe"
 TARGET_REPORT_PREFIX = "HXC_TARGET_CONTRACT="
-C_EXPECTED = "bootstrap=1 init=1 c=1 reflaxe_c=1 unicode=1 utf16=0"
-# The Eval host already exposes target.unicode. Isolation is proven by the
-# bootstrap/init/public/implementation markers, not by clearing host facts.
 NON_C_EXPECTED = "bootstrap=0 init=0 c=0 reflaxe_c=0 unicode=1 utf16=0"
 CALLER_C_EXPECTED = "bootstrap=0 init=0 c=1 reflaxe_c=0 unicode=1 utf16=0"
 
@@ -92,25 +89,35 @@ def extract_target_report(
     return json.loads(reports[0])
 
 
+def assert_target_contract(
+    result: subprocess.CompletedProcess[str], expected: dict[str, object], label: str
+) -> None:
+    actual = extract_target_report(result, label)
+    if actual != expected:
+        raise ProbeFailure(
+            f"{label} changed the target-contract snapshot\n"
+            f"expected:\n{json.dumps(expected, indent=2, sort_keys=True)}\n"
+            f"actual:\n{json.dumps(actual, indent=2, sort_keys=True)}"
+        )
+
+
 def source_command(
     *,
     c_build: bool,
     duplicate_macros: bool = False,
-    prelude_defines: tuple[tuple[str, str | None], ...] = (),
     direct_defines: tuple[str, ...] = (),
     target_report: bool = False,
-    carrier: str = "eval",
+    carrier: str | None = None,
 ) -> list[str]:
+    # The production C path is Haxe's custom target. Eval remains useful only
+    # for proving that loading the library does not mutate unrelated builds.
+    if carrier is None:
+        carrier = "custom" if c_build else "eval"
     command = [
         development_tool("haxe"),
         "-cp",
         str(FIXTURE),
     ]
-    for name, value in prelude_defines:
-        value_argument = "null" if value is None else json.dumps(value)
-        command.extend(
-            ["--macro", f"TargetPrelude.define({json.dumps(name)}, {value_argument})"]
-        )
     command.extend(
         [
             "-lib",
@@ -119,7 +126,7 @@ def source_command(
             PROBE_DEFINE,
         ]
     )
-    if c_build:
+    if c_build and carrier != "custom" and carrier != "custom-no-output":
         command.extend(["-D", "c_output=bootstrap-probe-output"])
     for define in direct_defines:
         command.extend(["-D", define])
@@ -137,6 +144,10 @@ def source_command(
     command.extend(["-main", "BootstrapProbe"])
     if carrier == "eval":
         command.append("--interp")
+    elif carrier == "custom":
+        command.extend(["--custom-target", "c=bootstrap-probe-output"])
+    elif carrier == "custom-no-output":
+        command.extend(["--custom-target", "c"])
     elif carrier == "cross":
         command.append("--no-output")
     elif carrier == "js":
@@ -146,8 +157,25 @@ def source_command(
     return command
 
 
+def production_command(output: Path) -> list[str]:
+    return [
+        development_tool("haxe"),
+        "-cp",
+        str(FIXTURE),
+        "-lib",
+        "reflaxe.c",
+        "--macro",
+        "TargetContractProbe.install()",
+        "-main",
+        "BootstrapProbe",
+        "--custom-target",
+        f"c={output}",
+    ]
+
+
 def check_source_checkout() -> None:
     nested_cwd = FIXTURE
+    expected = json.loads(EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8"))
     non_c = run(
         source_command(c_build=False),
         cwd=nested_cwd,
@@ -156,55 +184,49 @@ def check_source_checkout() -> None:
     assert_probe(non_c, NON_C_EXPECTED, "non-C isolation probe")
 
     c_build = run(
-        source_command(c_build=True),
+        source_command(c_build=True, target_report=True),
         cwd=nested_cwd,
-        label="C activation probe",
+        label="custom-target C activation probe",
     )
-    assert_probe(c_build, C_EXPECTED, "C activation probe")
+    assert_target_contract(c_build, expected, "custom-target C activation probe")
 
     duplicate = run(
-        source_command(c_build=True, duplicate_macros=True),
+        source_command(c_build=True, duplicate_macros=True, target_report=True),
         cwd=nested_cwd,
         label="exactly-once probe",
     )
-    assert_probe(duplicate, C_EXPECTED, "exactly-once probe")
+    assert_target_contract(duplicate, expected, "exactly-once probe")
 
 
 def check_target_identity_and_stdlib_branches() -> None:
     expected = json.loads(EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8"))
 
-    c_output = run(
+    custom_target = run(
         source_command(c_build=True, target_report=True),
         cwd=FIXTURE,
-        label="c_output target-contract probe",
+        label="custom-target contract probe",
     )
-    assert_probe(c_output, C_EXPECTED, "c_output target-contract probe")
-    if extract_target_report(c_output, "c_output target-contract probe") != expected:
-        raise ProbeFailure("c_output target-contract snapshot drifted")
+    assert_target_contract(custom_target, expected, "custom-target contract probe")
 
     duplicate = run(
         source_command(c_build=True, duplicate_macros=True, target_report=True),
         cwd=FIXTURE,
         label="duplicate target-contract probe",
     )
-    assert_probe(duplicate, C_EXPECTED, "duplicate target-contract probe")
-    if extract_target_report(duplicate, "duplicate target-contract probe") != expected:
-        raise ProbeFailure("duplicate initialization changed the target-contract snapshot")
+    assert_target_contract(duplicate, expected, "duplicate target-contract probe")
 
-    name_only = run(
+    explicit_transport = run(
         source_command(
-            c_build=False,
-            prelude_defines=(("target.name", "c"),),
+            c_build=True,
+            direct_defines=("c_output=bootstrap-probe-output",),
             target_report=True,
         ),
         cwd=FIXTURE,
-        label="target.name activation probe",
+        label="matching Reflaxe output transport probe",
     )
-    assert_probe(name_only, C_EXPECTED, "target.name activation probe")
-    expected_name_only = json.loads(json.dumps(expected))
-    expected_name_only["defines"]["cOutput"] = False
-    if extract_target_report(name_only, "target.name activation probe") != expected_name_only:
-        raise ProbeFailure("target.name activation did not normalize to the C contract")
+    assert_target_contract(
+        explicit_transport, expected, "matching Reflaxe output transport probe"
+    )
 
     non_c = run(
         source_command(c_build=False, target_report=True),
@@ -216,6 +238,7 @@ def check_target_identity_and_stdlib_branches() -> None:
     non_c_defines = non_c_report["defines"]
     if (
         non_c_report["carrier"] is not None
+        or non_c_report["environment"] is not None
         or non_c_defines["bootstrapCount"] is not None
         or non_c_defines["initCount"] is not None
         or non_c_defines["c"]
@@ -237,7 +260,10 @@ def assert_configuration_conflict(
 ) -> None:
     result = run(command, cwd=FIXTURE, expected_code=1, label=label)
     combined = result.stdout + result.stderr
-    source_position = re.compile(r"BootstrapProbe\.hx:\d+: character(?:s)? \d+(?:-\d+)?")
+    source_position = re.compile(
+        r"(?:^|[/ ])(?:test/bootstrap/)?BootstrapProbe\.hx(?::\d+: character(?:s)? \d+(?:-\d+)?)?",
+        re.MULTILINE,
+    )
     if "HXC0003:" not in combined or expected_fragment not in combined:
         raise ProbeFailure(
             f"{label} missed its stable configuration diagnostic\n"
@@ -251,34 +277,23 @@ def check_target_conflicts() -> None:
     assert_configuration_conflict(
         source_command(
             c_build=True,
-            prelude_defines=(("target.name", "js"),),
+            direct_defines=("c_output=other-output",),
         ),
-        "advertises `target.name=js`",
-        "conflicting target.name probe",
+        "conflicts with the custom-target output",
+        "conflicting output transport probe",
     )
     assert_configuration_conflict(
         source_command(
             c_build=True,
-            prelude_defines=(("target.utf16", None),),
+            direct_defines=("hxc_environment=invalid",),
         ),
-        "exposes `target.utf16`",
-        "conflicting target.utf16 probe",
+        "unsupported C environment `invalid`",
+        "invalid environment probe",
     )
     assert_configuration_conflict(
-        source_command(
-            c_build=True,
-            prelude_defines=(("target.atomics", None),),
-        ),
-        "before a reflaxe.c platform adapter has proven atomic support",
-        "unproven target.atomics probe",
-    )
-    assert_configuration_conflict(
-        source_command(
-            c_build=True,
-            direct_defines=("hxc_environment=freestanding",),
-        ),
-        "freestanding environment conflicts",
-        "freestanding carrier-capability probe",
+        source_command(c_build=True, carrier="custom-no-output"),
+        "requires an output directory",
+        "missing custom-target output probe",
     )
     assert_configuration_conflict(
         source_command(c_build=True, carrier="js"),
@@ -288,26 +303,46 @@ def check_target_conflicts() -> None:
     assert_configuration_conflict(
         source_command(c_build=True, carrier="cross"),
         "Haxe carrier `cross` exposes `target.utf16`",
-        "Haxe 4 Cross UTF-16 carrier probe",
+        "legacy Cross UTF-16 carrier probe",
     )
 
-    reserved = run(
-        [
-            development_tool("haxe"),
-            "-cp",
-            str(FIXTURE),
-            "-D",
-            "target.name=c",
-            "-main",
-            "BootstrapProbe",
-            "--interp",
-        ],
-        cwd=FIXTURE,
-        expected_code=1,
-        label="reserved target namespace probe",
+    expected_freestanding = json.loads(
+        EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8")
     )
-    if "reserved compiler flag namespace `target.*`" not in reserved.stdout + reserved.stderr:
-        raise ProbeFailure("Haxe 4 unexpectedly accepted target.name from the command line")
+    expected_freestanding["environment"] = "freestanding"
+    expected_freestanding["platform"]["sys"] = False
+    expected_freestanding["defines"]["targetSys"] = False
+    freestanding = run(
+        source_command(
+            c_build=True,
+            direct_defines=("hxc_environment=freestanding",),
+            target_report=True,
+        ),
+        cwd=FIXTURE,
+        label="freestanding capability-clean probe",
+    )
+    assert_target_contract(
+        freestanding, expected_freestanding, "freestanding capability-clean probe"
+    )
+
+    for define in ("target.name=c", "target.utf16", "target.atomics"):
+        reserved = run(
+            [
+                development_tool("haxe"),
+                "-cp",
+                str(FIXTURE),
+                "-D",
+                define,
+                "-main",
+                "BootstrapProbe",
+                "--interp",
+            ],
+            cwd=FIXTURE,
+            expected_code=1,
+            label=f"reserved target namespace probe ({define})",
+        )
+        if "reserved compiler flag namespace `target.*`" not in reserved.stdout + reserved.stderr:
+            raise ProbeFailure(f"active Haxe unexpectedly accepted {define} from the command line")
 
 
 def check_reversed_order_fails() -> None:
@@ -323,13 +358,12 @@ def check_reversed_order_fails() -> None:
         f"reflaxe={json.loads((ROOT / 'vendor/reflaxe/haxelib.json').read_text())['version']}",
         "-D",
         PROBE_DEFINE,
-        "-D",
-        "c_output=bootstrap-probe-output",
         "--macro",
         "reflaxe.c.CompilerInit.Start()",
         "-main",
         "BootstrapProbe",
-        "--interp",
+        "--custom-target",
+        "c=bootstrap-probe-output",
     ]
     result = subprocess.run(
         command,
@@ -346,6 +380,26 @@ def check_reversed_order_fails() -> None:
             "reversed lifecycle order did not fail with the expected diagnostic\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
+
+
+def check_production_carrier_fails_closed() -> None:
+    expected = json.loads(EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8"))
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-production-carrier-") as temporary:
+        output = Path(temporary) / "generated"
+        result = run(
+            production_command(output),
+            cwd=FIXTURE,
+            expected_code=1,
+            label="production custom-target lowering boundary probe",
+        )
+        combined = result.stdout + result.stderr
+        if "HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary" not in combined:
+            raise ProbeFailure("production custom target did not stop at HXC1000")
+        assert_target_contract(
+            result, expected, "production custom-target lowering boundary probe"
+        )
+        if output.exists() and any(output.rglob("*")):
+            raise ProbeFailure("HXC1000 production probe left a plausible generated artifact")
 
 
 def available_port() -> int:
@@ -390,37 +444,71 @@ def check_compiler_server_isolation() -> None:
             EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8")
         )
         cases = [
-            (True, (), C_EXPECTED, "compiler-server first C build"),
+            (True, (), True, "compiler-server first C build"),
             (
                 True,
-                (("target.atomics", None),),
-                None,
-                "compiler-server invalid capability build",
+                ("hxc_environment=invalid",),
+                False,
+                "compiler-server invalid environment build",
             ),
-            (False, (), NON_C_EXPECTED, "compiler-server non-C isolation"),
-            (True, (), C_EXPECTED, "compiler-server repeated C build"),
+            (False, (), True, "compiler-server non-C isolation"),
+            (True, (), True, "compiler-server repeated C build"),
         ]
-        for c_build, prelude_defines, expected, label in cases:
+        for c_build, direct_defines, succeeds, label in cases:
             command = source_command(
                 c_build=c_build,
-                prelude_defines=prelude_defines,
-                target_report=c_build and expected is not None,
+                direct_defines=direct_defines,
+                target_report=c_build and succeeds,
             )
             command[1:1] = ["--connect", endpoint]
             result = run(
                 command,
                 cwd=FIXTURE,
-                expected_code=0 if expected is not None else 1,
+                expected_code=0 if succeeds else 1,
                 label=label,
                 no_server=False,
             )
-            if expected is None:
+            if not succeeds:
                 if "HXC0003:" not in result.stdout + result.stderr:
                     raise ProbeFailure("compiler-server conflict lost its diagnostic")
                 continue
-            assert_probe(result, expected, label)
-            if c_build and extract_target_report(result, label) != expected_contract:
-                raise ProbeFailure(f"{label} leaked or changed target state")
+            if c_build:
+                assert_target_contract(result, expected_contract, label)
+            else:
+                assert_probe(result, NON_C_EXPECTED, label)
+
+        with tempfile.TemporaryDirectory(prefix="reflaxe-c-server-production-") as temporary:
+            output = Path(temporary) / "generated"
+            command = production_command(output)
+            command[1:1] = ["--connect", endpoint]
+            production = run(
+                command,
+                cwd=FIXTURE,
+                expected_code=1,
+                label="compiler-server production lowering boundary",
+                no_server=False,
+            )
+            if "HXC1000:" not in production.stdout + production.stderr:
+                raise ProbeFailure("compiler-server production request missed HXC1000")
+            assert_target_contract(
+                production,
+                expected_contract,
+                "compiler-server production lowering boundary",
+            )
+            if output.exists() and any(output.rglob("*")):
+                raise ProbeFailure("compiler-server HXC1000 request emitted an artifact")
+
+        recovery_command = source_command(c_build=True, target_report=True)
+        recovery_command[1:1] = ["--connect", endpoint]
+        recovery = run(
+            recovery_command,
+            cwd=FIXTURE,
+            label="compiler-server recovery after HXC1000",
+            no_server=False,
+        )
+        assert_target_contract(
+            recovery, expected_contract, "compiler-server recovery after HXC1000"
+        )
     finally:
         server.terminate()
         try:
@@ -460,7 +548,11 @@ def check_package_layout() -> None:
         stage_package(stage)
 
         run([development_tool("lix"), "scope", "create"], cwd=consumer, label="package scope creation")
-        run([development_tool("lix"), "use", "haxe", "4.3.7"], cwd=consumer, label="package Haxe pin")
+        run(
+            [development_tool("lix"), "use", "haxe", "5.0.0-preview.1"],
+            cwd=consumer,
+            label="package Haxe pin",
+        )
         run(
             [development_tool("lix"), "dev", "reflaxe.c", str(stage)],
             cwd=consumer,
@@ -476,23 +568,22 @@ def check_package_layout() -> None:
                 "reflaxe.c",
                 "-D",
                 PROBE_DEFINE,
-                "-D",
-                "c_output=bootstrap-probe-output",
                 "--macro",
                 "TargetContractProbe.install()",
                 "-main",
                 "BootstrapProbe",
-                "--interp",
+                "--custom-target",
+                "c=bootstrap-probe-output",
             ],
             cwd=nested,
             label="staged package CWD probe",
         )
-        assert_probe(package_probe, C_EXPECTED, "staged package CWD probe")
         expected_contract = json.loads(
             EXPECTED_TARGET_CONTRACT.read_text(encoding="utf-8")
         )
-        if extract_target_report(package_probe, "staged package CWD probe") != expected_contract:
-            raise ProbeFailure("staged package changed the target-contract snapshot")
+        assert_target_contract(
+            package_probe, expected_contract, "staged package CWD probe"
+        )
 
         run(
             [
@@ -515,13 +606,14 @@ def main() -> int:
         check_target_identity_and_stdlib_branches()
         check_target_conflicts()
         check_reversed_order_fails()
+        check_production_carrier_fails_closed()
         check_compiler_server_isolation()
         check_package_layout()
     except ProbeFailure as error:
         print(f"bootstrap-policy: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "bootstrap-policy: OK: source, target identity, stdlib branches, conflicts, order, isolation, server, and package probes passed"
+        "bootstrap-policy: OK: custom target, platform config, stdlib branches, fail-closed lowering, isolation, server, and package probes passed"
     )
     return 0
 

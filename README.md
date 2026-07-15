@@ -108,24 +108,25 @@ evaluation order, avoid C undefined behavior, compile warning-clean, and remain
 deterministic across repeated builds.
 
 The remaining foundational contracts are now explicit design inputs, not
-implementation claims: `c_output` activates a `c` target that emits strict C11;
-portable strings are immutable UTF-8 with Unicode-scalar indices; tracing, when
-actually required, uses a selective precise non-moving collector; and general
-exceptions use contained C frames while every public C boundary exposes ordinary
-status/error values. The 1.0 release matrix covers hosted Linux, macOS, and
-Windows tuples plus a capability-limited ARM Cortex-M freestanding-metal lane.
+implementation claims: `--custom-target c=<output>` selects a `c` target that
+will emit strict C11; portable strings are immutable UTF-8 with Unicode-scalar
+indices; tracing, when actually required, uses a selective precise non-moving
+collector; and general exceptions use contained C frames while every public C
+boundary exposes ordinary status/error values. The 1.0 release matrix covers
+hosted Linux, macOS, and Windows tuples plus a capability-limited ARM Cortex-M
+freestanding-metal lane.
 See [ADR 0007](docs/adr/0007-strict-c11-target-and-platform-baseline.md),
 [ADR 0004](docs/adr/0004-utf8-scalar-string-contract.md),
 [ADR 0005](docs/adr/0005-precise-nonmoving-collector.md), and
 [ADR 0006](docs/adr/0006-explicit-failure-edges-and-contained-unwinding.md).
 
-One bootstrap constraint is deliberately visible: Haxe 4.3.7's default
-Reflaxe `Cross` carrier preselects UTF-16 conditionals that contradict the C
-string contract, and public initialization macros cannot remove them. The M0
-test carrier proves target identity and the correct upstream scalar branches;
-an actual Cross request fails with `HXC0003` until the production carrier
-decision is implemented. The project will not call a target working by merely
-renaming contradictory compiler state.
+The production typing carrier is the exact official Haxe 5.0.0-preview.1
+custom-target API. Its automatic `c.Init.init()` hook installs C-owned static,
+scalar-Unicode, and environment capabilities before standard-library and user
+typing. The preview pin, source revision, and official platform artifact hashes
+are locked and compile-tested. Haxe 4's default Reflaxe `Cross` carrier remains
+an `HXC0003` regression case because its unremovable UTF-16 facts contradict
+the C string contract.
 
 ## What exists today
 
@@ -134,26 +135,28 @@ The current checkout contains:
 - a detailed [product requirements document](docs/PRD.md);
 - [architecture](docs/architecture.md) and
   [configuration](docs/configuration.md) contracts;
-- a partial Reflaxe compiler adapter whose missing whole-program dependencies
-  are explicitly tracked for the next bootstrap task;
-- a Haxe 4.3.7 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked toolchain;
-- target-gated `CompilerBootstrap` and `CompilerInit` lifecycle, identity,
-  upstream stdlib-branch, conflict, package, and compiler-server probes;
+- a minimal Reflaxe adapter and whole-program boundary that type-check and then
+  deliberately stop with source-anchored `HXC1000` before emitting C;
+- a Haxe 5.0.0-preview.1 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked
+  toolchain;
+- production `CustomTarget(c)` platform setup plus target-gated
+  `CompilerBootstrap` and `CompilerInit` lifecycle, identity, upstream
+  stdlib-branch, conflict, package, and compiler-server probes;
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
 - a structured C AST and printer seed;
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
-It does **not** yet contain a type-checking whole compiler graph, a Haxe lowering
-pipeline, runtime implementation, CLI, executable examples, or release tooling.
-The package metadata added at M0 is a reproducible development/package-layout
-seed, not a publishable compiler. Those capabilities remain tracked work.
+It does **not** yet contain Haxe-to-C semantic lowering, a complete runtime, the
+`hxc` implementation, executable generated examples, or release tooling. The
+package metadata added at M0 is a reproducible development/package-layout seed,
+not a publishable compiler. Those capabilities remain tracked work.
 
 ## Explore the scaffold
 
-Use Node.js 20 or newer; `npm ci` installs the pinned Lix shim and resolves Haxe
-4.3.7. Contributors also need `bd`, `jq`,
+Use Node.js 20 or newer; `npm ci` installs the pinned Lix shim and resolves the
+exact Haxe 5.0.0-preview.1 release. Contributors also need `bd`, `jq`,
 [Gitleaks](https://github.com/gitleaks/gitleaks), and the Haxe formatter. Then
 activate the tracked pre-commit chain:
 
@@ -182,6 +185,16 @@ python3 scripts/ci/check_license_policy.py
 See the [pinned toolchain guide](docs/toolchain.md) for the exact dependency,
 package-layout, bootstrap-order, and update contracts. The compile-backed probes
 do not claim that ordinary Haxe programs can be emitted as C yet.
+
+The eventual direct compiler invocation is:
+
+```sh
+haxe -lib reflaxe.c --custom-target c=build/c -main Main
+```
+
+At M0 that real production path intentionally ends at `HXC1000` with no output;
+it is documented now so `c_output`, Eval, or the future `hxc` wrapper are not
+mistaken for alternate user-program carriers.
 
 The remaining bootstrap work will make the complete target-owned Haxe graph
 type-check, preserve fail-closed unsupported lowering, and then build a small

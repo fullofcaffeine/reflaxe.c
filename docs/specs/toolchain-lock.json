@@ -1,9 +1,15 @@
 {
   "schemaVersion": 1,
   "haxe": {
-    "version": "4.3.7",
-    "sourceRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
-    "upstreamUrl": "https://github.com/HaxeFoundation/haxe"
+    "version": "5.0.0-preview.1",
+    "sourceRevision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+    "upstreamUrl": "https://github.com/HaxeFoundation/haxe",
+    "releaseChannel": "preview",
+    "artifacts": {
+      "linux64": "sha256:57710c7219c2d23bbd490cc5ed49e43686a946ab3a4910a7983a9d15fb078732",
+      "macUniversal": "sha256:aeb033a1500ba971d0428db5bd8ef58a32266f900edcfc367b6c6851213d5d61",
+      "windows64": "sha256:c223025518c6a527c66bd6c9ca51b4eff848ffcac97fc6c1833d1338cef1622e"
+    }
   },
   "reflaxe": {
     "version": "4.0.0-beta",

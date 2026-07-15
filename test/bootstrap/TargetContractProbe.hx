@@ -16,10 +16,22 @@ class TargetContractProbe {
 				return;
 			}
 			reported = true;
+			final configuration = Compiler.getConfiguration();
+			final platform = configuration == null ? null : configuration.platformConfig;
 			final report = {
 				schemaVersion: 1,
 				haxeVersion: Context.definedValue("haxe"),
 				carrier: Context.definedValue("reflaxe_c_haxe_carrier"),
+				environment: Context.definedValue("reflaxe_c_platform_environment"),
+				platform: {
+					staticTypeSystem: platformField(platform, "staticTypeSystem"),
+					sys: platformField(platform, "sys"),
+					capturePolicy: platformFieldString(platform, "capturePolicy"),
+					usesUtf16: platformField(platform, "usesUtf16"),
+					supportsUnicode: platformField(platform, "supportsUnicode"),
+					supportsThreads: platformField(platform, "supportsThreads"),
+					supportsAtomics: platformField(platform, "supportsAtomics")
+				},
 				defines: {
 					bootstrapCount: Context.definedValue("reflaxe_c_bootstrap_count"),
 					initCount: Context.definedValue("reflaxe_c_init_count"),
@@ -27,6 +39,8 @@ class TargetContractProbe {
 					c: Context.defined("c"),
 					reflaxeC: Context.defined("reflaxe_c"),
 					targetName: Context.definedValue("target.name"),
+					customTarget: Context.defined("custom_target"),
+					targetStatic: Context.defined("target.static"),
 					targetUnicode: Context.defined("target.unicode"),
 					targetUtf16: Context.defined("target.utf16"),
 					utf16: Context.defined("utf16"),
@@ -44,6 +58,15 @@ class TargetContractProbe {
 			};
 			Sys.println(REPORT_PREFIX + Json.stringify(report));
 		});
+	}
+
+	static function platformField(platform:Dynamic, field:String):Dynamic {
+		return platform == null ? null : Reflect.field(platform, field);
+	}
+
+	static function platformFieldString(platform:Dynamic, field:String):Null<String> {
+		final value = platformField(platform, field);
+		return value == null ? null : Std.string(value);
 	}
 
 	static function classHasStatic(typeName:String, fieldName:String):Bool {
