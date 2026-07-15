@@ -89,6 +89,15 @@ independently testable compiler layer, not a claim that typed Haxe reaches it in
 production or that C is emitted; `HXC1000` remains the honest whole-program
 boundary.
 
+The [typed-AST input adapter](docs/typed-ast-input.md) now captures Haxe's
+complete module set before Reflaxe callback filtering, normalizes module and
+declaration ownership, retains externs/typedefs/abstracts and raw expressions,
+and records the entry point in a fresh per-request context. Its deterministic
+inventory is identical across reordered input and cold/compiler-server builds.
+This is the production frontend boundary for future Haxe-to-HxcIR work, not a
+claim that lowering exists; the same build still stops at `HXC1000` without an
+artifact.
+
 ### CLI bootstrap
 
 Direct Haxe/HXML compilation remains the canonical path. During bootstrap, the
@@ -152,6 +161,9 @@ The current checkout contains:
   [configuration](docs/configuration.md) contracts;
 - a minimal Reflaxe adapter and whole-program boundary that type-check and then
   deliberately stop with source-anchored `HXC1000` before emitting C;
+- a deterministic typed-AST adapter and reviewed inventory covering complete
+  module ownership, declarations, fields, metadata, expressions, entry points,
+  reordered input, and compiler-server isolation;
 - a dedicated HXML gate that automatically covers every `src/**/*.hx` and
   `std/c/**/*.hx` module plus explicit compiler-macro branches;
 - a Haxe 5.0.0-preview.1 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked
@@ -211,6 +223,7 @@ python3 scripts/ci/check_toolchain.py --require-tools
 python3 test/all_sources/run.py
 python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
+python3 test/typed_ast/run.py
 python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
 python3 test/hxc_ir/run.py

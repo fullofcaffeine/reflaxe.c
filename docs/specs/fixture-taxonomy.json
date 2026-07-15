@@ -26,6 +26,7 @@
         "all-sources",
         "bootstrap",
         "typed-c",
+        "typed-ast",
         "hxc-ir"
       ]
     },
@@ -43,6 +44,7 @@
         "all-sources",
         "bootstrap",
         "typed-c",
+        "typed-ast",
         "hxc-ir"
       ]
     },
@@ -75,6 +77,7 @@
       "suiteIds": [
         "bootstrap",
         "typed-c",
+        "typed-ast",
         "c-ast",
         "declaration-plan",
         "hxc-ir"
@@ -193,6 +196,25 @@
       ]
     },
     {
+      "id": "typed-ast",
+      "directory": "test/typed_ast",
+      "runner": [
+        "python3",
+        "test/typed_ast/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "complete typed modules, declarations, ownership, metadata, fields, and entry point are classified",
+        "normalized inventory is byte-identical across captured input order and compiler-server requests",
+        "the implementation-only report reaches source-anchored HXC1000 without emitting C"
+      ]
+    },
+    {
       "id": "c-ast",
       "directory": "test/c_ast",
       "runner": [
@@ -287,6 +309,15 @@
         "id": "typed-c",
         "expectedRoots": [
           "test/typed_c/expected/typed-c-contract.json"
+        ],
+        "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "typed-ast",
+        "expectedRoots": [
+          "test/typed_ast/expected/typed-ast-inventory.json"
         ],
         "formats": [
           "json"

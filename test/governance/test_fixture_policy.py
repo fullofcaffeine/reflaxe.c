@@ -49,7 +49,14 @@ class FixturePolicyTests(unittest.TestCase):
         self.assertEqual(tuple(entries), self.runner.registered_suite_ids())
         self.assertEqual(
             tuple(entries),
-            ("bootstrap", "typed-c", "c-ast", "declaration-plan", "hxc-ir"),
+            (
+                "bootstrap",
+                "typed-c",
+                "typed-ast",
+                "c-ast",
+                "declaration-plan",
+                "hxc-ir",
+            ),
         )
 
     def test_update_requires_an_explicit_selector(self) -> None:

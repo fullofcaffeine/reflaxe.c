@@ -47,6 +47,16 @@ REQUIRED_GATE_FILES = (
     "test/hxc_ir/expected/coverage.hxcir",
     "test/hxc_ir/expected/diagnostics.json",
     "test/hxc_ir/run.py",
+    "src/reflaxe/c/frontend/TypedProgramInput.hx",
+    "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
+    "src/reflaxe/c/frontend/TypedAstInventory.hx",
+    "docs/typed-ast-input.md",
+    "test/typed_ast/README.md",
+    "test/typed_ast/fixtures/rich/Main.hx",
+    "test/typed_ast/fixtures/rich/FixtureTypes.hx",
+    "test/typed_ast/fixtures/isolation/Main.hx",
+    "test/typed_ast/expected/typed-ast-inventory.json",
+    "test/typed_ast/run.py",
     "test/positive/README.md",
     "test/negative/README.md",
     "test/ast/README.md",
@@ -123,6 +133,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
+    if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
+        errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
         errors.append("package.json must retain the test:fixture-policy entry point")
     if scripts.get("snapshots:check") != "python3 scripts/test/snapshots.py --check":
@@ -135,6 +147,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:declaration-plan")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
+    if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute snapshots:check")
     if "npm run test:native" not in str(scripts.get("test", "")):
@@ -166,6 +180,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
+    if "test/typed_ast/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
         errors.append("pre-commit must validate the fixture and example policy")
     if "scripts/test/snapshots.py" not in pre_commit:

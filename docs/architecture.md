@@ -15,12 +15,14 @@ CompilerInit
   -> Reflaxe registration
 
 CReflaxeCompiler
-  -> collects Haxe module types
-  -> resets CompilationContext
+  -> captures the complete Haxe module-type set before Reflaxe filters
+  -> resets CompilationContext and request-local adapter state
+  -> invokes TypedAstNormalizer
   -> invokes CCompiler
   -> writes GeneratedFile records through OutputManager
 
 CCompiler
+  -> consumes TypedProgramInput from CompilationContext
   -> validates semantic contract
   -> lowers typed AST to HxcIR
   -> runs analyses and HxcIR passes
@@ -64,13 +66,33 @@ records their validated reverse, inner-to-outer execution order. Calls and
 memory operations distinguish static/direct, program-local, and named runtime
 implementations, so the IR never selects an implicit runtime core.
 
+The target-owned typed-input boundary is implemented under
+`src/reflaxe/c/frontend/`. `filterTypes` captures the complete request before
+Reflaxe suppresses callback inputs, so externs and typedefs remain available.
+`TypedAstNormalizer` sorts logical module/declaration sets, preserves ordered
+field, enum-constructor, metadata, and expression-root sequences with explicit
+ordinals, records primary/secondary module ownership, retains raw compiler
+objects for lowering, and carries `getMainModule()` plus
+`getMainExpr()` as the entry point. A fresh `CompilationContext` owns the result
+once, and request-local captures are cleared before `CCompiler` runs. See
+[typed-AST input boundary](typed-ast-input.md).
+
+`TypedAstInventory` exposes a path-stable implementation report for unsupported
+node planning. It classifies declarations, class/field kinds, expression nodes,
+types, and metadata without serializing raw host positions. The exact
+Reflaxe-injected build-cache hook is excluded from the normalized metadata view
+because it appears only after cache reuse; source-authored metadata and the raw
+declaration remain intact. Forward/reversed input and cold/compiler-server
+fixtures are byte-identical. This boundary still performs no Haxe-to-HxcIR
+lowering, so production compilation deliberately ends at `HXC1000`.
+
 `HxcIRDumper` canonicalizes only semantically unordered collections and retains
 ordered instructions, edge arguments, and cleanup steps with repository-relative
 source spans. `HxcIRValidator` rejects missing targets/results/terminators,
 use-before-definition, illegal lifetime transitions, and malformed cleanup
 paths. Unsupported typed nodes use source-positioned `HXC1001`; they never
-become an opaque value. Typed-module normalization and HxcIR-to-C lowering are
-still absent, so the production compiler remains at its `HXC1000` boundary.
+become an opaque value. Typed-Haxe-to-HxcIR and HxcIR-to-C lowering are still
+absent, so the production compiler remains at its `HXC1000` boundary.
 
 The type model normalizes base specifiers and keeps them separate from a
 grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and

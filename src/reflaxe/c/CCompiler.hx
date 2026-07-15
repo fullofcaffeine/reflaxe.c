@@ -4,8 +4,10 @@ package reflaxe.c;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
-import haxe.macro.Type.ModuleType;
+import haxe.Json;
 import reflaxe.c.emit.GeneratedFile;
+import reflaxe.c.frontend.TypedAstInventory;
+import reflaxe.c.frontend.TypedProgramInput;
 
 /** Whole-program lowering boundary. Semantic lowering is intentionally fail-closed at M0. */
 class CCompiler {
@@ -15,7 +17,13 @@ class CCompiler {
 		this.context = context;
 	}
 
-	public function compileModules(modules:Array<ModuleType>):Array<GeneratedFile> {
+	public function compileModules(program:TypedProgramInput):Array<GeneratedFile> {
+		if (context.typedProgram != program) {
+			Context.fatalError("HXC9000: whole-program compiler received an input outside its per-build CompilationContext", compilationPosition());
+		}
+		if (Context.defined(TypedAstInventory.REPORT_DEFINE)) {
+			Sys.println(TypedAstInventory.REPORT_PREFIX + Json.stringify(TypedAstInventory.snapshot(program)));
+		}
 		Context.fatalError("HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary; no C was emitted.", compilationPosition());
 		return [];
 	}

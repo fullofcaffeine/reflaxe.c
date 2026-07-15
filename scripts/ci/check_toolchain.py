@@ -214,10 +214,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_c_ast_script = "python3 test/c_ast/run.py"
     expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
+    expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:all-sources && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-ast && "
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:hxc-ir && npm run snapshots:check"
     )
     if (
@@ -245,6 +246,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:hxc-ir") != expected_hxc_ir_script
     ):
         errors.append("package.json must retain the HxcIR semantic gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:typed-ast") != expected_typed_ast_script
+    ):
+        errors.append("package.json must retain the typed-AST normalization gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("snapshots:check") != expected_snapshot_script

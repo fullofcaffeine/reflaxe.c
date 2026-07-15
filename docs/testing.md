@@ -13,8 +13,8 @@ native C/C++ inputs do not prove that typed Haxe currently emits C.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through mapped M0 suites |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including typed-input acceptance before lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through mapped M0 suites, including the honest `HXC1000` typed-input boundary |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, and `hxc_ir` |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Native seed only; no generated-Haxe runtime proof yet |
@@ -85,6 +85,7 @@ The registered snapshot selectors are:
 
 - `bootstrap`
 - `typed-c`
+- `typed-ast`
 - `c-ast`
 - `declaration-plan`
 - `hxc-ir`
@@ -94,6 +95,14 @@ List them from the executable registry with:
 ```sh
 python3 scripts/test/snapshots.py --list
 ```
+
+The `typed-ast` suite is the compile-backed frontend boundary. It captures real
+custom-target input, classifies modules/declarations/externs/typedefs/abstracts,
+metadata, fields, expressions, and the entry point, and compares forward,
+reversed, repeated, cold, and compiler-server reports. Its expected JSON is an
+unsupported-node inventory; it does not prove HxcIR or C lowering. The internal
+report and reverse-order defines are test/diagnostic seams, not user-facing
+compiler configuration. See [typed-AST input boundary](typed-ast-input.md).
 
 ## Examples are product proofs, not implicit tests
 

@@ -116,6 +116,18 @@ def typed_c_artifacts() -> list[Artifact]:
     ]
 
 
+def typed_ast_artifacts() -> list[Artifact]:
+    module = load_module("typed_ast", "test/typed_ast/run.py")
+    result = module.render_snapshot()
+    return [
+        Artifact(
+            Path("test/typed_ast/expected/typed-ast-inventory.json"),
+            "json",
+            result.report,
+        )
+    ]
+
+
 def c_ast_artifacts() -> list[Artifact]:
     module = load_module("c_ast", "test/c_ast/run.py")
     artifacts: list[Artifact] = []
@@ -207,6 +219,7 @@ def hxc_ir_artifacts() -> list[Artifact]:
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
+    "typed-ast": typed_ast_artifacts,
     "c-ast": c_ast_artifacts,
     "declaration-plan": declaration_plan_artifacts,
     "hxc-ir": hxc_ir_artifacts,

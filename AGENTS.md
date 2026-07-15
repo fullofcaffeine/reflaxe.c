@@ -263,6 +263,40 @@ missing-metadata or missing-adapter assumptions.
   and retain direct Haxe/HXML plus the C toolchain as the recovery build path.
   Compiler registration must never depend on an existing `hxc` executable.
 
+### Typed-AST input boundary
+
+- `CReflaxeCompiler.filterTypes` is the complete typed-module capture boundary:
+  it runs before Reflaxe callback filters. Preserve typedefs, externs,
+  abstracts, secondary declarations, metadata, and module ownership there;
+  never reconstruct whole-program input from class/enum callback order.
+- Treat the pending/current module arrays as request-local handoff state.
+  `onCompileStart` must create a fresh `CompilationContext`, consume and clear
+  the pending capture, and `onCompileEnd` must clear current storage before
+  invoking code that can fail. No capture or `TypedProgramInput` may survive a
+  compiler-server request.
+- Normalize unordered typed input by logical module/declaration coordinates
+  while retaining raw Haxe compiler objects for semantic lowering. Preserve
+  compiler/source order for field groups, enum constructors, metadata, and
+  initializer roots with explicit ordinals; determinism must never erase enum
+  indices or initialization/annotation order. Primary versus secondary
+  ownership is explicit. Do not serialize raw
+  positions, absolute roots, backslashes, timestamps, map iteration, or other
+  host/process facts into an inventory.
+- Reflaxe's exact process-local
+  `@:build(reflaxe.ReflectCompiler.addToBuildCache())` hook is excluded from the
+  normalized metadata view because it appears only after cache reuse. Do not
+  generalize that exception to arbitrary `@:build` or source-authored metadata;
+  the raw declaration remains untouched.
+- `reflaxe_c_typed_ast_report` is an implementation-only unsupported-node
+  inventory, and `reflaxe_c_test_reverse_typed_modules` is a test-only order
+  seam. Neither is public application configuration. An intentional normalized
+  input/report change updates `docs/typed-ast-input.md`, the fixture catalog,
+  and `test/typed_ast/expected/`, then runs `npm run test:typed-ast`, the central
+  snapshot check, and the exhaustive all-source gate.
+- Typed-input collection is not Haxe-to-HxcIR lowering. Preserve the
+  source-anchored `HXC1000` no-output boundary until E1.T07 implements and tests
+  actual semantic lowering.
+
 ### HxcIR semantic boundary
 
 - Treat HxcIR instruction arrays as semantic evaluation order. Never reorder
@@ -507,7 +541,8 @@ bash scripts/lint/whitespace_guard.sh
 `npm test` verifies the exact dependency lock, vendored Reflaxe checksum, the
 complete current target-owned Haxe graph and explicit macro branches,
 source/package lifecycle behavior, cold/compiler-server C/non-C isolation,
-macro order, the structural declarator and expression/statement goldens, the
+macro order, typed-AST normalization/order/server isolation, the structural
+declarator and expression/statement goldens, the
 declaration/include plan and header goldens, the canonical HxcIR semantic and
 negative-diagnostic goldens, the available local strict native smoke lanes,
 registered snapshot reproduction, fixture/example ownership, notices, and

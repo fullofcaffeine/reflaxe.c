@@ -1,0 +1,3103 @@
+{
+  "inventory": {
+    "fieldKinds": [
+      {
+        "count": 16,
+        "kind": "enum-constructor"
+      },
+      {
+        "count": 16,
+        "kind": "method-inline"
+      },
+      {
+        "count": 80,
+        "kind": "method-normal"
+      },
+      {
+        "count": 8,
+        "kind": "variable"
+      }
+    ],
+    "expressionKinds": [
+      {
+        "count": 2,
+        "kind": "array-access"
+      },
+      {
+        "count": 2,
+        "kind": "array-declaration"
+      },
+      {
+        "count": 10,
+        "kind": "binary-operator"
+      },
+      {
+        "count": 27,
+        "kind": "block"
+      },
+      {
+        "count": 15,
+        "kind": "call"
+      },
+      {
+        "count": 4,
+        "kind": "cast"
+      },
+      {
+        "count": 19,
+        "kind": "constant"
+      },
+      {
+        "count": 1,
+        "kind": "enum-index"
+      },
+      {
+        "count": 1,
+        "kind": "enum-parameter"
+      },
+      {
+        "count": 18,
+        "kind": "field-access"
+      },
+      {
+        "count": 19,
+        "kind": "function"
+      },
+      {
+        "count": 3,
+        "kind": "if"
+      },
+      {
+        "count": 53,
+        "kind": "local"
+      },
+      {
+        "count": 1,
+        "kind": "metadata"
+      },
+      {
+        "count": 3,
+        "kind": "new"
+      },
+      {
+        "count": 6,
+        "kind": "parenthesis"
+      },
+      {
+        "count": 17,
+        "kind": "return"
+      },
+      {
+        "count": 1,
+        "kind": "switch"
+      },
+      {
+        "count": 1,
+        "kind": "throw"
+      },
+      {
+        "count": 11,
+        "kind": "type-expression"
+      },
+      {
+        "count": 2,
+        "kind": "unary-operator"
+      },
+      {
+        "count": 17,
+        "kind": "variable"
+      },
+      {
+        "count": 2,
+        "kind": "while"
+      }
+    ],
+    "classKinds": [
+      {
+        "count": 4,
+        "kind": "abstract-implementation"
+      },
+      {
+        "count": 18,
+        "kind": "normal"
+      }
+    ],
+    "declarationKinds": [
+      {
+        "count": 12,
+        "kind": "abstract"
+      },
+      {
+        "count": 22,
+        "kind": "class"
+      },
+      {
+        "count": 3,
+        "kind": "enum"
+      },
+      {
+        "count": 5,
+        "kind": "typedef"
+      }
+    ],
+    "metadataNames": [
+      {
+        "count": 2,
+        "kind": ":allow"
+      },
+      {
+        "count": 9,
+        "kind": ":coreType"
+      },
+      {
+        "count": 2,
+        "kind": ":deprecated"
+      },
+      {
+        "count": 2,
+        "kind": ":directlyUsed"
+      },
+      {
+        "count": 1,
+        "kind": ":dox"
+      },
+      {
+        "count": 1,
+        "kind": ":exhaustive"
+      },
+      {
+        "count": 1,
+        "kind": ":forward"
+      },
+      {
+        "count": 1,
+        "kind": ":forward.variance"
+      },
+      {
+        "count": 1,
+        "kind": ":ifFeature"
+      },
+      {
+        "count": 8,
+        "kind": ":keep"
+      },
+      {
+        "count": 2,
+        "kind": ":noCompletion"
+      },
+      {
+        "count": 3,
+        "kind": ":notNull"
+      },
+      {
+        "count": 3,
+        "kind": ":pure"
+      },
+      {
+        "count": 4,
+        "kind": ":runtime"
+      },
+      {
+        "count": 6,
+        "kind": ":runtimeValue"
+      },
+      {
+        "count": 7,
+        "kind": ":typedAstFixture"
+      },
+      {
+        "count": 5,
+        "kind": ":used"
+      },
+      {
+        "count": 2,
+        "kind": ":using"
+      },
+      {
+        "count": 2,
+        "kind": ":value"
+      }
+    ],
+    "typeKinds": [
+      {
+        "count": 114,
+        "kind": "abstract"
+      },
+      {
+        "count": 4,
+        "kind": "anonymous"
+      },
+      {
+        "count": 38,
+        "kind": "dynamic"
+      },
+      {
+        "count": 12,
+        "kind": "enum"
+      },
+      {
+        "count": 137,
+        "kind": "function"
+      },
+      {
+        "count": 55,
+        "kind": "instance"
+      },
+      {
+        "count": 12,
+        "kind": "typedef"
+      }
+    ]
+  },
+  "expressionRoots": [
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 18,
+      "fieldName": "iterator",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 19,
+      "fieldName": "keyValueIterator",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 20,
+      "fieldName": "map",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Array",
+      "sourceOrder": 21,
+      "fieldName": "filter",
+      "ownerDeclarationPath": "Array",
+      "role": "member"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 0,
+      "fieldName": "new",
+      "ownerDeclarationPath": "FixtureBox",
+      "role": "constructor"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 1,
+      "fieldName": "marker",
+      "ownerDeclarationPath": "FixtureBox",
+      "role": "member"
+    },
+    {
+      "expressionKind": "constant",
+      "typeKind": "abstract",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 0,
+      "fieldName": "answer",
+      "ownerDeclarationPath": "FixtureTypes",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 0,
+      "fieldName": "ofInt",
+      "ownerDeclarationPath": "_FixtureTypes.FixtureCounter_Impl_",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 1,
+      "fieldName": "_hx_new",
+      "ownerDeclarationPath": "_FixtureTypes.FixtureCounter_Impl_",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "FixtureTypes",
+      "sourceOrder": 2,
+      "fieldName": "toInt",
+      "ownerDeclarationPath": "_FixtureTypes.FixtureCounter_Impl_",
+      "role": "static"
+    },
+    {
+      "expressionKind": "call",
+      "typeKind": "abstract",
+      "ownerModulePath": "Main",
+      "sourceOrder": 0,
+      "fieldName": null,
+      "ownerDeclarationPath": "Main",
+      "role": "entry-point"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "Main",
+      "sourceOrder": 0,
+      "fieldName": "main",
+      "ownerDeclarationPath": "Main",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 0,
+      "fieldName": "getName",
+      "ownerDeclarationPath": "haxe.EnumTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 1,
+      "fieldName": "createByName",
+      "ownerDeclarationPath": "haxe.EnumTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 2,
+      "fieldName": "createByIndex",
+      "ownerDeclarationPath": "haxe.EnumTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 3,
+      "fieldName": "createAll",
+      "ownerDeclarationPath": "haxe.EnumTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 4,
+      "fieldName": "getConstructors",
+      "ownerDeclarationPath": "haxe.EnumTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 0,
+      "fieldName": "equals",
+      "ownerDeclarationPath": "haxe.EnumValueTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 1,
+      "fieldName": "getName",
+      "ownerDeclarationPath": "haxe.EnumValueTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 2,
+      "fieldName": "getParameters",
+      "ownerDeclarationPath": "haxe.EnumValueTools",
+      "role": "static"
+    },
+    {
+      "expressionKind": "function",
+      "typeKind": "function",
+      "ownerModulePath": "haxe.EnumTools",
+      "sourceOrder": 3,
+      "fieldName": "getIndex",
+      "ownerDeclarationPath": "haxe.EnumValueTools",
+      "role": "static"
+    }
+  ],
+  "modules": [
+    {
+      "path": "Any",
+      "sourcePath": "Any.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "Any",
+          "isPrivate": false,
+          "path": "Any",
+          "isFinal": false,
+          "name": "Any",
+          "isInterface": false,
+          "representedTypeDisplay": "Dynamic",
+          "representedTypeKind": "dynamic",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":forward.variance"
+            }
+          ],
+          "sourcePath": "Any.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [],
+          "classKind": "abstract-implementation",
+          "isAbstract": false,
+          "ownerModulePath": "Any",
+          "isPrivate": true,
+          "path": "_Any.Any_Impl_",
+          "isFinal": true,
+          "name": "Any_Impl_",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            }
+          ],
+          "sourcePath": "Any.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "Array",
+      "sourcePath": "Array.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "() -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "length",
+              "sourceOrder": 0,
+              "typeDisplay": "Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "concat",
+              "sourceOrder": 1,
+              "typeDisplay": "(a : Array<Array.T>) -> Array<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "join",
+              "sourceOrder": 2,
+              "typeDisplay": "(sep : String) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "pop",
+              "sourceOrder": 3,
+              "typeDisplay": "() -> Null<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "push",
+              "sourceOrder": 4,
+              "typeDisplay": "(x : Array.T) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "reverse",
+              "sourceOrder": 5,
+              "typeDisplay": "() -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "shift",
+              "sourceOrder": 6,
+              "typeDisplay": "() -> Null<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "slice",
+              "sourceOrder": 7,
+              "typeDisplay": "(pos : Int, ?end : Null<Int>) -> Array<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "sort",
+              "sourceOrder": 8,
+              "typeDisplay": "(f : ((Array.T, Array.T) -> Int)) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "splice",
+              "sourceOrder": 9,
+              "typeDisplay": "(pos : Int, len : Int) -> Array<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "toString",
+              "sourceOrder": 10,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "unshift",
+              "sourceOrder": 11,
+              "typeDisplay": "(x : Array.T) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "insert",
+              "sourceOrder": 12,
+              "typeDisplay": "(pos : Int, x : Array.T) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "remove",
+              "sourceOrder": 13,
+              "typeDisplay": "(x : Array.T) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "contains",
+              "sourceOrder": 14,
+              "typeDisplay": "(x : Array.T) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":pure"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "indexOf",
+              "sourceOrder": 15,
+              "typeDisplay": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "lastIndexOf",
+              "sourceOrder": 16,
+              "typeDisplay": "(x : Array.T, ?fromIndex : Null<Int>) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "copy",
+              "sourceOrder": 17,
+              "typeDisplay": "() -> Array<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "iterator",
+              "sourceOrder": 18,
+              "typeDisplay": "() -> haxe.iterators.ArrayIterator<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":runtime"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "keyValueIterator",
+              "sourceOrder": 19,
+              "typeDisplay": "() -> haxe.iterators.ArrayKeyValueIterator<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":pure"
+                },
+                {
+                  "arguments": [],
+                  "name": ":runtime"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "map",
+              "sourceOrder": 20,
+              "typeDisplay": "(f : (Array.T -> map.S)) -> Array<map.S>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":runtime"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "filter",
+              "sourceOrder": 21,
+              "typeDisplay": "(f : (Array.T -> Bool)) -> Array<Array.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":runtime"
+                }
+              ],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "resize",
+              "sourceOrder": 22,
+              "typeDisplay": "(len : Int) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "Array",
+          "isPrivate": false,
+          "path": "Array",
+          "isFinal": false,
+          "name": "Array",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "Array.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "Class",
+      "sourcePath": "Class.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "Class",
+          "isPrivate": false,
+          "path": "Class",
+          "isFinal": false,
+          "name": "Class",
+          "isInterface": false,
+          "representedTypeDisplay": "Class<Class.T>",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "Class.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "Enum",
+      "sourcePath": "Enum.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "Enum",
+          "isPrivate": false,
+          "path": "Enum",
+          "isFinal": false,
+          "name": "Enum",
+          "isInterface": false,
+          "representedTypeDisplay": "Enum<Enum.T>",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "Enum.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "EnumValue",
+      "sourcePath": "EnumValue.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "EnumValue",
+          "isPrivate": false,
+          "path": "EnumValue",
+          "isFinal": false,
+          "name": "EnumValue",
+          "isInterface": false,
+          "representedTypeDisplay": "EnumValue",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreType"
+            }
+          ],
+          "sourcePath": "EnumValue.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [],
+          "classKind": "abstract-implementation",
+          "isAbstract": false,
+          "ownerModulePath": "EnumValue",
+          "isPrivate": true,
+          "path": "_EnumValue.EnumValue_Impl_",
+          "isFinal": true,
+          "name": "EnumValue_Impl_",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            }
+          ],
+          "sourcePath": "EnumValue.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "FixtureTypes",
+      "sourcePath": "FixtureTypes.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "(value : FixtureBox.T) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "instance",
+              "name": "value",
+              "sourceOrder": 0,
+              "typeDisplay": "FixtureBox.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "marker",
+              "sourceOrder": 1,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "member"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureBox",
+          "isFinal": false,
+          "name": "FixtureBox",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":directlyUsed"
+            },
+            {
+              "arguments": [
+                "\"class\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureCounter",
+          "isFinal": false,
+          "name": "FixtureCounter",
+          "isInterface": false,
+          "representedTypeDisplay": "Int",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":used"
+            },
+            {
+              "arguments": [
+                "\"abstract\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "marker",
+              "sourceOrder": 0,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureMarker",
+          "isFinal": false,
+          "name": "FixtureMarker",
+          "isInterface": true,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [
+                "\"interface\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "now",
+              "sourceOrder": 0,
+              "typeDisplay": "() -> Float",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureNativeClock",
+          "isFinal": false,
+          "name": "FixtureNativeClock",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [
+                "\"extern\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixturePoint",
+          "isFinal": false,
+          "name": "FixturePoint",
+          "isInterface": false,
+          "representedTypeDisplay": "{ y : Int, x : Int }",
+          "representedTypeKind": "anonymous",
+          "isExtern": false,
+          "kind": "typedef",
+          "metadata": [
+            {
+              "arguments": [
+                "\"typedef\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "enum",
+              "name": "Idle",
+              "sourceOrder": 0,
+              "typeDisplay": "FixtureState",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "Ready",
+              "sourceOrder": 1,
+              "typeDisplay": "(value : Int) -> FixtureState",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            }
+          ],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureState",
+          "isFinal": false,
+          "name": "FixtureState",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "enum",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":directlyUsed"
+            },
+            {
+              "arguments": [],
+              "name": ":used"
+            },
+            {
+              "arguments": [
+                "\"enum\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "abstract",
+              "name": "answer",
+              "sourceOrder": 0,
+              "typeDisplay": "Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [
+                    "42"
+                  ],
+                  "name": ":value"
+                }
+              ],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": false,
+          "path": "FixtureTypes",
+          "isFinal": false,
+          "name": "FixtureTypes",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [
+                "\"primary\""
+              ],
+              "name": ":typedAstFixture"
+            }
+          ],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "ofInt",
+              "sourceOrder": 0,
+              "typeDisplay": "(value : Int) -> FixtureCounter",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "_hx_new",
+              "sourceOrder": 1,
+              "typeDisplay": "(value : Int) -> FixtureCounter",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":noCompletion"
+                }
+              ],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "toInt",
+              "sourceOrder": 2,
+              "typeDisplay": "(this : Int) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "abstract-implementation",
+          "isAbstract": false,
+          "ownerModulePath": "FixtureTypes",
+          "isPrivate": true,
+          "path": "_FixtureTypes.FixtureCounter_Impl_",
+          "isFinal": true,
+          "name": "FixtureCounter_Impl_",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "FixtureTypes.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "IntIterator",
+      "sourcePath": "IntIterator.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "IntIterator",
+          "isPrivate": false,
+          "path": "IntIterator",
+          "isFinal": false,
+          "name": "IntIterator",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            }
+          ],
+          "sourcePath": "IntIterator.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "Main",
+      "sourcePath": "Main.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "main",
+              "sourceOrder": 0,
+              "typeDisplay": "() -> Void",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": true,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":keep"
+                }
+              ],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "Main",
+          "isPrivate": false,
+          "path": "Main",
+          "isFinal": false,
+          "name": "Main",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "Main.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "Std",
+      "sourcePath": "Std.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "is",
+              "sourceOrder": 0,
+              "typeDisplay": "(v : Dynamic, t : Dynamic) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [
+                    "'Std.is is deprecated. Use Std.isOfType instead.'"
+                  ],
+                  "name": ":deprecated"
+                }
+              ],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "isOfType",
+              "sourceOrder": 1,
+              "typeDisplay": "(v : Dynamic, t : Dynamic) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "downcast",
+              "sourceOrder": 2,
+              "typeDisplay": "(value : downcast.T, c : Class<downcast.S>) -> Null<downcast.S>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "instance",
+              "sourceOrder": 3,
+              "typeDisplay": "(value : instance.T, c : Class<instance.S>) -> Null<instance.S>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [
+                    "'Std.instance() is deprecated. Use Std.downcast() instead.'"
+                  ],
+                  "name": ":deprecated"
+                }
+              ],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "string",
+              "sourceOrder": 4,
+              "typeDisplay": "(s : Dynamic) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "int",
+              "sourceOrder": 5,
+              "typeDisplay": "(x : Float) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "parseInt",
+              "sourceOrder": 6,
+              "typeDisplay": "(x : String) -> Null<Int>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "parseFloat",
+              "sourceOrder": 7,
+              "typeDisplay": "(x : String) -> Float",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "random",
+              "sourceOrder": 8,
+              "typeDisplay": "(x : Int) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "Std",
+          "isPrivate": false,
+          "path": "Std",
+          "isFinal": false,
+          "name": "Std",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "Std.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "StdTypes",
+      "sourcePath": "StdTypes.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "ArrayAccess",
+          "isFinal": false,
+          "name": "ArrayAccess",
+          "isInterface": true,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Bool",
+          "isFinal": false,
+          "name": "Bool",
+          "isInterface": false,
+          "representedTypeDisplay": "Bool",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":used"
+            },
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":notNull"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Dynamic",
+          "isFinal": false,
+          "name": "Dynamic",
+          "isInterface": false,
+          "representedTypeDisplay": "Dynamic<Dynamic.T>",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Float",
+          "isFinal": false,
+          "name": "Float",
+          "isInterface": false,
+          "representedTypeDisplay": "Float",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":notNull"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Int",
+          "isFinal": false,
+          "name": "Int",
+          "isInterface": false,
+          "representedTypeDisplay": "Int",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":used"
+            },
+            {
+              "arguments": [],
+              "name": ":coreType"
+            },
+            {
+              "arguments": [],
+              "name": ":notNull"
+            },
+            {
+              "arguments": [],
+              "name": ":runtimeValue"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Iterable",
+          "isFinal": false,
+          "name": "Iterable",
+          "isInterface": false,
+          "representedTypeDisplay": "{ iterator : () -> Iterator<Iterable.T> }",
+          "representedTypeKind": "anonymous",
+          "isExtern": false,
+          "kind": "typedef",
+          "metadata": [],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Iterator",
+          "isFinal": false,
+          "name": "Iterator",
+          "isInterface": false,
+          "representedTypeDisplay": "{ next : () -> Iterator.T, hasNext : () -> Bool }",
+          "representedTypeKind": "anonymous",
+          "isExtern": false,
+          "kind": "typedef",
+          "metadata": [],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "KeyValueIterable",
+          "isFinal": false,
+          "name": "KeyValueIterable",
+          "isInterface": false,
+          "representedTypeDisplay": "{ keyValueIterator : () -> KeyValueIterator<KeyValueIterable.K, KeyValueIterable.V> }",
+          "representedTypeKind": "anonymous",
+          "isExtern": false,
+          "kind": "typedef",
+          "metadata": [],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "KeyValueIterator",
+          "isFinal": false,
+          "name": "KeyValueIterator",
+          "isInterface": false,
+          "representedTypeDisplay": "Iterator<{ value : KeyValueIterator.V, key : KeyValueIterator.K }>",
+          "representedTypeKind": "typedef",
+          "isExtern": false,
+          "kind": "typedef",
+          "metadata": [],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Null",
+          "isFinal": false,
+          "name": "Null",
+          "isInterface": false,
+          "representedTypeDisplay": "Null<Null.T>",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":forward"
+            },
+            {
+              "arguments": [],
+              "name": ":coreType"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "StdTypes",
+          "isPrivate": false,
+          "path": "Void",
+          "isFinal": false,
+          "name": "Void",
+          "isInterface": false,
+          "representedTypeDisplay": "Void",
+          "representedTypeKind": "abstract",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":used"
+            },
+            {
+              "arguments": [],
+              "name": ":coreType"
+            }
+          ],
+          "sourcePath": "StdTypes.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "String",
+      "sourcePath": "String.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "(string : String) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "length",
+              "sourceOrder": 0,
+              "typeDisplay": "Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "toUpperCase",
+              "sourceOrder": 1,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "toLowerCase",
+              "sourceOrder": 2,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "charAt",
+              "sourceOrder": 3,
+              "typeDisplay": "(index : Int) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "charCodeAt",
+              "sourceOrder": 4,
+              "typeDisplay": "(index : Int) -> Null<Int>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "indexOf",
+              "sourceOrder": 5,
+              "typeDisplay": "(str : String, ?startIndex : Null<Int>) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "lastIndexOf",
+              "sourceOrder": 6,
+              "typeDisplay": "(str : String, ?startIndex : Null<Int>) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "split",
+              "sourceOrder": 7,
+              "typeDisplay": "(delimiter : String) -> Array<String>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "substr",
+              "sourceOrder": 8,
+              "typeDisplay": "(pos : Int, ?len : Null<Int>) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "substring",
+              "sourceOrder": 9,
+              "typeDisplay": "(startIndex : Int, ?endIndex : Null<Int>) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "toString",
+              "sourceOrder": 10,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "fromCharCode",
+              "sourceOrder": 0,
+              "typeDisplay": "(code : Int) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [],
+                  "name": ":pure"
+                }
+              ],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "String",
+          "isPrivate": false,
+          "path": "String",
+          "isFinal": false,
+          "name": "String",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "String.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "StringBuf",
+      "sourcePath": "StringBuf.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "StringBuf",
+          "isPrivate": false,
+          "path": "StringBuf",
+          "isFinal": false,
+          "name": "StringBuf",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            }
+          ],
+          "sourcePath": "StringBuf.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "Type",
+      "sourcePath": "Type.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "getClass",
+              "sourceOrder": 0,
+              "typeDisplay": "(o : getClass.T) -> Null<Class<getClass.T>>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getEnum",
+              "sourceOrder": 1,
+              "typeDisplay": "(o : EnumValue) -> Null<Enum<Dynamic>>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getSuperClass",
+              "sourceOrder": 2,
+              "typeDisplay": "(c : Class<Dynamic>) -> Null<Class<Dynamic>>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getClassName",
+              "sourceOrder": 3,
+              "typeDisplay": "(c : Class<Dynamic>) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getEnumName",
+              "sourceOrder": 4,
+              "typeDisplay": "(e : Enum<Dynamic>) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "resolveClass",
+              "sourceOrder": 5,
+              "typeDisplay": "(name : String) -> Null<Class<Dynamic>>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "resolveEnum",
+              "sourceOrder": 6,
+              "typeDisplay": "(name : String) -> Null<Enum<Dynamic>>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createInstance",
+              "sourceOrder": 7,
+              "typeDisplay": "(cl : Class<createInstance.T>, args : Array<Dynamic>) -> createInstance.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createEmptyInstance",
+              "sourceOrder": 8,
+              "typeDisplay": "(cl : Class<createEmptyInstance.T>) -> createEmptyInstance.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createEnum",
+              "sourceOrder": 9,
+              "typeDisplay": "(e : Enum<createEnum.T>, constr : String, ?params : Null<Array<Dynamic>>) -> createEnum.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createEnumIndex",
+              "sourceOrder": 10,
+              "typeDisplay": "(e : Enum<createEnumIndex.T>, index : Int, ?params : Null<Array<Dynamic>>) -> createEnumIndex.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getInstanceFields",
+              "sourceOrder": 11,
+              "typeDisplay": "(c : Class<Dynamic>) -> Array<String>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getClassFields",
+              "sourceOrder": 12,
+              "typeDisplay": "(c : Class<Dynamic>) -> Array<String>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getEnumConstructs",
+              "sourceOrder": 13,
+              "typeDisplay": "(e : Enum<Dynamic>) -> Array<String>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "typeof",
+              "sourceOrder": 14,
+              "typeDisplay": "(v : Dynamic) -> ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "enumEq",
+              "sourceOrder": 15,
+              "typeDisplay": "(a : enumEq.T, b : enumEq.T) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "enumConstructor",
+              "sourceOrder": 16,
+              "typeDisplay": "(e : EnumValue) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "enumParameters",
+              "sourceOrder": 17,
+              "typeDisplay": "(e : EnumValue) -> Array<Dynamic>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "enumIndex",
+              "sourceOrder": 18,
+              "typeDisplay": "(e : EnumValue) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "allEnums",
+              "sourceOrder": 19,
+              "typeDisplay": "(e : Enum<allEnums.T>) -> Array<allEnums.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "Type",
+          "isPrivate": false,
+          "path": "Type",
+          "isFinal": false,
+          "name": "Type",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "Type.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "enum",
+              "name": "TNull",
+              "sourceOrder": 0,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TInt",
+              "sourceOrder": 1,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TFloat",
+              "sourceOrder": 2,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TBool",
+              "sourceOrder": 3,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TObject",
+              "sourceOrder": 4,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TFunction",
+              "sourceOrder": 5,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "TClass",
+              "sourceOrder": 6,
+              "typeDisplay": "(c : Class<Dynamic>) -> ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "TEnum",
+              "sourceOrder": 7,
+              "typeDisplay": "(e : Enum<Dynamic>) -> ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "enum",
+              "name": "TUnknown",
+              "sourceOrder": 8,
+              "typeDisplay": "ValueType",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            }
+          ],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "Type",
+          "isPrivate": false,
+          "path": "ValueType",
+          "isFinal": false,
+          "name": "ValueType",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "enum",
+          "metadata": [],
+          "sourcePath": "Type.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.CallStack",
+      "sourcePath": "haxe/CallStack.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "haxe.CallStack",
+          "isPrivate": false,
+          "path": "haxe.CallStack",
+          "isFinal": false,
+          "name": "CallStack",
+          "isInterface": false,
+          "representedTypeDisplay": "Array<haxe.StackItem>",
+          "representedTypeKind": "instance",
+          "isExtern": false,
+          "kind": "abstract",
+          "metadata": [
+            {
+              "arguments": [
+                "haxe.Exception"
+              ],
+              "name": ":allow"
+            },
+            {
+              "arguments": [
+                "haxe.CallStack"
+              ],
+              "name": ":using"
+            }
+          ],
+          "sourcePath": "haxe/CallStack.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "enum",
+              "name": "CFunction",
+              "sourceOrder": 0,
+              "typeDisplay": "haxe.StackItem",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "Module",
+              "sourceOrder": 1,
+              "typeDisplay": "(m : String) -> haxe.StackItem",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "FilePos",
+              "sourceOrder": 2,
+              "typeDisplay": "(s : Null<haxe.StackItem>, file : String, line : Int, ?column : Null<Int>) -> haxe.StackItem",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "Method",
+              "sourceOrder": 3,
+              "typeDisplay": "(classname : Null<String>, method : String) -> haxe.StackItem",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            },
+            {
+              "typeKind": "function",
+              "name": "LocalFunction",
+              "sourceOrder": 4,
+              "typeDisplay": "(?v : Null<Int>) -> haxe.StackItem",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "enum-constructor",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "enum-constructor"
+            }
+          ],
+          "classKind": null,
+          "isAbstract": false,
+          "ownerModulePath": "haxe.CallStack",
+          "isPrivate": false,
+          "path": "haxe.StackItem",
+          "isFinal": false,
+          "name": "StackItem",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "enum",
+          "metadata": [],
+          "sourcePath": "haxe/CallStack.hx",
+          "ownership": "secondary"
+        },
+        {
+          "fields": [],
+          "classKind": "abstract-implementation",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.CallStack",
+          "isPrivate": true,
+          "path": "haxe._CallStack.CallStack_Impl_",
+          "isFinal": true,
+          "name": "CallStack_Impl_",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            },
+            {
+              "arguments": [
+                "haxe.CallStack"
+              ],
+              "name": ":using"
+            },
+            {
+              "arguments": [
+                "haxe.Exception"
+              ],
+              "name": ":allow"
+            }
+          ],
+          "sourcePath": "haxe/CallStack.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.EnumTools",
+      "sourcePath": "haxe/EnumTools.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "getName",
+              "sourceOrder": 0,
+              "typeDisplay": "(e : Enum<getName.T>) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createByName",
+              "sourceOrder": 1,
+              "typeDisplay": "(e : Enum<createByName.T>, constr : String, ?params : Null<Array<Dynamic>>) -> createByName.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createByIndex",
+              "sourceOrder": 2,
+              "typeDisplay": "(e : Enum<createByIndex.T>, index : Int, ?params : Null<Array<Dynamic>>) -> createByIndex.T",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "createAll",
+              "sourceOrder": 3,
+              "typeDisplay": "(e : Enum<createAll.T>) -> Array<createAll.T>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getConstructors",
+              "sourceOrder": 4,
+              "typeDisplay": "(e : Enum<getConstructors.T>) -> Array<String>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.EnumTools",
+          "isPrivate": false,
+          "path": "haxe.EnumTools",
+          "isFinal": false,
+          "name": "EnumTools",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "haxe/EnumTools.hx",
+          "ownership": "primary"
+        },
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "equals",
+              "sourceOrder": 0,
+              "typeDisplay": "(a : equals.T, b : equals.T) -> Bool",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getName",
+              "sourceOrder": 1,
+              "typeDisplay": "(e : EnumValue) -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getParameters",
+              "sourceOrder": 2,
+              "typeDisplay": "(e : EnumValue) -> Array<Dynamic>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "getIndex",
+              "sourceOrder": 3,
+              "typeDisplay": "(e : EnumValue) -> Int",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-inline",
+              "hasExpression": true,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.EnumTools",
+          "isPrivate": false,
+          "path": "haxe.EnumValueTools",
+          "isFinal": false,
+          "name": "EnumValueTools",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "haxe/EnumTools.hx",
+          "ownership": "secondary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.Exception",
+      "sourcePath": "haxe/Exception.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "new",
+              "sourceOrder": 0,
+              "typeDisplay": "(message : String, ?previous : Null<haxe.Exception>, ?native : Null<Any>) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "constructor"
+            },
+            {
+              "typeKind": "instance",
+              "name": "message",
+              "sourceOrder": 0,
+              "typeDisplay": "String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "get_message",
+              "sourceOrder": 1,
+              "typeDisplay": "() -> String",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "stack",
+              "sourceOrder": 2,
+              "typeDisplay": "haxe.CallStack",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "get_stack",
+              "sourceOrder": 3,
+              "typeDisplay": "() -> haxe.CallStack",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "set_stack",
+              "sourceOrder": 4,
+              "typeDisplay": "(stack : haxe.CallStack) -> haxe.CallStack",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "previous",
+              "sourceOrder": 5,
+              "typeDisplay": "Null<haxe.Exception>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "get_previous",
+              "sourceOrder": 6,
+              "typeDisplay": "() -> Null<haxe.Exception>",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "abstract",
+              "name": "native",
+              "sourceOrder": 7,
+              "typeDisplay": "Any",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "variable",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "get_native",
+              "sourceOrder": 8,
+              "typeDisplay": "() -> Any",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "unwrap",
+              "sourceOrder": 9,
+              "typeDisplay": "() -> Any",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "toString",
+              "sourceOrder": 10,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "details",
+              "sourceOrder": 11,
+              "typeDisplay": "() -> String",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "member"
+            },
+            {
+              "typeKind": "function",
+              "name": "caught",
+              "sourceOrder": 0,
+              "typeDisplay": "(value : Any) -> haxe.Exception",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "thrown",
+              "sourceOrder": 1,
+              "typeDisplay": "(value : Any) -> Any",
+              "isPublic": false,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.Exception",
+          "isPrivate": false,
+          "path": "haxe.Exception",
+          "isFinal": false,
+          "name": "Exception",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [],
+          "sourcePath": "haxe/Exception.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.NativeStackTrace",
+      "sourcePath": "haxe/NativeStackTrace.hx",
+      "declarations": [
+        {
+          "fields": [
+            {
+              "typeKind": "function",
+              "name": "saveStack",
+              "sourceOrder": 0,
+              "typeDisplay": "(exception : Any) -> Void",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "callStack",
+              "sourceOrder": 1,
+              "typeDisplay": "() -> Any",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "exceptionStack",
+              "sourceOrder": 2,
+              "typeDisplay": "() -> Any",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [],
+              "role": "static"
+            },
+            {
+              "typeKind": "function",
+              "name": "toHaxe",
+              "sourceOrder": 3,
+              "typeDisplay": "(nativeStackTrace : Any, ?skip : Int) -> Array<haxe.StackItem>",
+              "isPublic": true,
+              "isExtern": false,
+              "kind": "method-normal",
+              "hasExpression": false,
+              "metadata": [
+                {
+                  "arguments": [
+                    "{ skip : 0 }"
+                  ],
+                  "name": ":value"
+                }
+              ],
+              "role": "static"
+            }
+          ],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.NativeStackTrace",
+          "isPrivate": false,
+          "path": "haxe.NativeStackTrace",
+          "isFinal": false,
+          "name": "NativeStackTrace",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": true,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [
+                "hide"
+              ],
+              "name": ":dox"
+            },
+            {
+              "arguments": [],
+              "name": ":noCompletion"
+            }
+          ],
+          "sourcePath": "haxe/NativeStackTrace.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.iterators.ArrayIterator",
+      "sourcePath": "haxe/iterators/ArrayIterator.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.iterators.ArrayIterator",
+          "isPrivate": false,
+          "path": "haxe.iterators.ArrayIterator",
+          "isFinal": false,
+          "name": "ArrayIterator",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            }
+          ],
+          "sourcePath": "haxe/iterators/ArrayIterator.hx",
+          "ownership": "primary"
+        }
+      ]
+    },
+    {
+      "path": "haxe.iterators.ArrayKeyValueIterator",
+      "sourcePath": "haxe/iterators/ArrayKeyValueIterator.hx",
+      "declarations": [
+        {
+          "fields": [],
+          "classKind": "normal",
+          "isAbstract": false,
+          "ownerModulePath": "haxe.iterators.ArrayKeyValueIterator",
+          "isPrivate": false,
+          "path": "haxe.iterators.ArrayKeyValueIterator",
+          "isFinal": false,
+          "name": "ArrayKeyValueIterator",
+          "isInterface": false,
+          "representedTypeDisplay": null,
+          "representedTypeKind": null,
+          "isExtern": false,
+          "kind": "class",
+          "metadata": [
+            {
+              "arguments": [],
+              "name": ":keep"
+            },
+            {
+              "arguments": [
+                "\"anon_read.keyValueIterator\"",
+                "\"dynamic_read.keyValueIterator\""
+              ],
+              "name": ":ifFeature"
+            }
+          ],
+          "sourcePath": "haxe/iterators/ArrayKeyValueIterator.hx",
+          "ownership": "primary"
+        }
+      ]
+    }
+  ],
+  "status": "normalized-typed-input-no-lowering",
+  "schemaVersion": 1,
+  "totals": {
+    "fields": 120,
+    "expressionRoots": 21,
+    "modules": 19,
+    "expressions": 235,
+    "declarations": 42
+  },
+  "entryPoint": {
+    "expressionKind": "call",
+    "declarationPath": "Main",
+    "modulePath": "Main"
+  }
+}
