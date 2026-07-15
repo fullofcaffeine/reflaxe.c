@@ -1,27 +1,122 @@
 {
-  "schemaVersion": 1,
-  "stability": "Diagnostic IDs are stable once released; wording may improve without changing the ID when the remediation contract is unchanged.",
+  "$schema": "diagnostics.schema.json",
+  "schemaVersion": 2,
+  "eventSchema": "diagnostic-event.schema.json",
+  "idPolicy": {
+    "stability": "An emitted ID is stable. Reuse is forbidden, and retirement leaves a tombstone rather than reallocating the number.",
+    "wording": "Summary and detail wording may improve when the failure family and remediation contract do not change; consumers match IDs and structured fields, never full prose.",
+    "retirement": "A retired diagnostic remains registered with its last meaning and a replacement ID when one exists.",
+    "allocation": "Allocate the lowest suitable unused ID in the owning range and add the typed Haxe ID, catalog entry, tests, and documentation in the same change."
+  },
+  "severityPolicy": {
+    "levels": [
+      "error",
+      "warning",
+      "info"
+    ],
+    "escalation": "A call site may select only an allowed severity. Policy-driven escalation must preserve the ID; HXC2001 is informational by default and may become a warning under runtime diagnostics."
+  },
+  "sourcePolicy": {
+    "requirement": "Every emitted compiler diagnostic has a primary Haxe source span. When no user construct exists, use the compilation or configuration anchor rather than a host-only path.",
+    "pathForm": "Normalized repository/project-relative UTF-8 with forward slashes; JSON output must not expose an absolute checkout path.",
+    "coordinates": "One-based lines and columns with an exclusive end point."
+  },
+  "profilePolicy": {
+    "values": [
+      "portable",
+      "metal",
+      "unresolved"
+    ],
+    "unresolved": "Use unresolved only when configuration failed before a valid source-semantics profile could be selected."
+  },
   "ranges": [
-    {"range": "HXC0000-HXC0999", "category": "bootstrap and configuration"},
-    {"range": "HXC1000-HXC1999", "category": "language lowering"},
-    {"range": "HXC2000-HXC2999", "category": "runtime and memory policy"},
-    {"range": "HXC3000-HXC3999", "category": "C ABI and export"},
-    {"range": "HXC4000-HXC4999", "category": "interop and unsafe boundaries"},
-    {"range": "HXC5000-HXC5999", "category": "target API and macro contracts"},
-    {"range": "HXC9000-HXC9999", "category": "internal compiler failures"}
+    {
+      "start": "HXC0000",
+      "end": "HXC0999",
+      "category": "bootstrap and configuration",
+      "status": "active"
+    },
+    {
+      "start": "HXC1000",
+      "end": "HXC1999",
+      "category": "language lowering and unsupported source semantics",
+      "status": "active"
+    },
+    {
+      "start": "HXC2000",
+      "end": "HXC2999",
+      "category": "runtime and memory policy",
+      "status": "active"
+    },
+    {
+      "start": "HXC3000",
+      "end": "HXC3999",
+      "category": "C ABI, export, layout, and ownership boundaries",
+      "status": "active"
+    },
+    {
+      "start": "HXC4000",
+      "end": "HXC4999",
+      "category": "interop, unsafe boundaries, bindgen, and platform capabilities",
+      "status": "active"
+    },
+    {
+      "start": "HXC5000",
+      "end": "HXC5999",
+      "category": "target API, metadata, macros, and DSL contracts",
+      "status": "active"
+    },
+    {
+      "start": "HXC6000",
+      "end": "HXC6999",
+      "category": "native build, toolchain, and packaging",
+      "status": "reserved"
+    },
+    {
+      "start": "HXC7000",
+      "end": "HXC7999",
+      "category": "determinism, incremental state, and quality gates",
+      "status": "reserved"
+    },
+    {
+      "start": "HXC8000",
+      "end": "HXC8999",
+      "category": "CLI, workspace, inspection, and orchestration",
+      "status": "reserved"
+    },
+    {
+      "start": "HXC9000",
+      "end": "HXC9999",
+      "category": "internal compiler failures",
+      "status": "active"
+    }
   ],
   "diagnostics": [
     {
       "id": "HXC0002",
       "name": "framework-unavailable",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "bootstrap",
+      "kind": "dependency-failure",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "The Reflaxe framework could not be resolved during compiler bootstrap.",
-      "remediation": "Use the scoped library HXML, pin/vendor Reflaxe, or install the compatible library revision."
+      "remediation": "Use the scoped library HXML, pin or vendor Reflaxe, or install the compatible library revision."
     },
     {
       "id": "HXC0003",
       "name": "invalid-configuration",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "configuration",
+      "kind": "invalid-configuration",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "A target identity, carrier capability, profile, runtime, environment, standard, or related build option is invalid or contradictory.",
       "remediation": "Correct the named option or carrier mismatch; use `hxc inspect build` once M8 implements configuration inspection."
     },
@@ -29,6 +124,13 @@
       "id": "HXC1000",
       "name": "lowering-not-implemented",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "lowering",
+      "kind": "compiler-capability",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "The scaffold reached a language-lowering path that is intentionally not implemented.",
       "remediation": "Implement and test the corresponding Beads task; scaffold output is never executable program output."
     },
@@ -36,6 +138,13 @@
       "id": "HXC1001",
       "name": "unsupported-expression",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "lowering",
+      "kind": "unsupported-source",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "A typed Haxe expression has no supported C lowering.",
       "remediation": "Use a supported construct or implement its typed IR and C AST lowering with semantic tests."
     },
@@ -43,6 +152,13 @@
       "id": "HXC2000",
       "name": "runtime-policy-violation",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "runtime-analysis",
+      "kind": "runtime-policy",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "Source semantics require a runtime feature forbidden by the selected runtime policy.",
       "remediation": "Remove the source requirement, select an allowed runtime policy, or provide an explicit metal implementation."
     },
@@ -50,6 +166,14 @@
       "id": "HXC2001",
       "name": "runtime-feature-selected",
       "defaultSeverity": "info",
+      "allowedSeverities": [
+        "info",
+        "warning"
+      ],
+      "phase": "runtime-analysis",
+      "kind": "runtime-selection",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "A root source semantic requirement selected an hxrt feature after direct C and local specialization were ineligible.",
       "remediation": "Inspect hxc.runtime-plan.json; accept the explained feature, choose a semantics-preserving typed C alternative, or select a stricter runtime policy."
     },
@@ -57,13 +181,27 @@
       "id": "HXC3000",
       "name": "invalid-abi-boundary",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "abi",
+      "kind": "invalid-abi",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "An exported or imported declaration cannot be represented by the selected stable C ABI contract.",
-      "remediation": "Use fixed ABI types, opaque handles, views, callbacks with context, and explicit status/error outputs."
+      "remediation": "Use fixed ABI types, opaque handles, views, callbacks with context, and explicit status or error outputs."
     },
     {
       "id": "HXC4001",
       "name": "raw-c-forbidden-in-example",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "interop",
+      "kind": "unsafe-boundary",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "An example or snapshot uses raw `__c__()` target-code injection.",
       "remediation": "Add a typed `c.*` facade or compiler lowering instead."
     },
@@ -71,6 +209,13 @@
       "id": "HXC4002",
       "name": "raw-c-forbidden-in-strict-mode",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "interop",
+      "kind": "unsafe-boundary",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "Strict mode found application-side raw `__c__()` target-code injection.",
       "remediation": "Use typed interop, a reviewed framework macro, or disable strict mode only for an isolated migration fixture."
     },
@@ -78,6 +223,13 @@
       "id": "HXC5001",
       "name": "bootstrap-macro-contract",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "target-contract",
+      "kind": "invalid-target-contract",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "A public target macro is present as an API contract but its validated implementation is not complete.",
       "remediation": "Complete the owning Beads milestone before using the macro in production code."
     },
@@ -85,6 +237,13 @@
       "id": "HXC5002",
       "name": "invalid-typed-c-contract",
       "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "target-contract",
+      "kind": "invalid-target-contract",
+      "sourcePolicy": "required",
+      "idStability": "stable",
       "summary": "A typed C declaration, header, layout, ownership, build, macro, or DSL contract is invalid for the resolved target configuration.",
       "remediation": "Correct the reported typed declaration or metadata at its Haxe source span; do not bypass validation with raw C."
     },
@@ -92,8 +251,15 @@
       "id": "HXC9000",
       "name": "internal-compiler-error",
       "defaultSeverity": "error",
-      "summary": "A required compiler lifecycle invariant or internal object is missing.",
-      "remediation": "Report a minimized reproducer, compiler/version manifest, and stack trace; do not work around it with raw C."
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "internal",
+      "kind": "internal-compiler-failure",
+      "sourcePolicy": "required",
+      "idStability": "stable",
+      "summary": "A required compiler lifecycle invariant or internal object is missing or malformed.",
+      "remediation": "Report a minimized reproducer, compiler/version manifest, and the relevant stack trace or IR dump; do not bypass validation with raw C."
     }
   ]
 }

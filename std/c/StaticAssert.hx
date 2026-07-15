@@ -3,6 +3,8 @@ package c;
 #if macro
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import reflaxe.c.CDiagnostic;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 #end
 
 /** Source-positioned Haxe compile-time assertion; native layout assertions are emitted later. */
@@ -11,16 +13,16 @@ class StaticAssert {
 		final detail = switch message.expr {
 			case EConst(CString(value, _)): value;
 			case _:
-				Context.error("HXC5002: c.StaticAssert.require message must be a string literal", message.pos);
+				CDiagnostic.error(CDiagnosticId.InvalidTypedCContract, "c.StaticAssert.require message must be a string literal", message.pos);
 				"invalid static assertion";
 		}
 
 		switch condition.expr {
 			case EConst(CIdent("true")):
 			case EConst(CIdent("false")):
-				Context.error('HXC5002: static assertion failed: $detail', condition.pos);
+				CDiagnostic.error(CDiagnosticId.InvalidTypedCContract, 'static assertion failed: $detail', condition.pos);
 			case _:
-				Context.error("HXC5002: c.StaticAssert.require condition must be a compile-time Bool literal", condition.pos);
+				CDiagnostic.error(CDiagnosticId.InvalidTypedCContract, "c.StaticAssert.require condition must be a compile-time Bool literal", condition.pos);
 		}
 
 		return macro {};

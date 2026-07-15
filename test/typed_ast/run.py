@@ -17,10 +17,8 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-ast-inventory.json"
 REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
-HXC1000 = (
-    "HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary; "
-    "no C was emitted."
-)
+LOWERING_DIAGNOSTIC_ID = "HXC1000"
+LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
 
 
 class TypedAstProbeFailure(RuntimeError):
@@ -86,7 +84,12 @@ def compile_fixture(
             )
 
     combined = process.stdout + process.stderr
-    if process.returncode == 0 or HXC1000 not in combined or "Main.hx" not in combined:
+    if (
+        process.returncode == 0
+        or LOWERING_DIAGNOSTIC_ID not in combined
+        or LOWERING_DETAIL not in combined
+        or "Main.hx" not in combined
+    ):
         raise TypedAstProbeFailure(
             f"{fixture} missed its source-anchored HXC1000 boundary\n"
             f"stdout:\n{process.stdout}\nstderr:\n{process.stderr}"

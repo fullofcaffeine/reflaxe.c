@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 EXPECTED = Path(__file__).resolve().parent / "expected/typed-c-contract.json"
 REPORT_PREFIX = "HXC_TYPED_C_CONTRACT="
+INVALID_TYPED_C_DIAGNOSTIC_ID = "HXC5002"
 
 
 class TypedCProbeFailure(RuntimeError):
@@ -125,12 +126,14 @@ def check_negative_fixtures() -> None:
         combined = result.stdout + result.stderr
         if result.returncode == 0:
             raise TypedCProbeFailure(f"negative fixture {directory} unexpectedly compiled")
-        if "HXC5002:" not in combined or expected not in combined:
+        if INVALID_TYPED_C_DIAGNOSTIC_ID not in combined or expected not in combined:
             raise TypedCProbeFailure(
                 f"negative fixture {directory} missed its stable diagnostic\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
         if source_position.search(combined) is None:
             raise TypedCProbeFailure(f"negative fixture {directory} did not report a Haxe source position\n{combined}")
+        if "[profile=portable]" not in combined or "Remediation:" not in combined:
+            raise TypedCProbeFailure(f"negative fixture {directory} lost its profile or remediation field\n{combined}")
 
 
 def available_port() -> int:
@@ -175,7 +178,12 @@ def check_compiler_server_isolation() -> None:
         repeated = compile_fixture("positive", "MainReverse", report=True, connect=endpoint)
         require_success(first, "compiler-server first typed C fixture")
         require_success(repeated, "compiler-server repeated typed C fixture")
-        if invalid.returncode == 0 or "HXC5002: duplicate explicit C symbol" not in invalid.stdout + invalid.stderr:
+        invalid_output = invalid.stdout + invalid.stderr
+        if (
+            invalid.returncode == 0
+            or INVALID_TYPED_C_DIAGNOSTIC_ID not in invalid_output
+            or "duplicate explicit C symbol" not in invalid_output
+        ):
             raise TypedCProbeFailure("compiler-server negative request missed its isolated HXC5002 diagnostic")
         first_payload, _ = extract_report(first, "compiler-server first typed C fixture")
         repeated_payload, _ = extract_report(repeated, "compiler-server repeated typed C fixture")

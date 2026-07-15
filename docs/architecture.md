@@ -86,6 +86,16 @@ declaration remain intact. Forward/reversed input and cold/compiler-server
 fixtures are byte-identical. This boundary still performs no Haxe-to-HxcIR
 lowering, so production compilation deliberately ends at `HXC1000`.
 
+`CDiagnostic` is the single target-owned diagnostic boundary. Its typed ID
+registry is checked against the schema-2 catalog, while `CDiagnosticRecord`
+provides deterministic schema-1 JSON with severity, phase, kind, profile,
+normalized primary source range, remediation, notes, and related locations.
+Production call sites cannot embed raw ID prefixes. Unsupported source
+(`HXC1001`), the scaffold capability boundary (`HXC1000`), and internal
+compiler failure (`HXC9000`) remain structurally distinct. Public CLI/event
+framing and native-tool attachments remain E8.T09 rather than leaking into the
+compiler core. See [diagnostic contract](diagnostics.md).
+
 `HxcIRDumper` canonicalizes only semantically unordered collections and retains
 ordered instructions, edge arguments, and cleanup steps with repository-relative
 source spans. `HxcIRValidator` rejects missing targets/results/terminators,

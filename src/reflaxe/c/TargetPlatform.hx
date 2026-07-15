@@ -4,6 +4,7 @@ package reflaxe.c;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 #if (haxe >= version("5.0.0-preview.1"))
 import haxe.macro.PlatformConfig;
 #end
@@ -51,8 +52,8 @@ class TargetPlatform {
 		Compiler.define(ENVIRONMENT_DEFINE, environment);
 		Compiler.define(READY_DEFINE);
 		#else
-		Context.fatalError("HXC0003: reflaxe.c production typing requires Haxe custom-target platform configuration; Haxe 4 lifecycle probes are test-only.",
-			configurationPosition());
+		CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration,
+			"reflaxe.c production typing requires Haxe custom-target platform configuration; Haxe 4 lifecycle probes are test-only.", configurationPosition());
 		#end
 	}
 
@@ -67,8 +68,8 @@ class TargetPlatform {
 			case "hosted" | "freestanding" | "wasi" | "emscripten":
 				environment;
 			case _:
-				Context.fatalError('HXC0003: unsupported C environment `$environment`; expected hosted, freestanding, wasi, or emscripten.',
-					configurationPosition());
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration,
+					'unsupported C environment `$environment`; expected hosted, freestanding, wasi, or emscripten.', configurationPosition());
 		};
 	}
 

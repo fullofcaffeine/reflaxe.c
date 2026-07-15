@@ -14,10 +14,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 HXML = Path(__file__).with_name("all_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
-HXC1000 = (
-    "HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary; "
-    "no C was emitted."
-)
+LOWERING_DIAGNOSTIC_ID = "HXC1000"
+LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
 MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CompilerBootstrap.Start",
     "Typing macro reflaxe.c.BuildDetection.isCBuild",
@@ -112,7 +110,11 @@ def check_production_boundary() -> None:
         combined = result.stdout + result.stderr
         if "Typing macro c.Init.init" not in combined:
             raise AllSourcesFailure("production HXML did not type the c.Init custom-target hook")
-        if HXC1000 not in combined or "AllSourcesProbe.hx" not in combined:
+        if (
+            LOWERING_DIAGNOSTIC_ID not in combined
+            or LOWERING_DETAIL not in combined
+            or "AllSourcesProbe.hx" not in combined
+        ):
             raise AllSourcesFailure(
                 "production HXML missed its source-anchored HXC1000 boundary\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"

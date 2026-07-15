@@ -2268,6 +2268,29 @@ Every compiler diagnostic has a stable ID, severity, source span, profile, and r
 - non-determinism;
 - internal compiler error.
 
+The checked-in schema-2 catalog at `docs/specs/diagnostics.json` is the
+allocation and policy authority. Its ranges cover `HXC0000` through `HXC9999`
+exactly once; unallocated native-build, determinism, and CLI ranges remain
+explicitly reserved. `CDiagnosticId` is the typed Haxe call-site registry and
+must match the catalog exactly. Raw diagnostic prefixes in production Haxe are
+forbidden.
+
+An emitted ID is stable and is never reused. Detail wording may improve when
+the failure family and remediation contract do not change; automation matches
+the ID and structured fields, not full prose. Each entry defines its default
+and allowed severities. Every structured record uses a normalized
+project/repository-relative primary Haxe range with one-based, end-exclusive
+coordinates and a `portable`, `metal`, or early-failure `unresolved` profile.
+The schema-1 single-record format is
+`docs/specs/diagnostic-event.schema.json`; E8.T09 owns public stream framing,
+native-tool attachments, command context, and CLI stdout/stderr discipline.
+
+Unsupported source (`HXC1001`), the intentional scaffold capability boundary
+(`HXC1000`), and internal compiler failure (`HXC9000`) are distinct kinds.
+Malformed internal state must not be reported as unsupported user source, and
+known unsupported source must not be hidden as an internal crash. The complete
+allocation and contributor workflow are documented in `docs/diagnostics.md`.
+
 ### 20.2 Generated comments and line mapping
 
 Debug builds SHOULD support:
@@ -4918,7 +4941,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Runtime ABI and implementation (`runtime-abi-and-implementation`) | `runtime/hxrt/include/hxc_runtime.h`, `runtime/hxrt/src/hxc_runtime.c` | Verified native seed | A provisional allocator/string/status/Int32 ABI compiles and runs natively but is not selected by generated programs. The runtime feature graph/manifest, hardened allocation contracts, arrays, objects, managed memory, dynamic values, reflection, exceptions, threads, and platform adapters remain later work. |
 | Native smoke fixtures (`native-smoke-fixtures`) | `runtime/hxrt/test/**`, `scripts/ci/runtime_smoke.py`, `test/c_ast/**`, `test/declaration_plan/**`, `test/native/pointlib/**`, `test/native/cpp_shim/**` | Verified native seed, AST, and planned-header goldens | Local auto mode explicitly reports optional compiler-family skips and requires at least one complete pair. CI separately requires real GCC/G++ and Clang/Clang++ lanes with warnings as errors; each compiles/runs the runtime-free declarator and expression/statement AST goldens, independently compiles every planned declaration header, runs their combined consumer and the hosted C11 runtime, compiles the freestanding path, links/runs a C++17 runtime-header consumer, and exercises independent C-library and opaque-handle C++-shim fixtures. Sanitizers, Haxe-language generated output, broader platform matrices, ownership/failure paths, generated C++-compatible export headers, and installed external consumers remain later gates. |
 | Fixture taxonomy and snapshot policy (`fixture-policy`) | `docs/testing.md`, `docs/specs/fixture-{case,taxonomy}*.json`, `scripts/test/snapshots.py`, `scripts/ci/check_fixture_policy.py`, canonical `test/{positive,negative,ast,snapshot,runtime,differential,abi,performance}/` lanes | Verified policy and deterministic M0 snapshots | Eight evidence lanes have explicit directory, runner, and expected-output contracts. Existing M0 suites, including the real custom-target typed-AST normalization/inventory suite, are mapped in place; every checked-in expected artifact is registry-owned and reproducible through an explicit check/update command that prints semantic diffs and cannot bless in CI. Direct AST/IR, independent native runtime/ABI, and oracle seeds retain their limited claims. Future examples require schema-valid declared assertions and may not become implicit tests. |
-| Diagnostics (`diagnostics`) | `CDiagnostic.hx`, `docs/specs/diagnostics.json`, schema | Seeded | Stable IDs and the deliberate scaffold failure are registered. Complete source ranges, severity policy, remediation, JSON output, registry drift checks, and diagnostic tests are still required. |
+| Diagnostics (`diagnostics`) | `CDiagnostic.hx`, `docs/diagnostics.md`, `docs/specs/diagnostics{,.schema}.json`, `diagnostic-event.schema.json`, `test/diagnostics/**`, policy checker | Compile-verified diagnostic core | Twelve current IDs have typed call sites, exhaustive reserved ranges, declared severities/phases/kinds/source/profile/remediation policy, deterministic schema-1 records, Haxe/JSON parity, raw-prefix/reference drift checks, and structural unsupported-source versus internal-failure tests. E8.T09 still owns the public CLI event stream, native-tool attachments, command context, and stdout/stderr integration. |
 | Requirements and ledgers (`requirements-and-ledgers`) | `requirements.json`, `stdlib-ledger.json`, schemas | Seeded | The complete PRD has 160 stable product/semantic/quality requirements and an initial standard-library ownership ledger. Codex must keep PRD, registries, task mappings, diagnostics, runtime features, and capability evidence synchronized as scope changes. |
 | Example portfolio (`example-portfolio`) | `examples/hello`, `no-runtime`, `pointlib`, `shared-library`, `cpp-shim`, `todo-cli` | Seeded | These establish intended user journeys and API shapes; only independent native fixture fragments are executable today. Do not special-case the compiler or use raw C injection to make examples appear complete. |
 | Development runner and future CLI (`development-cli`) | `src/Run.hx`, `schemas/hxc.schema.json`, `templates/hxc.json` | Seeded | A development entry point and configuration shape exist. The production `hxc` command surface, stable exit categories, JSON outputs, native build adapters, bindgen/export orchestration, and packaging are planned. |

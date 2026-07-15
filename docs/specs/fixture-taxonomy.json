@@ -25,6 +25,7 @@
       "suiteIds": [
         "all-sources",
         "bootstrap",
+        "diagnostics",
         "typed-c",
         "typed-ast",
         "hxc-ir"
@@ -43,6 +44,7 @@
       "suiteIds": [
         "all-sources",
         "bootstrap",
+        "diagnostics",
         "typed-c",
         "typed-ast",
         "hxc-ir"
@@ -174,6 +176,24 @@
         "custom-target lifecycle and platform snapshot",
         "configuration conflicts and legacy Cross fail closed",
         "compiler-server and package-layout isolation"
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "directory": "test/diagnostics",
+      "runner": [
+        "python3",
+        "test/diagnostics/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed Haxe definitions match every machine-readable catalog entry",
+        "structured records are deterministic, source-positioned, profile-aware, and schema-valid",
+        "unregistered IDs, absolute paths, and disallowed severity changes fail closed"
       ]
     },
     {

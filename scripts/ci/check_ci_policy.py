@@ -15,6 +15,17 @@ PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 
 REQUIRED_GATE_FILES = (
+    "src/reflaxe/c/CDiagnostic.hx",
+    "docs/diagnostics.md",
+    "docs/specs/diagnostics.json",
+    "docs/specs/diagnostics.schema.json",
+    "docs/specs/diagnostic-event.schema.json",
+    "scripts/ci/check_diagnostic_policy.py",
+    "test/diagnostics/DiagnosticGolden.hx",
+    "test/diagnostics/README.md",
+    "test/diagnostics/diagnostics.hxml",
+    "test/diagnostics/run.py",
+    "test/governance/test_diagnostic_policy.py",
     "runtime/hxrt/include/hxc_runtime.h",
     "runtime/hxrt/src/hxc_runtime.c",
     "runtime/hxrt/test/runtime_smoke.c",
@@ -127,6 +138,8 @@ def validate() -> list[str]:
         scripts = {}
     if scripts.get("test:native") != "python3 scripts/ci/runtime_smoke.py":
         errors.append("package.json must retain the test:native entry point")
+    if scripts.get("test:diagnostics") != "python3 test/diagnostics/run.py":
+        errors.append("package.json must retain the test:diagnostics entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
         errors.append("package.json must retain the test:c-ast entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
@@ -143,6 +156,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the explicit snapshots:update entry point")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
+    if "npm run test:diagnostics" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:diagnostics")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:declaration-plan")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
@@ -176,6 +191,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must validate required CI wiring")
     if "test/c_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the structural C AST golden test")
+    if "test/diagnostics/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed diagnostic policy test")
     if "test/declaration_plan/run.py" not in pre_commit:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/hxc_ir/run.py" not in pre_commit:

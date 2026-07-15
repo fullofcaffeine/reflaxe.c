@@ -211,13 +211,14 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     if not isinstance(scripts, dict) or scripts.get("postinstall") != "lix download":
         errors.append("package.json postinstall must resolve the scoped Haxe toolchain with lix download")
     expected_all_sources_script = "python3 test/all_sources/run.py"
+    expected_diagnostics_script = "python3 test/diagnostics/run.py"
     expected_c_ast_script = "python3 test/c_ast/run.py"
     expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
-        "npm run deps:verify && npm run test:all-sources && "
+        "npm run deps:verify && npm run test:diagnostics && npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:hxc-ir && npm run snapshots:check"
     )
@@ -226,6 +227,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:all-sources") != expected_all_sources_script
     ):
         errors.append("package.json must retain the dedicated all-source Haxe gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:diagnostics") != expected_diagnostics_script
+    ):
+        errors.append("package.json must retain the typed diagnostic policy gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:toolchain") != expected_toolchain_script

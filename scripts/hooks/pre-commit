@@ -76,9 +76,14 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|testing|typed-ast-input)\.md|docs/specs/fixture-(case|taxonomy).*\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|typed_ast)/)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|diagnostics|testing|typed-ast-input)\.md|docs/specs/fixture-(case|taxonomy).*\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|diagnostics|typed_ast)/)'; then
   echo "[pre-commit] Validating fixture taxonomy, snapshot ownership, and example assertions..."
   python3 "$ROOT_DIR/scripts/ci/check_fixture_policy.py"
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/.*\.(md|json)|src/.*\.hx$|std/c/.*\.hx$|scripts/ci/check_diagnostic_policy\.py|test/(diagnostics/|governance/test_diagnostic_policy\.py)|package\.json)'; then
+	echo "[pre-commit] Validating typed diagnostic registry and JSON policy..."
+	python3 "$ROOT_DIR/test/diagnostics/run.py"
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/c/Init\.hx|src/reflaxe/c/(BuildDetection|CompilerBootstrap|CompilerInit|TargetPlatform)\.hx|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py)'; then

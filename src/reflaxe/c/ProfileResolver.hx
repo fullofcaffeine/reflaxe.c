@@ -2,6 +2,7 @@ package reflaxe.c;
 
 #if macro
 import haxe.macro.Context;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 #end
 
 /** Resolves the early profile seed without selecting any runtime feature. */
@@ -15,7 +16,8 @@ class ProfileResolver {
 			case "metal":
 				Metal;
 			case value:
-				Context.fatalError('HXC0003: invalid reflaxe.c profile `$value`; expected portable or metal.', Context.currentPos());
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid reflaxe.c profile `$value`; expected portable or metal.', Context.currentPos(),
+					"unresolved");
 		};
 		#else
 		return Portable;

@@ -159,6 +159,9 @@ The current checkout contains:
 - a detailed [product requirements document](docs/PRD.md);
 - [architecture](docs/architecture.md) and
   [configuration](docs/configuration.md) contracts;
+- a [typed diagnostic contract](docs/diagnostics.md) with 12 registered IDs,
+  exhaustive reserved ranges, schema-validated records, and registry-drift
+  enforcement;
 - a minimal Reflaxe adapter and whole-program boundary that type-check and then
   deliberately stop with source-anchored `HXC1000` before emitting C;
 - a deterministic typed-AST adapter and reviewed inventory covering complete
@@ -215,7 +218,9 @@ bd list --ready --type task
 
 jq empty \
   docs/specs/beads-plan.json \
+  docs/specs/diagnostic-event.schema.json \
   docs/specs/diagnostics.json \
+  docs/specs/diagnostics.schema.json \
   docs/specs/stdlib-ledger.json \
   docs/specs/third-party-provenance.json
 

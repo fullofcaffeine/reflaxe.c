@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/diagnostics.schema.json",
+  "title": "reflaxe.c diagnostic catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "eventSchema",
+    "idPolicy",
+    "severityPolicy",
+    "sourcePolicy",
+    "profilePolicy",
+    "ranges",
+    "diagnostics"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "diagnostics.schema.json"
+    },
+    "schemaVersion": {
+      "const": 2
+    },
+    "eventSchema": {
+      "const": "diagnostic-event.schema.json"
+    },
+    "idPolicy": {
+      "$ref": "#/$defs/nonEmptyPolicy"
+    },
+    "severityPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "levels",
+        "escalation"
+      ],
+      "properties": {
+        "levels": {
+          "const": [
+            "error",
+            "warning",
+            "info"
+          ]
+        },
+        "escalation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "sourcePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement",
+        "pathForm",
+        "coordinates"
+      ],
+      "properties": {
+        "requirement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pathForm": {
+          "type": "string",
+          "minLength": 1
+        },
+        "coordinates": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "profilePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "values",
+        "unresolved"
+      ],
+      "properties": {
+        "values": {
+          "const": [
+            "portable",
+            "metal",
+            "unresolved"
+          ]
+        },
+        "unresolved": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ranges": {
+      "type": "array",
+      "minItems": 10,
+      "items": {
+        "$ref": "#/$defs/range"
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/diagnostic"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stability",
+        "wording",
+        "retirement",
+        "allocation"
+      ],
+      "properties": {
+        "stability": {
+          "type": "string",
+          "minLength": 1
+        },
+        "wording": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retirement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "allocation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^HXC[0-9]{4}$"
+    },
+    "range": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "start",
+        "end",
+        "category",
+        "status"
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/id"
+        },
+        "end": {
+          "$ref": "#/$defs/id"
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "enum": [
+            "active",
+            "reserved"
+          ]
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "defaultSeverity",
+        "allowedSeverities",
+        "phase",
+        "kind",
+        "sourcePolicy",
+        "idStability",
+        "summary",
+        "remediation"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "defaultSeverity": {
+          "$ref": "#/$defs/severity"
+        },
+        "allowedSeverities": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/severity"
+          }
+        },
+        "phase": {
+          "$ref": "#/$defs/phase"
+        },
+        "kind": {
+          "$ref": "#/$defs/kind"
+        },
+        "sourcePolicy": {
+          "const": "required"
+        },
+        "idStability": {
+          "const": "stable"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remediation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "bootstrap",
+        "configuration",
+        "lowering",
+        "runtime-analysis",
+        "abi",
+        "interop",
+        "target-contract",
+        "internal"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "dependency-failure",
+        "invalid-configuration",
+        "compiler-capability",
+        "unsupported-source",
+        "runtime-policy",
+        "runtime-selection",
+        "invalid-abi",
+        "unsafe-boundary",
+        "invalid-target-contract",
+        "internal-compiler-failure"
+      ]
+    }
+  }
+}

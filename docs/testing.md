@@ -26,6 +26,13 @@ The canonical directories are stable homes for new cases. Existing focused
 suites stay in their current paths and are mapped by the catalog; moving them
 would create noise without improving their evidence.
 
+The mapped `diagnostics` suite is both positive and negative policy evidence.
+It compares the typed Haxe definitions with the machine catalog, validates two
+byte-identical structured renders, and proves that unregistered IDs, absolute
+paths, and forbidden severity changes are rejected. It asserts stable IDs and
+essential fields rather than treating complete prose as an API. See
+[diagnostic contract](diagnostics.md).
+
 ## Case contract
 
 A new case contains `case.json` conforming to the checked-in case schema. It

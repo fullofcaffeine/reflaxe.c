@@ -10,6 +10,8 @@ import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.MetaAccess;
+import reflaxe.c.CDiagnostic;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractField;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
@@ -945,7 +947,7 @@ class TypedCContractMacro {
 	}
 
 	static function error(message:String, pos:Position):Void {
-		Context.error("HXC5002: " + message, pos);
+		CDiagnostic.error(CDiagnosticId.InvalidTypedCContract, message, pos);
 	}
 	#else
 	public static function install():Void {}

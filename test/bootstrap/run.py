@@ -22,6 +22,10 @@ PROBE_DEFINE = "reflaxe_c_lifecycle_probe"
 TARGET_REPORT_PREFIX = "HXC_TARGET_CONTRACT="
 NON_C_EXPECTED = "bootstrap=0 init=0 c=0 reflaxe_c=0 unicode=1 utf16=0"
 CALLER_C_EXPECTED = "bootstrap=0 init=0 c=1 reflaxe_c=0 unicode=1 utf16=0"
+CONFIGURATION_DIAGNOSTIC_ID = "HXC0003"
+LOWERING_DIAGNOSTIC_ID = "HXC1000"
+LOWERING_DETAIL = "unimplemented whole-program lowering boundary"
+DIAGNOSTIC_PROFILE = re.compile(r"\[profile=(?:portable|metal|unresolved)\]")
 
 
 class ProbeFailure(RuntimeError):
@@ -264,11 +268,13 @@ def assert_configuration_conflict(
         r"(?:^|[/ ])(?:test/bootstrap/)?BootstrapProbe\.hx(?::\d+: character(?:s)? \d+(?:-\d+)?)?",
         re.MULTILINE,
     )
-    if "HXC0003:" not in combined or expected_fragment not in combined:
+    if CONFIGURATION_DIAGNOSTIC_ID not in combined or expected_fragment not in combined:
         raise ProbeFailure(
             f"{label} missed its stable configuration diagnostic\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
+    if DIAGNOSTIC_PROFILE.search(combined) is None or "Remediation:" not in combined:
+        raise ProbeFailure(f"{label} lost its profile or remediation field\n{combined}")
     if source_position.search(combined) is None:
         raise ProbeFailure(f"{label} did not identify the compilation root\n{combined}")
 
@@ -393,8 +399,10 @@ def check_production_carrier_fails_closed() -> None:
             label="production custom-target lowering boundary probe",
         )
         combined = result.stdout + result.stderr
-        if "HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary" not in combined:
+        if LOWERING_DIAGNOSTIC_ID not in combined or LOWERING_DETAIL not in combined:
             raise ProbeFailure("production custom target did not stop at HXC1000")
+        if "[profile=portable]" not in combined or "Remediation:" not in combined:
+            raise ProbeFailure("production HXC1000 lost its profile or remediation field")
         assert_target_contract(
             result, expected, "production custom-target lowering boundary probe"
         )
@@ -469,7 +477,7 @@ def check_compiler_server_isolation() -> None:
                 no_server=False,
             )
             if not succeeds:
-                if "HXC0003:" not in result.stdout + result.stderr:
+                if CONFIGURATION_DIAGNOSTIC_ID not in result.stdout + result.stderr:
                     raise ProbeFailure("compiler-server conflict lost its diagnostic")
                 continue
             if c_build:
@@ -488,7 +496,7 @@ def check_compiler_server_isolation() -> None:
                 label="compiler-server production lowering boundary",
                 no_server=False,
             )
-            if "HXC1000:" not in production.stdout + production.stderr:
+            if LOWERING_DIAGNOSTIC_ID not in production.stdout + production.stderr:
                 raise ProbeFailure("compiler-server production request missed HXC1000")
             assert_target_contract(
                 production,

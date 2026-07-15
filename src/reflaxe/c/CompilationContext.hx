@@ -1,6 +1,7 @@
 package reflaxe.c;
 
 #if (macro || reflaxe_runtime)
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.frontend.TypedProgramInput;
 #end
 
@@ -19,7 +20,7 @@ class CompilationContext {
 	#if (macro || reflaxe_runtime)
 	public function setTypedProgram(program:TypedProgramInput):Void {
 		if (typedProgram != null) {
-			throw "HXC9000: CompilationContext already owns a normalized typed program";
+			throw CDiagnostic.codeMessage(CDiagnosticId.InternalCompilerError, "CompilationContext already owns a normalized typed program");
 		}
 		typedProgram = program;
 	}

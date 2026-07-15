@@ -5,6 +5,7 @@ import haxe.macro.Compiler;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.Json;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.frontend.TypedAstInventory;
 import reflaxe.c.frontend.TypedProgramInput;
@@ -19,12 +20,14 @@ class CCompiler {
 
 	public function compileModules(program:TypedProgramInput):Array<GeneratedFile> {
 		if (context.typedProgram != program) {
-			Context.fatalError("HXC9000: whole-program compiler received an input outside its per-build CompilationContext", compilationPosition());
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "whole-program compiler received an input outside its per-build CompilationContext",
+				compilationPosition(), context.profile);
 		}
 		if (Context.defined(TypedAstInventory.REPORT_DEFINE)) {
 			Sys.println(TypedAstInventory.REPORT_PREFIX + Json.stringify(TypedAstInventory.snapshot(program)));
 		}
-		Context.fatalError("HXC1000: reflaxe.c reached its unimplemented whole-program lowering boundary; no C was emitted.", compilationPosition());
+		CDiagnostic.fatal(CDiagnosticId.LoweringNotImplemented, "reflaxe.c reached its unimplemented whole-program lowering boundary; no C was emitted.",
+			compilationPosition(), context.profile);
 		return [];
 	}
 

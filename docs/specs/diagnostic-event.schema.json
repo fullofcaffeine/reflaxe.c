@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/diagnostic-event.schema.json",
+  "title": "reflaxe.c structured diagnostic record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "severity",
+    "phase",
+    "kind",
+    "profile",
+    "message",
+    "remediation",
+    "source",
+    "context",
+    "notes",
+    "relatedLocations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^HXC[0-9]{4}$"
+    },
+    "severity": {
+      "enum": [
+        "error",
+        "warning",
+        "info"
+      ]
+    },
+    "phase": {
+      "enum": [
+        "bootstrap",
+        "configuration",
+        "lowering",
+        "runtime-analysis",
+        "abi",
+        "interop",
+        "target-contract",
+        "internal"
+      ]
+    },
+    "kind": {
+      "enum": [
+        "dependency-failure",
+        "invalid-configuration",
+        "compiler-capability",
+        "unsupported-source",
+        "runtime-policy",
+        "runtime-selection",
+        "invalid-abi",
+        "unsafe-boundary",
+        "invalid-target-contract",
+        "internal-compiler-failure"
+      ]
+    },
+    "profile": {
+      "enum": [
+        "portable",
+        "metal",
+        "unresolved"
+      ]
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1
+    },
+    "remediation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "context": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "relatedLocations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "label",
+          "source"
+        ],
+        "properties": {
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "start",
+        "end"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!~)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "start": {
+          "$ref": "#/$defs/point"
+        },
+        "end": {
+          "$ref": "#/$defs/point"
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "line",
+        "column"
+      ],
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

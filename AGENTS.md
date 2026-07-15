@@ -297,6 +297,32 @@ missing-metadata or missing-adapter assumptions.
   source-anchored `HXC1000` no-output boundary until E1.T07 implements and tests
   actual semantic lowering.
 
+### Diagnostic boundary
+
+- `docs/specs/diagnostics.json` is the allocation and policy authority;
+  `diagnostics.schema.json` and `diagnostic-event.schema.json` define its
+  machine forms. `CDiagnosticId` must contain exactly the allocated IDs. Add
+  the catalog entry, typed ID, tests, and affected docs together; never reuse a
+  retired number or allocate from a reserved range.
+- Production Haxe code emits through `CDiagnostic` with a typed ID. Do not add
+  raw `"HXCdddd: ..."` prefixes outside `CDiagnostic.hx`. Exception/report
+  models use `CDiagnostic.codeMessage` and retain the typed ID rather than
+  inventing local constants.
+- Every emitted diagnostic has an allowed severity, a primary Haxe source
+  range, a profile, and remediation. Structured paths are normalized
+  project/repository-relative UTF-8 with `/`; never serialize an absolute
+  checkout path. `unresolved` is a profile only when configuration failed
+  before profile selection.
+- Tests normally assert the stable ID plus essential structured/semantic
+  fields, not complete English prose. Use a full golden only when formatting is
+  itself under test. `HXC1001` is unsupported source, `HXC9000` is an internal
+  compiler invariant, and `HXC1000` is the deliberate compiler-capability
+  boundary; never collapse those failure families.
+- `CDiagnosticRecord` is the deterministic single-record JSON core. E8.T09
+  owns public stream framing, native-tool attachments, command context, and
+  CLI stdout/stderr behavior. A diagnostic contract change runs
+  `npm run test:diagnostics` and the exhaustive all-source gate.
+
 ### HxcIR semantic boundary
 
 - Treat HxcIR instruction arrays as semantic evaluation order. Never reorder

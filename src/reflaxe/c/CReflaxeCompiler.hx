@@ -9,6 +9,7 @@ import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.frontend.TypedAstNormalizer;
 
@@ -53,7 +54,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 
 	override public function generateFilesManually():Void {
 		if (output == null) {
-			Context.fatalError("HXC9000: Reflaxe output manager is not initialized", Context.currentPos());
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "Reflaxe output manager is not initialized", Context.currentPos());
 			return;
 		}
 
@@ -83,7 +84,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 
 	function requireContext():CompilationContext {
 		if (compilationContext == null) {
-			Context.fatalError("HXC9000: missing per-build CompilationContext", Context.currentPos());
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "missing per-build CompilationContext", Context.currentPos());
 		}
 		return cast compilationContext;
 	}

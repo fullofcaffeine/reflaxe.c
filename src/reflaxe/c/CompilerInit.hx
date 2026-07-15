@@ -5,6 +5,7 @@ import haxe.io.Path;
 import haxe.macro.Compiler as MacroCompiler;
 import haxe.macro.Context;
 import haxe.macro.Expr.Position;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.macros.TypedCContractMacro;
 #if !reflaxe_c_lifecycle_probe
 import reflaxe.BaseCompiler.BaseCompilerFileOutputType;
@@ -27,7 +28,8 @@ class CompilerInit {
 		}
 
 		if (!Context.defined(CompilerBootstrap.READY_DEFINE)) {
-			Context.fatalError("HXC9000: reflaxe.c.CompilerBootstrap.Start() must run before CompilerInit.Start().", configurationPosition());
+			CDiagnostic.fatal(CDiagnosticId.InternalCompilerError, "reflaxe.c.CompilerBootstrap.Start() must run before CompilerInit.Start().",
+				configurationPosition());
 		}
 
 		if (initialized) {
@@ -172,7 +174,7 @@ class CompilerInit {
 	}
 
 	static function configurationError(message:String):Void {
-		Context.fatalError('HXC0003: $message', configurationPosition());
+		CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, message, configurationPosition());
 	}
 
 	static function configurationPosition():Position {

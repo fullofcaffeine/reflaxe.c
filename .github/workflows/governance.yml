@@ -25,7 +25,7 @@ jobs:
       - name: Resolve exact Haxe and Lix tools
         run: npm ci
 
-      - name: Verify pins, all sources, target lifecycle, typed contracts, fixtures, and snapshots
+      - name: Verify pins, diagnostics, all sources, target lifecycle, typed contracts, fixtures, and snapshots
         run: npm run test:toolchain
 
   native-smoke:

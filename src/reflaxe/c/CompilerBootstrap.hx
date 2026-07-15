@@ -4,6 +4,7 @@ package reflaxe.c;
 import haxe.io.Path;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import sys.FileSystem;
 #end
 
@@ -33,7 +34,8 @@ class CompilerBootstrap {
 		}
 
 		if (!canResolveReflaxe()) {
-			Context.fatalError("HXC0002: reflaxe.c could not resolve its pinned Reflaxe framework; run `npm ci` and use the checked-in scoped library configuration.",
+			CDiagnostic.fatal(CDiagnosticId.FrameworkUnavailable,
+				"reflaxe.c could not resolve its pinned Reflaxe framework; run `npm ci` and use the checked-in scoped library configuration.",
 				Context.currentPos());
 		}
 
