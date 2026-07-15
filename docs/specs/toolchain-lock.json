@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "haxe": {
+    "version": "4.3.7",
+    "sourceRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
+    "upstreamUrl": "https://github.com/HaxeFoundation/haxe"
+  },
+  "reflaxe": {
+    "version": "4.0.0-beta",
+    "sourceRevision": "73a983112e039daad46b37912ab238df6bf0cf53",
+    "gitTree": "05ab4abc670b6e3ed5424e78c622b92979b5affb",
+    "upstreamUrl": "https://github.com/SomeRanDev/reflaxe",
+    "bundleRoot": "vendor/reflaxe",
+    "bundlePaths": [
+      "LICENSE",
+      "haxelib.json",
+      "src"
+    ],
+    "bundleFileCount": 62,
+    "bundleSha256": "2c14cc7364f069f5f00f50383136f88dc1836389f0f540e96dbf71a6fe0c70b8"
+  },
+  "tools": {
+    "lix": {
+      "package": "lix",
+      "version": "17.0.2",
+      "npmIntegrity": "sha512-Y8d2wU8e+p4M442dvHfvCGJSmwPQNHn07/qDQU2Fu+iNfJrWr5SRFQlN6/iHkBGgzbCdrVca6f+iutfcZgch8A=="
+    }
+  }
+}

@@ -158,6 +158,39 @@ compiler lifecycle classes referenced by the adapter.
   export, callback return, foreign frame, signal, or thread boundary, and never
   rely on indeterminate C locals after `longjmp`.
 
+### Pinned toolchain and activation
+
+- Treat `.haxerc`, `package.json`, `package-lock.json`,
+  `docs/specs/toolchain-lock.json`, `haxe_libraries/*.hxml`, and
+  `vendor/reflaxe` as one reviewed dependency contract. Never float Haxe,
+  Reflaxe, or Lix versions and never refresh one pin without its checksums,
+  provenance, notices, and lifecycle evidence.
+- The reviewed Reflaxe bundle is compiler-only source. It must not appear in
+  generated C, become an `hxrt` feature, or be described as a generated-program
+  runtime dependency. Do not patch it silently; document target-required patches
+  and include them in the bundle digest, or prefer a new upstream commit.
+- `haxe_libraries/reflaxe.hxml` supplies only the vendored classpath and version.
+  It must not start Reflaxe. `CompilerInit` owns the exactly-once
+  `ReflectCompiler.Start()` and `AddCompiler(...)` sequence.
+- Keep `extraParams.hxml` caller-CWD-independent: no relative `-cp`/`-p` entries,
+  and `CompilerBootstrap.Start()` must precede `CompilerInit.Start()`. Scoped
+  source-checkout paths use `${SCOPE_DIR}` and precedence-sensitive `_std` roots
+  must exist on the initial classpath rather than being injected late.
+- Only `c_output=<non-empty directory>` or real custom-target identity activates
+  the compiler. A caller's `-D c` is not activation. On valid activation expose
+  `c`, `reflaxe_c`, and `target.unicode`; reject `target.utf16` and do not invent
+  other target capability defines.
+- `reflaxe_c_lifecycle_probe` is an internal test seam that avoids entering the
+  still-incomplete adapter during E0 bootstrap tests. Never document it as a
+  user option or let it bypass a production compilation.
+- The package-layout probe may flatten the pinned framework into a temporary
+  classpath to prove installed resolution. It is not release assembly or
+  permission to publish while `haxe_c-od2.5` remains unresolved.
+- The future `hxc` command is an optional orchestration layer. Bootstrap its
+  target-neutral core on Eval, later dogfood the C target for the native binary,
+  and retain direct Haxe/HXML plus the C toolchain as the recovery build path.
+  Compiler registration must never depend on an existing `hxc` executable.
+
 ### Product contracts
 
 - One compiler pipeline serves both profiles. `portable` is the default Haxe
@@ -255,27 +288,32 @@ compiler lifecycle classes referenced by the adapter.
 ### Validation and evidence
 
 Run the exact gates owned by the active issue. At the present partial-scaffold
-stage, the locally available baseline is limited to:
+stage, the locally available baseline is:
 
 ```bash
-jq empty docs/specs/beads-plan.json docs/specs/diagnostics.json docs/specs/stdlib-ledger.json docs/specs/third-party-provenance.json
-python3 scripts/ci/check_license_policy.py
-python3 -m unittest discover -s test/governance -p 'test_*.py'
-cc -std=c11 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
-c++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
+npm ci
+npm test
+jq empty docs/specs/*.json .haxerc haxelib.json package.json package-lock.json
 bd dep cycles --json
 bd lint --json
-git diff --check
+bash scripts/lint/whitespace_guard.sh
 ```
+
+`npm test` verifies the exact dependency lock, vendored Reflaxe checksum,
+source/package lifecycle behavior, cold/compiler-server C/non-C isolation,
+macro order, notices, and governance policy. It does not type-check the
+incomplete compiler adapter or claim generated-C/native-runtime success; those
+remain later Beads gates.
 
 After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
 keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks
 remain active while repository checks run first. It exports/stages Beads JSONL,
-formats staged Haxe, rejects staged secrets and machine-local paths, checks
-whitespace, enforces the license/provenance inventory, and runs relevant JSON
-or public-header gates. Gitleaks is required; the formatter haxelib is required
-when Haxe files are staged. Do not bypass the hook to publish a failing change;
-record and fix the underlying gate instead.
+formats repository-owned staged Haxe, preserves immutable vendor bytes, rejects
+staged secrets and machine-local paths, checks whitespace, verifies dependency
+checksums, enforces the license/provenance inventory, and runs relevant JSON or
+public-header gates. Gitleaks is required; the formatter haxelib is required when
+repository-owned Haxe files are staged. Do not bypass the hook to publish a
+failing change; record and fix the underlying gate instead.
 
 Do not claim Haxe/Reflaxe type-checking, runtime linking, generated-program
 execution, sanitizers, cross-platform CI, bindgen, export, or stdlib parity

@@ -9,6 +9,24 @@ permissions:
   contents: read
 
 jobs:
+  pinned-toolchain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Verify pins and compiler lifecycle
+        run: npm run test:toolchain
+
   license-and-provenance:
     runs-on: ubuntu-latest
     steps:

@@ -15,6 +15,7 @@ from typing import Any, Iterable
 
 EXPECTED_COMPONENT_LICENSES = {
     "reflaxe-framework": "MIT",
+    "lix-package-manager": "MIT",
     "haxe-compiler": "GPL-2.0-or-later",
     "haxe-standard-library": "MIT",
     "llvm-clang-tooling": "Apache-2.0 WITH LLVM-exception",
@@ -24,6 +25,7 @@ EXPECTED_RELEASE_FILES = {
     "THIRD_PARTY_NOTICES.md",
     "docs/specs/third-party-provenance.json",
     "LICENSES/HAXE-STDLIB-MIT.txt",
+    "vendor/reflaxe/LICENSE",
 }
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")

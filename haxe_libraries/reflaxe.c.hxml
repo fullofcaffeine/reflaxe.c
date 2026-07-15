@@ -1,0 +1,12 @@
+# reflaxe.c source-checkout library configuration.
+#
+# Do not replace ${SCOPE_DIR} with caller-relative paths. Target std roots will
+# be added here when their currently absent source trees are restored.
+
+-cp ${SCOPE_DIR}/src/
+-lib reflaxe
+
+-D reflaxe.c=0.0.0-development
+--macro nullSafety("reflaxe.c")
+--macro reflaxe.c.CompilerBootstrap.Start()
+--macro reflaxe.c.CompilerInit.Start()

@@ -57,6 +57,13 @@ All supplied target roots pin:
 
 The C scaffold follows that exact initial contract.
 
+For the M0 implementation, Lix is pinned to npm artifact `17.0.2` and Reflaxe
+is vendored from commit `73a983112e039daad46b37912ab238df6bf0cf53`.
+This follows the mature sibling-target source-checkout shape while adding an
+independent content checksum and a temporary installed-package probe. The
+vendored framework is compiler-only; it has no relationship to target runtime
+feature selection.
+
 ### Reflaxe target metadata
 
 Target manifests use:
@@ -94,6 +101,10 @@ The self-referential target HXML consistently:
 6. calls bootstrap and init macros.
 
 `extraParams.hxml` avoids relative `-cp` entries because those resolve relative to the consumer project.
+
+The base `reflaxe.hxml` must not retain upstream Reflaxe's automatic
+`ReflectCompiler.Start()` macro. Target initialization owns that call, otherwise
+the two-stage target sequence can double-start the framework.
 
 ## Two-stage ignition
 

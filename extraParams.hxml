@@ -1,0 +1,9 @@
+# reflaxe.c package activation.
+#
+# Haxelib/Lix consumers evaluate this file from their own working directory,
+# so it must never contain relative classpaths. CompilerBootstrap must remain
+# before CompilerInit.
+
+--macro nullSafety("reflaxe.c")
+--macro reflaxe.c.CompilerBootstrap.Start()
+--macro reflaxe.c.CompilerInit.Start()

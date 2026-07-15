@@ -1,0 +1,21 @@
+{
+  "name": "reflaxe.c",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Development tooling for the reflaxe.c Haxe-to-C target.",
+  "license": "GPL-3.0-only",
+  "scripts": {
+    "postinstall": "lix download",
+    "deps:verify": "python3 scripts/ci/check_toolchain.py --require-tools",
+    "test:bootstrap": "python3 test/bootstrap/run.py",
+    "test:governance": "python3 scripts/ci/check_license_policy.py && python3 -m unittest discover -s test/governance -p 'test_*.py'",
+    "test:toolchain": "npm run deps:verify && npm run test:bootstrap",
+    "test": "npm run test:toolchain && npm run test:governance"
+  },
+  "devDependencies": {
+    "lix": "17.0.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

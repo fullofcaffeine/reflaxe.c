@@ -77,6 +77,11 @@ shared `hxc` CLI core will run on Haxe's built-in Eval target through
 `haxe --run` or `haxelib run reflaxe.c`, so development requires no additional
 host runtime.
 
+`hxc` exists for C's multi-tool workflows—native compiler selection, manifests,
+headers, ABI inspection, bindgen, and diagnostics—not because Reflaxe or Haxe
+requires a wrapper command. It is an optional ergonomics layer that could inform
+other targets later; no application or direct compiler build may depend on it.
+
 Once `reflaxe.c` supports the files, processes, configuration, strings, errors,
 and cleanup behavior the CLI needs, that same core will be compiled through the
 C target into a native `hxc` executable. Eval remains the recovery path and a
@@ -117,24 +122,30 @@ The current checkout contains:
 - a detailed [product requirements document](docs/PRD.md);
 - [architecture](docs/architecture.md) and
   [configuration](docs/configuration.md) contracts;
-- a minimal Reflaxe compiler adapter that fails with `HXC1000`;
+- a partial Reflaxe compiler adapter whose missing whole-program dependencies
+  are explicitly tracked for the next bootstrap task;
+- a Haxe 4.3.7 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked toolchain;
+- target-gated `CompilerBootstrap` and `CompilerInit` lifecycle probes;
 - a structured C AST and printer seed;
-- a public runtime-header seed that parses as C11 and C++17;
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
-It does **not** yet contain the complete bootstrap, Haxe lowering pipeline,
-runtime implementation, CLI, package metadata, examples, or release tooling.
-Those capabilities are tracked as work, not presented as finished features.
+It does **not** yet contain a type-checking whole compiler graph, a Haxe lowering
+pipeline, runtime implementation, CLI, executable examples, or release tooling.
+The package metadata added at M0 is a reproducible development/package-layout
+seed, not a publishable compiler. Those capabilities remain tracked work.
 
 ## Explore the scaffold
 
-Requirements for the currently available checks are `bd`, `jq`, a C compiler,
-and a C++ compiler. Contributors should also install
-[Gitleaks](https://github.com/gitleaks/gitleaks) and the Haxe formatter, then
+Use Node.js 20 or newer; `npm ci` installs the pinned Lix shim and resolves Haxe
+4.3.7. Contributors also need `bd`, `jq`,
+[Gitleaks](https://github.com/gitleaks/gitleaks), and the Haxe formatter. Then
 activate the tracked pre-commit chain:
 
 ```sh
+npm ci
+npm test
+
 haxelib install formatter
 scripts/hooks/install.sh
 
@@ -147,15 +158,14 @@ jq empty \
   docs/specs/stdlib-ledger.json \
   docs/specs/third-party-provenance.json
 
+python3 scripts/ci/check_toolchain.py --require-tools
+python3 test/bootstrap/run.py
 python3 scripts/ci/check_license_policy.py
-python3 -m unittest discover -s test/governance -p 'test_*.py'
-
-cc -std=c11 -Wall -Wextra -Werror -pedantic \
-  -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
-
-c++ -std=c++17 -Wall -Wextra -Werror -pedantic \
-  -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
 ```
+
+See the [pinned toolchain guide](docs/toolchain.md) for the exact dependency,
+package-layout, bootstrap-order, and update contracts. The compile-backed probes
+do not claim that ordinary Haxe programs can be emitted as C yet.
 
 The first implementation milestone will ratify the public contracts, pin the
 Haxe/Reflaxe toolchain, make the target-owned Haxe sources type-check, and build
@@ -166,6 +176,7 @@ a small end-to-end C emission slice before expanding language coverage.
 - [Product requirements](docs/PRD.md)
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
+- [Pinned toolchain and update procedure](docs/toolchain.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)
 - [Beads plan](docs/BEADS_PLAN.md)

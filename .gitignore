@@ -3,3 +3,10 @@
 .dolt/
 *.db
 .beads-credential-key
+
+# Scoped Haxe / Node development artifacts
+node_modules/
+.cache/
+bootstrap-probe-output/
+__pycache__/
+*.py[cod]

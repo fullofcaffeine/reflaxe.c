@@ -24,6 +24,13 @@ fi
 
 STAGED_HX_FILES=()
 while IFS= read -r staged_file; do
+  case "$staged_file" in
+    vendor/*|third_party/*|runtime/vendor/*|runtime/third_party/*)
+      # Third-party bytes are immutable inputs. Formatting would silently fork
+      # the reviewed upstream bundle and invalidate its provenance checksum.
+      continue
+      ;;
+  esac
   if [ -n "$staged_file" ] && [ -f "$ROOT_DIR/$staged_file" ]; then
     STAGED_HX_FILES+=("$staged_file")
   fi
@@ -49,7 +56,7 @@ echo "[pre-commit] Running local path guard..."
 bash "$ROOT_DIR/scripts/lint/local_path_guard_staged.sh"
 
 echo "[pre-commit] Checking staged whitespace..."
-git diff --cached --check
+bash "$ROOT_DIR/scripts/lint/whitespace_guard.sh" --staged
 
 echo "[pre-commit] Running staged secret scan..."
 bash "$ROOT_DIR/scripts/security/run-gitleaks.sh" --staged
@@ -67,6 +74,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
       jq empty "$json_file"
     fi
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-lock)?\.json|extraParams\.hxml|haxe_libraries/|vendor/reflaxe/|src/reflaxe/c/(BuildDetection|CompilerBootstrap|CompilerInit)\.hx|docs/specs/toolchain-lock\.json|scripts/ci/check_toolchain\.py)'; then
+  echo "[pre-commit] Verifying pinned toolchain and bootstrap policy..."
+  python3 "$ROOT_DIR/scripts/ci/check_toolchain.py" --root "$ROOT_DIR"
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -qx 'runtime/hxrt/include/hxc_runtime.h'; then

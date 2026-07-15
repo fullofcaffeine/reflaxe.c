@@ -1,0 +1,29 @@
+{
+  "name": "reflaxe.c",
+  "url": "https://github.com/fullofcaffeine/reflaxe.c",
+  "license": "GPL-3.0-only",
+  "tags": [
+    "haxe",
+    "reflaxe",
+    "c",
+    "compiler",
+    "backend",
+    "macro"
+  ],
+  "description": "A Reflaxe-based Haxe target for readable, idiomatic, strict C11 output.",
+  "version": "0.0.0",
+  "releasenote": "M0 development scaffold; not a functioning Haxe-to-C compiler.",
+  "contributors": [
+    "fullofcaffeine"
+  ],
+  "classPath": "src",
+  "dependencies": {},
+  "reflaxe": {
+    "name": "C",
+    "abbv": "c",
+    "stdPaths": [
+      "std",
+      "std/c/_std"
+    ]
+  }
+}
