@@ -1,0 +1,25 @@
+name: Governance
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  license-and-provenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Validate license and provenance policy
+        run: python3 scripts/ci/check_license_policy.py
+
+      - name: Exercise release-artifact fail-closed checks
+        run: python3 -m unittest discover -s test/governance -p 'test_*.py'
+
+      - name: Validate JSON specifications
+        run: jq empty docs/specs/*.json

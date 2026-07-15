@@ -1,0 +1,119 @@
+{
+  "schemaVersion": 1,
+  "evidenceCheckedAt": "2026-07-15",
+  "project": {
+    "name": "reflaxe.c",
+    "licenseExpression": "GPL-3.0-only",
+    "licenseFile": "LICENSE",
+    "licenseSha256": "9e54404b6d141e4babddd0b36cc6fa39d53cbadfb612653408f880ddfa97edaf"
+  },
+  "policy": {
+    "externalToolsAreRedistributed": false,
+    "bundledComponentsRequireImmutableRevision": true,
+    "unlistedReservedPaths": "reject",
+    "generatedOutputDecision": "haxe_c-od2.5"
+  },
+  "release": {
+    "requiredFiles": [
+      {
+        "path": "LICENSE",
+        "sha256": "9e54404b6d141e4babddd0b36cc6fa39d53cbadfb612653408f880ddfa97edaf"
+      },
+      {
+        "path": "THIRD_PARTY_NOTICES.md"
+      },
+      {
+        "path": "docs/specs/third-party-provenance.json"
+      },
+      {
+        "path": "LICENSES/HAXE-STDLIB-MIT.txt",
+        "sha256": "61c9e5c8ca48e1f6e27f66cc6fb2eb11865a08672e1c793a13cfdaa89ad1bb74"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "reflaxe-framework",
+      "name": "Reflaxe",
+      "role": "compiler-framework-dependency",
+      "usage": "external-not-redistributed",
+      "selectionStatus": "pin-pending-e0-t03",
+      "version": null,
+      "sourceRevision": null,
+      "observedRevision": "73a983112e039daad46b37912ab238df6bf0cf53",
+      "upstreamUrl": "https://github.com/SomeRanDev/reflaxe",
+      "licenseExpression": "MIT",
+      "licenseUrl": "https://github.com/SomeRanDev/reflaxe/blob/73a983112e039daad46b37912ab238df6bf0cf53/LICENSE",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    },
+    {
+      "id": "haxe-compiler",
+      "name": "Haxe compiler",
+      "role": "language-compiler-build-tool",
+      "usage": "external-not-redistributed",
+      "selectionStatus": "version-contract-accepted-resolution-pin-pending-e0-t03",
+      "version": "4.3.7",
+      "sourceRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
+      "observedRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
+      "upstreamUrl": "https://github.com/HaxeFoundation/haxe",
+      "licenseExpression": "GPL-2.0-or-later",
+      "licenseUrl": "https://github.com/HaxeFoundation/haxe/blob/e0b355c6be312c1b17382603f018cf52522ec651/src/typing/typeload.ml",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    },
+    {
+      "id": "haxe-standard-library",
+      "name": "Haxe standard library",
+      "role": "upstream-source-basis",
+      "usage": "external-source-with-retained-license",
+      "selectionStatus": "version-contract-accepted",
+      "version": "4.3.7",
+      "sourceRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
+      "observedRevision": "e0b355c6be312c1b17382603f018cf52522ec651",
+      "upstreamUrl": "https://github.com/HaxeFoundation/haxe/tree/e0b355c6be312c1b17382603f018cf52522ec651/std",
+      "licenseExpression": "MIT",
+      "licenseUrl": "https://github.com/HaxeFoundation/haxe/blob/e0b355c6be312c1b17382603f018cf52522ec651/extra/LICENSE.txt",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": [
+        {
+          "path": "LICENSES/HAXE-STDLIB-MIT.txt",
+          "sha256": "61c9e5c8ca48e1f6e27f66cc6fb2eb11865a08672e1c793a13cfdaa89ad1bb74"
+        }
+      ]
+    },
+    {
+      "id": "llvm-clang-tooling",
+      "name": "LLVM/Clang",
+      "role": "external-syntax-and-abi-tooling",
+      "usage": "external-not-redistributed",
+      "selectionStatus": "tool-version-pending",
+      "version": null,
+      "sourceRevision": null,
+      "observedRevision": "c4830afdbbc7b16a52a05d6a5b56e6c3fc14fb98",
+      "upstreamUrl": "https://github.com/llvm/llvm-project",
+      "licenseExpression": "Apache-2.0 WITH LLVM-exception",
+      "licenseUrl": "https://github.com/llvm/llvm-project/blob/c4830afdbbc7b16a52a05d6a5b56e6c3fc14fb98/LICENSE.TXT",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    }
+  ],
+  "derivedSourcePolicies": [
+    {
+      "root": "std/c/_std",
+      "defaultUpstreamComponent": "haxe-standard-library",
+      "files": []
+    }
+  ],
+  "runtimeDependencies": [],
+  "reservedThirdPartyRoots": [
+    "vendor",
+    "third_party",
+    "runtime/vendor",
+    "runtime/third_party"
+  ]
+}

@@ -80,4 +80,7 @@ if [ ! -s "$ROOT_DIR/LICENSE" ]; then
   exit 1
 fi
 
+echo "[pre-commit] Validating license and third-party provenance policy..."
+python3 "$ROOT_DIR/scripts/ci/check_license_policy.py" --root "$ROOT_DIR" --quiet
+
 echo "[pre-commit] OK"

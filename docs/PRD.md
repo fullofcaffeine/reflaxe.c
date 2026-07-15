@@ -2329,6 +2329,17 @@ Performance claims in the README require reproducible benchmark definitions and 
   third-party code retains compatible notices, SPDX/provenance, and license
   review evidence.
 - Third-party runtime code has license and provenance records.
+- `docs/specs/third-party-provenance.json` is the fail-closed distribution
+  inventory. External development tools are distinguished from redistributed
+  source/binaries; reserved vendor/runtime roots reject unowned files; and every
+  target `_std` file has content-hashed per-file provenance.
+- Release assembly runs
+  `scripts/ci/check_license_policy.py --package-root <assembled-tree>` so the
+  canonical license, third-party notice, provenance manifest, and retained
+  upstream licenses match the reviewed repository copies.
+- Generated C/header, template, and selectively emitted/linked runtime license
+  treatment remains owned by decision `haxe_c-od2.5`; no release workflow may
+  infer an exception or grant solely from the repository license.
 - Fuzzing covers untrusted binding configuration and manifest parsing.
 - Exported ABI functions validate lengths, overflows, and nullability at trust boundaries according to policy.
 - Unsafe operations are counted and reviewable.
@@ -2343,6 +2354,9 @@ reflaxe.c/
   .github/workflows/
   .haxerc
   AGENTS.md
+  LICENSE
+  LICENSES/
+  THIRD_PARTY_NOTICES.md
   CHANGELOG.md
   README.md
   SECURITY.md
@@ -2775,7 +2789,11 @@ are not permission to contradict an accepted record.
 
 1. **Project/license (owner-confirmed 2026-07-15):** repository named
    `reflaxe.c`; optional orchestration CLI named `hxc`; repository-owned code
-   licensed `GPL-3.0-only`. Third-party notices/provenance remain an M0 gate.
+   licensed `GPL-3.0-only`. The current upstream inventory and fail-closed
+   notice/package checks live in `THIRD_PARTY_NOTICES.md`,
+   `docs/specs/third-party-provenance.json`, and
+   `scripts/ci/check_license_policy.py`. Generated-output and runtime
+   redistribution treatment remains decision `haxe_c-od2.5`.
 2. **Profiles (accepted):** `portable` default plus `metal`; no third
    “idiomatic” profile. Both use the direct-C-first pipeline in ADR 0001.
 3. **Runtime policy (accepted):** `auto|minimal|none` remains orthogonal to
@@ -4814,7 +4832,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Deterministic import tooling (`bindgen`) | `tools/` placeholder, pointlib extern/example contracts, PRD/task graph | Planned | No Clang parser or binding generator exists. Implement exact preprocessing/target capture, normalized ABI model, raw externs, optional ergonomic wrappers, lock/provenance files, layout probes, drift reports, callbacks, and constrained C++ shims. |
 | Public C ABI and library production (`c-export`) | `std/c/Export.hx`, `examples/shared-library` | Planned | Export intent and consumer fixtures are seeded, but no Haxe export analyzer/generator exists. Build stable headers/wrappers, ownership/error adapters, visibility/version maps, install metadata, ABI manifests/diffs, and independent consumers. |
 | Portable runtime and standard library (`portable-runtime-and-stdlib`) | Minimal `runtime/hxrt` seed and `stdlib-ledger.json` | Planned | Full portable Haxe semantics and standard-library parity are product requirements, not current capabilities. Ratify strings, memory, exceptions, and platform contracts before implementing selective runtime facilities and ledger-driven conformance. |
-| Governance, compatibility, and releases (`governance-release`) | `LICENSE`, `SECURITY.md`, `CHANGELOG.md`, `VALIDATION.md` | Partial | GPL-3.0-only is ratified and the canonical text is checked in. Record third-party notices/provenance, define supported versions and ABI/semantic policy, and produce reproducible release evidence before public claims. |
+| Governance, compatibility, and releases (`governance-release`) | `LICENSE`, `LICENSES/`, `THIRD_PARTY_NOTICES.md`, `docs/specs/third-party-provenance.json`, governance CI | Partial | GPL-3.0-only, the current upstream inventory, and fail-closed source/package notice validation are checked in. Generated-output/runtime redistribution treatment, supported versions, ABI/semantic policy, and reproducible release evidence remain before release claims. |
 
 ### 32.3 Immediate scaffold audit acceptance
 
@@ -5377,7 +5395,7 @@ analysis; evidence may justify a different accepted result.
 
 | Decision | Recommended default | Owner artifact | Planning effect |
 | --- | --- | --- | --- |
-| Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; maintain compatible notices and SPDX/provenance per copied or adapted file | E0.T02 / ADR | License choice is resolved; notices/provenance still block release and broad code import, not local AST experiments. |
+| Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; the checked inventory rejects unowned vendor/runtime files and unlisted `_std` work | E0.T02 / `third-party-provenance.json` | Repository licensing and current provenance are resolved; `haxe_c-od2.5` still blocks release packaging until generated-output/runtime redistribution treatment is ratified. |
 | Exact Haxe and Reflaxe baseline | Start with Haxe 4.3.7 and a pinned Reflaxe revision proven by scaffold compilation; broaden later through CI | E0.T03 / ADR | Blocks compiler API work. |
 | Default C dialect | Accepted: strict ISO C11/no extensions is the normative source and public-header floor; C17 preserves it, while C23 internal syntax remains experimental and ABI-neutral | ADR 0007 / E0.T01 | AST, printer, runtime, header, and compiler gates share one floor. |
 | Target define name | Accepted: `c_output` is the Haxe 4/Reflaxe activation/output signal, `c`/`target.name=c` is target identity, and `reflaxe_c` is implementation-owned; enable `target.unicode`, not `target.utf16` | ADR 0007 / E0.T01/E0.T03 | Bootstrap conflict probes and stdlib typing must implement the ratified identity. |
@@ -5590,6 +5608,9 @@ Primary implementation references, checked for this handoff on 2026-07-15:
 - Haxe Manual, String Unicode: `https://haxe.org/manual/std-String-unicode.html`
 - Haxe Manual, String Encoding: `https://haxe.org/manual/std-String-encoding.html`
 - Reflaxe repository/new-target documentation: `https://github.com/SomeRanDev/reflaxe`
+- Reflaxe MIT license: `https://github.com/SomeRanDev/reflaxe/blob/main/LICENSE`
+- Haxe 4.3.7 license bundle and standard-library MIT notice: `https://github.com/HaxeFoundation/haxe/blob/4.3.7/extra/LICENSE.txt`
+- LLVM/Clang license: `https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT`
 - Haxe C++ target getting started: `https://haxe.org/manual/target-cpp-getting-started.html`
 - hxcpp runtime/project: `https://github.com/HaxeFoundation/hxcpp`
 - ISO C++ FAQ, mixing C and C++: `https://isocpp.org/wiki/faq/mixing-c-and-cpp`

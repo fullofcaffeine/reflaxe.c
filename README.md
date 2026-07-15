@@ -120,6 +120,7 @@ The current checkout contains:
 - a minimal Reflaxe compiler adapter that fails with `HXC1000`;
 - a structured C AST and printer seed;
 - a public runtime-header seed that parses as C11 and C++17;
+- a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
 It does **not** yet contain the complete bootstrap, Haxe lowering pipeline,
@@ -143,7 +144,11 @@ bd list --ready --type task
 jq empty \
   docs/specs/beads-plan.json \
   docs/specs/diagnostics.json \
-  docs/specs/stdlib-ledger.json
+  docs/specs/stdlib-ledger.json \
+  docs/specs/third-party-provenance.json
+
+python3 scripts/ci/check_license_policy.py
+python3 -m unittest discover -s test/governance -p 'test_*.py'
 
 cc -std=c11 -Wall -Wextra -Werror -pedantic \
   -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
@@ -162,10 +167,16 @@ a small end-to-end C emission slice before expanding language coverage.
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
 - [Architecture decisions](docs/adr/README.md)
+- [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)
 - [Beads plan](docs/BEADS_PLAN.md)
 - [Contributor and agent rules](AGENTS.md)
 
 ## License
 
-Licensed under [GPL-3.0-only](LICENSE). Third-party attribution and provenance
-remain tracked M0 governance work and must be complete before a public release.
+Repository-owned source is licensed under [GPL-3.0-only](LICENSE). Verified
+upstream attribution, current distribution status, and fail-closed package
+requirements live in [Third-party notices and provenance](THIRD_PARTY_NOTICES.md).
+
+The licensing treatment of generated C/headers, templates, and emitted or
+linked runtime slices is still an explicit pre-release decision; this README
+does not assume that the repository license answers those separate cases.

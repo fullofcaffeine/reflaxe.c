@@ -187,6 +187,33 @@ compiler lifecycle classes referenced by the adapter.
   not represent C++ classes, templates, overloads, exceptions, or ABI details
   as if they were ordinary C declarations.
 
+### License and provenance invariants
+
+- Repository-owned source is `GPL-3.0-only`. Treat
+  `docs/specs/third-party-provenance.json` as the machine-readable inventory
+  and `THIRD_PARTY_NOTICES.md` as its human-readable explanation; update both
+  in the same change whenever distribution facts change.
+- An external compiler, framework, or analysis tool is not redistributed merely
+  because it is used during development. Conversely, never label copied source
+  as “external only.” Distribution status must match the checkout and package.
+- Do not add files under `vendor/`, `third_party/`, `runtime/vendor/`, or
+  `runtime/third_party/` without an owning manifest entry, immutable source
+  revision, concrete SPDX license expression, exact governed paths, and local
+  license evidence. `runtimeDependencies: []` is an audited statement that no
+  third-party runtime dependency is present.
+- Every file under `std/c/_std/` must have a derived-source ledger entry with a
+  content hash. Copied or adapted Haxe standard-library source records its exact
+  upstream path/revision, MIT license, and retained notice; a genuinely
+  repository-authored override is classified separately as `GPL-3.0-only`.
+- Run `python3 scripts/ci/check_license_policy.py` after any dependency,
+  vendoring, `_std`, runtime, license, notice, or package-layout change. Release
+  assembly must additionally run it with `--package-root <assembled-tree>` so
+  reviewed license and notice files are present byte-for-byte.
+- Do not infer or promise a license for generated C, generated headers,
+  templates, or selectively emitted/linked runtime slices from the repository
+  license. That public treatment is owned by Beads decision `haxe_c-od2.5` and
+  remains a release-packaging blocker until ratified.
+
 ### Beads plan execution
 
 - The durable product source is `docs/PRD.md`; live ownership/readiness/status
@@ -231,7 +258,9 @@ Run the exact gates owned by the active issue. At the present partial-scaffold
 stage, the locally available baseline is limited to:
 
 ```bash
-jq empty docs/specs/beads-plan.json docs/specs/diagnostics.json docs/specs/stdlib-ledger.json
+jq empty docs/specs/beads-plan.json docs/specs/diagnostics.json docs/specs/stdlib-ledger.json docs/specs/third-party-provenance.json
+python3 scripts/ci/check_license_policy.py
+python3 -m unittest discover -s test/governance -p 'test_*.py'
 cc -std=c11 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
 c++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
 bd dep cycles --json
@@ -243,9 +272,10 @@ After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
 keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks
 remain active while repository checks run first. It exports/stages Beads JSONL,
 formats staged Haxe, rejects staged secrets and machine-local paths, checks
-whitespace, and runs relevant JSON or public-header gates. Gitleaks is required;
-the formatter haxelib is required when Haxe files are staged. Do not bypass the
-hook to publish a failing change; record and fix the underlying gate instead.
+whitespace, enforces the license/provenance inventory, and runs relevant JSON
+or public-header gates. Gitleaks is required; the formatter haxelib is required
+when Haxe files are staged. Do not bypass the hook to publish a failing change;
+record and fix the underlying gate instead.
 
 Do not claim Haxe/Reflaxe type-checking, runtime linking, generated-program
 execution, sanitizers, cross-platform CI, bindgen, export, or stdlib parity
