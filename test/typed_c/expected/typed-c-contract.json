@@ -1,0 +1,235 @@
+{
+  "schemaVersion": 1,
+  "status": "contract-seed-no-lowering",
+  "declarations": [
+    {
+      "modulePath": "Dimensions",
+      "sourceKind": "class",
+      "layout": "struct",
+      "cName": "widget_dimensions",
+      "headerPath": "widget.h",
+      "headerVisibility": "public",
+      "pack": null,
+      "align": null,
+      "exported": false,
+      "linkage": null,
+      "callingConvention": null,
+      "visibility": null,
+      "section": null,
+      "dependencies": [],
+      "fields": [
+        {
+          "name": "width",
+          "cName": null,
+          "kind": "field",
+          "type": {"kind": "abstract", "name": "c.UInt32", "arguments": []},
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        },
+        {
+          "name": "height",
+          "cName": null,
+          "kind": "field",
+          "type": {"kind": "abstract", "name": "c.UInt32", "arguments": []},
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        }
+      ]
+    },
+    {
+      "modulePath": "SQLite3",
+      "sourceKind": "class",
+      "layout": "opaque",
+      "cName": "sqlite3",
+      "headerPath": null,
+      "headerVisibility": null,
+      "pack": null,
+      "align": null,
+      "exported": false,
+      "linkage": null,
+      "callingConvention": null,
+      "visibility": null,
+      "section": null,
+      "dependencies": [],
+      "fields": []
+    },
+    {
+      "modulePath": "WidgetApi",
+      "sourceKind": "class",
+      "layout": null,
+      "cName": null,
+      "headerPath": "widget.h",
+      "headerVisibility": "public",
+      "pack": null,
+      "align": null,
+      "exported": false,
+      "linkage": null,
+      "callingConvention": null,
+      "visibility": null,
+      "section": null,
+      "dependencies": [
+        {"modulePath": "WidgetConfig", "requirement": "forward"}
+      ],
+      "fields": [
+        {
+          "name": "recommendedCapacity",
+          "cName": "widget_recommended_capacity",
+          "kind": "function",
+          "type": {
+            "kind": "function",
+            "name": null,
+            "arguments": [
+              {
+                "kind": "c-contract",
+                "name": "c.ConstRef",
+                "arguments": [
+                  {"kind": "class", "name": "WidgetConfig", "arguments": []}
+                ]
+              },
+              {"kind": "abstract", "name": "c.Size", "arguments": []}
+            ]
+          },
+          "bitWidth": null,
+          "align": null,
+          "exported": true,
+          "linkage": "external",
+          "callingConvention": "c",
+          "visibility": null,
+          "section": null
+        },
+        {
+          "name": "version",
+          "cName": "WIDGET_API_VERSION",
+          "kind": "constant",
+          "type": {"kind": "abstract", "name": "c.UInt32", "arguments": []},
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        }
+      ]
+    },
+    {
+      "modulePath": "WidgetConfig",
+      "sourceKind": "class",
+      "layout": "struct",
+      "cName": "widget_config",
+      "headerPath": "widget.h",
+      "headerVisibility": "public",
+      "pack": null,
+      "align": 8,
+      "exported": false,
+      "linkage": null,
+      "callingConvention": null,
+      "visibility": null,
+      "section": null,
+      "dependencies": [
+        {"modulePath": "Dimensions", "requirement": "complete"},
+        {"modulePath": "WidgetStorage", "requirement": "forward"}
+      ],
+      "fields": [
+        {
+          "name": "dimensions",
+          "cName": null,
+          "kind": "field",
+          "type": {"kind": "class", "name": "Dimensions", "arguments": []},
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        },
+        {
+          "name": "capacity",
+          "cName": null,
+          "kind": "field",
+          "type": {"kind": "abstract", "name": "c.Size", "arguments": []},
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        },
+        {
+          "name": "storage",
+          "cName": null,
+          "kind": "field",
+          "type": {
+            "kind": "c-contract",
+            "name": "c.NullablePtr",
+            "arguments": [
+              {"kind": "class", "name": "WidgetStorage", "arguments": []}
+            ]
+          },
+          "bitWidth": null,
+          "align": null,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        },
+        {
+          "name": "flags",
+          "cName": null,
+          "kind": "field",
+          "type": {"kind": "abstract", "name": "c.UInt32", "arguments": []},
+          "bitWidth": null,
+          "align": 4,
+          "exported": false,
+          "linkage": null,
+          "callingConvention": null,
+          "visibility": null,
+          "section": null
+        }
+      ]
+    },
+    {
+      "modulePath": "WidgetStorage",
+      "sourceKind": "class",
+      "layout": "opaque",
+      "cName": "widget_storage",
+      "headerPath": null,
+      "headerVisibility": null,
+      "pack": null,
+      "align": null,
+      "exported": false,
+      "linkage": null,
+      "callingConvention": null,
+      "visibility": null,
+      "section": null,
+      "dependencies": [],
+      "fields": []
+    }
+  ],
+  "buildFacts": [
+    {"kind": "define", "name": "SQLITE_THREADSAFE", "value": "1", "valueKind": "integer"},
+    {"kind": "include", "name": "sqlite3.h", "value": "system", "valueKind": "enum"},
+    {"kind": "link", "name": "sqlite3", "value": null, "valueKind": null},
+    {"kind": "pkg-config", "name": "sqlite3", "value": null, "valueKind": null}
+  ],
+  "effects": {
+    "allocation": "none",
+    "ownership": "declarative-only",
+    "unsafe": "none",
+    "portability": "c-target-only",
+    "runtimeFeatures": []
+  }
+}

@@ -2,6 +2,7 @@
 
 - Status: Accepted
 - Date: 2026-07-14
+- Last amended: 2026-07-15 (ratified M0 source vocabulary and admission evidence)
 - Decision owners: project owner and compiler maintainers
 - Related requirements: HXC-PROD-004, HXC-PROD-008, HXC-PROD-012,
   HXC-MAC-001 through HXC-MAC-012
@@ -51,8 +52,8 @@ include dependencies. Explicit metadata may select public/private header groups,
 stable C names, visibility, or external includes, but users do not hand-author
 include guards or dependency ordering as strings.
 
-The exact API spellings remain subject to the owning implementation issue, but
-the surface must cover:
+The M0 source spellings are ratified below. Their semantic coverage must grow
+without bypassing the shared declaration model:
 
 - public and private header grouping;
 - imported and exported declarations;
@@ -70,6 +71,36 @@ Haxe conditional compilation should replace generated preprocessor branching
 when the choice can be made before C emission. Function-like C macros should
 prefer typed inline functions or generated wrappers. Raw preprocessor output is
 reserved for ABI or platform boundaries that genuinely require it.
+
+### Ratified M0 source contract
+
+The target-facing intrinsic types live under `c.*`. Pointer, qualifier,
+exact-width integer, span, C string, ownership, allocator, result, atomic, and
+related types are compile-time/codegen contracts rather than wrapper objects.
+Importing one is an explicit C-native boundary and does not itself select
+`hxrt`.
+
+C facts that attach to declarations use namespaced metadata: `@:c.layout`,
+`@:c.header`, `@:c.name`, `@:c.include`, `@:c.link`, `@:c.define`,
+`@:c.pkgConfig`, `@:c.framework`, `@:c.pack`, `@:c.align`, `@:c.bitField`,
+`@:c.linkage`, `@:c.callingConvention`, `@:c.visibility`, `@:c.section`,
+`@:c.export`, and `@:c.constant`. Enum-like arguments use canonical typed
+values such as `c.Layout.Struct`, `c.Header.Public`, and
+`c.CallingConvention.C`; external names and paths remain constrained literals
+because they describe external artifacts.
+
+The M0 validator produces a typed deterministic declaration/build snapshot and
+rejects unknown metadata, malformed facts, reserved or duplicate explicit C
+symbols, opaque values embedded directly, and impossible by-value cycles with
+`HXC5002` at the originating span. `c.StaticAssert.require` is admitted for
+literal Haxe compile-time invariants. `c.Syntax` and `c.Unsafe` expose no
+operation yet, and no C DSL is admitted by this decision slice.
+
+This ratifies the source vocabulary, not a stable generated ABI or completed
+lowering. Native layout, calling-convention, section, and visibility support
+remains capability-gated and authoritative only after C/Clang probes. See
+[the typed C authoring contract](../typed-c-authoring.md) for exact M0 status,
+effects, examples, and downstream ownership.
 
 ### Compile-time verification is layered
 
@@ -110,6 +141,10 @@ exist and all of the following:
 
 An implementation that lowers internally through raw C still owns an unsafe
 boundary and must expose a typed API to application code.
+
+The admitted M0 validator and static assertion both report allocation `none`,
+unsafe `none`, and no runtime features. They exist for declaration correctness
+that ordinary Haxe syntax cannot express and introduce no runtime reflection.
 
 ## Consequences
 

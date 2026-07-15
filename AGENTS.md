@@ -191,6 +191,37 @@ compiler lifecycle classes referenced by the adapter.
   and retain direct Haxe/HXML plus the C toolchain as the recovery build path.
   Compiler registration must never depend on an existing `hxc` executable.
 
+### Typed C M0 seed
+
+- Files under `std/c/` are compiler contracts, not implemented wrapper objects.
+  Importing or mentioning them selects no runtime feature. Do not add fallback
+  allocations or ordinary runtime method bodies to make an unsupported operation
+  appear usable; implement the owning typed lowering and runtime-plan evidence.
+- Canonical declaration metadata is namespaced: `@:c.layout`, `@:c.header`,
+  `@:c.name`, `@:c.include`, `@:c.link`, `@:c.define`, `@:c.pkgConfig`,
+  `@:c.framework`, `@:c.pack`, `@:c.align`, `@:c.bitField`, `@:c.linkage`,
+  `@:c.callingConvention`, `@:c.visibility`, `@:c.section`, `@:c.export`, and
+  `@:c.constant`. Unknown `@:c.*` spellings fail with `HXC5002`; never add an
+  alias without updating ADR 0002, the PRD, typed-C guide, validator, snapshot,
+  and negative tests together.
+- `TypedCContractMacro` rebuilds a structural snapshot from the current typed
+  module set. It must remain deterministic and per-compilation, must not consult
+  ambient process state, and must not write files. Later compiler stages route
+  snapshot-derived artifacts through Reflaxe output ownership.
+- `reflaxe_c_contract_report` is an implementation-only inspection/test seam.
+  Do not document it as an application option or confuse its empty M0 effect
+  list with a whole-program `hxc.runtime-plan.json` proof.
+- `c.StaticAssert.require` proves only literal Haxe compile-time facts. Layout,
+  size, offset, alignment, toolchain, and imported-header claims still require
+  generated `_Static_assert`, Clang/native probes, and independent consumers.
+- `c.Syntax` and `c.Unsafe` intentionally expose no operation. Adding raw or
+  unsafe authority requires the owning Beads issue, a searchable lexical/API
+  boundary, inspection output, strict-mode enforcement, and positive/negative
+  no-hidden-runtime evidence.
+- The source vocabulary is ratified but its generated public ABI is not stable.
+  E7 owns ABI-safe export/header implementation and E10.T09 owns stabilization;
+  do not publish compatibility claims from the M0 snapshot.
+
 ### Product contracts
 
 - One compiler pipeline serves both profiles. `portable` is the default Haxe

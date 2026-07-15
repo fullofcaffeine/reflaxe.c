@@ -250,6 +250,14 @@ negative diagnostics, deterministic inspectable expansion, explicit
 allocation/ownership/unsafe/runtime effects, and a concrete safety,
 portability, or ergonomics benefit proportional to its surface area.
 
+The M0 C seed applies two concrete sibling lessons without copying their target
+semantics: Rust-style native façade types are compile-time/codegen contracts
+rather than wrapper allocations, and Rust/Go-style metadata registries are
+rebuilt from the current typed module set and sorted before reporting. C extends
+that pattern with structural declaration dependencies, literal build facts,
+opaque/by-value cycle checks, and an explicitly empty runtime-effect list. See
+`docs/typed-c-authoring.md`; actual C layouts still require native authority.
+
 ## Standard library
 
 Observed patterns:

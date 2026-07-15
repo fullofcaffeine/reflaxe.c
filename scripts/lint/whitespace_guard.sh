@@ -14,9 +14,18 @@ fi
 
 # Preserve immutable third-party bytes exactly as reviewed. Their content is
 # protected by provenance/checksum gates instead of repository formatting.
-git diff "${DIFF_ARGS[@]}" --check -- \
-  . \
-  ':(exclude)vendor/**' \
-  ':(exclude)third_party/**' \
-  ':(exclude)runtime/vendor/**' \
-  ':(exclude)runtime/third_party/**'
+if [ "${#DIFF_ARGS[@]}" -eq 0 ]; then
+  git diff --check -- \
+    . \
+    ':(exclude)vendor/**' \
+    ':(exclude)third_party/**' \
+    ':(exclude)runtime/vendor/**' \
+    ':(exclude)runtime/third_party/**'
+else
+  git diff "${DIFF_ARGS[@]}" --check -- \
+    . \
+    ':(exclude)vendor/**' \
+    ':(exclude)third_party/**' \
+    ':(exclude)runtime/vendor/**' \
+    ':(exclude)runtime/third_party/**'
+fi

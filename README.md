@@ -57,7 +57,7 @@ requirement. `hxc_runtime=none` turns runtime freedom into a hard whole-program
 proof. Every successful build is planned to emit `hxc.runtime-plan.json`, even
 when the selected feature set is empty.
 
-The planned `c.*` surface also makes C itself pleasant to author from Haxe:
+The `c.*` source contract is designed to make C itself pleasant to author from Haxe:
 typed pointers, spans, ownership, layouts, header groups, linkage, calling
 conventions, compile-time constants/assertions, external build facts, and ABI
 exports. Haxe types and macros should catch invalid declaration graphs, layout
@@ -66,9 +66,13 @@ position; C compilers, Clang, static assertions, and ABI probes still verify the
 native facts. Ordinary Haxe comes first, then typed APIs and validated metadata;
 a DSL must justify a real language gap, and raw C stays explicit and unsafe.
 
-These are M0 design contracts, not currently implemented capabilities. The
-ratified rationale lives in [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md)
-and [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).
+The M0 intrinsic types and namespaced declaration metadata now type-check, and a
+compile-backed validator produces a deterministic structural contract report
+with source-positioned negative diagnostics. They do not lower to C or prove
+native layouts yet. The exact boundary and examples are in
+[typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
+[ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
+[ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).
 
 ### CLI bootstrap
 
@@ -126,6 +130,8 @@ The current checkout contains:
   are explicitly tracked for the next bootstrap task;
 - a Haxe 4.3.7 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked toolchain;
 - target-gated `CompilerBootstrap` and `CompilerInit` lifecycle probes;
+- zero-runtime `c.*` contract types plus deterministic typed declaration/build
+  metadata validation and `HXC5002` negative fixtures;
 - a structured C AST and printer seed;
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
@@ -160,6 +166,7 @@ jq empty \
 
 python3 scripts/ci/check_toolchain.py --require-tools
 python3 test/bootstrap/run.py
+python3 test/typed_c/run.py
 python3 scripts/ci/check_license_policy.py
 ```
 
@@ -167,9 +174,9 @@ See the [pinned toolchain guide](docs/toolchain.md) for the exact dependency,
 package-layout, bootstrap-order, and update contracts. The compile-backed probes
 do not claim that ordinary Haxe programs can be emitted as C yet.
 
-The first implementation milestone will ratify the public contracts, pin the
-Haxe/Reflaxe toolchain, make the target-owned Haxe sources type-check, and build
-a small end-to-end C emission slice before expanding language coverage.
+The remaining bootstrap work will make the complete target-owned Haxe graph
+type-check, preserve fail-closed unsupported lowering, and then build a small
+end-to-end C emission slice before expanding language coverage.
 
 ## Project documents
 
@@ -177,6 +184,7 @@ a small end-to-end C emission slice before expanding language coverage.
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
+- [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)
 - [Beads plan](docs/BEADS_PLAN.md)

@@ -867,7 +867,7 @@ Generated names MUST be stable across machines and independent of hash-map itera
 
 Rules:
 
-- user-visible exports use explicit `@:cName` or a documented stable default;
+- user-visible exports use explicit `@:c.name` or a documented stable default;
 - internal names use `hxc_` plus escaped qualified names;
 - C keywords, implementation-reserved identifiers, and library-reserved names are escaped;
 - identifiers beginning with double underscore or underscore plus uppercase are never generated;
@@ -1648,22 +1648,26 @@ It is a separate language adapter over a C ABI, not direct C++ code generation b
 
 ### 16.1 Export annotations
 
-Proposed metadata:
+The M0 declaration vocabulary supplies the first five namespaced facts below;
+E7 must admit and implement the ownership/error/version facts before accepting
+those final proposed spellings:
 
 ```haxe
-@:cExport
-@:cName("todo_store_open")
-@:cHeader("todo_store.h")
-@:cVisibility("default")
-@:cCallingConvention("cdecl")
-@:cOwned
-@:cBorrowed
-@:cNullable
-@:cError("status")
-@:cSince("1.0")
+@:c.export
+@:c.name("todo_store_open")
+@:c.header("todo_store.h", c.Header.Public)
+@:c.visibility(c.Visibility.Default)
+@:c.callingConvention(c.CallingConvention.C)
+@:c.owned                  // proposed E7 contract
+@:c.borrowed               // proposed E7 contract
+@:c.nullable               // proposed E7 contract
+@:c.error("status")        // proposed E7 contract
+@:c.since("1.0")           // proposed E7 contract
 ```
 
-Metadata is validated centrally through Reflaxe metadata templates where possible.
+Metadata is validated centrally through the shared typed C contract model. E7
+must extend its allowlist, diagnostics, snapshots, and admission record rather
+than accepting unvalidated annotations locally.
 
 ### 16.2 ABI-safe public types
 
@@ -1786,7 +1790,7 @@ CI SHOULD include:
 
 ### 17.1 Core `c.*` API
 
-Initial modules:
+M0-reserved modules:
 
 ```text
 c.Syntax
@@ -1803,6 +1807,14 @@ c.StringView
 c.Span<T>
 c.ConstSpan<T>
 c.CArray<T, N>
+c.Int8
+c.UInt8
+c.Int16
+c.UInt16
+c.Int32
+c.UInt32
+c.Int64
+c.UInt64
 c.Size
 c.PtrDiff
 c.IntPtr
@@ -1814,14 +1826,13 @@ c.Owned<T>
 c.Borrowed<T>
 c.Allocator
 c.Arena
-c.Lib
-c.Build
-c.Export
 c.Header
+c.IncludeKind
 c.Layout
 c.StaticAssert
 c.Linkage
 c.CallingConvention
+c.Visibility
 c.MemoryOrder
 c.Unsafe
 ```
@@ -1831,11 +1842,20 @@ not necessarily runtime objects. A `c.*` import is an explicit C-native source
 boundary; it must not silently infect unrelated portable modules or require
 `hxrt` merely because the abstraction exists.
 
+The M0 implementations are intentionally method-free compiler contracts except
+for the compile-time-only `c.StaticAssert.require`. They have no wrapper
+allocation or runtime representation and no lowering yet. Empty `c.Lib`,
+`c.Build`, or `c.Export` marker types are not admitted: build and export intent
+uses validated declaration metadata until a concrete typed value API earns its
+surface. `CArray<T, N>` currently reserves `N` as a type-level length witness;
+the exact witness-generation ergonomics remain E3 work.
+
 ### 17.2 Typed declarations, headers, structs, and unions
 
 C developers MUST be able to author C-facing declarations and header structure
-from typed Haxe. Exact metadata and module spellings remain provisional until
-ADR 0002's implementation issue accepts them, but the surface MUST cover:
+from typed Haxe. ADR 0002 ratifies the namespaced M0 metadata vocabulary below;
+public generated-ABI stability still belongs to E7 and E10. The surface MUST
+cover:
 
 - public/private header grouping and stable C names;
 - imported extern declarations and exported Haxe declarations;
@@ -1850,24 +1870,25 @@ ADR 0002's implementation issue accepts them, but the surface MUST cover:
 Representative intent:
 
 ```haxe
-@:cOpaque
+@:c.layout(c.Layout.Opaque)
+@:c.name("widget_storage")
 extern class WidgetStorage {}
 
-@:cHeader("widget.h")
-@:cPublic
-@:cStruct
-class WidgetConfig {
+@:c.layout(c.Layout.Struct)
+@:c.header("widget.h", c.Header.Public)
+@:c.name("widget_config")
+extern class WidgetConfig {
   public var capacity:c.Size;
   public var storage:c.NullablePtr<WidgetStorage>;
 }
 
-@:cHeader("widget.h")
-class WidgetApi {
-  @:cExport
-  @:cName("widget_recommended_capacity")
-  public static function recommendedCapacity(config:WidgetConfig):c.Size {
-    return config.capacity;
-  }
+@:c.header("widget.h", c.Header.Public)
+extern class WidgetApi {
+  @:c.export
+  @:c.name("widget_recommended_capacity")
+  @:c.linkage(c.Linkage.External)
+  @:c.callingConvention(c.CallingConvention.C)
+  public static function recommendedCapacity(config:c.ConstRef<WidgetConfig>):c.Size;
 }
 ```
 
@@ -1877,19 +1898,19 @@ do not manually author include guards or repeat dependency ordering in strings.
 External headers remain explicit metadata because they are build inputs, not
 facts the Haxe type graph can invent.
 
-Proposed metadata/macros:
+Ratified M0 metadata examples:
 
 ```haxe
-@:cStruct
-@:cName("sqlite3_vfs")
+@:c.layout(c.Layout.Struct)
+@:c.name("sqlite3_vfs")
 extern class SqliteVfs { ... }
 
-@:cUnion
+@:c.layout(c.Layout.Union)
 extern class ValueUnion { ... }
 
-@:cPacked(1)
-@:cAlign(8)
-@:cBitField(3)
+@:c.pack(1)
+@:c.align(8)
+@:c.bitField(3)
 ```
 
 Macros and compiler analyses validate invalid combinations, incomplete by-value
@@ -1904,14 +1925,21 @@ ABI probes remain authoritative for imported header layouts.
 Typed APIs replace raw preprocessor strings:
 
 ```haxe
-@:cInclude("sqlite3.h")
-@:cLink("sqlite3")
-@:cDefine("SQLITE_THREADSAFE", 1)
-@:cPkgConfig("sqlite3")
+@:c.include("sqlite3.h", c.IncludeKind.System)
+@:c.link("sqlite3")
+@:c.define("SQLITE_THREADSAFE", 1)
+@:c.pkgConfig("sqlite3")
 extern class SQLite3 { ... }
 ```
 
 The compiler aggregates and deduplicates these into the manifest and build files.
+
+The M0 collector already normalizes these literal facts into a deterministic
+typed snapshot and rejects malformed paths, names, values, duplicate explicit
+symbols, opaque by-value use, and impossible by-value cycles with `HXC5002`.
+It emits no files or C and explicitly reports an empty runtime-feature set. See
+`docs/typed-c-authoring.md` for the precise implemented/provisional boundary and
+macro admission record.
 
 Haxe conditional compilation SHOULD resolve configuration before C emission
 when possible. Function-like C macros SHOULD become typed inline functions or
@@ -3100,7 +3128,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
   - C keywords and implementation-reserved identifiers are escaped.
   - Overloads/generic specializations remain stable across filesystem paths and discovery order.
   - Collision diagnostics identify both source symbols.
-  - Public @:cName values are validated rather than rewritten silently.
+  - Public `@:c.name` values are validated rather than rewritten silently.
 - **Labels:** hxc-plan, epic-e1, effort-medium, naming, abi
 
 #### E1.T05 — Expand HxcIR semantic core
@@ -3382,7 +3410,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
   - Field order/layout policy is deterministic.
   - Anonymous structural equality does not accidentally become C nominal incompatibility.
   - By-value copies and address-taking are explicit.
-  - Metal @:cStruct validation rejects unsupported layout combinations.
+  - Metal `@:c.layout(c.Layout.Struct)` validation rejects unsupported layout combinations.
 - **Labels:** hxc-plan, epic-e3, effort-large, lowering, structs
 
 #### E3.T02 — Lower Haxe enums as tagged unions
@@ -4090,8 +4118,8 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 - **Blocked by:** E3.T10, E0.T06
 - **PRD references:** §16.1
 - **Requirement IDs:** `HXC-RT-010`, `HXC-ABI-001`, `HXC-CLI-006`
-- **Outcome:** Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names.
-- **Description:** Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names. PRD: §16.1
+- **Outcome:** Collect `@:c.export` and related public ABI metadata and build a deterministic export model independent of internal symbol names.
+- **Description:** Collect `@:c.export` and related public ABI metadata and build a deterministic export model independent of internal symbol names. PRD: §16.1
 - **Acceptance criteria:**
   - Duplicate/invalid names and visibility conflicts are source-positioned.
   - Only explicitly exported declarations enter public ABI.
@@ -4826,7 +4854,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Whole-program compiler (`whole-program-compiler`) | `CCompiler.hx` | Fail-closed | It deliberately reports `HXC1000`; this is correct scaffold behavior, not a working compiler. Implement semantic lowering behind the existing boundary rather than weakening the failure or emitting fake success. |
 | Structural C AST and printer (`c-ast-printer`) | `ast/CAST.hx`, `ast/CASTPrinter.hx` | Seeded | A substantial declaration/expression/statement model and deterministic printer seed exist. Declarator completeness, precedence, attributes, dialect gates, provenance, comments/source maps, invariants, and a compile-backed golden corpus remain. |
 | Generated-file boundary (`generated-file-boundary`) | `emit/GeneratedFile.hx` | Seeded | Safe relative paths are represented. Add output manifests, dependency ordering, changed-file writes, stale-file cleanup, content hashing, collision checks, and Reflaxe `OutputManager` integration. |
-| Target-facing C API (`target-c-api`) | `std/c/**` | Seeded | Pointer, span, ownership, result, allocator, export, link, syntax, calling-convention, visibility, integer, and volatile abstractions reserve typed contracts. Most have no compiler lowering yet and must not be advertised as functional. |
+| Target-facing C API (`target-c-api`) | `std/c/**`, `TypedCContractMacro`, typed-C fixtures | Compile-verified contract seed | Pointer, span, ownership, result, allocator, syntax, calling-convention, visibility, integer, and volatile abstractions type-check as compiler contracts. Namespaced declaration/build metadata produces a deterministic typed snapshot; negative fixtures prove the current HXC5002 validation slice and empty runtime effects. No `c.*` lowering, header emission, native layout proof, unsafe operation, or stable public ABI is implemented. |
 | Runtime ABI and implementation (`runtime-abi-and-implementation`) | `runtime/hxrt/include/hxc_runtime.h`, `runtime/hxrt/src/hxc_runtime.c`, `runtime/hxrt/features.json` | Verified native seed | A provisional allocator/string/status/Int32 ABI and three runtime feature entries compile natively. This is not the portable Haxe runtime: feature closure, arrays, objects, managed memory, dynamic values, reflection, exceptions, threads, and platform adapters remain. |
 | Native smoke fixtures (`native-smoke-fixtures`) | `runtime/hxrt/test/**`, `scripts/ci/runtime_smoke.py`, pointlib/C++-shim native fixtures | Verified native seed | The current smoke gate covers strict hosted and freestanding C11 with available GCC/Clang, C++17 public-header inclusion, a C library fixture, and an opaque-handle C++ shim. Sanitizers, generated-Haxe output, target matrices, ownership/failure paths, and external consumers remain later gates. |
 | Diagnostics (`diagnostics`) | `CDiagnostic.hx`, `docs/specs/diagnostics.json`, schema | Seeded | Stable IDs and the deliberate scaffold failure are registered. Complete source ranges, severity policy, remediation, JSON output, registry drift checks, and diagnostic tests are still required. |

@@ -224,6 +224,7 @@ def copy_package_file(source: Path, stage: Path) -> None:
 
 def stage_package(stage: Path) -> None:
     shutil.copytree(ROOT / "src", stage / "src")
+    shutil.copytree(ROOT / "std", stage / "std")
     shutil.copytree(ROOT / "vendor/reflaxe/src", stage / "src", dirs_exist_ok=True)
     for relative in ("haxelib.json", "extraParams.hxml", "README.md", "LICENSE"):
         copy_package_file(ROOT / relative, stage)

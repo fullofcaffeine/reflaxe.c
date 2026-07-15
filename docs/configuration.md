@@ -117,3 +117,10 @@ layout attributes, and exports flow through one provenance-aware declaration and
 build model. Haxe macros receive that resolved model rather than consulting
 ambient process state ad hoc. Clang inputs and native probes remain explicit and
 reproducible. See [ADR 0002](adr/0002-haxe-first-typed-c-authoring.md).
+
+Source metadata supplies only declaration-local, literal facts through the
+canonical namespaced vocabulary in [typed C authoring](typed-c-authoring.md).
+It cannot inject compiler flags, shell fragments, a target triple, sysroot, or
+ambient environment lookup. The M0 collector normalizes and deduplicates these
+facts deterministically; E8.T04 later merges them with resolved project/toolchain
+configuration and records provenance or a conflict diagnostic.

@@ -545,7 +545,7 @@
         "C keywords and implementation-reserved identifiers are escaped.",
         "Overloads/generic specializations remain stable across filesystem paths and discovery order.",
         "Collision diagnostics identify both source symbols.",
-        "Public @:cName values are validated rather than rewritten silently."
+        "Public @:c.name values are validated rather than rewritten silently."
       ],
       "labels": [
         "hxc-plan",
@@ -1102,7 +1102,7 @@
         "Field order/layout policy is deterministic.",
         "Anonymous structural equality does not accidentally become C nominal incompatibility.",
         "By-value copies and address-taking are explicit.",
-        "Metal @:cStruct validation rejects unsupported layout combinations."
+        "Metal @:c.layout(c.Layout.Struct) validation rejects unsupported layout combinations."
       ],
       "labels": [
         "hxc-plan",
@@ -2525,7 +2525,7 @@
       "prd": [
         "§16.1"
       ],
-      "outcome": "Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names.",
+      "outcome": "Collect @:c.export and related public ABI metadata and build a deterministic export model independent of internal symbol names.",
       "acceptance": [
         "Duplicate/invalid names and visibility conflicts are source-positioned.",
         "Only explicitly exported declarations enter public ABI.",
@@ -2541,7 +2541,7 @@
       ],
       "effort": "large",
       "type": "task",
-      "description": "Collect @:cExport/public ABI metadata and build a deterministic export model independent of internal symbol names.\n\nPRD: §16.1"
+      "description": "Collect @:c.export and related public ABI metadata and build a deterministic export model independent of internal symbol names.\n\nPRD: §16.1"
     },
     {
       "key": "E7.T02",

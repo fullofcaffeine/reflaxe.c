@@ -136,6 +136,7 @@ code strings:
 Haxe declarations and types
   -> typed c.* abstractions
   -> validated metadata/macros
+  -> deterministic TypedCContractSnapshot
   -> declaration, header, layout, ownership, and build facts
   -> HxcIR / C AST / neutral manifest
 ```
@@ -152,6 +153,12 @@ narrow typed DSL only for a real language gap, and finally explicit raw C
 authority. Every macro/DSL must expose its expansion and allocation, ownership,
 unsafe, portability, and runtime effects. See
 [ADR 0002](adr/0002-haxe-first-typed-c-authoring.md).
+
+The M0 collector is installed once per C compilation and rebuilds its snapshot
+from that compilation's typed module set. It owns no cross-build registry and
+writes no files. Its report seam is test-only; the future compiler consumes the
+snapshot and routes manifests and headers through Reflaxe output ownership. See
+[typed C authoring](typed-c-authoring.md).
 
 ## ABI boundary
 

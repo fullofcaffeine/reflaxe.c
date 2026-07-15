@@ -81,6 +81,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|haxelib\.json|package(-l
   python3 "$ROOT_DIR/scripts/ci/check_toolchain.py" --root "$ROOT_DIR"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/|src/reflaxe/c/(contract|macros)/|test/typed_c/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running typed C contract probes..."
+  python3 "$ROOT_DIR/test/typed_c/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -qx 'runtime/hxrt/include/hxc_runtime.h'; then
   echo "[pre-commit] Validating the public runtime header as C11 and C++17..."
   cc -std=c11 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h

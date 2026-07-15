@@ -3,6 +3,7 @@ package reflaxe.c;
 #if macro
 import haxe.macro.Compiler as MacroCompiler;
 import haxe.macro.Context;
+import reflaxe.c.macros.TypedCContractMacro;
 #if !reflaxe_c_lifecycle_probe
 import reflaxe.BaseCompiler.BaseCompilerFileOutputType;
 import reflaxe.ReflectCompiler;
@@ -38,6 +39,7 @@ class CompilerInit {
 		MacroCompiler.define("reflaxe_c");
 		MacroCompiler.define("target.unicode");
 		MacroCompiler.define(READY_DEFINE);
+		TypedCContractMacro.install();
 
 		#if !reflaxe_c_lifecycle_probe
 		ReflectCompiler.Start();
