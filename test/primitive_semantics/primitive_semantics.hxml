@@ -1,0 +1,7 @@
+-cp test/primitive_semantics/
+-lib reflaxe.c
+
+--macro PrimitiveTypeProbe.install()
+
+-main PrimitiveSemanticsGolden
+--interp

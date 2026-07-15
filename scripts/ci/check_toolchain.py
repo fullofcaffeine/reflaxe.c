@@ -217,13 +217,14 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
+    expected_primitive_semantics_script = "python3 test/primitive_semantics/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:diagnostics && npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:hxc-ir && npm run snapshots:check"
+        "npm run test:hxc-ir && npm run test:primitive-semantics && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -265,6 +266,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:hxc-ir") != expected_hxc_ir_script
     ):
         errors.append("package.json must retain the HxcIR semantic gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:primitive-semantics")
+        != expected_primitive_semantics_script
+    ):
+        errors.append("package.json must retain the primitive semantic gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script

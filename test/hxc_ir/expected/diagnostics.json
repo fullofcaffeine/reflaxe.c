@@ -2,8 +2,14 @@
   "missingTerminator": [
     "HXC9000 error [profile=portable] test/negative/MissingTerminator.hx:1:1-8:2 [module:invalid.MissingTerminator.function:invalid.MissingTerminator.main.block:entry] Invalid HxcIR: basic block `entry` has no terminator Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "nullableUnwrapWithoutFailure": [
+    "HXC9000 error [profile=portable] test/negative/NullableUnwrapWithoutFailure.hx:3:1-3:2 [module:invalid.NullableUnwrapWithoutFailure.function:invalid.NullableUnwrapWithoutFailure.main.block:entry.instruction:1:bad.unwrap] Invalid HxcIR: checked or nullable-unwrapping conversion requires an explicit failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "cleanupOrder": [
     "HXC9000 error [profile=portable] test/negative/CleanupOrder.hx:6:1-6:2 [module:invalid.CleanupOrder.function:invalid.CleanupOrder.main.block:entry.terminator.cleanup:1] Invalid HxcIR: cleanup actions in region `cleanup.bad` must execute in reverse registration order Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "primitiveRuntimeConversion": [
+    "HXC9000 error [profile=portable] test/negative/PrimitiveRuntimeConversion.hx:3:1-3:2 [module:invalid.PrimitiveRuntimeConversion.function:invalid.PrimitiveRuntimeConversion.main.block:entry.instruction:1:bad.convert] Invalid HxcIR: primitive conversion `IRCNumericExact` must use direct C or a program-local helper, not runtime feature `primitive-conversion` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "useBeforeDefinition": [
     "HXC9000 error [profile=portable] test/negative/UseBeforeDefinition.hx:2:1-2:2 [module:invalid.UseBeforeDefinition.function:invalid.UseBeforeDefinition.main.block:entry.instruction:0:bad.store.value] Invalid HxcIR: value `value.later` is not available at this instruction; preserve order or pass it through a block parameter Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

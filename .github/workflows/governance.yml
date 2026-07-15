@@ -45,6 +45,9 @@ jobs:
       - name: Run required strict native toolchain
         run: python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"
 
+      - name: Verify primitive algorithms at O0 and O2
+        run: python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"
+
   license-and-provenance:
     runs-on: ubuntu-latest
     timeout-minutes: 10

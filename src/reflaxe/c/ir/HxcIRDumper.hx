@@ -105,8 +105,8 @@ class HxcIRDumper {
 				'unary operation=${quote(operationId)} value=${quote(valueId)} implementation=${implementation(selected)}';
 			case IRIOBinary(operationId, leftValueId, rightValueId, selected):
 				'binary operation=${quote(operationId)} left=${quote(leftValueId)} right=${quote(rightValueId)} implementation=${implementation(selected)}';
-			case IRIOConvert(valueId, kind, targetType, selected):
-				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)}';
+			case IRIOConvert(valueId, kind, targetType, selected, failure):
+				'convert value=${quote(valueId)} kind=${conversion(kind)} target=${typeRef(targetType)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
@@ -196,12 +196,30 @@ class HxcIRDumper {
 		return switch value {
 			case IRTBool: "bool";
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+			case IRTAbiInteger(kind): 'abi-int(${abiIntegerKind(kind)})';
 			case IRTFloat(width): 'f$width';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance(${quote(instanceId)})';
 			case IRTPointer(pointee, nullable): 'pointer(${nullable ? "nullable" : "nonnull"},${typeRef(pointee)})';
+			case IRTNullable(inner, representation): 'nullable(${nullableRepresentation(representation)},${typeRef(inner)})';
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeRef).join(",")})->${typeRef(result)}';
 			case IRTDynamic: "dynamic";
+		}
+	}
+
+	function abiIntegerKind(value:HxcIRAbiIntegerKind):String {
+		return switch value {
+			case IRAKSize: "size";
+			case IRAKPtrDiff: "ptrdiff";
+			case IRAKIntPtr: "intptr";
+			case IRAKUIntPtr: "uintptr";
+		}
+	}
+
+	function nullableRepresentation(value:HxcIRNullableRepresentation):String {
+		return switch value {
+			case IRNTagged: "tagged";
+			case IRNPointer: "pointer";
 		}
 	}
 
@@ -232,13 +250,16 @@ class HxcIRDumper {
 
 	function conversion(value:HxcIRConversionKind):String {
 		return switch value {
-			case IRCNumeric: "numeric";
-			case IRCNullability: "nullability";
+			case IRCNumericExact: "numeric-exact";
+			case IRCNumericWrapping: "numeric-wrapping";
+			case IRCNumericSaturating: "numeric-saturating";
+			case IRCNumericChecked: "numeric-checked";
+			case IRCNullableInject: "nullable-inject";
+			case IRCNullableUnwrap: "nullable-unwrap";
 			case IRCPointer: "pointer";
 			case IRCBox: "box";
 			case IRCUnbox: "unbox";
 			case IRCRepresentation: "representation";
-			case IRCChecked: "checked";
 		}
 	}
 

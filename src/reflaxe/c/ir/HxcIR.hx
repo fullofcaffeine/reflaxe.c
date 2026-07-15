@@ -15,13 +15,29 @@ typedef HxcIRModule = {
 	final source:HxcSourceSpan;
 }
 
+/** Target-ABI integer identities whose widths are resolved from native facts. */
+enum HxcIRAbiIntegerKind {
+	IRAKSize;
+	IRAKPtrDiff;
+	IRAKIntPtr;
+	IRAKUIntPtr;
+}
+
+/** The selected storage strategy for a source-level nullable value. */
+enum HxcIRNullableRepresentation {
+	IRNTagged;
+	IRNPointer;
+}
+
 enum HxcIRTypeRef {
 	IRTBool;
 	IRTInt(width:Int, signed:Bool);
+	IRTAbiInteger(kind:HxcIRAbiIntegerKind);
 	IRTFloat(width:Int);
 	IRTVoid;
 	IRTInstance(instanceId:String);
 	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
+	IRTNullable(value:HxcIRTypeRef, representation:HxcIRNullableRepresentation);
 	IRTFunction(parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef);
 	IRTDynamic;
 }
@@ -137,13 +153,16 @@ enum HxcIRImplementation {
 }
 
 enum HxcIRConversionKind {
-	IRCNumeric;
-	IRCNullability;
+	IRCNumericExact;
+	IRCNumericWrapping;
+	IRCNumericSaturating;
+	IRCNumericChecked;
+	IRCNullableInject;
+	IRCNullableUnwrap;
 	IRCPointer;
 	IRCBox;
 	IRCUnbox;
 	IRCRepresentation;
-	IRCChecked;
 }
 
 enum HxcIRAllocationIntent {
@@ -217,7 +236,7 @@ enum HxcIRInstructionKind {
 	IRIOAddress(place:HxcIRPlace);
 	IRIOUnary(operationId:String, valueId:String, implementation:HxcIRImplementation);
 	IRIOBinary(operationId:String, leftValueId:String, rightValueId:String, implementation:HxcIRImplementation);
-	IRIOConvert(valueId:String, kind:HxcIRConversionKind, targetType:HxcIRTypeRef, implementation:HxcIRImplementation);
+	IRIOConvert(valueId:String, kind:HxcIRConversionKind, targetType:HxcIRTypeRef, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
 	IRIOCall(call:HxcIRCall);
 	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
 	IRIOProject(valueId:String, fieldName:String);

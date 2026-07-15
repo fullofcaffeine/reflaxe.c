@@ -149,6 +149,19 @@ def check_semantics(semantic: str, coverage: str) -> None:
             raise HxcIRFailure(f"coverage dump lost an explicit failure shape: {failure_shape}")
     if 'kind=box target=dynamic implementation=runtime("dynamic")' not in coverage:
         raise HxcIRFailure("coverage dump lost explicit boxing/runtime intent")
+    primitive_shapes = (
+        'type=abi-int(size)',
+        'type=nullable(pointer,instance("instance.object"))',
+        'kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none',
+        'kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error',
+        'kind=nullable-inject target=nullable(tagged,i32) implementation=static failure=none',
+        'kind=nullable-unwrap target=i32 implementation=static failure=failure(kind=result-error',
+    )
+    for primitive_shape in primitive_shapes:
+        if primitive_shape not in coverage:
+            raise HxcIRFailure(
+                f"coverage dump lost an explicit primitive semantic shape: {primitive_shape}"
+            )
     if 'branch condition="value.is-some" true=edge(target="success",arguments=["value.projected"]' not in coverage:
         raise HxcIRFailure("coverage dump lost typed cross-block argument flow")
 
@@ -166,6 +179,9 @@ def check_diagnostics(report: dict[str, object]) -> None:
     serialized = json.dumps(actual, sort_keys=True)
     if "HXC1001" not in serialized or "HXC9000" not in serialized:
         raise HxcIRFailure("negative fixtures lost stable unsupported/internal diagnostic IDs")
+    for diagnostic_key in ("primitiveRuntimeConversion", "nullableUnwrapWithoutFailure"):
+        if diagnostic_key not in actual:
+            raise HxcIRFailure(f"negative fixtures lost {diagnostic_key} validation")
     if str(ROOT) in serialized or re.search(r"\[profile=[^]]+\] (?:/|[A-Za-z]:\\)", serialized):
         raise HxcIRFailure("diagnostics leaked machine-local path spelling")
 

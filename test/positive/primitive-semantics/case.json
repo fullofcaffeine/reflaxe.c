@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-semantics-typed",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-003",
+    "HXC-SEM-005"
+  ],
+  "sources": [
+    "src/reflaxe/c/semantics/CPrimitiveContract.hx",
+    "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
+    "src/reflaxe/c/semantics/CPrimitiveTypeMapper.hx",
+    "src/reflaxe/c/semantics/CPrimitiveTypes.hx",
+    "test/primitive_semantics/PrimitiveFixture.hx",
+    "test/primitive_semantics/PrimitiveSemanticsGolden.hx",
+    "test/primitive_semantics/PrimitiveTypeProbe.hx",
+    "test/primitive_semantics/native_contract.c",
+    "test/primitive_semantics/primitive_semantics.hxml",
+    "test/primitive_semantics/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../primitive_semantics/run.py"
+    ],
+    "workingDirectory": "test/positive/primitive-semantics",
+    "timeoutSeconds": 60,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "docs/specs/primitive-semantics.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

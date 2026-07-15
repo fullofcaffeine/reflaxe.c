@@ -78,6 +78,22 @@ REQUIRED_GATE_FILES = (
     "test/hxc_ir/expected/coverage.hxcir",
     "test/hxc_ir/expected/diagnostics.json",
     "test/hxc_ir/run.py",
+    "src/reflaxe/c/semantics/CPrimitiveTypes.hx",
+    "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
+    "src/reflaxe/c/semantics/CPrimitiveTypeMapper.hx",
+    "src/reflaxe/c/semantics/CPrimitiveContract.hx",
+    "docs/adr/0008-primitive-representations-and-conversions.md",
+    "docs/primitive-semantics.md",
+    "docs/specs/primitive-semantics.schema.json",
+    "docs/specs/primitive-semantics.json",
+    "test/primitive_semantics/PrimitiveFixture.hx",
+    "test/primitive_semantics/PrimitiveSemanticsGolden.hx",
+    "test/primitive_semantics/PrimitiveTypeProbe.hx",
+    "test/primitive_semantics/native_contract.c",
+    "test/primitive_semantics/primitive_semantics.hxml",
+    "test/primitive_semantics/run.py",
+    "test/positive/primitive-semantics/case.json",
+    "test/snapshot/primitive-semantics/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -121,6 +137,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "          - gcc\n",
     "          - clang\n",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -170,6 +187,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:project-emitter entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
+    if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
+        errors.append("package.json must retain the test:primitive-semantics entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -190,6 +209,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
+    if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:primitive-semantics")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -229,6 +250,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the deterministic project emitter test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
+    if "test/primitive_semantics/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed primitive semantic test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -250,6 +273,32 @@ def validate() -> list[str]:
         errors.append("native smoke runner must independently compile and execute declaration-plan headers")
     if "project-emitter-header-independent-compile" not in runner or "project-emitter-structural-run" not in runner:
         errors.append("native smoke runner must independently compile and execute project-emitter output")
+
+    primitive_runner = read_text(ROOT / "test/primitive_semantics/run.py", errors)
+    for required_primitive_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-fno-fast-math",
+        "-O0",
+        "-O2",
+    ):
+        if required_primitive_flag not in primitive_runner:
+            errors.append(
+                "primitive semantic runner lost strict flag "
+                + required_primitive_flag
+            )
+    if "--native-only" not in primitive_runner:
+        errors.append("primitive semantic runner must expose the native matrix seam")
+    if (
+        "command identity mismatch" not in primitive_runner
+        or '"--version"' not in primitive_runner
+    ):
+        errors.append(
+            "primitive semantic runner must verify required compiler-family identity"
+        )
 
     return errors
 

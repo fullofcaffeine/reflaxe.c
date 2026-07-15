@@ -33,8 +33,8 @@ private class HxcIRValidationState {
 	}
 
 	public function validate():Array<HxcIRDiagnostic> {
-		if (program.schemaVersion != 1) {
-			add("program", 'schema version ${program.schemaVersion} is unsupported; expected 1', programSource());
+		if (program.schemaVersion != 2) {
+			add("program", 'schema version ${program.schemaVersion} is unsupported; expected 2', programSource());
 		}
 		indexProgram();
 		validateProgramContents();
@@ -382,10 +382,16 @@ private class HxcIRValidationState {
 				requireValue(leftValueId, '$path.left', instruction.source, available);
 				requireValue(rightValueId, '$path.right', instruction.source, available);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
-			case IRIOConvert(valueId, _, targetType, implementation):
-				requireValue(valueId, '$path.value', instruction.source, available);
+			case IRIOConvert(valueId, kind, targetType, implementation, failure):
+				final sourceType = requireValue(valueId, '$path.value', instruction.source, available);
 				validateTypeRef(targetType, '$path.targetType', instruction.source, false);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
+				if (sourceType != null) {
+					validateConversion(kind, sourceType, targetType, implementation, failure, path, instruction.source);
+				}
+				if (failure != null) {
+					validateFailureEdge(failure, '$path.failure', instruction.source, available, blocks, regions);
+				}
 				if (instruction.result != null && typeKey(instruction.result.type) != typeKey(targetType)) {
 					add(path, "conversion result type does not match its target type", instruction.source);
 				}
@@ -449,7 +455,7 @@ private class HxcIRValidationState {
 
 	function instructionProducesValue(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
-			case IRIOConstant(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _) |
+			case IRIOConstant(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
 				IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOAllocate(_, _, _, _):
 				true;
 			case IRIOCall(call):
@@ -722,6 +728,90 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function validateConversion(kind:HxcIRConversionKind, sourceType:HxcIRTypeRef, targetType:HxcIRTypeRef, implementation:HxcIRImplementation,
+			failure:Null<HxcIRFailureEdge>, path:String, source:HxcSourceSpan):Void {
+		final requiresFailure = kind == IRCNullableUnwrap || kind == IRCNumericChecked;
+		if (requiresFailure && failure == null) {
+			add(path, "checked or nullable-unwrapping conversion requires an explicit failure edge", source);
+		} else if (!requiresFailure && failure != null && isPrimitiveConversion(kind)) {
+			add(path, "non-failing primitive conversion must not carry a failure edge", source);
+		}
+
+		if (isPrimitiveConversion(kind)) {
+			switch implementation {
+				case IRIRuntime(featureId):
+					add(path, 'primitive conversion `$kind` must use direct C or a program-local helper, not runtime feature `$featureId`', source);
+				case IRIStatic | IRIProgramLocal(_):
+			}
+		}
+
+		switch kind {
+			case IRCNumericExact:
+				if (!isNumeric(sourceType) || !isNumeric(targetType)) {
+					add(path, "numeric-exact conversion requires numeric source and target types", source);
+				}
+			case IRCNumericWrapping:
+				if (!isInteger(sourceType) || !isInteger(targetType)) {
+					add(path, "numeric-wrapping conversion requires integer source and target types", source);
+				}
+			case IRCNumericSaturating:
+				if (!isFloat(sourceType) || !isInteger(targetType)) {
+					add(path, "numeric-saturating conversion requires a floating source and integer target", source);
+				}
+			case IRCNumericChecked:
+				if (!isNumeric(sourceType) || !isInteger(targetType)) {
+					add(path, "numeric-checked conversion requires a numeric source and integer target", source);
+				}
+			case IRCNullableInject:
+				if (!isNullablePair(sourceType, targetType)) {
+					add(path, "nullable injection target must be the nullable representation of its source type", source);
+				}
+			case IRCNullableUnwrap:
+				if (!isNullablePair(targetType, sourceType)) {
+					add(path, "nullable unwrap target must match the nullable payload type", source);
+				}
+			case IRCPointer | IRCBox | IRCUnbox | IRCRepresentation:
+		}
+	}
+
+	static function isPrimitiveConversion(kind:HxcIRConversionKind):Bool {
+		return switch kind {
+			case IRCNumericExact | IRCNumericWrapping | IRCNumericSaturating | IRCNumericChecked | IRCNullableInject | IRCNullableUnwrap:
+				true;
+			case IRCPointer | IRCBox | IRCUnbox | IRCRepresentation:
+				false;
+		}
+	}
+
+	static function isNumeric(type:HxcIRTypeRef):Bool
+		return isInteger(type) || isFloat(type);
+
+	static function isInteger(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTInt(_, _) | IRTAbiInteger(_): true;
+			case _: false;
+		}
+	}
+
+	static function isFloat(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTFloat(_): true;
+			case _: false;
+		}
+	}
+
+	static function isNullablePair(value:HxcIRTypeRef, nullable:HxcIRTypeRef):Bool {
+		return switch nullable {
+			case IRTNullable(inner, _): typeKey(value) == typeKey(inner);
+			case IRTPointer(pointee, true):
+				switch value {
+					case IRTPointer(valuePointee, false): typeKey(valuePointee) == typeKey(pointee);
+					case _: false;
+				}
+			case _: false;
+		}
+	}
+
 	function validateTransition(from:HxcIRInitializationState, to:HxcIRInitializationState, path:String, source:HxcSourceSpan):Void {
 		final valid = switch [from, to] {
 			case [IRISUninitialized, IRISInitializing] | [IRISUninitialized, IRISInitialized] | [IRISInitializing, IRISInitialized] |
@@ -743,6 +833,7 @@ private class HxcIRValidationState {
 				if (width != 8 && width != 16 && width != 32 && width != 64) {
 					add(path, 'integer width $width is unsupported; expected 8, 16, 32, or 64', source);
 				}
+			case IRTAbiInteger(_):
 			case IRTFloat(width):
 				if (width != 32 && width != 64) {
 					add(path, 'floating width $width is unsupported; expected 32 or 64', source);
@@ -757,6 +848,31 @@ private class HxcIRValidationState {
 				}
 			case IRTPointer(pointee, _):
 				validateTypeRef(pointee, '$path.pointee', source, true);
+			case IRTNullable(inner, representation):
+				validateTypeRef(inner, '$path.value', source, false);
+				switch inner {
+					case IRTNullable(_, _):
+						add(path, "nested nullable values must be canonicalized to one nullable layer", source);
+					case IRTVoid | IRTFunction(_, _) | IRTDynamic:
+						add(path, "Void, function, and Dynamic types cannot use a primitive nullable representation", source);
+					case _:
+				}
+				switch representation {
+					case IRNTagged:
+						switch inner {
+							case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_):
+							case _:
+								add(path, "tagged primitive nullability requires a scalar payload", source);
+						}
+					case IRNPointer:
+						switch inner {
+							case IRTInstance(_):
+							case _:
+								add(path,
+									"pointer nullable wrappers require a reference instance; native pointers encode nullability directly on their pointer type",
+									source);
+						}
+				}
 			case IRTFunction(parameters, result):
 				for (index => parameter in parameters) {
 					validateTypeRef(parameter, '$path.parameter:$index', source, false);
@@ -830,12 +946,30 @@ private class HxcIRValidationState {
 		return switch type {
 			case IRTBool: "bool";
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
 			case IRTFloat(width): 'f$width';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
+			case IRTNullable(inner, representation): 'nullable:${nullableRepresentationKey(representation)}<${typeKey(inner)}>';
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeKey).join(",")})->${typeKey(result)}';
 			case IRTDynamic: "dynamic";
+		}
+	}
+
+	static function abiIntegerKey(kind:HxcIRAbiIntegerKind):String {
+		return switch kind {
+			case IRAKSize: "size";
+			case IRAKPtrDiff: "ptrdiff";
+			case IRAKIntPtr: "intptr";
+			case IRAKUIntPtr: "uintptr";
+		}
+	}
+
+	static function nullableRepresentationKey(representation:HxcIRNullableRepresentation):String {
+		return switch representation {
+			case IRNTagged: "tagged";
+			case IRNPointer: "pointer";
 		}
 	}
 

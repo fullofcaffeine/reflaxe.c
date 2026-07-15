@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/primitive-semantics.schema.json",
+  "title": "reflaxe.c primitive semantic contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "algorithm",
+    "status",
+    "requirements",
+    "haxeBaseline",
+    "profiles",
+    "representations",
+    "nullability",
+    "conversions",
+    "floatContract",
+    "constraints"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "algorithm": { "const": "hxc-primitive-semantics-v1" },
+    "status": { "const": "semantic-contract-no-production-c-lowering" },
+    "requirements": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "HXC-SEM-001" },
+        { "const": "HXC-SEM-003" },
+        { "const": "HXC-SEM-005" }
+      ],
+      "items": false
+    },
+    "haxeBaseline": { "const": "5.0.0-preview.1" },
+    "profiles": { "$ref": "#/$defs/profiles" },
+    "representations": {
+      "type": "array",
+      "minItems": 17,
+      "maxItems": 17,
+      "items": { "$ref": "#/$defs/representation" }
+    },
+    "nullability": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/nullability" }
+    },
+    "conversions": {
+      "type": "array",
+      "minItems": 13,
+      "items": { "$ref": "#/$defs/conversion" }
+    },
+    "floatContract": { "$ref": "#/$defs/floatContract" },
+    "constraints": { "$ref": "#/$defs/constraints" }
+  },
+  "$defs": {
+    "profiles": {
+      "type": "array",
+      "prefixItems": [{ "const": "portable" }, { "const": "metal" }],
+      "items": false
+    },
+    "emptyRuntimeFeatures": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "width": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "bits"],
+      "properties": {
+        "kind": { "enum": ["none", "exact", "target-abi", "c-abi-defined"] },
+        "bits": { "type": ["integer", "null"], "enum": [null, 8, 16, 32, 64] }
+      }
+    },
+    "representation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceType",
+        "profiles",
+        "profileDifference",
+        "cType",
+        "requiredHeaders",
+        "width",
+        "signedness",
+        "storage",
+        "hxcIrType",
+        "runtimeFeatures"
+      ],
+      "properties": {
+        "sourceType": {
+          "enum": [
+            "Void", "Bool", "Int", "UInt", "Float",
+            "c.Int8", "c.Int16", "c.Int32", "c.Int64",
+            "c.UInt8", "c.UInt16", "c.UInt32", "c.UInt64",
+            "c.Size", "c.PtrDiff", "c.IntPtr", "c.UIntPtr"
+          ]
+        },
+        "profiles": { "$ref": "#/$defs/profiles" },
+        "profileDifference": { "const": "none" },
+        "cType": {
+          "enum": [
+            "void", "bool", "int8_t", "int16_t", "int32_t", "int64_t",
+            "uint8_t", "uint16_t", "uint32_t", "uint64_t", "double",
+            "size_t", "ptrdiff_t", "intptr_t", "uintptr_t"
+          ]
+        },
+        "requiredHeaders": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["stdbool.h", "stddef.h", "stdint.h"] }
+        },
+        "width": { "$ref": "#/$defs/width" },
+        "signedness": { "enum": ["not-applicable", "boolean", "signed", "unsigned"] },
+        "storage": { "enum": ["no-value", "direct-scalar"] },
+        "hxcIrType": { "type": "string", "minLength": 1 },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
+      }
+    },
+    "nullability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourcePattern", "representation", "invariant", "profiles", "runtimeFeatures"],
+      "properties": {
+        "sourcePattern": { "type": "string", "minLength": 1 },
+        "representation": { "type": "string", "minLength": 1 },
+        "invariant": { "type": "string", "minLength": 1 },
+        "profiles": { "$ref": "#/$defs/profiles" },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
+      }
+    },
+    "conversion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "sourceType",
+        "targetType",
+        "sourceNullability",
+        "targetNullability",
+        "use",
+        "meaning",
+        "hxcIrKind",
+        "implementation",
+        "failureEdgeRequired",
+        "exceptionalInputs",
+        "runtimeFeatures"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$" },
+        "sourceType": { "type": "string", "minLength": 1 },
+        "targetType": { "type": "string", "minLength": 1 },
+        "sourceNullability": { "enum": ["non-null", "nullable"] },
+        "targetNullability": { "enum": ["non-null", "nullable"] },
+        "use": {
+          "enum": [
+            "implicit",
+            "Std.int-or-typed-numeric-cast",
+            "explicit-wrapping",
+            "explicit-checked",
+            "nullable-inject",
+            "nullable-unwrap"
+          ]
+        },
+        "meaning": { "type": "string", "minLength": 1 },
+        "hxcIrKind": {
+          "enum": [
+            "numeric-exact",
+            "numeric-wrapping",
+            "numeric-saturating",
+            "numeric-checked",
+            "nullable-inject",
+            "nullable-unwrap"
+          ]
+        },
+        "implementation": {
+          "type": "string",
+          "pattern": "^(direct-c|program-local:[A-Za-z0-9._-]+)$"
+        },
+        "failureEdgeRequired": { "type": "boolean" },
+        "exceptionalInputs": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
+      }
+    },
+    "floatContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cType", "format", "comparisons", "negativeZero", "fastMath", "stdIntExceptionalPolicy"],
+      "properties": {
+        "cType": { "const": "double" },
+        "format": { "type": "string", "minLength": 1 },
+        "comparisons": { "type": "string", "minLength": 1 },
+        "negativeZero": { "type": "string", "minLength": 1 },
+        "fastMath": { "type": "string", "minLength": 1 },
+        "stdIntExceptionalPolicy": {
+          "type": "array",
+          "minItems": 5,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cDialect", "requiredCharacteristics", "forbiddenAssumptions", "runtimeFeatures"],
+      "properties": {
+        "cDialect": { "const": "strict ISO C11" },
+        "requiredCharacteristics": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "forbiddenAssumptions": {
+          "type": "array",
+          "minItems": 4,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
+      }
+    }
+  }
+}

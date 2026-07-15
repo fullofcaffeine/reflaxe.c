@@ -36,6 +36,8 @@ class HxcIRGolden {
 				useBeforeDefinition: invalidDiagnostics(useBeforeDefinitionProgram()),
 				cleanupOrder: invalidDiagnostics(cleanupOrderProgram()),
 				absoluteSource: invalidDiagnostics(absoluteSourceProgram()),
+				primitiveRuntimeConversion: invalidDiagnostics(primitiveRuntimeConversionProgram()),
+				nullableUnwrapWithoutFailure: invalidDiagnostics(nullableUnwrapWithoutFailureProgram()),
 				unsupportedTypedNode: [
 					HxcIRDiagnostic.unsupportedTypedAstNode(PROFILE, "TUnop(OpIncrement,Postfix)", "function app.Main.main expression", span(MAIN_SOURCE, 18))
 						.render()]
@@ -130,7 +132,7 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: 1, modules: modules};
+		return {schemaVersion: 2, modules: modules};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -156,7 +158,7 @@ class HxcIRGolden {
 				instruction("i05.add", result("value.updated", IRTInt(32, true)), IRIOBinary("haxe.i32.add", "value.current", "value.rhs", IRIStatic),
 					MAIN_SOURCE, 18),
 				instruction("i06.store", null, IRIOStore(IRPDereference("value.slot"), "value.updated"), MAIN_SOURCE, 18),
-				instruction("i07.widen", result("value.widened", IRTFloat(64)), IRIOConvert("value.updated", IRCNumeric, IRTFloat(64), IRIStatic),
+				instruction("i07.widen", result("value.widened", IRTFloat(64)), IRIOConvert("value.updated", IRCNumericExact, IRTFloat(64), IRIStatic, null),
 					MAIN_SOURCE, 19)
 			],
 			terminator: terminator(IRTReturn("value.updated", cleanup), MAIN_SOURCE, 20),
@@ -305,7 +307,7 @@ class HxcIRGolden {
 			}
 		];
 		return {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			modules: [
 				{
 					id: "coverage.IR",
@@ -375,7 +377,10 @@ class HxcIRGolden {
 			parameters: [
 				parameter("value.receiver", IRTInstance("instance.object"), COVERAGE_SOURCE, 16),
 				parameter("value.callable", IRTFunction([IRTInt(32, true)], IRTInt(32, true)), COVERAGE_SOURCE, 16),
-				parameter("value.argument", IRTInt(32, true), COVERAGE_SOURCE, 16)
+				parameter("value.argument", IRTInt(32, true), COVERAGE_SOURCE, 16),
+				parameter("value.float-input", IRTFloat(64), COVERAGE_SOURCE, 16),
+				parameter("value.size", IRTAbiInteger(IRAKSize), COVERAGE_SOURCE, 16),
+				parameter("value.nullable-reference", IRTNullable(IRTInstance("instance.object"), IRNPointer), COVERAGE_SOURCE, 16)
 			],
 			locals: [
 				local("local.owned", IRTPointer(IRTInstance("instance.object"), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17)
@@ -388,12 +393,22 @@ class HxcIRGolden {
 					parameters: [],
 					instructions: [
 						instruction("c00.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), COVERAGE_SOURCE, 18),
-						instruction("c01.convert", result("value.float", IRTFloat(64)), IRIOConvert("value.one", IRCNumeric, IRTFloat(64), IRIStatic),
+						instruction("c01.convert", result("value.float", IRTFloat(64)),
+							IRIOConvert("value.one", IRCNumericExact, IRTFloat(64), IRIStatic, null), COVERAGE_SOURCE, 19),
+						instruction("c01.saturating", result("value.saturated", IRTInt(32, true)),
+							IRIOConvert("value.float-input", IRCNumericSaturating, IRTInt(32, true), IRIProgramLocal("hxc.f64.to.i32.saturating"), null),
 							COVERAGE_SOURCE, 19),
-						instruction("c01.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic")),
+						instruction("c01.checked", result("value.checked-i8", IRTInt(8, true)),
+							IRIOConvert("value.argument", IRCNumericChecked, IRTInt(8, true), IRIProgramLocal("hxc.i32.to.i8.checked"), resultFailure),
+							COVERAGE_SOURCE, 19),
+						instruction("c01.nullable-inject", result("value.nullable-one", IRTNullable(IRTInt(32, true), IRNTagged)),
+							IRIOConvert("value.one", IRCNullableInject, IRTNullable(IRTInt(32, true), IRNTagged), IRIStatic, null), COVERAGE_SOURCE, 19),
+						instruction("c01.nullable-unwrap", result("value.unwrapped-one", IRTInt(32, true)),
+							IRIOConvert("value.nullable-one", IRCNullableUnwrap, IRTInt(32, true), IRIStatic, resultFailure), COVERAGE_SOURCE, 19),
+						instruction("c01.box", result("value.boxed", IRTDynamic), IRIOConvert("value.one", IRCBox, IRTDynamic, IRIRuntime("dynamic"), null),
 							COVERAGE_SOURCE, 19),
 						instruction("c01.unbox", result("value.unboxed", IRTInt(32, true)),
-							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic")), COVERAGE_SOURCE, 19),
+							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
 						instruction("c02.direct", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid)), COVERAGE_SOURCE, 20),
 						instruction("c02.result-edge", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid, resultFailure)), COVERAGE_SOURCE, 20),
 						instruction("c03.virtual", result("value.virtual", IRTInt(32, true)),
@@ -518,10 +533,28 @@ class HxcIRGolden {
 		return program;
 	}
 
+	static function primitiveRuntimeConversionProgram():HxcIRProgram {
+		final file = "test/negative/PrimitiveRuntimeConversion.hx";
+		return minimalProgram("invalid.PrimitiveRuntimeConversion", [
+			instruction("bad.source", result("value.source", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.convert", result("value.target", IRTFloat(64)),
+				IRIOConvert("value.source", IRCNumericExact, IRTFloat(64), IRIRuntime("primitive-conversion"), null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	static function nullableUnwrapWithoutFailureProgram():HxcIRProgram {
+		final file = "test/negative/NullableUnwrapWithoutFailure.hx";
+		return minimalProgram("invalid.NullableUnwrapWithoutFailure", [
+			instruction("bad.nullable", result("value.nullable", IRTNullable(IRTInt(32, true), IRNTagged)), IRIOConstant(IRCNull), file, 2),
+			instruction("bad.unwrap", result("value.unwrapped", IRTInt(32, true)),
+				IRIOConvert("value.nullable", IRCNullableUnwrap, IRTInt(32, true), IRIStatic, null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
 			regions:Array<HxcIRCleanupRegion>, file:String):HxcIRProgram {
 		return {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			modules: [
 				{
 					id: moduleId,

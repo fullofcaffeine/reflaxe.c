@@ -98,6 +98,7 @@ The registered snapshot selectors are:
 - `symbol-registry`
 - `project-emitter`
 - `hxc-ir`
+- `primitive-semantics`
 
 List them from the executable registry with:
 
@@ -112,6 +113,15 @@ reversed, repeated, cold, and compiler-server reports. Its expected JSON is an
 unsupported-node inventory; it does not prove HxcIR or C lowering. The internal
 report and reverse-order defines are test/diagnostic seams, not user-facing
 compiler configuration. See [typed-AST input boundary](typed-ast-input.md).
+
+`test/primitive_semantics` is the focused positive/snapshot contract for
+ADR 0008. A typed initialization macro classifies real pinned-compiler fields
+in portable and metal, while a second typed fixture renders the exact mapping,
+conversion, floating, nullability, and zero-runtime table twice. Its independent
+strict-C11 probe runs under available GCC and Clang at O0/O2. That probe proves
+the accepted algorithms and target prerequisites only; it is not generated
+Haxe output and does not advance the production `HXC1000` boundary. See the
+[primitive semantic contract](primitive-semantics.md).
 
 ## Examples are product proofs, not implicit tests
 

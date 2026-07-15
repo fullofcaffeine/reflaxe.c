@@ -29,7 +29,8 @@
         "typed-c",
         "typed-ast",
         "symbol-registry",
-        "hxc-ir"
+        "hxc-ir",
+        "primitive-semantics"
       ]
     },
     {
@@ -88,7 +89,8 @@
         "declaration-plan",
         "symbol-registry",
         "project-emitter",
-        "hxc-ir"
+        "hxc-ir",
+        "primitive-semantics"
       ]
     },
     {
@@ -336,6 +338,25 @@
       ]
     },
     {
+      "id": "primitive-semantics",
+      "directory": "test/primitive_semantics",
+      "runner": [
+        "python3",
+        "test/primitive_semantics/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "real pinned-compiler typed fields map fixed and ABI primitives plus scalar, reference, and native-pointer nullability identically in both profiles",
+        "the machine contract is deterministic and every primitive mapping/conversion has an empty runtime feature set",
+        "strict C11 GCC and Clang O0/O2 probes cover widening, narrowing, signed/unsigned bits, NaN, infinity, overflow, negative zero, nullability, and ABI prerequisites",
+        "the independent native probe is contract evidence and is not described as Haxe-generated output"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -434,6 +455,15 @@
         "formats": [
           "json",
           "hxcir"
+        ]
+      },
+      {
+        "id": "primitive-semantics",
+        "expectedRoots": [
+          "docs/specs/primitive-semantics.json"
+        ],
+        "formats": [
+          "json"
         ]
       }
     ]

@@ -409,6 +409,14 @@ missing-metadata or missing-adapter assumptions.
   unsupported-node escape. Frontend lowering must emit source-positioned
   `HXC1001` and stop that path. Internal invalid IR uses `HXC9000`; never repair
   either by inventing a constant, null, raw C, or placeholder value.
+- Preserve ADR 0008 primitive semantics structurally. Ordinary portable/metal
+  Haxe primitives share exact mappings; target-ABI integers retain their
+  `size_t`/`ptrdiff_t`/`intptr_t`/`uintptr_t` identities and must never be
+  guessed from host `int` or `long`. Keep exact, wrapping, checked, saturating,
+  nullable-inject, and nullable-unwrap conversions distinct; checked/unwrap
+  operations retain failure edges. Avoid implementation-defined signed casts
+  and undefined floating-to-integer casts. Primitive mapping/conversion uses
+  direct C or a program-local helper and must not select `hxrt`.
 - An intentional HxcIR model, validation, dump, or diagnostic change updates
   `docs/hxc-ir.md` and the reviewable files under `test/hxc_ir/expected/`, then
   runs `npm run test:hxc-ir` and the exhaustive all-source gate. HxcIR-only

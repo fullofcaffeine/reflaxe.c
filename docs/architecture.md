@@ -76,7 +76,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-1 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-2 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -84,6 +84,16 @@ parameters. Cleanup actions are registered in source order while every edge
 records their validated reverse, inner-to-outer execution order. Calls and
 memory operations distinguish static/direct, program-local, and named runtime
 implementations, so the IR never selects an implicit runtime core.
+
+Primitive representation is owned by the typed
+`src/reflaxe/c/semantics/` layer. It maps real Haxe compiler types to exact
+fixed-width or unresolved target-ABI integer identities, preserves tagged
+scalar versus pointer nullability, and records exact, wrapping, checked, or
+saturating conversions before C syntax exists. Portable and metal share these
+ordinary Haxe mappings. Primitive decisions use direct C or a program-local
+specialization and cannot select `hxrt`; see the [primitive semantic
+contract](primitive-semantics.md) and [ADR
+0008](adr/0008-primitive-representations-and-conversions.md).
 
 The target-owned typed-input boundary is implemented under
 `src/reflaxe/c/frontend/`. `filterTypes` captures the complete request before
@@ -119,8 +129,9 @@ compiler core. See [diagnostic contract](diagnostics.md).
 `HxcIRDumper` canonicalizes only semantically unordered collections and retains
 ordered instructions, edge arguments, and cleanup steps with repository-relative
 source spans. `HxcIRValidator` rejects missing targets/results/terminators,
-use-before-definition, illegal lifetime transitions, and malformed cleanup
-paths. Unsupported typed nodes use source-positioned `HXC1001`; they never
+use-before-definition, illegal lifetime transitions, malformed cleanup paths,
+primitive runtime fallback, or checked/nullable unwraps without a failure
+edge. Unsupported typed nodes use source-positioned `HXC1001`; they never
 become an opaque value. Typed-Haxe-to-HxcIR and HxcIR-to-C lowering are still
 absent, so the production compiler remains at its `HXC1000` boundary.
 

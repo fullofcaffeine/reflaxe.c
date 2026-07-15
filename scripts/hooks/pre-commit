@@ -12,9 +12,14 @@ if [ -d "$ROOT_DIR/.beads" ] && command -v bd >/dev/null 2>&1; then
   if bd -C "$ROOT_DIR" context >/dev/null 2>&1; then
     echo "[pre-commit] Exporting Beads issues to JSONL..."
     BEADS_EXPORT_TMP="$(mktemp)"
-    trap 'rm -f "$BEADS_EXPORT_TMP"' EXIT
+    BEADS_EXPORT_NORMALIZED="$(mktemp)"
+    trap 'rm -f "$BEADS_EXPORT_TMP" "$BEADS_EXPORT_NORMALIZED"' EXIT
     bd -C "$ROOT_DIR" export > "$BEADS_EXPORT_TMP"
-    mv -f "$BEADS_EXPORT_TMP" "$ROOT_DIR/.beads/issues.jsonl"
+    # Newer bd builds may append a blank record. JSONL permits no such record,
+    # and the repository whitespace guard intentionally rejects it.
+    awk 'NF { print }' "$BEADS_EXPORT_TMP" > "$BEADS_EXPORT_NORMALIZED"
+    mv -f "$BEADS_EXPORT_NORMALIZED" "$ROOT_DIR/.beads/issues.jsonl"
+    rm -f "$BEADS_EXPORT_TMP"
     git -C "$ROOT_DIR" add .beads/issues.jsonl
     trap - EXIT
   else
@@ -76,7 +81,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|diagnostics|project-emission|symbol-naming|testing|typed-ast-input)\.md|docs/specs/fixture-(case|taxonomy).*\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|diagnostics|project_emitter|symbol_registry|typed_ast)/)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|diagnostics|primitive-semantics|project-emission|symbol-naming|testing|typed-ast-input)\.md|docs/specs/(fixture-(case|taxonomy).*|primitive-semantics.*)\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|diagnostics|primitive_semantics|project_emitter|symbol_registry|typed_ast)/)'; then
   echo "[pre-commit] Validating fixture taxonomy, snapshot ownership, and example assertions..."
   python3 "$ROOT_DIR/scripts/ci/check_fixture_policy.py"
 fi
@@ -136,12 +141,17 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ir/|test/hxc_ir/|ha
   python3 "$ROOT_DIR/test/hxc_ir/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir)/expected/|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(ir|semantics)/|test/primitive_semantics/|docs/(adr/0008-primitive-representations-and-conversions|primitive-semantics)\.md|docs/specs/primitive-semantics.*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running typed primitive semantic and strict C11 probes..."
+  python3 "$ROOT_DIR/test/primitive_semantics/run.py"
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir)/expected/|test/primitive_semantics/|docs/specs/primitive-semantics\.json|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Checking registered snapshots without updating them..."
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|test/native/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/semantics/|test/native/|test/primitive_semantics/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

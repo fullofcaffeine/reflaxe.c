@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 1
+the structural C AST. Its schema is internal to the compiler: schema version 2
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. Typed-AST collection is owned by E1.T06 and C lowering by later
 tasks; neither is implied by the presence of this core.
@@ -22,7 +22,10 @@ an ordered instruction array and exactly one terminator.
 An `HxcIRTypeRef` describes Haxe-level semantic types and selected type
 instances, not C declarator spelling. `IRTDynamic` is the explicit Haxe
 `Dynamic` type; it must never be used as a placeholder for an unsupported typed
-AST node.
+AST node. Exact-width integers retain width and signedness, while `size_t`,
+`ptrdiff_t`, `intptr_t`, and `uintptr_t` retain distinct unresolved target-ABI
+identities. Nullability records either a tagged scalar payload or a pointer
+representation rather than being inferred from the eventual C spelling.
 
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
@@ -54,6 +57,13 @@ need to recover intent from target syntax.
 - calls, conversions, allocation, deallocation, retain, and trace operations
   identify their implementation as static/direct, program-local specialized,
   or a named runtime feature;
+- primitive conversions identify exact, wrapping, checked, saturating,
+  nullable-inject, or nullable-unwrap intent. Checked numeric and nullable
+  unwrap forms require an explicit failure edge; the remaining primitive forms
+  reject one;
+- exact, wrapping, checked, saturating, and nullable primitive operations may
+  use only direct/static or program-local implementation. A named runtime
+  feature is an internal invariant failure, not a fallback;
 - local entry states and every explicit lifetime transition are legal. An
   initialization ends in `initialized`; a destroy cleanup ends in `destroyed`;
 - cleanup actions are listed in registration order. An edge lists actual
@@ -116,9 +126,12 @@ npm run test:hxc-ir
 for `arr[nextIndex()] += produce()` and its nested cleanup path without a
 runtime request. The checked-in Haxe fixture runs independently under Eval and
 asserts the oracle trace `nextIndex,produce:8`. `coverage.hxcir` exercises all
-dispatch, conversion, aggregate/tag, allocation, retain/trace, and lifetime
-forms, including explicit named runtime requests. `diagnostics.json` covers missing termination,
-use-before-definition, invalid cleanup order, path redaction, and `HXC1001`.
+dispatch forms plus ABI integers, tagged/pointer nullability, explicit primitive
+conversion/failure forms, aggregate/tag, allocation, retain/trace, and lifetime
+forms. Its named runtime requests are explicit non-primitive coverage.
+`diagnostics.json` covers missing termination, use-before-definition, invalid
+cleanup order, path redaction, primitive runtime rejection, missing
+nullable-unwrap failure, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 

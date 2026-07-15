@@ -1,4 +1,4 @@
-hxcir schema=1
+hxcir schema=2
 module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
   type "type.interface" name="coverage.Interface" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   type "type.object" name="coverage.Object" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -15,12 +15,19 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
     parameter "value.receiver" type=instance("instance.object") @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     parameter "value.callable" type=function(i32)->i32 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     parameter "value.argument" type=i32 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    parameter "value.float-input" type=f64 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    parameter "value.size" type=abi-int(size) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    parameter "value.nullable-reference" type=nullable(pointer,instance("instance.object")) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     local "local.owned" type=pointer(nonnull,instance("instance.object")) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-39:2
       instruction "c00.one" result="value.one":i32 constant value=int(1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
-      instruction "c01.convert" result="value.float":f64 convert value="value.one" kind=numeric target=f64 implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
-      instruction "c01.box" result="value.boxed":dynamic convert value="value.one" kind=box target=dynamic implementation=runtime("dynamic") @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
-      instruction "c01.unbox" result="value.unboxed":i32 convert value="value.boxed" kind=unbox target=i32 implementation=runtime("dynamic") @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.convert" result="value.float":f64 convert value="value.one" kind=numeric-exact target=f64 implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.saturating" result="value.saturated":i32 convert value="value.float-input" kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.checked" result="value.checked-i8":i8 convert value="value.argument" kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.nullable-inject" result="value.nullable-one":nullable(tagged,i32) convert value="value.one" kind=nullable-inject target=nullable(tagged,i32) implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.nullable-unwrap" result="value.unwrapped-one":i32 convert value="value.nullable-one" kind=nullable-unwrap target=i32 implementation=static failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.box" result="value.boxed":dynamic convert value="value.one" kind=box target=dynamic implementation=runtime("dynamic") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.unbox" result="value.unboxed":i32 convert value="value.boxed" kind=unbox target=i32 implementation=runtime("dynamic") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c02.direct" result=- call dispatch=direct("fn.coverage.target") arguments=[] returns=void failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
       instruction "c02.result-edge" result=- call dispatch=direct("fn.coverage.target") arguments=[] returns=void failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":20:1-20:2
       instruction "c03.virtual" result="value.virtual":i32 call dispatch=virtual(slot="slot.render",receiver="value.receiver") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":21:1-21:2

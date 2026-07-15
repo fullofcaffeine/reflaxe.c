@@ -250,6 +250,31 @@ def hxc_ir_artifacts() -> list[Artifact]:
     ]
 
 
+def primitive_semantics_artifacts() -> list[Artifact]:
+    module = load_module(
+        "primitive_semantics", "test/primitive_semantics/run.py"
+    )
+    first = module.render("snapshot first primitive semantic render")
+    second = module.render("snapshot second primitive semantic render")
+    if (
+        first.contract_payload != second.contract_payload
+        or first.type_probe_payload != second.type_probe_payload
+    ):
+        raise SnapshotFailure(
+            "two primitive semantic renders were not byte-identical"
+        )
+    module.validate_contract(first.contract)
+    module.validate_type_probe(first.type_probe)
+    module.validate_schema_document()
+    return [
+        Artifact(
+            Path("docs/specs/primitive-semantics.json"),
+            "json",
+            first.contract,
+        )
+    ]
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -259,6 +284,7 @@ GENERATORS: dict[str, Generator] = {
     "symbol-registry": symbol_registry_artifacts,
     "project-emitter": project_emitter_artifacts,
     "hxc-ir": hxc_ir_artifacts,
+    "primitive-semantics": primitive_semantics_artifacts,
 }
 
 

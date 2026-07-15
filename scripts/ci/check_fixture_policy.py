@@ -117,7 +117,16 @@ def validate_case(
         errors.append(f"{label} must declare at least one source")
     else:
         for index, source in enumerate(sources):
-            safe_path(source, f"{label}.sources[{index}]", errors)
+            source_path = safe_path(source, f"{label}.sources[{index}]", errors)
+            if (
+                source_path is not None
+                and case.get("status") == "active"
+                and not source_path.is_file()
+            ):
+                errors.append(
+                    f"{label}.sources[{index}] is missing: "
+                    f"{source_path.relative_to(ROOT)}"
+                )
     runner = case.get("runner")
     if not isinstance(runner, dict):
         errors.append(f"{label} must declare a runner object")
@@ -131,11 +140,20 @@ def validate_case(
             errors.append(f"{label} runner.timeoutSeconds must be an integer")
         if not isinstance(runner.get("network"), bool):
             errors.append(f"{label} runner.network must be boolean")
-        safe_path(
+        working_directory = safe_path(
             runner.get("workingDirectory"),
             f"{label}.runner.workingDirectory",
             errors,
         )
+        if (
+            working_directory is not None
+            and case.get("status") == "active"
+            and not working_directory.is_dir()
+        ):
+            errors.append(
+                f"{label} runner working directory is missing: "
+                f"{working_directory.relative_to(ROOT)}"
+            )
     expected = case.get("expected")
     if not isinstance(expected, dict) or not isinstance(expected.get("exitCode"), int):
         errors.append(f"{label} expected must declare an integer exitCode")
@@ -218,6 +236,38 @@ def validate() -> list[str]:
         errors.append(
             f"fixture types must be exactly {sorted(EXPECTED_TYPES)!r}; got {sorted(type_entries)!r}"
         )
+
+    case_ids: set[str] = set()
+    for identifier, entry in type_entries.items():
+        directory = safe_path(
+            entry.get("directory"), f"fixture type {identifier} directory", errors
+        )
+        if directory is None or not directory.is_dir():
+            continue
+        for child in sorted(path for path in directory.iterdir() if path.is_dir()):
+            manifest = child / "case.json"
+            if not manifest.is_file():
+                errors.append(
+                    "canonical fixture case lacks case.json: "
+                    + manifest.relative_to(ROOT).as_posix()
+                )
+                continue
+            case = load_json(manifest, errors)
+            validate_case(
+                manifest,
+                case,
+                expected_role="fixture",
+                errors=errors,
+            )
+            if case.get("type") != identifier:
+                errors.append(
+                    f"{manifest.relative_to(ROOT)} must declare type {identifier!r}"
+                )
+            case_id = case.get("id")
+            if isinstance(case_id, str):
+                if case_id in case_ids:
+                    errors.append(f"duplicate canonical fixture case ID: {case_id}")
+                case_ids.add(case_id)
 
     raw_suites = catalog.get("suites")
     suites: dict[str, dict[str, Any]] = {}
@@ -398,7 +448,8 @@ def main() -> int:
             print(f"fixture-policy: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "fixture-policy: OK: 8 lanes, mapped runners/expected outputs, explicit snapshot updates, and example assertions"
+        "fixture-policy: OK: 8 lanes, canonical case manifests, mapped runners/expected outputs, "
+        "explicit snapshot updates, and example assertions"
     )
     return 0
 

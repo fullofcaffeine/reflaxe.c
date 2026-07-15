@@ -58,6 +58,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "symbol-registry",
                 "project-emitter",
                 "hxc-ir",
+                "primitive-semantics",
             ),
         )
 

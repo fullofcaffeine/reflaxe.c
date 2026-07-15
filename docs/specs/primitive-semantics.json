@@ -1,0 +1,609 @@
+{
+  "conversions": [
+    {
+      "use": "implicit",
+      "targetType": "Float",
+      "meaning": "exact",
+      "id": "haxe-int-to-float",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-exact",
+      "implementation": "direct-c",
+      "sourceType": "Int"
+    },
+    {
+      "use": "implicit",
+      "targetType": "Float",
+      "meaning": "exact",
+      "id": "haxe-uint-to-float",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-exact",
+      "implementation": "direct-c",
+      "sourceType": "UInt"
+    },
+    {
+      "use": "implicit",
+      "targetType": "UInt",
+      "meaning": "modulo-2^32",
+      "id": "haxe-int-to-uint-bits",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "direct-c",
+      "sourceType": "Int"
+    },
+    {
+      "use": "implicit",
+      "targetType": "Int",
+      "meaning": "low-32-bits-as-twos-complement",
+      "id": "haxe-uint-to-int-bits",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "program-local:hxc.u32.to.i32.bits",
+      "sourceType": "UInt"
+    },
+    {
+      "use": "Std.int-or-typed-numeric-cast",
+      "targetType": "Int",
+      "meaning": "truncate-toward-zero-with-defined-saturation",
+      "id": "haxe-std-int",
+      "exceptionalInputs": [
+        "NaN->0",
+        "+infinity->2147483647",
+        "-infinity->-2147483648",
+        "positive-overflow->2147483647",
+        "negative-overflow->-2147483648"
+      ],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-saturating",
+      "implementation": "program-local:hxc.f64.to.i32.saturating",
+      "sourceType": "Float"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "c.Int32",
+      "meaning": "exact",
+      "id": "exact-signed-widen",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-exact",
+      "implementation": "direct-c",
+      "sourceType": "c.Int8"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "c.Int16",
+      "meaning": "exact",
+      "id": "exact-unsigned-to-signed-widen",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-exact",
+      "implementation": "direct-c",
+      "sourceType": "c.UInt8"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "c.Int8",
+      "meaning": "low-8-bits-as-twos-complement",
+      "id": "exact-signed-narrow-wrapping",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "program-local:hxc.integer.to.i8.wrapping",
+      "sourceType": "c.Int32"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "c.UInt8",
+      "meaning": "modulo-2^8",
+      "id": "exact-unsigned-narrow-wrapping",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "direct-c",
+      "sourceType": "c.UInt32"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "c.Int32",
+      "meaning": "low-32-bits-as-twos-complement",
+      "id": "exact-unsigned-to-signed-bits",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "program-local:hxc.integer.to.i32.wrapping",
+      "sourceType": "c.UInt32"
+    },
+    {
+      "use": "explicit-checked",
+      "targetType": "c.Int8",
+      "meaning": "range-check-then-exact",
+      "id": "exact-checked-narrow",
+      "exceptionalInputs": [
+        "out-of-range->failure-edge"
+      ],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": true,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-checked",
+      "implementation": "program-local:hxc.primitive.to.c.Int8.checked",
+      "sourceType": "c.Int32"
+    },
+    {
+      "use": "nullable-inject",
+      "targetType": "Int",
+      "meaning": "construct-present-nullable",
+      "id": "nullable-scalar-inject",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "nullable",
+      "hxcIrKind": "nullable-inject",
+      "implementation": "direct-c",
+      "sourceType": "Int"
+    },
+    {
+      "use": "nullable-unwrap",
+      "targetType": "Int",
+      "meaning": "check-present-then-extract",
+      "id": "nullable-scalar-unwrap",
+      "exceptionalInputs": [
+        "absent->failure-edge"
+      ],
+      "sourceNullability": "nullable",
+      "failureEdgeRequired": true,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "nullable-unwrap",
+      "implementation": "direct-c",
+      "sourceType": "Int"
+    }
+  ],
+  "requirements": [
+    "HXC-SEM-001",
+    "HXC-SEM-003",
+    "HXC-SEM-005"
+  ],
+  "profiles": [
+    "portable",
+    "metal"
+  ],
+  "floatContract": {
+    "comparisons": "ordered C comparisons; NaN is unordered and unequal to itself; infinities retain IEEE ordering",
+    "cType": "double",
+    "fastMath": "forbidden for Haxe semantic lowering because it can erase NaN, infinity, and signed-zero behavior",
+    "negativeZero": "preserved by storage and floating operations; compares equal to positive zero",
+    "format": "IEC 60559 / IEEE 754 binary64 required by the resolved target tuple",
+    "stdIntExceptionalPolicy": [
+      "finite in-range values truncate toward zero",
+      "negative zero converts to 0",
+      "NaN converts to 0",
+      "positive infinity and finite positive overflow convert to 2147483647",
+      "negative infinity and finite negative overflow convert to -2147483648"
+    ]
+  },
+  "nullability": [
+    {
+      "representation": "tagged optional { bool has_value; T value; }",
+      "sourcePattern": "Null<non-null scalar>",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "runtimeFeatures": [],
+      "invariant": "value is read only when has_value is true; a proven non-null value may erase the wrapper"
+    },
+    {
+      "representation": "nullable pointer to target-owned T representation",
+      "sourcePattern": "Null<reference-like T>",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "runtimeFeatures": [],
+      "invariant": "null is the null pointer; non-null unwrap requires an explicit checked edge"
+    },
+    {
+      "representation": "C pointer with explicit nullable native contract",
+      "sourcePattern": "c.NullablePtr<T>",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "runtimeFeatures": [],
+      "invariant": "ordinary c.Ptr/c.Ref variants remain non-null; pointer ownership and lifetime stay separate"
+    }
+  ],
+  "constraints": {
+    "requiredCharacteristics": [
+      "CHAR_BIT == 8",
+      "exact int8_t/uint8_t/int16_t/uint16_t/int32_t/uint32_t/int64_t/uint64_t typedefs",
+      "double is 64-bit binary64",
+      "intptr_t and uintptr_t exist for pointer round trips"
+    ],
+    "forbiddenAssumptions": [
+      "C int has Haxe Int width",
+      "C long has any fixed width",
+      "out-of-range unsigned-to-signed C casts preserve bits",
+      "out-of-range or non-finite floating-to-integer C casts are valid"
+    ],
+    "runtimeFeatures": [],
+    "cDialect": "strict ISO C11"
+  },
+  "status": "semantic-contract-no-production-c-lowering",
+  "schemaVersion": 1,
+  "representations": [
+    {
+      "storage": "no-value",
+      "cType": "void",
+      "hxcIrType": "void",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "none",
+        "bits": null
+      },
+      "signedness": "not-applicable",
+      "runtimeFeatures": [],
+      "requiredHeaders": [],
+      "profileDifference": "none",
+      "sourceType": "Void"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "bool",
+      "hxcIrType": "bool",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "c-abi-defined",
+        "bits": null
+      },
+      "signedness": "boolean",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdbool.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "Bool"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "int32_t",
+      "hxcIrType": "i32",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 32
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "Int"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uint32_t",
+      "hxcIrType": "u32",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 32
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "UInt"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "double",
+      "hxcIrType": "f64",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 64
+      },
+      "signedness": "not-applicable",
+      "runtimeFeatures": [],
+      "requiredHeaders": [],
+      "profileDifference": "none",
+      "sourceType": "Float"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "int8_t",
+      "hxcIrType": "i8",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 8
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.Int8"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "int16_t",
+      "hxcIrType": "i16",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 16
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.Int16"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "int32_t",
+      "hxcIrType": "i32",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 32
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.Int32"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "int64_t",
+      "hxcIrType": "i64",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 64
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.Int64"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uint8_t",
+      "hxcIrType": "u8",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 8
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.UInt8"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uint16_t",
+      "hxcIrType": "u16",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 16
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.UInt16"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uint32_t",
+      "hxcIrType": "u32",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 32
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.UInt32"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uint64_t",
+      "hxcIrType": "u64",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 64
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.UInt64"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "size_t",
+      "hxcIrType": "abi-int:size",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "target-abi",
+        "bits": null
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stddef.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.Size"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "ptrdiff_t",
+      "hxcIrType": "abi-int:ptrdiff",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "target-abi",
+        "bits": null
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stddef.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.PtrDiff"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "intptr_t",
+      "hxcIrType": "abi-int:intptr",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "target-abi",
+        "bits": null
+      },
+      "signedness": "signed",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.IntPtr"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "uintptr_t",
+      "hxcIrType": "abi-int:uintptr",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "target-abi",
+        "bits": null
+      },
+      "signedness": "unsigned",
+      "runtimeFeatures": [],
+      "requiredHeaders": [
+        "stdint.h"
+      ],
+      "profileDifference": "none",
+      "sourceType": "c.UIntPtr"
+    }
+  ],
+  "haxeBaseline": "5.0.0-preview.1",
+  "algorithm": "hxc-primitive-semantics-v1"
+}

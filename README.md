@@ -91,13 +91,21 @@ See [project emission](docs/project-emission.md). The C authoring boundary is in
 
 The target-owned [HxcIR semantic core](docs/hxc-ir.md) now structurally records
 values versus places, exact instruction order, initialization/lifetime changes,
-all call dispatch forms, conversions, allocation intent, failure successors,
+all call dispatch forms, ABI integer and nullable identities, explicit
+exact/wrapping/checked/saturating conversions, allocation intent, failure successors,
 and reverse inner-to-outer cleanup paths before C syntax exists. Its validator,
 canonical source-aware dumps, reordered-input goldens, matching Eval side-effect
 oracle, and stable `HXC1001`/`HXC9000` negatives are compile-backed. This is an
 independently testable compiler layer, not a claim that typed Haxe reaches it in
 production or that C is emitted; `HXC1000` remains the honest whole-program
 boundary.
+
+The [primitive semantic contract](docs/primitive-semantics.md) now maps real
+typed Haxe declarations for both profiles to exact fixed-width and target-ABI
+identities, records scalar/reference nullability, and defines widening,
+wrapping, checked, NaN/infinity, and `Std.int` behavior without hidden runtime
+selection. Its independently authored strict-C11 probe validates the ratified
+algorithms at O0/O2; this is contract evidence, not generated Haxe-to-C output.
 
 The [typed-AST input adapter](docs/typed-ast-input.md) now captures Haxe's
 complete module set before Reflaxe callback filtering, normalizes module and
@@ -195,6 +203,9 @@ The current checkout contains:
 - a target-owned HxcIR model, validator, and deterministic source-aware dumper
   covering explicit side-effect/cleanup order, places and values, dispatch,
   conversions, failure edges, initialization, and named runtime intent;
+- a typed primitive mapping/conversion contract with profile-invariant exact and
+  ABI integer identities, explicit scalar/reference nullability, owned machine
+  snapshot, and strict-C11 O0/O2 algorithm probes without `hxrt`;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;

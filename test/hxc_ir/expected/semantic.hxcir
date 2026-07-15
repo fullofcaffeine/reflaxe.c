@@ -1,4 +1,4 @@
-hxcir schema=1
+hxcir schema=2
 module "app.SideEffectSupport" @"test/hxc_ir/fixtures/SideEffectSupport.hx":1:1-10:2
   function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
     block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
@@ -40,7 +40,7 @@ module "app.SideEffects" @"test/hxc_ir/fixtures/SideEffects.hx":1:1-40:2
       instruction "i04.produce" result="value.rhs":i32 call dispatch=direct("fn.produce") arguments=[] returns=i32 failure=failure(kind=exception,target=block("catch"),arguments=[],cleanup=["cleanup.inner"."release-token","cleanup.inner"."destroy-scratch","cleanup.outer"."destroy-array"]) @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
       instruction "i05.add" result="value.updated":i32 binary operation="haxe.i32.add" left="value.current" right="value.rhs" implementation=static @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
       instruction "i06.store" result=- store place=dereference("value.slot") value="value.updated" @"test/hxc_ir/fixtures/SideEffects.hx":18:1-18:2
-      instruction "i07.widen" result="value.widened":f64 convert value="value.updated" kind=numeric target=f64 implementation=static @"test/hxc_ir/fixtures/SideEffects.hx":19:1-19:2
+      instruction "i07.widen" result="value.widened":f64 convert value="value.updated" kind=numeric-exact target=f64 implementation=static failure=none @"test/hxc_ir/fixtures/SideEffects.hx":19:1-19:2
       terminator return value="value.updated" cleanup=["cleanup.inner"."release-token","cleanup.inner"."destroy-scratch","cleanup.outer"."destroy-array"] @"test/hxc_ir/fixtures/SideEffects.hx":20:1-20:2
     end block "entry"
     block "catch" @"test/hxc_ir/fixtures/SideEffects.hx":22:1-24:2
