@@ -158,7 +158,8 @@
       "prd": [
         "§8",
         "§9",
-        "§28"
+        "§28",
+        "ADR 0001, 0002, 0004-0007"
       ],
       "outcome": "Resolve the owner decisions that affect public semantics before implementation hardens accidental choices.",
       "acceptance": [
@@ -217,7 +218,8 @@
       "prd": [
         "§2.2",
         "§2.3",
-        "§25 M0"
+        "§25 M0",
+        "ADR 0007"
       ],
       "outcome": "Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.",
       "acceptance": [
@@ -246,7 +248,8 @@
       ],
       "prd": [
         "§10.3",
-        "§25 M0"
+        "§25 M0",
+        "ADR 0007"
       ],
       "outcome": "Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain.",
       "acceptance": [
@@ -1643,7 +1646,8 @@
       ],
       "prd": [
         "§12.13",
-        "§13.6"
+        "§13.6",
+        "ADR 0006"
       ],
       "outcome": "Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI.",
       "acceptance": [
@@ -3551,7 +3555,8 @@
       ],
       "prd": [
         "§21",
-        "§25 M10"
+        "§25 M10",
+        "ADR 0007"
       ],
       "outcome": "Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering.",
       "acceptance": [

@@ -104,6 +104,13 @@ Where this PRD records a recommended but unresolved decision, Codex should:
 
 Questions that do not block reversible implementation should not stop all work.
 
+Accepted records currently ratify direct/selective runtime planning (ADR 0001),
+Haxe-first typed C authoring (ADR 0002), the C11 target/platform baseline (ADR
+0007), UTF-8 scalar strings (ADR 0004), the precise non-moving collector (ADR
+0005), and contained exception unwinding (ADR 0006). Later implementation must
+change those contracts through a superseding ADR, not by drifting code or
+examples.
+
 ---
 
 ## 1. Executive summary
@@ -661,10 +668,13 @@ Hosted versus freestanding is an environment, not a semantic profile:
 
 Initial support:
 
-- `hosted`: required for the first usable releases.
-- `freestanding`: staged behind explicit capability checks.
-- `wasi`: planned after hosted file/process abstractions are modular.
-- `emscripten`: planned for browser/Node WebAssembly integrations.
+- `hosted`: required for the first usable releases and the full applicable
+  portable standard-library promise on accepted Tier 1 platforms.
+- `freestanding`: a capability-limited metal release lane; version 1.0 requires
+  at least one declared ARM Cortex-M GCC profile with emulator or hardware
+  execution evidence, not a hosted-standard-library claim.
+- `wasi`: Tier 2 after hosted file/process abstractions are modular.
+- `emscripten`: Tier 2 for browser/Node WebAssembly integrations.
 
 ### 9.6 C dialect and extensions
 
@@ -675,7 +685,12 @@ Initial support:
 
 Default: `c11` + `none`.
 
-Extensions MUST be recorded in the build manifest. Portable standard-library code MUST not depend on nonstandard extensions unless guarded by a platform adapter.
+`c11` is the normative generated-source and public-header floor. `c17` compiles
+the same contract without changing representation or ABI. `c23` is experimental
+and MAY improve internal spelling only after compiler-matrix evidence; generated
+public headers remain C11-compatible. Extensions MUST be recorded in the build
+manifest. Portable standard-library code MUST not depend on nonstandard
+extensions unless guarded by a platform adapter. See ADR 0007.
 
 ### 9.7 Optimization and debug policy
 
@@ -903,20 +918,42 @@ Public headers default to portable include guards.
 
 ### 11.1 Default baseline
 
-C11 is the initial baseline because it offers fixed-width types, atomics, `_Static_assert`, alignment support, and broad toolchain reach without requiring recent C23 support.
+C11 is the accepted normative baseline because it offers fixed-width types,
+atomics, `_Static_assert`, alignment support, and broad toolchain reach without
+requiring recent C23 support. Compiler-owned output, selected runtime slices,
+fixtures, and public headers default to strict ISO C11 without extensions.
 
-C17 is a compatibility selection. C23 MAY unlock cleaner syntax or standard features, but generated semantics MUST remain equivalent and must not silently change ABI.
+C17 is a compatibility selection over the same source contract. C23 MAY unlock
+cleaner internal syntax after capability evidence, but generated semantics MUST
+remain equivalent, public headers remain C11-compatible, and the selection must
+not silently change ABI. Optional facilities such as threads remain
+capability-gated rather than inferred from the language version. See ADR 0007.
 
 ### 11.2 Compiler tiers
 
-Initial quality tiers:
+Version 1.0 release-blocking tiers are tuples, not bare operating-system names:
 
-- **Tier 1:** current supported GCC and Clang families on Linux and macOS.
-- **Tier 2:** clang-cl and MSVC-compatible builds where the selected C dialect and runtime features are supported.
-- **Tier 2:** Emscripten and WASI SDK after hosted semantics stabilize.
+- **Tier 1 hosted Linux/glibc:** `x86_64` and `aarch64`, GCC and Clang.
+- **Tier 1 hosted macOS:** `arm64` and `x86_64`, Apple Clang.
+- **Tier 1 hosted Windows/UCRT:** `x86_64`, `clang-cl`; public consumers use
+  the MSVC ABI.
+- **Tier 1 freestanding metal:** at least one release-declared ARM Cortex-M
+  `arm-none-eabi` capability profile using GNU Arm Embedded GCC, limited to the
+  documented `metal` plus `none`/allowed `minimal` surface.
+- **Tier 2:** native MSVC `cl`, Linux/musl and additional architectures, WASI,
+  Emscripten, and additional Clang freestanding profiles while their evidence
+  remains non-release-blocking.
 - **Tier 3:** embedded vendor compilers through documented capability profiles.
 
-Exact version floors belong in a machine-readable support matrix and are updated separately from this PRD.
+Hosted Tier 1 requires native compile/link/run and C/C++ consumer evidence;
+eligible lanes also run sanitizers. Freestanding Tier 1 requires compile, link,
+map/symbol inspection, and emulator or hardware smoke. Compile-only and
+cross-compile evidence are recorded separately and cannot silently satisfy a
+native-run obligation. See ADR 0007.
+
+Exact version floors belong in a machine-readable support matrix and are updated
+separately from this PRD. Unsupported combinations fail planning with their
+missing capability rather than inheriting support from an OS label.
 
 ### 11.3 Warning policy
 
@@ -1006,16 +1043,30 @@ typedef struct hxc_string {
 } hxc_string;
 ```
 
-Final representation requires an ADR and a conformance experiment. The proposed default is immutable UTF-8 storage with explicit APIs that implement the documented Haxe `String` behavior. APIs whose behavior differs across existing Haxe targets must be normalized and documented rather than accidentally copying one host implementation.
+ADR 0004 accepts immutable, valid UTF-8 storage and Eval-like Unicode-scalar
+indexing. `target.unicode` is enabled and `target.utf16` is not. `String.length`,
+character access, slicing/search indices, and iterators count Unicode scalar
+values, never UTF-8 bytes or UTF-16 surrogate halves. No normalization occurs.
+Ordinary decoding replaces each maximal subpart of an ill-formed UTF-8 sequence
+with U+FFFD;
+checked target APIs return an explicit validation result, and lossless arbitrary
+data remains `Bytes`.
 
 Requirements:
 
 - string literals are deduplicated where safe;
 - embedded NUL bytes are supported;
+- the private representation may cache scalar length or indexing metadata, but
+  no allocation/index table is unconditional;
 - C string conversion is explicit and lifetime-aware;
 - `c.CString` is a separate null-terminated byte-string abstraction;
+- safe `CString` conversion rejects embedded NUL and distinguishes borrowed
+  trailing-NUL storage from allocator-owned conversion;
 - substring, character access, iteration, comparison, hashing, parsing, and Unicode behavior have differential tests;
 - metal code may use byte spans or C strings without pulling in portable string machinery.
+
+The internal string layout is not a stable public C ABI. Exported interfaces use
+explicit UTF-8 views or documented owned buffers.
 
 ### 12.4 Arrays and vectors
 
@@ -1182,10 +1233,15 @@ Reflection is demand-driven:
 
 ### 12.13 Exceptions
 
-Portable Haxe exceptions require a defined strategy. The compiler SHOULD support two implementations selected per function/region:
+ADR 0006 accepts two implementations selected per function/region after HxcIR
+has made exceptional successors and cleanup regions explicit:
 
-1. **Result/status lowering** where call graphs and control flow permit explicit propagation without semantic drift.
-2. **Runtime exception frames** for general throw/catch/finally behavior, likely using a carefully encapsulated `setjmp`/`longjmp` mechanism or another portable runtime strategy.
+1. **Result/status lowering** where a closed call graph and control-flow proof
+   permit explicit propagation without semantic drift. This is the preferred
+   runtime-free and metal strategy.
+2. **Runtime exception frames** for general throw/catch/finally behavior. The
+   selected strict-C11 mechanism is an encapsulated thread-local frame/cleanup
+   chain using `setjmp`/`longjmp`.
 
 Requirements:
 
@@ -1193,8 +1249,12 @@ Requirements:
 - no C++ exceptions;
 - exceptions never cross a public C ABI;
 - exported functions translate exceptions to status/error values;
+- callbacks catch and translate before returning into foreign C, and a transfer
+  never crosses a foreign frame or thread;
 - metal defaults to explicit `c.Result<T,E>` or status returns;
-- runtime `longjmp` usage is isolated and tested against volatile/lifetime rules;
+- runtime `longjmp` usage is isolated and tested against automatic-local,
+  `volatile`, active-frame, cleanup, payload-rooting, and lifetime rules;
+- partially initialized values and `finally` actions clean up exactly once;
 - exception strategy appears in compile reports.
 
 ### 12.14 Control flow
@@ -1333,14 +1393,23 @@ The final signature may adapt for C portability, but requirements are:
 
 Full Haxe semantics permit cyclic object graphs, so reference counting alone is not a complete portable solution.
 
-Proposed baseline:
+ADR 0005 accepts this baseline when tracing collection is actually selected:
 
-- a precise, non-moving mark-and-sweep collector driven by generated type descriptors;
+- a target-owned, stop-the-world, precise, non-moving mark-and-sweep collector
+  driven by generated type descriptors or specialized trace functions;
+- explicit global tables and compiler-emitted stack/thread root chains rather
+  than conservative scanning of arbitrary C memory;
 - optional conservative collector adapter for platforms where desired;
 - optional arena or manual representations for proven regions;
 - no collector in runtime-free metal programs.
 
-A non-moving collector simplifies C pointer stability and FFI, at the cost of fragmentation and descriptor work. This decision requires an ADR and benchmarks before beta.
+A non-moving collector simplifies C pointer stability and FFI, at the cost of
+fragmentation, stop-the-world pauses, and descriptor/root work. Interior or
+foreign pointers do not implicitly keep managed storage alive; they require a
+typed root/pinned handle or remain borrows within a proven owner lifetime. The
+backend is pluggable behind a versioned internal interface, but generated public
+types and C ABIs never expose backend-private layout. Collector stress,
+fragmentation, pause, and allocation benchmarks remain mandatory before beta.
 
 ### 13.4 Escape and region optimization
 
@@ -2209,7 +2278,8 @@ Generated C is compiled with:
 
 - no warnings under the strict baseline;
 - debug and release optimization;
-- at least GCC and Clang for Tier 1 suites;
+- the compiler family required by each ADR 0007 Tier 1 tuple, including both
+  GCC and Clang on Linux;
 - C and C++ header consumers for exported APIs;
 - sanitizer builds for eligible suites.
 
@@ -2697,31 +2767,48 @@ Classes, GC, closures, exceptions, dynamic values, reflection, and Unicode requi
 
 ---
 
-## 28. Proposed decisions requiring owner confirmation
+## 28. Owner decisions and remaining implementation confirmations
 
-The PRD proceeds with these defaults unless changed by ADR:
+Accepted decisions below are normative through their ADR. Items without an ADR
+remain reversible implementation defaults owned by the named Beads work; they
+are not permission to contradict an accepted record.
 
 1. **Project/license (owner-confirmed 2026-07-15):** repository named
    `reflaxe.c`; optional orchestration CLI named `hxc`; repository-owned code
    licensed `GPL-3.0-only`. Third-party notices/provenance remain an M0 gate.
-2. **Profiles:** `portable` default plus `metal`; no third “idiomatic” profile.
-3. **Runtime policy:** `auto|minimal|none` remains orthogonal to profile;
-   absent overrides, portable resolves to `auto + summary` and metal to
-   `minimal + warn`. Direct C and program-local specialization always precede
-   `hxrt`; `none` proves complete runtime absence. See ADR 0001.
-4. **C dialect:** strict C11 default, C17/C23 opt-in.
-5. **Runtime memory:** precise non-moving GC as the intended portable baseline, pluggable allocator/collector adapters, no runtime for eligible metal code.
-6. **String storage:** likely UTF-8 runtime representation, pending a conformance ADR.
-7. **Build integration:** emit CMake and Meson plus a tool-neutral manifest; do not require a custom build system.
+2. **Profiles (accepted):** `portable` default plus `metal`; no third
+   “idiomatic” profile. Both use the direct-C-first pipeline in ADR 0001.
+3. **Runtime policy (accepted):** `auto|minimal|none` remains orthogonal to
+   profile; absent overrides, portable resolves to `auto + summary` and metal
+   to `minimal + warn`. Direct C and program-local specialization always
+   precede `hxrt`; `none` proves complete runtime absence. See ADR 0001.
+4. **C dialect and target identity (accepted):** ADR 0007 defines strict ISO
+   C11/no extensions, C17 compatibility, experimental ABI-neutral C23 syntax,
+   `c_output` activation, `c` identity, and capability-derived platform flags.
+5. **Runtime memory (accepted):** ADR 0005 defines a selectively linked precise
+   non-moving mark-and-sweep baseline with exact roots and pluggable internal
+   backends; eligible code remains collector- and runtime-free.
+6. **String storage (accepted):** ADR 0004 defines immutable valid UTF-8,
+   Unicode-scalar indexing, deterministic malformed-input replacement, and
+   separate `Bytes`, `CString`, and exported-view contracts.
+7. **Build integration:** emit CMake and Meson plus a tool-neutral manifest; do
+   not require a custom build system.
 8. **Bindgen:** Clang-derived facts; AI suggestions are review-only.
-9. **C++:** consume through existing/generated C shims; emit C++-friendly headers and optional wrappers.
-10. **ABI:** opaque handles by default; no exceptions across boundary; explicit ownership and status errors.
-11. **Haxe version:** exact 4.3.7 contract first; Haxe 5/custom-target support tracked separately.
-12. **Target define:** define `c` for target-conditional code while avoiding conflict with unrelated user defines through documented build detection.
-13. **Typed C authoring:** Haxe declarations plus typed `c.*` APIs and validated
-    metadata/macros model headers and C-native facts; narrow DSLs require an
-    admission rationale and raw C remains an explicit unsafe escape. See ADR
-    0002.
+9. **C++:** consume through existing/generated C shims; emit C++-friendly
+   headers and optional wrappers. ADR 0003 remains owned by E6.T10.
+10. **Exceptions and ABI failure (accepted):** ADR 0006 uses proven explicit
+    result lowering or a contained strict-C11 unwind slice internally. Opaque
+    handles, explicit ownership, and status/errors cross native boundaries; a
+    Haxe or C++ exception/non-local transfer never does.
+11. **Haxe version:** exact 4.3.7 contract first; Haxe 5/custom-target support
+    tracked separately.
+12. **Version 1.0 platforms (accepted):** ADR 0007 defines the release-blocking
+    Linux, macOS, Windows, and capability-limited ARM Cortex-M lanes. Exact
+    version floors and promotion evidence remain with E10.
+13. **Typed C authoring (accepted):** Haxe declarations plus typed `c.*` APIs
+    and validated metadata/macros model headers and C-native facts; narrow DSLs
+    require an admission rationale and raw C remains an explicit unsafe escape.
+    See ADR 0002.
 
 ---
 
@@ -2790,7 +2877,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 
 - **Priority / effort / type:** P0 / small / task
 - **Blocked by:** none
-- **PRD references:** §8, §9, §28
+- **PRD references:** §8, §9, §28, ADR 0001, 0002, 0004–0007
 - **Requirement IDs:** `HXC-PROD-002`, `HXC-PROD-004`, `HXC-PROD-005`, `HXC-SCAF-006`
 - **Outcome:** Resolve the owner decisions that affect public semantics before implementation hardens accidental choices.
 - **Description:** Resolve the owner decisions that affect public semantics before implementation hardens accidental choices. PRD: §8, §9, §28
@@ -2818,7 +2905,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 
 - **Priority / effort / type:** P0 / medium / task
 - **Blocked by:** E0.T01
-- **PRD references:** §2.2, §2.3, §25 M0
+- **PRD references:** §2.2, §2.3, §25 M0, ADR 0007
 - **Requirement IDs:** `HXC-SCAF-002`, `HXC-SCAF-006`, `HXC-SCAF-007`
 - **Outcome:** Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version.
 - **Description:** Create a reproducible source-checkout and package build using Haxe 4.3.7 and a known Reflaxe revision/version. PRD: §2.2, §2.3, §25 M0
@@ -2832,7 +2919,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 
 - **Priority / effort / type:** P0 / medium / task
 - **Blocked by:** E0.T03
-- **PRD references:** §10.3, §25 M0
+- **PRD references:** §10.3, §25 M0, ADR 0007
 - **Requirement IDs:** `HXC-SCAF-003`, `HXC-SCAF-004`, `HXC-SCAF-007`, `HXC-MAC-009`
 - **Outcome:** Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain.
 - **Description:** Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain. PRD: §10.3, §25 M0
@@ -3538,7 +3625,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 
 - **Priority / effort / type:** P1 / xlarge / task
 - **Blocked by:** E4.T02, E2.T06, E3.T05
-- **PRD references:** §12.13, §13.6
+- **PRD references:** §12.13, §13.6, ADR 0006
 - **Requirement IDs:** `HXC-SEM-019`, `HXC-RT-009`, `HXC-RT-010`
 - **Outcome:** Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI.
 - **Description:** Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI. PRD: §12.13, §13.6
@@ -4489,7 +4576,7 @@ The wording is brownfield-aware: where a seed file already exists, “implement�
 
 - **Priority / effort / type:** P1 / xlarge / task
 - **Blocked by:** E0.T05, E2.T10
-- **PRD references:** §21, §25 M10
+- **PRD references:** §21, §25 M10, ADR 0007
 - **Requirement IDs:** `HXC-QA-002`, `HXC-QA-003`, `HXC-QA-007`, `HXC-QA-010`
 - **Outcome:** Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering.
 - **Description:** Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering. PRD: §21, §25 M10
@@ -4813,7 +4900,7 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-SEM-003 | Floating-point behavior MUST document C/Haxe differences and normalize only where the portable contract requires it. | P1 | E2 | NaN, infinity, negative zero, conversion, and comparison fixtures match the chosen contract. |
 | HXC-SEM-004 | Operand and argument evaluation order MUST match Haxe even where C leaves order unspecified. | P0 | E2 | Side-effect permutations produce identical traces across GCC/Clang optimization levels. |
 | HXC-SEM-005 | Null checks and nullability representation MUST be explicit and profile-aware. | P0 | E2/E4 | Null dereference/cast/call fixtures have defined results or stable failures. |
-| HXC-SEM-006 | Haxe strings MUST preserve the accepted Unicode/indexing contract and remain distinct from binary `Bytes` and NUL-terminated `CString`. | P0 | E4/E5 | BMP, non-BMP, embedded-NUL, slicing, comparison, and FFI conversion tests pass. |
+| HXC-SEM-006 | Haxe strings MUST use the ADR 0004 immutable valid-UTF-8 contract with Unicode-scalar indices, no implicit normalization, deterministic malformed-input replacement, and separation from binary `Bytes` and NUL-terminated `CString`. | P0 | E4/E5 | BMP, non-BMP, malformed UTF-8, embedded-NUL, slicing, comparison, and borrowed/owned FFI conversion tests pass. |
 | HXC-SEM-007 | Arrays MUST preserve Haxe mutation, length, indexing, resize, element-default, and generic specialization behavior. | P0 | E3/E4 | Array API differential suite and bounds policy tests pass. |
 | HXC-SEM-008 | `haxe.io.Bytes` and typed byte views MUST preserve binary data including embedded NUL bytes. | P0 | E5 | Binary round-trip and C span interop fixtures pass. |
 | HXC-SEM-009 | Anonymous structures SHOULD lower to generated concrete structs when shape and escape behavior permit. | P1 | E3 | Shape deduplication, field order, and dynamic-access fallback tests pass. |
@@ -4826,8 +4913,8 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-SEM-016 | Generics SHOULD monomorphize to concrete C types/functions with deterministic deduplication and code-size reporting. | P0 | E3 | Specialization identity, recursive generic, and size-limit fixtures pass. |
 | HXC-SEM-017 | `Dynamic` MUST be opt-in by source semantics and represented through a tagged runtime value rather than boxing every value. | P1 | E4 | Dynamic field/call/cast/equality fixtures pass and non-dynamic programs remain unboxed. |
 | HXC-SEM-018 | Reflection metadata MUST be reachability-driven and emitted only for required types/members unless explicitly kept. | P1 | E4/E5 | `Type`/`Reflect` conformance and dead-metadata elimination tests pass. |
-| HXC-SEM-019 | Portable exceptions MUST preserve throw/catch/finally behavior and cleanup; metal code MAY use explicit result/status contracts. | P0 | E4 | Nested throw, rethrow, finally, allocation cleanup, and ABI-boundary tests pass. |
-| HXC-SEM-020 | No exception or longjmp-like control transfer may cross an exported C ABI boundary. | P0 | E7 | Generated wrappers translate failures into the configured status/error contract. |
+| HXC-SEM-019 | Portable exceptions MUST preserve throw/catch/finally behavior through ADR 0006 explicit HxcIR failure/cleanup edges, using proven result lowering first and the contained exception slice only for general behavior. | P0 | E4 | Nested throw, rethrow, finally, automatic-local, allocation cleanup, and strategy-report tests pass. |
+| HXC-SEM-020 | No exception or longjmp-like control transfer may cross an exported C ABI, callback return, foreign frame, signal, or thread boundary. | P0 | E7 | Generated export/callback wrappers translate failures into the configured status/error contract. |
 | HXC-SEM-021 | Static initialization order MUST be deterministic, dependency-aware, and cycle-diagnosed. | P0 | E2/E3 | Cross-module initialization fixtures have stable traces and cycle diagnostics. |
 | HXC-SEM-022 | `if`, loops, switch, pattern matching, break/continue, return, and short-circuit operators MUST preserve Haxe control-flow semantics. | P0 | E2 | Structured-control differential suite passes. |
 | HXC-SEM-023 | Equality, identity, comparison, casts, and type tests MUST have explicit type-directed lowering. | P0 | E2–E4 | Semantic matrix covers primitives, strings, enums, arrays, objects, dynamic values, and null. |
@@ -4843,7 +4930,7 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | HXC-RT-003 | `hxc_runtime=none` MUST prove eligibility and fail with precise blockers rather than silently linking runtime code; success means no `hxrt` include, source, define, library, or symbol. | P0 | E4 | No-runtime positive/negative fixtures and artifact/symbol inspection pass. |
 | HXC-RT-004 | Direct C and program-local specialization MUST precede runtime requests, and unused runtime source/metadata MUST not be emitted or linked. | P0 | E3/E4 | Representation and feature-combination tests inspect lowering decisions, sources, symbols, and binary size. |
 | HXC-RT-005 | Allocation MUST use an explicit allocator ABI and permit user/platform allocators. | P0 | E4 | Hosted, custom, failure-injection, and freestanding allocator tests pass. |
-| HXC-RT-006 | Portable managed objects MUST use a memory strategy that preserves reachability and cycles; the backend MUST be pluggable behind a stable compiler/runtime interface. | P0 | E4 | Cycle, root, finalization policy, stress, and backend-conformance tests pass. |
+| HXC-RT-006 | When selected, portable managed objects MUST use the ADR 0005 precise non-moving tracing contract with exact global/stack/thread roots; the backend MUST be pluggable behind a stable compiler/runtime interface and interior/foreign pointers MUST obey explicit root rules. | P0 | E4 | Cycle, root, interior/foreign-pointer, finalization policy, pause/allocation, stress, and backend-conformance tests pass. |
 | HXC-RT-007 | The compiler SHOULD stack/region-allocate values proven not to escape without changing observable behavior. | P2 | E4/E10 | Escape-analysis fixtures and allocation benchmarks demonstrate safe reductions. |
 | HXC-RT-008 | Runtime strings, arrays, objects, dynamic values, reflection, and exceptions MUST be separate features rather than one monolithic dependency. | P0 | E4 | Minimal programs select only the expected slices. |
 | HXC-RT-009 | Cleanup actions MUST be explicit for owned C resources, temporary allocations, and exceptional exits. | P0 | E4 | Leak/failure-path sanitizer tests pass. |
@@ -4956,7 +5043,7 @@ Each requirement has a stable ID so Codex can cite it in Beads descriptions, acc
 | --- | --- | --- | --- | --- |
 | HXC-QA-001 | Every lowering feature MUST have positive, negative, AST/IR or snapshot, native compile, runtime, and policy coverage as applicable. | P0 | E0/E10 | Definition-of-done validator or review checklist is satisfied. |
 | HXC-QA-002 | Generated C MUST compile warning-free under strict supported compiler flags. | P0 | E10 | Compiler matrix treats warnings as errors. |
-| HXC-QA-003 | GCC and Clang are mandatory baseline compilers; MSVC and platform compilers require an explicit support milestone. | P0 | E10 | CI matrix matches declared support policy. |
+| HXC-QA-003 | The ADR 0007 Tier 1 tuples are release blockers: GCC/Clang on Linux, Apple Clang on macOS, clang-cl on Windows, and one GNU Arm Embedded GCC freestanding-metal lane; MSVC and other platform compilers require explicit promotion evidence. | P0 | E10 | CI/release evidence matches the declared tuple and distinguishes native/emulated execution from compile-only results. |
 | HXC-QA-004 | Undefined-behavior, address, leak, and thread sanitizers MUST run on eligible suites. | P0 | E10 | Sanitizer matrix is green or has documented platform exclusions. |
 | HXC-QA-005 | Differential tests MUST compare portable behavior against an accepted Haxe target/oracle. | P0 | E2–E5/E10 | Semantic trace/output comparisons pass. |
 | HXC-QA-006 | Fuzzing SHOULD cover parser/config inputs, C AST printer, bindgen normalization, serializers, and runtime boundary APIs. | P2 | E10 | Seed corpora, crash minimization, and regression fixtures exist. |
@@ -5281,24 +5368,27 @@ Markdown documents may describe milestones, requirements, and acceptance policy.
 
 ---
 
-## 37. Open decisions and recommended defaults
+## 37. Decision register and recommended defaults
 
-These are design gates, not invitations to restart the whole product discussion. The recommendation is the default for ADR analysis; accepted decisions may differ when evidence justifies them.
+This table records accepted design gates alongside the defaults for decisions
+that still have an owning implementation experiment. Accepted rows change only
+through a superseding ADR. A recommendation is the default for unresolved ADR
+analysis; evidence may justify a different accepted result.
 
 | Decision | Recommended default | Owner artifact | Planning effect |
 | --- | --- | --- | --- |
 | Repository license and upstream-derived stdlib policy | Owner selected GPL-3.0-only on 2026-07-15; maintain compatible notices and SPDX/provenance per copied or adapted file | E0.T02 / ADR | License choice is resolved; notices/provenance still block release and broad code import, not local AST experiments. |
 | Exact Haxe and Reflaxe baseline | Start with Haxe 4.3.7 and a pinned Reflaxe revision proven by scaffold compilation; broaden later through CI | E0.T03 / ADR | Blocks compiler API work. |
-| Default C dialect | Strict C11 default; allow C17/C23 feature gates after compiler-matrix evidence | E0.T01 / ADR | Blocks AST/printer extension choices. |
-| Target define name | Use documented `c`/`target.name=c` activation only after conflict testing; keep `reflaxe_c` internal compatibility define | E0.T01 / ADR | Blocks target-conditional stdlib behavior. |
+| Default C dialect | Accepted: strict ISO C11/no extensions is the normative source and public-header floor; C17 preserves it, while C23 internal syntax remains experimental and ABI-neutral | ADR 0007 / E0.T01 | AST, printer, runtime, header, and compiler gates share one floor. |
+| Target define name | Accepted: `c_output` is the Haxe 4/Reflaxe activation/output signal, `c`/`target.name=c` is target identity, and `reflaxe_c` is implementation-owned; enable `target.unicode`, not `target.utf16` | ADR 0007 / E0.T01/E0.T03 | Bootstrap conflict probes and stdlib typing must implement the ratified identity. |
 | Direct C and runtime fallback | Owner accepted direct C/local specialization before selective `hxrt`; portable defaults to `auto + summary`, metal to `minimal + warn`, and explicit `none` proves complete absence | ADR 0001 / E0.T01 / E4.T01 / E4.T10 | Runtime planner, diagnostics, manifests, and no-runtime fixtures use one reason ledger. |
 | Typed C authoring and DSL admission | Owner accepted Haxe-first declarations, typed `c.*`, validated metadata/macros, narrow justified DSLs, and explicit raw authority in that order | ADR 0002 / `haxe_c-od2.3` | Blocks bootstrap completion of the absent `c.*` scaffold and informs E3/E6/E7/E9. |
-| String representation | Use a length-carrying Unicode representation; decide UTF-8 versus UTF-16/code-unit semantics through Haxe conformance tests; keep `CString` separate | E0.T01 / ADR | Blocks broad String/std/FFI work. |
-| Portable managed-memory bootstrap | Define a backend interface first. Consider a proven hosted collector for alpha and a precise target-owned backend as the long-term default; do not bake backend details into generated public types | E0.T01/E4.T04 / ADR | Blocks classes/closures/dynamic at portable scale. |
-| Exception lowering | Evaluate explicit failure edges plus runtime unwinding/cleanup stack; never expose setjmp/longjmp or native exceptions through public C ABI | E0.T01/E4 / ADR | Blocks try/catch/finally and cleanup architecture. |
+| String representation | Accepted: immutable valid UTF-8, Unicode-scalar indices, no normalization, deterministic U+FFFD decoding, and separate `Bytes`/`CString`/ABI-view contracts | ADR 0004 / E0.T01/E4.T03 | String/std/FFI implementation now has an observable contract. |
+| Portable managed-memory bootstrap | Accepted: selective target-owned precise non-moving stop-the-world mark-and-sweep with exact roots; backend details stay internal and conservative adapters are non-default | ADR 0005 / E0.T01/E4.T06 | Object/closure/dynamic implementation may target one root and reachability model. |
+| Exception lowering | Accepted: explicit HxcIR failure/cleanup edges, proven result lowering first, otherwise a contained strict-C11 frame/cleanup runtime; no non-local transfer crosses native ABI/thread boundaries | ADR 0006 / E0.T01/E4.T09 | Try/catch/finally, cleanup, callbacks, and exports share one boundary rule. |
 | Array bounds and null failure behavior | Match the accepted Haxe portable contract; metal may expose checked/unchecked typed operations explicitly | E2 / ADR | Blocks array and pointer APIs. |
 | Regex backend | Select based on semantics, Unicode, portability, licensing, and size; make it a runtime/platform feature | E5 / ADR | Does not block primitive vertical slice. |
-| Initial supported platforms | Tier 1 proposal: Linux x86_64 with GCC/Clang; add macOS/Windows before beta; freestanding/WASI/Emscripten as explicit capability tiers | E0.T01/E10 / ADR | Controls CI and release claims. |
+| Initial supported platforms | Accepted 1.0 Tier 1: Linux/glibc x86_64+aarch64 on GCC/Clang; macOS arm64+x86_64 on Apple Clang; Windows x86_64 on clang-cl; plus one capability-limited ARM Cortex-M GCC freestanding-metal lane. WASI/Emscripten/MSVC begin below Tier 1 | ADR 0007 / E0.T01/E10 | CI must distinguish native/emulated run from compile-only evidence and publish exact version floors. |
 | Build-system adapters | One neutral manifest is normative; CMake and Meson are generated adapters, not the semantic source of truth | E1/E8 / ADR | Blocks emitter interface, not semantics. |
 | Public ABI stability point | Everything is experimental before 1.0; opaque handles default; freeze only after ABI diff tooling and consumers exist | E7/E10 / ADR | Prevents accidental early compatibility promises. |
 | C++ shim generator scope | Manual/declared shims are core; automatic C++ subset generation is experimental and post-core | E6 / ADR | Does not block C bindgen. |
@@ -5353,7 +5443,9 @@ Minimum claim gate:
 - robust bindgen declaration coverage and wrapper mappings;
 - export/install/ABI diff workflows;
 - production-like todo CLI;
-- macOS/Windows or the accepted tier-1 matrix;
+- every accepted Tier 1 hosted OS has a fresh-user smoke path; secondary
+  architectures and the freestanding-metal lane may still be completing their
+  full 1.0 evidence;
 - performance, code-size, security, and reproducibility evidence;
 - migration notes for known breaking changes.
 
@@ -5361,6 +5453,10 @@ Minimum claim gate:
 
 Minimum claim gate:
 
+- every ADR 0007 Tier 1 tuple has non-skippable archived evidence: native
+  compile/link/run for hosted lanes and emulator or hardware execution for the
+  declared freestanding-metal lane, with cross-compile-only results labeled as
+  such;
 - all applicable standard-library ledger entries for supported platforms are implemented, tested, or explicitly excluded by published capability contract;
 - no known release-blocking semantic divergence, C undefined behavior, memory-safety issue, or ABI defect;
 - public compiler/runtime/export ABI version policies are frozen and tested;
@@ -5470,7 +5566,8 @@ The handoff archive is complete when it contains:
 ### 40.5 Recommended first implementation sequence from this scaffold
 
 1. Run all structural, plan, runtime, and Haxe type-check gates; fix the handoff before adding semantics.
-2. Ratify the unresolved P0 decisions and record ADRs.
+2. Preserve the ratified P0 decisions in ADR 0001, 0002, and 0004–0007; create a
+   superseding ADR rather than hardening contradictory code.
 3. Pin and verify Reflaxe/Haxe; make the current Haxe sources compile.
 4. Complete C declarator/expression printer corpus and output ownership.
 5. Add HxcIR and typed-AST normalization.

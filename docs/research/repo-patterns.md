@@ -252,6 +252,21 @@ Observed patterns:
 
 C adds a machine-readable implementation ledger and per-API runtime/platform ownership.
 
+## Unicode target semantics
+
+Haxe 4.3.7 deliberately permits target-specific string storage and non-BMP
+indexing, while its Unicode iterator APIs normalize iteration to code points.
+The Eval target is UTF-8 and a local `--interp` probe observed an astral
+character length/code of `1`/`128512`, composed/decomposed lengths of `1`/`2`,
+and an embedded-NUL length of `3`.
+
+The Rust sibling independently codifies scalar-indexed portable strings and
+warns target overrides not to copy UTF-16 surrogate walking or expose UTF-8 byte
+offsets. That is the strongest family precedent for a native UTF-8 target: use
+one scalar-indexed Haxe model, keep byte operations explicitly typed, and avoid
+a second representation for `UnicodeString`. ADR 0004 adopts that contract for
+C and adds deterministic malformed-input and `CString` boundary rules.
+
 ## Output management
 
 Reflaxe `OutputManager`:

@@ -144,6 +144,19 @@ compiler lifecycle classes referenced by the adapter.
   exported pointer, string, buffer, handle, callback, error, and allocator
   boundary needs explicit layout, ownership, nullability, lifetime, calling
   convention, and failure policy. No exception may cross the C ABI.
+- Preserve ADR 0004 string units: portable `String` is valid UTF-8 but every
+  ordinary Haxe index is a Unicode-scalar index. Never expose byte offsets or
+  UTF-16 surrogate halves through `String`, normalize implicitly, store malformed
+  UTF-8, or conflate `String` with binary `Bytes` or NUL-terminated `c.CString`.
+- The default tracing backend, when selected, is ADR 0005 precise non-moving
+  mark-and-sweep with compiler-emitted exact roots. Do not treat arbitrary raw,
+  interior, or foreign pointers as roots; require a typed live base/root or
+  pinned handle, and keep collector details out of generated public types.
+- Preserve ADR 0006 explicit exceptional and cleanup edges through HxcIR.
+  Prefer proven result/status lowering; otherwise isolate exception frames and
+  `setjmp`/`longjmp` in the selected runtime slice. Never transfer across an
+  export, callback return, foreign frame, signal, or thread boundary, and never
+  rely on indeterminate C locals after `longjmp`.
 
 ### Product contracts
 
@@ -154,8 +167,18 @@ compiler lifecycle classes referenced by the adapter.
 - With no explicit runtime override, `portable` resolves to `auto + summary` and
   `metal` to `minimal + warn`; explicit valid combinations still win. Use
   `hxc_runtime=none` for the hard whole-program no-runtime proof.
-- Strict hosted C11 with no extensions is the default until an accepted ADR or
-  issue explicitly selects another dialect/environment.
+- Strict ISO C11 with no extensions is the normative generated-source, runtime,
+  fixture, and public-header floor. C17 preserves that contract; C23 internal
+  syntax remains experimental and cannot silently alter semantics or ABI.
+- Direct Haxe/Reflaxe builds activate through `c_output=<directory>` and expose
+  the public `c` target conditional. Use `target.name=c` when available,
+  `target.unicode` without `target.utf16`, and set `target.sys`,
+  `target.threaded`, or `target.atomics` only from proven adapter capabilities.
+  Do not use `reflaxe_c` as the recommended application portability condition.
+- A platform support claim names the whole environment/runtime/architecture/
+  compiler/capability tuple. Do not report a cross-compile as a native or
+  emulated run, a capability-limited freestanding lane as hosted stdlib support,
+  or a Tier 2/3 combination as part of the ADR 0007 Tier 1 release gate.
 - Idiomatic, warning-clean C is required in every profile; it is not a third
   profile or a correctness-off mode.
 - Clang-derived facts and compiled probes are authoritative for bindgen and

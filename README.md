@@ -98,6 +98,18 @@ Strict hosted C11 is the working default. Generated code must preserve Haxe
 evaluation order, avoid C undefined behavior, compile warning-clean, and remain
 deterministic across repeated builds.
 
+The remaining foundational contracts are now explicit design inputs, not
+implementation claims: `c_output` activates a `c` target that emits strict C11;
+portable strings are immutable UTF-8 with Unicode-scalar indices; tracing, when
+actually required, uses a selective precise non-moving collector; and general
+exceptions use contained C frames while every public C boundary exposes ordinary
+status/error values. The 1.0 release matrix covers hosted Linux, macOS, and
+Windows tuples plus a capability-limited ARM Cortex-M freestanding-metal lane.
+See [ADR 0007](docs/adr/0007-strict-c11-target-and-platform-baseline.md),
+[ADR 0004](docs/adr/0004-utf8-scalar-string-contract.md),
+[ADR 0005](docs/adr/0005-precise-nonmoving-collector.md), and
+[ADR 0006](docs/adr/0006-explicit-failure-edges-and-contained-unwinding.md).
+
 ## What exists today
 
 The current checkout contains:
@@ -149,6 +161,7 @@ a small end-to-end C emission slice before expanding language coverage.
 - [Product requirements](docs/PRD.md)
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
+- [Architecture decisions](docs/adr/README.md)
 - [Beads plan](docs/BEADS_PLAN.md)
 - [Contributor and agent rules](AGENTS.md)
 

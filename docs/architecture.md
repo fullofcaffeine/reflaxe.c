@@ -55,6 +55,23 @@ A compilation produces multiple file categories and sidecar reports. `Manual` le
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
+## Target and native baseline
+
+The Haxe target identity is `c`: `c_output=<directory>` is the reliable Haxe 4
+bootstrap/output signal, `target.name=c` is used where custom-target plumbing
+supplies it, and initialization exposes the `c` conditional. `reflaxe_c` is an
+implementation compatibility marker, not the application portability contract.
+
+The target enables `target.unicode` without `target.utf16`. Other platform
+defines are capability facts: `target.sys`, `target.threaded`, and
+`target.atomics` are enabled only by adapters that implement them.
+
+Strict ISO C11 without extensions is the generated-source, runtime, fixture, and
+public-header floor. C17 preserves the same contract; C23 syntax remains an
+opt-in internal experiment and may not change ABI. Support is resolved from an
+environment/OS-runtime/architecture/compiler/capability tuple rather than an OS
+name. See [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md).
+
 ## Fail-closed bootstrap
 
 The scaffold's compiler classes establish lifecycle and interfaces, but broad language lowering is not marked complete. Until a construct has a tested lowering, the implementation must issue a stable diagnostic. Silent placeholder code is prohibited.
@@ -78,6 +95,37 @@ library, or symbol exists in the build.
 Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
 These are presets over independent axes, not separate compiler pipelines. See
 [ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
+
+## String and managed-memory model
+
+Portable `String` is a private immutable valid-UTF-8 representation. Every Haxe
+index counts Unicode scalar values, embedded NUL is content, normalization is
+never implicit, and malformed external UTF-8 has distinct lossy and checked
+paths. Binary `Bytes`, NUL-terminated `c.CString`, and exported UTF-8 views keep
+their own units, ownership, and lifetime contracts. String support is a separate
+runtime feature and does not by itself require objects, reflection, or the
+collector. See [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+
+When object-graph semantics still require tracing after escape/region analysis,
+the default `gc` slice is precise, non-moving, stop-the-world mark-and-sweep.
+Generated trace descriptors plus explicit global/stack/thread root chains are
+the authority; arbitrary C addresses are not scanned for roots. Interior and
+foreign pointers require a live typed base/root or pinned handle. Backend
+details never enter exported layouts, and `hxc_runtime=none` emits none of this
+machinery. See [ADR 0005](adr/0005-precise-nonmoving-collector.md).
+
+## Failure and unwind model
+
+HxcIR represents exceptional successors, cleanup checkpoints, and all exits
+before choosing C control flow. Closed regions use reported result/status
+lowering when it is provably equivalent. General portable behavior selects the
+isolated `exception` slice, whose strict-C11 frame/cleanup chain contains
+`setjmp`/`longjmp` and handles C automatic-local rules explicitly.
+
+Exports and callback trampolines catch and translate every Haxe exception to a
+declared C status/error contract. A non-local transfer never crosses a foreign
+frame, public ABI, signal, or thread boundary. See
+[ADR 0006](adr/0006-explicit-failure-edges-and-contained-unwinding.md).
 
 ## Typed C authoring boundary
 
