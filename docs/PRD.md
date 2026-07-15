@@ -2329,15 +2329,36 @@ test/snapshot/<family>/<case>/
 
 `case.json` declares profiles, runtime policies, toolchains, environment, sanitizer eligibility, and expected diagnostics.
 
+The executable taxonomy is `docs/specs/fixture-taxonomy.json`, with individual
+case manifests validated by `docs/specs/fixture-case.schema.json`. Its eight
+canonical lanes are positive, negative, AST/IR, snapshot, runtime,
+differential, ABI, and performance. During M0, existing focused suites may stay
+in place when the catalog maps their directory, runner contract, expected
+outputs, and evidence limitations explicitly; new cases use the canonical lane
+directories. A structural snapshot never substitutes for required native,
+runtime, differential, sanitizer, ABI, or performance evidence.
+
 ### 21.3 Snapshot update policy
 
-Snapshots update only through an explicit command such as:
+The implemented M0 snapshot registry checks all owned artifacts with:
 
-```text
-hxc test --update <selector>
+```sh
+npm run snapshots:check
 ```
 
-The command prints a semantic diff summary. CI never updates snapshots.
+Snapshots update only through an explicit selector (or an explicit full
+refresh):
+
+```sh
+npm run snapshots:update -- --suite <suite-id>
+npm run snapshots:update -- --all
+```
+
+The command renders twice, prints a semantic diff summary before writing, stays
+inside catalog-owned expected roots, and validates the owning suite after the
+update. CI never updates snapshots. Once the production CLI exists,
+`hxc test --update <selector>` may provide an ergonomic front end to this same
+policy; it must not introduce a second blessing path.
 
 ### 21.4 Compiler compilation gate
 
@@ -4894,6 +4915,7 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Target-facing C API (`target-c-api`) | `std/c/**`, `TypedCContractMacro`, typed-C fixtures | Compile-verified contract seed | Pointer, span, ownership, result, allocator, syntax, calling-convention, visibility, integer, and volatile abstractions type-check as compiler contracts. Namespaced declaration/build metadata produces a deterministic schema-2 typed snapshot whose merged build facts retain sorted declaration provenance; negative fixtures prove the current HXC5002 validation slice and empty runtime effects. No `c.*` lowering, production header emission, native layout proof, unsafe operation, or stable public ABI is implemented. |
 | Runtime ABI and implementation (`runtime-abi-and-implementation`) | `runtime/hxrt/include/hxc_runtime.h`, `runtime/hxrt/src/hxc_runtime.c` | Verified native seed | A provisional allocator/string/status/Int32 ABI compiles and runs natively but is not selected by generated programs. The runtime feature graph/manifest, hardened allocation contracts, arrays, objects, managed memory, dynamic values, reflection, exceptions, threads, and platform adapters remain later work. |
 | Native smoke fixtures (`native-smoke-fixtures`) | `runtime/hxrt/test/**`, `scripts/ci/runtime_smoke.py`, `test/c_ast/**`, `test/declaration_plan/**`, `test/native/pointlib/**`, `test/native/cpp_shim/**` | Verified native seed, AST, and planned-header goldens | Local auto mode explicitly reports optional compiler-family skips and requires at least one complete pair. CI separately requires real GCC/G++ and Clang/Clang++ lanes with warnings as errors; each compiles/runs the runtime-free declarator and expression/statement AST goldens, independently compiles every planned declaration header, runs their combined consumer and the hosted C11 runtime, compiles the freestanding path, links/runs a C++17 runtime-header consumer, and exercises independent C-library and opaque-handle C++-shim fixtures. Sanitizers, Haxe-language generated output, broader platform matrices, ownership/failure paths, generated C++-compatible export headers, and installed external consumers remain later gates. |
+| Fixture taxonomy and snapshot policy (`fixture-policy`) | `docs/testing.md`, `docs/specs/fixture-{case,taxonomy}*.json`, `scripts/test/snapshots.py`, `scripts/ci/check_fixture_policy.py`, canonical `test/{positive,negative,ast,snapshot,runtime,differential,abi,performance}/` lanes | Verified policy and deterministic M0 snapshots | Eight evidence lanes have explicit directory, runner, and expected-output contracts. Existing M0 suites are mapped in place; every checked-in expected artifact is registry-owned and reproducible through an explicit check/update command that prints semantic diffs and cannot bless in CI. Direct AST/IR, independent native runtime/ABI, and oracle seeds retain their limited claims. Future examples require schema-valid declared assertions and may not become implicit tests. |
 | Diagnostics (`diagnostics`) | `CDiagnostic.hx`, `docs/specs/diagnostics.json`, schema | Seeded | Stable IDs and the deliberate scaffold failure are registered. Complete source ranges, severity policy, remediation, JSON output, registry drift checks, and diagnostic tests are still required. |
 | Requirements and ledgers (`requirements-and-ledgers`) | `requirements.json`, `stdlib-ledger.json`, schemas | Seeded | The complete PRD has 160 stable product/semantic/quality requirements and an initial standard-library ownership ledger. Codex must keep PRD, registries, task mappings, diagnostics, runtime features, and capability evidence synchronized as scope changes. |
 | Example portfolio (`example-portfolio`) | `examples/hello`, `no-runtime`, `pointlib`, `shared-library`, `cpp-shim`, `todo-cli` | Seeded | These establish intended user journeys and API shapes; only independent native fixture fragments are executable today. Do not special-case the compiler or use raw C injection to make examples appear complete. |

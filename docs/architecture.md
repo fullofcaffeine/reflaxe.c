@@ -130,6 +130,31 @@ name. See [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md).
 
 The scaffold's compiler classes establish lifecycle and interfaces, but broad language lowering is not marked complete. Until a construct has a tested lowering, the implementation must issue a stable diagnostic. Silent placeholder code is prohibited.
 
+## Evidence and fixture boundary
+
+The machine-readable fixture catalog in
+[`docs/specs/fixture-taxonomy.json`](specs/fixture-taxonomy.json) maps every
+current runner to one or more of eight evidence lanes: positive, negative,
+AST/IR, snapshot, runtime, differential, ABI, and performance. New cases use a
+schema-valid `case.json` in the corresponding canonical `test/<lane>/`
+directory; existing M0 suites remain mapped in place to avoid a path-only
+migration. The detailed runner and assertion contract lives in
+[`docs/testing.md`](testing.md).
+
+Snapshots are a review surface, not an architectural shortcut. The central
+registry owns every checked-in expected tree, rerenders it twice, compares JSON
+semantically and structural text byte-for-byte, and exposes explicit check and
+update paths. Update mode prints the diff before per-file atomic replacement,
+runs the owning suite, and is forbidden in CI.
+
+Evidence does not leak across compiler layers. A direct HxcIR or C AST golden
+proves that model/printer boundary only. A separately authored native C/C++
+fixture proves a prospective runtime or interop contract only. Generated-Haxe
+runtime, differential, ABI, sanitizer, and performance claims require their own
+declared assertions and may not be inferred from either snapshot class.
+Examples follow the same rule: they are run only through explicit case
+manifests and never through an undeclared directory glob.
+
 ## Runtime feature graph
 
 Runtime planning follows representation selection, escape/lifetime analysis, and

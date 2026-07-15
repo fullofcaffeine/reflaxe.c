@@ -47,6 +47,21 @@ REQUIRED_GATE_FILES = (
     "test/hxc_ir/expected/coverage.hxcir",
     "test/hxc_ir/expected/diagnostics.json",
     "test/hxc_ir/run.py",
+    "test/positive/README.md",
+    "test/negative/README.md",
+    "test/ast/README.md",
+    "test/snapshot/README.md",
+    "test/runtime/README.md",
+    "test/differential/README.md",
+    "test/abi/README.md",
+    "test/performance/README.md",
+    "docs/testing.md",
+    "docs/specs/fixture-case.schema.json",
+    "docs/specs/fixture-taxonomy.schema.json",
+    "docs/specs/fixture-taxonomy.json",
+    "scripts/test/snapshots.py",
+    "scripts/ci/check_fixture_policy.py",
+    "test/governance/test_fixture_policy.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -108,18 +123,32 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
+    if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
+        errors.append("package.json must retain the test:fixture-policy entry point")
+    if scripts.get("snapshots:check") != "python3 scripts/test/snapshots.py --check":
+        errors.append("package.json must retain the snapshots:check entry point")
+    if scripts.get("snapshots:update") != "python3 scripts/test/snapshots.py --update":
+        errors.append("package.json must retain the explicit snapshots:update entry point")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
     if "npm run test:declaration-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:declaration-plan")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
+    if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute snapshots:check")
     if "npm run test:native" not in str(scripts.get("test", "")):
         errors.append("package.json test must execute test:native")
     if "python3 scripts/ci/check_ci_policy.py" not in str(
         scripts.get("test:governance", "")
     ):
         errors.append("package.json test:governance must execute the CI policy guard")
+    if "npm run test:fixture-policy" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must execute the public fixture policy guard"
+        )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
@@ -137,6 +166,10 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the declaration planning golden test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
+    if "scripts/ci/check_fixture_policy.py" not in pre_commit:
+        errors.append("pre-commit must validate the fixture and example policy")
+    if "scripts/test/snapshots.py" not in pre_commit:
+        errors.append("pre-commit must check registered snapshot ownership and drift")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):

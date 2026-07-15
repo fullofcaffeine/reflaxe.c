@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "caseSchema": "docs/specs/fixture-case.schema.json",
+  "runnerContract": {
+    "caseManifest": "case.json",
+    "defaultWorkingDirectory": "case-directory",
+    "defaultTimeoutSeconds": 30,
+    "networkDefault": false,
+    "requiredExpectedFields": [
+      "exitCode",
+      "at-least-one-semantic-assertion"
+    ]
+  },
+  "types": [
+    {
+      "id": "positive",
+      "directory": "test/positive",
+      "status": "active",
+      "purpose": "Accepted source or compiler inputs that must succeed with explicit semantic assertions.",
+      "expectedOutputs": [
+        "exact exit code",
+        "exact or normalized stdout/stderr",
+        "declared artifacts and runtime-plan effects where applicable"
+      ],
+      "suiteIds": [
+        "all-sources",
+        "bootstrap",
+        "typed-c",
+        "hxc-ir"
+      ]
+    },
+    {
+      "id": "negative",
+      "directory": "test/negative",
+      "status": "active",
+      "purpose": "Rejected input that must fail closed at a source position with stable diagnostics.",
+      "expectedOutputs": [
+        "non-zero exit code",
+        "stable diagnostic IDs and essential fields",
+        "no plausible generated artifact"
+      ],
+      "suiteIds": [
+        "all-sources",
+        "bootstrap",
+        "typed-c",
+        "hxc-ir"
+      ]
+    },
+    {
+      "id": "ast",
+      "directory": "test/ast",
+      "status": "active",
+      "purpose": "Direct HxcIR or C AST construction that proves structural semantics without claiming Haxe-to-C lowering.",
+      "expectedOutputs": [
+        "deterministic structural dump or C/header text",
+        "validator result",
+        "strict native compile/run evidence when C is emitted"
+      ],
+      "suiteIds": [
+        "c-ast",
+        "declaration-plan",
+        "hxc-ir"
+      ]
+    },
+    {
+      "id": "snapshot",
+      "directory": "test/snapshot",
+      "status": "active",
+      "purpose": "Reviewable expected compiler, IR, C, header, diagnostic, or manifest artifacts.",
+      "expectedOutputs": [
+        "byte-exact text or semantic JSON",
+        "deterministic second render",
+        "unified semantic diff on drift"
+      ],
+      "suiteIds": [
+        "bootstrap",
+        "typed-c",
+        "c-ast",
+        "declaration-plan",
+        "hxc-ir"
+      ]
+    },
+    {
+      "id": "runtime",
+      "directory": "test/runtime",
+      "status": "seed-only",
+      "purpose": "Native compile/link/run, failure-path, sanitizer, and runtime-feature behavior.",
+      "expectedOutputs": [
+        "exact stdout/stderr/exit code",
+        "selected runtime features or explicit zero-runtime proof",
+        "strict compiler and sanitizer results where eligible"
+      ],
+      "suiteIds": [
+        "native-smoke"
+      ]
+    },
+    {
+      "id": "differential",
+      "directory": "test/differential",
+      "status": "seed-only",
+      "purpose": "The same Haxe semantics compared against a declared reference target or oracle.",
+      "expectedOutputs": [
+        "oracle identity and normalized trace",
+        "target trace",
+        "reproducible seed and allowed normalizations"
+      ],
+      "suiteIds": [
+        "hxc-ir"
+      ]
+    },
+    {
+      "id": "abi",
+      "directory": "test/abi",
+      "status": "seed-only",
+      "purpose": "Headers, symbols, layouts, ownership, calling conventions, and independent consumers.",
+      "expectedOutputs": [
+        "C and C++ consumer results",
+        "symbol and layout facts",
+        "ABI manifest or explicit native-seed limitation"
+      ],
+      "suiteIds": [
+        "native-smoke"
+      ]
+    },
+    {
+      "id": "performance",
+      "directory": "test/performance",
+      "status": "contract-only",
+      "purpose": "Reproducible compiler, generated-C, runtime, allocation, size, and FFI measurements.",
+      "expectedOutputs": [
+        "versioned measurements and units",
+        "toolchain, hardware, inputs, and variance",
+        "reviewed baseline and budget decision"
+      ],
+      "suiteIds": []
+    }
+  ],
+  "suites": [
+    {
+      "id": "all-sources",
+      "directory": "test/all_sources",
+      "runner": [
+        "python3",
+        "test/all_sources/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative"
+      ],
+      "status": "active",
+      "assertions": [
+        "all owned Haxe sources and macro branches type-check under Eval",
+        "production custom-target activation stops at source-anchored HXC1000",
+        "HXC1000 leaves no generated artifact"
+      ]
+    },
+    {
+      "id": "bootstrap",
+      "directory": "test/bootstrap",
+      "runner": [
+        "python3",
+        "test/bootstrap/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "custom-target lifecycle and platform snapshot",
+        "configuration conflicts and legacy Cross fail closed",
+        "compiler-server and package-layout isolation"
+      ]
+    },
+    {
+      "id": "typed-c",
+      "directory": "test/typed_c",
+      "runner": [
+        "python3",
+        "test/typed_c/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed contract report is deterministic across order and compiler-server requests",
+        "invalid metadata and declaration graphs emit HXC5002",
+        "declaration facts have no runtime or unsafe effect"
+      ]
+    },
+    {
+      "id": "c-ast",
+      "directory": "test/c_ast",
+      "runner": [
+        "python3",
+        "test/c_ast/run.py"
+      ],
+      "types": [
+        "ast",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "two structural renders are byte-identical",
+        "declarator and expression/statement C11 goldens match",
+        "native-smoke compiles and runs both goldens without hxrt"
+      ]
+    },
+    {
+      "id": "declaration-plan",
+      "directory": "test/declaration_plan",
+      "runner": [
+        "python3",
+        "test/declaration_plan/run.py"
+      ],
+      "types": [
+        "ast",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "plan and header renders are deterministic",
+        "expected include/forward/complete decisions match",
+        "native-smoke independently compiles headers and runs their consumer"
+      ]
+    },
+    {
+      "id": "hxc-ir",
+      "directory": "test/hxc_ir",
+      "runner": [
+        "python3",
+        "test/hxc_ir/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "ast",
+        "snapshot",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "canonical HxcIR dumps preserve source-aware semantic order",
+        "invalid or unsupported IR paths emit HXC9000 or HXC1001",
+        "the Eval side-effect oracle matches the modeled order without claiming C execution"
+      ]
+    },
+    {
+      "id": "native-smoke",
+      "directory": "test/native",
+      "runner": [
+        "python3",
+        "scripts/ci/runtime_smoke.py"
+      ],
+      "types": [
+        "runtime",
+        "abi"
+      ],
+      "status": "seed-only",
+      "assertions": [
+        "strict C11 and C++17 compile/link/run with available matched toolchains",
+        "independent C-library and opaque-handle C++-shim fixtures run",
+        "these native inputs are not described as Haxe-generated output"
+      ]
+    }
+  ],
+  "snapshotPolicy": {
+    "checkCommand": "npm run snapshots:check",
+    "updateCommand": "npm run snapshots:update -- --suite <suite-id>",
+    "ciMayUpdate": false,
+    "diffFormat": "unified-semantic",
+    "managedSuites": [
+      {
+        "id": "bootstrap",
+        "expectedRoots": [
+          "test/bootstrap/expected/target-contract.json"
+        ],
+        "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "typed-c",
+        "expectedRoots": [
+          "test/typed_c/expected/typed-c-contract.json"
+        ],
+        "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "c-ast",
+        "expectedRoots": [
+          "test/c_ast/expected"
+        ],
+        "formats": [
+          "c"
+        ]
+      },
+      {
+        "id": "declaration-plan",
+        "expectedRoots": [
+          "test/declaration_plan/expected"
+        ],
+        "formats": [
+          "json",
+          "header"
+        ]
+      },
+      {
+        "id": "hxc-ir",
+        "expectedRoots": [
+          "test/hxc_ir/expected"
+        ],
+        "formats": [
+          "json",
+          "hxcir"
+        ]
+      }
+    ]
+  },
+  "examplesPolicy": {
+    "directory": "examples",
+    "status": "absent",
+    "caseManifest": "case.json",
+    "requiredExpectedAssertions": [
+      "exitCode",
+      "at-least-one-of-stdout-stderr-diagnostics-artifacts-runtimePlan-oracle-metrics"
+    ]
+  }
+}

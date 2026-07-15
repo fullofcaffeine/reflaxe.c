@@ -215,8 +215,21 @@ python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
 python3 test/hxc_ir/run.py
 python3 scripts/ci/runtime_smoke.py
+python3 scripts/ci/check_fixture_policy.py
+python3 scripts/test/snapshots.py --check
 python3 scripts/ci/check_license_policy.py
 ```
+
+Expected artifacts are never refreshed implicitly. For an intentional change,
+review the semantic diff produced by a targeted update, then inspect the Git
+diff and rerun the owning native/oracle gates:
+
+```sh
+npm run snapshots:update -- --suite hxc-ir
+```
+
+See the [fixture and snapshot policy](docs/testing.md) for the eight evidence
+lanes, case manifests, current mapped suites, and example assertion rules.
 
 See the [pinned toolchain guide](docs/toolchain.md) for the exact dependency,
 package-layout, bootstrap-order, and update contracts. The compile-backed probes
@@ -245,6 +258,7 @@ before expanding language coverage.
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
+- [Fixture and snapshot policy](docs/testing.md)
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)
 - [Beads plan](docs/BEADS_PLAN.md)
