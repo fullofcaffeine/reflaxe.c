@@ -149,11 +149,17 @@ set. It proves naming analysis only; it does not claim production C emission.
 
 `test/project_emitter` is the negative/AST/snapshot suite for typed schema-1
 project packaging and the Reflaxe ownership boundary. It renders fresh projects
-under unrelated absolute roots and reversed discovery order, validates every
-SHA-256, verifies unchanged artifact mtimes, removes a listed stale header while
-preserving an unlisted user file, and rejects traversal, descendant symlinks,
-unowned destinations, duplicate paths, malformed ownership JSON, and premature
-lowered-program status before any partial write. Its checked-in headers and C
-sources compile and run in the native matrix. They are built directly by a test
-macro, so the suite does not weaken or bypass the production `HXC1000` no-output
-boundary. See [project-emission boundary](project-emission.md).
+under unrelated absolute roots, reversed discovery, a fixed locale, CRLF inputs,
+and real warm compiler-server reuse. Its raw-byte comparator reports the first
+UTF-8-ordered artifact difference and byte offset; normal-artifact scans reject
+host paths, carriage returns, timestamps, random IDs, and unstable JSON keys.
+The suite validates every SHA-256, verifies unchanged artifact mtimes, and
+proves a full-to-renamed-symbol transition removes every prior owned payload
+while preserving an unlisted user file. It rejects traversal, descendant
+symlinks, unowned destinations, duplicate paths, malformed ownership JSON,
+non-canonical line endings, and premature lowered-program status before any
+partial write. Reflaxe invocation/activity metadata is validated separately.
+Its checked-in headers and C sources compile and run in the native matrix. They
+are built directly by a test macro, so the suite does not weaken or bypass the
+production `HXC1000` no-output boundary. See [project-emission
+boundary](project-emission.md).

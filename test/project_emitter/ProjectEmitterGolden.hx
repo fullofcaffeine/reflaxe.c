@@ -27,19 +27,41 @@ import reflaxe.data.EnumOptionData;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
 
+private enum ProjectFixtureVariant {
+	PFVOriginal;
+	PFVRenamed;
+}
+
+private typedef ProjectFixtureIdentity = {
+	final apiType:String;
+	final apiField:String;
+	final mainType:String;
+	final publicHeaderPath:String;
+	final privateHeaderPath:String;
+	final sourcePath:String;
+	final bootSourcePath:String;
+	final guardStem:String;
+	final defineName:String;
+}
+
 /** Drives the real Reflaxe OutputManager with a direct structural project plan. */
 class ProjectEmitterGolden {
 	public static function run(mode:String, outputDirectory:String):Void {
 		final files = switch mode {
-			case "full": new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture));
-			case "reverse": new CProjectEmitter().emit(plan(true, false, CProjectCompilationStatus.StructuralFixture));
-			case "trimmed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture));
+			case "full": new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
+			case "reverse": new CProjectEmitter().emit(plan(true, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
+			case "trimmed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
+			case "renamed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVRenamed));
 			case "duplicate":
-				final duplicatePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture);
+				final duplicatePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
 				duplicatePlan.units.push(duplicatePlan.units[0]);
 				new CProjectEmitter().emit(duplicatePlan);
 			case "invalid-path":
 				[new GeneratedFile("../outside.c", "int outside;\n", GeneratedFileKind.Source)];
+			case "invalid-line-endings":
+				[
+					new GeneratedFile("src/invalid_line_endings.c", "int invalid_line_endings;\r\n", GeneratedFileKind.Source)
+				];
 			case "invalid-layout":
 				new CProjectEmitter().emit({
 					schemaVersion: CProjectEmitter.SCHEMA_VERSION,
@@ -56,7 +78,8 @@ class ProjectEmitterGolden {
 					buildFacts: [],
 					symbolTable: emptySymbols()
 				});
-			case "lowered": new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.LoweredProgram));
+			case "lowered":
+				new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.LoweredProgram, ProjectFixtureVariant.PFVOriginal));
 			case _: throw 'unknown project emitter fixture mode `$mode`';
 		};
 
@@ -72,11 +95,13 @@ class ProjectEmitterGolden {
 		Sys.println("project-emitter-macro: OK");
 	}
 
-	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus):CProjectEmissionPlan {
+	static function plan(reverse:Bool, trimmed:Bool, compilationStatus:CProjectCompilationStatus, variant:ProjectFixtureVariant):CProjectEmissionPlan {
+		final identity = fixtureIdentity(variant);
 		final registry = new CSymbolRegistry();
-		final exportRequest = new CSymbolRequest(CSymbolKind.CSKExport, ["fixture", "Api", "value"], CSymbolNamespace.CNSOrdinary("translation-unit"),
-			CSymbolVisibility.CSVPublic);
-		final bootRequest = new CSymbolRequest(CSymbolKind.CSKStaticInitializer, ["fixture", "Main"], CSymbolNamespace.CNSOrdinary("translation-unit"));
+		final exportRequest = new CSymbolRequest(CSymbolKind.CSKExport, ["fixture", identity.apiType, identity.apiField],
+			CSymbolNamespace.CNSOrdinary("translation-unit"), CSymbolVisibility.CSVPublic);
+		final bootRequest = new CSymbolRequest(CSymbolKind.CSKStaticInitializer, ["fixture", identity.mainType],
+			CSymbolNamespace.CNSOrdinary("translation-unit"));
 		final requests = [exportRequest, bootRequest];
 		if (reverse) {
 			requests.reverse();
@@ -86,10 +111,10 @@ class ProjectEmitterGolden {
 		final exportedName = registry.identifierFor(exportRequest).value;
 
 		final units = [
-			new GeneratedFile("include/hxc/emitter_fixture.h", publicHeader(exportedName), GeneratedFileKind.PublicHeader),
-			new GeneratedFile("include/hxc/detail/emitter_fixture_internal.h", privateHeader(), GeneratedFileKind.PrivateHeader),
-			new GeneratedFile("src/emitter_fixture.c", implementation(exportedName), GeneratedFileKind.Source),
-			new GeneratedFile("src/hxc_boot.c", bootSource(exportedName), GeneratedFileKind.Source)
+			new GeneratedFile(identity.publicHeaderPath, publicHeader(identity, exportedName), GeneratedFileKind.PublicHeader),
+			new GeneratedFile(identity.privateHeaderPath, privateHeader(identity), GeneratedFileKind.PrivateHeader),
+			new GeneratedFile(identity.sourcePath, implementation(identity, exportedName), GeneratedFileKind.Source),
+			new GeneratedFile(identity.bootSourcePath, bootSource(identity, exportedName), GeneratedFileKind.Source)
 		];
 		if (!trimmed) {
 			units.push(new GeneratedFile("include/hxc/removed_module.h", removedHeader(), GeneratedFileKind.PublicHeader));
@@ -100,21 +125,21 @@ class ProjectEmitterGolden {
 				name: "stdio.h",
 				value: "system",
 				valueKind: "enum",
-				ownerModulePaths: ["fixture.Main"]
+				ownerModulePaths: ['fixture.${identity.mainType}']
 			},
 			{
 				kind: "include",
 				name: "stdio.h",
 				value: "system",
 				valueKind: "enum",
-				ownerModulePaths: ["fixture.Api", "fixture.Main"]
+				ownerModulePaths: ['fixture.${identity.apiType}', 'fixture.${identity.mainType}']
 			},
 			{
 				kind: "define",
-				name: "HXC_EMITTER_FIXTURE",
+				name: identity.defineName,
 				value: "1",
 				valueKind: "integer",
-				ownerModulePaths: ["fixture.Main"]
+				ownerModulePaths: ['fixture.${identity.mainType}']
 			}
 		];
 		if (reverse) {
@@ -139,32 +164,66 @@ class ProjectEmitterGolden {
 		};
 	}
 
+	static function fixtureIdentity(variant:ProjectFixtureVariant):ProjectFixtureIdentity {
+		return switch variant {
+			case PFVOriginal:
+				{
+					apiType: "Api",
+					apiField: "value",
+					mainType: "Main",
+					publicHeaderPath: "include/hxc/emitter_fixture.h",
+					privateHeaderPath: "include/hxc/detail/emitter_fixture_internal.h",
+					sourcePath: "src/emitter_fixture.c",
+					bootSourcePath: "src/hxc_boot.c",
+					guardStem: "EMITTER_FIXTURE",
+					defineName: "HXC_EMITTER_FIXTURE"
+				};
+			case PFVRenamed:
+				{
+					apiType: "RenamedApi",
+					apiField: "renamedValue",
+					mainType: "RenamedMain",
+					publicHeaderPath: "include/hxc/renamed_fixture.h",
+					privateHeaderPath: "include/hxc/detail/renamed_fixture_internal.h",
+					sourcePath: "src/renamed_fixture.c",
+					bootSourcePath: "src/hxc_renamed_boot.c",
+					guardStem: "RENAMED_FIXTURE",
+					defineName: "HXC_RENAMED_FIXTURE"
+				};
+		};
+	}
+
 	static function emptySymbols():reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot {
 		final registry = new CSymbolRegistry();
 		return registry.finalizeSymbols();
 	}
 
-	static function publicHeader(exportedName:String):String {
-		return "#ifndef HXC_EMITTER_FIXTURE_H\n"
-			+ "#define HXC_EMITTER_FIXTURE_H\n"
+	static function publicHeader(identity:ProjectFixtureIdentity, exportedName:String):String {
+		final guard = 'HXC_${identity.guardStem}_H';
+		return '#ifndef $guard\n' + '#define $guard\n' + "\n" + 'int $exportedName(void);\n' + "\n" + "#endif\n";
+	}
+
+	static function privateHeader(identity:ProjectFixtureIdentity):String {
+		final guard = 'HXC_DETAIL_${identity.guardStem}_INTERNAL_H';
+		final answer = 'HXC_${identity.guardStem}_ANSWER';
+		return '#ifndef $guard\n' + '#define $guard\n' + "\n" + 'enum { $answer = 42 };\n' + "\n" + "#endif\n";
+	}
+
+	static function implementation(identity:ProjectFixtureIdentity, exportedName:String):String {
+		final publicHeader = identity.publicHeaderPath.substr("include/".length);
+		final privateHeader = identity.privateHeaderPath.substr("include/".length);
+		final answer = 'HXC_${identity.guardStem}_ANSWER';
+		return '#include "$publicHeader"\n'
+			+ '#include "$privateHeader"\n'
 			+ "\n"
-			+ 'int $exportedName(void);\n'
-			+ "\n"
-			+ "#endif\n";
+			+ 'int $exportedName(void) {\n'
+			+ '    return $answer;\n'
+			+ "}\n";
 	}
 
-	static function privateHeader():String {
-		return "#ifndef HXC_DETAIL_EMITTER_FIXTURE_INTERNAL_H\n" + "#define HXC_DETAIL_EMITTER_FIXTURE_INTERNAL_H\n" + "\n"
-			+ "enum { HXC_EMITTER_FIXTURE_ANSWER = 42 };\n" + "\n" + "#endif\n";
-	}
-
-	static function implementation(exportedName:String):String {
-		return '#include "hxc/emitter_fixture.h"\n' + '#include "hxc/detail/emitter_fixture_internal.h"\n' + "\n" + 'int $exportedName(void) {\n'
-			+ "    return HXC_EMITTER_FIXTURE_ANSWER;\n" + "}\n";
-	}
-
-	static function bootSource(exportedName:String):String {
-		return '#include "hxc/emitter_fixture.h"\n' + "#include <stdio.h>\n" + "\n" + "int main(void) {\n" + '    if ($exportedName() != 42) {\n'
+	static function bootSource(identity:ProjectFixtureIdentity, exportedName:String):String {
+		final publicHeader = identity.publicHeaderPath.substr("include/".length);
+		return '#include "$publicHeader"\n' + "#include <stdio.h>\n" + "\n" + "int main(void) {\n" + '    if ($exportedName() != 42) {\n'
 			+ "        return 1;\n" + "    }\n" + '    (void)puts("project-emitter: OK");\n' + "    return 0;\n" + "}\n";
 	}
 

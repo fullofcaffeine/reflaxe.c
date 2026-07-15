@@ -79,10 +79,12 @@ packages structural headers and sources with content hashes, neutral build
 facts, symbol output, and honest runtime/ABI/stdlib placeholders. Its guarded
 Reflaxe adapter skips unchanged artifacts, safely removes only owned stale
 paths, rejects unowned collisions and path/symlink escapes, and produces
-byte-identical fresh projects across absolute roots. The emitted structural
-corpus compiles and runs under strict GCC and Clang; it is not typed-Haxe
-lowering, so production still stops at `HXC1000` with no output. See
-[project emission](docs/project-emission.md). The C authoring boundary is in
+byte-identical projects across absolute roots, discovery orders, locales, CRLF
+inputs, and warm compiler-server reuse. Renamed-symbol tests remove only prior
+owned paths, and failures identify the first differing artifact and byte. The
+emitted structural corpus compiles and runs under strict GCC and Clang; it is
+not typed-Haxe lowering, so production still stops at `HXC1000` with no output.
+See [project emission](docs/project-emission.md). The C authoring boundary is in
 [typed C authoring](docs/typed-c-authoring.md); the ratified rationale lives in
 [ADR 0001](docs/adr/0001-direct-c-and-selective-runtime.md) and
 [ADR 0002](docs/adr/0002-haxe-first-typed-c-authoring.md).

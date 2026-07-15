@@ -55,6 +55,13 @@ then delegates every save and stale deletion to `OutputManager`. The pure typed
 emitter contains no output root or host fact. See [project-emission
 boundary](project-emission.md).
 
+Adversarial determinism checks compare normal compiler artifacts as raw bytes
+across isolated roots, input order, locale, CRLF source/configuration input,
+renamed ownership, and warm compiler-server requests. They sort paths by UTF-8
+and identify the first differing path and byte offset. Reflaxe invocation state
+in `_GeneratedFiles.json` is validated as engine activity metadata rather than
+normalized into the compiler-artifact comparison.
+
 ## IR boundary
 
 `HxcIR` exists to normalize semantics that C syntax cannot safely express directly:

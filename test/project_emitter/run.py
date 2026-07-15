@@ -8,14 +8,17 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
-from typing import Iterable
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -25,6 +28,41 @@ OWNERSHIP = "_GeneratedFiles.json"
 MANIFEST = "hxc.manifest.json"
 REMOVED_HEADER = "include/hxc/removed_module.h"
 SUCCESS_LINES = ("project-emitter-macro: OK", "project-emitter-fixture: OK")
+ORIGINAL_PAYLOADS = frozenset(
+    {
+        "include/hxc/detail/emitter_fixture_internal.h",
+        "include/hxc/emitter_fixture.h",
+        REMOVED_HEADER,
+        "src/emitter_fixture.c",
+        "src/hxc_boot.c",
+    }
+)
+RENAMED_PAYLOADS = frozenset(
+    {
+        "include/hxc/detail/renamed_fixture_internal.h",
+        "include/hxc/renamed_fixture.h",
+        "src/renamed_fixture.c",
+        "src/hxc_renamed_boot.c",
+    }
+)
+ISO_TIMESTAMP = re.compile(
+    rb"\b[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}"
+    rb"(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?\b"
+)
+UUID = re.compile(
+    rb"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}\b"
+)
+UNSTABLE_JSON_KEYS = frozenset(
+    {
+        "buildtime",
+        "createdat",
+        "generatedat",
+        "nonce",
+        "randomid",
+        "timestamp",
+        "uuid",
+    }
+)
 
 
 class ProjectEmitterFailure(RuntimeError):
@@ -36,6 +74,30 @@ class SnapshotArtifact:
     relative_path: Path
     format: str
     value: object
+
+
+@dataclass(frozen=True)
+class ArtifactDifference:
+    relative_path: str
+    offset: int
+    expected_exists: bool
+    actual_exists: bool
+    expected_byte: int | None
+    actual_byte: int | None
+
+    def message(self, label: str) -> str:
+        location = (
+            f"{label}: first differing artifact `{self.relative_path}` "
+            f"at byte offset {self.offset}"
+        )
+        if self.expected_exists is not self.actual_exists:
+            expected = "present" if self.expected_exists else "missing"
+            actual = "present" if self.actual_exists else "missing"
+            return f"{location} (expected artifact {expected}, actual artifact {actual})"
+        return (
+            f"{location} (expected {byte_description(self.expected_byte)}, "
+            f"actual {byte_description(self.actual_byte)})"
+        )
 
 
 def development_tool(name: str) -> str:
@@ -59,16 +121,29 @@ def run_emitter(
     *,
     label: str,
     expected_code: int = 0,
+    connect: str | None = None,
+    hxml: Path = HXML,
+    environment_updates: Mapping[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
-    result = subprocess.run(
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
+    if environment_updates is not None:
+        environment.update(environment_updates)
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend(
         [
-            development_tool("haxe"),
-            str(HXML),
+            str(hxml),
             "--macro",
             macro_call(mode, output),
-        ],
+        ]
+    )
+    result = subprocess.run(
+        command,
         cwd=ROOT,
         env=environment,
         check=False,
@@ -105,6 +180,189 @@ def output_tree(output: Path) -> dict[str, bytes]:
         path.relative_to(output).as_posix(): path.read_bytes()
         for path in output_files(output)
     }
+
+
+def generated_artifact_tree(output: Path) -> dict[str, bytes]:
+    ownership = json_value(output / OWNERSHIP)
+    if not isinstance(ownership, dict):
+        raise ProjectEmitterFailure("Reflaxe ownership metadata is not a JSON object")
+    generated = ownership.get("filesGenerated")
+    if not isinstance(generated, list) or not all(
+        isinstance(path, str) for path in generated
+    ):
+        raise ProjectEmitterFailure("Reflaxe ownership metadata omitted generated paths")
+    return {path: (output / path).read_bytes() for path in generated}
+
+
+def byte_description(value: int | None) -> str:
+    return "<EOF>" if value is None else f"0x{value:02x}"
+
+
+def first_artifact_difference(
+    expected: Mapping[str, bytes], actual: Mapping[str, bytes]
+) -> ArtifactDifference | None:
+    paths = sorted(set(expected) | set(actual), key=lambda path: path.encode("utf-8"))
+    for relative in paths:
+        expected_exists = relative in expected
+        actual_exists = relative in actual
+        if expected_exists is not actual_exists:
+            expected_content = expected.get(relative, b"")
+            actual_content = actual.get(relative, b"")
+            return ArtifactDifference(
+                relative,
+                0,
+                expected_exists,
+                actual_exists,
+                expected_content[0] if expected_content else None,
+                actual_content[0] if actual_content else None,
+            )
+        expected_content = expected[relative]
+        actual_content = actual[relative]
+        shared_length = min(len(expected_content), len(actual_content))
+        for offset in range(shared_length):
+            if expected_content[offset] != actual_content[offset]:
+                return ArtifactDifference(
+                    relative,
+                    offset,
+                    True,
+                    True,
+                    expected_content[offset],
+                    actual_content[offset],
+                )
+        if len(expected_content) != len(actual_content):
+            return ArtifactDifference(
+                relative,
+                shared_length,
+                True,
+                True,
+                (
+                    expected_content[shared_length]
+                    if shared_length < len(expected_content)
+                    else None
+                ),
+                (
+                    actual_content[shared_length]
+                    if shared_length < len(actual_content)
+                    else None
+                ),
+            )
+    return None
+
+
+def assert_artifact_trees_equal(
+    expected: Mapping[str, bytes], actual: Mapping[str, bytes], label: str
+) -> None:
+    difference = first_artifact_difference(expected, actual)
+    if difference is not None:
+        raise ProjectEmitterFailure(difference.message(label))
+
+
+def check_difference_reporting() -> None:
+    cases = (
+        (
+            "synthetic content mismatch",
+            {"é.bin": b"late", "z.bin": b"abc"},
+            {"z.bin": b"abX", "é.bin": b"different"},
+            "synthetic content mismatch: first differing artifact `z.bin` "
+            "at byte offset 2 (expected 0x63, actual 0x58)",
+        ),
+        (
+            "synthetic length mismatch",
+            {"length.bin": b"abc"},
+            {"length.bin": b"ab"},
+            "synthetic length mismatch: first differing artifact `length.bin` "
+            "at byte offset 2 (expected 0x63, actual <EOF>)",
+        ),
+        (
+            "synthetic file-set mismatch",
+            {"missing.bin": b"payload"},
+            {},
+            "synthetic file-set mismatch: first differing artifact `missing.bin` "
+            "at byte offset 0 (expected artifact present, actual artifact missing)",
+        ),
+    )
+    for label, expected_tree, actual_tree, expected_message in cases:
+        try:
+            assert_artifact_trees_equal(expected_tree, actual_tree, label)
+        except ProjectEmitterFailure as error:
+            if str(error) != expected_message:
+                raise ProjectEmitterFailure(
+                    f"artifact-difference report drifted: {error}"
+                ) from error
+        else:
+            raise ProjectEmitterFailure(
+                f"artifact-difference reporter missed `{label}`"
+            )
+
+
+def stage_crlf_fixture(directory: Path) -> Path:
+    for name in ("ProjectEmitterGolden.hx", "ProjectEmitterProbe.hx"):
+        source = HXML.parent / name
+        contents = source.read_bytes()
+        if b"\r" in contents:
+            raise ProjectEmitterFailure(f"tracked fixture is not canonical LF text: {name}")
+        (directory / name).write_bytes(contents.replace(b"\n", b"\r\n"))
+    hxml = directory / "project_emitter_crlf.hxml"
+    lines = [
+        "# E1.T09 CRLF and absolute-source-root determinism probe.",
+        "",
+        f"-cp {directory.as_posix()}",
+        "-lib reflaxe.c",
+        "",
+        "-main ProjectEmitterProbe",
+        "--interp",
+    ]
+    hxml.write_bytes(("\r\n".join(lines) + "\r\n").encode("utf-8"))
+    return hxml
+
+
+def normalized_json_key(value: str) -> str:
+    return value.replace("_", "").replace("-", "").lower()
+
+
+def assert_no_unstable_json_keys(value: object, artifact: str, location: str) -> None:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            if not isinstance(key, str):
+                raise ProjectEmitterFailure(
+                    f"JSON artifact `{artifact}` has a non-string key at {location}"
+                )
+            if normalized_json_key(key) in UNSTABLE_JSON_KEYS:
+                raise ProjectEmitterFailure(
+                    f"JSON artifact `{artifact}` exposes unstable field `{key}` at {location}"
+                )
+            assert_no_unstable_json_keys(child, artifact, f"{location}.{key}")
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            assert_no_unstable_json_keys(child, artifact, f"{location}[{index}]")
+
+
+def check_no_unstable_facts(
+    tree: Mapping[str, bytes], forbidden_paths: Iterable[Path]
+) -> None:
+    encoded_paths = tuple(str(path).encode("utf-8") for path in forbidden_paths)
+    for relative, payload in tree.items():
+        if b"\r" in payload:
+            raise ProjectEmitterFailure(
+                f"generated artifact `{relative}` contains a non-canonical CR byte"
+            )
+        for forbidden in encoded_paths:
+            if forbidden and forbidden in payload:
+                raise ProjectEmitterFailure(
+                    f"generated artifact `{relative}` leaked host path {forbidden!r}"
+                )
+        if ISO_TIMESTAMP.search(payload) is not None:
+            raise ProjectEmitterFailure(
+                f"generated artifact `{relative}` contains an unstable timestamp"
+            )
+        if UUID.search(payload) is not None:
+            raise ProjectEmitterFailure(
+                f"generated artifact `{relative}` contains a random-looking UUID"
+            )
+        if relative.endswith(".json"):
+            assert_no_unstable_json_keys(
+                json.loads(payload.decode("utf-8")), relative, "$"
+            )
 
 
 def json_value(path: Path) -> object:
@@ -247,6 +505,12 @@ def check_manifest(output: Path) -> None:
     ownership = json_value(output / OWNERSHIP)
     if not isinstance(ownership, dict):
         raise ProjectEmitterFailure("Reflaxe ownership metadata is not a JSON object")
+    if ownership.get("id") != 1 or ownership.get("wasCached") is not False:
+        raise ProjectEmitterFailure(
+            "fresh Reflaxe ownership metadata contains unstable activity state: "
+            f"id={ownership.get('id')!r}, wasCached={ownership.get('wasCached')!r}, "
+            f"output={output}"
+        )
     files_generated = ownership.get("filesGenerated")
     expected_owned = sorted(set(tree) - {OWNERSHIP})
     if files_generated != expected_owned:
@@ -276,28 +540,79 @@ def check_manifest(output: Path) -> None:
         raise ProjectEmitterFailure("structural project emission selected a hidden runtime")
 
 
-def check_cross_root_and_order() -> None:
-    with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-roots-") as temporary:
-        root = Path(temporary)
-        first = root / "absolute-a" / "project"
-        second = root / "unrelated" / "absolute-b" / "project"
-        reversed_output = root / "reversed" / "project"
+def check_cross_root_order_locale_and_line_endings() -> None:
+    with (
+        tempfile.TemporaryDirectory(
+            prefix="reflaxe-c-project-root-a-"
+        ) as first_temporary,
+        tempfile.TemporaryDirectory(
+            prefix="reflaxe-c-project-root-b-"
+        ) as second_temporary,
+        tempfile.TemporaryDirectory(
+            prefix="reflaxe-c-project-variants-"
+        ) as variants_temporary,
+    ):
+        first_root = Path(first_temporary)
+        second_root = Path(second_temporary)
+        variants_root = Path(variants_temporary)
+        first = first_root / "project"
+        second = second_root / "unrelated" / "project"
+        reversed_output = variants_root / "reversed" / "project"
+        locale_output = variants_root / "locale" / "project"
+        crlf_output = variants_root / "crlf" / "project"
+        crlf_fixture = variants_root / "crlf-fixture"
+        crlf_fixture.mkdir()
         run_emitter("full", first, label="first absolute-root render")
         run_emitter("full", second, label="second absolute-root render")
         run_emitter("reverse", reversed_output, label="reverse discovery render")
+        run_emitter(
+            "full",
+            locale_output,
+            label="C.UTF-8 locale render",
+            environment_updates={"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"},
+        )
+        run_emitter(
+            "full",
+            crlf_output,
+            label="CRLF source/HXML render",
+            hxml=stage_crlf_fixture(crlf_fixture),
+        )
         first_tree = output_tree(first)
-        if first_tree != output_tree(second):
-            raise ProjectEmitterFailure(
-                "fresh project bytes changed with the absolute output directory"
-            )
-        if first_tree != output_tree(reversed_output):
-            raise ProjectEmitterFailure(
-                "project bytes changed with unit, build-fact, or symbol discovery order"
-            )
-        serialized = b"\n".join(first_tree.values())
-        for forbidden in (str(first).encode(), str(second).encode(), str(ROOT).encode()):
-            if forbidden in serialized:
-                raise ProjectEmitterFailure("project artifacts leaked an absolute host path")
+        assert_artifact_trees_equal(
+            first_tree,
+            output_tree(second),
+            "absolute-output-root determinism failure",
+        )
+        assert_artifact_trees_equal(
+            first_tree,
+            output_tree(reversed_output),
+            "module/build-fact/symbol order determinism failure",
+        )
+        assert_artifact_trees_equal(
+            first_tree,
+            output_tree(locale_output),
+            "locale determinism failure",
+        )
+        assert_artifact_trees_equal(
+            first_tree,
+            output_tree(crlf_output),
+            "source line-ending determinism failure",
+        )
+        check_no_unstable_facts(
+            first_tree,
+            (
+                ROOT,
+                first_root,
+                second_root,
+                variants_root,
+                first,
+                second,
+                reversed_output,
+                locale_output,
+                crlf_output,
+                crlf_fixture,
+            ),
+        )
         check_manifest(first)
         check_expected(first)
 
@@ -354,6 +669,199 @@ def check_stale_and_user_ownership() -> None:
             raise ProjectEmitterFailure("trimmed ownership set retained stale/user paths")
 
 
+def check_renamed_symbol_and_module_cleanup() -> None:
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-rename-") as temporary:
+        root = Path(temporary)
+        output = root / "incremental" / "project"
+        fresh = root / "fresh-renamed" / "project"
+        run_emitter("full", output, label="pre-rename project render")
+        unlisted = output / "src/emitter_fixture.user.c"
+        unlisted.write_text("user-owned renamed-neighbor\n", encoding="utf-8")
+        run_emitter("renamed", output, label="renamed symbol/module render")
+
+        for relative in ORIGINAL_PAYLOADS:
+            if (output / relative).exists():
+                raise ProjectEmitterFailure(
+                    f"renamed build retained compiler-owned artifact: {relative}"
+                )
+        for relative in RENAMED_PAYLOADS:
+            if not (output / relative).is_file():
+                raise ProjectEmitterFailure(
+                    f"renamed build omitted replacement artifact: {relative}"
+                )
+        if unlisted.read_text(encoding="utf-8") != "user-owned renamed-neighbor\n":
+            raise ProjectEmitterFailure(
+                "renamed build modified an unlisted neighboring source"
+            )
+
+        ownership = json_value(output / OWNERSHIP)
+        if not isinstance(ownership, dict):
+            raise ProjectEmitterFailure("renamed ownership metadata is invalid")
+        generated = ownership.get("filesGenerated")
+        if (
+            ownership.get("id") != 2
+            or ownership.get("wasCached") is not False
+            or not isinstance(generated, list)
+            or any(relative in generated for relative in ORIGINAL_PAYLOADS)
+            or not RENAMED_PAYLOADS.issubset(generated)
+            or "src/emitter_fixture.user.c" in generated
+        ):
+            raise ProjectEmitterFailure(
+                "renamed ownership metadata retained stale or user-owned paths"
+            )
+
+        symbols = json_value(output / "hxc.symbols.json")
+        if not isinstance(symbols, dict) or not isinstance(symbols.get("symbols"), list):
+            raise ProjectEmitterFailure("renamed symbol table is invalid")
+        raw_source_symbols = [
+            symbol.get("sourceSymbol")
+            for symbol in symbols["symbols"]
+            if isinstance(symbol, dict)
+        ]
+        if not all(isinstance(symbol, str) for symbol in raw_source_symbols):
+            raise ProjectEmitterFailure(
+                f"renamed symbol table contains an invalid source identity: {raw_source_symbols!r}"
+            )
+        source_symbols = set(raw_source_symbols)
+        expected_symbols = {
+            "fixture.RenamedApi.renamedValue",
+            "fixture.RenamedMain",
+        }
+        if source_symbols != expected_symbols:
+            raise ProjectEmitterFailure(
+                f"renamed symbol table drifted: {sorted(source_symbols)!r}"
+            )
+
+        run_emitter("renamed", fresh, label="fresh renamed project render")
+        assert_artifact_trees_equal(
+            generated_artifact_tree(fresh),
+            generated_artifact_tree(output),
+            "incremental renamed-project determinism failure",
+        )
+        check_no_unstable_facts(output_tree(fresh), (ROOT, root, output, fresh))
+        check_manifest(fresh)
+
+
+def available_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+        candidate.bind(("127.0.0.1", 0))
+        return int(candidate.getsockname()[1])
+
+
+def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            stdout, stderr = server.communicate()
+            raise ProjectEmitterFailure(
+                "Haxe compiler server exited early\n"
+                f"stdout:\n{stdout}\nstderr:\n{stderr}"
+            )
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                return
+        except OSError:
+            time.sleep(0.05)
+    raise ProjectEmitterFailure(
+        "Haxe compiler server did not accept connections within 10 seconds"
+    )
+
+
+def check_compiler_server_determinism() -> None:
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-server-") as temporary:
+        root = Path(temporary)
+        cold_full = root / "cold-full"
+        cold_renamed = root / "cold-renamed"
+        shared = root / "server-shared"
+        cached_renamed = root / "server-cached-renamed"
+        cached_reverse = root / "server-cached-reverse"
+        run_emitter("full", cold_full, label="cold server-reference render")
+        run_emitter("renamed", cold_renamed, label="cold renamed server-reference render")
+
+        port = available_port()
+        endpoint = str(port)
+        environment = os.environ.copy()
+        environment.pop("HAXE_NO_SERVER", None)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            run_emitter(
+                "full",
+                shared,
+                label="compiler-server warm-up render",
+                connect=endpoint,
+            )
+            run_emitter(
+                "renamed",
+                shared,
+                label="compiler-server incremental rename render",
+                connect=endpoint,
+            )
+            run_emitter(
+                "renamed",
+                cached_renamed,
+                label="cached compiler-server renamed render",
+                connect=endpoint,
+            )
+            run_emitter(
+                "reverse",
+                cached_reverse,
+                label="cached compiler-server reversed-order render",
+                connect=endpoint,
+            )
+
+            assert_artifact_trees_equal(
+                generated_artifact_tree(cold_renamed),
+                generated_artifact_tree(shared),
+                "compiler-server incremental rename determinism failure",
+            )
+            assert_artifact_trees_equal(
+                generated_artifact_tree(cold_renamed),
+                generated_artifact_tree(cached_renamed),
+                "cached compiler-server renamed-root determinism failure",
+            )
+            assert_artifact_trees_equal(
+                generated_artifact_tree(cold_full),
+                generated_artifact_tree(cached_reverse),
+                "cached compiler-server order determinism failure",
+            )
+
+            for relative in ORIGINAL_PAYLOADS:
+                if (shared / relative).exists():
+                    raise ProjectEmitterFailure(
+                        "compiler-server rename retained stale owned artifact "
+                        f"`{relative}`"
+                    )
+            shared_ownership = json_value(shared / OWNERSHIP)
+            if (
+                not isinstance(shared_ownership, dict)
+                or shared_ownership.get("id") != 2
+                or not isinstance(shared_ownership.get("wasCached"), bool)
+            ):
+                raise ProjectEmitterFailure(
+                    "compiler-server ownership activity state did not advance safely"
+                )
+            for output in (shared, cached_renamed, cached_reverse):
+                check_no_unstable_facts(
+                    generated_artifact_tree(output),
+                    (ROOT, root, output),
+                )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+
 def expect_guard_failure(mode: str, output: Path, label: str) -> None:
     result = run_emitter(mode, output, label=label, expected_code=1)
     if "project-emitter-fixture: OK" in result.stdout + result.stderr:
@@ -373,7 +881,13 @@ def ownership_document(files: Iterable[object]) -> str:
 
 
 def check_negative_guards() -> None:
-    for mode in ("duplicate", "invalid-path", "invalid-layout", "lowered"):
+    for mode in (
+        "duplicate",
+        "invalid-path",
+        "invalid-layout",
+        "invalid-line-endings",
+        "lowered",
+    ):
         with tempfile.TemporaryDirectory(
             prefix=f"reflaxe-c-project-{mode}-"
         ) as temporary:
@@ -496,9 +1010,12 @@ def main() -> int:
         print("project-emitter: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
-        check_cross_root_and_order()
+        check_difference_reporting()
+        check_cross_root_order_locale_and_line_endings()
         check_unchanged_write_skip()
         check_stale_and_user_ownership()
+        check_renamed_symbol_and_module_cleanup()
+        check_compiler_server_determinism()
         check_negative_guards()
         check_production_boundary()
     except (
@@ -511,9 +1028,9 @@ def main() -> int:
         print(f"project-emitter: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "project-emitter: OK: typed deterministic manifests, cross-root bytes, "
-        "content-addressed skipped writes, Reflaxe-only stale ownership, path guards, "
-        "strict runtime/ABI placeholders, and HXC1000 no-output passed"
+        "project-emitter: OK: precise byte-difference reports, isolated-root/order/"
+        "locale/CRLF/server determinism, renamed-symbol stale ownership, skipped "
+        "writes, path guards, strict placeholders, and HXC1000 no-output passed"
     )
     return 0
 

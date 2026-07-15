@@ -1,4 +1,4 @@
-# Dedicated E1.T07 deterministic multi-file project ownership test.
+# Dedicated E1.T07/E1.T09 deterministic project ownership/adversarial test.
 
 -cp test/project_emitter/
 -lib reflaxe.c

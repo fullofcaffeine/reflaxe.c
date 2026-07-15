@@ -91,6 +91,9 @@ The plan contains no output root, timestamp, locale, random value, discovery
 counter, or process identity. Payloads and build requirements are sorted by
 UTF-8 bytes; identical build facts merge their sorted declaration provenance.
 Path layout, artifact hash coverage, and sidecar status are snapshot-owned.
+The adversarial comparator orders relative paths by UTF-8 and compares raw
+bytes, reporting the first differing artifact and exact byte offset (including
+missing-path and end-of-file differences) without normalizing compiler output.
 
 Run:
 
@@ -100,12 +103,19 @@ npm run snapshots:check
 npm run test:native
 ```
 
-`test/project_emitter` proves cross-root and reversed-discovery byte identity,
-content hash accuracy, unchanged-file mtime preservation, safe stale removal,
-survival of user-owned files, unowned-collision/path/existing-or-dangling-
-symlink/malformed-JSON failures, and the unchanged production `HXC1000`
-no-output boundary. The native
-matrix independently compiles every emitted header and links/runs the emitted
-strict-C11 structural project under GCC and Clang. This is emitted-C shape and
-ownership evidence, not generated-Haxe semantic evidence or a public ABI,
-runtime, standard-library, or generated-output licensing claim.
+`test/project_emitter` proves byte identity across isolated roots, reversed
+discovery, a fixed explicit locale, CRLF source/HXML inputs with an absolute
+classpath, and real warm compiler-server requests. It scans normal artifacts
+for host paths, carriage returns, timestamp/UUID-shaped values, and unstable
+JSON keys; validates content hashes and unchanged-file mtimes; and exercises a
+full-to-renamed-symbol transition that removes every prior owned payload while
+preserving an unlisted neighboring source. Reflaxe's `_GeneratedFiles.json`
+invocation/activity fields are validated separately and excluded from the
+normal-artifact server comparison. The suite also rejects unowned collisions,
+invalid paths, existing or dangling symlinks, malformed ownership JSON, and
+non-canonical line endings before a partial write, while preserving the
+production `HXC1000` no-output boundary. The native matrix independently
+compiles every emitted header and links/runs the emitted strict-C11 structural
+project under GCC and Clang. This is emitted-C shape and ownership evidence,
+not generated-Haxe semantic evidence or a public ABI, runtime, standard-library,
+or generated-output licensing claim.

@@ -171,6 +171,12 @@ missing-metadata or missing-adapter assumptions.
 - Output must be deterministic across module order, checkout path, locale, and
   repeated/compiler-server builds. Do not embed unstable absolute paths,
   timestamps, random IDs, or map iteration order in normal artifacts.
+- Determinism evidence compares normal compiler artifacts as raw bytes. Order
+  paths by UTF-8 and report the first differing artifact plus exact byte offset;
+  do not normalize away an unexplained difference. Cover isolated roots,
+  discovery order, locale, CRLF inputs, renamed ownership, and warm compiler-
+  server reuse. Reflaxe's `_GeneratedFiles.json` invocation/activity fields are
+  engine metadata, not normal compiler artifacts, and must be tested separately.
 - Examples, tests, templates, and standard-library surfaces must not use raw
   `__c__` injection to make an unsupported path appear complete. Add a typed
   `c.*` abstraction or a reusable compiler lowering instead.
@@ -186,6 +192,28 @@ missing-metadata or missing-adapter assumptions.
   specialized helper, then the narrowest dependency-closed `hxrt` slice. Never
   add an unconditional runtime `core`; a runtime-free build contains no `hxrt`
   include, source, define, library, or symbol.
+- Apply that hierarchy as a hard compiler/stdlib optimization rule. Whenever a
+  fact is statically knowable, `hxc` must perform the semantics-preserving,
+  deterministic, and reasonably bounded work at compile time: representation
+  selection, specialization/monomorphization, constant evaluation, static
+  dispatch/devirtualization, escape/ownership/lifetime analysis, table/layout
+  construction, and dead-feature/code elimination belong in the compiler rather
+  than a generic runtime path. Do not move work into `hxrt` merely because a
+  runtime implementation is easier. Never precompute observable runtime effects
+  or accept pathological compiler cost/code-size growth; when such a tradeoff
+  requires runtime work, record the concrete reason in the analysis/runtime plan.
+- Lower Haxe standard-library operations through the same order: emit direct
+  idiomatic C or a C-library/intrinsic operation when it preserves the Haxe
+  contract, otherwise emit a program-local type/value-specialized helper, and
+  select `hxrt` only for semantics that genuinely depend on runtime state or
+  values, justified shared machinery, or an unavoidable platform/ABI service.
+  A one-wrapper-per-stdlib-method runtime is not an acceptable default design.
+- Treat selected `hxrt` code as production performance-critical code. Keep each
+  slice narrow, typed, warning-clean, allocation- and code-size-conscious, and
+  free of general boxing/reflection when reachability or specialization can
+  remove it. Hot helpers require owning benchmarks/profiles plus regression
+  coverage for throughput/latency, allocations, and code size as applicable;
+  never call an `hxrt` path optimized or fast without reproducible evidence.
 - Runtime warnings identify deduplicated root semantic requirements at source
   spans. Transitive dependencies belong in `hxc.runtime-plan.json`, not as
   repetitive warnings. Every successful build, including an empty plan, records
