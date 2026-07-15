@@ -1,0 +1,7 @@
+# Dedicated E1.T01 structural C declarator golden test.
+
+-cp test/c_ast/
+-lib reflaxe.c
+
+-main CASTGolden
+--interp

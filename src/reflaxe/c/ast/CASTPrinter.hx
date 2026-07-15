@@ -5,12 +5,14 @@ import reflaxe.c.ast.CAST;
 /** Deterministic C11 printer seed. Formatting is intentionally boring. */
 class CASTPrinter {
 	final indentUnit:String;
+	final dialect:CDialect;
 	var indent:Int = 0;
 
-	public function new(indentUnit:String = "  ") {
+	public function new(indentUnit:String = "  ", dialect:CDialect = StrictC11) {
 		if (indentUnit == "")
 			throw "C AST indent unit must not be empty";
 		this.indentUnit = indentUnit;
+		this.dialect = dialect;
 	}
 
 	public function printTranslationUnit(unit:CTranslationUnit):String {
@@ -52,16 +54,17 @@ class CASTPrinter {
 			case DComment(text): printComment(text);
 			case DRawCompilerOwned(text): text;
 			case DStaticAssert(condition, message): '_Static_assert(${printExpr(condition, 3)}, ${quote(message)});';
-			case DForwardStruct(name): 'struct $name;';
-			case DForwardUnion(name): 'union $name;';
+			case DForwardStruct(name, attributes): joinTokens(['struct ${identifier(name)}', printAttributes(attributes)]) + ";";
+			case DForwardUnion(name, attributes): joinTokens(['union ${identifier(name)}', printAttributes(attributes)]) + ";";
 			case DStruct(name, fields, attributes): printAggregate("struct", name, fields, attributes);
 			case DUnion(name, fields, attributes): printAggregate("union", name, fields, attributes);
 			case DEnum(name, values, attributes): printEnum(name, values, attributes);
-			case DTypedef(type, declarator): 'typedef ${printTypedDeclarator(type, declarator)};';
+			case DTypedef(type, declarator, attributes): joinTokens(["typedef", printTypedDeclarator(type, declarator), printAttributes(attributes)]) + ";";
 			case DVariable(variable): printVariable(variable) + ";";
-			case DPrototype(storage, returnType, declarator, attributes):
+			case DPrototype(storage, functionSpecifiers, returnType, declarator, attributes):
 				joinTokens([
 					printStorage(storage),
+					printFunctionSpecifiers(functionSpecifiers),
 					printType(returnType),
 					printDeclarator(declarator),
 					printAttributes(attributes)
@@ -93,7 +96,7 @@ class CASTPrinter {
 			case SReturn(value): line(value == null ? "return;" : 'return ${printExpr(value)};');
 			case SBreak: line("break;");
 			case SContinue: line("continue;");
-			case SGoto(labelName): line('goto $labelName;');
+			case SGoto(labelName): line('goto ${identifier(labelName)};');
 			case SLabel(labelName, statement): printLabel(labelName, statement);
 		}
 	}
@@ -101,7 +104,7 @@ class CASTPrinter {
 	public function printExpr(expr:CExpr, parentPrecedence:Int = 0):String {
 		final current = precedence(expr);
 		final rendered = switch expr {
-			case EIdentifier(name): name;
+			case EIdentifier(name): identifier(name);
 			case EInt(value): value;
 			case EFloat(value): value;
 			case EString(value): quote(value);
@@ -115,7 +118,7 @@ class CASTPrinter {
 			case ECall(callee, args):
 				'${printExpr(callee, 15)}(${args.map(arg -> printExpr(arg, 2)).join(", ")})';
 			case EIndex(target, index): '${printExpr(target, 15)}[${printExpr(index)}]';
-			case EMember(target, field, throughPointer): '${printExpr(target, 15)}${throughPointer ? "->" : "."}$field';
+			case EMember(target, field, throughPointer): '${printExpr(target, 15)}${throughPointer ? "->" : "."}${identifier(field)}';
 			case ECast(type, declarator, value): '(${printTypeName(type, declarator)})${printExpr(value, 14)}';
 			case ESizeOfType(type, declarator): 'sizeof(${printTypeName(type, declarator)})';
 			case EAlignOfType(type, declarator): '_Alignof(${printTypeName(type, declarator)})';
@@ -131,13 +134,16 @@ class CASTPrinter {
 	}
 
 	public function printType(type:CType):String {
-		final qualifiers = type.qualifiers.map(q -> cast(q, String));
+		if (isAtomicTypeSpecifier(type.spec) && type.qualifiers.contains(QAtomic))
+			throw "A C atomic type specifier cannot also carry the _Atomic qualifier";
+
 		final spec = switch type.spec {
 			case TVoid: "void";
 			case TBool: "bool";
 			case TChar(null): "char";
 			case TChar(true): "signed char";
 			case TChar(false): "unsigned char";
+			case TNativeInt(rank, signed): printNativeInteger(rank, signed);
 			case TInt(8, true): "int8_t";
 			case TInt(8, false): "uint8_t";
 			case TInt(16, true): "int16_t";
@@ -149,42 +155,51 @@ class CASTPrinter {
 			case TInt(bits, _): throw 'Unsupported exact-width C integer: $bits bits';
 			case TFloat: "float";
 			case TDouble: "double";
-			case TNamed(name): name;
-			case TStruct(name): 'struct $name';
-			case TUnion(name): 'union $name';
-			case TEnum(name): 'enum $name';
+			case TLongDouble: "long double";
+			case TComplex(realType): printRealType(realType) + " _Complex";
+			case TNamed(name): identifier(name);
+			case TStruct(name): 'struct ${identifier(name)}';
+			case TUnion(name): 'union ${identifier(name)}';
+			case TEnum(name): 'enum ${identifier(name)}';
+			case TStructDefinition(name, fields, attributes): printAggregateSpecifier("struct", name, fields, attributes);
+			case TUnionDefinition(name, fields, attributes): printAggregateSpecifier("union", name, fields, attributes);
+			case TEnumDefinition(name, values, attributes): printEnumSpecifier(name, values, attributes);
+			case TAtomic(atomicType, declarator):
+				if (declaratorIdentifier(declarator) != null)
+					throw "_Atomic(type-name) requires an abstract declarator";
+				'_Atomic(${printTypeName(atomicType, declarator)})';
 		}
-		qualifiers.push(spec);
-		return qualifiers.join(" ");
+		return joinTokens([printQualifiers(type.qualifiers), spec]);
 	}
 
 	/**
-		Prints grammar-level declarators. Callers express semantic grouping with
-		`DGroup`; the printer never guesses pointer/function/array association.
+		Prints the C declarator grammar tree. `DGroup` is an explicit source-level
+		parenthesized declarator, so precedence never has to be reverse-engineered.
 	 */
 	public function printDeclarator(declarator:CDeclarator):String {
 		return switch declarator {
-			case DName(name): name;
+			case DName(null): "";
+			case DName(name): identifier(name);
 			case DPointer(inner, qualifiers):
-				final qualifierText = qualifiers.map(q -> cast(q, String)).join(" ");
+				final qualifierText = printQualifiers(qualifiers);
 				"*" + (qualifierText == "" ? "" : qualifierText + " ") + printDeclarator(inner);
-			case DArray(inner, size, isStatic, qualifiers):
+			case DArray(inner, bound, qualifiers):
 				final parts:Array<String> = [];
-				if (isStatic)
-					parts.push("static");
-				for (qualifier in qualifiers)
-					parts.push(cast(qualifier, String));
-				if (size != null)
-					parts.push(printExpr(size, 2));
+				final qualifierText = printQualifiers(qualifiers);
+				if (qualifierText != "")
+					parts.push(qualifierText);
+				switch bound {
+					case ABIncomplete:
+					case ABVariable: parts.push("*");
+					case ABFixed(size): parts.push(printExpr(size, 2));
+					case ABStaticMinimum(size):
+						parts.push("static");
+						parts.push(printExpr(size, 2));
+				}
 				'${printDeclarator(inner)}[${parts.join(" ")}]';
-			case DFunction(inner, params, variadic):
-				final values = params.map(param -> printTypedDeclarator(param.type, param.declarator));
-				if (variadic)
-					values.push("...");
-				if (values.length == 0)
-					values.push("void");
-				'${printDeclarator(inner)}(${values.join(", ")})';
+			case DFunction(inner, parameters): '${printDeclarator(inner)}(${printFunctionParameters(parameters)})';
 			case DGroup(inner): '(${printDeclarator(inner)})';
+			case DAttributed(inner, attributes): joinTokens([printAttributes(attributes), printDeclarator(inner)]);
 		}
 	}
 
@@ -195,6 +210,7 @@ class CASTPrinter {
 	function printFunction(definition:CFunctionDef):String {
 		final header = joinTokens([
 			printStorage(definition.storage),
+			printFunctionSpecifiers(definition.functionSpecifiers),
 			printType(definition.returnType),
 			printDeclarator(definition.declarator),
 			printAttributes(definition.attributes)
@@ -205,6 +221,7 @@ class CASTPrinter {
 	function printVariable(variable:CVariableDecl):String {
 		final left = joinTokens([
 			printStorage(variable.storage),
+			printAlignments(variable.alignments),
 			printType(variable.type),
 			printDeclarator(variable.declarator),
 			printAttributes(variable.attributes)
@@ -218,7 +235,7 @@ class CASTPrinter {
 			case IList(items):
 				final rendered = items.map(item -> {
 					final prefix = item.designators.map(designator -> switch designator {
-						case DField(name): '.$name';
+						case DField(name): '.${identifier(name)}';
 						case DIndex(index): '[${printExpr(index)}]';
 					}).join("");
 					(prefix == "" ? "" : prefix + " = ") + printInitializer(item.value);
@@ -227,31 +244,48 @@ class CASTPrinter {
 		}
 	}
 
-	function printAggregate(keyword:String, name:String, fields:Array<CField>, attributes:Array<String>):String {
-		final out:Array<String> = [];
-		out.push(joinTokens(['$keyword $name', printAttributes(attributes)]) + " {");
+	function printAggregate(keyword:String, name:Null<CIdentifier>, fields:Array<CField>, attributes:Array<CAttribute>):String {
+		return printAggregateSpecifier(keyword, name, fields, attributes) + ";";
+	}
+
+	function printAggregateSpecifier(keyword:String, name:Null<CIdentifier>, fields:Array<CField>, attributes:Array<CAttribute>):String {
+		if (fields.length == 0)
+			throw 'A complete C11 $keyword definition must contain at least one field';
+		final tag = name == null ? keyword : '$keyword ${identifier(name)}';
+		final out:Array<String> = [joinTokens([tag, printAttributes(attributes)]) + " {"];
 		indent++;
 		for (field in fields) {
 			final bit = field.bitWidth == null ? "" : ' : ${printExpr(field.bitWidth, 3)}';
-			out.push(line(printTypedDeclarator(field.type, field.declarator) + bit + ";"));
+			out.push(line(joinTokens([
+				printAlignments(field.alignments),
+				printTypedDeclarator(field.type, field.declarator),
+				printAttributes(field.attributes)
+			]) + bit + ";"));
 		}
 		indent--;
-		out.push(line("};"));
+		out.push(line("}"));
 		return out.join("\n");
 	}
 
-	function printEnum(name:String, values:Array<CEnumerator>, attributes:Array<String>):String {
+	function printEnum(name:Null<CIdentifier>, values:Array<CEnumerator>, attributes:Array<CAttribute>):String {
+		return printEnumSpecifier(name, values, attributes) + ";";
+	}
+
+	function printEnumSpecifier(name:Null<CIdentifier>, values:Array<CEnumerator>, attributes:Array<CAttribute>):String {
+		if (values.length == 0)
+			throw "A complete C11 enum definition must contain at least one enumerator";
+		final tag = name == null ? "enum" : 'enum ${identifier(name)}';
 		final out:Array<String> = [];
-		out.push(joinTokens(['enum $name', printAttributes(attributes)]) + " {");
+		out.push(joinTokens([tag, printAttributes(attributes)]) + " {");
 		indent++;
 		for (index in 0...values.length) {
 			final value = values[index];
 			final assignment = value.value == null ? "" : ' = ${printExpr(value.value, 3)}';
 			final comma = index + 1 < values.length ? "," : "";
-			out.push(line(value.name + assignment + comma));
+			out.push(line(joinTokens([identifier(value.name), printAttributes(value.attributes)]) + assignment + comma));
 		}
 		indent--;
-		out.push(line("};"));
+		out.push(line("}"));
 		return out.join("\n");
 	}
 
@@ -279,10 +313,10 @@ class CASTPrinter {
 		return result;
 	}
 
-	function printLabel(labelName:String, statement:CStmt):String {
+	function printLabel(labelName:CIdentifier, statement:CStmt):String {
 		final previous = indent;
 		indent = 0;
-		final header = line('$labelName:');
+		final header = line('${identifier(labelName)}:');
 		indent = previous + 1;
 		final body = switch statement {
 			// In C11 a label cannot directly prefix a declaration. A block is a statement.
@@ -422,11 +456,179 @@ class CASTPrinter {
 		}
 	}
 
-	function printStorage(storage:Array<CStorage>):String
-		return storage.map(value -> cast(value, String)).join(" ");
+	function printStorage(storage:Array<CStorage>):String {
+		final tokens = storage.map(storageToken);
+		ensureUnique(tokens, "storage-class specifier");
+		if (storage.length > 1) {
+			final validThreadCombination = storage.length == 2
+				&& storage.contains(SThreadLocal)
+				&& (storage.contains(SExtern) || storage.contains(SStatic));
+			if (!validThreadCombination)
+				throw "C11 permits multiple storage-class specifiers only for _Thread_local with static or extern";
+		}
+		final canonical = [STypedef, SExtern, SStatic, SThreadLocal, SAuto, SRegister];
+		return canonical.filter(value -> storage.contains(value)).map(storageToken).join(" ");
+	}
 
-	function printAttributes(attributes:Array<String>):String
-		return attributes.join(" ");
+	function printFunctionSpecifiers(specifiers:Array<CFunctionSpecifier>):String {
+		final tokens = specifiers.map(functionSpecifierToken);
+		ensureUnique(tokens, "function specifier");
+		return [FInline, FNoReturn].filter(value -> specifiers.contains(value)).map(functionSpecifierToken).join(" ");
+	}
+
+	function printQualifiers(qualifiers:Array<CQualifier>):String {
+		final tokens = qualifiers.map(qualifierToken);
+		ensureUnique(tokens, "type qualifier");
+		return [QConst, QRestrict, QVolatile, QAtomic].filter(value -> qualifiers.contains(value)).map(qualifierToken).join(" ");
+	}
+
+	function printAlignments(alignments:Array<CAlignment>):String {
+		return alignments.map(alignment -> switch alignment {
+			case AlignExpr(value): '_Alignas(${printExpr(value, 2)})';
+			case AlignType(type, declarator):
+				if (declaratorIdentifier(declarator) != null)
+					throw "_Alignas(type-name) requires an abstract declarator";
+				'_Alignas(${printTypeName(type, declarator)})';
+		}).join(" ");
+	}
+
+	function printAttributes(attributes:Array<CAttribute>):String {
+		if (attributes.length == 0)
+			return "";
+		if (dialect == StrictC11)
+			throw "Compiler-extension attributes require an explicit GNU or Clang C11 dialect";
+		return '__attribute__((${attributes.map(printAttribute).join(", ")}))';
+	}
+
+	function printAttribute(attribute:CAttribute):String {
+		return switch attribute {
+			case APacked: "packed";
+			case AAligned(null): "aligned";
+			case AAligned(value): 'aligned(${printExpr(value, 2)})';
+			case ASection(name):
+				if (name == "")
+					throw "C section attribute name must not be empty";
+				'section(${quote(name)})';
+			case AVisibility(visibility): 'visibility(${quote(visibilityToken(visibility))})';
+			case ACallingConvention(CCVectorcall) if (dialect != ClangC11):
+				throw "vectorcall requires the Clang C11 extension dialect";
+			case ACallingConvention(convention): callingConventionToken(convention);
+			case AUsed: "used";
+			case AUnused: "unused";
+			case AWeak: "weak";
+		}
+	}
+
+	function printFunctionParameters(parameters:CFunctionParameters):String {
+		return switch parameters {
+			case FPPrototype(params, variadic):
+				if (variadic && params.length == 0)
+					throw "A C11 variadic prototype requires at least one named parameter";
+				final values = params.map(param -> joinTokens([
+					printTypedDeclarator(param.type, param.declarator),
+					printAttributes(param.attributes)
+				]));
+				if (variadic)
+					values.push("...");
+				if (values.length == 0)
+					values.push("void");
+				values.join(", ");
+			case FPUnspecified: "";
+			case FPIdentifierList(names):
+				if (names.length == 0)
+					throw "A C identifier-list declarator must contain at least one identifier";
+				names.map(identifier).join(", ");
+		}
+	}
+
+	function printNativeInteger(rank:CNativeIntegerRank, signed:Bool):String {
+		final rankToken = switch rank {
+			case IRShort: "short";
+			case IRInt: "int";
+			case IRLong: "long";
+			case IRLongLong: "long long";
+		}
+		return signed ? rankToken : "unsigned " + rankToken;
+	}
+
+	function isAtomicTypeSpecifier(specifier:CTypeSpec):Bool {
+		return switch specifier {
+			case TAtomic(_, _): true;
+			case _: false;
+		}
+	}
+
+	function printRealType(realType:CRealType):String {
+		return switch realType {
+			case RFloat: "float";
+			case RDouble: "double";
+			case RLongDouble: "long double";
+		}
+	}
+
+	function storageToken(storage:CStorage):String {
+		return switch storage {
+			case SAuto: "auto";
+			case SExtern: "extern";
+			case SStatic: "static";
+			case SRegister: "register";
+			case SThreadLocal: "_Thread_local";
+			case STypedef: "typedef";
+		}
+	}
+
+	function functionSpecifierToken(specifier:CFunctionSpecifier):String {
+		return switch specifier {
+			case FInline: "inline";
+			case FNoReturn: "_Noreturn";
+		}
+	}
+
+	function qualifierToken(qualifier:CQualifier):String {
+		return switch qualifier {
+			case QConst: "const";
+			case QRestrict: "restrict";
+			case QVolatile: "volatile";
+			case QAtomic: "_Atomic";
+		}
+	}
+
+	function callingConventionToken(convention:CCallingConvention):String {
+		return switch convention {
+			case CCCdecl: "cdecl";
+			case CCStdcall: "stdcall";
+			case CCFastcall: "fastcall";
+			case CCVectorcall: "vectorcall";
+		}
+	}
+
+	function visibilityToken(visibility:CVisibility):String {
+		return switch visibility {
+			case VDefault: "default";
+			case VHidden: "hidden";
+			case VProtected: "protected";
+			case VInternal: "internal";
+		}
+	}
+
+	function declaratorIdentifier(declarator:CDeclarator):Null<CIdentifier> {
+		return switch declarator {
+			case DName(name): name;
+			case DPointer(inner, _) | DArray(inner, _, _) | DFunction(inner, _) | DGroup(inner) | DAttributed(inner, _): declaratorIdentifier(inner);
+		}
+	}
+
+	function identifier(value:CIdentifier):String
+		return value.value;
+
+	function ensureUnique(values:Array<String>, kind:String):Void {
+		final seen:Map<String, Bool> = [];
+		for (value in values) {
+			if (seen.exists(value))
+				throw 'Duplicate C $kind: $value';
+			seen.set(value, true);
+		}
+	}
 
 	function includeKindOrder(kind:CIncludeKind):Int
 		return switch kind {

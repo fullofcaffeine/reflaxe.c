@@ -147,7 +147,8 @@ The current checkout contains:
   stdlib-branch, conflict, package, and compiler-server probes;
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
-- a structured C AST and printer seed;
+- a structured C11 type/declarator AST with a deterministic golden compiled by
+  both GCC and Clang, plus an expression/statement printer seed;
 - a provisional standalone `hxrt` allocator/string/status/Int32 ABI seed with
   strict hosted and freestanding compilation plus C++17 header consumption; it
   is not yet selected or linked by generated programs;
@@ -189,6 +190,7 @@ python3 scripts/ci/check_toolchain.py --require-tools
 python3 test/all_sources/run.py
 python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
+python3 test/c_ast/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_license_policy.py
 ```

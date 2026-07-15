@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail closed when the required M0 CI/native-smoke wiring drifts."""
+"""Fail closed when required toolchain and native-smoke wiring drifts."""
 
 from __future__ import annotations
 
@@ -19,6 +19,10 @@ REQUIRED_NATIVE_FILES = (
     "runtime/hxrt/src/hxc_runtime.c",
     "runtime/hxrt/test/runtime_smoke.c",
     "runtime/hxrt/test/public_header_cpp.cpp",
+    "test/c_ast/CASTGolden.hx",
+    "test/c_ast/c_ast.hxml",
+    "test/c_ast/expected/declarators.c",
+    "test/c_ast/run.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -74,6 +78,10 @@ def validate() -> list[str]:
         scripts = {}
     if scripts.get("test:native") != "python3 scripts/ci/runtime_smoke.py":
         errors.append("package.json must retain the test:native entry point")
+    if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
+        errors.append("package.json must retain the test:c-ast entry point")
+    if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:c-ast")
     if "npm run test:native" not in str(scripts.get("test", "")):
         errors.append("package.json test must execute test:native")
     if "python3 scripts/ci/check_ci_policy.py" not in str(
@@ -91,6 +99,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the native smoke harness for relevant changes")
     if "scripts/ci/check_ci_policy.py" not in pre_commit:
         errors.append("pre-commit must validate required CI wiring")
+    if "test/c_ast/run.py" not in pre_commit:
+        errors.append("pre-commit must run the structural C AST golden test")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):
@@ -98,6 +108,8 @@ def validate() -> list[str]:
             errors.append(f"native smoke runner lost strict flag {required_flag}")
     if "required toolchain" not in runner or "SKIP" not in runner:
         errors.append("native smoke runner must distinguish required failures from optional skips")
+    if "structural-c-ast-golden-run" not in runner or "C_AST_GOLDEN" not in runner:
+        errors.append("native smoke runner must compile and execute the structural C AST golden")
 
     return errors
 

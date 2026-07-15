@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile and execute the M0 native seed under strict C/C++ toolchains."""
+"""Compile and execute native seeds and generated goldens under strict toolchains."""
 
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCE = ROOT / "runtime/hxrt/src/hxc_runtime.c"
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
+C_AST_GOLDEN = ROOT / "test/c_ast/expected/declarators.c"
 POINTLIB = ROOT / "test/native/pointlib"
 CPP_SHIM = ROOT / "test/native/cpp_shim"
 
@@ -205,6 +206,29 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     build.mkdir(parents=True, exist_ok=True)
     family = toolchain.family
     lanes: list[str] = []
+
+    c_ast_object = build / "c_ast_golden.o"
+    c_ast_executable = build / "c_ast_golden"
+    compile_object(
+        toolchain.cc,
+        C_STRICT_FLAGS,
+        C_AST_GOLDEN,
+        c_ast_object,
+        includes=(),
+        label=f"{family} structural C AST golden",
+    )
+    link_executable(
+        toolchain.cc,
+        (c_ast_object,),
+        c_ast_executable,
+        label=f"{family} structural C AST golden link",
+    )
+    run_executable(
+        c_ast_executable,
+        "c-ast-golden: OK",
+        label=f"{family} structural C AST golden execution",
+    )
+    lanes.append("structural-c-ast-golden-run")
 
     runtime_object = build / "hxc_runtime.o"
     runtime_smoke_object = build / "runtime_smoke.o"

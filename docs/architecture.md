@@ -55,6 +55,19 @@ A compilation produces multiple file categories and sidecar reports. `Manual` le
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
+The type model normalizes base specifiers and keeps them separate from a
+grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and
+abstract declarators therefore retain their association without reconstructing
+or parsing target-code strings. Final C tokens use validated `CIdentifier`
+values; array bounds, parameter-list forms, C11 alignment/atomics, anonymous
+aggregate specifiers, and compiler attributes remain typed nodes.
+
+The printer's default dialect is strict ISO C11. Compiler attributes are
+explicit extension nodes and require an explicit GNU or Clang mode. The
+`test/c_ast` Haxe fixture renders a deterministic declarator golden, while the
+required GCC and Clang lanes compile and execute that checked-in C. This is a
+direct AST/printer proof only; Haxe-to-HxcIR-to-C lowering remains fail-closed.
+
 ## Target and native baseline
 
 The Haxe target identity is `c`: production typing uses
