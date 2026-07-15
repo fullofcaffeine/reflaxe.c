@@ -148,6 +148,11 @@ The current checkout contains:
 - zero-runtime `c.*` contract types plus deterministic typed declaration/build
   metadata validation and `HXC5002` negative fixtures;
 - a structured C AST and printer seed;
+- a provisional standalone `hxrt` allocator/string/status/Int32 ABI seed with
+  strict hosted and freestanding compilation plus C++17 header consumption; it
+  is not yet selected or linked by generated programs;
+- independent native C-library and opaque-handle C++-shim fixtures that validate
+  the future interop boundaries without pretending they were generated;
 - a fail-closed third-party provenance and release-notice policy;
 - a live Beads execution graph covering the planned milestones.
 
@@ -159,7 +164,8 @@ not a publishable compiler. Those capabilities remain tracked work.
 ## Explore the scaffold
 
 Use Node.js 20 or newer; `npm ci` installs the pinned Lix shim and resolves the
-exact Haxe 5.0.0-preview.1 release. Contributors also need `bd`, `jq`,
+exact Haxe 5.0.0-preview.1 release. Contributors also need at least one matched
+GCC/G++ or Clang/Clang++ pair, plus `bd`, `jq`,
 [Gitleaks](https://github.com/gitleaks/gitleaks), and the Haxe formatter. Then
 activate the tracked pre-commit chain:
 
@@ -183,6 +189,7 @@ python3 scripts/ci/check_toolchain.py --require-tools
 python3 test/all_sources/run.py
 python3 test/bootstrap/run.py
 python3 test/typed_c/run.py
+python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_license_policy.py
 ```
 

@@ -76,10 +76,10 @@ acceptance criteria, scaffold code, then examples/comments.
 The current checkout is a deliberately partial slice of the fuller scaffold
 described by PRD Section 32. Verify files with `rg --files` before citing or
 running them. In particular, this checkout currently lacks several documented
-assets, including `CODEX_HANDOFF.md`, some schemas, examples, runtime
-implementation sources, and the CLI implementation. The pinned
-Haxe/Reflaxe/Lix package metadata, M0 target API contracts, and minimal compiler
-lifecycle are present and compile-verified; do not repeat older
+assets, including `CODEX_HANDOFF.md`, some schemas, examples, runtime feature
+planning and broad runtime implementation, and the CLI implementation. The
+pinned Haxe/Reflaxe/Lix package metadata, M0 target API contracts, and minimal
+compiler lifecycle are present and compile-verified; do not repeat older
 missing-metadata or missing-adapter assumptions.
 
 - A path named in the PRD is not proof that it exists here.
@@ -120,6 +120,11 @@ missing-metadata or missing-adapter assumptions.
   `c.*` abstraction or a reusable compiler lowering instead.
 - Runtime support is a feature graph. Every selected helper needs a stable
   feature ID and a source reason; unused features must remain absent.
+- The checked-in `runtime/hxrt` implementation is a provisional native smoke
+  seed for its public header, not an unconditional runtime core and not evidence
+  that generated Haxe selects or links it. Keep fixture-only C/C++ code under
+  `runtime/hxrt/test` or `test/native`; never describe those independent native
+  inputs as generated output.
 - Runtime planning happens only after direct-representation, escape/lifetime,
   and specialization decisions. Prefer direct idiomatic C, then a program-local
   specialized helper, then the narrowest dependency-closed `hxrt` slice. Never
@@ -269,6 +274,13 @@ missing-metadata or missing-adapter assumptions.
 - Strict ISO C11 with no extensions is the normative generated-source, runtime,
   fixture, and public-header floor. C17 preserves that contract; C23 internal
   syntax remains experimental and cannot silently alter semantics or ABI.
+- `scripts/ci/runtime_smoke.py` owns the M0 native warning baseline and must
+  compile hosted/freestanding runtime paths, the public header from C++17, the
+  C-library fixture, and the opaque-handle C++ shim. Auto mode may skip an
+  unavailable optional compiler family only with an explicit `SKIP` reason and
+  must run at least one complete C/C++ pair. CI passes `--toolchain gcc` and
+  `--toolchain clang` in separate required lanes; either missing, mislabeled,
+  unrun, warning-producing, or failing lane is a hard failure.
 - Direct Haxe/Reflaxe builds activate through
   `--custom-target c=<directory>` and expose the public `c` target conditional.
   The compiler owns `target.name=c`; use `target.unicode` without
@@ -369,22 +381,23 @@ bash scripts/lint/whitespace_guard.sh
 `npm test` verifies the exact dependency lock, vendored Reflaxe checksum, the
 complete current target-owned Haxe graph and explicit macro branches,
 source/package lifecycle behavior, cold/compiler-server C/non-C isolation,
-macro order, notices, and governance policy. The all-source pass proves only
-that the scaffold type-checks; it does not claim semantic lowering,
-generated-C, or native-runtime success.
+macro order, the available local strict native smoke lanes, notices, and
+governance policy. GitHub CI additionally requires distinct GCC/G++ and
+Clang/Clang++ lanes. The all-source and native-seed passes do not claim semantic
+lowering or generated-C success.
 
 After cloning, run `scripts/hooks/install.sh`. The tracked pre-commit chain
 keeps `.beads/hooks` as `core.hooksPath` so Beads checkout/merge/push hooks
 remain active while repository checks run first. It exports/stages Beads JSONL,
 formats repository-owned staged Haxe, preserves immutable vendor bytes, rejects
 staged secrets and machine-local paths, checks whitespace, verifies dependency
-checksums, enforces the license/provenance inventory, and runs relevant JSON or
-public-header gates. Gitleaks is required; the formatter haxelib is required when
-repository-owned Haxe files are staged. Do not bypass the hook to publish a
-failing change; record and fix the underlying gate instead.
+checksums, enforces the license/provenance inventory, and runs relevant JSON,
+Haxe, or strict native gates. Gitleaks is required; the formatter haxelib is
+required when repository-owned Haxe files are staged. Do not bypass the hook to
+publish a failing change; record and fix the underlying gate instead.
 
 Claim Haxe/Reflaxe source-graph type-checking only with the dedicated all-source
-gate. Do not claim runtime linking, generated-program execution, sanitizers,
+gate. Do not claim generated-program runtime linking/execution, sanitizers,
 cross-platform CI, bindgen, export, or stdlib parity until the responsible issue
 adds a real command and that command passes.
 

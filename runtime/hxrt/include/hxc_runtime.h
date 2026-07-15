@@ -1,6 +1,8 @@
 #ifndef HXC_RUNTIME_H_INCLUDED
 #define HXC_RUNTIME_H_INCLUDED
 
+/* Provisional M0 smoke-test ABI; generated programs do not select it yet. */
+
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>

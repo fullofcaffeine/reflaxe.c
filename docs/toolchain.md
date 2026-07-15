@@ -72,6 +72,21 @@ The temporary package is a validation fixture, not authorization to publish a
 release. Generated-output, template, and runtime-slice licensing remains owned
 by Beads decision `haxe_c-od2.5`.
 
+## Native smoke matrix
+
+`npm test` also runs `python3 scripts/ci/runtime_smoke.py`. Local auto mode
+examines compiler identity rather than command names, runs every complete
+GCC/G++ or Clang/Clang++ pair it finds, reports unavailable or aliased families
+as explicit optional `SKIP` lines, and fails if no complete pair actually runs.
+
+GitHub CI does not use that optional discovery contract. Its independent matrix
+invokes `--toolchain gcc` and `--toolchain clang`; each named C11/C++17 pair is
+required and a missing or mismatched executable is an error. Both lanes compile
+with warnings as errors, run the hosted runtime seed and native fixtures,
+compile the freestanding runtime path, and link a C++17 consumer of the public C
+header. These are native seed/interop checks, not generated-Haxe evidence or a
+runtime feature-selection claim.
+
 ## Activation sequence
 
 Direct Haxe/HXML use remains the compiler foundation:

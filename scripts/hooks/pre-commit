@@ -96,10 +96,10 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/|src/reflaxe/c/(contract|ma
   python3 "$ROOT_DIR/test/typed_c/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -qx 'runtime/hxrt/include/hxc_runtime.h'; then
-  echo "[pre-commit] Validating the public runtime header as C11 and C++17..."
-  cc -std=c11 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c-header runtime/hxrt/include/hxc_runtime.h
-  c++ -std=c++17 -Wall -Wextra -Werror -pedantic -fsyntax-only -x c++-header runtime/hxrt/include/hxc_runtime.h
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|test/native/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+  echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
+  python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
+  python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"
 fi
 
 if [ ! -s "$ROOT_DIR/LICENSE" ]; then
