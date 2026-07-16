@@ -102,7 +102,8 @@ class CCompiler {
 				runtimePolicyProvenance: configuration.runtimePolicyProvenance,
 				runtimeDiagnosticsProvenance: configuration.runtimeDiagnosticsProvenance,
 				units: units,
-				buildFacts: [],
+				buildFacts: lowered.buildFacts,
+				primitiveHelperIds: lowered.helpers.map(helper -> helper.helperId),
 				symbolTable: lowered.symbolTable
 			});
 		} catch (error:CBodyLoweringError) {

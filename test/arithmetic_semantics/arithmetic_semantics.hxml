@@ -1,0 +1,8 @@
+-cp test/arithmetic_semantics/
+-cp test/arithmetic_semantics/fixtures/
+-lib reflaxe.c
+
+--macro ArithmeticSemanticsProbe.install()
+
+-main ArithmeticFixture
+--interp

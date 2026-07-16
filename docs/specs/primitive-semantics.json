@@ -195,6 +195,7 @@
   ],
   "requirements": [
     "HXC-SEM-001",
+    "HXC-SEM-002",
     "HXC-SEM-003",
     "HXC-SEM-005"
   ],
@@ -264,8 +265,8 @@
     "runtimeFeatures": [],
     "cDialect": "strict ISO C11"
   },
-  "status": "semantic-contract-no-production-c-lowering",
-  "schemaVersion": 1,
+  "status": "production-primitive-arithmetic-slice",
+  "schemaVersion": 2,
   "representations": [
     {
       "storage": "no-value",
@@ -605,5 +606,496 @@
     }
   ],
   "haxeBaseline": "5.0.0-preview.1",
-  "algorithm": "hxc-primitive-semantics-v1"
+  "algorithm": "hxc-primitive-semantics-v2",
+  "operations": [
+    {
+      "edgeCases": [
+        "compute through a direct uint64_t intermediate and retain the low 32 bits, independent of C integer promotions",
+        "reconstruct int32_t without an out-of-range unsigned-to-signed cast"
+      ],
+      "id": "int-negate",
+      "operationId": "haxe.i32.negate",
+      "sourceOperandTypes": [
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.negate.wrapping"
+    },
+    {
+      "edgeCases": [
+        "operate on the uint32_t bit representation through an explicitly unsigned widened intermediate",
+        "reconstruct int32_t without implementation-defined signed conversion"
+      ],
+      "id": "int-bit-not",
+      "operationId": "haxe.i32.bit-not",
+      "sourceOperandTypes": [
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.bit-not"
+    },
+    {
+      "edgeCases": [
+        "binary64 NaN, infinity, and signed-zero behavior is preserved",
+        "fast-math is forbidden"
+      ],
+      "id": "float-negate",
+      "operationId": "haxe.f64.negate",
+      "sourceOperandTypes": [
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "compute through a direct uint64_t intermediate and retain the low 32 bits, independent of C integer promotions",
+        "reconstruct int32_t without an out-of-range unsigned-to-signed cast"
+      ],
+      "id": "int-add",
+      "operationId": "haxe.i32.add",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.add.wrapping"
+    },
+    {
+      "edgeCases": [
+        "compute through a direct uint64_t intermediate and retain the low 32 bits, independent of C integer promotions",
+        "reconstruct int32_t without an out-of-range unsigned-to-signed cast"
+      ],
+      "id": "int-subtract",
+      "operationId": "haxe.i32.subtract",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.subtract.wrapping"
+    },
+    {
+      "edgeCases": [
+        "compute through a direct uint64_t intermediate and retain the low 32 bits, independent of C integer promotions",
+        "reconstruct int32_t without an out-of-range unsigned-to-signed cast"
+      ],
+      "id": "int-multiply",
+      "operationId": "haxe.i32.multiply",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.multiply.wrapping"
+    },
+    {
+      "edgeCases": [
+        "both Int operands convert exactly to binary64 before division",
+        "a zero divisor returns IEEE NaN or signed infinity without executing C division by zero",
+        "INT32_MIN / -1 produces exactly 2147483648.0"
+      ],
+      "id": "int-divide",
+      "operationId": "haxe.f64.divide",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "program-local:hxc.f64.divide.zero-safe"
+    },
+    {
+      "edgeCases": [
+        "a zero divisor returns 0 as this target's deterministic refinement",
+        "INT32_MIN % -1 returns 0 without executing overflowing C division",
+        "all other inputs use exact signed remainder"
+      ],
+      "id": "int-modulo",
+      "operationId": "haxe.i32.modulo",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.modulo.zero-safe"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "the shift executes on uint32_t bits before defined signed reconstruction"
+      ],
+      "id": "int-shift-left",
+      "operationId": "haxe.i32.shift-left.masked",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.shift-left.masked"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "negative inputs receive explicit two's-complement sign extension"
+      ],
+      "id": "int-shift-right",
+      "operationId": "haxe.i32.shift-right.masked",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.shift-right.masked"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "the value shifts as uint32_t bits before defined signed reconstruction"
+      ],
+      "id": "int-unsigned-shift-right",
+      "operationId": "haxe.i32.unsigned-shift-right.masked",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.unsigned-shift-right.masked"
+    },
+    {
+      "edgeCases": [
+        "operate on the uint32_t bit representation through an explicitly unsigned widened intermediate",
+        "reconstruct int32_t without implementation-defined signed conversion"
+      ],
+      "id": "int-bit-and",
+      "operationId": "haxe.i32.bit-and",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.bit-and"
+    },
+    {
+      "edgeCases": [
+        "operate on the uint32_t bit representation through an explicitly unsigned widened intermediate",
+        "reconstruct int32_t without implementation-defined signed conversion"
+      ],
+      "id": "int-bit-or",
+      "operationId": "haxe.i32.bit-or",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.bit-or"
+    },
+    {
+      "edgeCases": [
+        "operate on the uint32_t bit representation through an explicitly unsigned widened intermediate",
+        "reconstruct int32_t without implementation-defined signed conversion"
+      ],
+      "id": "int-bit-xor",
+      "operationId": "haxe.i32.bit-xor",
+      "sourceOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "Int",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Int",
+      "implementation": "program-local:hxc.i32.bit-xor"
+    },
+    {
+      "edgeCases": [
+        "use a direct uint64_t intermediate and narrow each result to uint32_t, preserving modulo-2^32 behavior across C integer promotions"
+      ],
+      "id": "uint-add",
+      "operationId": "haxe.u32.add",
+      "sourceOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "use a direct uint64_t intermediate and narrow each result to uint32_t, preserving modulo-2^32 behavior across C integer promotions"
+      ],
+      "id": "uint-subtract",
+      "operationId": "haxe.u32.subtract",
+      "sourceOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "use a direct uint64_t intermediate and narrow each result to uint32_t, preserving modulo-2^32 behavior across C integer promotions"
+      ],
+      "id": "uint-multiply",
+      "operationId": "haxe.u32.multiply",
+      "sourceOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "a zero divisor returns 0 as this target's deterministic refinement",
+        "all other inputs use defined uint32_t remainder"
+      ],
+      "id": "uint-modulo",
+      "operationId": "haxe.u32.modulo",
+      "sourceOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "UInt"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "program-local:hxc.u32.modulo.zero-safe"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "the operation executes directly through uint64_t and narrows to uint32_t so wider signed int promotions cannot change it"
+      ],
+      "id": "uint-shift-left",
+      "operationId": "haxe.u32.shift-left.masked",
+      "sourceOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "the operation executes directly through uint64_t and narrows to uint32_t so wider signed int promotions cannot change it"
+      ],
+      "id": "uint-shift-right",
+      "operationId": "haxe.u32.shift-right.masked",
+      "sourceOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "the shift count is masked with 31, including negative source counts",
+        "the operation executes directly through uint64_t and narrows to uint32_t so wider signed int promotions cannot change it"
+      ],
+      "id": "uint-unsigned-shift-right",
+      "operationId": "haxe.u32.unsigned-shift-right.masked",
+      "sourceOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "loweredOperandTypes": [
+        "UInt",
+        "Int"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "UInt",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "binary64 NaN, infinity, and signed-zero behavior is preserved",
+        "fast-math is forbidden"
+      ],
+      "id": "float-add",
+      "operationId": "haxe.f64.add",
+      "sourceOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "binary64 NaN, infinity, and signed-zero behavior is preserved",
+        "fast-math is forbidden"
+      ],
+      "id": "float-subtract",
+      "operationId": "haxe.f64.subtract",
+      "sourceOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "binary64 NaN, infinity, and signed-zero behavior is preserved",
+        "fast-math is forbidden"
+      ],
+      "id": "float-multiply",
+      "operationId": "haxe.f64.multiply",
+      "sourceOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "direct-c"
+    },
+    {
+      "edgeCases": [
+        "a zero divisor returns IEEE NaN or signed infinity without executing C division by zero",
+        "binary64 NaN, infinity, and signed-zero behavior is preserved",
+        "fast-math is forbidden"
+      ],
+      "id": "float-divide",
+      "operationId": "haxe.f64.divide",
+      "sourceOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "program-local:hxc.f64.divide.zero-safe"
+    },
+    {
+      "edgeCases": [
+        "finite nonzero inputs use C fmod with truncation-toward-zero remainder semantics",
+        "a zero divisor returns NaN without executing an invalid native operation",
+        "the compiler selects the exact math-library link fact and no runtime feature"
+      ],
+      "id": "float-modulo",
+      "operationId": "haxe.f64.modulo",
+      "sourceOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "loweredOperandTypes": [
+        "Float",
+        "Float"
+      ],
+      "runtimeFeatures": [],
+      "resultType": "Float",
+      "implementation": "program-local:hxc.f64.modulo"
+    }
+  ]
 }

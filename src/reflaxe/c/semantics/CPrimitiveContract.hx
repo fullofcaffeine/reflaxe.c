@@ -10,12 +10,18 @@ import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionDecision;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionMeaning;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionResult;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionUse;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperationDecision;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperationResult;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperator;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveMappingResult;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveNullability;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveSignedness;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveSourceType;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveStorage;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveTypeMapping;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperationDecision;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperationResult;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperator;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveWidth;
 
 typedef CPrimitiveWidthRecord = {
@@ -48,6 +54,17 @@ typedef CPrimitiveConversionRecord = {
 	final implementation:String;
 	final failureEdgeRequired:Bool;
 	final exceptionalInputs:Array<String>;
+	final runtimeFeatures:Array<String>;
+}
+
+typedef CPrimitiveOperationRecord = {
+	final id:String;
+	final operationId:String;
+	final sourceOperandTypes:Array<String>;
+	final loweredOperandTypes:Array<String>;
+	final resultType:String;
+	final implementation:String;
+	final edgeCases:Array<String>;
 	final runtimeFeatures:Array<String>;
 }
 
@@ -85,6 +102,7 @@ typedef CPrimitiveContractSnapshot = {
 	final representations:Array<CPrimitiveRepresentationRecord>;
 	final nullability:Array<CPrimitiveNullabilityRecord>;
 	final conversions:Array<CPrimitiveConversionRecord>;
+	final operations:Array<CPrimitiveOperationRecord>;
 	final floatContract:CPrimitiveFloatContract;
 	final constraints:CPrimitiveConstraintRecord;
 }
@@ -103,10 +121,10 @@ class CPrimitiveContract {
 		}
 
 		return {
-			schemaVersion: 1,
-			algorithm: "hxc-primitive-semantics-v1",
-			status: "semantic-contract-no-production-c-lowering",
-			requirements: ["HXC-SEM-001", "HXC-SEM-003", "HXC-SEM-005"],
+			schemaVersion: 2,
+			algorithm: "hxc-primitive-semantics-v2",
+			status: "production-primitive-arithmetic-slice",
+			requirements: ["HXC-SEM-001", "HXC-SEM-002", "HXC-SEM-003", "HXC-SEM-005"],
 			haxeBaseline: "5.0.0-preview.1",
 			profiles: ["portable", "metal"],
 			representations: representations,
@@ -134,6 +152,7 @@ class CPrimitiveContract {
 				}
 			],
 			conversions: conversionRecords(),
+			operations: operationRecords(),
 			floatContract: {
 				cType: "double",
 				format: "IEC 60559 / IEEE 754 binary64 required by the resolved target tuple",
@@ -165,6 +184,142 @@ class CPrimitiveContract {
 				runtimeFeatures: []
 			}
 		};
+	}
+
+	static function operationRecords():Array<CPrimitiveOperationRecord> {
+		return [
+			unaryOperationRecord("int-negate", CPUONegate, CPHaxeInt, CPHaxeInt, signedWrappingEdges()),
+			unaryOperationRecord("int-bit-not", CPUOBitwiseNot, CPHaxeInt, CPHaxeInt, signedBitEdges()),
+			unaryOperationRecord("float-negate", CPUONegate, CPHaxeFloat, CPHaxeFloat, floatingDirectEdges()),
+			binaryOperationRecord("int-add", CPBOAdd, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedWrappingEdges()),
+			binaryOperationRecord("int-subtract", CPBOSubtract, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedWrappingEdges()),
+			binaryOperationRecord("int-multiply", CPBOMultiply, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedWrappingEdges()),
+			binaryOperationRecord("int-divide", CPBODivide, CPHaxeInt, CPHaxeInt, CPHaxeFloat, [
+				"both Int operands convert exactly to binary64 before division",
+				"a zero divisor returns IEEE NaN or signed infinity without executing C division by zero",
+				"INT32_MIN / -1 produces exactly 2147483648.0"
+			]),
+			binaryOperationRecord("int-modulo", CPBOModulo, CPHaxeInt, CPHaxeInt, CPHaxeInt, [
+				"a zero divisor returns 0 as this target's deterministic refinement",
+				"INT32_MIN % -1 returns 0 without executing overflowing C division",
+				"all other inputs use exact signed remainder"
+			]),
+			binaryOperationRecord("int-shift-left", CPBOShiftLeft, CPHaxeInt, CPHaxeInt, CPHaxeInt, [
+				"the shift count is masked with 31, including negative source counts",
+				"the shift executes on uint32_t bits before defined signed reconstruction"
+			]),
+			binaryOperationRecord("int-shift-right", CPBOShiftRight, CPHaxeInt, CPHaxeInt, CPHaxeInt, [
+				"the shift count is masked with 31, including negative source counts",
+				"negative inputs receive explicit two's-complement sign extension"
+			]),
+			binaryOperationRecord("int-unsigned-shift-right", CPBOUnsignedShiftRight, CPHaxeInt, CPHaxeInt, CPHaxeInt,
+				[
+					"the shift count is masked with 31, including negative source counts",
+					"the value shifts as uint32_t bits before defined signed reconstruction"
+				]),
+			binaryOperationRecord("int-bit-and", CPBOBitAnd, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedBitEdges()),
+			binaryOperationRecord("int-bit-or", CPBOBitOr, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedBitEdges()),
+			binaryOperationRecord("int-bit-xor", CPBOBitXor, CPHaxeInt, CPHaxeInt, CPHaxeInt, signedBitEdges()),
+			binaryOperationRecord("uint-add", CPBOAdd, CPHaxeUInt, CPHaxeUInt, CPHaxeUInt, unsignedWrappingEdges()),
+			binaryOperationRecord("uint-subtract", CPBOSubtract, CPHaxeUInt, CPHaxeUInt, CPHaxeUInt, unsignedWrappingEdges()),
+			binaryOperationRecord("uint-multiply", CPBOMultiply, CPHaxeUInt, CPHaxeUInt, CPHaxeUInt, unsignedWrappingEdges()),
+			binaryOperationRecord("uint-modulo", CPBOModulo, CPHaxeUInt, CPHaxeUInt, CPHaxeUInt,
+				[
+					"a zero divisor returns 0 as this target's deterministic refinement",
+					"all other inputs use defined uint32_t remainder"
+				]),
+			binaryOperationRecord("uint-shift-left", CPBOShiftLeft, CPHaxeUInt, CPHaxeInt, CPHaxeUInt, unsignedShiftEdges()),
+			binaryOperationRecord("uint-shift-right", CPBOShiftRight, CPHaxeUInt, CPHaxeInt, CPHaxeUInt, unsignedShiftEdges()),
+			binaryOperationRecord("uint-unsigned-shift-right", CPBOUnsignedShiftRight, CPHaxeUInt, CPHaxeInt, CPHaxeUInt, unsignedShiftEdges()),
+			binaryOperationRecord("float-add", CPBOAdd, CPHaxeFloat, CPHaxeFloat, CPHaxeFloat, floatingDirectEdges()),
+			binaryOperationRecord("float-subtract", CPBOSubtract, CPHaxeFloat, CPHaxeFloat, CPHaxeFloat, floatingDirectEdges()),
+			binaryOperationRecord("float-multiply", CPBOMultiply, CPHaxeFloat, CPHaxeFloat, CPHaxeFloat, floatingDirectEdges()),
+			binaryOperationRecord("float-divide", CPBODivide, CPHaxeFloat, CPHaxeFloat, CPHaxeFloat, [
+				"a zero divisor returns IEEE NaN or signed infinity without executing C division by zero",
+				"binary64 NaN, infinity, and signed-zero behavior is preserved",
+				"fast-math is forbidden"
+			]),
+			binaryOperationRecord("float-modulo", CPBOModulo, CPHaxeFloat, CPHaxeFloat, CPHaxeFloat, [
+				"finite nonzero inputs use C fmod with truncation-toward-zero remainder semantics",
+				"a zero divisor returns NaN without executing an invalid native operation",
+				"the compiler selects the exact math-library link fact and no runtime feature"
+			])
+		];
+	}
+
+	static function unaryOperationRecord(id:String, operation:CPrimitiveUnaryOperator, operandType:CPrimitiveSourceType, resultType:CPrimitiveSourceType,
+			edgeCases:Array<String>):CPrimitiveOperationRecord {
+		final operand = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, operandType));
+		final result = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, resultType));
+		final decision = requireUnaryDecision(CPrimitiveSemantics.unaryOperation(operation, operand, result));
+		return {
+			id: id,
+			operationId: decision.operationId,
+			sourceOperandTypes: [CPrimitiveSemantics.sourceTypeKey(operandType)],
+			loweredOperandTypes: [CPrimitiveSemantics.sourceTypeKey(decision.operand.sourceType)],
+			resultType: CPrimitiveSemantics.sourceTypeKey(decision.result.sourceType),
+			implementation: implementation(decision.implementation),
+			edgeCases: edgeCases.copy(),
+			runtimeFeatures: []
+		};
+	}
+
+	static function binaryOperationRecord(id:String, operation:CPrimitiveBinaryOperator, leftType:CPrimitiveSourceType, rightType:CPrimitiveSourceType,
+			resultType:CPrimitiveSourceType, edgeCases:Array<String>):CPrimitiveOperationRecord {
+		final left = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, leftType));
+		final right = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, rightType));
+		final result = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, resultType));
+		final decision = requireBinaryDecision(CPrimitiveSemantics.binaryOperation(operation, left, right, result));
+		return {
+			id: id,
+			operationId: decision.operationId,
+			sourceOperandTypes: [
+				CPrimitiveSemantics.sourceTypeKey(leftType),
+				CPrimitiveSemantics.sourceTypeKey(rightType)
+			],
+			loweredOperandTypes: [
+				CPrimitiveSemantics.sourceTypeKey(decision.leftOperand.sourceType),
+				CPrimitiveSemantics.sourceTypeKey(decision.rightOperand.sourceType)
+			],
+			resultType: CPrimitiveSemantics.sourceTypeKey(decision.result.sourceType),
+			implementation: implementation(decision.implementation),
+			edgeCases: edgeCases.copy(),
+			runtimeFeatures: []
+		};
+	}
+
+	static function signedWrappingEdges():Array<String> {
+		return [
+			"compute through a direct uint64_t intermediate and retain the low 32 bits, independent of C integer promotions",
+			"reconstruct int32_t without an out-of-range unsigned-to-signed cast"
+		];
+	}
+
+	static function signedBitEdges():Array<String> {
+		return [
+			"operate on the uint32_t bit representation through an explicitly unsigned widened intermediate",
+			"reconstruct int32_t without implementation-defined signed conversion"
+		];
+	}
+
+	static function unsignedWrappingEdges():Array<String> {
+		return [
+			"use a direct uint64_t intermediate and narrow each result to uint32_t, preserving modulo-2^32 behavior across C integer promotions"
+		];
+	}
+
+	static function unsignedShiftEdges():Array<String> {
+		return [
+			"the shift count is masked with 31, including negative source counts",
+			"the operation executes directly through uint64_t and narrows to uint32_t so wider signed int promotions cannot change it"
+		];
+	}
+
+	static function floatingDirectEdges():Array<String> {
+		return [
+			"binary64 NaN, infinity, and signed-zero behavior is preserved",
+			"fast-math is forbidden"
+		];
 	}
 
 	static function conversionRecords():Array<CPrimitiveConversionRecord> {
@@ -245,6 +400,20 @@ class CPrimitiveContract {
 			case CPConversionAllowed(decision): decision;
 			case CPConversionElided: throw "Required primitive conversion was unexpectedly elided";
 			case CPConversionRejected(reason): throw 'Required primitive conversion was rejected: $reason';
+		}
+	}
+
+	static function requireUnaryDecision(result:CPrimitiveUnaryOperationResult):CPrimitiveUnaryOperationDecision {
+		return switch result {
+			case CPUOperationAllowed(decision): decision;
+			case CPUOperationRejected(reason): throw 'Required primitive unary operation was rejected: $reason';
+		}
+	}
+
+	static function requireBinaryDecision(result:CPrimitiveBinaryOperationResult):CPrimitiveBinaryOperationDecision {
+		return switch result {
+			case CPBOperationAllowed(decision): decision;
+			case CPBOperationRejected(reason): throw 'Required primitive binary operation was rejected: $reason';
 		}
 	}
 

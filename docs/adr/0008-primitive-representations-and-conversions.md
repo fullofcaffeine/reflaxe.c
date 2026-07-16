@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-15
 - Decision owners: project owner and compiler maintainers
-- Related requirements: HXC-SEM-001, HXC-SEM-003, HXC-SEM-005
+- Related requirements: HXC-SEM-001, HXC-SEM-002, HXC-SEM-003, HXC-SEM-005
 
 ## Context
 
@@ -88,6 +88,39 @@ Target-ABI integers are not narrowed, widened, or range-compared from a guessed
 host width. Such a conversion remains rejected until the resolved native ABI
 facts make the decision sound.
 
+### Arithmetic operations have an explicit UB-safe contract
+
+The compiler chooses a typed operation and implementation in HxcIR before it
+chooses C syntax. Ordinary Haxe `Int` arithmetic has 32-bit two's-complement
+wrapping behavior, but generated C never performs an overflowing signed
+operation. Addition, subtraction, multiplication, negation, and bitwise
+operations execute through explicitly unsigned 64-bit intermediates, retain
+the low 32 bits, and use a small compiler-emitted helper to reconstruct
+`int32_t` without an implementation-defined out-of-range cast. The widening is
+required because a conforming C implementation may otherwise promote
+`uint32_t` to a wider signed `int` before the operation.
+
+The remaining integer edge rules are:
+
+- every shift count is masked with `31`, including a negative Haxe count;
+- left and unsigned-right shifts operate on `uint32_t` bits;
+- signed right shift performs explicit sign extension rather than relying on
+  implementation-defined C behavior;
+- `Int` and `UInt` modulo by zero return `0`, an intentional deterministic
+  target refinement for a Haxe edge whose behavior is target-specific;
+- `INT32_MIN % -1` returns `0` without evaluating the overflowing C operation;
+- Haxe `/` produces `Float`, so integer operands convert exactly to binary64
+  before division and `INT32_MIN / -1` is exactly `2147483648.0`.
+
+`UInt` addition, subtraction, multiplication, bit operations, and masked shifts
+remain direct C, using an explicit `uint64_t` intermediate and `uint32_t`
+narrowing so C integer promotions cannot change the operation. Only zero-safe
+modulo needs a program-local helper. The pinned Haxe `UInt`
+abstract expands several operations through signed and floating expressions;
+the frontend recognizes only that exact typed standard-library expansion and
+recovers the underlying unsigned operation. A Haxe pin change must re-audit
+this structural recognition instead of accepting an arbitrary source pattern.
+
 ### Floating behavior is binary64 and fast-math is not semantic lowering
 
 Haxe `Float` storage and ordinary operations preserve binary64 NaN, infinity,
@@ -113,6 +146,14 @@ This refinement is identical in both profiles. It is emitted as a
 program-local specialized operation, with comparisons performed before the
 final in-range C conversion.
 
+Floating addition, subtraction, multiplication, negation, and comparisons use
+direct `double` operations. Division uses a zero-safe program-local helper so
+zero yields the appropriate NaN or signed infinity without asking a sanitizer
+to tolerate a native divide-by-zero operation. Floating modulo uses `fmod`;
+zero yields NaN through the helper, and the compiler records the exact `m` link
+requirement with source-module provenance. That build fact is not a runtime
+feature.
+
 ### Nullability is representation-explicit
 
 `Null<T>` for a non-null scalar uses a tagged optional containing a presence
@@ -132,7 +173,7 @@ introduced here.
 
 ### Primitive operations are compiler-first and runtime-free
 
-Primitive representation, direct conversions, and specialized conversion
+Primitive representation, operations, direct conversions, and specialized
 helpers select no `hxrt` feature. The implementation preference is:
 
 1. direct, idiomatic, strictly defined C;
@@ -140,25 +181,30 @@ helpers select no `hxrt` feature. The implementation preference is:
 3. a runtime feature only if a later semantic operation demonstrates that the
    first two choices are infeasible.
 
-HxcIR validation rejects an exact, wrapping, checked, saturating, or nullable
-primitive conversion that names a runtime feature. The checked and nullable
-unwrap forms also reject a missing failure edge.
+Selected helpers form a deterministic dependency closure. They are emitted as
+private `static inline` structural C with registry-finalized names and only for
+the requesting program. Optimized builds are expected to erase the call
+boundary. HxcIR validation rejects a primitive operation or an exact,
+wrapping, checked, saturating, or nullable primitive conversion that names a
+runtime feature. The checked and nullable unwrap forms also reject a missing
+failure edge.
 
 ## Evidence boundary
 
-The fixture compiles real Haxe fields through the pinned typed-AST macro API and
-compares portable and metal decisions. It renders the machine contract twice,
-validates the registered snapshot, and exercises widening, narrowing,
-signed/unsigned bit interpretation, NaN, infinities, overflow, negative zero,
-and scalar nullability in strict C11 at `-O0` and `-O2`.
+The primitive-contract fixture compiles real Haxe fields through the pinned
+typed-AST macro API, compares portable and metal decisions, renders the schema-2
+machine contract twice, and exercises representation and conversion algorithms
+in independent strict C11 at `-O0` and `-O2`.
 
-That native C fixture is independent executable evidence for the ratified
-algorithms and target prerequisites. E2.T02 now consumes the ordinary mappings
-for real typed bodies, and E2.T03 records admitted implicit argument conversions
-in HxcIR before emitting direct structural C calls. The independent fixture is
-still not generated Haxe output. E2.T05 owns arithmetic, division, modulo, and
-shift undefined-behavior discipline; E2.T11 owns broader generated-program
-differential and sanitizer evidence.
+The arithmetic suite is separate generated-Haxe evidence. It lowers real
+`Int`/`UInt`/`Float` operators and `Std.int` through HxcIR, checks the selected
+helper closure and exact `m` build fact, compares defined behavior with Eval,
+and executes boundary inputs under strict GCC and Clang at `-O0`, `-O2`, and
+UBSan where supported. It verifies that optimized assembly retains no
+out-of-line specialization symbol and that safe unsigned paths remain direct
+C. Portable, metal, and explicit `hxc_runtime=none` projects remain runtime-
+free. E2.T11 still owns broader generated-program differential and sanitizer
+coverage beyond this primitive slice.
 
 ## Consequences
 
@@ -166,6 +212,8 @@ differential and sanitizer evidence.
   being reconstructed from C spellings.
 - C implementation-defined and undefined conversions cannot become accidental
   semantics.
+- Signed overflow, invalid shifts, division overflow, and unchecked
+  floating-to-integer conversion cannot become accidental generated-C behavior.
 - Profile selection stays orthogonal to explicit source contracts.
 - Runtime-free primitive programs remain eligible for a build with no `hxrt`
   include, source, define, library, or symbol.
@@ -178,6 +226,9 @@ differential and sanitizer evidence.
   the required width across supported ABIs.
 - Emitting ordinary C casts for every conversion: out-of-range signed and
   floating conversions do not provide a portable semantic contract.
+- Emitting signed C arithmetic and relying on wrapping compiler flags: that
+  would make source correctness depend on a native build option and would not
+  solve invalid shifts or division overflow.
 - Using a tagged union for every nullable value: references and native pointers
   already have an exact null pointer representation.
 - Using a null pointer for nullable scalars: valid scalar zero values would be

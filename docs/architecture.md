@@ -23,8 +23,9 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> current E2.T04: collects reachable typed functions and captured primitive globals
-  -> CBodyLowering maps admitted signatures, ordered expressions, calls, and bodies
+  -> current E2.T05: collects reachable typed functions and captured primitive globals
+  -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, and UB-safe primitive operations
+  -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
   -> emits a private prototype header, source definitions, and int main(void)
   -> invokes ProjectEmitter with analyzed zero-runtime primitive facts
@@ -88,10 +89,12 @@ Primitive representation is owned by the typed
 `src/reflaxe/c/semantics/` layer. It maps real Haxe compiler types to exact
 fixed-width or unresolved target-ABI integer identities, preserves tagged
 scalar versus pointer nullability, and records exact, wrapping, checked, or
-saturating conversions before C syntax exists. Portable and metal share these
-ordinary Haxe mappings. Primitive decisions use direct C or a program-local
-specialization and cannot select `hxrt`; see the [primitive semantic
-contract](primitive-semantics.md) and [ADR
+saturating conversions before C syntax exists. Typed unary and binary operation
+decisions likewise record direct or named program-local implementation intent.
+Portable and metal share these ordinary Haxe mappings and operation rules.
+Primitive decisions cannot select `hxrt`; see the [primitive semantic
+contract](primitive-semantics.md), [UB-safe arithmetic
+lowering](arithmetic-semantics.md), and [ADR
 0008](adr/0008-primitive-representations-and-conversions.md).
 
 The target-owned typed-input boundary is implemented under
@@ -142,8 +145,10 @@ returns. E2.T03 adds primitive parameters, explicit argument conversions, and
 direct static calls, then emits the reachable graph with a private prototype
 header, deterministic source partition, and hosted `int main(void)` wrapper.
 E2.T04 adds captured primitive globals, stable loads, local/global assignment,
-lazy Boolean and value-conditional block graphs, and unsigned
-increment/decrement. Within the remaining unconditional single-block subset, a
+lazy Boolean and value-conditional block graphs, and unsigned increment. E2.T05
+adds typed arithmetic/comparison operations, wrapping signed updates, compound
+assignment, masked shifts, zero-safe division/modulo, bit operations, and the
+defined `Std.int` conversion. Within the remaining unconditional single-block subset, a
 closed direct-call cycle is compiler-proven non-returning and emitted with
 structural C11 `_Noreturn` plus no unreachable return. Direct
 self-tail calls use registry-named typed argument temporaries and a structural
@@ -152,10 +157,13 @@ units behind the shared header so strict optimized compilation remains
 warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
-[explicit evaluation order](evaluation-order.md).
+[explicit evaluation order](evaluation-order.md); E2.T05 operation selection is
+in [UB-safe primitive arithmetic](arithmetic-semantics.md).
 
-`CBodyLowering` prepares the complete admitted HxcIR function set before sealing
-the per-compilation symbol registry. Function requests use translation-unit
+`CBodyLowering` prepares the complete admitted HxcIR function set, scans it for
+program-local primitive helper IDs, computes their dependency closure, and
+registers every helper/parameter/standard symbol before sealing the
+per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
 ordinals, so shadowing is stable without deriving C identifiers from Haxe text.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
@@ -164,7 +172,10 @@ Direct-call arguments remain ordered HxcIR instructions, conversions precede
 their calls, and every load plus each consumed call result becomes a typed
 stable-value temporary instead of a C subexpression with weaker evaluation
 order. Lazy/conditional expressions remain explicit labels and edges rather
-than C operators. `CStaticFunctionProjectEmitter`
+than C operators. `CPrimitiveHelperEmitter` builds only selected private
+`static inline` helpers through structural CAST; safe unsigned fast paths remain
+direct C, and floating modulo contributes the exact `m` build fact without a
+runtime feature. `CStaticFunctionProjectEmitter`
 places all prototypes before definitions, partitions proven non-returning cycle
 members, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.

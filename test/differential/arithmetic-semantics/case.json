@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-arithmetic-semantics-differential",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-002",
+    "HXC-SEM-003",
+    "HXC-QA-004"
+  ],
+  "sources": [
+    "test/arithmetic_semantics/expected/program.c",
+    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/oracle.hxml",
+    "test/arithmetic_semantics/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../arithmetic_semantics/run.py"
+    ],
+    "workingDirectory": "test/differential/arithmetic-semantics",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "typed boundaries, Eval differential, strict C11, UBSan, runtime-free helpers, and optimized fast paths passed$"
+    },
+    "oracle": "test/arithmetic_semantics/oracle.hxml"
+  }
+}

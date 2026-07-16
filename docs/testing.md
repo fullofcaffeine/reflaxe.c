@@ -9,19 +9,21 @@ The taxonomy describes evidence. It does not promote a seed into a supported
 compiler capability. Direct HxcIR/C AST fixtures and independent native C/C++
 inputs do not prove typed-Haxe lowering. The body-lowering suite is narrower
 real TypedExpr-to-HxcIR/C evidence. The function-lowering suite extends it to a
-production-emitted primitive private header/source/entry project, but neither
-suite proves broader language, standard-library, public ABI, or `hxrt` support.
+production-emitted primitive private header/source/entry project, and the
+arithmetic suite adds generated UB-safe operation, sanitizer, and optimized-
+shape evidence. None proves broader language, standard-library, public ABI, or
+`hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, and evaluation-order lowering |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, and arithmetic lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported body/signature/argument boundaries |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution plus native runtime seeds; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order and arithmetic Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -105,6 +107,7 @@ The registered snapshot selectors are:
 - `body-lowering`
 - `function-lowering`
 - `evaluation-order`
+- `arithmetic-semantics`
 
 List them from the executable registry with:
 
@@ -158,6 +161,19 @@ array support, verifies the stable-value temporary proof, compares an Eval
 oracle with generated projects, and runs strict GCC/Clang at O0/O2 with a
 positive zero-runtime plan. See [explicit evaluation
 order](evaluation-order.md).
+
+`test/arithmetic_semantics` is the focused
+positive/snapshot/runtime/differential suite for E2.T05. It lowers real typed
+`Int`, `UInt`, and `Float` operators, compound/update forms, and `Std.int` into
+explicit HxcIR implementation decisions. Its managed snapshots show the helper
+dependency closure, structural private header, direct unsigned fast paths,
+exact `m` build fact, and finalized symbols. It compares the common defined
+subset with Eval, then checks target refinements for overflow, zero divisors,
+`INT32_MIN / -1`, negative and oversized shifts, bit operations, NaN,
+infinities, signed zero, and floating-to-integer bounds. Required GCC and Clang
+lanes run `-O0`, `-O2`, and eligible UBSan builds and reject an out-of-line
+helper in optimized assembly. See [UB-safe primitive
+arithmetic](arithmetic-semantics.md).
 
 ## Examples are product proofs, not implicit tests
 

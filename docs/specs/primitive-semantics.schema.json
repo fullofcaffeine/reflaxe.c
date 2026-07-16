@@ -14,17 +14,19 @@
     "representations",
     "nullability",
     "conversions",
+    "operations",
     "floatContract",
     "constraints"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "algorithm": { "const": "hxc-primitive-semantics-v1" },
-    "status": { "const": "semantic-contract-no-production-c-lowering" },
+    "schemaVersion": { "const": 2 },
+    "algorithm": { "const": "hxc-primitive-semantics-v2" },
+    "status": { "const": "production-primitive-arithmetic-slice" },
     "requirements": {
       "type": "array",
       "prefixItems": [
         { "const": "HXC-SEM-001" },
+        { "const": "HXC-SEM-002" },
         { "const": "HXC-SEM-003" },
         { "const": "HXC-SEM-005" }
       ],
@@ -47,6 +49,12 @@
       "type": "array",
       "minItems": 13,
       "items": { "$ref": "#/$defs/conversion" }
+    },
+    "operations": {
+      "type": "array",
+      "minItems": 26,
+      "maxItems": 26,
+      "items": { "$ref": "#/$defs/operation" }
     },
     "floatContract": { "$ref": "#/$defs/floatContract" },
     "constraints": { "$ref": "#/$defs/constraints" }
@@ -178,6 +186,48 @@
         "failureEdgeRequired": { "type": "boolean" },
         "exceptionalInputs": {
           "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
+      }
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "operationId",
+        "sourceOperandTypes",
+        "loweredOperandTypes",
+        "resultType",
+        "implementation",
+        "edgeCases",
+        "runtimeFeatures"
+      ],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]+$" },
+        "operationId": { "type": "string", "pattern": "^haxe\\.(i32|u32|f64)\\.[a-z][a-z0-9.-]+$" },
+        "sourceOperandTypes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "enum": ["Int", "UInt", "Float"] }
+        },
+        "loweredOperandTypes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 2,
+          "items": { "enum": ["Int", "UInt", "Float"] }
+        },
+        "resultType": { "enum": ["Int", "UInt", "Float"] },
+        "implementation": {
+          "type": "string",
+          "pattern": "^(direct-c|program-local:[A-Za-z0-9._-]+)$"
+        },
+        "edgeCases": {
+          "type": "array",
+          "minItems": 1,
           "uniqueItems": true,
           "items": { "type": "string", "minLength": 1 }
         },

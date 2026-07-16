@@ -106,12 +106,19 @@ def object_list(value: object, label: str) -> list[object]:
 
 
 def validate_contract(contract: dict[str, object]) -> None:
-    if contract.get("schemaVersion") != 1:
+    if contract.get("schemaVersion") != 2:
         raise PrimitiveSemanticsFailure("primitive contract schema version drifted")
-    if contract.get("algorithm") != "hxc-primitive-semantics-v1":
+    if contract.get("algorithm") != "hxc-primitive-semantics-v2":
         raise PrimitiveSemanticsFailure("primitive contract algorithm drifted")
-    if contract.get("status") != "semantic-contract-no-production-c-lowering":
+    if contract.get("status") != "production-primitive-arithmetic-slice":
         raise PrimitiveSemanticsFailure("primitive contract overstated production capability")
+    if contract.get("requirements") != [
+        "HXC-SEM-001",
+        "HXC-SEM-002",
+        "HXC-SEM-003",
+        "HXC-SEM-005",
+    ]:
+        raise PrimitiveSemanticsFailure("primitive contract requirement ownership drifted")
     if contract.get("profiles") != ["portable", "metal"]:
         raise PrimitiveSemanticsFailure("primitive contract profile order or set drifted")
 
@@ -192,6 +199,51 @@ def validate_contract(contract: dict[str, object]) -> None:
         "negative-overflow->-2147483648",
     ]:
         raise PrimitiveSemanticsFailure("Std.int exceptional conversion policy drifted")
+
+    operation_records = object_list(contract.get("operations"), "operations")
+    operations: dict[str, dict[str, object]] = {}
+    for index, raw_record in enumerate(operation_records):
+        record = object_record(raw_record, f"operations[{index}]")
+        identifier = record.get("id")
+        if not isinstance(identifier, str) or identifier in operations:
+            raise PrimitiveSemanticsFailure(f"invalid or duplicate operation ID: {identifier!r}")
+        operations[identifier] = record
+        if record.get("runtimeFeatures") != []:
+            raise PrimitiveSemanticsFailure(f"operation {identifier} selected hxrt")
+        implementation = record.get("implementation")
+        if not isinstance(implementation, str) or implementation.startswith("runtime:"):
+            raise PrimitiveSemanticsFailure(f"operation {identifier} bypassed compiler-first lowering")
+        if not object_list(record.get("edgeCases"), f"operation {identifier} edgeCases"):
+            raise PrimitiveSemanticsFailure(f"operation {identifier} omitted its boundary contract")
+
+    required_operation_facts = {
+        "int-add": ("haxe.i32.add", "program-local:hxc.i32.add.wrapping"),
+        "int-divide": ("haxe.f64.divide", "program-local:hxc.f64.divide.zero-safe"),
+        "int-modulo": ("haxe.i32.modulo", "program-local:hxc.i32.modulo.zero-safe"),
+        "int-shift-right": ("haxe.i32.shift-right.masked", "program-local:hxc.i32.shift-right.masked"),
+        "int-bit-xor": ("haxe.i32.bit-xor", "program-local:hxc.i32.bit-xor"),
+        "uint-add": ("haxe.u32.add", "direct-c"),
+        "uint-shift-left": ("haxe.u32.shift-left.masked", "direct-c"),
+        "float-divide": ("haxe.f64.divide", "program-local:hxc.f64.divide.zero-safe"),
+        "float-modulo": ("haxe.f64.modulo", "program-local:hxc.f64.modulo"),
+    }
+    for identifier, (operation_id, implementation) in required_operation_facts.items():
+        record = operations.get(identifier)
+        if (
+            record is None
+            or record.get("operationId") != operation_id
+            or record.get("implementation") != implementation
+        ):
+            raise PrimitiveSemanticsFailure(f"operation contract drifted: {identifier}")
+
+    if "zero divisor returns 0" not in " ".join(
+        str(value) for value in object_list(operations["int-modulo"].get("edgeCases"), "int-modulo edge cases")
+    ):
+        raise PrimitiveSemanticsFailure("Int modulo-by-zero refinement drifted")
+    if "masked with 31" not in " ".join(
+        str(value) for value in object_list(operations["int-shift-right"].get("edgeCases"), "int-shift edge cases")
+    ):
+        raise PrimitiveSemanticsFailure("Int shift masking contract drifted")
 
     nullability = object_list(contract.get("nullability"), "nullability")
     patterns = {
@@ -276,7 +328,7 @@ def validate_schema_document() -> None:
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         raise PrimitiveSemanticsFailure("primitive schema must use JSON Schema 2020-12")
     properties = object_record(schema.get("properties"), "primitive schema properties")
-    for required in ("representations", "nullability", "conversions", "floatContract", "constraints"):
+    for required in ("representations", "nullability", "conversions", "operations", "floatContract", "constraints"):
         if required not in properties:
             raise PrimitiveSemanticsFailure(f"primitive schema omitted {required}")
 

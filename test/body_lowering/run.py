@@ -450,8 +450,8 @@ def check_production_boundaries() -> None:
             if (
                 unsupported.returncode != 1
                 or "HXC1001" not in combined
-                or "TUnop(OpIncrement:requires-E2.T05-for-non-UInt)" not in combined
-                or "Main.hx:4: characters 3-10" not in combined
+                or "Unsupported typed Haxe node `TWhile`" not in combined
+                or "Main.hx:4: lines 4-5" not in combined
                 or f"[profile={profile}]" not in combined
             ):
                 raise BodyLoweringFailure(

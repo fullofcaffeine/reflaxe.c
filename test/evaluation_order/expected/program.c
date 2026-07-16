@@ -101,11 +101,11 @@ hxc_temp_EvaluationFixture_run_blockzx2Dlabel_conditionalzx2Djoin_n6:
   uint32_t hxc_local_EvaluationFixture_run_selected_n2 = hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n9;
   hxc_field_EvaluationFixture_counter = 0;
   uint32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10 = hxc_field_EvaluationFixture_counter;
-  hxc_field_EvaluationFixture_counter = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10 + 1;
+  hxc_field_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10 + (uint64_t)(uint32_t)1);
   uint32_t hxc_local_EvaluationFixture_run_old_n4 = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n10;
   uint32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11 = hxc_field_EvaluationFixture_counter;
-  hxc_field_EvaluationFixture_counter = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11 + 1;
-  uint32_t hxc_local_EvaluationFixture_run_fresh_n5 = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11 + 1;
+  hxc_field_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11 + (uint64_t)(uint32_t)1);
+  uint32_t hxc_local_EvaluationFixture_run_fresh_n5 = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n11 + (uint64_t)(uint32_t)1);
   uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n12 = hxc_local_EvaluationFixture_run_old_n4;
   (void)hxc_temp_EvaluationFixture_run_loadzx2Dresult_n12;
   uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n13 = hxc_local_EvaluationFixture_run_fresh_n5;

@@ -33,7 +33,8 @@
         "primitive-semantics",
         "body-lowering",
         "function-lowering",
-        "evaluation-order"
+        "evaluation-order",
+        "arithmetic-semantics"
       ]
     },
     {
@@ -98,7 +99,8 @@
         "primitive-semantics",
         "body-lowering",
         "function-lowering",
-        "evaluation-order"
+        "evaluation-order",
+        "arithmetic-semantics"
       ]
     },
     {
@@ -115,7 +117,8 @@
         "native-smoke",
         "body-lowering",
         "function-lowering",
-        "evaluation-order"
+        "evaluation-order",
+        "arithmetic-semantics"
       ]
     },
     {
@@ -130,7 +133,8 @@
       ],
       "suiteIds": [
         "hxc-ir",
-        "evaluation-order"
+        "evaluation-order",
+        "arithmetic-semantics"
       ]
     },
     {
@@ -433,6 +437,27 @@
       ]
     },
     {
+      "id": "arithmetic-semantics",
+      "directory": "test/arithmetic_semantics",
+      "runner": [
+        "python3",
+        "test/arithmetic_semantics/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed Int, UInt, and Float arithmetic selects direct C or request-local program helpers without selecting hxrt",
+        "overflow, division, modulo, shifts, and bit operations preserve the documented boundary semantics without C undefined behavior",
+        "portable, metal, and runtime-none production builds compile and run as strict C11 under the required GCC and Clang lanes, with UBSan enabled where supported",
+        "selected helpers are static inline and disappear from optimized output while safe UInt operations remain inspectable as direct C"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -572,6 +597,18 @@
           "test/evaluation_order/expected/program.h",
           "test/evaluation_order/expected/program.c",
           "test/evaluation_order/expected/symbols.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "arithmetic-semantics",
+        "expectedRoots": [
+          "test/arithmetic_semantics/expected"
         ],
         "formats": [
           "c",

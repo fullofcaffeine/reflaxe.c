@@ -8,9 +8,10 @@ artifact write and stale deletion to Reflaxe's `OutputManager`.
 
 This boundary still does not make the scaffold a general Haxe-to-C compiler.
 E2.T03 admits one production status only for a validated, reachable primitive
-static-function graph. That path emits its structural private header, one or
-more deterministic sources, and `int main(void)` entry with analyzed empty
-runtime/ABI/stdlib results.
+static-function graph, and E2.T05 extends that same status with UB-safe
+primitive operations and request-local helpers. That path emits its structural
+private header, one or more deterministic sources, and `int main(void)` entry
+with analyzed empty runtime/ABI/stdlib results.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project
@@ -50,7 +51,9 @@ The emitter owns these schema-1 sidecars:
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   primitive executable's `analyzed-runtime-free` record with resolved policy,
-  provenance, direct decisions, and a positive empty-runtime proof;
+  provenance, direct decisions, and a positive empty-runtime proof. The
+  `selected-program-local-helpers` decision appears only when that compilation
+  selected at least one helper;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
@@ -60,8 +63,10 @@ The compiler manifest cannot contain its own digest without a recursive
 definition, so its declared hash scope is every compiler artifact except
 `hxc.manifest.json` and Reflaxe's `_GeneratedFiles.json`. The `GeneratedFile`
 value for the manifest still carries and verifies its own in-memory SHA-256.
-CMake, Meson, direct command plans, and stable runtime/ABI schemas remain owned
-by their later Beads issues.
+Floating modulo contributes a provenance-bearing `m` link fact to the neutral
+manifest. This is an ordinary C build requirement and does not change the empty
+runtime plan. CMake, Meson, direct command plans, and stable runtime/ABI schemas
+remain owned by their later Beads issues.
 
 ## Ownership and filesystem safety
 
@@ -107,6 +112,7 @@ Run:
 
 ```sh
 npm run test:project-emitter
+npm run test:arithmetic-semantics
 npm run snapshots:check
 npm run test:native
 ```
@@ -125,8 +131,9 @@ non-canonical line endings before a partial write, while preserving the
 production exact-`HXC1001` unsupported boundary and rejection of unproven generic
 lowered-program status. The native matrix independently compiles every emitted
 header and links/runs the emitted strict-C11 structural project under GCC and
-Clang. The separate function-lowering suite proves that the narrow primitive
-production path passes through this ownership boundary with analyzed empty
-runtime/ABI/stdlib records. The structural corpus itself remains emitted-C shape
+Clang. The function-lowering and arithmetic suites prove that the narrow
+primitive production path passes through this ownership boundary with analyzed
+empty runtime/ABI/stdlib records, optional request-local helpers, and the exact
+math build fact. The structural corpus itself remains emitted-C shape
 and ownership evidence, not generated-Haxe semantic evidence or a public ABI,
 runtime, standard-library, or generated-output licensing claim.

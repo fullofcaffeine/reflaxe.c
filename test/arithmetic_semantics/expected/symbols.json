@@ -1,0 +1,2960 @@
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fadd",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fadd|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fadd",
+      "sourceSymbol": "ArithmeticFixture.fadd(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fadd_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fadd|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fadd4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fadd|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fadd_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fadd.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fadd_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fadd|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fadd5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fadd|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fadd_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fadd.right#1"
+    },
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fdiv",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fdiv|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fdiv",
+      "sourceSymbol": "ArithmeticFixture.fdiv(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fdiv_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fdiv|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fdiv4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fdiv|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fdiv_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fdiv.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fdiv_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fdiv|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fdiv5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fdiv|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fdiv_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fdiv.right#1"
+    },
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fequal",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:fequal|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fequal",
+      "sourceSymbol": "ArithmeticFixture.fequal(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fequal_left_n0",
+      "semanticKey": "5:local|102:ordinary:90:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:fequal|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture6:fequal4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:fequal|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fequal_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fequal.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fequal_right_n1",
+      "semanticKey": "5:local|102:ordinary:90:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:fequal|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture6:fequal5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:fequal|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fequal_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fequal.right#1"
+    },
+    {
+      "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fint",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fint|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fint",
+      "sourceSymbol": "ArithmeticFixture.fint(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fint_value_n0",
+      "semanticKey": "5:local|95:ordinary:83:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fint|1:3:f64|0:|0:|3:17:ArithmeticFixture4:fint5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fint|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fint_value_n0",
+      "sourceSymbol": "ArithmeticFixture.fint.value#0"
+    },
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fmod",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmod|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fmod",
+      "sourceSymbol": "ArithmeticFixture.fmod(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fmod_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmod|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fmod4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmod|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fmod_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fmod.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fmod_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmod|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fmod5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmod|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fmod_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fmod.right#1"
+    },
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fmul",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmul|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fmul",
+      "sourceSymbol": "ArithmeticFixture.fmul(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fmul_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmul|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fmul4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmul|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fmul_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fmul.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fmul_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmul|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fmul5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fmul|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fmul_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fmul.right#1"
+    },
+    {
+      "overloadSignature": [
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fneg",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fneg|1:3:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fneg",
+      "sourceSymbol": "ArithmeticFixture.fneg(f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fneg_value_n0",
+      "semanticKey": "5:local|95:ordinary:83:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fneg|1:3:f64|0:|0:|3:17:ArithmeticFixture4:fneg5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fneg|1:3:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fneg_value_n0",
+      "sourceSymbol": "ArithmeticFixture.fneg.value#0"
+    },
+    {
+      "overloadSignature": [
+        "f64",
+        "f64"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_fsub",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fsub|2:3:f643:f64|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_fsub",
+      "sourceSymbol": "ArithmeticFixture.fsub(f64, f64)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fsub_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fsub|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fsub4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fsub|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fsub_left_n0",
+      "sourceSymbol": "ArithmeticFixture.fsub.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_fsub_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fsub|2:3:f643:f64|0:|0:|3:17:ArithmeticFixture4:fsub5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:fsub|2:3:f643:f64|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_fsub_right_n1",
+      "sourceSymbol": "ArithmeticFixture.fsub.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_iadd",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iadd|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_iadd",
+      "sourceSymbol": "ArithmeticFixture.iadd(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iadd_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iadd|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:iadd4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iadd|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iadd_left_n0",
+      "sourceSymbol": "ArithmeticFixture.iadd.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iadd_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iadd|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:iadd5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iadd|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iadd_right_n1",
+      "sourceSymbol": "ArithmeticFixture.iadd.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_iand",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iand|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_iand",
+      "sourceSymbol": "ArithmeticFixture.iand(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iand_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iand|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:iand4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iand|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iand_left_n0",
+      "sourceSymbol": "ArithmeticFixture.iand.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iand_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iand|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:iand5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:iand|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iand_right_n1",
+      "sourceSymbol": "ArithmeticFixture.iand.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_idiv",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:idiv|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_idiv",
+      "sourceSymbol": "ArithmeticFixture.idiv(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_idiv_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:idiv|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:idiv4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:idiv|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_idiv_left_n0",
+      "sourceSymbol": "ArithmeticFixture.idiv.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_idiv_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:idiv|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:idiv5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:idiv|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_idiv_right_n1",
+      "sourceSymbol": "ArithmeticFixture.idiv.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_iless",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iless|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_iless",
+      "sourceSymbol": "ArithmeticFixture.iless(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iless_left_n0",
+      "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iless|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture5:iless4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iless|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iless_left_n0",
+      "sourceSymbol": "ArithmeticFixture.iless.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iless_right_n1",
+      "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iless|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture5:iless5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iless|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iless_right_n1",
+      "sourceSymbol": "ArithmeticFixture.iless.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_imod",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imod|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_imod",
+      "sourceSymbol": "ArithmeticFixture.imod(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_imod_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imod|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:imod4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imod|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_imod_left_n0",
+      "sourceSymbol": "ArithmeticFixture.imod.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_imod_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imod|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:imod5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imod|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_imod_right_n1",
+      "sourceSymbol": "ArithmeticFixture.imod.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_imul",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imul|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_imul",
+      "sourceSymbol": "ArithmeticFixture.imul(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_imul_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imul|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:imul4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imul|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_imul_left_n0",
+      "sourceSymbol": "ArithmeticFixture.imul.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_imul_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imul|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:imul5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:imul|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_imul_right_n1",
+      "sourceSymbol": "ArithmeticFixture.imul.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ineg",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ineg|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ineg",
+      "sourceSymbol": "ArithmeticFixture.ineg(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ineg_value_n0",
+      "semanticKey": "5:local|95:ordinary:83:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ineg|1:3:i32|0:|0:|3:17:ArithmeticFixture4:ineg5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ineg|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ineg_value_n0",
+      "sourceSymbol": "ArithmeticFixture.ineg.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_inot",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:inot|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_inot",
+      "sourceSymbol": "ArithmeticFixture.inot(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_inot_value_n0",
+      "semanticKey": "5:local|95:ordinary:83:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:inot|1:3:i32|0:|0:|3:17:ArithmeticFixture4:inot5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:inot|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_inot_value_n0",
+      "sourceSymbol": "ArithmeticFixture.inot.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ior",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture3:ior|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ior",
+      "sourceSymbol": "ArithmeticFixture.ior(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ior_left_n0",
+      "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture3:ior|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture3:ior4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture3:ior|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ior_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ior.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ior_right_n1",
+      "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture3:ior|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture3:ior5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture3:ior|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ior_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ior.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ishl",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishl|2:3:i323:i32|0:|0:",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ishl",
+      "sourceSymbol": "ArithmeticFixture.ishl(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ishl_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishl|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ishl4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishl|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ishl_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ishl.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ishl_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishl|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ishl5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishl|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ishl_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ishl.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ishr",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishr|2:3:i323:i32|0:|0:",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ishr",
+      "sourceSymbol": "ArithmeticFixture.ishr(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ishr_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishr|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ishr4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishr|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ishr_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ishr.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ishr_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishr|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ishr5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ishr|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ishr_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ishr.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_isub",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:isub|2:3:i323:i32|0:|0:",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_isub",
+      "sourceSymbol": "ArithmeticFixture.isub(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_isub_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:isub|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:isub4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:isub|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_isub_left_n0",
+      "sourceSymbol": "ArithmeticFixture.isub.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_isub_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:isub|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:isub5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "standard-library-reserved"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:isub|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_isub_right_n1",
+      "sourceSymbol": "ArithmeticFixture.isub.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_iushr",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iushr|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_iushr",
+      "sourceSymbol": "ArithmeticFixture.iushr(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iushr_left_n0",
+      "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iushr|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture5:iushr4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iushr|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iushr_left_n0",
+      "sourceSymbol": "ArithmeticFixture.iushr.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_iushr_right_n1",
+      "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iushr|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture5:iushr5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture5:iushr|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_iushr_right_n1",
+      "sourceSymbol": "ArithmeticFixture.iushr.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ixor",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ixor|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ixor",
+      "sourceSymbol": "ArithmeticFixture.ixor(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ixor_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ixor|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ixor4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ixor|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ixor_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ixor.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ixor_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ixor|2:3:i323:i32|0:|0:|3:17:ArithmeticFixture4:ixor5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ixor|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ixor_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ixor.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_main",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_main",
+      "sourceSymbol": "ArithmeticFixture.main"
+    },
+    {
+      "overloadSignature": [
+        "u32",
+        "u32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_uadd",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:uadd|2:3:u323:u32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_uadd",
+      "sourceSymbol": "ArithmeticFixture.uadd(u32, u32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_uadd_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:uadd|2:3:u323:u32|0:|0:|3:17:ArithmeticFixture4:uadd4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:uadd|2:3:u323:u32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_uadd_left_n0",
+      "sourceSymbol": "ArithmeticFixture.uadd.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_uadd_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:uadd|2:3:u323:u32|0:|0:|3:17:ArithmeticFixture4:uadd5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:uadd|2:3:u323:u32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_uadd_right_n1",
+      "sourceSymbol": "ArithmeticFixture.uadd.right#1"
+    },
+    {
+      "overloadSignature": [
+        "u32",
+        "u32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_umod",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:umod|2:3:u323:u32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_umod",
+      "sourceSymbol": "ArithmeticFixture.umod(u32, u32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_umod_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:umod|2:3:u323:u32|0:|0:|3:17:ArithmeticFixture4:umod4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:umod|2:3:u323:u32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_umod_left_n0",
+      "sourceSymbol": "ArithmeticFixture.umod.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_umod_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:umod|2:3:u323:u32|0:|0:|3:17:ArithmeticFixture4:umod5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:umod|2:3:u323:u32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_umod_right_n1",
+      "sourceSymbol": "ArithmeticFixture.umod.right#1"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_update",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_update",
+      "sourceSymbol": "ArithmeticFixture.update(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n2",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update20:compound-load-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n2",
+      "sourceSymbol": "ArithmeticFixture.update.compound-load-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n4",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update20:compound-load-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n4",
+      "sourceSymbol": "ArithmeticFixture.update.compound-load-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_update_current_n1",
+      "semanticKey": "5:local|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update7:current|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_update_current_n1",
+      "sourceSymbol": "ArithmeticFixture.update.current#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_decrementzx2Dloadzx2Dresult_n1",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update21:decrement-load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_decrementzx2Dloadzx2Dresult_n1",
+      "sourceSymbol": "ArithmeticFixture.update.decrement-load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_update_fresh_n3",
+      "semanticKey": "5:local|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update5:fresh|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_update_fresh_n3",
+      "sourceSymbol": "ArithmeticFixture.update.fresh#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_incrementzx2Dloadzx2Dresult_n0",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update21:increment-load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_incrementzx2Dloadzx2Dresult_n0",
+      "sourceSymbol": "ArithmeticFixture.update.increment-load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n3",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update11:load-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n3",
+      "sourceSymbol": "ArithmeticFixture.update.load-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n5",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update11:load-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n5",
+      "sourceSymbol": "ArithmeticFixture.update.load-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n6",
+      "semanticKey": "9:temporary|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update11:load-result|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n6",
+      "sourceSymbol": "ArithmeticFixture.update.load-result#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_update_old_n2",
+      "semanticKey": "5:local|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update3:old|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_update_old_n2",
+      "sourceSymbol": "ArithmeticFixture.update.old#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_update_value_n0",
+      "semanticKey": "5:local|97:ordinary:85:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:|3:17:ArithmeticFixture6:update5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture6:update|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_update_value_n0",
+      "sourceSymbol": "ArithmeticFixture.update.value#0"
+    },
+    {
+      "overloadSignature": [
+        "u32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ushl",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushl|2:3:u323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ushl",
+      "sourceSymbol": "ArithmeticFixture.ushl(u32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ushl_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushl|2:3:u323:i32|0:|0:|3:17:ArithmeticFixture4:ushl4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushl|2:3:u323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ushl_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ushl.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ushl_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushl|2:3:u323:i32|0:|0:|3:17:ArithmeticFixture4:ushl5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushl|2:3:u323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ushl_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ushl.right#1"
+    },
+    {
+      "overloadSignature": [
+        "u32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_ArithmeticFixture_ushr",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushr|2:3:u323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_ArithmeticFixture_ushr",
+      "sourceSymbol": "ArithmeticFixture.ushr(u32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ushr_left_n0",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushr|2:3:u323:i32|0:|0:|3:17:ArithmeticFixture4:ushr4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushr|2:3:u323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ushr_left_n0",
+      "sourceSymbol": "ArithmeticFixture.ushr.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_ArithmeticFixture_ushr_right_n1",
+      "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushr|2:3:u323:i32|0:|0:|3:17:ArithmeticFixture4:ushr5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:17:ArithmeticFixture4:ushr|2:3:u323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_ArithmeticFixture_ushr_right_n1",
+      "sourceSymbol": "ArithmeticFixture.ushr.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "INFINITY",
+      "cName": "INFINITY",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library8:INFINITY|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "INFINITY",
+      "sourceSymbol": "c-standard-library.INFINITY"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "INT32_MAX",
+      "cName": "INT32_MAX",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library9:INT32_MAX|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "INT32_MAX",
+      "sourceSymbol": "c-standard-library.INT32_MAX"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "INT32_MIN",
+      "cName": "INT32_MIN",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library9:INT32_MIN|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "INT32_MIN",
+      "sourceSymbol": "c-standard-library.INT32_MIN"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "NAN",
+      "cName": "NAN",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library3:NAN|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "NAN",
+      "sourceSymbol": "c-standard-library.NAN"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "UINT32_C",
+      "cName": "UINT32_C",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library8:UINT32_C|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "UINT32_C",
+      "sourceSymbol": "c-standard-library.UINT32_C"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "fmod",
+      "cName": "fmod",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:18:c-standard-library4:fmod|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "external",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "fmod",
+      "sourceSymbol": "c-standard-library.fmod"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "signbit",
+      "cName": "signbit",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library7:signbit|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "signbit",
+      "sourceSymbol": "c-standard-library.signbit"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "main",
+      "cName": "main",
+      "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|3:8:compiler22:executable-entry-point31:function.ArithmeticFixture.main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "static-initializer",
+      "specializationArguments": [],
+      "baseName": "main",
+      "sourceSymbol": "compiler.executable-entry-point.function.ArithmeticFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.f64.divide.zero-safe4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.divide.zero-safe.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.f64.divide.zero-safe5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.divide.zero-safe.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Emodulo_left_n0",
+      "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:|4:8:compiler16:primitive-helper14:hxc.f64.modulo4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Emodulo_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Emodulo_right_n1",
+      "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:|4:8:compiler16:primitive-helper14:hxc.f64.modulo5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Emodulo_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.modulo.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.f64.to.i32.saturating|0:|4:8:compiler16:primitive-helper25:hxc.f64.to.i32.saturating5:value|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.f64.to.i32.saturating|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.f64.to.i32.saturating.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_left_n0",
+      "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-and4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-and.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_right_n1",
+      "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-and5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-and.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dnot_value_n0",
+      "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-not|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-not5:value|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-not|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dnot_value_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-not.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dor_left_n0",
+      "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:|4:8:compiler16:primitive-helper14:hxc.i32.bit-or4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dor_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-or.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dor_right_n1",
+      "semanticKey": "5:local|120:ordinary:107:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:|4:8:compiler16:primitive-helper14:hxc.i32.bit-or5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dor_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-or.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_left_n0",
+      "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-xor4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-xor.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_right_n1",
+      "semanticKey": "5:local|121:ordinary:108:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:|4:8:compiler16:primitive-helper15:hxc.i32.bit-xor5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.bit-xor.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_left_n0",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.i32.modulo.zero-safe4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.modulo.zero-safe.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.i32.modulo.zero-safe5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.modulo.zero-safe.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Enegatezx2Ewrapping_value_n0",
+      "semanticKey": "5:local|129:ordinary:116:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:23:hxc.i32.negate.wrapping|0:|4:8:compiler16:primitive-helper23:hxc.i32.negate.wrapping5:value|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:23:hxc.i32.negate.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Enegatezx2Ewrapping_value_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.negate.wrapping.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked_left_n0",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:|4:8:compiler16:primitive-helper25:hxc.i32.shift-left.masked4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-left.masked.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked_right_n1",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:|4:8:compiler16:primitive-helper25:hxc.i32.shift-left.masked5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-left.masked.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked_left_n0",
+      "semanticKey": "5:local|132:ordinary:119:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:|4:8:compiler16:primitive-helper26:hxc.i32.shift-right.masked4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-right.masked.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked_right_n1",
+      "semanticKey": "5:local|132:ordinary:119:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:|4:8:compiler16:primitive-helper26:hxc.i32.shift-right.masked5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.shift-right.masked.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_left_n0",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.subtract.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.subtract.wrapping.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_right_n1",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.subtract.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.subtract.wrapping.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_left_n0",
+      "semanticKey": "5:local|141:ordinary:128:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:|4:8:compiler16:primitive-helper35:hxc.i32.unsigned-shift-right.masked4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.unsigned-shift-right.masked.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_right_n1",
+      "semanticKey": "5:local|141:ordinary:128:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:|4:8:compiler16:primitive-helper35:hxc.i32.unsigned-shift-right.masked5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.unsigned-shift-right.masked.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe_left_n0",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.u32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.u32.modulo.zero-safe4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.u32.modulo.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.u32.modulo.zero-safe.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe_right_n1",
+      "semanticKey": "5:local|130:ordinary:117:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.u32.modulo.zero-safe|0:|4:8:compiler16:primitive-helper24:hxc.u32.modulo.zero-safe5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.u32.modulo.zero-safe|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.u32.modulo.zero-safe.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
+      "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.u32.to.i32.bits.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.f64.divide.zero-safe|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.f64.divide.zero-safe"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe",
+      "sourceSymbol": "compiler.primitive-helper<hxc.f64.divide.zero-safe>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Emodulo",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.f64.modulo|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.f64.modulo"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Emodulo",
+      "sourceSymbol": "compiler.primitive-helper<hxc.f64.modulo>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.f64.to.i32.saturating|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.f64.to.i32.saturating"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating",
+      "sourceSymbol": "compiler.primitive-helper<hxc.f64.to.i32.saturating>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.add.wrapping"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.add.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dand",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-and|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.bit-and"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dand",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.bit-and>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dnot",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-not|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.bit-not"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dnot",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.bit-not>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dor",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:14:hxc.i32.bit-or|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.bit-or"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dor",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.bit-or>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:15:hxc.i32.bit-xor|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.bit-xor"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.bit-xor>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.i32.modulo.zero-safe|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.modulo.zero-safe"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.modulo.zero-safe>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.multiply.wrapping"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.multiply.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:23:hxc.i32.negate.wrapping|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.negate.wrapping"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.negate.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.shift-left.masked|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.shift-left.masked"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.shift-left.masked>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:26:hxc.i32.shift-right.masked|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.shift-right.masked"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.shift-right.masked>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.subtract.wrapping|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.subtract.wrapping"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.subtract.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:35:hxc.i32.unsigned-shift-right.masked|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.unsigned-shift-right.masked"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.unsigned-shift-right.masked>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:24:hxc.u32.modulo.zero-safe|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.u32.modulo.zero-safe"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe",
+      "sourceSymbol": "compiler.primitive-helper<hxc.u32.modulo.zero-safe>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.u32.to.i32.bits"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
+      "sourceSymbol": "compiler.primitive-helper<hxc.u32.to.i32.bits>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "cName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "semanticKey": "6:module|12:preprocessor|3:8:compiler14:program-header5:guard|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "internal",
+      "kind": "module",
+      "specializationArguments": [],
+      "baseName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "sourceSymbol": "compiler.program-header.guard"
+    }
+  ],
+  "collisions": [],
+  "algorithm": "hxc-c-symbol-v1"
+}

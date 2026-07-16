@@ -410,6 +410,50 @@ def evaluation_order_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def arithmetic_semantics_artifacts() -> list[Artifact]:
+    module = load_module(
+        "arithmetic_semantics", "test/arithmetic_semantics/run.py"
+    )
+    first_payload, report = module.render("snapshot first arithmetic render")
+    second_payload, repeated = module.render("snapshot second arithmetic render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input arithmetic render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "arithmetic snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("arithmetic.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("contract.json", "json"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"arithmetic report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"arithmetic report omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/arithmetic_semantics/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -423,6 +467,7 @@ GENERATORS: dict[str, Generator] = {
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,
+    "arithmetic-semantics": arithmetic_semantics_artifacts,
 }
 
 

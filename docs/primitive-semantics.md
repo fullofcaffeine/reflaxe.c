@@ -13,18 +13,21 @@ shape constrained by
 `Null<T>`, exact/native integer identity, references, and native pointers; an
 unsupported source type is rejected instead of being hidden behind an opaque
 or dynamically typed placeholder. `CPrimitiveSemantics` then produces a closed
-typed mapping or conversion decision for the shared portable/metal pipeline.
+typed mapping, conversion, or operation decision for the shared portable/metal
+pipeline.
 
 The HxcIR schema-2 additions keep four facts structural:
 
 - ABI-sized integer identity (`size`, `ptrdiff`, `intptr`, or `uintptr`);
 - tagged-scalar versus pointer nullability;
 - exact, wrapping, checked, and saturating numeric conversion intent;
+- typed unary/binary operation identity plus direct or program-local
+  implementation intent;
 - an optional failure edge on conversion, required for checked numeric and
   nullable-unwrap operations.
 
 Every primitive decision selects direct C or a named program-local helper.
-Primitive mapping and conversion add no runtime feature.
+Primitive mapping, conversion, and arithmetic add no runtime feature.
 
 ## Observable rules
 
@@ -40,6 +43,23 @@ out-of-range unsigned-to-signed cast. Checked narrowing carries a failure edge.
 For `Std.int`, finite in-range values truncate toward zero; NaN maps to zero and
 infinities or finite overflow saturate to the applicable 32-bit endpoint.
 
+`Int` addition, subtraction, multiplication, and negation use explicitly
+unsigned 64-bit intermediates, retain the low 32 bits, and then reconstruct the
+signed result. This remains correct even when C would promote `uint32_t` to a
+wider signed `int`. Shifts mask their count with `31`; signed right shift uses
+explicit sign extension. Bit operations work on unsigned bits and reconstruct
+the signed value without an implementation-defined cast. Integer modulo by
+zero returns `0`, as does `INT32_MIN % -1`. Haxe division produces binary64
+`Float`, so integer operands convert before the operation and zero yields IEEE
+NaN or signed infinity through a guarded helper.
+
+Safe `UInt` arithmetic and masked shifts remain direct C, with explicit
+`uint64_t` intermediates and `uint32_t` narrowing to defeat integer-promotion
+ambiguity. Floating addition, subtraction, multiplication, negation, and
+comparisons remain direct binary64 operations; division is zero-safe and
+modulo uses `fmod` with an exact compiler-selected `m` link fact. See [UB-safe primitive
+arithmetic](arithmetic-semantics.md) for the production operation boundary.
+
 Nullable scalars use a tagged optional. Nullable references and native pointers
 use a null pointer. A nullable unwrap either has a presence proof or retains an
 explicit failure edge.
@@ -50,20 +70,21 @@ Run the focused contract with:
 
 ```sh
 npm run test:primitive-semantics
+npm run test:arithmetic-semantics
 ```
 
-The suite maps real typed Haxe declarations in both profiles, renders the
-machine contract twice, checks the centrally owned snapshot, and compiles the
-independent native semantic probe as strict C11 with GCC and Clang at `-O0` and
-`-O2`. The native probe demonstrates the accepted algorithms and platform
-facts; it is not generated C.
+The primitive suite maps real typed Haxe declarations in both profiles, renders
+the schema-2 machine contract twice, checks the centrally owned snapshot, and
+compiles the independent native semantic probe as strict C11 with GCC and
+Clang at `-O0` and `-O2`. That probe demonstrates accepted algorithms and
+platform facts; it is not generated C.
 
-E2.T02 applies the ordinary `Void`/`Bool`/`Int`/`UInt`/`Float` mappings to real
-constants, initialized locals/reads, primitive blocks, and returns. E2.T03 adds
-primitive parameters and records admitted implicit argument conversions before
-direct calls. The production slice remains runtime-free and representation-
-identical in portable and metal; unsupported signatures or body nodes report
-exact `HXC1001` without output. E2.T05 owns the remaining arithmetic
-undefined-behavior rules, and E2.T11 owns broader generated-program differential
-and sanitizer proof. See [primitive function-body lowering](body-lowering.md)
-and [static function lowering](function-lowering.md).
+The arithmetic suite supplies the generated-Haxe proof: typed operations and
+`Std.int` flow through HxcIR, selected static-inline helpers, strict C11,
+portable/metal/runtime-none production projects, an Eval oracle, boundary
+execution, UBSan where supported, and optimized-shape inspection. Unsupported
+signatures or body nodes still report exact `HXC1001` without output. E2.T11
+owns broader generated-program differential and sanitizer proof. See
+[primitive function-body lowering](body-lowering.md), [static function
+lowering](function-lowering.md), and [explicit evaluation
+order](evaluation-order.md).

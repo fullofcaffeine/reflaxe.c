@@ -62,6 +62,65 @@ enum CPrimitiveConversionMeaning {
 	CPUnwrapPresent;
 }
 
+/** Source-level unary operators whose primitive meaning is fixed by this target. */
+enum CPrimitiveUnaryOperator {
+	CPUONegate;
+	CPUOBitwiseNot;
+	CPUOLogicalNot;
+}
+
+/** Source-level binary operators whose primitive meaning is fixed by this target. */
+enum CPrimitiveBinaryOperator {
+	CPBOAdd;
+	CPBOSubtract;
+	CPBOMultiply;
+	CPBODivide;
+	CPBOModulo;
+	CPBOShiftLeft;
+	CPBOShiftRight;
+	CPBOUnsignedShiftRight;
+	CPBOBitAnd;
+	CPBOBitOr;
+	CPBOBitXor;
+	CPBOEqual;
+	CPBONotEqual;
+	CPBOLess;
+	CPBOLessEqual;
+	CPBOGreater;
+	CPBOGreaterEqual;
+}
+
+/** Closed identities for compiler-emitted helpers; none of these select `hxrt`. */
+enum CPrimitiveHelperKind {
+	CPHU32ToI32Bits;
+	CPHI32Add;
+	CPHI32Subtract;
+	CPHI32Multiply;
+	CPHI32Negate;
+	CPHI32Modulo;
+	CPHU32Modulo;
+	CPHI32ShiftLeft;
+	CPHI32ShiftRight;
+	CPHI32UnsignedShiftRight;
+	CPHI32BitAnd;
+	CPHI32BitOr;
+	CPHI32BitXor;
+	CPHI32BitwiseNot;
+	CPHF64Divide;
+	CPHF64Modulo;
+	CPHF64ToI32Saturating;
+}
+
+enum CPrimitiveUnaryOperationResult {
+	CPUOperationAllowed(decision:CPrimitiveUnaryOperationDecision);
+	CPUOperationRejected(reason:String);
+}
+
+enum CPrimitiveBinaryOperationResult {
+	CPBOperationAllowed(decision:CPrimitiveBinaryOperationDecision);
+	CPBOperationRejected(reason:String);
+}
+
 /** A closed result keeps unsupported conversions out of placeholder IR. */
 enum CPrimitiveConversionResult {
 	CPConversionElided;
@@ -123,5 +182,36 @@ class CPrimitiveConversionDecision {
 		this.irKind = irKind;
 		this.implementation = implementation;
 		this.failureRequired = failureRequired;
+	}
+}
+
+class CPrimitiveUnaryOperationDecision {
+	public final operand:CPrimitiveTypeMapping;
+	public final result:CPrimitiveTypeMapping;
+	public final operationId:String;
+	public final implementation:HxcIRImplementation;
+
+	public function new(operand:CPrimitiveTypeMapping, result:CPrimitiveTypeMapping, operationId:String, implementation:HxcIRImplementation) {
+		this.operand = operand;
+		this.result = result;
+		this.operationId = operationId;
+		this.implementation = implementation;
+	}
+}
+
+class CPrimitiveBinaryOperationDecision {
+	public final leftOperand:CPrimitiveTypeMapping;
+	public final rightOperand:CPrimitiveTypeMapping;
+	public final result:CPrimitiveTypeMapping;
+	public final operationId:String;
+	public final implementation:HxcIRImplementation;
+
+	public function new(leftOperand:CPrimitiveTypeMapping, rightOperand:CPrimitiveTypeMapping, result:CPrimitiveTypeMapping, operationId:String,
+			implementation:HxcIRImplementation) {
+		this.leftOperand = leftOperand;
+		this.rightOperand = rightOperand;
+		this.result = result;
+		this.operationId = operationId;
+		this.implementation = implementation;
 	}
 }

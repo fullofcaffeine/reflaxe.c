@@ -23,6 +23,19 @@ bd close <id>         # Complete work
 bd dolt push          # Push beads data to remote
 ```
 
+## Commit Messages
+
+- Keep the conventional-commit subject concise, then add a useful commit body
+  for every non-trivial change. Write the body in friendly, beginner-readable
+  language so someone who does not already know the compiler internals can
+  understand what problem was solved.
+- Explain what changed, why it matters, and how it was verified. Call out
+  important behavior or output changes and name any intentionally deferred
+  scope so the commit does not imply broader closure than it provides.
+- Prefer concrete descriptions of the old and new behavior over a list of
+  filenames or internal type names. Technical details are welcome, but
+  introduce them in plain language and make the practical outcome clear first.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

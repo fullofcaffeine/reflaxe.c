@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-arithmetic-semantics-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-002",
+    "HXC-SEM-003",
+    "HXC-QA-004"
+  ],
+  "sources": [
+    "test/arithmetic_semantics/expected/program.c",
+    "test/arithmetic_semantics/expected/program.h",
+    "test/arithmetic_semantics/expected/symbols.json",
+    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../arithmetic_semantics/run.py"
+    ],
+    "workingDirectory": "test/runtime/arithmetic-semantics",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "runtime-free helpers, and optimized fast paths passed$"
+    },
+    "artifacts": [
+      {
+        "path": "test/arithmetic_semantics/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

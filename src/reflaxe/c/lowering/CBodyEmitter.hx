@@ -10,8 +10,9 @@ class CBodyEmitter {
 	public function new() {}
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
-			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, lineDirectives:Bool,
-			tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>, ?nonReturningFunctionIds:Map<String, Bool>):CStmt {
+			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
+			?nonReturningFunctionIds:Map<String, Bool>):CStmt {
 		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
 			fail('body lowering requires a cleanup-free entry-first block graph in `${fn.id}`');
 		}
@@ -51,17 +52,21 @@ class CBodyEmitter {
 						}
 						addLineDirective(statements, instruction.source, lineDirectives);
 						statements.push(SExpr(EBinary(Assign, placeExpression(place, localNames, globalNames, fn.id), requireValue(values, valueId, fn.id))));
-					case IRIOBinary(operationId, leftValueId, rightValueId, IRIStatic):
+					case IRIOUnary(operationId, valueId, implementation):
 						final result = requireResult(instruction, fn.id);
-						final operation = binaryOperation(operationId, instruction.id, fn.id);
+						final expression = operationExpression(operationId, implementation, [requireValue(values, valueId, fn.id)], helperNames,
+							instruction.id, fn.id);
+						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
+					case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
+						final result = requireResult(instruction, fn.id);
 						// The admitted operators are total and pure over values that loads/calls
 						// have already stabilized. The evaluation-order suite enforces that
 						// boundary before allowing this expression-level elision.
-						values.set(result.id, EBinary(operation, requireValue(values, leftValueId, fn.id), requireValue(values, rightValueId, fn.id)));
-						if (!referencedValues.exists(result.id)) {
-							addLineDirective(statements, instruction.source, lineDirectives);
-							statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, fn.id))));
-						}
+						final expression = operationExpression(operationId, implementation, [
+							requireValue(values, leftValueId, fn.id),
+							requireValue(values, rightValueId, fn.id)
+						], helperNames, instruction.id, fn.id);
+						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
 					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 						final result = requireResult(instruction, fn.id);
 						final expression = switch kind {
@@ -75,6 +80,15 @@ class CBodyEmitter {
 							addLineDirective(statements, instruction.source, lineDirectives);
 							statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
 						}
+					case IRIOConvert(valueId, kind, _, IRIProgramLocal(helperId), null):
+						final result = requireResult(instruction, fn.id);
+						switch kind {
+							case IRCNumericExact | IRCNumericWrapping | IRCNumericSaturating:
+							case _:
+								fail('program-local conversion `${instruction.id}` in `${fn.id}` has unsupported kind `$kind`');
+						}
+						final expression = helperCall(helperId, [requireValue(values, valueId, fn.id)], helperNames, instruction.id, fn.id);
+						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
 					case IRIOCall(call):
 						if (isNonReturningSelfCall(fn.id, call, nonReturningFunctionIds)) {
 							emitTailLoopCall(statements, values, instruction, call, fn, parameterNames, tailArgumentNames, lineDirectives);
@@ -119,6 +133,8 @@ class CBodyEmitter {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
 					case IRIOStore(_, valueId) | IRIOInitialize(_, valueId, _, _) | IRIOConvert(valueId, _, _, _, _):
+						referenced.set(valueId, true);
+					case IRIOUnary(_, valueId, _):
 						referenced.set(valueId, true);
 					case IRIOBinary(_, leftValueId, rightValueId, _):
 						referenced.set(leftValueId, true);
@@ -243,11 +259,93 @@ class CBodyEmitter {
 		};
 	}
 
-	static function binaryOperation(operationId:String, instructionId:String, functionId:String):CBinaryOp {
-		return switch operationId {
-			case "haxe.u32.add": Add;
-			case _: fail('binary instruction `$instructionId` in `$functionId` has unsupported operation `$operationId`');
+	function recordPureResult(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			result:HxcIRResult, expression:CExpr, lineDirectives:Bool, functionId:String):Void {
+		values.set(result.id, expression);
+		if (!referencedValues.exists(result.id)) {
+			addLineDirective(statements, instruction.source, lineDirectives);
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, functionId))));
+		}
+	}
+
+	static function operationExpression(operationId:String, implementation:HxcIRImplementation, operands:Array<CExpr>, helperNames:Map<String, CIdentifier>,
+			instructionId:String, functionId:String):CExpr {
+		return switch implementation {
+			case IRIStatic:
+				staticOperationExpression(operationId, operands, instructionId, functionId);
+			case IRIProgramLocal(helperId):
+				helperCall(helperId, operands, helperNames, instructionId, functionId);
+			case IRIRuntime(featureId):
+				fail('primitive operation `$instructionId` in `$functionId` unexpectedly selected runtime feature `$featureId`');
 		};
+	}
+
+	static function staticOperationExpression(operationId:String, operands:Array<CExpr>, instructionId:String, functionId:String):CExpr {
+		if (operands.length == 1) {
+			final value = operands[0];
+			return switch operationId {
+				case "haxe.u32.negate": widenedUInt32Binary(Subtract, uint32Constant("0"), value);
+				case "haxe.u32.bit-not": castUInt32(EUnary(BitwiseNot, castUInt64(castUInt32(value))));
+				case "haxe.f64.negate": EUnary(Minus, value);
+				case "haxe.bool.not": EUnary(LogicalNot, value);
+				case _: fail('unary instruction `$instructionId` in `$functionId` has unsupported direct operation `$operationId`');
+			};
+		}
+		if (operands.length != 2) {
+			return fail('primitive instruction `$instructionId` in `$functionId` has invalid operand count `${operands.length}`');
+		}
+		final left = operands[0];
+		final right = operands[1];
+		return switch operationId {
+			case "haxe.u32.add": widenedUInt32Binary(Add, left, right);
+			case "haxe.u32.subtract": widenedUInt32Binary(Subtract, left, right);
+			case "haxe.u32.multiply": widenedUInt32Binary(Multiply, left, right);
+			case "haxe.f64.add": EBinary(Add, left, right);
+			case "haxe.f64.subtract": EBinary(Subtract, left, right);
+			case "haxe.f64.multiply": EBinary(Multiply, left, right);
+			case "haxe.u32.shift-left.masked": widenedUInt32Shift(ShiftLeft, left, right);
+			case "haxe.u32.shift-right.masked" | "haxe.u32.unsigned-shift-right.masked": widenedUInt32Shift(ShiftRight, left, right);
+			case "haxe.u32.bit-and": widenedUInt32Binary(BitAnd, left, right);
+			case "haxe.u32.bit-or": widenedUInt32Binary(BitOr, left, right);
+			case "haxe.u32.bit-xor": widenedUInt32Binary(BitXor, left, right);
+			case "haxe.bool.equal" | "haxe.i32.equal" | "haxe.u32.equal" | "haxe.f64.equal": EBinary(Equal, left, right);
+			case "haxe.bool.not-equal" | "haxe.i32.not-equal" | "haxe.u32.not-equal" | "haxe.f64.not-equal": EBinary(NotEqual, left, right);
+			case "haxe.i32.less" | "haxe.u32.less" | "haxe.f64.less": EBinary(Less, left, right);
+			case "haxe.i32.less-equal" | "haxe.u32.less-equal" | "haxe.f64.less-equal": EBinary(LessEqual, left, right);
+			case "haxe.i32.greater" | "haxe.u32.greater" | "haxe.f64.greater": EBinary(Greater, left, right);
+			case "haxe.i32.greater-equal" | "haxe.u32.greater-equal" | "haxe.f64.greater-equal": EBinary(GreaterEqual, left, right);
+			case _: fail('binary instruction `$instructionId` in `$functionId` has unsupported direct operation `$operationId`');
+		};
+	}
+
+	/**
+		Keep UInt operations direct while defeating C integer promotions on targets
+		where every uint32_t value is representable by a wider signed int.
+	 */
+	static function widenedUInt32Binary(operation:CBinaryOp, left:CExpr, right:CExpr):CExpr
+		return castUInt32(EBinary(operation, castUInt64(castUInt32(left)), castUInt64(castUInt32(right))));
+
+	static function widenedUInt32Shift(operation:CBinaryOp, value:CExpr, count:CExpr):CExpr
+		return castUInt32(EBinary(operation, castUInt64(castUInt32(value)), maskedShiftCount(count)));
+
+	static function maskedShiftCount(value:CExpr):CExpr
+		return EBinary(BitAnd, castUInt32(value), uint32Constant("31"));
+
+	static function castUInt32(value:CExpr):CExpr
+		return ECast(new CType(TInt(32, false)), DName(null), value);
+
+	static function castUInt64(value:CExpr):CExpr
+		return ECast(new CType(TInt(64, false)), DName(null), value);
+
+	static function uint32Constant(value:String):CExpr
+		return castUInt32(EInt(CIntegerLiteral.decimal(value)));
+
+	static function helperCall(helperId:String, operands:Array<CExpr>, helperNames:Map<String, CIdentifier>, instructionId:String, functionId:String):CExpr {
+		final name = helperNames.get(helperId);
+		if (name == null) {
+			return fail('primitive instruction `$instructionId` in `$functionId` has no selected helper `$helperId`');
+		}
+		return ECall(EIdentifier(name), operands);
 	}
 
 	public function cType(type:HxcIRTypeRef):CType {

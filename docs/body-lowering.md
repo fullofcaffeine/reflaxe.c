@@ -5,7 +5,9 @@ E2.T02 established the first compile-backed path from real pinned-Haxe
 reuses this layer for typed parameters and direct calls and packages the
 admitted primitive graph as a production C project. E2.T04 adds explicit
 multi-block sequencing for assignments, primitive static fields, lazy Boolean
-operators, value conditionals, and unsigned increments. This document remains
+operators, value conditionals, and unsigned increments. E2.T05 adds typed
+UB-safe primitive operators, compound updates, signed updates, and `Std.int`.
+This document remains
 the contract for individual body semantics; [static function
 lowering](function-lowering.md) owns graph, prototype, call, and
 executable-entry behavior, while [evaluation order](evaluation-order.md) owns
@@ -16,8 +18,8 @@ the stable-value and control-flow proof.
 `CBodyLowering` accepts typed functions containing:
 
 - `Void`, `Bool`, `Int`, `UInt`, and `Float` return/local/value types;
-- compiler-typed `TInt`, `TFloat`, and `TBool` constants (unary operators are
-  still outside this slice);
+- compiler-typed `TInt`, `TFloat`, and `TBool` constants plus numeric negation,
+  bitwise complement, and Boolean negation;
 - initialized automatic locals and local reads;
 - primitive parameters and direct static calls whose typed signatures are in
   the same admitted graph;
@@ -26,7 +28,12 @@ the stable-value and control-flow proof.
   captured constant initializers;
 - short-circuit `&&`/`||` and value-form ternary expressions through explicit
   HxcIR blocks;
-- prefix/postfix `UInt` increment through load/operation/store;
+- `Int`/`UInt`/`Float` arithmetic and comparisons, Haxe division, integer and
+  floating modulo, masked integer shifts, and integer bit operations;
+- arithmetic compound assignment plus prefix/postfix numeric increment and
+  decrement through explicit load/operation/store;
+- `Std.int(Float)` through the defined saturating/truncating primitive
+  conversion;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
@@ -41,17 +48,16 @@ return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Default/optional/rest parameters, indirect calls, general arithmetic, signed
-increment and all decrement forms, statement control flow, source array/index
-lowering, instance objects/fields, strings, closures, allocation, exceptions,
-and cleanup remain outside this slice. The first unsupported typed node fails with
-`HXC1001` at its exact Haxe range; lowering never substitutes `Dynamic`, `Any`,
-reflection, raw C, or an invented value.
+Default/optional/rest parameters, indirect calls, statement control flow,
+source array/index lowering, instance objects/fields, strings, closures,
+allocation, exceptions, and cleanup remain outside this slice. The first
+unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
+never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 
 ## Names, source mapping, and C shape
 
-Every function, global, local, stable-value temporary, and generated label is
-registered in the per-compilation
+Every function, global, local, stable-value temporary, generated label, and
+selected program-local helper is registered in the per-compilation
 `CSymbolRegistry` before names are finalized. A local request includes its
 lexical source ordinal and function namespace, so two shadowed Haxe variables
 with the same spelling receive distinct deterministic C identifiers. Input
@@ -62,13 +68,16 @@ Haxe compiler positions become normalized, repository-relative, one-based
 HxcIR spans. The C body emitter has two structural modes: ordinary output and
 output with typed `#line` statement/declaration nodes. It never interpolates a
 raw directive. Both forms are strict C11 and use only the required standard
-headers (`<stdbool.h>` and/or `<stdint.h>` for the admitted types).
+headers. Selected arithmetic helpers may add `<math.h>` or `<stdint.h>`, and
+floating modulo adds the exact `m` build fact.
 
 Every local/global load first becomes a typed stable-value temporary; an unused
 read then becomes an explicit `(void)temporary` statement so source order is
 retained without native warnings. The emitted body slice selects no runtime
-feature, header, source, define, library, or symbol. Portable and metal use the
-same representation for these already-ratified primitive semantics.
+feature, header, source, define, or symbol. Compiler-owned helpers remain
+private `static inline` declarations; the C math library fact is a build
+requirement, not an `hxrt` feature. Portable and metal use the same
+representation and operation semantics.
 
 ## Production boundary
 
@@ -93,6 +102,7 @@ Run:
 ```sh
 npm run test:body-lowering
 npm run test:evaluation-order
+npm run test:arithmetic-semantics
 npm run snapshots:check
 ```
 
@@ -104,7 +114,8 @@ available GCC and Clang at `-O0` and `-O2` under
 `-pedantic-errors`. Required CI lanes pin each compiler family and verify its
 command identity before compiling the checked-in generated snapshots.
 
-This slice has no public C ABI, standard-library support, allocation, or `hxrt`
-dependency. Standard-library parity remains the E5 feature graph: direct
-idiomatic C first, program-local specialization next, and only the narrowest
-justified optimized runtime slice last.
+This slice has no public C ABI, broad standard-library support, allocation, or
+`hxrt` dependency. The one admitted `Std.int` intrinsic is compiler lowering,
+not a general stdlib claim. Standard-library parity remains the E5 feature
+graph: direct idiomatic C first, program-local specialization next, and only
+the narrowest justified optimized runtime slice last.

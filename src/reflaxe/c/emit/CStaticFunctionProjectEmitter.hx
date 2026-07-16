@@ -8,6 +8,7 @@ import reflaxe.c.ir.HxcIR;
 import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
+import reflaxe.c.lowering.CPrimitiveHelperEmitter;
 
 /** Structural function prototype/definition plan for the first executable slice. */
 typedef CStaticFunctionSourcePlan = {
@@ -43,6 +44,7 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final bodyEmitter = new CBodyEmitter();
+		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
 		for (fn in lowered.functions) {
@@ -68,9 +70,17 @@ class CStaticFunctionProjectEmitter {
 				}
 			}
 		}
+		for (header in helperEmitter.requiredHeaders(lowered.helpers)) {
+			if (headers.indexOf(header) == -1) {
+				headers.push(header);
+			}
+		}
 		headers.sort(compareStrings);
 		for (header in headers) {
 			headerUnit.includes.push({path: header, kind: System});
+		}
+		for (definition in helperEmitter.definitions(lowered.helpers)) {
+			headerUnit.declarations.push(definition);
 		}
 		for (global in lowered.globals) {
 			headerUnit.declarations.push(DVariable({
@@ -89,6 +99,10 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final programUnit = sourceUnit();
+		final helperNames:Map<String, CIdentifier> = [];
+		for (helper in lowered.helpers) {
+			helperNames.set(helper.helperId, helper.cName);
+		}
 		for (global in lowered.globals) {
 			programUnit.declarations.push(DVariable({
 				storage: [],
@@ -108,7 +122,7 @@ class CStaticFunctionProjectEmitter {
 				functionSpecifiers: functionSpecifiers,
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
-				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, false,
+				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
 					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds),
 				attributes: []
 			});

@@ -10,12 +10,19 @@ import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionDecision;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionMeaning;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionResult;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionUse;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperationDecision;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperationResult;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveBinaryOperator;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveHelperKind;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveMappingResult;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveNullability;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveSignedness;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveSourceType;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveStorage;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveTypeMapping;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperationDecision;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperationResult;
+import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveUnaryOperator;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveWidth;
 
 private typedef CIntegerFacts = {
@@ -100,6 +107,118 @@ class CPrimitiveSemantics {
 		return CPConversionRejected("conversion is not admitted by the selected typed primitive operation");
 	}
 
+	/** Decide one typed primitive unary operation before C syntax is selected. */
+	public static function unaryOperation(operation:CPrimitiveUnaryOperator, operand:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveUnaryOperationResult {
+		if (!isOrdinaryNonNullable(operand) || !isOrdinaryNonNullable(result)) {
+			return CPUOperationRejected("primitive unary operations require ordinary non-null Haxe scalar operands and results");
+		}
+		return switch operation {
+			case CPUONegate:
+				switch result.sourceType {
+					case CPHaxeInt:
+						unaryAllowed(requireSource(CPHaxeInt), result, "haxe.i32.negate", CPHI32Negate);
+					case CPHaxeUInt:
+						unaryAllowed(requireSource(CPHaxeUInt), result, "haxe.u32.negate", null);
+					case CPHaxeFloat:
+						unaryAllowed(requireSource(CPHaxeFloat), result, "haxe.f64.negate", null);
+					case _:
+						CPUOperationRejected("numeric negation requires an Int, UInt, or Float result");
+				}
+			case CPUOBitwiseNot:
+				switch result.sourceType {
+					case CPHaxeInt:
+						unaryAllowed(requireSource(CPHaxeInt), result, "haxe.i32.bit-not", CPHI32BitwiseNot);
+					case CPHaxeUInt:
+						unaryAllowed(requireSource(CPHaxeUInt), result, "haxe.u32.bit-not", null);
+					case _:
+						CPUOperationRejected("bitwise complement requires an Int or UInt result");
+				}
+			case CPUOLogicalNot: operand.sourceType == CPHaxeBool && result.sourceType == CPHaxeBool ? unaryAllowed(operand, result, "haxe.bool.not",
+					null) : CPUOperationRejected("logical not requires Bool input and result");
+		};
+	}
+
+	/** Decide operand coercions, result type, and direct/helper ownership for a binary operation. */
+	public static function binaryOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		if (!isOrdinaryNonNullable(left) || !isOrdinaryNonNullable(right) || !isOrdinaryNonNullable(result)) {
+			return CPBOperationRejected("primitive binary operations require ordinary non-null Haxe scalar operands and results");
+		}
+		return switch operation {
+			case CPBOAdd | CPBOSubtract | CPBOMultiply:
+				arithmeticOperation(operation, left, right, result);
+			case CPBODivide: result.sourceType == CPHaxeFloat && isNumeric(left) && isNumeric(right) ? binaryAllowed(requireSource(CPHaxeFloat),
+					requireSource(CPHaxeFloat), result, "haxe.f64.divide",
+					CPHF64Divide) : CPBOperationRejected("Haxe primitive division requires numeric operands and a Float result");
+			case CPBOModulo:
+				moduloOperation(left, right, result);
+			case CPBOShiftLeft | CPBOShiftRight | CPBOUnsignedShiftRight:
+				shiftOperation(operation, left, right, result);
+			case CPBOBitAnd | CPBOBitOr | CPBOBitXor:
+				bitOperation(operation, left, right, result);
+			case CPBOEqual | CPBONotEqual:
+				equalityOperation(operation, left, right, result);
+			case CPBOLess | CPBOLessEqual | CPBOGreater | CPBOGreaterEqual:
+				comparisonOperation(operation, left, right, result);
+		};
+	}
+
+	public static function helperId(kind:CPrimitiveHelperKind):String {
+		return switch kind {
+			case CPHU32ToI32Bits: "hxc.u32.to.i32.bits";
+			case CPHI32Add: "hxc.i32.add.wrapping";
+			case CPHI32Subtract: "hxc.i32.subtract.wrapping";
+			case CPHI32Multiply: "hxc.i32.multiply.wrapping";
+			case CPHI32Negate: "hxc.i32.negate.wrapping";
+			case CPHI32Modulo: "hxc.i32.modulo.zero-safe";
+			case CPHU32Modulo: "hxc.u32.modulo.zero-safe";
+			case CPHI32ShiftLeft: "hxc.i32.shift-left.masked";
+			case CPHI32ShiftRight: "hxc.i32.shift-right.masked";
+			case CPHI32UnsignedShiftRight: "hxc.i32.unsigned-shift-right.masked";
+			case CPHI32BitAnd: "hxc.i32.bit-and";
+			case CPHI32BitOr: "hxc.i32.bit-or";
+			case CPHI32BitXor: "hxc.i32.bit-xor";
+			case CPHI32BitwiseNot: "hxc.i32.bit-not";
+			case CPHF64Divide: "hxc.f64.divide.zero-safe";
+			case CPHF64Modulo: "hxc.f64.modulo";
+			case CPHF64ToI32Saturating: "hxc.f64.to.i32.saturating";
+		};
+	}
+
+	public static function helperKind(id:String):Null<CPrimitiveHelperKind> {
+		return switch id {
+			case "hxc.u32.to.i32.bits": CPHU32ToI32Bits;
+			case "hxc.i32.add.wrapping": CPHI32Add;
+			case "hxc.i32.subtract.wrapping": CPHI32Subtract;
+			case "hxc.i32.multiply.wrapping": CPHI32Multiply;
+			case "hxc.i32.negate.wrapping": CPHI32Negate;
+			case "hxc.i32.modulo.zero-safe": CPHI32Modulo;
+			case "hxc.u32.modulo.zero-safe": CPHU32Modulo;
+			case "hxc.i32.shift-left.masked": CPHI32ShiftLeft;
+			case "hxc.i32.shift-right.masked": CPHI32ShiftRight;
+			case "hxc.i32.unsigned-shift-right.masked": CPHI32UnsignedShiftRight;
+			case "hxc.i32.bit-and": CPHI32BitAnd;
+			case "hxc.i32.bit-or": CPHI32BitOr;
+			case "hxc.i32.bit-xor": CPHI32BitXor;
+			case "hxc.i32.bit-not": CPHI32BitwiseNot;
+			case "hxc.f64.divide.zero-safe": CPHF64Divide;
+			case "hxc.f64.modulo": CPHF64Modulo;
+			case "hxc.f64.to.i32.saturating": CPHF64ToI32Saturating;
+			case _: null;
+		};
+	}
+
+	public static function helperDependencies(kind:CPrimitiveHelperKind):Array<CPrimitiveHelperKind> {
+		return switch kind {
+			case CPHI32Add | CPHI32Subtract | CPHI32Multiply | CPHI32Negate | CPHI32ShiftLeft | CPHI32ShiftRight | CPHI32UnsignedShiftRight | CPHI32BitAnd |
+				CPHI32BitOr | CPHI32BitXor | CPHI32BitwiseNot:
+				[CPHU32ToI32Bits];
+			case CPHU32ToI32Bits | CPHI32Modulo | CPHU32Modulo | CPHF64Divide | CPHF64Modulo | CPHF64ToI32Saturating:
+				[];
+		};
+	}
+
 	public static function sourceTypeKey(sourceType:CPrimitiveSourceType):String {
 		return switch sourceType {
 			case CPHaxeVoid: "Void";
@@ -135,6 +254,192 @@ class CPrimitiveSemantics {
 			CPCIntPtr,
 			CPCUIntPtr
 		];
+	}
+
+	static function arithmeticOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		final suffix = switch operation {
+			case CPBOAdd: "add";
+			case CPBOSubtract: "subtract";
+			case CPBOMultiply: "multiply";
+			case _: return CPBOperationRejected("non-arithmetic operator reached arithmetic primitive selection");
+		};
+		return switch result.sourceType {
+			case CPHaxeInt: final helper = switch operation {
+					case CPBOAdd: CPHI32Add;
+					case CPBOSubtract: CPHI32Subtract;
+					case CPBOMultiply: CPHI32Multiply;
+					case _: return CPBOperationRejected("non-arithmetic operator reached signed arithmetic selection");
+				}; isIntegerLike(left) && isIntegerLike(right) ? binaryAllowed(requireSource(CPHaxeInt), requireSource(CPHaxeInt), result, 'haxe.i32.$suffix',
+					helper) : CPBOperationRejected("Int arithmetic requires integer operands");
+			case CPHaxeUInt: isIntegerLike(left) && isIntegerLike(right) ? binaryAllowed(requireSource(CPHaxeUInt), requireSource(CPHaxeUInt), result,
+					'haxe.u32.$suffix', null) : CPBOperationRejected("UInt arithmetic requires integer operands");
+			case CPHaxeFloat: isNumeric(left) && isNumeric(right) ? binaryAllowed(requireSource(CPHaxeFloat), requireSource(CPHaxeFloat), result,
+					'haxe.f64.$suffix', null) : CPBOperationRejected("Float arithmetic requires numeric operands");
+			case _:
+				CPBOperationRejected("primitive arithmetic requires an Int, UInt, or Float result");
+		};
+	}
+
+	static function moduloOperation(left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping, result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		return switch result.sourceType {
+			case CPHaxeInt: isIntegerLike(left) && isIntegerLike(right) ? binaryAllowed(requireSource(CPHaxeInt), requireSource(CPHaxeInt), result,
+					"haxe.i32.modulo", CPHI32Modulo) : CPBOperationRejected("Int modulo requires integer operands");
+			case CPHaxeUInt: isIntegerLike(left) && isIntegerLike(right) ? binaryAllowed(requireSource(CPHaxeUInt), requireSource(CPHaxeUInt), result,
+					"haxe.u32.modulo", CPHU32Modulo) : CPBOperationRejected("UInt modulo requires integer operands");
+			case CPHaxeFloat: isNumeric(left) && isNumeric(right) ? binaryAllowed(requireSource(CPHaxeFloat), requireSource(CPHaxeFloat), result,
+					"haxe.f64.modulo", CPHF64Modulo) : CPBOperationRejected("Float modulo requires numeric operands");
+			case _:
+				CPBOperationRejected("primitive modulo requires an Int, UInt, or Float result");
+		};
+	}
+
+	static function shiftOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		if (!isIntegerLike(left) || !isIntegerLike(right)) {
+			return CPBOperationRejected("shift operands must be Int or UInt");
+		}
+		final operationSuffix = switch operation {
+			case CPBOShiftLeft: "shift-left";
+			case CPBOShiftRight: "shift-right";
+			case CPBOUnsignedShiftRight: "unsigned-shift-right";
+			case _: return CPBOperationRejected("non-shift operator reached shift primitive selection");
+		};
+		return switch result.sourceType {
+			case CPHaxeInt:
+				final helper = switch operation {
+					case CPBOShiftLeft: CPHI32ShiftLeft;
+					case CPBOShiftRight: CPHI32ShiftRight;
+					case CPBOUnsignedShiftRight: CPHI32UnsignedShiftRight;
+					case _: return CPBOperationRejected("non-shift operator reached signed shift selection");
+				};
+				binaryAllowed(requireSource(CPHaxeInt), requireSource(CPHaxeInt), result, 'haxe.i32.$operationSuffix.masked', helper);
+			case CPHaxeUInt:
+				binaryAllowed(requireSource(CPHaxeUInt), requireSource(CPHaxeInt), result, 'haxe.u32.$operationSuffix.masked', null);
+			case _:
+				CPBOperationRejected("shift result must be Int or UInt");
+		};
+	}
+
+	static function bitOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		if (!isIntegerLike(left) || !isIntegerLike(right)) {
+			return CPBOperationRejected("bitwise operands must be Int or UInt");
+		}
+		final suffix = switch operation {
+			case CPBOBitAnd: "bit-and";
+			case CPBOBitOr: "bit-or";
+			case CPBOBitXor: "bit-xor";
+			case _: return CPBOperationRejected("non-bitwise operator reached bitwise primitive selection");
+		};
+		return switch result.sourceType {
+			case CPHaxeInt:
+				final helper = switch operation {
+					case CPBOBitAnd: CPHI32BitAnd;
+					case CPBOBitOr: CPHI32BitOr;
+					case CPBOBitXor: CPHI32BitXor;
+					case _: return CPBOperationRejected("non-bitwise operator reached signed bitwise selection");
+				};
+				binaryAllowed(requireSource(CPHaxeInt), requireSource(CPHaxeInt), result, 'haxe.i32.$suffix', helper);
+			case CPHaxeUInt:
+				binaryAllowed(requireSource(CPHaxeUInt), requireSource(CPHaxeUInt), result, 'haxe.u32.$suffix', null);
+			case _:
+				CPBOperationRejected("bitwise result must be Int or UInt");
+		};
+	}
+
+	static function equalityOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		if (result.sourceType != CPHaxeBool) {
+			return CPBOperationRejected("equality requires a Bool result");
+		}
+		final suffix = operation == CPBOEqual ? "equal" : "not-equal";
+		if (left.sourceType == CPHaxeBool && right.sourceType == CPHaxeBool) {
+			return binaryAllowed(left, right, result, 'haxe.bool.$suffix', null);
+		}
+		final common = commonNumericOperand(left, right);
+		return common == null ? CPBOperationRejected("equality operands require a common primitive numeric type") : binaryAllowed(common, common, result,
+			'haxe.${numericKey(common)}.$suffix', null);
+	}
+
+	static function comparisonOperation(operation:CPrimitiveBinaryOperator, left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping,
+			result:CPrimitiveTypeMapping):CPrimitiveBinaryOperationResult {
+		if (result.sourceType != CPHaxeBool) {
+			return CPBOperationRejected("ordered comparison requires a Bool result");
+		}
+		final common = commonNumericOperand(left, right);
+		if (common == null) {
+			return CPBOperationRejected("ordered comparison operands require a common primitive numeric type");
+		}
+		final suffix = switch operation {
+			case CPBOLess: "less";
+			case CPBOLessEqual: "less-equal";
+			case CPBOGreater: "greater";
+			case CPBOGreaterEqual: "greater-equal";
+			case _: return CPBOperationRejected("non-comparison operator reached ordered comparison selection");
+		};
+		return binaryAllowed(common, common, result, 'haxe.${numericKey(common)}.$suffix', null);
+	}
+
+	static function commonNumericOperand(left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping):Null<CPrimitiveTypeMapping> {
+		if (!isNumeric(left) || !isNumeric(right)) {
+			return null;
+		}
+		if (left.sourceType == CPHaxeFloat || right.sourceType == CPHaxeFloat) {
+			return requireSource(CPHaxeFloat);
+		}
+		if (left.sourceType == CPHaxeUInt && right.sourceType == CPHaxeUInt) {
+			return requireSource(CPHaxeUInt);
+		}
+		if (left.sourceType == CPHaxeInt && right.sourceType == CPHaxeInt) {
+			return requireSource(CPHaxeInt);
+		}
+		return null;
+	}
+
+	static function numericKey(mapping:CPrimitiveTypeMapping):String {
+		return switch mapping.sourceType {
+			case CPHaxeInt: "i32";
+			case CPHaxeUInt: "u32";
+			case CPHaxeFloat: "f64";
+			case _: throw "non-numeric primitive reached numeric operation identity";
+		};
+	}
+
+	static function unaryAllowed(operand:CPrimitiveTypeMapping, result:CPrimitiveTypeMapping, operationId:String,
+			helper:Null<CPrimitiveHelperKind>):CPrimitiveUnaryOperationResult {
+		return CPUOperationAllowed(new CPrimitiveUnaryOperationDecision(operand, result, operationId,
+			helper == null ? IRIStatic : IRIProgramLocal(helperId(helper))));
+	}
+
+	static function binaryAllowed(left:CPrimitiveTypeMapping, right:CPrimitiveTypeMapping, result:CPrimitiveTypeMapping, operationId:String,
+			helper:Null<CPrimitiveHelperKind>):CPrimitiveBinaryOperationResult {
+		return CPBOperationAllowed(new CPrimitiveBinaryOperationDecision(left, right, result, operationId,
+			helper == null ? IRIStatic : IRIProgramLocal(helperId(helper))));
+	}
+
+	static function requireSource(sourceType:CPrimitiveSourceType):CPrimitiveTypeMapping
+		return baseMapping(sourceType);
+
+	static function isOrdinaryNonNullable(mapping:CPrimitiveTypeMapping):Bool {
+		return mapping.nullability == CPNonNullable && switch mapping.sourceType {
+			case CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
+			case _: false;
+		};
+	}
+
+	static function isNumeric(mapping:CPrimitiveTypeMapping):Bool {
+		return switch mapping.sourceType {
+			case CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
+			case _: false;
+		};
+	}
+
+	static function isIntegerLike(mapping:CPrimitiveTypeMapping):Bool {
+		return switch mapping.sourceType {
+			case CPHaxeInt | CPHaxeUInt: true;
+			case _: false;
+		};
 	}
 
 	static function implicitConversion(source:CPrimitiveTypeMapping, target:CPrimitiveTypeMapping):CPrimitiveConversionResult {

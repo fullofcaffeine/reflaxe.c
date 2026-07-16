@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-arithmetic-semantics-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-002",
+    "HXC-SEM-003",
+    "HXC-QA-004"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/emit/CProjectEmitter.hx",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CPrimitiveHelperEmitter.hx",
+    "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
+    "src/reflaxe/c/semantics/CPrimitiveTypes.hx",
+    "test/arithmetic_semantics/ArithmeticSemanticsProbe.hx",
+    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../arithmetic_semantics/run.py"
+    ],
+    "workingDirectory": "test/positive/arithmetic-semantics",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^arithmetic-semantics: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/arithmetic_semantics/expected/arithmetic.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/contract.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

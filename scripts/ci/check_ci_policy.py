@@ -98,6 +98,7 @@ REQUIRED_GATE_FILES = (
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyLoweringError.hx",
+    "src/reflaxe/c/lowering/CPrimitiveHelperEmitter.hx",
     "src/reflaxe/c/lowering/HaxeSourceSpan.hx",
     "docs/body-lowering.md",
     "test/body_lowering/BodyLoweringProbe.hx",
@@ -148,6 +149,21 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/evaluation-order/case.json",
     "test/runtime/evaluation-order/case.json",
     "test/differential/evaluation-order/case.json",
+    "docs/arithmetic-semantics.md",
+    "test/arithmetic_semantics/ArithmeticSemanticsProbe.hx",
+    "test/arithmetic_semantics/arithmetic_semantics.hxml",
+    "test/arithmetic_semantics/oracle.hxml",
+    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/expected/arithmetic.hxcir",
+    "test/arithmetic_semantics/expected/contract.json",
+    "test/arithmetic_semantics/expected/program.h",
+    "test/arithmetic_semantics/expected/program.c",
+    "test/arithmetic_semantics/expected/symbols.json",
+    "test/arithmetic_semantics/run.py",
+    "test/positive/arithmetic-semantics/case.json",
+    "test/snapshot/arithmetic-semantics/case.json",
+    "test/runtime/arithmetic-semantics/case.json",
+    "test/differential/arithmetic-semantics/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -195,6 +211,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -252,6 +269,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:function-lowering entry point")
     if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
         errors.append("package.json must retain the test:evaluation-order entry point")
+    if scripts.get("test:arithmetic-semantics") != "python3 test/arithmetic_semantics/run.py":
+        errors.append("package.json must retain the test:arithmetic-semantics entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -280,6 +299,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:function-lowering")
     if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:evaluation-order")
+    if "npm run test:arithmetic-semantics" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:arithmetic-semantics")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -327,6 +348,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed function-lowering test")
     if "test/evaluation_order/run.py" not in pre_commit:
         errors.append("pre-commit must run the explicit evaluation-order test")
+    if "test/arithmetic_semantics/run.py" not in pre_commit:
+        errors.append("pre-commit must run the primitive arithmetic semantic test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -454,6 +477,37 @@ def validate() -> list[str]:
     if "compiler_identity" not in evaluation_runner or '"--version"' not in evaluation_runner:
         errors.append(
             "evaluation-order runner must verify required compiler-family identity"
+        )
+
+    arithmetic_runner = read_text(ROOT / "test/arithmetic_semantics/run.py", errors)
+    for required_arithmetic_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-Wstrict-prototypes",
+        "-Wmissing-prototypes",
+        "-Wundef",
+        "-Wformat=2",
+        "-Wimplicit-fallthrough",
+        "-Wcast-align",
+        "-Wcast-qual",
+        "-fsanitize=undefined,float-divide-by-zero",
+        "-O0",
+        "-O2",
+    ):
+        if required_arithmetic_flag not in arithmetic_runner:
+            errors.append(
+                "arithmetic semantic native runner lost strict flag "
+                + required_arithmetic_flag
+            )
+    if "--native-only" not in arithmetic_runner or "--toolchain" not in arithmetic_runner:
+        errors.append("arithmetic semantic runner must expose the required native matrix seam")
+    if "compiler_identity" not in arithmetic_runner or '"--version"' not in arithmetic_runner:
+        errors.append(
+            "arithmetic semantic runner must verify required compiler-family identity"
         )
 
     return errors

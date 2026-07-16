@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "status": "typed-ub-safe-arithmetic-runtime-free",
+  "helpers": [
+    "hxc.f64.divide.zero-safe",
+    "hxc.f64.modulo",
+    "hxc.f64.to.i32.saturating",
+    "hxc.i32.add.wrapping",
+    "hxc.i32.bit-and",
+    "hxc.i32.bit-not",
+    "hxc.i32.bit-or",
+    "hxc.i32.bit-xor",
+    "hxc.i32.modulo.zero-safe",
+    "hxc.i32.multiply.wrapping",
+    "hxc.i32.negate.wrapping",
+    "hxc.i32.shift-left.masked",
+    "hxc.i32.shift-right.masked",
+    "hxc.i32.subtract.wrapping",
+    "hxc.i32.unsigned-shift-right.masked",
+    "hxc.u32.modulo.zero-safe",
+    "hxc.u32.to.i32.bits"
+  ],
+  "buildFacts": [
+    {
+      "ownerModulePaths": [
+        "ArithmeticFixture"
+      ],
+      "name": "m",
+      "valueKind": null,
+      "kind": "link",
+      "value": null
+    }
+  ],
+  "runtimeFeatures": []
+}

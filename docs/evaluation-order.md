@@ -18,8 +18,10 @@ The current source-backed slice covers:
   requires it;
 - value-form `if`/ternary expressions as true/false blocks that store into a
   typed flow local and rejoin explicitly; and
-- prefix/postfix `UInt` increment as load, constant, UB-safe
-  unsigned operation, store, then selection of the new or old value.
+- prefix/postfix primitive increment/decrement as load, constant, typed UB-safe
+  operation, store, then selection of the new or old value; and
+- compound arithmetic assignment as one stable destination load, left-to-right
+  operand evaluation, one typed operation, and one store.
 
 Static-field declarations and initializers come from the `TypedProgramInput`
 captured inside `filterTypes`. Lowering never asks a mutable `ClassField` for a
@@ -61,9 +63,10 @@ convenience alone is not authority to weaken sequencing.
 
 This is expression-valued control flow, not the general statement-control-flow
 implementation. Statement `if`, loops, switches, breaks, and continues remain
-fail-closed for E2.T06. Signed `Int` increment and all decrement forms remain
-deferred to the E2.T05 UB-safe arithmetic policy; the admitted `UInt` operation
-uses C unsigned arithmetic directly.
+fail-closed for E2.T06. E2.T05 now routes signed updates through wrapping
+program-local helpers and keeps safe `UInt` updates as direct unsigned C. A
+right operand that creates control flow forces the already evaluated left value
+into a typed flow local before that control flow begins.
 
 Array representation and source `TArray` lowering remain E2.T08. The indexing
 acceptance evidence is therefore the existing representation-neutral HxcIR
@@ -84,6 +87,7 @@ Run:
 
 ```sh
 npm run test:evaluation-order
+npm run test:arithmetic-semantics
 npm run snapshots:check
 ```
 
@@ -92,4 +96,5 @@ checks exact HxcIR/header/C/symbol snapshots; checks the indexed compound
 assignment IR; runs an Eval oracle; builds real production projects including
 `hxc_runtime=none`; and compiles/runs checked-in and production-generated C
 with required GCC and Clang lanes at `-O0` and `-O2` under warning-clean strict
-C11.
+C11. The arithmetic suite extends that proof to signed updates, compound
+assignment, boundary arithmetic, and eligible UBSan execution.

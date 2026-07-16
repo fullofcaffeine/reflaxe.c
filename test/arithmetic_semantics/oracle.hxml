@@ -1,0 +1,4 @@
+-cp test/arithmetic_semantics/fixtures/
+-D arithmetic_semantics_oracle
+-main ArithmeticFixture
+--interp

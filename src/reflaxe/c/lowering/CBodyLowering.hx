@@ -3,17 +3,22 @@ package reflaxe.c.lowering;
 #if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
 import haxe.macro.Expr.Position;
+import haxe.macro.Expr.Binop;
+import haxe.macro.Expr.Unop;
 import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.c.CProfile;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST;
+import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperPlan;
+import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperSelection;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
 import reflaxe.c.semantics.CPrimitiveSemantics;
 import reflaxe.c.semantics.CPrimitiveTypes;
@@ -96,12 +101,17 @@ class CBodyLoweringResult {
 	public final program:HxcIRProgram;
 	public final functions:Array<CLoweredBodyFunction>;
 	public final globals:Array<CLoweredBodyGlobal>;
+	public final helpers:Array<CPrimitiveHelperPlan>;
+	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
 
-	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>, symbolTable:CSymbolTableSnapshot) {
+	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>, helpers:Array<CPrimitiveHelperPlan>,
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
+		this.helpers = helpers.copy();
+		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
 	}
 }
@@ -138,7 +148,15 @@ class CBodyLowering {
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final program = buildProgram(built, preparedGlobals);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
+		final helperSelection = new CPrimitiveHelperSelection();
+		helperSelection.collect(program);
+		helperSelection.register(context.symbols);
 		final symbolTable = context.symbols.finalizeSymbols();
+		final helpers = helperSelection.finalize(context.symbols);
+		final helperNames:Map<String, CIdentifier> = [];
+		for (helper in helpers) {
+			helperNames.set(helper.helperId, helper.cName);
+		}
 		final functionNames:Map<String, CIdentifier> = [];
 		for (item in built) {
 			functionNames.set(item.ir.id, context.symbols.identifierFor(item.prepared.functionRequest));
@@ -177,11 +195,13 @@ class CBodyLowering {
 			lowered.push(new CLoweredBodyFunction(input.modulePath, input.declarationPath, input.fieldName, item.ir,
 				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, temporaryNames, tailArgumentNames, labelNames,
 				emitter.requiredHeaders(item.ir),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, false, tailArgumentNames, labelNames),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, true, tailArgumentNames, labelNames)));
+				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false, tailArgumentNames,
+					labelNames),
+				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, true, tailArgumentNames,
+					labelNames)));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, symbolTable);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable);
 	}
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>):HxcIRProgram {
@@ -303,6 +323,11 @@ private typedef LoweredPlace = {
 	final place:HxcIRPlace;
 	final mapping:CPrimitiveTypeMapping;
 	final mutable:Bool;
+}
+
+private enum UIntIntrinsicResult {
+	UIIntrinsicLowered(value:LoweredValue);
+	UIIntrinsicNotMatched;
 }
 
 private typedef MutableBodyBlock = {
@@ -740,8 +765,13 @@ private class FunctionBuilder {
 			case TMeta(_, inner): lowerValue(inner, expectedMapping);
 			case TBlock(expressions): lowerValueBlock(expression, expressions, expectedMapping);
 			case TCast(inner, _):
-				final source = lowerValue(inner);
-				coerce(source, primitiveMapping(expression.t, expression.pos, "TCast(target-type)"), expression.pos, "TCast");
+				final target = primitiveMapping(expression.t, expression.pos, "TCast(target-type)");
+				switch tryLowerUIntIntrinsic(expression, inner, target) {
+					case UIIntrinsicLowered(value): value;
+					case UIIntrinsicNotMatched:
+						final source = lowerValue(inner);
+						coerce(source, target, expression.pos, "TCast");
+				}
 			case TCall(_, _):
 				final result = lowerCall(expression, true);
 				if (result == null) {
@@ -749,9 +779,13 @@ private class FunctionBuilder {
 				}
 				result;
 			case TBinop(OpAssign, left, right): lowerAssignment(expression, left, right);
+			case TBinop(OpAssignOp(operation), left, right): lowerCompoundAssignment(expression, operation, left, right);
 			case TBinop(OpBoolAnd, left, right): lowerLazyBoolean(expression, left, right, false);
 			case TBinop(OpBoolOr, left, right): lowerLazyBoolean(expression, left, right, true);
-			case TUnop(OpIncrement, postFix, target): lowerIncrement(expression, target, postFix);
+			case TBinop(operation, left, right): lowerBinary(expression, operation, left, right);
+			case TUnop(OpIncrement, postFix, target): lowerUpdate(expression, target, postFix, true);
+			case TUnop(OpDecrement, postFix, target): lowerUpdate(expression, target, postFix, false);
+			case TUnop(operation, _, operand): lowerUnary(expression, operation, operand);
 			case TIf(condition, whenTrue, whenFalse): lowerConditional(expression, condition, whenTrue, whenFalse, expectedMapping);
 			case _: unsupported(expression, nodeName(expression));
 		};
@@ -846,24 +880,240 @@ private class FunctionBuilder {
 		return value;
 	}
 
-	function lowerIncrement(expression:TypedExpr, targetExpression:TypedExpr, postFix:Bool):LoweredValue {
+	function lowerCompoundAssignment(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		final target = lowerPlace(left);
+		if (!target.mutable) {
+			unsupported(left, "TBinop(OpAssignOp:immutable-place)");
+		}
+		final oldValue = loadPlace(target, left.pos, "compound-load");
+		final oldValueLocal = expressionCreatesFlow(right) ? createFlowLocal(oldValue.mapping, oldValue.id,
+			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "compound-left") : null;
+		final rightValue = lowerValue(right);
+		final stableOldValue = oldValueLocal == null ? oldValue : loadPlace({place: IRPLocal(oldValueLocal), mapping: oldValue.mapping, mutable: true},
+			left.pos, "compound-left-load");
+		final nextValue = lowerBinaryValues(expression, operation, stableOldValue, rightValue, "compound", target.mapping);
+		final stored = coerce(nextValue, target.mapping, expression.pos, "TBinop(OpAssignOp:result)");
+		appendInstruction(null, IRIOStore(target.place, stored.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "compound-store");
+		return stored;
+	}
+
+	function lowerBinary(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		final leftValue = lowerValue(left);
+		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftValue.mapping, leftValue.id,
+			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "binary-left") : null;
+		final rightValue = lowerValue(right);
+		final stableLeftValue = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftValue.mapping, mutable: true},
+			left.pos, "binary-left-load");
+		return lowerBinaryValues(expression, operation, stableLeftValue, rightValue, "binary");
+	}
+
+	function tryLowerUIntIntrinsic(expression:TypedExpr, inner:TypedExpr, target:CPrimitiveTypeMapping):UIntIntrinsicResult {
+		if (target.sourceType != CPHaxeUInt || target.nullability != CPNonNullable) {
+			return UIIntrinsicNotMatched;
+		}
+		final candidate = unwrapPatternExpression(inner);
+		switch candidate.expr {
+			case TBinop(operation, left, right):
+				final leftUInt = extractUIntBitValue(left);
+				if (leftUInt == null) {
+					return UIIntrinsicNotMatched;
+				}
+				final rightSource = switch operation {
+					case OpShl | OpShr | OpUShr: right;
+					case OpAdd | OpSub | OpMult | OpAnd | OpOr | OpXor:
+						extractUIntBitValue(right);
+					case _:
+						null;
+				};
+				if (rightSource == null) {
+					return UIIntrinsicNotMatched;
+				}
+				return UIIntrinsicLowered(lowerUIntBinary(expression, operation, leftUInt, rightSource, target));
+			case TCall(callee, arguments) if (isStdInt(callee) && arguments.length == 1):
+				final modulo = unwrapPatternExpression(arguments[0]);
+				switch modulo.expr {
+					case TBinop(OpMod, left, right):
+						final leftUInt = extractUIntFloatValue(left);
+						final rightUInt = extractUIntFloatValue(right);
+						if (leftUInt != null && rightUInt != null) {
+							return UIIntrinsicLowered(lowerUIntBinary(expression, OpMod, leftUInt, rightUInt, target));
+						}
+					case _:
+				}
+			case _:
+		}
+		return UIIntrinsicNotMatched;
+	}
+
+	function lowerUIntBinary(expression:TypedExpr, operation:Binop, leftExpression:TypedExpr, rightExpression:TypedExpr,
+			target:CPrimitiveTypeMapping):LoweredValue {
+		final leftValue = lowerValue(leftExpression);
+		final rightValue = lowerValue(rightExpression);
+		return lowerBinaryValues(expression, operation, leftValue, rightValue, "uint-intrinsic", target);
+	}
+
+	function extractUIntBitValue(expression:TypedExpr):Null<TypedExpr> {
+		final candidate = unwrapPatternExpression(expression);
+		final mapping = switch CPrimitiveTypeMapper.map(candidate.t, context.profile) {
+			case CTPrimitive(value): value;
+			case _: return null;
+		};
+		return mapping.sourceType == CPHaxeUInt && mapping.nullability == CPNonNullable ? candidate : null;
+	}
+
+	/** Recognize the pinned `UInt.toFloat()` expansion without treating arbitrary blocks as intrinsics. */
+	function extractUIntFloatValue(expression:TypedExpr):Null<TypedExpr> {
+		final candidate = unwrapPatternExpression(expression);
+		final expressions = switch candidate.expr {
+			case TBlock(values) if (values.length == 2): values;
+			case _: return null;
+		};
+		final declaration = switch expressions[0].expr {
+			case TVar(variable, initializer) if (initializer != null): {variable: variable, initializer: initializer};
+			case _: return null;
+		};
+		final source = extractUIntBitValue(declaration.initializer);
+		if (source == null) {
+			return null;
+		}
+		final branches = switch expressions[1].expr {
+			case TIf(condition, whenTrue, whenFalse) if (whenFalse != null): {condition: condition, whenTrue: whenTrue, whenFalse: whenFalse};
+			case _: return null;
+		};
+		if (!matchesNegativeLocalTest(branches.condition, declaration.variable.id)
+			|| !matchesUIntFloatNegativeBranch(branches.whenTrue, declaration.variable.id)
+			|| !matchesUIntFloatNonNegativeBranch(branches.whenFalse, declaration.variable.id)) {
+			return null;
+		}
+		return source;
+	}
+
+	function matchesNegativeLocalTest(expression:TypedExpr, variableId:Int):Bool {
+		final candidate = unwrapPatternExpression(expression);
+		return switch candidate.expr {
+			case TBinop(OpLt, left, right): isLocal(left, variableId) && isIntegerConstant(right, "0");
+			case _: false;
+		};
+	}
+
+	function matchesUIntFloatNegativeBranch(expression:TypedExpr, variableId:Int):Bool {
+		final candidate = unwrapValueBlock(expression);
+		return switch candidate.expr {
+			case TBinop(OpAdd, left, right): isFloatConstant(left, "4294967296") && isLocal(right, variableId);
+			case _: false;
+		};
+	}
+
+	function matchesUIntFloatNonNegativeBranch(expression:TypedExpr, variableId:Int):Bool {
+		final candidate = unwrapValueBlock(expression);
+		return switch candidate.expr {
+			case TBinop(OpAdd, left, right): isLocal(left, variableId) && isFloatConstant(right, "0");
+			case _: false;
+		};
+	}
+
+	function unwrapValueBlock(expression:TypedExpr):TypedExpr {
+		final candidate = unwrapPatternExpression(expression);
+		return switch candidate.expr {
+			case TBlock(expressions) if (expressions.length == 1): unwrapValueBlock(expressions[0]);
+			case _: candidate;
+		};
+	}
+
+	function unwrapPatternExpression(expression:TypedExpr):TypedExpr {
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): unwrapPatternExpression(inner);
+			case _: expression;
+		};
+	}
+
+	static function isLocal(expression:TypedExpr, variableId:Int):Bool {
+		return switch expression.expr {
+			case TLocal(variable): variable.id == variableId;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isLocal(inner, variableId);
+			case _: false;
+		};
+	}
+
+	static function isIntegerConstant(expression:TypedExpr, expected:String):Bool {
+		return switch expression.expr {
+			case TConst(TInt(value)): Std.string(value) == expected;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isIntegerConstant(inner, expected);
+			case _: false;
+		};
+	}
+
+	static function isFloatConstant(expression:TypedExpr, expectedWhole:String):Bool {
+		return switch expression.expr {
+			case TConst(TFloat(value)): final lower = value.toLowerCase(); lower == expectedWhole || lower == expectedWhole + ".0";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isFloatConstant(inner, expectedWhole);
+			case _: false;
+		};
+	}
+
+	function lowerBinaryValues(expression:TypedExpr, operation:Binop, leftValue:LoweredValue, rightValue:LoweredValue, role:String,
+			?expectedResult:CPrimitiveTypeMapping):LoweredValue {
+		final semanticOperation = primitiveBinaryOperator(operation, expression);
+		final resultMapping = expectedResult == null ? primitiveMapping(expression.t, expression.pos, 'TBinop($operation:result-type)') : expectedResult;
+		final decision = switch CPrimitiveSemantics.binaryOperation(semanticOperation, leftValue.mapping, rightValue.mapping, resultMapping) {
+			case CPBOperationAllowed(value): value;
+			case CPBOperationRejected(reason): return unsupported(expression, 'TBinop($operation:$reason)');
+		};
+		switch decision.implementation {
+			case IRIStatic | IRIProgramLocal(_):
+			case IRIRuntime(featureId):
+				return unsupported(expression, 'TBinop($operation:primitive-operation-must-not-use-runtime:$featureId)');
+		}
+		final left = coerce(leftValue, decision.leftOperand, expression.pos, 'TBinop($operation:left)');
+		final right = coerce(rightValue, decision.rightOperand, expression.pos, 'TBinop($operation:right)');
+		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
+		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, decision.implementation),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role);
+		return {id: result.id, type: result.type, mapping: decision.result};
+	}
+
+	function lowerUnary(expression:TypedExpr, operation:Unop, operandExpression:TypedExpr):LoweredValue {
+		final semanticOperation = switch operation {
+			case OpNeg: CPUONegate;
+			case OpNegBits: CPUOBitwiseNot;
+			case OpNot: CPUOLogicalNot;
+			case _: return unsupported(expression, 'TUnop($operation)');
+		};
+		final operandValue = lowerValue(operandExpression);
+		final resultMapping = primitiveMapping(expression.t, expression.pos, 'TUnop($operation:result-type)');
+		final decision = switch CPrimitiveSemantics.unaryOperation(semanticOperation, operandValue.mapping, resultMapping) {
+			case CPUOperationAllowed(value): value;
+			case CPUOperationRejected(reason): return unsupported(expression, 'TUnop($operation:$reason)');
+		};
+		switch decision.implementation {
+			case IRIStatic | IRIProgramLocal(_):
+			case IRIRuntime(featureId):
+				return unsupported(expression, 'TUnop($operation:primitive-operation-must-not-use-runtime:$featureId)');
+		}
+		final operand = coerce(operandValue, decision.operand, expression.pos, 'TUnop($operation:operand)');
+		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
+		appendInstruction(result, IRIOUnary(decision.operationId, operand.id, decision.implementation),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "unary");
+		return {id: result.id, type: result.type, mapping: decision.result};
+	}
+
+	function lowerUpdate(expression:TypedExpr, targetExpression:TypedExpr, postFix:Bool, increment:Bool):LoweredValue {
 		final target = lowerPlace(targetExpression);
 		if (!target.mutable) {
-			unsupported(targetExpression, "TUnop(OpIncrement:immutable-place)");
+			unsupported(targetExpression, 'TUnop(${increment ? "OpIncrement" : "OpDecrement"}:immutable-place)');
 		}
-		switch target.mapping.irType {
-			case IRTInt(32, false):
-			case _:
-				unsupported(expression, "TUnop(OpIncrement:requires-E2.T05-for-non-UInt)");
-		}
-		final oldValue = loadPlace(target, targetExpression.pos, "increment-load");
+		final role = increment ? "increment" : "decrement";
+		final oldValue = loadPlace(target, targetExpression.pos, role + "-load");
 		final oneResult:HxcIRResult = {id: nextValueId(), type: target.mapping.irType};
-		appendInstruction(oneResult, IRIOConstant(IRCInt("1")), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "increment-one");
-		final nextResult:HxcIRResult = {id: nextValueId(), type: target.mapping.irType};
-		appendInstruction(nextResult, IRIOBinary("haxe.u32.add", oldValue.id, oneResult.id, IRIStatic),
-			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "increment");
-		appendInstruction(null, IRIOStore(target.place, nextResult.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "increment-store");
-		final nextValue:LoweredValue = {id: nextResult.id, type: nextResult.type, mapping: target.mapping};
+		final one = switch target.mapping.irType {
+			case IRTInt(_, _): IRCInt("1");
+			case IRTFloat(64): IRCFloat("1.0");
+			case _: return unsupported(expression, 'TUnop(${increment ? "OpIncrement" : "OpDecrement"}:non-numeric)');
+		};
+		appendInstruction(oneResult, IRIOConstant(one), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role + "-one");
+		final oneValue:LoweredValue = {id: oneResult.id, type: oneResult.type, mapping: target.mapping};
+		final nextValue = lowerBinaryValues(expression, increment ? OpAdd : OpSub, oldValue, oneValue, role, target.mapping);
+		appendInstruction(null, IRIOStore(target.place, nextValue.id), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role + "-store");
 		return postFix ? oldValue : nextValue;
 	}
 
@@ -959,6 +1209,30 @@ private class FunctionBuilder {
 			case TCall(callee, arguments): {callee: callee, arguments: arguments};
 			case _: return unsupported(expression, nodeName(expression));
 		};
+		if (isStdInt(call.callee)) {
+			if (call.arguments.length != 1) {
+				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
+			}
+			final source = lowerValue(call.arguments[0]);
+			final target = primitiveMapping(expression.t, expression.pos, "TCall(Std.int:result-type)");
+			final decision = switch CPrimitiveSemantics.conversion(source.mapping, target, CPUStdInt) {
+				case CPConversionAllowed(value): value;
+				case CPConversionElided: return unsupported(expression, "TCall(Std.int:unexpected-elided-conversion)");
+				case CPConversionRejected(reason): return unsupported(expression, 'TCall(Std.int:$reason)');
+			};
+			if (decision.failureRequired) {
+				return unsupported(expression, "TCall(Std.int:unexpected-failure-edge)");
+			}
+			switch decision.implementation {
+				case IRIStatic | IRIProgramLocal(_):
+				case IRIRuntime(featureId):
+					return unsupported(expression, 'TCall(Std.int:primitive-conversion-must-not-use-runtime:$featureId)');
+			}
+			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+			appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, decision.implementation, null),
+				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
+			return {id: result.id, type: result.type, mapping: target};
+		}
 		final targetId = directStaticFunctionId(call.callee);
 		final target = functionsById.get(targetId);
 		if (target == null) {
@@ -1004,6 +1278,15 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function isStdInt(callee:TypedExpr):Bool {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.length == 0 && owner.name == "Std" && fieldReference.get()
+					.name == "int";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStdInt(inner);
+			case _: false;
+		};
 	}
 
 	function registerTailArguments(targetId:String, instructionId:String, argumentCount:Int):Void {
@@ -1106,8 +1389,7 @@ private class FunctionBuilder {
 				}
 				switch decision.implementation {
 					case IRIStatic:
-					case IRIProgramLocal(helperId):
-						unsupportedAt(position, '$node:program-local-conversion-helper-not-emitted:$helperId');
+					case IRIProgramLocal(_):
 					case IRIRuntime(featureId):
 						unsupportedAt(position, '$node:primitive-conversion-must-not-use-runtime:$featureId');
 				}
@@ -1118,6 +1400,53 @@ private class FunctionBuilder {
 			case CPConversionRejected(reason):
 				unsupportedAt(position, '$node:unsupported-implicit-conversion:$reason');
 		};
+	}
+
+	function primitiveBinaryOperator(operation:Binop, expression:TypedExpr):CPrimitiveBinaryOperator {
+		return switch operation {
+			case OpAdd: CPBOAdd;
+			case OpSub: CPBOSubtract;
+			case OpMult: CPBOMultiply;
+			case OpDiv: CPBODivide;
+			case OpMod: CPBOModulo;
+			case OpShl: CPBOShiftLeft;
+			case OpShr: CPBOShiftRight;
+			case OpUShr: CPBOUnsignedShiftRight;
+			case OpAnd: CPBOBitAnd;
+			case OpOr: CPBOBitOr;
+			case OpXor: CPBOBitXor;
+			case OpEq: CPBOEqual;
+			case OpNotEq: CPBONotEqual;
+			case OpLt: CPBOLess;
+			case OpLte: CPBOLessEqual;
+			case OpGt: CPBOGreater;
+			case OpGte: CPBOGreaterEqual;
+			case _:
+				unsupported(expression, 'TBinop($operation)');
+		};
+	}
+
+	function expressionCreatesFlow(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TIf(_, _, _): true;
+			case TBinop(OpBoolAnd, _, _) | TBinop(OpBoolOr, _, _): true;
+			case TBinop(_, left, right): expressionCreatesFlow(left) || expressionCreatesFlow(right);
+			case TUnop(_, _, operand) | TParenthesis(operand) | TMeta(_, operand) | TCast(operand, _): expressionCreatesFlow(operand);
+			case TBlock(expressions): anyExpressionCreatesFlow(expressions);
+			case TCall(callee, arguments): expressionCreatesFlow(callee) || anyExpressionCreatesFlow(arguments);
+			case TVar(_, initializer): initializer != null && expressionCreatesFlow(initializer);
+			case TReturn(value): value != null && expressionCreatesFlow(value);
+			case _: false;
+		};
+	}
+
+	function anyExpressionCreatesFlow(expressions:Array<TypedExpr>):Bool {
+		for (expression in expressions) {
+			if (expressionCreatesFlow(expression)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	function directStaticFunctionId(callee:TypedExpr):String {

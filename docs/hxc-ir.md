@@ -6,14 +6,15 @@ is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
 narrow production C consumer. E2.T04 adds primitive global places plus explicit
-branch/jump graphs for lazy and expression-valued control flow. All other
-frontend and C lowering remains explicitly gated.
+branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
+typed unary/binary operation IDs with direct or request-local implementation
+intent. All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
-initialization and lifetime transitions, call dispatch, conversion strategy,
-allocation intent, failure successors, and cleanup execution before a C
-expression or statement is selected.
+initialization and lifetime transitions, call dispatch, conversion and
+primitive-operation strategy, allocation intent, failure successors, and
+cleanup execution before a C expression or statement is selected.
 
 ## Structural model
 
@@ -85,8 +86,10 @@ need to recover intent from target syntax.
 
 These checks make a malformed internal IR an `HXC9000` compiler invariant
 failure. They do not replace later semantic passes such as representation
-selection, ownership proofs, runtime-feature finalization, exception-strategy
-selection, or C undefined-behavior checks.
+selection, ownership proofs, runtime-feature finalization, or exception-
+strategy selection. For the admitted primitive slice, E2.T05 now consumes the
+implementation intent with UB-safe structural C and request-local helpers;
+future operation families still require their own proof.
 
 ## Runtime and profile policy
 
@@ -152,6 +155,7 @@ that evidence to parameters, conversions, calls, recursive prototypes, and the
 production private header/source-set/entry project. The evaluation-order suite
 adds source-backed calls, assignments, static fields, short circuit, ternary,
 and increments, and deliberately reuses the representation-neutral indexed
-compound-assignment IR until E2.T08 owns source array lowering. All select no
-runtime files or public C ABI and compile/run as strict C11 with available GCC
-and Clang at `-O0` and `-O2`.
+compound-assignment IR until E2.T08 owns source array lowering. The arithmetic
+suite adds source-backed operation/helper decisions, `Std.int`, boundary
+execution, and eligible UBSan. All select no runtime files or public C ABI and
+compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.

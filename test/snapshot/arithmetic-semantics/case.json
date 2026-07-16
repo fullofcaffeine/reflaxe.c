@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-arithmetic-semantics-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-002",
+    "HXC-SEM-003",
+    "HXC-QA-004"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/arithmetic_semantics/expected/arithmetic.hxcir",
+    "test/arithmetic_semantics/expected/contract.json",
+    "test/arithmetic_semantics/expected/program.c",
+    "test/arithmetic_semantics/expected/program.h",
+    "test/arithmetic_semantics/expected/symbols.json",
+    "test/arithmetic_semantics/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "arithmetic-semantics"
+    ],
+    "workingDirectory": "test/snapshot/arithmetic-semantics",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/arithmetic_semantics/expected/arithmetic.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/contract.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/arithmetic_semantics/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

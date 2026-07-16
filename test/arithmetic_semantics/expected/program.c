@@ -1,0 +1,188 @@
+#include "hxc/program.h"
+
+double hxc_method_ArithmeticFixture_fadd(double hxc_local_ArithmeticFixture_fadd_left_n0, double hxc_local_ArithmeticFixture_fadd_right_n1)
+{
+  return hxc_local_ArithmeticFixture_fadd_left_n0 + hxc_local_ArithmeticFixture_fadd_right_n1;
+}
+
+double hxc_method_ArithmeticFixture_fdiv(double hxc_local_ArithmeticFixture_fdiv_left_n0, double hxc_local_ArithmeticFixture_fdiv_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(hxc_local_ArithmeticFixture_fdiv_left_n0, hxc_local_ArithmeticFixture_fdiv_right_n1);
+}
+
+bool hxc_method_ArithmeticFixture_fequal(double hxc_local_ArithmeticFixture_fequal_left_n0, double hxc_local_ArithmeticFixture_fequal_right_n1)
+{
+  return hxc_local_ArithmeticFixture_fequal_left_n0 == hxc_local_ArithmeticFixture_fequal_right_n1;
+}
+
+int32_t hxc_method_ArithmeticFixture_fint(double hxc_local_ArithmeticFixture_fint_value_n0)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating(hxc_local_ArithmeticFixture_fint_value_n0);
+}
+
+double hxc_method_ArithmeticFixture_fmod(double hxc_local_ArithmeticFixture_fmod_left_n0, double hxc_local_ArithmeticFixture_fmod_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Emodulo(hxc_local_ArithmeticFixture_fmod_left_n0, hxc_local_ArithmeticFixture_fmod_right_n1);
+}
+
+double hxc_method_ArithmeticFixture_fmul(double hxc_local_ArithmeticFixture_fmul_left_n0, double hxc_local_ArithmeticFixture_fmul_right_n1)
+{
+  return hxc_local_ArithmeticFixture_fmul_left_n0 * hxc_local_ArithmeticFixture_fmul_right_n1;
+}
+
+double hxc_method_ArithmeticFixture_fneg(double hxc_local_ArithmeticFixture_fneg_value_n0)
+{
+  return -hxc_local_ArithmeticFixture_fneg_value_n0;
+}
+
+double hxc_method_ArithmeticFixture_fsub(double hxc_local_ArithmeticFixture_fsub_left_n0, double hxc_local_ArithmeticFixture_fsub_right_n1)
+{
+  return hxc_local_ArithmeticFixture_fsub_left_n0 - hxc_local_ArithmeticFixture_fsub_right_n1;
+}
+
+int32_t hxc_method_ArithmeticFixture_iadd(int32_t hxc_local_ArithmeticFixture_iadd_left_n0, int32_t hxc_local_ArithmeticFixture_iadd_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_local_ArithmeticFixture_iadd_left_n0, hxc_local_ArithmeticFixture_iadd_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_iand(int32_t hxc_local_ArithmeticFixture_iand_left_n0, int32_t hxc_local_ArithmeticFixture_iand_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dand(hxc_local_ArithmeticFixture_iand_left_n0, hxc_local_ArithmeticFixture_iand_right_n1);
+}
+
+double hxc_method_ArithmeticFixture_idiv(int32_t hxc_local_ArithmeticFixture_idiv_left_n0, int32_t hxc_local_ArithmeticFixture_idiv_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe((double)hxc_local_ArithmeticFixture_idiv_left_n0, (double)hxc_local_ArithmeticFixture_idiv_right_n1);
+}
+
+bool hxc_method_ArithmeticFixture_iless(int32_t hxc_local_ArithmeticFixture_iless_left_n0, int32_t hxc_local_ArithmeticFixture_iless_right_n1)
+{
+  return hxc_local_ArithmeticFixture_iless_left_n0 < hxc_local_ArithmeticFixture_iless_right_n1;
+}
+
+int32_t hxc_method_ArithmeticFixture_imod(int32_t hxc_local_ArithmeticFixture_imod_left_n0, int32_t hxc_local_ArithmeticFixture_imod_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe(hxc_local_ArithmeticFixture_imod_left_n0, hxc_local_ArithmeticFixture_imod_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_imul(int32_t hxc_local_ArithmeticFixture_imul_left_n0, int32_t hxc_local_ArithmeticFixture_imul_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_local_ArithmeticFixture_imul_left_n0, hxc_local_ArithmeticFixture_imul_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_ineg(int32_t hxc_local_ArithmeticFixture_ineg_value_n0)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping(hxc_local_ArithmeticFixture_ineg_value_n0);
+}
+
+int32_t hxc_method_ArithmeticFixture_inot(int32_t hxc_local_ArithmeticFixture_inot_value_n0)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dnot(hxc_local_ArithmeticFixture_inot_value_n0);
+}
+
+int32_t hxc_method_ArithmeticFixture_ior(int32_t hxc_local_ArithmeticFixture_ior_left_n0, int32_t hxc_local_ArithmeticFixture_ior_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dor(hxc_local_ArithmeticFixture_ior_left_n0, hxc_local_ArithmeticFixture_ior_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_ishl(int32_t hxc_local_ArithmeticFixture_ishl_left_n0, int32_t hxc_local_ArithmeticFixture_ishl_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Dleftzx2Emasked(hxc_local_ArithmeticFixture_ishl_left_n0, hxc_local_ArithmeticFixture_ishl_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_ishr(int32_t hxc_local_ArithmeticFixture_ishr_left_n0, int32_t hxc_local_ArithmeticFixture_ishr_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eshiftzx2Drightzx2Emasked(hxc_local_ArithmeticFixture_ishr_left_n0, hxc_local_ArithmeticFixture_ishr_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_isub(int32_t hxc_local_ArithmeticFixture_isub_left_n0, int32_t hxc_local_ArithmeticFixture_isub_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping(hxc_local_ArithmeticFixture_isub_left_n0, hxc_local_ArithmeticFixture_isub_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_iushr(int32_t hxc_local_ArithmeticFixture_iushr_left_n0, int32_t hxc_local_ArithmeticFixture_iushr_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked(hxc_local_ArithmeticFixture_iushr_left_n0, hxc_local_ArithmeticFixture_iushr_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_ixor(int32_t hxc_local_ArithmeticFixture_ixor_left_n0, int32_t hxc_local_ArithmeticFixture_ixor_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_local_ArithmeticFixture_ixor_left_n0, hxc_local_ArithmeticFixture_ixor_right_n1);
+}
+
+void hxc_method_ArithmeticFixture_main(void)
+{
+  hxc_method_ArithmeticFixture_iadd(1, 2);
+  hxc_method_ArithmeticFixture_isub(1, 2);
+  hxc_method_ArithmeticFixture_imul(1, 2);
+  hxc_method_ArithmeticFixture_ineg(1);
+  hxc_method_ArithmeticFixture_idiv(1, 2);
+  hxc_method_ArithmeticFixture_imod(1, 2);
+  hxc_method_ArithmeticFixture_ishl(1, -1);
+  hxc_method_ArithmeticFixture_ishr(-1, -1);
+  hxc_method_ArithmeticFixture_iushr(-1, -1);
+  hxc_method_ArithmeticFixture_iand(1, 2);
+  hxc_method_ArithmeticFixture_ior(1, 2);
+  hxc_method_ArithmeticFixture_ixor(1, 2);
+  hxc_method_ArithmeticFixture_inot(1);
+  hxc_method_ArithmeticFixture_iless(1, 2);
+  hxc_method_ArithmeticFixture_fadd(1.0, 2.0);
+  hxc_method_ArithmeticFixture_fsub(1.0, 2.0);
+  hxc_method_ArithmeticFixture_fmul(1.0, 2.0);
+  hxc_method_ArithmeticFixture_fneg(1.0);
+  hxc_method_ArithmeticFixture_fdiv(1.0, 0.0);
+  hxc_method_ArithmeticFixture_fmod(1.0, 0.0);
+  hxc_method_ArithmeticFixture_fint(3.75);
+  hxc_method_ArithmeticFixture_fequal(1.0, 2.0);
+  hxc_method_ArithmeticFixture_uadd((uint32_t)1, (uint32_t)2);
+  hxc_method_ArithmeticFixture_umod((uint32_t)1, (uint32_t)2);
+  hxc_method_ArithmeticFixture_ushl((uint32_t)1, -1);
+  hxc_method_ArithmeticFixture_ushr((uint32_t)1, -1);
+  hxc_method_ArithmeticFixture_update(3);
+  return;
+}
+
+uint32_t hxc_method_ArithmeticFixture_uadd(uint32_t hxc_local_ArithmeticFixture_uadd_left_n0, uint32_t hxc_local_ArithmeticFixture_uadd_right_n1)
+{
+  return (uint32_t)((uint64_t)(uint32_t)hxc_local_ArithmeticFixture_uadd_left_n0 + (uint64_t)(uint32_t)hxc_local_ArithmeticFixture_uadd_right_n1);
+}
+
+uint32_t hxc_method_ArithmeticFixture_umod(uint32_t hxc_local_ArithmeticFixture_umod_left_n0, uint32_t hxc_local_ArithmeticFixture_umod_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Emodulozx2Ezzerozx2Dsafe(hxc_local_ArithmeticFixture_umod_left_n0, hxc_local_ArithmeticFixture_umod_right_n1);
+}
+
+int32_t hxc_method_ArithmeticFixture_update(int32_t hxc_local_ArithmeticFixture_update_value_n0)
+{
+  int32_t hxc_local_ArithmeticFixture_update_current_n1 = hxc_local_ArithmeticFixture_update_value_n0;
+  int32_t hxc_temp_ArithmeticFixture_update_incrementzx2Dloadzx2Dresult_n0 = hxc_local_ArithmeticFixture_update_current_n1;
+  hxc_local_ArithmeticFixture_update_current_n1 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_ArithmeticFixture_update_incrementzx2Dloadzx2Dresult_n0, 1);
+  int32_t hxc_local_ArithmeticFixture_update_old_n2 = hxc_temp_ArithmeticFixture_update_incrementzx2Dloadzx2Dresult_n0;
+  int32_t hxc_temp_ArithmeticFixture_update_decrementzx2Dloadzx2Dresult_n1 = hxc_local_ArithmeticFixture_update_current_n1;
+  hxc_local_ArithmeticFixture_update_current_n1 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping(hxc_temp_ArithmeticFixture_update_decrementzx2Dloadzx2Dresult_n1, 1);
+  int32_t hxc_local_ArithmeticFixture_update_fresh_n3 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping(hxc_temp_ArithmeticFixture_update_decrementzx2Dloadzx2Dresult_n1, 1);
+  int32_t hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n2 = hxc_local_ArithmeticFixture_update_current_n1;
+  int32_t hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n3 = hxc_local_ArithmeticFixture_update_old_n2;
+  hxc_local_ArithmeticFixture_update_current_n1 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n2, hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n3);
+  int32_t hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n4 = hxc_local_ArithmeticFixture_update_current_n1;
+  int32_t hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n5 = hxc_local_ArithmeticFixture_update_fresh_n3;
+  hxc_local_ArithmeticFixture_update_current_n1 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_temp_ArithmeticFixture_update_compoundzx2Dloadzx2Dresult_n4, hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n5);
+  int32_t hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n6 = hxc_local_ArithmeticFixture_update_current_n1;
+  return hxc_temp_ArithmeticFixture_update_loadzx2Dresult_n6;
+}
+
+uint32_t hxc_method_ArithmeticFixture_ushl(uint32_t hxc_local_ArithmeticFixture_ushl_left_n0, int32_t hxc_local_ArithmeticFixture_ushl_right_n1)
+{
+  return (uint32_t)((uint64_t)(uint32_t)hxc_local_ArithmeticFixture_ushl_left_n0 << ((uint32_t)hxc_local_ArithmeticFixture_ushl_right_n1 & (uint32_t)31));
+}
+
+uint32_t hxc_method_ArithmeticFixture_ushr(uint32_t hxc_local_ArithmeticFixture_ushr_left_n0, int32_t hxc_local_ArithmeticFixture_ushr_right_n1)
+{
+  return (uint32_t)((uint64_t)(uint32_t)hxc_local_ArithmeticFixture_ushr_left_n0 >> ((uint32_t)hxc_local_ArithmeticFixture_ushr_right_n1 & (uint32_t)31));
+}
+
+int main(void)
+{
+  hxc_method_ArithmeticFixture_main();
+  return 0;
+}

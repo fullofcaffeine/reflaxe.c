@@ -53,6 +53,7 @@ typedef CProjectEmissionPlan = {
 	final ?runtimeDiagnosticsProvenance:String;
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
+	final ?primitiveHelperIds:Array<String>;
 	final symbolTable:CSymbolTableSnapshot;
 }
 
@@ -318,6 +319,17 @@ class CProjectEmitter {
 		if (plan.symbolTable.schemaVersion != 1 || plan.symbolTable.algorithm != "hxc-c-symbol-v1") {
 			fail("project emission requires the finalized schema-1 hxc-c-symbol-v1 symbol table");
 		}
+		final helperIds = plan.primitiveHelperIds;
+		if (helperIds != null) {
+			final seen:Map<String, Bool> = [];
+			for (helperId in helperIds) {
+				validateLogicalText(helperId, "primitive helper ID");
+				if (seen.exists(helperId)) {
+					fail('primitive helper ID `${helperId}` is duplicated');
+				}
+				seen.set(helperId, true);
+			}
+		}
 	}
 
 	function validatePrimitiveExecutablePlan(plan:CProjectEmissionPlan):Void {
@@ -327,8 +339,10 @@ class CProjectEmitter {
 		if (plan.environment != CProjectEnvironment.Hosted) {
 			fail('primitive executable emission requires the hosted environment; found `${plan.environment}`');
 		}
-		if (plan.buildFacts.length != 0) {
-			fail("the primitive executable slice cannot carry external build requirements");
+		for (fact in plan.buildFacts) {
+			if (fact.kind != "link" || fact.name != "m" || fact.value != null || fact.valueKind != null || fact.ownerModulePaths.length == 0) {
+				fail('primitive executable emission only admits the compiler-selected C math link fact; found `${fact.kind}` `${fact.name}`');
+			}
 		}
 		var sources = 0;
 		var privateHeaders = 0;
@@ -508,6 +522,19 @@ class CProjectEmitter {
 		if (policyProvenance == null || diagnosticProvenance == null) {
 			throw new ProjectEmissionError("primitive executable lost validated runtime-policy provenance");
 		}
+		final helperIds = plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds;
+		final directDecisions = [
+			"primitive-values",
+			"ub-safe-primitive-operations",
+			"primitive-static-storage",
+			"static-functions",
+			"direct-calls",
+			"explicit-evaluation-order",
+			"executable-entry-point"
+		];
+		if (helperIds.length > 0) {
+			directDecisions.insert(2, "selected-program-local-helpers");
+		}
 		return {
 			schemaVersion: SCHEMA_VERSION,
 			status: ResolvedAnalysisStatus.RuntimeFree,
@@ -519,20 +546,13 @@ class CProjectEmitter {
 			diagnosticProvenance: diagnosticProvenance,
 			environment: plan.environment,
 			rootReasons: [],
-			directDecisions: [
-				"primitive-values",
-				"primitive-static-storage",
-				"static-functions",
-				"direct-calls",
-				"explicit-evaluation-order",
-				"executable-entry-point"
-			],
+			directDecisions: directDecisions,
 			features: [],
 			artifacts: [],
 			symbols: [],
 			libraries: [],
 			defines: [],
-			noRuntimeProof: "reachable validated HxcIR contains only direct primitive storage, functions, conversions, sequenced control flow, and calls"
+			noRuntimeProof: helperIds.length == 0 ? "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls" : "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls"
 		};
 	}
 
