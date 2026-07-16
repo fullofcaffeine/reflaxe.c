@@ -17,7 +17,7 @@ import reflaxe.c.frontend.TypedAstNormalizer;
 import reflaxe.c.frontend.TypedProgramInput;
 
 /** Reflaxe adapter. Semantic lowering remains in `CCompiler`. */
-class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dynamic> {
+class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 	var pendingProgram:Null<TypedProgramInput> = null;
 	var currentProgram:Null<TypedProgramInput> = null;
 	var generatedFiles:Array<GeneratedFile> = [];
@@ -90,7 +90,7 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 		return null;
 	}
 
-	public function compileExpressionImpl(expr:TypedExpr, topLevel:Bool):Null<Dynamic> {
+	public function compileExpressionImpl(expr:TypedExpr, topLevel:Bool):Null<Bool> {
 		return null;
 	}
 

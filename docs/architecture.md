@@ -131,6 +131,15 @@ compiler failure (`HXC9000`) remain structurally distinct. Public CLI/event
 framing and native-tool attachments remain E8.T09 rather than leaking into the
 compiler core. See [diagnostic contract](diagnostics.md).
 
+Repository-owned Haxe is also protected by the [typed boundary
+policy](typed-boundaries.md). Compiler semantics contain no `Dynamic`, `Any`,
+`Reflect`, `untyped`, open-ended record carrier, or unchecked cast. JSON
+decoding is isolated in the output-ownership adapter and converted immediately
+to a closed validated record. The only other allowlisted occurrences are a
+diagnostic negative test and an intentional Haxe-`Dynamic` semantic fixture.
+The source-exact machine inventory rejects new or stale exceptions before they
+can become compiler precedent.
+
 `HxcIRDumper` canonicalizes only semantically unordered collections and retains
 ordered instructions, edge arguments, and cleanup steps with repository-relative
 source spans. `HxcIRValidator` rejects missing targets/results/terminators,

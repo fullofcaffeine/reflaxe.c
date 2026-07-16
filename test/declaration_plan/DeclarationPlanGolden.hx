@@ -196,7 +196,7 @@ class DeclarationPlanGolden {
 		};
 	}
 
-	static function dumpPlan(plan:CDeclarationPlan):Dynamic {
+	static function dumpPlan(plan:CDeclarationPlan):DeclarationPlanDump {
 		return {
 			schemaVersion: plan.schemaVersion,
 			inputSchemaVersion: plan.inputSchemaVersion,
@@ -223,7 +223,7 @@ class DeclarationPlanGolden {
 		};
 	}
 
-	static function dumpInclude(include:CPlannedInclude):Dynamic {
+	static function dumpInclude(include:CPlannedInclude):DeclarationIncludeDump {
 		return {
 			path: include.path,
 			kind: include.kind == PIKSystem ? "system" : "local",
@@ -231,7 +231,7 @@ class DeclarationPlanGolden {
 		};
 	}
 
-	static function dumpDeclaration(declaration:CPlannedDeclaration):Dynamic {
+	static function dumpDeclaration(declaration:CPlannedDeclaration):DeclarationDump {
 		return {
 			modulePath: declaration.modulePath,
 			cName: declaration.cName,
@@ -263,7 +263,7 @@ class DeclarationPlanGolden {
 		}
 	}
 
-	static function renderHeaders(plan:CDeclarationPlan):Array<Dynamic> {
+	static function renderHeaders(plan:CDeclarationPlan):Array<RenderedHeader> {
 		return plan.headers.map(header -> {
 			path: header.path,
 			content: renderHeader(header)
@@ -392,4 +392,47 @@ private typedef PreambleEntry = {
 	final modulePath:String;
 	final cName:String;
 	final kind:CPlanForwardKind;
+}
+
+private typedef DeclarationIncludeDump = {
+	final path:String;
+	final kind:String;
+	final reasons:Array<String>;
+}
+
+private typedef DeclarationForwardDump = {
+	final modulePath:String;
+	final cName:String;
+	final kind:String;
+}
+
+private typedef DeclarationDump = {
+	final modulePath:String;
+	final cName:Null<String>;
+	final layout:Null<String>;
+	final emission:String;
+}
+
+private typedef DeclarationHeaderDump = {
+	final path:String;
+	final visibility:String;
+	final guard:String;
+	final includes:Array<DeclarationIncludeDump>;
+	final forwardDeclarations:Array<DeclarationForwardDump>;
+	final declarations:Array<DeclarationDump>;
+}
+
+private typedef DeclarationPlanDump = {
+	final schemaVersion:Int;
+	final inputSchemaVersion:Int;
+	final headers:Array<DeclarationHeaderDump>;
+	final sourceIncludes:Array<DeclarationIncludeDump>;
+	final sourceForwardDeclarations:Array<DeclarationForwardDump>;
+	final sourceDeclarations:Array<DeclarationDump>;
+	final buildIncludes:Array<DeclarationIncludeDump>;
+}
+
+private typedef RenderedHeader = {
+	final path:String;
+	final content:String;
 }

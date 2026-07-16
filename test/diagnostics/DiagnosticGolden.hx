@@ -23,7 +23,7 @@ class DiagnosticGolden {
 		var rejectedSeverity = false;
 		try {
 			CDiagnostic.create(CDiagnosticId.UnsupportedExpression, "portable", "invalid severity", source, CDiagnosticSeverity.Warning);
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			rejectedSeverity = true;
 		}
 		if (!rejectedSeverity) {
@@ -33,7 +33,7 @@ class DiagnosticGolden {
 		var rejectedPath = false;
 		try {
 			new CDiagnosticSourceSpan("/host/private/Main.hx", 1, 1, 1, 2);
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			rejectedPath = true;
 		}
 		if (!rejectedPath) {
@@ -43,7 +43,7 @@ class DiagnosticGolden {
 		var rejectedId = false;
 		try {
 			CDiagnostic.definition(cast("HXC" + "1234"));
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			rejectedId = true;
 		}
 		if (!rejectedId) {

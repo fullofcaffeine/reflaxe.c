@@ -37,6 +37,7 @@ class GovernancePolicyTests(unittest.TestCase):
         linked_files = (
             "docs/architecture.md",
             "docs/specs/third-party-provenance.json",
+            "docs/specs/typed-boundaries.json",
             "THIRD_PARTY_NOTICES.md",
         )
         for relative in linked_files:

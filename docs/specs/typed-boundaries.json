@@ -1,0 +1,104 @@
+{
+  "$schema": "typed-boundaries.schema.json",
+  "schemaVersion": 1,
+  "manifestId": "hxc-typed-boundaries-v1",
+  "scope": {
+    "files": "Every repository-owned .hx file in the checkout is scanned, including compiler, target API, fixtures, examples, templates, and future runtime tooling.",
+    "excludedRoots": [
+      ".beads",
+      ".git",
+      ".hxc",
+      "node_modules",
+      "runtime/third_party",
+      "runtime/vendor",
+      "third_party",
+      "vendor"
+    ],
+    "policy": "Untyped values never enter semantic compiler logic. An unavoidable external or negative-test boundary is exact-source allowlisted, validates immediately into the named closed model, and has malformed-input evidence."
+  },
+  "constructs": [
+    {
+      "id": "any-type",
+      "description": "Haxe Any erases the static value contract."
+    },
+    {
+      "id": "dynamic-type",
+      "description": "Haxe Dynamic defers member and conversion checks."
+    },
+    {
+      "id": "json-parse",
+      "description": "haxe.Json.parse returns an untyped external value."
+    },
+    {
+      "id": "open-record",
+      "description": "DynamicAccess is an open-ended string-keyed value carrier."
+    },
+    {
+      "id": "private-access",
+      "description": "Private-access metadata bypasses the declared visibility contract."
+    },
+    {
+      "id": "raw-code-injection",
+      "description": "Raw __c__ calls bypass typed IR and structural C AST lowering."
+    },
+    {
+      "id": "reflect-api",
+      "description": "Reflect member access replaces a known structural type with runtime lookup."
+    },
+    {
+      "id": "unchecked-cast",
+      "description": "The Haxe cast keyword can assert a type without validating the value shape."
+    },
+    {
+      "id": "untyped-keyword",
+      "description": "The Haxe untyped keyword disables ordinary type checking."
+    }
+  ],
+  "allowlist": [
+    {
+      "path": "src/reflaxe/c/emit/ReflaxeOutputWriter.hx",
+      "line": 94,
+      "column": 46,
+      "construct": "json-parse",
+      "boundaryKind": "external-json",
+      "symbol": "ReflaxeOutputWriter.decodeOwnershipMetadata",
+      "typedModel": "ReflaxeOwnershipMetadata",
+      "sourceLine": "final metadata:ReflaxeOwnershipMetadata = Json.parse(File.getContent(metadataPath));",
+      "justification": "The reviewed Reflaxe ownership file is external JSON and the pinned Haxe parser necessarily returns an untyped value.",
+      "validation": "The adapter immediately checks schema version, activity scalar types, the generated-file array, every string entry, path normalization, duplicates, and ownership-manifest exclusion before returning the closed record.",
+      "testEvidence": [
+        "test/project_emitter/run.py"
+      ]
+    },
+    {
+      "path": "test/diagnostics/DiagnosticGolden.hx",
+      "line": 45,
+      "column": 27,
+      "construct": "unchecked-cast",
+      "boundaryKind": "negative-test",
+      "symbol": "DiagnosticGolden.main",
+      "typedModel": "CDiagnosticId",
+      "sourceLine": "CDiagnostic.definition(cast(\"HXC\" + \"1234\"));",
+      "justification": "The negative test must forge an impossible enum-abstract value to prove the typed diagnostic registry rejects unallocated IDs.",
+      "validation": "The forged value is used only for the rejecting call and the fixture fails unless CDiagnostic.definition throws.",
+      "testEvidence": [
+        "test/diagnostics/run.py"
+      ]
+    },
+    {
+      "path": "test/hxc_ir/fixtures/IRCoverage.hx",
+      "line": 24,
+      "column": 42,
+      "construct": "dynamic-type",
+      "boundaryKind": "language-semantics-fixture",
+      "symbol": "IRCoverage.throwValue",
+      "typedModel": "HxcIRType.IRTDynamic",
+      "sourceLine": "public static function throwValue(value:Dynamic):Void",
+      "justification": "This fixture intentionally represents the real Haxe Dynamic language type so HxcIR can prove it is modeled explicitly rather than used as an internal escape hatch.",
+      "validation": "The HxcIR suite exercises the explicit IRTDynamic variant and validator rejection paths; the value is not part of compiler implementation state.",
+      "testEvidence": [
+        "test/hxc_ir/run.py"
+      ]
+    }
+  ]
+}

@@ -973,6 +973,60 @@ def check_negative_guards() -> None:
         )
         expect_guard_failure("full", output, "typed ownership JSON guard")
 
+    invalid_ownership_documents: tuple[tuple[str, object], ...] = (
+        ("array root", []),
+        (
+            "missing field",
+            {"version": 1, "id": 1, "filesGenerated": []},
+        ),
+        (
+            "wrong version",
+            {
+                "version": 2,
+                "id": 1,
+                "wasCached": False,
+                "filesGenerated": [],
+            },
+        ),
+        (
+            "negative activity id",
+            {
+                "version": 1,
+                "id": -1,
+                "wasCached": False,
+                "filesGenerated": [],
+            },
+        ),
+        (
+            "non-boolean cache state",
+            {
+                "version": 1,
+                "id": 1,
+                "wasCached": 0,
+                "filesGenerated": [],
+            },
+        ),
+        (
+            "non-array files",
+            {
+                "version": 1,
+                "id": 1,
+                "wasCached": False,
+                "filesGenerated": "src/main.c",
+            },
+        ),
+    )
+    for label, document in invalid_ownership_documents:
+        with tempfile.TemporaryDirectory(
+            prefix="reflaxe-c-project-schema-shape-"
+        ) as temporary:
+            output = Path(temporary) / "project"
+            output.mkdir()
+            (output / OWNERSHIP).write_text(
+                json.dumps(document, separators=(",", ":")), encoding="utf-8"
+            )
+            expect_guard_failure("full", output, f"ownership {label} guard")
+
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-project-json-") as temporary:
         output = Path(temporary) / "project"
         output.mkdir()

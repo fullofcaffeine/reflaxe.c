@@ -212,7 +212,7 @@ the C string contract.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 18 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 19 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 5 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 13 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -255,6 +255,7 @@ the C string contract.
 | `threading-and-atomics` | `unsupported` | No Haxe threading, synchronization, TLS, or atomic capability is advertised or implemented. |
 | `toolchain-metadata` | `implemented` | Haxe 5.0.0-preview.1, Reflaxe, Lix, package metadata, checksums, and provenance are pinned and verified. |
 | `typed-ast-input` | `implemented` | Complete typed-module capture and deterministic normalized ownership survive order changes and compiler-server reuse. |
+| `typed-boundary-governance` | `implemented` | Repository-owned Haxe has a source-exact guard against unreviewed untyped compiler seams. |
 | `typed-c-contract-validation` | `implemented` | Namespaced typed-C declaration and build metadata produce a deterministic validated structural snapshot. |
 
 **Hard claim gates not passed:** `full-standard-library`, `general-haxe-to-c`, `performance-validated`, `production-ready`, `public-abi-stability`, `supported-platforms`, `supported-release`.
@@ -292,7 +293,9 @@ jq empty \
   docs/specs/diagnostics.json \
   docs/specs/diagnostics.schema.json \
   docs/specs/stdlib-ledger.json \
-  docs/specs/third-party-provenance.json
+  docs/specs/third-party-provenance.json \
+  docs/specs/typed-boundaries.json \
+  docs/specs/typed-boundaries.schema.json
 
 python3 scripts/ci/check_toolchain.py --require-tools
 python3 test/all_sources/run.py
@@ -309,6 +312,7 @@ python3 test/evaluation_order/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/ci/check_capability_manifest.py
+python3 scripts/ci/check_typed_boundaries.py
 python3 scripts/test/snapshots.py --check
 python3 scripts/ci/check_license_policy.py
 python3 scripts/ci/check_governance_policy.py
@@ -360,6 +364,7 @@ fail-closed.
 - [Explicit Haxe evaluation order](docs/evaluation-order.md)
 - [Fixed arrays and span-based iteration](docs/span-lowering.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
+- [Typed Haxe boundary policy](docs/typed-boundaries.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)
 - [Architecture decisions](docs/adr/README.md)

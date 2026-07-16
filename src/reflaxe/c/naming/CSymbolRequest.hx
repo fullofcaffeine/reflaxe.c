@@ -229,7 +229,7 @@ class CSymbolRequest {
 		return false;
 	}
 
-	static function internalFailure(detail:String):Dynamic {
+	static function internalFailure(detail:String):Void {
 		throw new CSymbolRegistryError(CDiagnosticId.InternalCompilerError, detail);
 	}
 }

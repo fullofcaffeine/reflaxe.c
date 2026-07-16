@@ -149,6 +149,13 @@ missing-metadata or missing-adapter assumptions.
   malformed-input tests, and never let the untyped value escape that boundary.
   Existing upstream generic signatures are boundary facts, not precedent for
   untyped compiler internals.
+- `docs/specs/typed-boundaries.json` is the exact searchable inventory and
+  allowlist for repository-owned Haxe. Run `npm run test:typed-boundaries` for
+  every owned `.hx`, boundary-policy, compiler-preview API, JSON ingress, raw
+  authority, or allowlist change. Do not add an entry merely to silence the
+  guard: each remaining occurrence must name its smallest adapter, closed typed
+  model, immediate validation, and malformed-input evidence. A repeated
+  allowance is a missing typed abstraction to implement.
 - Preserve fail-closed behavior. Unsupported admitted-body paths report exact
   source-positioned `HXC1001`; a body that lowers successfully still reaches
   the deliberate `HXC1000` static-function/call/entry-point boundary until
@@ -721,6 +728,7 @@ stage, the locally available baseline is:
 npm ci
 npm test
 npm run test:governance-policy
+npm run test:typed-boundaries
 python3 scripts/beads/validate_plan.py --json
 python3 scripts/beads/bootstrap.py --json
 npm run test:fixture-policy

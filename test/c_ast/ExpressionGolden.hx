@@ -470,11 +470,11 @@ class ExpressionGolden {
 			throw '$label failed\nexpected: $expected\nactual:   $actual';
 	}
 
-	static function expectFailure(label:String, action:Void->Dynamic):Void {
+	static function expectFailure<T>(label:String, action:() -> T):Void {
 		var failed = false;
 		try {
 			action();
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			failed = true;
 		}
 		if (!failed)

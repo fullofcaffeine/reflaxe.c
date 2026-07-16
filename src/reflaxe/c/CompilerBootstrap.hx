@@ -48,7 +48,7 @@ class CompilerBootstrap {
 		try {
 			Context.resolvePath("reflaxe/ReflectCompiler.hx");
 			return true;
-		} catch (_:Dynamic) {
+		} catch (_:haxe.Exception) {
 			return false;
 		}
 	}

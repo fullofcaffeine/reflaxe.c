@@ -9,14 +9,90 @@ typedef TypedAstInventoryCount = {
 	final count:Int;
 }
 
+typedef TypedAstInventoryMetadata = {
+	final name:String;
+	final arguments:Array<String>;
+}
+
+typedef TypedAstInventoryField = {
+	final sourceOrder:Int;
+	final name:String;
+	final role:String;
+	final kind:String;
+	final typeKind:String;
+	final typeDisplay:String;
+	final isPublic:Bool;
+	final isExtern:Bool;
+	final metadata:Array<TypedAstInventoryMetadata>;
+	final hasExpression:Bool;
+}
+
+typedef TypedAstInventoryDeclaration = {
+	final path:String;
+	final name:String;
+	final kind:String;
+	final ownerModulePath:String;
+	final ownership:String;
+	final sourcePath:String;
+	final isPrivate:Bool;
+	final isExtern:Bool;
+	final classKind:Null<String>;
+	final isInterface:Bool;
+	final isFinal:Bool;
+	final isAbstract:Bool;
+	final representedTypeKind:Null<String>;
+	final representedTypeDisplay:Null<String>;
+	final metadata:Array<TypedAstInventoryMetadata>;
+	final fields:Array<TypedAstInventoryField>;
+}
+
+typedef TypedAstInventoryModule = {
+	final path:String;
+	final sourcePath:String;
+	final declarations:Array<TypedAstInventoryDeclaration>;
+}
+
+typedef TypedAstInventoryExpressionRoot = {
+	final ownerModulePath:String;
+	final ownerDeclarationPath:Null<String>;
+	final fieldName:Null<String>;
+	final role:String;
+	final sourceOrder:Int;
+	final expressionKind:String;
+	final typeKind:String;
+}
+
+typedef TypedAstInventoryEntryPoint = {
+	final modulePath:Null<String>;
+	final declarationPath:Null<String>;
+	final expressionKind:String;
+}
+
+typedef TypedAstInventoryTotals = {
+	final modules:Int;
+	final declarations:Int;
+	final fields:Int;
+	final expressionRoots:Int;
+	final expressions:Int;
+}
+
+typedef TypedAstInventoryKinds = {
+	final declarationKinds:Array<TypedAstInventoryCount>;
+	final classKinds:Array<TypedAstInventoryCount>;
+	final fieldKinds:Array<TypedAstInventoryCount>;
+	final expressionKinds:Array<TypedAstInventoryCount>;
+	final typeKinds:Array<TypedAstInventoryCount>;
+	final metadataNames:Array<TypedAstInventoryCount>;
+}
+
 typedef TypedAstInventorySnapshot = {
 	final schemaVersion:Int;
 	final status:String;
-	final entryPoint:Dynamic;
-	final totals:Dynamic;
-	final inventory:Dynamic;
-	final modules:Array<Dynamic>;
-	final expressionRoots:Array<Dynamic>;
+	final entryPoint:Null<TypedAstInventoryEntryPoint>;
+	final totals:TypedAstInventoryTotals;
+	final inventory:TypedAstInventoryKinds;
+	final modules:Array<TypedAstInventoryModule>;
+	final expressionRoots:Array<TypedAstInventoryExpressionRoot>;
 }
 
 /** Creates a path-stable, deterministic typed-AST coverage report. */
@@ -33,9 +109,9 @@ class TypedAstInventory {
 		final metadataNames:Map<String, Int> = [];
 		var fieldCount = 0;
 
-		final modules:Array<Dynamic> = [];
+		final modules:Array<TypedAstInventoryModule> = [];
 		for (module in program.modules) {
-			final declarations:Array<Dynamic> = [];
+			final declarations:Array<TypedAstInventoryDeclaration> = [];
 			for (declaration in module.declarations) {
 				increment(declarationKinds, declaration.kind);
 				if (declaration.classKind != null) {
@@ -46,7 +122,7 @@ class TypedAstInventory {
 				}
 				countMetadata(metadataNames, declaration.metadata);
 
-				final fields:Array<Dynamic> = [];
+				final fields:Array<TypedAstInventoryField> = [];
 				for (field in declaration.fields) {
 					fieldCount++;
 					increment(fieldKinds, field.kind);
@@ -89,7 +165,7 @@ class TypedAstInventory {
 		}
 
 		var expressionCount = 0;
-		final expressionRoots:Array<Dynamic> = [];
+		final expressionRoots:Array<TypedAstInventoryExpressionRoot> = [];
 		for (root in program.expressionRoots) {
 			expressionRoots.push({
 				ownerModulePath: root.ownerModulePath,
@@ -114,7 +190,7 @@ class TypedAstInventory {
 			visit(root.expression);
 		}
 
-		final entryPoint:Dynamic = program.entryPoint == null ? null : {
+		final entryPoint:Null<TypedAstInventoryEntryPoint> = program.entryPoint == null ? null : {
 			modulePath: program.entryPoint.modulePath,
 			declarationPath: program.entryPoint.declarationPath,
 			expressionKind: TypedAstNormalizer.expressionKind(program.entryPoint.expression)
@@ -149,7 +225,7 @@ class TypedAstInventory {
 		}
 	}
 
-	static function metadataReport(entries:Array<TypedAstMetadata>):Array<Dynamic> {
+	static function metadataReport(entries:Array<TypedAstMetadata>):Array<TypedAstInventoryMetadata> {
 		return [for (entry in entries) {name: entry.name, arguments: entry.arguments.copy()}];
 	}
 

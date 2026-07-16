@@ -3,7 +3,18 @@ import haxe.Json;
 import haxe.io.Path;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
+import haxe.macro.PlatformConfig;
 import haxe.macro.Type;
+
+private typedef TargetPlatformSnapshot = {
+	final staticTypeSystem:Null<Bool>;
+	final sys:Null<Bool>;
+	final capturePolicy:Null<String>;
+	final usesUtf16:Null<Bool>;
+	final supportsUnicode:Null<Bool>;
+	final supportsThreads:Null<Bool>;
+	final supportsAtomics:Null<Bool>;
+}
 
 /** Emits a structural snapshot of target facts and selected upstream branches. */
 class TargetContractProbe {
@@ -23,15 +34,7 @@ class TargetContractProbe {
 				haxeVersion: Context.definedValue("haxe"),
 				carrier: Context.definedValue("reflaxe_c_haxe_carrier"),
 				environment: Context.definedValue("reflaxe_c_platform_environment"),
-				platform: {
-					staticTypeSystem: platformField(platform, "staticTypeSystem"),
-					sys: platformField(platform, "sys"),
-					capturePolicy: platformFieldString(platform, "capturePolicy"),
-					usesUtf16: platformField(platform, "usesUtf16"),
-					supportsUnicode: platformField(platform, "supportsUnicode"),
-					supportsThreads: platformField(platform, "supportsThreads"),
-					supportsAtomics: platformField(platform, "supportsAtomics")
-				},
+				platform: platformSnapshot(platform),
 				defines: {
 					bootstrapCount: Context.definedValue("reflaxe_c_bootstrap_count"),
 					initCount: Context.definedValue("reflaxe_c_init_count"),
@@ -60,13 +63,27 @@ class TargetContractProbe {
 		});
 	}
 
-	static function platformField(platform:Dynamic, field:String):Dynamic {
-		return platform == null ? null : Reflect.field(platform, field);
-	}
-
-	static function platformFieldString(platform:Dynamic, field:String):Null<String> {
-		final value = platformField(platform, field);
-		return value == null ? null : Std.string(value);
+	static function platformSnapshot(platform:Null<PlatformConfig>):TargetPlatformSnapshot {
+		if (platform == null) {
+			return {
+				staticTypeSystem: null,
+				sys: null,
+				capturePolicy: null,
+				usesUtf16: null,
+				supportsUnicode: null,
+				supportsThreads: null,
+				supportsAtomics: null
+			};
+		}
+		return {
+			staticTypeSystem: platform.staticTypeSystem,
+			sys: platform.sys,
+			capturePolicy: Std.string(platform.capturePolicy),
+			usesUtf16: platform.usesUtf16,
+			supportsUnicode: platform.supportsUnicode,
+			supportsThreads: platform.supportsThreads,
+			supportsAtomics: platform.supportsAtomics
+		};
 	}
 
 	static function classHasStatic(typeName:String, fieldName:String):Bool {

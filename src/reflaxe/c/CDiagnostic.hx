@@ -65,6 +65,50 @@ typedef CDiagnosticDefinition = {
 	final remediation:String;
 }
 
+typedef CDiagnosticJsonPoint = {
+	final line:Int;
+	final column:Int;
+}
+
+typedef CDiagnosticSourceJson = {
+	final file:String;
+	final start:CDiagnosticJsonPoint;
+	final end:CDiagnosticJsonPoint;
+}
+
+typedef CDiagnosticRelatedLocationJson = {
+	final label:String;
+	final source:CDiagnosticSourceJson;
+}
+
+typedef CDiagnosticRecordJson = {
+	final schemaVersion:Int;
+	final id:CDiagnosticId;
+	final severity:CDiagnosticSeverity;
+	final phase:CDiagnosticPhase;
+	final kind:CDiagnosticKind;
+	final profile:String;
+	final message:String;
+	final remediation:String;
+	final source:CDiagnosticSourceJson;
+	final context:String;
+	final notes:Array<String>;
+	final relatedLocations:Array<CDiagnosticRelatedLocationJson>;
+}
+
+typedef CDiagnosticDefinitionJson = {
+	final id:CDiagnosticId;
+	final name:String;
+	final defaultSeverity:CDiagnosticSeverity;
+	final allowedSeverities:Array<CDiagnosticSeverity>;
+	final phase:CDiagnosticPhase;
+	final kind:CDiagnosticKind;
+	final sourcePolicy:String;
+	final idStability:String;
+	final summary:String;
+	final remediation:String;
+}
+
 /** Repository-relative, one-based, end-exclusive source range. */
 class CDiagnosticSourceSpan {
 	public final file:String;
@@ -94,7 +138,7 @@ class CDiagnosticSourceSpan {
 	public function display():String
 		return '$file:$startLine:$startColumn-$endLine:$endColumn';
 
-	public function toJsonValue():Dynamic {
+	public function toJsonValue():CDiagnosticSourceJson {
 		return {
 			file: file,
 			start: {line: startLine, column: startColumn},
@@ -134,7 +178,7 @@ class CDiagnosticRelatedLocation {
 		this.source = source;
 	}
 
-	public function toJsonValue():Dynamic
+	public function toJsonValue():CDiagnosticRelatedLocationJson
 		return {label: label, source: source.toJsonValue()};
 }
 
@@ -182,7 +226,7 @@ class CDiagnosticRecord {
 		return '$id $severity [profile=$profile] ${source.display()}$contextSuffix $message Remediation: $remediation';
 	}
 
-	public function toJsonValue():Dynamic {
+	public function toJsonValue():CDiagnosticRecordJson {
 		return {
 			schemaVersion: CDiagnostic.EVENT_SCHEMA_VERSION,
 			id: id,
@@ -284,7 +328,7 @@ class CDiagnostic {
 		return new CDiagnosticRecord(id, severity == null ? definition.defaultSeverity : severity, profile, message, source, context, notes, relatedLocations);
 	}
 
-	public static function catalogSnapshot():Array<Dynamic> {
+	public static function catalogSnapshot():Array<CDiagnosticDefinitionJson> {
 		return definitions().map(definition -> {
 			id: definition.id,
 			name: definition.name,

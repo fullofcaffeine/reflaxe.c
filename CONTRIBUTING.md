@@ -52,7 +52,11 @@ Use the Haxe type system to express invariants. `Reflect`, `Dynamic`, `Any`,
 `untyped`, raw C injection, unchecked casts, and stringly typed protocols are
 not substitutes for a sound model. Use a narrow, documented boundary only when
 the language or an external ABI genuinely requires one, and test both admitted
-and rejected inputs.
+and rejected inputs. The exact remaining inventory lives in
+[docs/specs/typed-boundaries.json](docs/specs/typed-boundaries.json); run
+`npm run test:typed-boundaries` for every repository-owned Haxe or boundary
+change. New allowlist entries require an immediate conversion to a closed typed
+model plus malformed-input evidence.
 
 Preserve the architecture in [docs/architecture.md](docs/architecture.md):
 semantic ordering and failure edges belong in typed HxcIR, C syntax belongs in

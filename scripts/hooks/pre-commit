@@ -86,6 +86,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|CONTRIBUTIN
   python3 "$ROOT_DIR/scripts/ci/check_capability_manifest.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '(^|/)[^/]+\.hx$|^(AGENTS\.md|CONTRIBUTING\.md|README\.md|docs/(PRD|architecture|typed-boundaries)\.md|docs/specs/typed-boundaries(\.schema)?\.json|package\.json|\.github/workflows/governance\.yml|scripts/ci/(check_ci_policy|check_typed_boundaries)\.py|test/governance/test_typed_boundaries\.py)$'; then
+  echo "[pre-commit] Rejecting unreviewed untyped Haxe boundaries..."
+  python3 "$ROOT_DIR/scripts/ci/check_typed_boundaries.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|CONTRIBUTING\.md|SECURITY\.md|README\.md|docs/PRD\.md|package\.json|\.github/workflows/governance\.yml|scripts/ci/(check_ci_policy|check_governance_policy)\.py|test/governance/test_governance_policy\.py)'; then
   echo "[pre-commit] Validating contribution, disclosure, and release governance..."
   npm run test:governance-policy

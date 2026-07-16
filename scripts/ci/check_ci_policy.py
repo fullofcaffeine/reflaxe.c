@@ -228,6 +228,11 @@ REQUIRED_GATE_FILES = (
     "docs/specs/bootstrap-inventory.schema.json",
     "scripts/ci/check_capability_manifest.py",
     "test/governance/test_capability_manifest.py",
+    "docs/typed-boundaries.md",
+    "docs/specs/typed-boundaries.json",
+    "docs/specs/typed-boundaries.schema.json",
+    "scripts/ci/check_typed_boundaries.py",
+    "test/governance/test_typed_boundaries.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -256,6 +261,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "python3 scripts/beads/bootstrap.py --json",
     "python3 scripts/ci/check_governance_policy.py",
     "python3 scripts/ci/check_capability_manifest.py",
+    "python3 scripts/ci/check_typed_boundaries.py",
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -338,6 +344,11 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the capability manifest entry point")
     if (
+        scripts.get("test:typed-boundaries")
+        != "python3 scripts/ci/check_typed_boundaries.py"
+    ):
+        errors.append("package.json must retain the typed-boundary guard entry point")
+    if (
         scripts.get("test:governance-policy")
         != "python3 scripts/ci/check_governance_policy.py"
     ):
@@ -399,6 +410,12 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:governance must execute the capability manifest guard"
         )
+    if "npm run test:typed-boundaries" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must execute the typed-boundary guard"
+        )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
@@ -440,6 +457,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must validate the fixture and example policy")
     if "scripts/ci/check_capability_manifest.py" not in pre_commit:
         errors.append("pre-commit must validate bootstrap capability claims")
+    if "scripts/ci/check_typed_boundaries.py" not in pre_commit:
+        errors.append("pre-commit must reject unreviewed untyped Haxe boundaries")
     if "scripts/test/snapshots.py" not in pre_commit:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if "npm run test:beads-plan" not in pre_commit:

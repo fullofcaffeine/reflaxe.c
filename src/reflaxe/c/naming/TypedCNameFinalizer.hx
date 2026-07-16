@@ -241,6 +241,6 @@ class TypedCNameFinalizer {
 		return leftBytes.length - rightBytes.length;
 	}
 
-	static function contractFailure(detail:String, ?sources:Array<String>):Dynamic
+	static function contractFailure(detail:String, ?sources:Array<String>):Void
 		throw new CSymbolRegistryError(CDiagnosticId.InvalidTypedCContract, detail, sources);
 }

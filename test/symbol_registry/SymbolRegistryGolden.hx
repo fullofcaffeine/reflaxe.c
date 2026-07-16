@@ -1,4 +1,5 @@
 import haxe.Json;
+import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractField;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
@@ -114,38 +115,38 @@ class SymbolRegistryGolden {
 		return result;
 	}
 
-	static function collisionDiagnostic():Dynamic {
+	static function collisionDiagnostic():SymbolRegistryFailureDump {
 		final result = new CSymbolRegistry();
 		result.register(new CSymbolRequest(CSKMethod, ["alpha", "open"], CNSOrdinary("translation-unit"), CSVPublic, "same_symbol"));
 		result.register(new CSymbolRequest(CSKMethod, ["beta", "open"], CNSOrdinary("translation-unit"), CSVPublic, "same_symbol"));
 		return expectRegistryFailure(() -> result.finalizeSymbols());
 	}
 
-	static function invalidExactDiagnostic(name:String):Dynamic {
+	static function invalidExactDiagnostic(name:String):SymbolRegistryFailureDump {
 		final result = new CSymbolRegistry();
 		return expectRegistryFailure(() -> result.register(new CSymbolRequest(CSKExport, ["api", "invalid"], CNSOrdinary("translation-unit"), CSVPublic,
 			name)));
 	}
 
-	static function conflictingFactsDiagnostic():Dynamic {
+	static function conflictingFactsDiagnostic():SymbolRegistryFailureDump {
 		final result = new CSymbolRegistry();
 		result.register(new CSymbolRequest(CSKExport, ["api", "open"], CNSOrdinary("translation-unit"), CSVPublic, "api_open"));
 		return expectRegistryFailure(() -> result.register(new CSymbolRequest(CSKExport, ["api", "open"], CNSOrdinary("translation-unit"), CSVPublic,
 			"api_open_v2")));
 	}
 
-	static function sealedRegistryDiagnostic():Dynamic {
+	static function sealedRegistryDiagnostic():SymbolRegistryFailureDump {
 		final result = new CSymbolRegistry();
 		result.register(new CSymbolRequest(CSKType, ["Ready"], CNSTag("translation-unit")));
 		result.finalizeSymbols();
 		return expectRegistryFailure(() -> result.register(new CSymbolRequest(CSKType, ["Late"], CNSTag("translation-unit"))));
 	}
 
-	static function hostPathIdentityDiagnostic():Dynamic {
+	static function hostPathIdentityDiagnostic():SymbolRegistryFailureDump {
 		return expectRegistryFailure(() -> new CSymbolRequest(CSKType, ["/tmp/checkout/Main"], CNSTag("translation-unit")));
 	}
 
-	static function expectRegistryFailure(operation:() -> Void):Dynamic {
+	static function expectRegistryFailure(operation:() -> Void):SymbolRegistryFailureDump {
 		try {
 			operation();
 		} catch (error:CSymbolRegistryError) {
@@ -244,4 +245,10 @@ class SymbolRegistryGolden {
 			ownerModulePaths: owners
 		};
 	}
+}
+
+private typedef SymbolRegistryFailureDump = {
+	final id:CDiagnosticId;
+	final message:String;
+	final sourceSymbols:Array<String>;
 }

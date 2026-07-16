@@ -81,7 +81,7 @@ class TargetPlatform {
 			try {
 				final file = Context.resolvePath(relativePath);
 				return Context.makePosition({file: file, min: 0, max: 0});
-			} catch (_:Dynamic) {}
+			} catch (_:haxe.Exception) {}
 		}
 		return Context.currentPos();
 	}

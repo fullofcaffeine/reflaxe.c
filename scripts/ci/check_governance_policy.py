@@ -44,6 +44,8 @@ DOCUMENTS = (
             "Dynamic",
             "Any",
             "untyped",
+            "docs/specs/typed-boundaries.json",
+            "npm run test:typed-boundaries",
             "PRD Section 40",
             "npm run snapshots:update -- --suite hxc-ir",
             "docs/specs/third-party-provenance.json",
@@ -106,6 +108,7 @@ DOCUMENTS = (
             "owner-authorized signer",
             "push the implementation and require remote Governance success",
             "python3 scripts/ci/check_governance_policy.py",
+            "npm run test:typed-boundaries",
         ),
     ),
     DocumentContract(
@@ -116,6 +119,7 @@ DOCUMENTS = (
             "[Security policy](SECURITY.md)",
             "[Agent rules](AGENTS.md)",
             "python3 scripts/ci/check_governance_policy.py",
+            "docs/typed-boundaries.md",
         ),
     ),
     DocumentContract(
@@ -129,6 +133,7 @@ DOCUMENTS = (
                 "  builder, provenance reviewer, and authorized signer"
             ),
             "private key material never enters the repository or logs",
+            "typed-boundary-governance",
         ),
     ),
 )
@@ -141,6 +146,7 @@ SHARED_WORKFLOW_TEXT = (
     "requirement IDs",
     "exact commands",
     "haxe_c-od2.5",
+    "npm run test:typed-boundaries",
 )
 
 

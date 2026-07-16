@@ -1,0 +1,191 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/typed-boundaries.schema.json",
+  "title": "reflaxe.c repository-owned Haxe typed-boundary inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "manifestId",
+    "scope",
+    "constructs",
+    "allowlist"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "typed-boundaries.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "manifestId": {
+      "const": "hxc-typed-boundaries-v1"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "files",
+        "excludedRoots",
+        "policy"
+      ],
+      "properties": {
+        "files": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "excludedRoots": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": ".beads"
+            },
+            {
+              "const": ".git"
+            },
+            {
+              "const": ".hxc"
+            },
+            {
+              "const": "node_modules"
+            },
+            {
+              "const": "runtime/third_party"
+            },
+            {
+              "const": "runtime/vendor"
+            },
+            {
+              "const": "third_party"
+            },
+            {
+              "const": "vendor"
+            }
+          ],
+          "items": false
+        },
+        "policy": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "constructs": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "description"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/constructId"
+          },
+          "description": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        }
+      }
+    },
+    "allowlist": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/allowance"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\)[^\\u0000]+$"
+    },
+    "constructId": {
+      "enum": [
+        "any-type",
+        "dynamic-type",
+        "json-parse",
+        "open-record",
+        "private-access",
+        "raw-code-injection",
+        "reflect-api",
+        "unchecked-cast",
+        "untyped-keyword"
+      ]
+    },
+    "boundaryKind": {
+      "enum": [
+        "compiler-preview",
+        "external-json",
+        "foreign-api",
+        "language-semantics-fixture",
+        "negative-test"
+      ]
+    },
+    "allowance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "line",
+        "column",
+        "construct",
+        "boundaryKind",
+        "symbol",
+        "typedModel",
+        "sourceLine",
+        "justification",
+        "validation",
+        "testEvidence"
+      ],
+      "properties": {
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "column": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "construct": {
+          "$ref": "#/$defs/constructId"
+        },
+        "boundaryKind": {
+          "$ref": "#/$defs/boundaryKind"
+        },
+        "symbol": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "typedModel": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "sourceLine": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "justification": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "validation": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "testEvidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/repositoryPath"
+          }
+        }
+      }
+    }
+  }
+}

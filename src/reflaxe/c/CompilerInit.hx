@@ -115,20 +115,17 @@ class CompilerInit {
 			configurationError("the C custom target did not run its compiler-owned `c.Init.init()` platform configuration.");
 		}
 
-		final environment = Context.definedValue(TargetPlatform.ENVIRONMENT_DEFINE);
-		if (environment == null) {
-			configurationError("the C custom target did not record its resolved environment.");
-		}
-		final expectsSys = TargetPlatform.environmentSupportsSys(cast environment);
+		final environment:String = switch Context.definedValue(TargetPlatform.ENVIRONMENT_DEFINE) {
+			case null:
+				configurationError("the C custom target did not record its resolved environment.");
+			case value:
+				value;
+		};
+		final expectsSys = TargetPlatform.environmentSupportsSys(environment);
 		final configuration = MacroCompiler.getConfiguration();
 		final platform = configuration == null ? null : configuration.platformConfig;
-		if (platform == null
-			|| Reflect.field(platform, "staticTypeSystem") != true
-			|| Reflect.field(platform, "supportsUnicode") != true
-			|| Reflect.field(platform, "usesUtf16") != false
-			|| Reflect.field(platform, "sys") != expectsSys
-			|| Reflect.field(platform, "supportsThreads") != false
-			|| Reflect.field(platform, "supportsAtomics") != false) {
+		if (platform == null || !platform.staticTypeSystem || !platform.supportsUnicode || platform.usesUtf16 || platform.sys != expectsSys
+			|| platform.supportsThreads || platform.supportsAtomics) {
 			configurationError("the compiler platform configuration drifted from static, scalar-Unicode, adapter-derived C semantics.");
 		}
 		if (!Context.defined("target.static") || !Context.defined("target.unicode")) {
@@ -173,8 +170,8 @@ class CompilerInit {
 		return raw.toLowerCase();
 	}
 
-	static function configurationError(message:String):Void {
-		CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, message, configurationPosition());
+	static function configurationError<T>(message:String):T {
+		return CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, message, configurationPosition());
 	}
 
 	static function configurationPosition():Position {
@@ -185,7 +182,7 @@ class CompilerInit {
 			try {
 				final file = Context.resolvePath(relativePath);
 				return Context.makePosition({file: file, min: 0, max: 0});
-			} catch (_:Dynamic) {}
+			} catch (_:haxe.Exception) {}
 		}
 		return Context.currentPos();
 	}

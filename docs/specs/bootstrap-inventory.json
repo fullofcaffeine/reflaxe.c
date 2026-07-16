@@ -808,6 +808,26 @@
       ]
     },
     {
+      "id": "typed-boundary-governance",
+      "area": "governance",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Repository-owned Haxe has a source-exact guard against unreviewed untyped compiler seams.",
+      "scope": "The inventory scans Dynamic, Any, Reflect, untyped, open-ended carriers, casts, private access, raw injection, and JSON ingress while requiring closed typed models and negative evidence for each exception.",
+      "evidence": [
+        "docs/specs/typed-boundaries.json",
+        "docs/typed-boundaries.md",
+        "scripts/ci/check_typed_boundaries.py",
+        "test/governance/test_typed_boundaries.py"
+      ],
+      "owners": [
+        "E2.T04"
+      ],
+      "limitations": [
+        "This protects compiler implementation technique; it does not implement user-language Dynamic or reflection semantics."
+      ]
+    },
+    {
       "id": "typed-c-contract-validation",
       "area": "target-api",
       "status": "implemented",
