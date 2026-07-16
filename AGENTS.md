@@ -103,6 +103,31 @@ missing-metadata or missing-adapter assumptions.
 - Keep README and capability claims at M0 until executable evidence advances
   the release gate.
 
+### Capability and limitation claims
+
+- `docs/specs/bootstrap-inventory.json` is the machine-readable authority for
+  what the current checkout implements and what remains unavailable. Keep its
+  schema, evidence paths, stable Beads owners, hard claim gates, this policy,
+  and the generated README capability block in one change.
+- Use the four statuses literally. `implemented` means the exact bounded scope
+  has executable repository evidence; `scaffold-only` means only a contract,
+  seed, fixture, or plan exists; `experimental` means an explicit opt-in
+  surface without a support promise; and `unsupported` means absent,
+  deliberately fail-closed, or not validated. Never promote a neighboring
+  capability from evidence for a narrower one.
+- Regenerate the README block with
+  `python3 scripts/ci/check_capability_manifest.py --write-readme`; do not edit
+  that generated block by hand. Run `npm run test:capabilities` for every
+  capability, evidence, product-claim, CLI, runtime, stdlib, platform, ABI, or
+  release-status change.
+- `hxc doctor` is currently unsupported and has no implementation to invoke.
+  E8.T06 must derive its future human and JSON status from the same manifest
+  capability IDs rather than introducing a second hand-maintained inventory.
+- Full standard-library support, general Haxe-to-C support, production
+  readiness, performance, supported platforms/releases, and public ABI
+  stability remain false until their named owner beads add the required
+  executable evidence and intentionally advance the manifest gates.
+
 ### Compiler and runtime invariants
 
 - Extend the existing architecture; do not run a new-target generator over

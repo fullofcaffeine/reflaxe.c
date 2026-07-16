@@ -205,76 +205,62 @@ the C string contract.
 
 ## What exists today
 
-The current checkout contains:
+<!-- BEGIN GENERATED BOOTSTRAP CAPABILITIES -->
+> Generated from [`docs/specs/bootstrap-inventory.json`](docs/specs/bootstrap-inventory.json) by `scripts/ci/check_capability_manifest.py`; edit the manifest, not this block.
 
-- a detailed [product requirements document](docs/PRD.md);
-- [architecture](docs/architecture.md) and
-  [configuration](docs/configuration.md) contracts;
-- a [typed diagnostic contract](docs/diagnostics.md) with 12 registered IDs,
-  exhaustive reserved ranges, schema-validated records, and registry-drift
-  enforcement;
-- a minimal Reflaxe adapter and whole-program boundary that lowers an admitted
-  reachable primitive static-function graph, reports exact `HXC1001` for
-  unsupported typed nodes/signatures, and emits an owned runtime-free private
-  header/source project with `int main(void)` when wholly admitted;
-- a deterministic typed-AST adapter and reviewed inventory covering complete
-  module ownership, declarations, fields, metadata, expressions, entry points,
-  reordered input, and compiler-server isolation;
-- a dedicated HXML gate that automatically covers every `src/**/*.hx` and
-  `std/c/**/*.hx` module plus explicit compiler-macro branches;
-- a Haxe 5.0.0-preview.1 / Reflaxe `73a9831` / Lix 17.0.2 checksum-locked
-  toolchain;
-- production `CustomTarget(c)` platform setup plus target-gated
-  `CompilerBootstrap` and `CompilerInit` lifecycle, identity, upstream
-  stdlib-branch, conflict, package, and compiler-server probes;
-- zero-runtime `c.*` contract types plus deterministic typed declaration/build
-  metadata validation and `HXC5002` negative fixtures;
-- a deterministic declaration planner with declaration-owned include
-  provenance, complete-type diagnostics, pointer-cycle forward declarations,
-  public/private separation, and independently compiled header goldens;
-- a per-compilation deterministic C symbol registry with exact-name validation,
-  namespace-aware collision provenance, typed-contract default finalization,
-  and an owned zero-runtime `hxc.symbols.json`-shape snapshot;
-- a target-owned HxcIR model, validator, and deterministic source-aware dumper
-  covering explicit side-effect/cleanup order, places and values, dispatch,
-  conversions, failure edges, initialization, and named runtime intent;
-- a typed primitive mapping/conversion contract with profile-invariant exact and
-  ABI integer identities, explicit scalar/reference nullability, owned machine
-  snapshot, and strict-C11 O0/O2 algorithm probes without `hxrt`;
-- real primitive `TypedExpr -> HxcIR -> structural C` body
-  lowering with deterministic global/local/temporary/label names, exact source
-  diagnostics, optional structural `#line` mapping, and runtime-free GCC/Clang
-  execution at O0/O2;
-- typed primitive parameters, explicit argument conversion/call order, direct
-  static calls, recursive prototype planning, scoped default/optional/rest
-  diagnostics, and deterministic production project/native execution without
-  `hxrt`;
-- explicit calls, assignments, primitive static fields, short circuit,
-  value-form ternaries, and `UInt` increments with a stable-temporary proof and
-  Eval-versus-generated-C differential execution at O0/O2;
-- typed nonempty fixed arrays, mutable/const local span borrows, explicit
-  static/loop/dynamic bounds policies, and direct element-scaled iteration with
-  six-way profile/build fail-stop evidence and no `hxrt` link symbols;
-- a structured C11 AST with deterministic declarator and exhaustive
-  expression/statement precedence and escaping goldens, compiled and executed
-  without `hxrt` by both GCC and Clang;
-- a provisional standalone `hxrt` allocator/string/status/Int32 ABI seed with
-  strict hosted and freestanding compilation plus C++17 header consumption; it
-  is not yet selected or linked by generated programs;
-- independent native C-library and opaque-handle C++-shim fixtures that validate
-  the future interop boundaries without pretending they were generated;
-- a fail-closed third-party provenance and release-notice policy;
-- a drift-checked contributor, private-disclosure, and release-responsibility
-  policy with no premature supported-release claim;
-- a live Beads execution graph covering the planned milestones.
+**Project stage:** `experimental-scaffold-with-primitive-executable-slice` (`M0`).
 
-It does **not** yet contain general Haxe-to-C semantic lowering, indirect or
-instance calls, arbitrary collection/iterator lowering, general Haxe arrays,
-escaping span views,
-standard-library parity, a complete runtime, the `hxc` implementation,
-executable generated examples, or release tooling.
-The package metadata added at M0 is a reproducible development/package-layout
-seed, not a publishable compiler. Those capabilities remain tracked work.
+| Status | Count | Meaning |
+| --- | ---: | --- |
+| `implemented` | 18 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `scaffold-only` | 5 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
+| `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
+| `unsupported` | 13 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
+
+| Capability | Status | Current boundary |
+| --- | --- | --- |
+| `beads-bootstrap` | `implemented` | The checked-in Beads plan validates and previews deterministically without a live database. |
+| `bindgen` | `unsupported` | No Clang-backed binding generator or user bindgen command exists. |
+| `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 capability and limitation inventory drives the README status table. |
+| `c-ast-printer` | `implemented` | Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run. |
+| `c-export` | `unsupported` | No Haxe export analyzer, public-header generator, library packaging, or ABI diff workflow exists. |
+| `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |
+| `configuration-policies` | `scaffold-only` | Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts. |
+| `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
+| `diagnostics` | `implemented` | Twelve typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
+| `example-portfolio` | `unsupported` | No repository-owned product example directories or executable generated examples exist. |
+| `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
+| `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
+| `generated-file-ownership` | `implemented` | Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling. |
+| `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
+| `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
+| `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
+| `hxc-ir` | `implemented` | Schema-2 HxcIR structurally records values, places, ordering, control flow, failures, cleanup, and runtime intent. |
+| `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes. |
+| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural and primitive native corpus. |
+| `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
+| `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
+| `primitive-executable-lowering` | `implemented` | A bounded primitive static-function and local fixed-array/span graph emits and runs runtime-free strict C11. |
+| `primitive-semantics` | `implemented` | A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence. |
+| `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
+| `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
+| `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
+| `runtime-feature-planning` | `unsupported` | No whole-program runtime feature graph or selective hxrt packaging implementation exists. |
+| `runtime-hxrt-seed` | `scaffold-only` | A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently. |
+| `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
+| `standard-library-ledger` | `scaffold-only` | An initial standard-library strategy and ownership ledger exists as planning data. |
+| `symbol-registry` | `implemented` | Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented. |
+| `target-activation` | `implemented` | The pinned Haxe 5 CustomTarget(c) carrier configures scalar Unicode facts and exactly-once target registration. |
+| `target-c-api` | `scaffold-only` | Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check. |
+| `threading-and-atomics` | `unsupported` | No Haxe threading, synchronization, TLS, or atomic capability is advertised or implemented. |
+| `toolchain-metadata` | `implemented` | Haxe 5.0.0-preview.1, Reflaxe, Lix, package metadata, checksums, and provenance are pinned and verified. |
+| `typed-ast-input` | `implemented` | Complete typed-module capture and deterministic normalized ownership survive order changes and compiler-server reuse. |
+| `typed-c-contract-validation` | `implemented` | Namespaced typed-C declaration and build metadata produce a deterministic validated structural snapshot. |
+
+**Hard claim gates not passed:** `full-standard-library`, `general-haxe-to-c`, `performance-validated`, `production-ready`, `public-abi-stability`, `supported-platforms`, `supported-release`.
+
+**`hxc doctor`:** `unsupported`; implementation is absent and owned by `E8.T06`. Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these capability IDs rather than maintaining a second status list.
+<!-- END GENERATED BOOTSTRAP CAPABILITIES -->
 
 ## Explore the scaffold
 
@@ -300,6 +286,8 @@ python3 scripts/beads/bootstrap.py --json
 jq empty \
   docs/specs/beads-plan.json \
   docs/specs/beads-plan.schema.json \
+  docs/specs/bootstrap-inventory.json \
+  docs/specs/bootstrap-inventory.schema.json \
   docs/specs/diagnostic-event.schema.json \
   docs/specs/diagnostics.json \
   docs/specs/diagnostics.schema.json \
@@ -320,6 +308,7 @@ python3 test/function_lowering/run.py
 python3 test/evaluation_order/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
+python3 scripts/ci/check_capability_manifest.py
 python3 scripts/test/snapshots.py --check
 python3 scripts/ci/check_license_policy.py
 python3 scripts/ci/check_governance_policy.py

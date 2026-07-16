@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/bootstrap-inventory.schema.json",
+  "title": "reflaxe.c bootstrap capability and limitation manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "manifestId",
+    "milestone",
+    "projectStatus",
+    "requirements",
+    "statusDefinitions",
+    "compatibility",
+    "claimGates",
+    "doctor",
+    "ledgers",
+    "capabilities"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "bootstrap-inventory.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "manifestId": {
+      "const": "hxc-bootstrap-capabilities-v1"
+    },
+    "milestone": {
+      "const": "M0"
+    },
+    "projectStatus": {
+      "const": "experimental-scaffold-with-primitive-executable-slice"
+    },
+    "requirements": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "HXC-SCAF-001"
+        },
+        {
+          "const": "HXC-SCAF-004"
+        },
+        {
+          "const": "HXC-DOC-007"
+        }
+      ],
+      "items": false
+    },
+    "statusDefinitions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "implemented",
+        "scaffold-only",
+        "experimental",
+        "unsupported"
+      ],
+      "properties": {
+        "implemented": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "scaffold-only": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "experimental": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "unsupported": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profiles",
+        "runtimePolicy",
+        "environments",
+        "generatedC",
+        "publicAbi"
+      ],
+      "properties": {
+        "profiles": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "runtimePolicy": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "environments": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "generatedC": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "publicAbi": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "claimGates": {
+      "type": "array",
+      "minItems": 7,
+      "items": {
+        "$ref": "#/$defs/claimGate"
+      }
+    },
+    "doctor": {
+      "$ref": "#/$defs/doctor"
+    },
+    "ledgers": {
+      "type": "array",
+      "minItems": 4,
+      "items": {
+        "$ref": "#/$defs/ledger"
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "minItems": 30,
+      "items": {
+        "$ref": "#/$defs/capability"
+      }
+    }
+  },
+  "$defs": {
+    "nonEmptyText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+    },
+    "repositoryPath": {
+      "type": "string",
+      "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.?/)(?!.*\\\\)[^\\u0000]+$"
+    },
+    "ownerBead": {
+      "type": "string",
+      "pattern": "^E[0-9]+\\.T[0-9]{2}$"
+    },
+    "owners": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/ownerBead"
+      }
+    },
+    "claimGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "claimed",
+        "owners",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "claimed": {
+          "const": false
+        },
+        "owners": {
+          "$ref": "#/$defs/owners"
+        },
+        "reason": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "status",
+        "implemented",
+        "ownerBeads",
+        "manifestConsumerRequired",
+        "remediation"
+      ],
+      "properties": {
+        "command": {
+          "const": "hxc doctor"
+        },
+        "status": {
+          "const": "unsupported"
+        },
+        "implemented": {
+          "const": false
+        },
+        "ownerBeads": {
+          "const": "E8.T06"
+        },
+        "manifestConsumerRequired": {
+          "const": true
+        },
+        "remediation": {
+          "$ref": "#/$defs/nonEmptyText"
+        }
+      }
+    },
+    "ledger": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "authority"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "path": {
+          "$ref": "#/$defs/repositoryPath"
+        },
+        "authority": {
+          "enum": [
+            "implemented-contract",
+            "test-policy",
+            "scaffold-only-planning-seed"
+          ]
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "area",
+        "status",
+        "disposition",
+        "summary",
+        "scope",
+        "evidence",
+        "owners",
+        "limitations"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/identifier"
+        },
+        "area": {
+          "enum": [
+            "cli",
+            "compiler",
+            "configuration",
+            "diagnostics",
+            "governance",
+            "interop",
+            "platform",
+            "product",
+            "quality",
+            "release",
+            "runtime",
+            "stdlib",
+            "target-api",
+            "toolchain"
+          ]
+        },
+        "status": {
+          "enum": [
+            "implemented",
+            "scaffold-only",
+            "experimental",
+            "unsupported"
+          ]
+        },
+        "disposition": {
+          "enum": [
+            "available",
+            "reserved",
+            "opt-in",
+            "fails-closed",
+            "not-exposed",
+            "not-validated"
+          ]
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[^|\\r\\n]+$"
+        },
+        "scope": {
+          "$ref": "#/$defs/nonEmptyText"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/repositoryPath"
+          }
+        },
+        "owners": {
+          "$ref": "#/$defs/owners"
+        },
+        "limitations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/nonEmptyText"
+          }
+        }
+      }
+    }
+  }
+}

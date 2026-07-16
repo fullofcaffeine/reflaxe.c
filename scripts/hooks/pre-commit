@@ -81,6 +81,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|CONTRIBUTING\.md|SECURITY\.md|docs/|package\.json|\.github/workflows/governance\.yml|scripts/(beads/|ci/|test/)|src/|std/c/|runtime/hxrt/|test/)'; then
+  echo "[pre-commit] Validating bootstrap capability and limitation claims..."
+  python3 "$ROOT_DIR/scripts/ci/check_capability_manifest.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|CONTRIBUTING\.md|SECURITY\.md|README\.md|docs/PRD\.md|package\.json|\.github/workflows/governance\.yml|scripts/ci/(check_ci_policy|check_governance_policy)\.py|test/governance/test_governance_policy\.py)'; then
   echo "[pre-commit] Validating contribution, disclosure, and release governance..."
   npm run test:governance-policy

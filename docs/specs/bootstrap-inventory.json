@@ -1,0 +1,829 @@
+{
+  "$schema": "bootstrap-inventory.schema.json",
+  "schemaVersion": 1,
+  "manifestId": "hxc-bootstrap-capabilities-v1",
+  "milestone": "M0",
+  "projectStatus": "experimental-scaffold-with-primitive-executable-slice",
+  "requirements": [
+    "HXC-SCAF-001",
+    "HXC-SCAF-004",
+    "HXC-DOC-007"
+  ],
+  "statusDefinitions": {
+    "implemented": "The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise.",
+    "scaffold-only": "A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability.",
+    "experimental": "The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate.",
+    "unsupported": "The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim."
+  },
+  "compatibility": {
+    "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
+    "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
+    "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
+    "generatedC": "Only the admitted primitive static-function and local fixed-array/span slice has generated-C evidence.",
+    "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
+  },
+  "claimGates": [
+    {
+      "id": "full-standard-library",
+      "claimed": false,
+      "owners": [
+        "E5.T01",
+        "E10.T10"
+      ],
+      "reason": "The current ledger is a planning seed and general standard-library calls remain unsupported."
+    },
+    {
+      "id": "general-haxe-to-c",
+      "claimed": false,
+      "owners": [
+        "E2.T10",
+        "E3.T10"
+      ],
+      "reason": "Only a bounded primitive static-function and local fixed-array/span subset reaches generated C."
+    },
+    {
+      "id": "performance-validated",
+      "claimed": false,
+      "owners": [
+        "E9.T10",
+        "E10.T05"
+      ],
+      "reason": "No versioned benchmark methodology, dashboard, or regression budget has passed."
+    },
+    {
+      "id": "production-ready",
+      "claimed": false,
+      "owners": [
+        "E10.T11",
+        "E10.T12"
+      ],
+      "reason": "Security, compatibility, stdlib, platform, release, and broad semantic gates remain open."
+    },
+    {
+      "id": "public-abi-stability",
+      "claimed": false,
+      "owners": [
+        "E7.T07",
+        "E10.T09"
+      ],
+      "reason": "No Haxe export analyzer, generated public header, ABI manifest, or compatibility policy is complete."
+    },
+    {
+      "id": "supported-platforms",
+      "claimed": false,
+      "owners": [
+        "E10.T01",
+        "E10.T07"
+      ],
+      "reason": "Current native CI is component evidence, not the complete ADR 0007 environment/runtime/architecture/compiler tuple matrix."
+    },
+    {
+      "id": "supported-release",
+      "claimed": false,
+      "owners": [
+        "E10.T08",
+        "E10.T11"
+      ],
+      "reason": "No publishable, signed, reproducible, evidence-backed release exists."
+    }
+  ],
+  "doctor": {
+    "command": "hxc doctor",
+    "status": "unsupported",
+    "implemented": false,
+    "ownerBeads": "E8.T06",
+    "manifestConsumerRequired": true,
+    "remediation": "Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these capability IDs rather than maintaining a second status list."
+  },
+  "ledgers": [
+    {
+      "id": "diagnostics",
+      "path": "docs/specs/diagnostics.json",
+      "authority": "implemented-contract"
+    },
+    {
+      "id": "fixture-taxonomy",
+      "path": "docs/specs/fixture-taxonomy.json",
+      "authority": "test-policy"
+    },
+    {
+      "id": "primitive-semantics",
+      "path": "docs/specs/primitive-semantics.json",
+      "authority": "implemented-contract"
+    },
+    {
+      "id": "standard-library",
+      "path": "docs/specs/stdlib-ledger.json",
+      "authority": "scaffold-only-planning-seed"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "beads-bootstrap",
+      "area": "governance",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The checked-in Beads plan validates and previews deterministically without a live database.",
+      "scope": "The plan contains stable epic/task keys, blocking edges, requirement coverage, and an idempotent materializer.",
+      "evidence": [
+        "scripts/beads/bootstrap.py",
+        "scripts/beads/validate_plan.py",
+        "test/governance/test_beads_bootstrap.py"
+      ],
+      "owners": [
+        "E0.T08"
+      ],
+      "limitations": [
+        "This is workflow infrastructure, not compiler or runtime behavior."
+      ]
+    },
+    {
+      "id": "bindgen",
+      "area": "interop",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No Clang-backed binding generator or user bindgen command exists.",
+      "scope": "The PRD and Beads graph reserve deterministic parsing, mapping, locking, ABI probing, and wrapper work.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E6.T01"
+      ],
+      "limitations": [
+        "Independent native C fixtures are not generated bindings."
+      ]
+    },
+    {
+      "id": "bootstrap-capability-manifest",
+      "area": "governance",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A schema-checked M0 capability and limitation inventory drives the README status table.",
+      "scope": "The manifest fixes status meanings, evidence paths, ownership, hard claim gates, and future doctor consumption.",
+      "evidence": [
+        "docs/specs/bootstrap-inventory.schema.json",
+        "scripts/ci/check_capability_manifest.py",
+        "test/governance/test_capability_manifest.py"
+      ],
+      "owners": [
+        "E0.T10"
+      ],
+      "limitations": [
+        "It reports evidence and changes no compiler behavior."
+      ]
+    },
+    {
+      "id": "c-ast-printer",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run.",
+      "scope": "Direct Haxe fixtures build typed C AST nodes and emit deterministic strict-C11 translation units.",
+      "evidence": [
+        "test/c_ast/expected/declarators.c",
+        "test/c_ast/expected/expressions.c",
+        "test/c_ast/run.py"
+      ],
+      "owners": [
+        "E1.T01",
+        "E1.T02"
+      ],
+      "limitations": [
+        "Direct AST fixtures alone do not prove Haxe-language lowering."
+      ]
+    },
+    {
+      "id": "c-export",
+      "area": "interop",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No Haxe export analyzer, public-header generator, library packaging, or ABI diff workflow exists.",
+      "scope": "The Beads E7 plan owns exported declarations, ABI-safe types, wrappers, libraries, manifests, and consumers.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E7.T01",
+        "E7.T03"
+      ],
+      "limitations": [
+        "Independent native C/C++ consumers are boundary seeds, not generated export evidence."
+      ]
+    },
+    {
+      "id": "c23-internal-dialect",
+      "area": "platform",
+      "status": "experimental",
+      "disposition": "opt-in",
+      "summary": "The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim.",
+      "scope": "Configuration recognizes c23 while public headers remain constrained to the C11 contract.",
+      "evidence": [
+        "docs/adr/0007-strict-c11-target-and-platform-baseline.md",
+        "src/reflaxe/c/CCompiler.hx"
+      ],
+      "owners": [
+        "E10.T07"
+      ],
+      "limitations": [
+        "It has no independent native syntax matrix and cannot change semantics or ABI."
+      ]
+    },
+    {
+      "id": "configuration-policies",
+      "area": "configuration",
+      "status": "scaffold-only",
+      "disposition": "reserved",
+      "summary": "Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts.",
+      "scope": "Direct defines resolve selected bootstrap facts, and build mode cannot weaken admitted span semantics.",
+      "evidence": [
+        "docs/configuration.md",
+        "src/reflaxe/c/BuildModeResolver.hx",
+        "src/reflaxe/c/ProfileResolver.hx"
+      ],
+      "owners": [
+        "E8.T01"
+      ],
+      "limitations": [
+        "There is no hxc.json parser, precedence model, schema, canonical effective-config report, or complete capability matrix."
+      ]
+    },
+    {
+      "id": "declaration-planner",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically.",
+      "scope": "Test-owned adapters emit independently compilable strict-C11 header plans from typed contract snapshots.",
+      "evidence": [
+        "src/reflaxe/c/plan/CDeclarationPlanner.hx",
+        "test/declaration_plan/run.py"
+      ],
+      "owners": [
+        "E1.T03"
+      ],
+      "limitations": [
+        "The planner fixture is not a generated public ABI or general Haxe declaration emitter."
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "area": "diagnostics",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Twelve typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked.",
+      "scope": "Current bootstrap, configuration, lowering, runtime, target-contract, and internal failures use the target-owned catalog.",
+      "evidence": [
+        "docs/specs/diagnostics.json",
+        "scripts/ci/check_diagnostic_policy.py",
+        "test/diagnostics/run.py"
+      ],
+      "owners": [
+        "E0.T06"
+      ],
+      "limitations": [
+        "The public hxc JSON event stream, command context, and native-tool attachments remain unimplemented."
+      ]
+    },
+    {
+      "id": "example-portfolio",
+      "area": "product",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No repository-owned product example directories or executable generated examples exist.",
+      "scope": "The E9 plan reserves hello, no-runtime, interop, shared-library, todo, and WebAssembly examples.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E9.T01",
+        "E9.T02"
+      ],
+      "limitations": [
+        "Focused compiler fixtures and independent native inputs must not be relabeled as product examples."
+      ]
+    },
+    {
+      "id": "fixture-snapshot-policy",
+      "area": "quality",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks.",
+      "scope": "Focused M0 suites map their exact runners and evidence without treating examples as implicit tests.",
+      "evidence": [
+        "docs/specs/fixture-taxonomy.json",
+        "scripts/ci/check_fixture_policy.py",
+        "scripts/test/snapshots.py"
+      ],
+      "owners": [
+        "E0.T09"
+      ],
+      "limitations": [
+        "A registered lane proves only its declared artifact and assertion scope."
+      ]
+    },
+    {
+      "id": "general-haxe-lowering",
+      "area": "compiler",
+      "status": "unsupported",
+      "disposition": "fails-closed",
+      "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
+      "scope": "Only the separately listed primitive static-function and local fixed-array/span subset is admitted.",
+      "evidence": [
+        "src/reflaxe/c/CCompiler.hx",
+        "test/all_sources/run.py",
+        "test/negative/body-lowering/case.json"
+      ],
+      "owners": [
+        "E2.T10",
+        "E3.T10"
+      ],
+      "limitations": [
+        "Objects, instances, virtual/interface calls, closures, general generics, strings, general arrays, exceptions, and dynamic/reflection semantics remain outside the admitted slice."
+      ]
+    },
+    {
+      "id": "generated-file-ownership",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling.",
+      "scope": "The writer rejects path escapes, symlink escapes, unowned collisions, and stale files outside the prior manifest.",
+      "evidence": [
+        "docs/project-emission.md",
+        "src/reflaxe/c/emit/ReflaxeOutputWriter.hx",
+        "test/project_emitter/run.py"
+      ],
+      "owners": [
+        "E1.T07",
+        "E1.T09"
+      ],
+      "limitations": [
+        "Only wholly admitted compiler graphs may reach this output boundary."
+      ]
+    },
+    {
+      "id": "governance-and-provenance",
+      "area": "governance",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked.",
+      "scope": "The repository has a private reporting path, GPL-3.0-only source policy, and fail-closed third-party inventory checks.",
+      "evidence": [
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "scripts/ci/check_governance_policy.py",
+        "scripts/ci/check_license_policy.py"
+      ],
+      "owners": [
+        "E0.T02",
+        "E0.T07"
+      ],
+      "limitations": [
+        "Governance policy is not a completed security review or release implementation."
+      ]
+    },
+    {
+      "id": "hxc-cli",
+      "area": "cli",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No Run.hx, hxc command router, project schema, template, or packaged executable exists.",
+      "scope": "Direct Haxe/HXML remains the only user-program compiler invocation; E8 owns the optional orchestration layer.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E8.T02"
+      ],
+      "limitations": [
+        "Repository Python validation scripts are developer tooling and are not hxc commands."
+      ]
+    },
+    {
+      "id": "hxc-doctor",
+      "area": "cli",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "The hxc doctor human and JSON command is not implemented.",
+      "scope": "This manifest provides the capability IDs and current unsupported contract that E8.T06 must consume.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E8.T06"
+      ],
+      "limitations": [
+        "No tool, SDK, sysroot, compiler, sanitizer, or writable-output probe is exposed as hxc doctor today."
+      ]
+    },
+    {
+      "id": "hxc-ir",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Schema-2 HxcIR structurally records values, places, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive lowering slice.",
+      "evidence": [
+        "docs/hxc-ir.md",
+        "src/reflaxe/c/ir/HxcIRValidator.hx",
+        "test/hxc_ir/run.py"
+      ],
+      "owners": [
+        "E1.T05"
+      ],
+      "limitations": [
+        "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
+      ]
+    },
+    {
+      "id": "native-interop-fixtures",
+      "area": "interop",
+      "status": "scaffold-only",
+      "disposition": "reserved",
+      "summary": "Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes.",
+      "scope": "The native inputs compile and run as isolated C/C++ consumer evidence.",
+      "evidence": [
+        "test/native/cpp_shim/smoke.c",
+        "test/native/pointlib/smoke.c"
+      ],
+      "owners": [
+        "E6.T10",
+        "E6.T12"
+      ],
+      "limitations": [
+        "They are not generated from Haxe and do not prove bindgen, export, or generated ABI support."
+      ]
+    },
+    {
+      "id": "native-smoke",
+      "area": "quality",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural and primitive native corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set registered by the runner.",
+      "evidence": [
+        ".github/workflows/governance.yml",
+        "scripts/ci/runtime_smoke.py",
+        "test/governance/test_runtime_smoke_policy.py"
+      ],
+      "owners": [
+        "E0.T05"
+      ],
+      "limitations": [
+        "Component-native evidence is not a complete supported-platform or release matrix."
+      ]
+    },
+    {
+      "id": "performance-evidence",
+      "area": "quality",
+      "status": "unsupported",
+      "disposition": "not-validated",
+      "summary": "No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated.",
+      "scope": "Future versioned methodology and budgets must precede performance or hand-written-quality marketing claims.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E9.T10",
+        "E10.T05"
+      ],
+      "limitations": [
+        "Code-shape tests and deterministic output are not performance benchmarks."
+      ]
+    },
+    {
+      "id": "platform-support-matrix",
+      "area": "platform",
+      "status": "unsupported",
+      "disposition": "not-validated",
+      "summary": "No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane.",
+      "scope": "ADR 0007 records the future Tier 1 gate; current local and CI compilers provide component evidence only.",
+      "evidence": [
+        "docs/adr/0007-strict-c11-target-and-platform-baseline.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E10.T01",
+        "E10.T07"
+      ],
+      "limitations": [
+        "Cross compilation or one native fixture cannot establish a supported platform tuple."
+      ]
+    },
+    {
+      "id": "primitive-executable-lowering",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A bounded primitive static-function and local fixed-array/span graph emits and runs runtime-free strict C11.",
+      "scope": "The slice covers typed constants, locals, globals, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans.",
+      "evidence": [
+        "test/arithmetic_semantics/run.py",
+        "test/function_lowering/run.py",
+        "test/span_lowering/run.py"
+      ],
+      "owners": [
+        "E2.T03",
+        "E2.T04",
+        "E2.T05",
+        "E2.T06",
+        "E2.T08"
+      ],
+      "limitations": [
+        "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."
+      ]
+    },
+    {
+      "id": "primitive-semantics",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence.",
+      "scope": "Void, Bool, Int, UInt, Float, exact and ABI integers, and the registered operation slice preserve explicit semantics without hxrt.",
+      "evidence": [
+        "docs/specs/primitive-semantics.json",
+        "test/primitive_semantics/run.py"
+      ],
+      "owners": [
+        "E2.T01",
+        "E2.T05"
+      ],
+      "limitations": [
+        "The contract does not cover strings, objects, general arrays, dynamic values, or arbitrary native ABI layout facts."
+      ]
+    },
+    {
+      "id": "public-c-abi",
+      "area": "interop",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists.",
+      "scope": "E7 and E10 own generated headers, wrappers, manifests, independent consumers, and stabilization.",
+      "evidence": [
+        "docs/PRD.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E7.T03",
+        "E10.T09"
+      ],
+      "limitations": [
+        "Private generated headers and target-facing c.* contracts are not a public ABI."
+      ]
+    },
+    {
+      "id": "reflaxe-adapter",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state.",
+      "scope": "Typed input is captured before callback filtering and compiler-server requests clear all pending/current storage.",
+      "evidence": [
+        "src/reflaxe/c/CReflaxeCompiler.hx",
+        "test/typed_ast/run.py"
+      ],
+      "owners": [
+        "E1.T06"
+      ],
+      "limitations": [
+        "Adapter activation does not mean every typed declaration or expression is lowerable."
+      ]
+    },
+    {
+      "id": "release-artifacts",
+      "area": "release",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No publishable compiler package, signed reproducible archive, supported version, or release automation exists.",
+      "scope": "Current package metadata and package-layout probes are development inputs only.",
+      "evidence": [
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E10.T08",
+        "E10.T11"
+      ],
+      "limitations": [
+        "Generated-output and runtime redistribution treatment also remains a separate pre-release decision."
+      ]
+    },
+    {
+      "id": "runtime-feature-planning",
+      "area": "runtime",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No whole-program runtime feature graph or selective hxrt packaging implementation exists.",
+      "scope": "Admitted primitive builds prove an empty analyzed plan; runtime-requiring semantics are not admitted.",
+      "evidence": [
+        "docs/adr/0001-direct-c-and-selective-runtime.md",
+        "docs/specs/beads-plan.json",
+        "test/function_lowering/run.py"
+      ],
+      "owners": [
+        "E4.T01"
+      ],
+      "limitations": [
+        "An empty runtime plan is not evidence that runtime-requiring Haxe semantics work."
+      ]
+    },
+    {
+      "id": "runtime-hxrt-seed",
+      "area": "runtime",
+      "status": "scaffold-only",
+      "disposition": "reserved",
+      "summary": "A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently.",
+      "scope": "Hosted/freestanding C compilation and C++17 public-header consumption validate only the seed itself.",
+      "evidence": [
+        "runtime/hxrt/include/hxc_runtime.h",
+        "runtime/hxrt/src/hxc_runtime.c",
+        "runtime/hxrt/test/runtime_smoke.c"
+      ],
+      "owners": [
+        "E4.T01",
+        "E4.T02"
+      ],
+      "limitations": [
+        "Generated Haxe does not select or link this seed, and it is not an unconditional runtime core."
+      ]
+    },
+    {
+      "id": "standard-library",
+      "area": "stdlib",
+      "status": "unsupported",
+      "disposition": "fails-closed",
+      "summary": "General Haxe standard-library parity is not implemented.",
+      "scope": "Only compiler-recognized primitive operations such as the admitted Std.int path are covered by their exact lowering tests.",
+      "evidence": [
+        "docs/specs/stdlib-ledger.json",
+        "test/arithmetic_semantics/run.py",
+        "test/negative/body-lowering/case.json"
+      ],
+      "owners": [
+        "E5.T01",
+        "E10.T10"
+      ],
+      "limitations": [
+        "String, collections, Bytes/I/O, general Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading remain roadmap work."
+      ]
+    },
+    {
+      "id": "standard-library-ledger",
+      "area": "stdlib",
+      "status": "scaffold-only",
+      "disposition": "reserved",
+      "summary": "An initial standard-library strategy and ownership ledger exists as planning data.",
+      "scope": "The seed names representative APIs, intended strategies, runtime features, profiles, environments, and future owners.",
+      "evidence": [
+        "docs/specs/stdlib-ledger.json",
+        "docs/specs/beads-plan.json"
+      ],
+      "owners": [
+        "E5.T01"
+      ],
+      "limitations": [
+        "It is not yet generated against the pinned Haxe std tree, schema-validated, or evidence-backed API parity data."
+      ]
+    },
+    {
+      "id": "symbol-registry",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented.",
+      "scope": "The registry validates authored names, escapes reserved generated forms, handles overload/specialization identity, and records collisions.",
+      "evidence": [
+        "docs/symbol-naming.md",
+        "src/reflaxe/c/naming/CSymbolRegistry.hx",
+        "test/symbol_registry/run.py"
+      ],
+      "owners": [
+        "E1.T04"
+      ],
+      "limitations": [
+        "Stable export ABI names remain unratified and broader typed-AST symbol collection is incomplete."
+      ]
+    },
+    {
+      "id": "target-activation",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The pinned Haxe 5 CustomTarget(c) carrier configures scalar Unicode facts and exactly-once target registration.",
+      "scope": "Cold, package, compiler-server, non-C isolation, conflict, legacy Cross, and fail-closed production paths are tested.",
+      "evidence": [
+        "src/c/Init.hx",
+        "src/reflaxe/c/CompilerInit.hx",
+        "test/bootstrap/run.py"
+      ],
+      "owners": [
+        "E0.T04"
+      ],
+      "limitations": [
+        "Successful activation establishes target typing facts, not general lowering or platform support."
+      ]
+    },
+    {
+      "id": "target-c-api",
+      "area": "target-api",
+      "status": "scaffold-only",
+      "disposition": "reserved",
+      "summary": "Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check.",
+      "scope": "The contract macro validates the current declaration/build surface; fixed CArray and local Span operations have a separate admitted lowering slice.",
+      "evidence": [
+        "std/c/Ptr.hx",
+        "std/c/Span.hx",
+        "test/typed_c/run.py"
+      ],
+      "owners": [
+        "E1.T03",
+        "E3.T01"
+      ],
+      "limitations": [
+        "Most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
+      ]
+    },
+    {
+      "id": "threading-and-atomics",
+      "area": "stdlib",
+      "status": "unsupported",
+      "disposition": "not-exposed",
+      "summary": "No Haxe threading, synchronization, TLS, or atomic capability is advertised or implemented.",
+      "scope": "Target setup deliberately leaves target.threaded and target.atomics absent until an adapter proves them.",
+      "evidence": [
+        "src/reflaxe/c/TargetPlatform.hx",
+        "test/bootstrap/run.py"
+      ],
+      "owners": [
+        "E5.T11"
+      ],
+      "limitations": [
+        "The presence of C11 atomic AST nodes or c.Atomic contracts is not Haxe concurrency support."
+      ]
+    },
+    {
+      "id": "toolchain-metadata",
+      "area": "toolchain",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Haxe 5.0.0-preview.1, Reflaxe, Lix, package metadata, checksums, and provenance are pinned and verified.",
+      "scope": "Fresh package resolution and installed/source-checkout lifecycle probes use the reviewed dependency contract.",
+      "evidence": [
+        "docs/specs/toolchain-lock.json",
+        "package-lock.json",
+        "scripts/ci/check_toolchain.py"
+      ],
+      "owners": [
+        "E0.T03"
+      ],
+      "limitations": [
+        "Pinned development dependencies are not a packaged or supported compiler release."
+      ]
+    },
+    {
+      "id": "typed-ast-input",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Complete typed-module capture and deterministic normalized ownership survive order changes and compiler-server reuse.",
+      "scope": "The adapter retains raw compiler objects while serializing only path-stable module, declaration, metadata, field, expression-root, and entry facts.",
+      "evidence": [
+        "docs/typed-ast-input.md",
+        "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
+        "test/typed_ast/run.py"
+      ],
+      "owners": [
+        "E1.T06"
+      ],
+      "limitations": [
+        "Typed-input capture is not semantic lowering, and unsupported nodes still fail with HXC1001."
+      ]
+    },
+    {
+      "id": "typed-c-contract-validation",
+      "area": "target-api",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Namespaced typed-C declaration and build metadata produce a deterministic validated structural snapshot.",
+      "scope": "The macro rejects unknown metadata, invalid literals, duplicate names, unsafe paths, opaque-by-value use, cycles, and unsupported static assertions.",
+      "evidence": [
+        "src/reflaxe/c/macros/TypedCContractMacro.hx",
+        "test/typed_c/run.py"
+      ],
+      "owners": [
+        "E1.T03"
+      ],
+      "limitations": [
+        "A valid contract snapshot does not itself emit a public header, select runtime code, or prove native layout."
+      ]
+    }
+  ]
+}

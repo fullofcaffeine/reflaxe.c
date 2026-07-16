@@ -76,6 +76,9 @@ jobs:
       - name: Validate contribution, disclosure, and release governance
         run: python3 scripts/ci/check_governance_policy.py
 
+      - name: Validate bootstrap capability and limitation claims
+        run: python3 scripts/ci/check_capability_manifest.py
+
       - name: Validate and preview Beads bootstrap without bd
         run: |
           python3 scripts/beads/validate_plan.py --json

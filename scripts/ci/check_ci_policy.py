@@ -224,6 +224,10 @@ REQUIRED_GATE_FILES = (
     "scripts/test/snapshots.py",
     "scripts/ci/check_fixture_policy.py",
     "test/governance/test_fixture_policy.py",
+    "docs/specs/bootstrap-inventory.json",
+    "docs/specs/bootstrap-inventory.schema.json",
+    "scripts/ci/check_capability_manifest.py",
+    "test/governance/test_capability_manifest.py",
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
@@ -251,6 +255,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "python3 scripts/beads/validate_plan.py --json",
     "python3 scripts/beads/bootstrap.py --json",
     "python3 scripts/ci/check_governance_policy.py",
+    "python3 scripts/ci/check_capability_manifest.py",
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -328,6 +333,11 @@ def validate() -> list[str]:
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
         errors.append("package.json must retain the test:fixture-policy entry point")
     if (
+        scripts.get("test:capabilities")
+        != "python3 scripts/ci/check_capability_manifest.py"
+    ):
+        errors.append("package.json must retain the capability manifest entry point")
+    if (
         scripts.get("test:governance-policy")
         != "python3 scripts/ci/check_governance_policy.py"
     ):
@@ -385,6 +395,10 @@ def validate() -> list[str]:
             "package.json test:governance must execute the contribution and "
             "security policy guard"
         )
+    if "npm run test:capabilities" not in str(scripts.get("test:governance", "")):
+        errors.append(
+            "package.json test:governance must execute the capability manifest guard"
+        )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
@@ -424,6 +438,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
         errors.append("pre-commit must validate the fixture and example policy")
+    if "scripts/ci/check_capability_manifest.py" not in pre_commit:
+        errors.append("pre-commit must validate bootstrap capability claims")
     if "scripts/test/snapshots.py" not in pre_commit:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if "npm run test:beads-plan" not in pre_commit:
