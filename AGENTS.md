@@ -663,6 +663,8 @@ stage, the locally available baseline is:
 ```bash
 npm ci
 npm test
+python3 scripts/beads/validate_plan.py --json
+python3 scripts/beads/bootstrap.py --json
 npm run test:fixture-policy
 npm run snapshots:check
 jq empty docs/specs/*.json .haxerc haxelib.json package.json package-lock.json

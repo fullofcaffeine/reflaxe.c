@@ -4,7 +4,12 @@
 
 ## Plan shape
 
-The bootstrap contains **11 epics, 122 tasks, and 274 explicit blocking edges**. Dependencies are intentionally selective: tasks under one epic can proceed in parallel unless a semantic or tooling prerequisite is named.
+The bootstrap contains **11 epics, 122 tasks, 274 explicit blocking edges, and
+160 covered requirement IDs**. Dependencies are intentionally selective: tasks
+under one epic can proceed in parallel unless a semantic or tooling prerequisite
+is named. Epic success criteria and task requirement IDs are stored directly in
+the plan, so recovery never needs to scrape Markdown or consult an existing
+Beads database.
 
 | Epic | Milestone | P | Tasks | Outcome |
 |---|---:|---:|---:|---|
@@ -30,7 +35,11 @@ python3 scripts/beads/bootstrap.py
 python3 scripts/beads/bootstrap.py --json
 ```
 
-The validator checks schema contracts, unique stable keys, parent ownership, dependency references, self-edges, cycles, and deterministic topological order. The default bootstrap mode is read-only and does not require `bd`.
+The validator checks the JSON Schema 2020-12 contract, exact typed fields,
+unique stable keys and titles, canonical ordering, parent ownership, requirement
+IDs, dependency references, self-edges, cycles, labels, and deterministic
+topological order. The default bootstrap mode is read-only, writes nothing, and
+does not inspect or require `bd`.
 
 ## Materialize
 
@@ -41,9 +50,24 @@ bd prime
 bd ready --json
 ```
 
-The apply path creates epics first, then parented tasks, then `child needs blocker` dependency edges. It writes only `.hxc/beads-plan-state.json`, an atomic stable-key-to-Beads-ID recovery map; it never edits Beads database internals. Exact issue titles also provide recovery when that state file is absent.
+The apply path uses non-interactive argument-array `bd` calls. It creates epics
+first, then parented tasks, then `child needs blocker` dependency edges. It
+writes only `.hxc/beads-plan-state.json`, an ignored atomic
+stable-key-to-Beads-ID recovery map; it never edits Beads database internals.
+Stable metadata/external references are authoritative, and exact issue titles
+provide recovery when that state file is absent.
 
-Rerunning `--apply` is intended to be idempotent. Existing state mappings and exact-title matches are reused; duplicate dependency reports are treated as existing edges. Any other Beads error stops the run.
+Rerunning `--apply` is idempotent. Open, claimed, and closed issues are reused
+without changing their execution state. Existing blocking edges are detected
+before mutation, conflicting stable identities fail closed, and the final
+`bd ready` seed set must agree with the graph before the recovery map is
+replaced. Any other Beads error stops the run.
+
+Tests can safely target a temporary repository without changing the checkout:
+
+```text
+python3 scripts/beads/bootstrap.py --apply --workspace /path/to/temp/repository
+```
 
 ## Work loop
 
@@ -72,6 +96,7 @@ Implementation will expose work not knowable from the bootstrap. Create a Beads 
 
 - `docs/specs/beads-plan.json`: exhaustive execution graph and acceptance criteria.
 - `docs/specs/beads-plan.schema.json`: portable structural schema.
+- `scripts/beads/hxc_beads_plan.py`: typed semantic model and graph validation.
 - `scripts/beads/validate_plan.py`: semantic graph validation and summary.
 - `scripts/beads/bootstrap.py`: dry-run and idempotent materialization.
 - `.hxc/beads-plan-state.json`: local generated recovery map after apply; ignored by Git.

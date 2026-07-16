@@ -226,7 +226,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
-        "npm run deps:verify && npm run test:diagnostics && npm run test:all-sources && "
+        "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
+        "npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:hxc-ir && npm run test:primitive-semantics && npm run test:body-lowering && "
@@ -247,7 +248,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         not isinstance(scripts, dict)
         or scripts.get("test:toolchain") != expected_toolchain_script
     ):
-        errors.append("package.json test:toolchain must run every pinned Haxe gate")
+        errors.append("package.json test:toolchain must run every required gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:c-ast") != expected_c_ast_script

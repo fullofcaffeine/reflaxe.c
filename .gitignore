@@ -3,6 +3,7 @@
 .dolt/
 *.db
 .beads-credential-key
+.hxc/beads-plan-state.json
 
 # Scoped Haxe / Node development artifacts
 node_modules/

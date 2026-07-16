@@ -292,8 +292,12 @@ scripts/hooks/install.sh
 bd prime
 bd list --ready --type task
 
+python3 scripts/beads/validate_plan.py --json
+python3 scripts/beads/bootstrap.py --json
+
 jq empty \
   docs/specs/beads-plan.json \
+  docs/specs/beads-plan.schema.json \
   docs/specs/diagnostic-event.schema.json \
   docs/specs/diagnostics.json \
   docs/specs/diagnostics.schema.json \

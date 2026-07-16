@@ -15,6 +15,13 @@ PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 
 REQUIRED_GATE_FILES = (
+    "docs/BEADS_PLAN.md",
+    "docs/specs/beads-plan.json",
+    "docs/specs/beads-plan.schema.json",
+    "scripts/beads/hxc_beads_plan.py",
+    "scripts/beads/validate_plan.py",
+    "scripts/beads/bootstrap.py",
+    "test/governance/test_beads_bootstrap.py",
     "src/reflaxe/c/CDiagnostic.hx",
     "docs/diagnostics.md",
     "docs/specs/diagnostics.json",
@@ -237,6 +244,8 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    "python3 scripts/beads/validate_plan.py --json",
+    "python3 scripts/beads/bootstrap.py --json",
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -298,6 +307,17 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:arithmetic-semantics entry point")
     if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
         errors.append("package.json must retain the test:span-lowering entry point")
+    beads_plan_script = str(scripts.get("test:beads-plan", ""))
+    for required_beads_command in (
+        "python3 scripts/beads/validate_plan.py",
+        "python3 scripts/beads/bootstrap.py",
+        "test_beads_bootstrap.py",
+    ):
+        if required_beads_command not in beads_plan_script:
+            errors.append(
+                "package.json test:beads-plan must execute "
+                + required_beads_command
+            )
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -332,6 +352,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:span-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
+    if "npm run test:beads-plan" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:beads-plan")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute snapshots:check")
     if "npm run test:native" not in str(scripts.get("test", "")):
@@ -387,6 +409,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must validate the fixture and example policy")
     if "scripts/test/snapshots.py" not in pre_commit:
         errors.append("pre-commit must check registered snapshot ownership and drift")
+    if "npm run test:beads-plan" not in pre_commit:
+        errors.append("pre-commit must validate the reproducible Beads graph")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):

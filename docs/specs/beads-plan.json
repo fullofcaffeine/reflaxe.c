@@ -21,6 +21,13 @@
       "priority": 0,
       "milestone": "M0",
       "description": "Ratify contracts, make the scaffold build reproducibly, and establish the project rules Codex must follow.",
+      "acceptance": [
+        "JSON files parse;",
+        "runtime seed compiles with available GCC and Clang under strict flags;",
+        "generated public runtime header compiles as both C and C++;",
+        "Beads plan can dry-run without `bd` and apply when `bd` is installed;",
+        "unsupported compiler paths fail explicitly rather than emit incorrect programs."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m0",
@@ -33,6 +40,12 @@
       "priority": 0,
       "milestone": "M1",
       "description": "Build the deterministic AST/IR/output foundation before broad language lowering.",
+      "acceptance": [
+        "exhaustive declarator golden tests;",
+        "AST printer output compiles under GCC/Clang;",
+        "two builds in different absolute paths are byte-identical;",
+        "stale generated files are safely removed."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m1",
@@ -45,6 +58,12 @@
       "priority": 0,
       "milestone": "M2",
       "description": "Deliver the first correct executable Haxe-to-C vertical slice with explicit evaluation order and no C undefined behavior.",
+      "acceptance": [
+        "core fixtures compile and execute;",
+        "differential semantic suite passes;",
+        "sanitizer suite passes;",
+        "`hello` contains no unused broad runtime feature."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m2",
@@ -57,6 +76,12 @@
       "priority": 1,
       "milestone": "M3",
       "description": "Lower Haxe's structured type system into readable C layouts and calls without defaulting to a universal box.",
+      "acceptance": [
+        "direct calls devirtualize in reports;",
+        "recursive enums and generic containers work;",
+        "nonescaping closures allocate no heap memory;",
+        "C output remains warning-clean."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m3",
@@ -69,6 +94,12 @@
       "priority": 1,
       "milestone": "M4",
       "description": "Implement selective runtime capabilities and full portable object-graph semantics while preserving a proven runtime-free lane.",
+      "acceptance": [
+        "cyclic graphs collect correctly;",
+        "exception cleanup tests pass;",
+        "runtime plan includes only reachable features;",
+        "`-D hxc_runtime=none` succeeds for eligible fixtures and gives reasoned errors for ineligible fixtures."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m4",
@@ -81,6 +112,11 @@
       "priority": 1,
       "milestone": "M5",
       "description": "Systematically support the Haxe standard library with direct lowering, target-owned adapters, and narrow runtime slices.",
+      "acceptance": [
+        "agreed upstream test threshold reached with no silent skips;",
+        "every gap is explicit and tracked;",
+        "portable todo domain compiles on C and selected sibling targets."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m5",
@@ -93,6 +129,12 @@
       "priority": 1,
       "milestone": "M6",
       "description": "Make existing C libraries easy and safe to consume from exact headers, flags, and ABI facts.",
+      "acceptance": [
+        "SQLite and zlib-class libraries bind from headers reproducibly;",
+        "regenerated output is clean;",
+        "ABI facts match compiled C probes;",
+        "unsupported constructs produce precise diagnostics."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m6",
@@ -105,6 +147,12 @@
       "priority": 1,
       "milestone": "M7",
       "description": "Make Haxe-authored code a first-class producer of stable C headers, static libraries, and shared objects.",
+      "acceptance": [
+        "consumers build independently;",
+        "exceptions and ownership are translated correctly;",
+        "headers compile under C and C++;",
+        "ABI diff gate detects intentional and accidental changes."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m7",
@@ -117,6 +165,11 @@
       "priority": 1,
       "milestone": "M8",
       "description": "Turn compiler components into the coherent hxc product and an automation-friendly build surface.",
+      "acceptance": [
+        "clean user journey from install to `hxc new`, `hxc run`;",
+        "JSON output supports automation;",
+        "existing build systems can consume the manifest without generated CMake/Meson."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m8",
@@ -129,6 +182,12 @@
       "priority": 2,
       "milestone": "M9",
       "description": "Prove the product through honest, polished examples and a macro-powered SQLite todo CLI.",
+      "acceptance": [
+        "examples use no unapproved `__c__`;",
+        "todo generated C is reviewed against a hand-written baseline;",
+        "docs state limitations honestly;",
+        "benchmark results are reproducible."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m9",
@@ -141,6 +200,12 @@
       "priority": 1,
       "milestone": "M10",
       "description": "Continuously harden correctness, ABI, security, performance, compatibility, and release provenance.",
+      "acceptance": [
+        "no release-blocking correctness, UB, security, or ABI issues;",
+        "all 1.0 gates have archived evidence;",
+        "immutable release artifacts and provenance are published;",
+        "post-1.0 compatibility policy is documented."
+      ],
       "labels": [
         "hxc-plan",
         "milestone-m10",
@@ -160,6 +225,12 @@
         "§9",
         "§28",
         "ADR 0001, 0002, 0004-0007"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-PROD-004",
+        "HXC-PROD-005",
+        "HXC-SCAF-006"
       ],
       "outcome": "Resolve the owner decisions that affect public semantics before implementation hardens accidental choices.",
       "acceptance": [
@@ -189,6 +260,12 @@
       "prd": [
         "§22",
         "§28"
+      ],
+      "requirements": [
+        "HXC-SCAF-001",
+        "HXC-SCAF-006",
+        "HXC-QA-011",
+        "HXC-QA-013"
       ],
       "outcome": "Replace the scaffold license placeholder with an approved repository license and auditable notices.",
       "acceptance": [
@@ -221,6 +298,11 @@
         "§25 M0",
         "ADR 0007"
       ],
+      "requirements": [
+        "HXC-SCAF-002",
+        "HXC-SCAF-006",
+        "HXC-SCAF-007"
+      ],
       "outcome": "Create a reproducible source-checkout and package build using the exact accepted Haxe 5 custom-target carrier and a known Reflaxe revision/version.",
       "acceptance": [
         "Fresh checkout resolves dependencies without relying on the caller's current working directory.",
@@ -251,6 +333,12 @@
         "§25 M0",
         "ADR 0007"
       ],
+      "requirements": [
+        "HXC-SCAF-003",
+        "HXC-SCAF-004",
+        "HXC-SCAF-007",
+        "HXC-MAC-009"
+      ],
       "outcome": "Type-check the compiler adapter, CLI, C AST seed, macros, and c.* surface under the pinned toolchain.",
       "acceptance": [
         "A dedicated HXML compiles all target-owned Haxe modules.",
@@ -280,6 +368,12 @@
         "§21",
         "§25 M0"
       ],
+      "requirements": [
+        "HXC-SCAF-007",
+        "HXC-QA-001",
+        "HXC-QA-002",
+        "HXC-QA-003"
+      ],
       "outcome": "Run structural, JSON, Haxe, C11 runtime, C++ header, and native fixture checks on every change.",
       "acceptance": [
         "GCC and Clang compile runtime/fixtures with warnings as errors.",
@@ -307,6 +401,11 @@
       ],
       "prd": [
         "§20.1"
+      ],
+      "requirements": [
+        "HXC-SCAF-004",
+        "HXC-COMP-014",
+        "HXC-CLI-010"
       ],
       "outcome": "Reserve diagnostic ranges and document wording, severity, source position, remediation, and stability rules.",
       "acceptance": [
@@ -336,6 +435,12 @@
         "§22",
         "§29"
       ],
+      "requirements": [
+        "HXC-QA-001",
+        "HXC-QA-011",
+        "HXC-QA-013",
+        "HXC-QA-014"
+      ],
       "outcome": "Give human and agent contributors a single operational contract for changes, disclosures, generated files, and releases.",
       "acceptance": [
         "AGENTS and CONTRIBUTING agree on Beads workflow and definition of done.",
@@ -363,6 +468,11 @@
       ],
       "prd": [
         "§24"
+      ],
+      "requirements": [
+        "HXC-SCAF-007",
+        "HXC-SCAF-008",
+        "HXC-QA-014"
       ],
       "outcome": "Prove the checked-in plan is acyclic, idempotently materializable, and useful to Codex.",
       "acceptance": [
@@ -395,6 +505,11 @@
         "§21.2",
         "§21.3"
       ],
+      "requirements": [
+        "HXC-COMP-014",
+        "HXC-QA-001",
+        "HXC-QA-007"
+      ],
       "outcome": "Standardize positive, negative, AST, C snapshot, runtime, differential, ABI, and performance fixtures.",
       "acceptance": [
         "Each fixture type has a directory, runner contract, and expected outputs.",
@@ -423,6 +538,11 @@
       "prd": [
         "§18.5",
         "§25 M0"
+      ],
+      "requirements": [
+        "HXC-SCAF-001",
+        "HXC-SCAF-004",
+        "HXC-DOC-007"
       ],
       "outcome": "Expose what the scaffold implements, reserves, rejects, and has not validated in machine-readable form.",
       "acceptance": [
@@ -453,6 +573,11 @@
         "§10.6",
         "§25 M1"
       ],
+      "requirements": [
+        "HXC-COMP-002",
+        "HXC-COMP-004",
+        "HXC-COMP-008"
+      ],
       "outcome": "Represent all C declarator shapes structurally, including nested pointer/array/function declarations, qualifiers, attributes, and incomplete types.",
       "acceptance": [
         "Golden tests cover precedence-sensitive declarations in parameters, typedefs, fields, and function pointers.",
@@ -482,6 +607,11 @@
         "§10.6",
         "§25 M1"
       ],
+      "requirements": [
+        "HXC-SCAF-005",
+        "HXC-COMP-005",
+        "HXC-COMP-007"
+      ],
       "outcome": "Print readable C with the minimum safe parentheses and deterministic formatting.",
       "acceptance": [
         "Every unary/binary/conditional/call/member/cast precedence pair has tests.",
@@ -509,6 +639,11 @@
       ],
       "prd": [
         "§10.10"
+      ],
+      "requirements": [
+        "HXC-COMP-001",
+        "HXC-COMP-007",
+        "HXC-COMP-008"
       ],
       "outcome": "Compute forward declarations, complete-type requirements, header/source placement, and deterministic include order.",
       "acceptance": [
@@ -540,6 +675,11 @@
       "prd": [
         "§10.8"
       ],
+      "requirements": [
+        "HXC-COMP-001",
+        "HXC-COMP-006",
+        "HXC-COMP-007"
+      ],
       "outcome": "Map Haxe modules/types/fields/locals/specializations to collision-free C identifiers with readable provenance.",
       "acceptance": [
         "C keywords and implementation-reserved identifiers are escaped.",
@@ -569,6 +709,11 @@
       "prd": [
         "§10.2",
         "§10.5"
+      ],
+      "requirements": [
+        "HXC-COMP-001",
+        "HXC-COMP-002",
+        "HXC-COMP-003"
       ],
       "outcome": "Represent explicit evaluation order, places/values, cleanup scopes, calls, dispatch, conversion, failure edges, and initialization independently of C syntax.",
       "acceptance": [
@@ -600,6 +745,11 @@
       "prd": [
         "§10.3",
         "§10.4"
+      ],
+      "requirements": [
+        "HXC-SCAF-002",
+        "HXC-SCAF-003",
+        "HXC-COMP-001"
       ],
       "outcome": "Collect all relevant Reflaxe module types into per-build normalized input while preserving source metadata and ownership.",
       "acceptance": [
@@ -634,6 +784,11 @@
         "§10.9",
         "§25 M1"
       ],
+      "requirements": [
+        "HXC-COMP-009",
+        "HXC-COMP-011",
+        "HXC-COMP-012"
+      ],
       "outcome": "Emit owned headers, sources, runtime-plan, compiler manifest, ABI placeholders, and build metadata through Reflaxe OutputManager.",
       "acceptance": [
         "Generated-file ownership safely deletes stale files and never touches user-owned files.",
@@ -663,6 +818,11 @@
       "prd": [
         "§18.3",
         "§25 M1"
+      ],
+      "requirements": [
+        "HXC-SCAF-005",
+        "HXC-COMP-001",
+        "HXC-COMP-010"
       ],
       "outcome": "Generate optional build-system adapters from one neutral compile/link plan.",
       "acceptance": [
@@ -695,6 +855,11 @@
         "§21.2",
         "§25 M1"
       ],
+      "requirements": [
+        "HXC-COMP-009",
+        "HXC-COMP-012",
+        "HXC-QA-007"
+      ],
       "outcome": "Exercise changed module order, absolute paths, removed modules, renamed symbols, line endings, and cached compiler-server runs.",
       "acceptance": [
         "Byte-for-byte checks pass across isolated roots.",
@@ -725,6 +890,11 @@
       "prd": [
         "§21.1"
       ],
+      "requirements": [
+        "HXC-COMP-004",
+        "HXC-COMP-005",
+        "HXC-QA-001"
+      ],
       "outcome": "Allow tests to construct C AST directly, emit translation units, and compile/link/run them without Haxe language lowering.",
       "acceptance": [
         "Corpus covers declarations, precedence, initializers, control flow, attributes, and header/source splits.",
@@ -754,6 +924,11 @@
       ],
       "prd": [
         "§12.1"
+      ],
+      "requirements": [
+        "HXC-SEM-001",
+        "HXC-SEM-003",
+        "HXC-SEM-005"
       ],
       "outcome": "Define exact C representations and conversion rules for Void, Bool, Int, Float, nullability, and target ABI integers.",
       "acceptance": [
@@ -786,6 +961,11 @@
         "§12.1",
         "§12.14"
       ],
+      "requirements": [
+        "HXC-SCAF-004",
+        "HXC-COMP-002",
+        "HXC-SEM-022"
+      ],
       "outcome": "Produce the first real HxcIR/C lowering for literal expressions and structured function bodies.",
       "acceptance": [
         "Source positions survive into diagnostics and optional line mapping.",
@@ -816,6 +996,11 @@
       "prd": [
         "§12.10"
       ],
+      "requirements": [
+        "HXC-SEM-001",
+        "HXC-SEM-004",
+        "HXC-SEM-011"
+      ],
       "outcome": "Emit prototypes/definitions and direct calls with explicit parameter/result representations.",
       "acceptance": [
         "Entry-point signature is correct for executable artifacts.",
@@ -845,6 +1030,11 @@
       ],
       "prd": [
         "§12.2"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-COMP-003",
+        "HXC-SEM-004"
       ],
       "outcome": "Introduce temporaries and sequencing so generated behavior never depends on C's unspecified operand/argument order.",
       "acceptance": [
@@ -877,6 +1067,11 @@
         "§11.4",
         "§12.1"
       ],
+      "requirements": [
+        "HXC-SEM-002",
+        "HXC-SEM-003",
+        "HXC-QA-004"
+      ],
       "outcome": "Preserve Haxe arithmetic semantics without signed overflow, invalid shifts, division overflow, or unchecked conversion undefined behavior.",
       "acceptance": [
         "INT_MIN/-1, divide-by-zero, negative shifts, overflow, modulo, and bit operations have boundary tests.",
@@ -905,6 +1100,11 @@
       ],
       "prd": [
         "§12.14"
+      ],
+      "requirements": [
+        "HXC-SCAF-004",
+        "HXC-SEM-022",
+        "HXC-SEM-023"
       ],
       "outcome": "Implement structured control flow while preserving expression values, break/continue targets, and cleanup obligations.",
       "acceptance": [
@@ -936,6 +1136,11 @@
       "prd": [
         "§12.3",
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-SEM-006",
+        "HXC-EX-001"
       ],
       "outcome": "Support immutable literals and the minimal hosted output path needed by hello without pulling the full object runtime.",
       "acceptance": [
@@ -969,6 +1174,11 @@
         "§12.4",
         "§17.1"
       ],
+      "requirements": [
+        "HXC-SEM-005",
+        "HXC-SEM-007",
+        "HXC-MAC-001"
+      ],
       "outcome": "Support compile-time fixed arrays and c.Span/c.ConstSpan without the general Haxe Array runtime.",
       "acceptance": [
         "Bounds behavior is explicit by profile/build mode.",
@@ -999,6 +1209,11 @@
       ],
       "prd": [
         "§12.15"
+      ],
+      "requirements": [
+        "HXC-COMP-003",
+        "HXC-SEM-004",
+        "HXC-SEM-021"
       ],
       "outcome": "Order module/class initialization explicitly and reject unresolvable cycles.",
       "acceptance": [
@@ -1034,6 +1249,12 @@
         "§19.1",
         "§25 M2"
       ],
+      "requirements": [
+        "HXC-PROD-001",
+        "HXC-EX-001",
+        "HXC-QA-002",
+        "HXC-QA-005"
+      ],
       "outcome": "Compile examples/hello from Haxe through generated C to a native executable.",
       "acceptance": [
         "Exact stdout is `Hello from hxc` plus one newline.",
@@ -1064,6 +1285,11 @@
       "prd": [
         "§21.5",
         "§21.6"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-QA-004",
+        "HXC-QA-005"
       ],
       "outcome": "Run generated C against a selected Haxe reference target over edge cases and randomized primitive programs.",
       "acceptance": [
@@ -1097,6 +1323,11 @@
         "§12.5",
         "§17.2"
       ],
+      "requirements": [
+        "HXC-SEM-009",
+        "HXC-SEM-014",
+        "HXC-MAC-002"
+      ],
       "outcome": "Represent structurally known records as named/deduplicated C structs with clear value/reference behavior.",
       "acceptance": [
         "Field order/layout policy is deterministic.",
@@ -1125,6 +1356,12 @@
       ],
       "prd": [
         "§12.6"
+      ],
+      "requirements": [
+        "HXC-SEM-010",
+        "HXC-SEM-016",
+        "HXC-SEM-024",
+        "HXC-MAC-002"
       ],
       "outcome": "Emit readable discriminants and payload unions, including recursive and generic cases.",
       "acceptance": [
@@ -1156,6 +1393,12 @@
       "prd": [
         "§12.9"
       ],
+      "requirements": [
+        "HXC-SEM-007",
+        "HXC-SEM-015",
+        "HXC-SEM-016",
+        "HXC-MAC-005"
+      ],
       "outcome": "Specialize reachable generic code/types by normalized type arguments and share equivalent instances.",
       "acceptance": [
         "Specialization keys are stable and collision-free.",
@@ -1185,6 +1428,11 @@
       ],
       "prd": [
         "§12.7"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-SEM-013",
+        "HXC-SEM-014"
       ],
       "outcome": "Lower fields, inheritance prefix/layout, object headers, and null/reference representation according to profile/runtime needs.",
       "acceptance": [
@@ -1217,6 +1465,11 @@
         "§12.7",
         "§12.15"
       ],
+      "requirements": [
+        "HXC-SEM-007",
+        "HXC-SEM-013",
+        "HXC-SEM-021"
+      ],
       "outcome": "Preserve Haxe construction order, default field initialization, and failure cleanup.",
       "acceptance": [
         "Super/field/body ordering matches Haxe semantics.",
@@ -1247,6 +1500,11 @@
       "prd": [
         "§12.7"
       ],
+      "requirements": [
+        "HXC-SEM-013",
+        "HXC-SEM-014",
+        "HXC-SEM-015"
+      ],
       "outcome": "Emit minimal vtables only for reachable polymorphic calls and preserve override signatures.",
       "acceptance": [
         "Nonvirtual/final/direct calls remain direct.",
@@ -1275,6 +1533,11 @@
       ],
       "prd": [
         "§12.8"
+      ],
+      "requirements": [
+        "HXC-SEM-013",
+        "HXC-SEM-015",
+        "HXC-SEM-023"
       ],
       "outcome": "Represent reachable interfaces with compact itables or equivalent descriptors and safe cast checks.",
       "acceptance": [
@@ -1305,6 +1568,11 @@
       ],
       "prd": [
         "§12.10"
+      ],
+      "requirements": [
+        "HXC-SEM-012",
+        "HXC-SEM-016",
+        "HXC-SEM-023"
       ],
       "outcome": "Represent function values as typed function/context pairs and allocate environments only when required.",
       "acceptance": [
@@ -1337,6 +1605,13 @@
       "prd": [
         "§13.4",
         "§21.7"
+      ],
+      "requirements": [
+        "HXC-SEM-013",
+        "HXC-SEM-015",
+        "HXC-SEM-016",
+        "HXC-RT-007",
+        "HXC-MAC-006"
       ],
       "outcome": "Prove and apply direct-call, stack-allocation, scalar-replacement, and dead-metadata optimizations without changing semantics.",
       "acceptance": [
@@ -1371,6 +1646,11 @@
       "prd": [
         "§21"
       ],
+      "requirements": [
+        "HXC-SEM-021",
+        "HXC-QA-001",
+        "HXC-QA-005"
+      ],
       "outcome": "Create positive, negative, recursive, cross-module, and differential fixtures for M3 semantics.",
       "acceptance": [
         "Recursive enums, generic containers, inheritance, interfaces, closures, and anonymous records are covered.",
@@ -1401,6 +1681,12 @@
       "prd": [
         "§13.1"
       ],
+      "requirements": [
+        "HXC-RT-001",
+        "HXC-RT-002",
+        "HXC-RT-004",
+        "HXC-RT-008"
+      ],
       "outcome": "Turn runtime feature IDs/dependencies/reasons into deterministic source/header/link selection.",
       "acceptance": [
         "Feature closure is deterministic and cycle-checked.",
@@ -1430,6 +1716,11 @@
       ],
       "prd": [
         "§13.2"
+      ],
+      "requirements": [
+        "HXC-SEM-019",
+        "HXC-RT-005",
+        "HXC-RT-011"
       ],
       "outcome": "Finalize aligned allocation/reallocation/release contracts for hosted, freestanding, and exported ownership.",
       "acceptance": [
@@ -1463,6 +1754,11 @@
         "§13",
         "ADR 0004"
       ],
+      "requirements": [
+        "HXC-PROD-005",
+        "HXC-SEM-006",
+        "HXC-RT-008"
+      ],
       "outcome": "Provide immutable/mutable string primitives, UTF policy, hashing, comparison, slicing, conversion, and C boundary views.",
       "acceptance": [
         "Embedded NUL and invalid encoding policy are tested.",
@@ -1492,6 +1788,11 @@
       ],
       "prd": [
         "§12.4"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-SEM-007",
+        "HXC-RT-008"
       ],
       "outcome": "Support resizable typed arrays with correct length/capacity, bounds, mutation, iteration, and element retention.",
       "acceptance": [
@@ -1524,6 +1825,11 @@
         "§13.1",
         "§12.12"
       ],
+      "requirements": [
+        "HXC-SEM-013",
+        "HXC-RT-006",
+        "HXC-RT-008"
+      ],
       "outcome": "Define minimal portable object headers/descriptors needed by collection, dispatch, reflection, and cleanup.",
       "acceptance": [
         "Descriptors are immutable/deterministic and only emitted when reachable.",
@@ -1554,6 +1860,11 @@
       "prd": [
         "§13.3",
         "ADR 0005"
+      ],
+      "requirements": [
+        "HXC-SEM-025",
+        "HXC-RT-003",
+        "HXC-RT-006"
       ],
       "outcome": "Implement the ratified collector with precise roots/fields, cycles, allocation pressure, and deterministic integration points.",
       "acceptance": [
@@ -1586,6 +1897,11 @@
       "prd": [
         "§12.11"
       ],
+      "requirements": [
+        "HXC-SEM-017",
+        "HXC-SEM-023",
+        "HXC-RT-008"
+      ],
       "outcome": "Box only source sites that require Dynamic/heterogeneous representation and implement conversions, fields, calls, equality, and errors.",
       "acceptance": [
         "Typed code paths do not route through Dynamic.",
@@ -1615,6 +1931,11 @@
       ],
       "prd": [
         "§12.12"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-SEM-018",
+        "HXC-RT-008"
       ],
       "outcome": "Support Type/Reflect/runtime type information only for operations and types proven reachable.",
       "acceptance": [
@@ -1649,6 +1970,11 @@
         "§13.6",
         "ADR 0006"
       ],
+      "requirements": [
+        "HXC-SEM-019",
+        "HXC-RT-009",
+        "HXC-RT-010"
+      ],
       "outcome": "Preserve throw/catch/finally behavior with explicit cleanup and no exception crossing a public C ABI.",
       "acceptance": [
         "Nested try/catch/finally and rethrow order matches Haxe.",
@@ -1680,6 +2006,11 @@
         "§9.4",
         "§13.5"
       ],
+      "requirements": [
+        "HXC-RT-002",
+        "HXC-RT-003",
+        "HXC-EX-002"
+      ],
       "outcome": "Decide whether a whole program can honor hxc_runtime=none and explain every blocker with source provenance.",
       "acceptance": [
         "Eligible primitive/span fixtures link with no hxrt symbols or files.",
@@ -1710,6 +2041,11 @@
       "prd": [
         "§13.1",
         "§16.8"
+      ],
+      "requirements": [
+        "HXC-RT-004",
+        "HXC-RT-010",
+        "HXC-RT-012"
       ],
       "outcome": "Define internal/public runtime ABI compatibility, feature schema versions, and generated-code checks.",
       "acceptance": [
@@ -1743,6 +2079,11 @@
       "prd": [
         "§21.6"
       ],
+      "requirements": [
+        "HXC-RT-008",
+        "HXC-RT-009",
+        "HXC-QA-004"
+      ],
       "outcome": "Exercise allocation failure, cycles, deep graphs, strings/arrays, exception cleanup, threads where applicable, and corrupted inputs.",
       "acceptance": [
         "ASan/UBSan/LSan and platform equivalents are clean.",
@@ -1775,6 +2116,11 @@
         "§14.2",
         "§14.3"
       ],
+      "requirements": [
+        "HXC-PROD-006",
+        "HXC-SEM-025",
+        "HXC-STD-001"
+      ],
       "outcome": "Inventory Haxe std modules/APIs and assign direct lowering, target override, runtime helper, native adapter, unsupported, and test provenance.",
       "acceptance": [
         "Ledger is generated/checkable against the pinned Haxe std tree.",
@@ -1804,6 +2150,11 @@
       ],
       "prd": [
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-SEM-006",
+        "HXC-STD-002",
+        "HXC-STD-007"
       ],
       "outcome": "Support String, StringBuf, Unicode/code-point operations, and encoding conversions to the agreed compatibility level.",
       "acceptance": [
@@ -1837,6 +2188,11 @@
       "prd": [
         "§14.4"
       ],
+      "requirements": [
+        "HXC-STD-002",
+        "HXC-STD-003",
+        "HXC-STD-007"
+      ],
       "outcome": "Support Array, Vector, List, StringMap, IntMap, ObjectMap, EnumValueMap, and iterators with typed representations.",
       "acceptance": [
         "Collection semantics and mutation during iteration match Haxe where specified.",
@@ -1866,6 +2222,11 @@
       ],
       "prd": [
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-SEM-006",
+        "HXC-SEM-008",
+        "HXC-STD-004"
       ],
       "outcome": "Support haxe.io.Bytes/BytesBuffer/Input/Output and endian/encoding operations with safe bounds and partial I/O.",
       "acceptance": [
@@ -1899,6 +2260,11 @@
       "prd": [
         "§14"
       ],
+      "requirements": [
+        "HXC-SEM-018",
+        "HXC-SEM-023",
+        "HXC-STD-002"
+      ],
       "outcome": "Cover core conversion, math, type inspection/creation, and reflection surfaces with selective runtime use.",
       "acceptance": [
         "Math edge cases follow Haxe target contract.",
@@ -1931,6 +2297,11 @@
       "prd": [
         "§14.4"
       ],
+      "requirements": [
+        "HXC-STD-004",
+        "HXC-STD-008",
+        "HXC-STD-009"
+      ],
       "outcome": "Support haxe.Json parse/stringify and required serialization primitives with bounded resource behavior.",
       "acceptance": [
         "Round-trip and malformed-input corpus passes.",
@@ -1961,6 +2332,11 @@
       "prd": [
         "§14.4"
       ],
+      "requirements": [
+        "HXC-SEM-025",
+        "HXC-STD-006",
+        "HXC-STD-007"
+      ],
       "outcome": "Choose/integrate a regex backend or scoped implementation that meets Haxe EReg semantics on supported platforms.",
       "acceptance": [
         "Backend/license/feature mapping is documented.",
@@ -1990,6 +2366,11 @@
       ],
       "prd": [
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-SEM-025",
+        "HXC-STD-006",
+        "HXC-STD-010"
       ],
       "outcome": "Support Date/timezone/timestamp operations through portable and platform adapters.",
       "acceptance": [
@@ -2022,6 +2403,11 @@
         "§14.4",
         "§12.18"
       ],
+      "requirements": [
+        "HXC-SEM-025",
+        "HXC-STD-004",
+        "HXC-STD-005"
+      ],
       "outcome": "Support sys.FileSystem, sys.io.File, environment, command/process, paths, and errors on hosted targets.",
       "acceptance": [
         "POSIX and Windows path/error behavior has platform tests.",
@@ -2051,6 +2437,11 @@
       ],
       "prd": [
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-PROD-002",
+        "HXC-STD-005",
+        "HXC-STD-008"
       ],
       "outcome": "Support the scoped sys.net surface with portable address/error/blocking semantics.",
       "acceptance": [
@@ -2083,6 +2474,11 @@
       "prd": [
         "§12.17",
         "§14.4"
+      ],
+      "requirements": [
+        "HXC-SEM-025",
+        "HXC-STD-009",
+        "HXC-STD-010"
       ],
       "outcome": "Map Haxe thread primitives to C11/platform threads with collector/root and memory-model integration.",
       "acceptance": [
@@ -2120,6 +2516,11 @@
         "§14.5",
         "§21.5"
       ],
+      "requirements": [
+        "HXC-PROD-006",
+        "HXC-STD-001",
+        "HXC-QA-005"
+      ],
       "outcome": "Run the pinned upstream suite with explicit selection, results, gaps, and differential comparisons.",
       "acceptance": [
         "No silent skip is possible.",
@@ -2152,6 +2553,11 @@
         "§15.1",
         "§15.3"
       ],
+      "requirements": [
+        "HXC-FFI-001",
+        "HXC-FFI-002",
+        "HXC-FFI-003"
+      ],
       "outcome": "Invoke Clang with exact target/defines/includes/flags and capture a versioned semantic declaration model.",
       "acceptance": [
         "Invocation is reproducible and inspectable.",
@@ -2181,6 +2587,11 @@
       "prd": [
         "§15.2",
         "§15.3"
+      ],
+      "requirements": [
+        "HXC-FFI-002",
+        "HXC-FFI-003",
+        "HXC-MAC-003"
       ],
       "outcome": "Represent translation-unit inputs, defines, include ordering, target triple, language mode, sysroot, and conditional declarations.",
       "acceptance": [
@@ -2213,6 +2624,11 @@
         "§15.4",
         "§15.5"
       ],
+      "requirements": [
+        "HXC-FFI-005",
+        "HXC-FFI-006",
+        "HXC-EX-003"
+      ],
       "outcome": "Generate exact raw Haxe extern representations for primitive ABI declarations.",
       "acceptance": [
         "Integer width/signedness follows target ABI, not spelling assumptions.",
@@ -2242,6 +2658,11 @@
       ],
       "prd": [
         "§15.4"
+      ],
+      "requirements": [
+        "HXC-FFI-005",
+        "HXC-FFI-006",
+        "HXC-MAC-002"
       ],
       "outcome": "Represent complete/incomplete aggregates and verify layout through Clang facts and generated C assertions/probes.",
       "acceptance": [
@@ -2273,6 +2694,11 @@
       ],
       "prd": [
         "§15.4"
+      ],
+      "requirements": [
+        "HXC-FFI-001",
+        "HXC-FFI-007",
+        "HXC-FFI-008"
       ],
       "outcome": "Generate callable externs with correct calling convention, nullability hooks, callback lifetime, and scoped variadic support.",
       "acceptance": [
@@ -2307,6 +2733,11 @@
       "prd": [
         "§15.5"
       ],
+      "requirements": [
+        "HXC-FFI-001",
+        "HXC-FFI-004",
+        "HXC-FFI-012"
+      ],
       "outcome": "Write minimally transformed, mechanically reviewable Haxe externs plus native build metadata.",
       "acceptance": [
         "Regeneration from identical input is byte-identical.",
@@ -2337,6 +2768,11 @@
       ],
       "prd": [
         "§15.6"
+      ],
+      "requirements": [
+        "HXC-FFI-004",
+        "HXC-FFI-009",
+        "HXC-FFI-012"
       ],
       "outcome": "Generate optional idiomatic wrappers from explicit ownership, nullability, length, error, string, handle, and lifetime mappings.",
       "acceptance": [
@@ -2370,6 +2806,11 @@
         "§15.5",
         "§16.8"
       ],
+      "requirements": [
+        "HXC-FFI-003",
+        "HXC-FFI-011",
+        "HXC-QA-009"
+      ],
       "outcome": "Record inputs and ABI facts so dependency/header changes are detected before runtime corruption.",
       "acceptance": [
         "Lock includes header digests, flags, target, Clang version, declaration/layout hashes, and mappings.",
@@ -2400,6 +2841,11 @@
       ],
       "prd": [
         "§15.2"
+      ],
+      "requirements": [
+        "HXC-FFI-010",
+        "HXC-MAC-003",
+        "HXC-CLI-005"
       ],
       "outcome": "Resolve exact include/define/link context from common native build metadata without hiding the final command.",
       "acceptance": [
@@ -2432,6 +2878,11 @@
         "§15.8",
         "ADR 0003"
       ],
+      "requirements": [
+        "HXC-FFI-013",
+        "HXC-FFI-014",
+        "HXC-EX-005"
+      ],
       "outcome": "Wrap configured C++ constructors/methods/destructors into opaque C handles and exception-safe C functions.",
       "acceptance": [
         "No C++ class/template/STL/exceptions appear in generated public C header.",
@@ -2462,6 +2913,11 @@
       ],
       "prd": [
         "§15.7"
+      ],
+      "requirements": [
+        "HXC-FFI-011",
+        "HXC-FFI-012",
+        "HXC-CLI-005"
       ],
       "outcome": "Allow an LLM to propose names/docs/ownership mappings as a reviewable patch while deterministic parsed facts remain authoritative.",
       "acceptance": [
@@ -2495,6 +2951,12 @@
         "§15",
         "§25 M6"
       ],
+      "requirements": [
+        "HXC-PROD-008",
+        "HXC-FFI-001",
+        "HXC-MAC-002",
+        "HXC-EX-003"
+      ],
       "outcome": "Regenerate and use representative stable C libraries covering opaque handles, callbacks, buffers, errors, enums, and build metadata.",
       "acceptance": [
         "Clean regeneration produces no diff.",
@@ -2525,6 +2987,11 @@
       "prd": [
         "§16.1"
       ],
+      "requirements": [
+        "HXC-RT-010",
+        "HXC-ABI-001",
+        "HXC-CLI-006"
+      ],
       "outcome": "Collect @:c.export and related public ABI metadata and build a deterministic export model independent of internal symbol names.",
       "acceptance": [
         "Duplicate/invalid names and visibility conflicts are source-positioned.",
@@ -2554,6 +3021,11 @@
       ],
       "prd": [
         "§16.2"
+      ],
+      "requirements": [
+        "HXC-ABI-004",
+        "HXC-ABI-005",
+        "HXC-ABI-007"
       ],
       "outcome": "Allow fixed scalars, declared value structs/enums, pointers/spans, callbacks, opaque handles, and explicit result/error shapes while rejecting internal Haxe/runtime layouts.",
       "acceptance": [
@@ -2588,6 +3060,11 @@
         "§16.3",
         "§16.4"
       ],
+      "requirements": [
+        "HXC-ABI-001",
+        "HXC-ABI-002",
+        "HXC-ABI-003"
+      ],
       "outcome": "Generate standalone, namespaced, documented C headers and wrappers that translate to internal calling conventions.",
       "acceptance": [
         "Header compiles as C11 and C++17 with extern-C guards.",
@@ -2619,6 +3096,11 @@
         "§16.5",
         "§16.6"
       ],
+      "requirements": [
+        "HXC-SEM-020",
+        "HXC-ABI-006",
+        "HXC-ABI-007"
+      ],
       "outcome": "Translate Haxe values/failures into explicit C contracts and generated destroy/free APIs.",
       "acceptance": [
         "No Haxe exception crosses the C ABI.",
@@ -2648,6 +3130,11 @@
       ],
       "prd": [
         "§16.7"
+      ],
+      "requirements": [
+        "HXC-RT-010",
+        "HXC-ABI-009",
+        "HXC-ABI-010"
       ],
       "outcome": "Hide internal symbols and export only the public ABI on ELF, Mach-O, and PE/COFF targets.",
       "acceptance": [
@@ -2682,6 +3169,11 @@
       "prd": [
         "§16.7"
       ],
+      "requirements": [
+        "HXC-ABI-009",
+        "HXC-ABI-010",
+        "HXC-CLI-006"
+      ],
       "outcome": "Produce archive/shared artifacts, import libraries where needed, and installation metadata from the neutral build plan.",
       "acceptance": [
         "Linux .so, macOS .dylib, and Windows .dll paths are covered according to the supported matrix.",
@@ -2712,6 +3204,12 @@
       ],
       "prd": [
         "§16.8"
+      ],
+      "requirements": [
+        "HXC-ABI-008",
+        "HXC-ABI-011",
+        "HXC-ABI-012",
+        "HXC-DOC-006"
       ],
       "outcome": "Describe public symbols/types/layout/ownership/calling convention/version in a stable schema and classify changes.",
       "acceptance": [
@@ -2745,6 +3243,12 @@
         "§16.3",
         "§25 M7"
       ],
+      "requirements": [
+        "HXC-ABI-002",
+        "HXC-ABI-003",
+        "HXC-EX-004",
+        "HXC-QA-009"
+      ],
       "outcome": "Build/install/consume exported libraries outside the generator tree using multiple C/C++ compilers.",
       "acceptance": [
         "Consumers include only public headers and link installed artifacts.",
@@ -2776,6 +3280,11 @@
       "prd": [
         "§16.4"
       ],
+      "requirements": [
+        "HXC-PROD-007",
+        "HXC-ABI-003",
+        "HXC-ABI-005"
+      ],
       "outcome": "Provide opt-in C++ convenience types over the stable C ABI without making C++ ABI part of the product contract.",
       "acceptance": [
         "Wrapper is header-only or otherwise explicitly versioned.",
@@ -2806,6 +3315,11 @@
       "prd": [
         "§16",
         "§19"
+      ],
+      "requirements": [
+        "HXC-EX-004",
+        "HXC-EX-009",
+        "HXC-QA-009"
       ],
       "outcome": "Demonstrate that ordinary C ABI artifacts load from at least Python ctypes and one additional FFI ecosystem without language-specific generator magic.",
       "acceptance": [
@@ -2839,6 +3353,11 @@
         "§18.2",
         "docs/configuration.md"
       ],
+      "requirements": [
+        "HXC-CLI-005",
+        "HXC-CLI-009",
+        "HXC-CLI-010"
+      ],
       "outcome": "Load strict configuration, overlays, CLI overrides, and direct defines into one provenance-aware build model.",
       "acceptance": [
         "Unknown keys and invalid combinations fail before compilation.",
@@ -2867,6 +3386,11 @@
       ],
       "prd": [
         "§18.1"
+      ],
+      "requirements": [
+        "HXC-CLI-004",
+        "HXC-CLI-005",
+        "HXC-CLI-010"
       ],
       "outcome": "Implement stable command parsing, exit codes, logging, machine-readable responses, and help/version behavior.",
       "acceptance": [
@@ -2899,6 +3423,11 @@
         "§18.1",
         "§25 M8"
       ],
+      "requirements": [
+        "HXC-CLI-002",
+        "HXC-CLI-008",
+        "HXC-CLI-010"
+      ],
       "outcome": "Instantiate CLI, C ABI library, and freestanding templates with deterministic substitutions and no overwrite surprises.",
       "acceptance": [
         "Template output validates against schema and type-checks.",
@@ -2928,6 +3457,11 @@
       ],
       "prd": [
         "§18.3"
+      ],
+      "requirements": [
+        "HXC-COMP-010",
+        "HXC-MAC-003",
+        "HXC-CLI-003"
       ],
       "outcome": "Translate generated sources, runtime slices, native sources, includes, defines, libraries, artifact type, and target into exact compile/link steps.",
       "acceptance": [
@@ -2960,6 +3494,11 @@
       "prd": [
         "§18.1"
       ],
+      "requirements": [
+        "HXC-CLI-003",
+        "HXC-CLI-004",
+        "HXC-CLI-008"
+      ],
       "outcome": "Provide the normal user loop while preserving separate codegen/native phases and exact command visibility.",
       "acceptance": [
         "build can stop after codegen/objects/library/executable.",
@@ -2990,6 +3529,11 @@
       ],
       "prd": [
         "§18.4"
+      ],
+      "requirements": [
+        "HXC-CLI-001",
+        "HXC-CLI-005",
+        "HXC-CLI-010"
       ],
       "outcome": "Check Haxe/Reflaxe/C/C++/Clang bindgen/build tools/platform features and explain missing optional versus required capabilities.",
       "acceptance": [
@@ -3022,6 +3566,11 @@
       "prd": [
         "§18.5"
       ],
+      "requirements": [
+        "HXC-COMP-015",
+        "HXC-MAC-010",
+        "HXC-CLI-007"
+      ],
       "outcome": "Expose config, typed inventory, HxcIR, C AST, lowering decisions, runtime plan, symbols, includes, build commands, macros, ABI, and size/allocation summaries.",
       "acceptance": [
         "Reports have human and versioned JSON forms.",
@@ -3053,6 +3602,11 @@
       "prd": [
         "§20.2"
       ],
+      "requirements": [
+        "HXC-COMP-013",
+        "HXC-COMP-014",
+        "HXC-CLI-008"
+      ],
       "outcome": "Map C compiler/linker errors and optional debug locations back to Haxe source and generated artifacts.",
       "acceptance": [
         "#line mode and sidecar map mode are supported/compared.",
@@ -3082,6 +3636,11 @@
       ],
       "prd": [
         "§20.1"
+      ],
+      "requirements": [
+        "HXC-COMP-014",
+        "HXC-CLI-004",
+        "HXC-CLI-010"
       ],
       "outcome": "Give IDEs/agents structured compiler, native toolchain, bindgen, ABI, and test diagnostics.",
       "acceptance": [
@@ -3114,6 +3673,11 @@
         "§25 M8",
         "§22"
       ],
+      "requirements": [
+        "HXC-CLI-002",
+        "HXC-CLI-003",
+        "HXC-QA-013"
+      ],
       "outcome": "Create haxelib/source archives and platform-appropriate CLI installation without relying on developer paths.",
       "acceptance": [
         "Package contains required std/runtime/templates/schemas/docs and excludes caches/secrets.",
@@ -3144,6 +3708,11 @@
       "prd": [
         "§18.3"
       ],
+      "requirements": [
+        "HXC-COMP-010",
+        "HXC-MAC-010",
+        "HXC-CLI-003"
+      ],
       "outcome": "Make generated/native C easy to inspect with clangd and consume from existing build systems.",
       "acceptance": [
         "compile_commands contains exact per-file invocations.",
@@ -3173,6 +3742,11 @@
       ],
       "prd": [
         "§19.1"
+      ],
+      "requirements": [
+        "HXC-EX-001",
+        "HXC-DOC-001",
+        "HXC-DOC-005"
       ],
       "outcome": "Turn hello into a documented install/build/run/inspect walkthrough with expected generated C and runtime reasoning.",
       "acceptance": [
@@ -3205,6 +3779,12 @@
       "prd": [
         "§19.1"
       ],
+      "requirements": [
+        "HXC-PROD-004",
+        "HXC-PROD-012",
+        "HXC-EX-002",
+        "HXC-EX-007"
+      ],
       "outcome": "Show explicit spans/pointers/layout/volatile/sections/custom startup with zero hidden runtime for hosted and freestanding targets.",
       "acceptance": [
         "Binary/symbol inspection proves no hxrt/libc dependency where claimed.",
@@ -3236,6 +3816,11 @@
       "prd": [
         "§19.1"
       ],
+      "requirements": [
+        "HXC-EX-003",
+        "HXC-EX-006",
+        "HXC-DOC-006"
+      ],
       "outcome": "Document raw extern generation, safe mapping, lock/probe review, rebuild, and upgrade drift for representative C libraries.",
       "acceptance": [
         "All checked-in generated bindings regenerate cleanly.",
@@ -3265,6 +3850,11 @@
       ],
       "prd": [
         "§19.1"
+      ],
+      "requirements": [
+        "HXC-EX-004",
+        "HXC-EX-009",
+        "HXC-DOC-006"
       ],
       "outcome": "Show Haxe-authored C ABI library creation, installation, ABI diff, and consumption from C/C++/other FFI.",
       "acceptance": [
@@ -3299,6 +3889,12 @@
         "§7.5",
         "§15.8"
       ],
+      "requirements": [
+        "HXC-PROD-007",
+        "HXC-EX-005",
+        "HXC-DOC-002",
+        "HXC-DOC-003"
+      ],
       "outcome": "Explain when to choose hxc, hxcpp, an existing C API, or a generated/manual C++ shim.",
       "acceptance": [
         "Guide states that arbitrary C++ cannot be consumed directly from C.",
@@ -3332,6 +3928,11 @@
         "§17.6",
         "§19.2"
       ],
+      "requirements": [
+        "HXC-MAC-007",
+        "HXC-MAC-008",
+        "HXC-EX-006"
+      ],
       "outcome": "Generate typed table/column metadata, migrations, schema hash, row codecs, and inspectable artifacts from Haxe declarations.",
       "acceptance": [
         "Duplicate/unsupported/destructive changes have compile-time diagnostics.",
@@ -3363,6 +3964,11 @@
       ],
       "prd": [
         "§19.2"
+      ],
+      "requirements": [
+        "HXC-FFI-009",
+        "HXC-MAC-008",
+        "HXC-EX-006"
       ],
       "outcome": "Use generated SQLite bindings/codecs/statements with explicit errors, resource ownership, transactions, and migrations.",
       "acceptance": [
@@ -3396,6 +4002,13 @@
         "§17.6",
         "§19.2"
       ],
+      "requirements": [
+        "HXC-MAC-004",
+        "HXC-MAC-007",
+        "HXC-MAC-008",
+        "HXC-MAC-009",
+        "HXC-EX-006"
+      ],
       "outcome": "Derive commands/options/validation/help/completion from typed declarations with Rails-like conventions and explicit generated code.",
       "acceptance": [
         "add/list/complete/remove/help workflows and error exit codes are tested.",
@@ -3428,6 +4041,11 @@
         "§5 G8",
         "§19.3"
       ],
+      "requirements": [
+        "HXC-PROD-009",
+        "HXC-EX-006",
+        "HXC-QA-010"
+      ],
       "outcome": "Keep domain/service logic free of C-only APIs and compile/run it under selected supplied sibling compilers.",
       "acceptance": [
         "Portable source boundary is mechanically checked.",
@@ -3459,6 +4077,13 @@
       "prd": [
         "§19.2",
         "§21.7"
+      ],
+      "requirements": [
+        "HXC-PROD-003",
+        "HXC-PROD-011",
+        "HXC-EX-010",
+        "HXC-QA-008",
+        "HXC-QA-012"
       ],
       "outcome": "Compare compile time, binary size, allocations, throughput, latency, and readability for todo and focused kernels.",
       "acceptance": [
@@ -3493,6 +4118,14 @@
       "prd": [
         "§7"
       ],
+      "requirements": [
+        "HXC-PROD-007",
+        "HXC-DOC-001",
+        "HXC-DOC-002",
+        "HXC-DOC-004",
+        "HXC-DOC-005",
+        "HXC-DOC-007"
+      ],
       "outcome": "Provide practical paths from hxcpp/native C/Haxe libraries to hxc, with compatibility tables and tradeoffs.",
       "acceptance": [
         "Guides include code/config/build examples.",
@@ -3524,6 +4157,11 @@
       "prd": [
         "§7.4",
         "§19.1"
+      ],
+      "requirements": [
+        "HXC-PROD-010",
+        "HXC-EX-008",
+        "HXC-DOC-008"
       ],
       "outcome": "Compile a small exported C ABI module through WASI or Emscripten and consume it from TypeScript with explicit memory/ownership wrappers.",
       "acceptance": [
@@ -3558,6 +4196,12 @@
         "§25 M10",
         "ADR 0007"
       ],
+      "requirements": [
+        "HXC-QA-002",
+        "HXC-QA-003",
+        "HXC-QA-007",
+        "HXC-QA-010"
+      ],
       "outcome": "Run supported Haxe/C/C++ compiler versions, operating systems, architectures, profiles, runtime policies, artifacts, and environments with explicit tiering.",
       "acceptance": [
         "Tier-1 gates cannot be skipped silently.",
@@ -3588,6 +4232,11 @@
       "prd": [
         "§21.6",
         "§22"
+      ],
+      "requirements": [
+        "HXC-COMP-005",
+        "HXC-QA-006",
+        "HXC-QA-010"
       ],
       "outcome": "Generate/minimize valid ASTs and adversarial literals/declarators, compile them with multiple compilers, and detect crashes/misprints/non-determinism.",
       "acceptance": [
@@ -3620,6 +4269,11 @@
         "§15",
         "§22"
       ],
+      "requirements": [
+        "HXC-FFI-001",
+        "HXC-QA-006",
+        "HXC-QA-011"
+      ],
       "outcome": "Exercise malformed/complex headers, preprocessor configurations, mapping files, and lock/probe parsers without trusting unbounded input.",
       "acceptance": [
         "No crash, uncontrolled resource use, path escape, or command injection.",
@@ -3651,6 +4305,11 @@
       ],
       "prd": [
         "§21.6"
+      ],
+      "requirements": [
+        "HXC-ABI-012",
+        "HXC-QA-004",
+        "HXC-QA-011"
       ],
       "outcome": "Continuously analyze compiler helpers, runtime, generated programs, and native adapters with appropriate dynamic/static tools.",
       "acceptance": [
@@ -3685,6 +4344,11 @@
         "§21.7",
         "§26"
       ],
+      "requirements": [
+        "HXC-QA-002",
+        "HXC-QA-008",
+        "HXC-QA-012"
+      ],
       "outcome": "Track compiler time/memory, generated C compile time, executable/library size, allocations, throughput, and startup with stable baselines.",
       "acceptance": [
         "Benchmarks distinguish noise from regression and record toolchain/hardware.",
@@ -3716,6 +4380,11 @@
       ],
       "prd": [
         "§22"
+      ],
+      "requirements": [
+        "HXC-ABI-012",
+        "HXC-QA-011",
+        "HXC-QA-013"
       ],
       "outcome": "Threat-model generated-code injection, malicious headers/configs, path traversal, tool invocation, allocator/lifetime errors, shared-library boundaries, and supply chain.",
       "acceptance": [
@@ -3750,6 +4419,11 @@
         "§25 M10",
         "§26"
       ],
+      "requirements": [
+        "HXC-PROD-006",
+        "HXC-QA-003",
+        "HXC-DOC-007"
+      ],
       "outcome": "Generate evidence-backed support status for Haxe features, stdlib modules, platforms, compilers, ABIs, environments, profiles, and artifacts.",
       "acceptance": [
         "Statuses link to tests/results and known issues.",
@@ -3782,6 +4456,11 @@
         "§22",
         "§25 M10"
       ],
+      "requirements": [
+        "HXC-RT-012",
+        "HXC-QA-011",
+        "HXC-QA-013"
+      ],
       "outcome": "Build immutable source/package artifacts with checksums, signatures, SBOM, provenance, release notes, and rollback instructions.",
       "acceptance": [
         "Release runs only from tagged clean commit.",
@@ -3813,6 +4492,11 @@
       "prd": [
         "§16.8",
         "§25 M10"
+      ],
+      "requirements": [
+        "HXC-ABI-011",
+        "HXC-ABI-012",
+        "HXC-QA-013"
       ],
       "outcome": "Define semantic versioning and compatibility guarantees for generated public C ABI, runtime ABI, manifests, bindings, CLI JSON, and config schema.",
       "acceptance": [
@@ -3848,6 +4532,11 @@
         "§5 G7",
         "§25 M10"
       ],
+      "requirements": [
+        "HXC-PROD-006",
+        "HXC-QA-005",
+        "HXC-QA-011"
+      ],
       "outcome": "Reach the ratified upstream test threshold with every remaining divergence explicit and release-approved.",
       "acceptance": [
         "No silent skips or unknown failures.",
@@ -3879,6 +4568,11 @@
       ],
       "prd": [
         "§25 M10"
+      ],
+      "requirements": [
+        "HXC-QA-011",
+        "HXC-QA-013",
+        "HXC-QA-014"
       ],
       "outcome": "Ship a beta only after install/onboarding/examples/compatibility/security/ABI evidence is archived.",
       "acceptance": [
@@ -3914,6 +4608,11 @@
       "prd": [
         "§25 M10",
         "§26"
+      ],
+      "requirements": [
+        "HXC-PROD-006",
+        "HXC-QA-013",
+        "HXC-QA-014"
       ],
       "outcome": "Release 1.0 only after correctness, UB, security, ABI, performance, docs, examples, and support gates are satisfied.",
       "acceptance": [
