@@ -12,6 +12,9 @@ from pathlib import Path, PurePosixPath
 
 ROOT = Path(__file__).resolve().parents[2]
 PRIVATE_CONTACT = "boss@fullofcaffeine.com"
+ADVISORY_URL = (
+    "https://github.com/fullofcaffeine/reflaxe.c/security/advisories/new"
+)
 MARKDOWN_LINK = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
 
 
@@ -70,6 +73,7 @@ DOCUMENTS = (
         (
             "# Security policy",
             "## Reporting a vulnerability",
+            "## Repository safeguards",
             "## Supported versions",
             "## Security scope",
             "## What to include",
@@ -77,9 +81,14 @@ DOCUMENTS = (
         ),
         (
             f"mailto:{PRIVATE_CONTACT}",
+            ADVISORY_URL,
             "[reflaxe.c security]",
             "Do not open a GitHub issue",
-            "available only for public repositories",
+            "enabled and verified after the repository became public",
+            "GitHub secret scanning and push protection are enabled",
+            "Dependabot\nvulnerability alerts and security updates",
+            "read-only\ndefault repository permissions",
+            "npm run beads:push",
             "There is no published or supported release yet.",
             "Best-effort triage only; not a supported release",
             "| Published releases | None |",
@@ -101,6 +110,7 @@ DOCUMENTS = (
             "CONTRIBUTING.md",
             "SECURITY.md",
             PRIVATE_CONTACT,
+            ADVISORY_URL,
             "There is no supported release today.",
             "release manager",
             "artifact builders",
@@ -227,10 +237,10 @@ def validate(root: Path) -> list[str]:
             "SECURITY.md must name the private contact once as text and once "
             "in its mailto link"
         )
-    if "/security/advisories/new" in security:
+    if security.count(ADVISORY_URL) != 1:
         errors.append(
-            "SECURITY.md must not advertise GitHub private reporting before "
-            "the public-repository feature is enabled"
+            "SECURITY.md must name the verified GitHub private reporting path "
+            "exactly once"
         )
     return errors
 

@@ -125,20 +125,20 @@ class GovernancePolicyTests(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("links to a missing path", result.stderr)
 
-    def test_unverified_github_advisory_path_is_rejected(self) -> None:
+    def test_verified_github_advisory_path_is_required(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             self.make_policy_root(root)
-            security = root / "SECURITY.md"
-            with security.open("a", encoding="utf-8") as output:
-                output.write(
-                    "\nhttps://github.com/fullofcaffeine/reflaxe.c/"
-                    "security/advisories/new\n"
-                )
+            self.replace(
+                root,
+                "SECURITY.md",
+                "https://github.com/fullofcaffeine/reflaxe.c/security/advisories/new",
+                "https://github.com/fullofcaffeine/reflaxe.c/security",
+            )
             result = self.run_policy(root)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn(
-                "must not advertise GitHub private reporting",
+                "must name the verified GitHub private reporting path",
                 result.stderr,
             )
 

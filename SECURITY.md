@@ -6,9 +6,14 @@ that could cross a trust boundary through the private path below.
 
 ## Reporting a vulnerability
 
-Email [boss@fullofcaffeine.com](mailto:boss@fullofcaffeine.com) with the subject
-`[reflaxe.c security]`. This is the current authoritative non-public reporting
-path.
+Use [GitHub's private vulnerability reporting
+form](https://github.com/fullofcaffeine/reflaxe.c/security/advisories/new) when
+possible. The form was enabled and verified after the repository became public;
+reports submitted there are not ordinary public issues.
+
+If the form is unavailable or email is more appropriate, contact
+[boss@fullofcaffeine.com](mailto:boss@fullofcaffeine.com) with the subject
+`[reflaxe.c security]`. Both paths are confidential reporting channels.
 
 Do not open a GitHub issue, pull request, discussion, or Beads issue containing
 vulnerability details. Do not attach live credentials, private source, personal
@@ -16,13 +21,17 @@ data, destructive payloads, or secrets from another system. If email is not
 suitable for the sensitive details, send only a minimal request to establish a
 different protected channel.
 
-The repository is currently private. [GitHub private vulnerability reporting
-and repository security advisories](https://docs.github.com/en/code-security/concepts/vulnerability-reporting-and-management/repository-security-advisories)
-are available only for public repositories, so the project does not advertise
-a non-working “Report a vulnerability” form.
-When the repository is public and that feature is explicitly enabled and
-verified, this policy will name the GitHub advisory path as an additional
-private channel.
+## Repository safeguards
+
+GitHub secret scanning and push protection are enabled, as are Dependabot
+vulnerability alerts and security updates. GitHub Actions retains read-only
+default repository permissions. These controls supplement, but do not replace,
+review and coordinated disclosure.
+
+Tracked hooks scan staged content and all reachable Git history, including the
+non-branch Beads Dolt ref. `npm run beads:push` additionally scans decoded
+current and historical Beads records before synchronization. Run `npm run
+public:preflight` before any visibility or publication change.
 
 ## Supported versions
 

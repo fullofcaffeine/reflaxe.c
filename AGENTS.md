@@ -672,10 +672,14 @@ missing-metadata or missing-adapter assumptions.
   GitHub issue, pull request, discussion, Beads record, CI output, snapshot, or
   generated artifact. Beads may track a neutral remediation task only after
   sensitive reproduction and reporter data have been removed.
-- The current private reporting path is `boss@fullofcaffeine.com`. Do not claim
-  GitHub private vulnerability reporting is active while the repository is
-  private; update the policy only after publication and feature enablement are
-  verified.
+- The repository is public and GitHub private vulnerability reporting is
+  enabled and verified at
+  `https://github.com/fullofcaffeine/reflaxe.c/security/advisories/new`;
+  `boss@fullofcaffeine.com` remains the confidential fallback. GitHub secret
+  scanning, push protection, Dependabot vulnerability alerts/security updates,
+  and read-only default Actions permissions are also verified. Do not weaken or
+  overstate those settings; optional validity/non-provider scanning is not part
+  of the current claim.
 - There is no supported release today. E10.T08 owns signed reproducible release
   automation and E10.T11 owns the beta gate. Development archives, native
   fixtures, package-layout probes, and generated snapshots are not releases.
