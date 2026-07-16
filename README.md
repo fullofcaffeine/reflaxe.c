@@ -264,6 +264,8 @@ The current checkout contains:
 - independent native C-library and opaque-handle C++-shim fixtures that validate
   the future interop boundaries without pretending they were generated;
 - a fail-closed third-party provenance and release-notice policy;
+- a drift-checked contributor, private-disclosure, and release-responsibility
+  policy with no premature supported-release claim;
 - a live Beads execution graph covering the planned milestones.
 
 It does **not** yet contain general Haxe-to-C semantic lowering, indirect or
@@ -320,6 +322,7 @@ python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/test/snapshots.py --check
 python3 scripts/ci/check_license_policy.py
+python3 scripts/ci/check_governance_policy.py
 ```
 
 Expected artifacts are never refreshed implicitly. For an intentional change,
@@ -373,7 +376,9 @@ fail-closed.
 - [Architecture decisions](docs/adr/README.md)
 - [Third-party notices and provenance](THIRD_PARTY_NOTICES.md)
 - [Beads plan](docs/BEADS_PLAN.md)
-- [Contributor and agent rules](AGENTS.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security policy](SECURITY.md)
+- [Agent rules](AGENTS.md)
 
 ## License
 

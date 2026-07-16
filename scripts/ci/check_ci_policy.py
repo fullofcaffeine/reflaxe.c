@@ -15,6 +15,10 @@ PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 
 REQUIRED_GATE_FILES = (
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "scripts/ci/check_governance_policy.py",
+    "test/governance/test_governance_policy.py",
     "docs/BEADS_PLAN.md",
     "docs/specs/beads-plan.json",
     "docs/specs/beads-plan.schema.json",
@@ -246,6 +250,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/beads/validate_plan.py --json",
     "python3 scripts/beads/bootstrap.py --json",
+    "python3 scripts/ci/check_governance_policy.py",
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -322,6 +327,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
         errors.append("package.json must retain the test:fixture-policy entry point")
+    if (
+        scripts.get("test:governance-policy")
+        != "python3 scripts/ci/check_governance_policy.py"
+    ):
+        errors.append("package.json must retain the governance policy entry point")
     if scripts.get("snapshots:check") != "python3 scripts/test/snapshots.py --check":
         errors.append("package.json must retain the snapshots:check entry point")
     if scripts.get("snapshots:update") != "python3 scripts/test/snapshots.py --update":
@@ -368,6 +378,13 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:governance must execute the public fixture policy guard"
         )
+    if "npm run test:governance-policy" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must execute the contribution and "
+            "security policy guard"
+        )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
@@ -411,6 +428,10 @@ def validate() -> list[str]:
         errors.append("pre-commit must check registered snapshot ownership and drift")
     if "npm run test:beads-plan" not in pre_commit:
         errors.append("pre-commit must validate the reproducible Beads graph")
+    if "npm run test:governance-policy" not in pre_commit:
+        errors.append(
+            "pre-commit must validate contribution, disclosure, and release policy"
+        )
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):

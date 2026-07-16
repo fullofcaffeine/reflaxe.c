@@ -2470,6 +2470,13 @@ Performance claims in the README require reproducible benchmark definitions and 
 - Fuzzing covers untrusted binding configuration and manifest parsing.
 - Exported ABI functions validate lengths, overflows, and nullability at trust boundaries according to policy.
 - Unsafe operations are counted and reviewable.
+- Vulnerability details use the non-public channel named in `SECURITY.md`, not
+  issues, pull requests, discussions, Beads records, or CI logs. The supported
+  versions table must distinguish development snapshots from released support.
+- Release responsibilities are separated between the release manager, artifact
+  builder, provenance reviewer, and authorized signer. Configured signatures
+  are release blockers; unconfigured signing must never be represented as
+  present, and private key material never enters the repository or logs.
 
 ---
 
@@ -2481,6 +2488,7 @@ reflaxe.c/
   .github/workflows/
   .haxerc
   AGENTS.md
+  CONTRIBUTING.md
   LICENSE
   LICENSES/
   THIRD_PARTY_NOTICES.md
@@ -4965,12 +4973,12 @@ The same inventory is available as `docs/specs/bootstrap-inventory.json` for Cod
 | Example portfolio (`example-portfolio`) | `examples/hello`, `no-runtime`, `pointlib`, `shared-library`, `cpp-shim`, `todo-cli` | Seeded | These establish intended user journeys and API shapes; only independent native fixture fragments are executable today. Do not special-case the compiler or use raw C injection to make examples appear complete. |
 | Development runner and future CLI (`development-cli`) | `src/Run.hx`, `schemas/hxc.schema.json`, `templates/hxc.json` | Seeded | A development entry point and configuration shape exist. The production `hxc` command surface, stable exit categories, JSON outputs, native build adapters, bindgen/export orchestration, and packaging are planned. |
 | Beads plan and materialization (`beads-bootstrap`) | `docs/specs/beads-plan.json`, schema, `scripts/beads/**`, `docs/BEADS_PLAN.md` | Verified governance bootstrap | The self-contained seed stores 11 epics, 122 tasks, their acceptance/requirement facts, 274 hard blocking edges, and 160 covered requirements. Standard-library-only validation and preview run without `bd`; the argument-array importer creates or reuses open/claimed/closed issues by stable identity, checks final ready-state parity, and writes only an ignored atomic recovery map outside Beads internals. |
-| Structural validation and archive integrity (`structural-validation`) | `check_toolchain.py`, `check_ci_policy.py`, `check_license_policy.py`, all-source HXML, runtime smoke, governance CI, package manifest | Verified native and Haxe scaffold with primitive sanitizer lane | Present local gates verify dependency/package policy, required CI wiring, license/provenance, the complete current owned Haxe graph and macro branches, fail-closed production activation, native fixtures, and generated primitive arithmetic under eligible UBSan. The fuller archive structure/reference/manifest scripts named elsewhere are absent from this checkout; broader sanitizer, full platform, and release gates remain explicitly unverified. |
+| Structural validation and archive integrity (`structural-validation`) | `check_toolchain.py`, `check_ci_policy.py`, `check_license_policy.py`, `check_governance_policy.py`, all-source HXML, runtime smoke, governance CI, package manifest | Verified native and Haxe scaffold with primitive sanitizer lane | Present local gates verify dependency/package policy, required CI wiring, contribution/security/release-policy drift, license/provenance, the complete current owned Haxe graph and macro branches, fail-closed production activation, native fixtures, and generated primitive arithmetic under eligible UBSan. The fuller archive structure/reference/manifest scripts named elsewhere are absent from this checkout; broader sanitizer, full platform, and release gates remain explicitly unverified. |
 | Supplied repository evidence (`research-evidence`) | `reference/repomix/*.xml`, checksums, `docs/research/repo-patterns.md` | Evidence-only | Searchable XML snapshots cover Haxe/hxcpp, Reflaxe, and sibling targets. They are precedent and provenance evidence—not code to copy wholesale—and adapted code still requires license review. |
 | Deterministic import tooling (`bindgen`) | `tools/` placeholder, pointlib extern/example contracts, PRD/task graph | Planned | No Clang parser or binding generator exists. Implement exact preprocessing/target capture, normalized ABI model, raw externs, optional ergonomic wrappers, lock/provenance files, layout probes, drift reports, callbacks, and constrained C++ shims. |
 | Public C ABI and library production (`c-export`) | `std/c/Export.hx`, `examples/shared-library` | Planned | Export intent and consumer fixtures are seeded, but no Haxe export analyzer/generator exists. Build stable headers/wrappers, ownership/error adapters, visibility/version maps, install metadata, ABI manifests/diffs, and independent consumers. |
 | Portable runtime and standard library (`portable-runtime-and-stdlib`) | Minimal `runtime/hxrt` seed and `stdlib-ledger.json` | Planned | Full portable Haxe semantics and standard-library parity are product requirements, not current capabilities. Ratify strings, memory, exceptions, and platform contracts before implementing selective runtime facilities and ledger-driven conformance. |
-| Governance, compatibility, and releases (`governance-release`) | `LICENSE`, `LICENSES/`, `THIRD_PARTY_NOTICES.md`, `docs/specs/third-party-provenance.json`, governance CI | Partial | GPL-3.0-only, the current upstream inventory, and fail-closed source/package notice validation are checked in. Generated-output/runtime redistribution treatment, supported versions, ABI/semantic policy, and reproducible release evidence remain before release claims. |
+| Governance, compatibility, and releases (`governance-release`) | `CONTRIBUTING.md`, `SECURITY.md`, `LICENSE`, `LICENSES/`, `THIRD_PARTY_NOTICES.md`, `docs/specs/third-party-provenance.json`, governance CI | Verified contributor/security policy; release implementation planned | Beads/definition-of-done workflow, private reporting, truthful no-supported-release status, generated-file/vendoring rules, and release/signing/provenance roles are checked and drift-gated. Generated-output/runtime redistribution decision `haxe_c-od2.5`, the E10 security review, automated signed reproducible artifacts, ABI/semantic policy, and release evidence still block release claims. |
 
 ### 32.3 Immediate scaffold audit acceptance
 

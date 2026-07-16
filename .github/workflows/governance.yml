@@ -73,6 +73,9 @@ jobs:
       - name: Validate license and provenance policy
         run: python3 scripts/ci/check_license_policy.py
 
+      - name: Validate contribution, disclosure, and release governance
+        run: python3 scripts/ci/check_governance_policy.py
+
       - name: Validate and preview Beads bootstrap without bd
         run: |
           python3 scripts/beads/validate_plan.py --json

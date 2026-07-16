@@ -617,6 +617,38 @@ missing-metadata or missing-adapter assumptions.
   license. That public treatment is owned by Beads decision `haxe_c-od2.5` and
   remains a release-packaging blocker until ratified.
 
+### Contribution, security, and release governance
+
+- `CONTRIBUTING.md` is the human workflow contract and this file is the agent
+  contract. Keep their Beads commands, definition of done, generated-file
+  ownership, vendoring/provenance rules, and close/push sequence aligned; run
+  `python3 scripts/ci/check_governance_policy.py` after changing either.
+- Security reports follow `SECURITY.md`. Never copy embargoed details into a
+  GitHub issue, pull request, discussion, Beads record, CI output, snapshot, or
+  generated artifact. Beads may track a neutral remediation task only after
+  sensitive reproduction and reporter data have been removed.
+- The current private reporting path is `boss@fullofcaffeine.com`. Do not claim
+  GitHub private vulnerability reporting is active while the repository is
+  private; update the policy only after publication and feature enablement are
+  verified.
+- There is no supported release today. E10.T08 owns signed reproducible release
+  automation and E10.T11 owns the beta gate. Development archives, native
+  fixtures, package-layout probes, and generated snapshots are not releases.
+- Release roles are explicit: the release manager owns version/tag/notes/gates
+  and publication; artifact builders own reproducibility, checksums, and
+  source/runtime/tool manifests; the provenance reviewer owns hashes, licenses,
+  notices, and generated/runtime treatment; an owner-authorized signer protects
+  private key material and records the public identity and verification command.
+  A missing configured signature blocks publication, and an unconfigured
+  signature must never be described as present.
+- Do not publish packages, create release tags, rotate signing keys, or upload
+  provenance without an owning release issue and explicit maintainer authority.
+- Maintainers push the implementation and require remote Governance success,
+  then close the Bead with evidence, run `bd dolt push`, commit/push the passive
+  export and interaction record, and verify a clean `0 0` Git state. A
+  contributor without publication authority leaves final closure and remote
+  synchronization to a maintainer.
+
 ### Beads plan execution
 
 - The durable product source is `docs/PRD.md`; live ownership/readiness/status
@@ -663,6 +695,7 @@ stage, the locally available baseline is:
 ```bash
 npm ci
 npm test
+npm run test:governance-policy
 python3 scripts/beads/validate_plan.py --json
 python3 scripts/beads/bootstrap.py --json
 npm run test:fixture-policy
