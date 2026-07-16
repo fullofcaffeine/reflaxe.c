@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import fnmatch
 import json
+import os
 import re
 import stat
 import subprocess
@@ -83,6 +84,92 @@ def extract(source: str, pattern: str, label: str) -> str:
     if match is None:
         raise SecurityToolingFailure(f"missing {label}")
     return match.group(1)
+
+
+def write_executable(path: Path, source: str) -> None:
+    path.write_text(source, encoding="utf-8")
+    path.chmod(0o755)
+
+
+def validate_hook_failure_propagation() -> None:
+    with tempfile.TemporaryDirectory(prefix="hxc-hook-chain-") as directory:
+        checkout = Path(directory)
+        fake_bin = checkout / "bin"
+        repository_hooks = checkout / "scripts/hooks"
+        fake_bin.mkdir()
+        repository_hooks.mkdir(parents=True)
+
+        write_executable(
+            fake_bin / "git",
+            """#!/usr/bin/env sh
+if [ "$1" = "rev-parse" ] && [ "$2" = "--show-toplevel" ]; then
+  printf '%s\n' "$HXC_HOOK_TEST_ROOT"
+  exit 0
+fi
+exit 91
+""",
+        )
+        write_executable(
+            fake_bin / "bd",
+            """#!/usr/bin/env sh
+printf '%s\n' "$*" >> "$HXC_BEADS_HOOK_MARKER"
+exit 0
+""",
+        )
+
+        environment = os.environ.copy()
+        environment.pop("BD_GIT_HOOK", None)
+        environment.update(
+            {
+                "PATH": f"{fake_bin}:/usr/bin:/bin",
+                "HXC_HOOK_TEST_ROOT": str(checkout),
+            }
+        )
+
+        for hook_name, expected_status in (("pre-commit", 73), ("pre-push", 74)):
+            repository_marker = checkout / f"{hook_name}.repository-ran"
+            beads_marker = checkout / f"{hook_name}.beads-ran"
+            write_executable(
+                repository_hooks / hook_name,
+                """#!/usr/bin/env sh
+printf '%s\n' "$*" > "$HXC_REPOSITORY_HOOK_MARKER"
+exit "$HXC_REPOSITORY_HOOK_STATUS"
+""",
+            )
+            environment.update(
+                {
+                    "HXC_REPOSITORY_HOOK_MARKER": str(repository_marker),
+                    "HXC_REPOSITORY_HOOK_STATUS": str(expected_status),
+                    "HXC_BEADS_HOOK_MARKER": str(beads_marker),
+                }
+            )
+
+            result = subprocess.run(
+                ["sh", str(ROOT / f".beads/hooks/{hook_name}"), "probe", hook_name],
+                cwd=checkout,
+                env=environment,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if result.returncode != expected_status:
+                raise SecurityToolingFailure(
+                    f"{hook_name} wrapper returned {result.returncode}, not delegated "
+                    f"status {expected_status}"
+                )
+            if not repository_marker.is_file():
+                raise SecurityToolingFailure(
+                    f"{hook_name} wrapper did not invoke its repository hook"
+                )
+            if repository_marker.read_text(encoding="utf-8") != f"probe {hook_name}\n":
+                raise SecurityToolingFailure(
+                    f"{hook_name} wrapper did not preserve repository-hook arguments"
+                )
+            if beads_marker.exists():
+                raise SecurityToolingFailure(
+                    f"{hook_name} wrapper ran Beads after its repository hook failed"
+                )
 
 
 def validate_installer() -> tuple[str, str]:
@@ -234,6 +321,7 @@ def validate_config_and_hooks() -> None:
         raise SecurityToolingFailure("active Beads pre-commit wrapper lost repository checks")
     if "scripts/hooks/pre-push" not in beads_pre_push:
         raise SecurityToolingFailure("active Beads pre-push wrapper lost repository checks")
+    validate_hook_failure_propagation()
 
     git_scan = read_text(ROOT / "scripts/security/run-gitleaks.sh")
     for required in (
@@ -360,7 +448,8 @@ def main() -> int:
         print(
             "security-tooling: OK: "
             f"Gitleaks {version} ({digest}), {action_count} commit-pinned Action uses, "
-            "staged/Git/Dolt-history gates, formatter 1.18.0, and credential ignores"
+            "staged/Git/Dolt-history gates, fail-closed hook delegation, "
+            "formatter 1.18.0, and credential ignores"
         )
         return 0
     except (OSError, UnicodeError, json.JSONDecodeError, SecurityToolingFailure) as error:
