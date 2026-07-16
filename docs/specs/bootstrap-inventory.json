@@ -93,7 +93,7 @@
     "implemented": false,
     "ownerBeads": "E8.T06",
     "manifestConsumerRequired": true,
-    "remediation": "Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these capability IDs rather than maintaining a second status list."
+    "remediation": "Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these inventory IDs rather than maintaining a second status list."
   },
   "ledgers": [
     {
@@ -123,7 +123,7 @@
       "area": "governance",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The checked-in Beads plan validates and previews deterministically without a live database.",
+      "summary": "Repository governance tooling validates and previews the checked-in Beads plan deterministically; this is not compiler or runtime functionality.",
       "scope": "The plan contains stable epic/task keys, blocking edges, requirement coverage, and an idempotent materializer.",
       "evidence": [
         "scripts/beads/bootstrap.py",
@@ -160,7 +160,7 @@
       "area": "governance",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A schema-checked M0 capability and limitation inventory drives the README status table.",
+      "summary": "A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table.",
       "scope": "The manifest fixes status meanings, evidence paths, ownership, hard claim gates, and future doctor consumption.",
       "evidence": [
         "docs/specs/bootstrap-inventory.schema.json",

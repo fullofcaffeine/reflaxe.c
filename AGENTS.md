@@ -740,6 +740,7 @@ npm ci
 npm test
 npm run test:governance-policy
 npm run test:typed-boundaries
+npm run public:preflight
 python3 scripts/beads/validate_plan.py --json
 python3 scripts/beads/bootstrap.py --json
 npm run test:fixture-policy
@@ -771,9 +772,16 @@ formats repository-owned staged Haxe, preserves immutable vendor bytes, rejects
 staged secrets and machine-local paths, checks whitespace, verifies dependency
 checksums, enforces the license/provenance and fixture/snapshot inventories, and
 runs relevant JSON, Haxe, or strict native gates. Gitleaks is required; the
-formatter haxelib is required when repository-owned Haxe files are staged. Do
-not bypass the hook to publish a failing change; record and fix the underlying
-gate instead.
+exact formatter haxelib is required when repository-owned Haxe files are
+staged. The tracked pre-push hook scans every reachable Git revision with the
+same narrow Gitleaks policy and revalidates security-tool/workflow pins. Public
+CI checks all repository-owned Haxe formatting, installs Gitleaks only after a
+reviewed SHA-256 match, scans full history from a depth-zero checkout, and pins
+every external GitHub Action to a full reviewed commit. Run `npm run
+public:preflight` before any visibility/publication change. Never broaden a
+secret-scan allowlist to a whole generated file when a path-and-match rule can
+identify deterministic non-secret bytes. Do not bypass a hook to publish a
+failing change; record and fix the underlying gate instead.
 
 Claim Haxe/Reflaxe source-graph type-checking only with the dedicated all-source
 gate. Do not claim generated-program runtime linking/execution, sanitizers,

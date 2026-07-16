@@ -15,7 +15,7 @@ Install the pinned development dependencies and the tracked Git hooks:
 
 ```sh
 npm ci
-haxelib install formatter
+haxelib install formatter 1.18.0
 scripts/hooks/install.sh
 bd prime
 ```
@@ -88,6 +88,13 @@ Before asking for review or closing an issue:
 - leave no unowned TODO, generated drift, secret, or machine-local path; and
 - run the issue-owned commands, the relevant focused tests, `npm test`, and the
   tracked `scripts/hooks/pre-commit` gate.
+
+Before changing repository visibility or publishing a reachable Git ref, run
+`npm run public:preflight`. The active pre-commit hook formats staged Haxe and
+scans staged content; pre-push independently scans the complete reachable Git
+history. CI repeats both checks with checksum-verified Gitleaks and full-commit
+GitHub Action pins. Never bypass these gates or use a whole-file secret
+allowlist for generated output.
 
 A close reason must name the requirement IDs, exact commands and their results,
 produced artifacts, remote CI evidence when required, compatibility impact, and

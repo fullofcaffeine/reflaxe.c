@@ -6,7 +6,7 @@ inventory, not legal advice. An external tool listed here is not thereby part
 of a `reflaxe.c` distribution.
 
 The machine-readable source of truth for distribution-sensitive compiler and
-runtime provenance, last verified on 2026-07-15, is
+runtime provenance, last verified on 2026-07-16, is
 [`docs/specs/third-party-provenance.json`](docs/specs/third-party-provenance.json).
 It distinguishes tools used to build or validate the project from source and
 binaries actually redistributed with it.
@@ -17,6 +17,8 @@ binaries actually redistributed with it.
 | --- | --- | --- | --- |
 | Reflaxe | Compiler framework dependency by Maybee “SomeRanDev” Rezbit. Version `4.0.0-beta`, commit `73a983112e039daad46b37912ab238df6bf0cf53`, Git tree `05ab4abc670b6e3ed5424e78c622b92979b5affb`; the selected 62-file compiler bundle is independently SHA-256 locked in `toolchain-lock.json`. | [MIT](vendor/reflaxe/LICENSE) | Compiler-only source is vendored under `vendor/reflaxe`; it is not linked into generated programs and is not an `hxrt` runtime feature. |
 | Lix | Scoped Haxe toolchain and library resolver. npm package `17.0.2` is locked by exact registry integrity. | [MIT](https://github.com/lix-pm/lix/blob/v17.0.2/LICENSE) | No Lix source or binary; `npm ci` installs it as a development tool. |
+| Gitleaks | Repository secret scanner `8.30.0`, source revision `6eaad039603a4de39fddd1cf5f727391efe9974e`; CI verifies the official Linux x64 release archive against SHA-256 `79a3ab579b53f71efd634f3aaf7e04a0fa0cf206b7ed434638d1547a2470a66e` before execution. | [MIT](https://github.com/gitleaks/gitleaks/blob/6eaad039603a4de39fddd1cf5f727391efe9974e/LICENSE) | No Gitleaks source or binary; it is an external development/CI tool. |
+| Haxe Formatter | Repository source formatter `1.18.0`, source revision `93ba289893d515614298f4ce7cee8619c31b420c`. | [MIT](https://github.com/HaxeCheckstyle/haxe-formatter/blob/93ba289893d515614298f4ce7cee8619c31b420c/LICENSE) | No formatter source or binary; contributors and CI install it as an external development tool. |
 | Haxe compiler | External build tool. The accepted language contract is Haxe `5.0.0-preview.1`, tag commit `2c1e544e0a2c7524ef4c8e103f1b0580362ea538`. | [GPL-2.0-or-later](https://github.com/HaxeFoundation/haxe/blob/2c1e544e0a2c7524ef4c8e103f1b0580362ea538/src/typing/typeload.ml) for compiler source | No compiler source or binary. |
 | Haxe standard library | Source basis for future target `_std` work, Haxe `5.0.0-preview.1`, tag commit `2c1e544e0a2c7524ef4c8e103f1b0580362ea538`. Every copied or adapted file must have a per-file provenance entry. | [MIT](https://github.com/HaxeFoundation/haxe/blob/2c1e544e0a2c7524ef4c8e103f1b0580362ea538/extra/LICENSE.txt); retained text in [`LICENSES/HAXE-STDLIB-MIT.txt`](LICENSES/HAXE-STDLIB-MIT.txt) | The license notice is present; no derived `_std` source exists yet. |
 | LLVM/Clang tooling | External syntax/ABI authority planned for bindgen and layout validation. The tool version remains to be selected; license evidence was observed at upstream revision `c4830afdbbc7b16a52a05d6a5b56e6c3fc14fb98`. | [Apache-2.0 WITH LLVM-exception](https://github.com/llvm/llvm-project/blob/c4830afdbbc7b16a52a05d6a5b56e6c3fc14fb98/LICENSE.TXT) | No LLVM/Clang source or binary. |

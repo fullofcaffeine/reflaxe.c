@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the M0 capability manifest and its derived human status view."""
+"""Validate the M0 product/infrastructure inventory and its human status view."""
 
 from __future__ import annotations
 
@@ -502,6 +502,12 @@ def render_readme(manifest: Manifest) -> str:
         "",
         f"**Project stage:** `{manifest.project_status}` (`{manifest.milestone}`).",
         "",
+        (
+            "This inventory combines product capability boundaries with repository "
+            "infrastructure and evidence machinery. Governance, quality, and toolchain "
+            "rows are not Haxe-to-C language or runtime features."
+        ),
+        "",
         "| Status | Count | Meaning |",
         "| --- | ---: | --- |",
     ]
@@ -510,7 +516,7 @@ def render_readme(manifest: Manifest) -> str:
     lines.extend(
         (
             "",
-            "| Capability | Status | Current boundary |",
+            "| Inventory item | Status | Current boundary |",
             "| --- | --- | --- |",
         )
     )
@@ -807,7 +813,7 @@ def doctor_contract_json(manifest: Manifest) -> str:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
-        description="Validate the bootstrap capability and limitation manifest."
+        description="Validate the bootstrap product, infrastructure, and limitation inventory."
     )
     result.add_argument("--root", type=Path, default=ROOT)
     result.add_argument("--quiet", action="store_true")

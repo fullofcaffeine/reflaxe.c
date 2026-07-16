@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "evidenceCheckedAt": "2026-07-15",
+  "evidenceCheckedAt": "2026-07-16",
   "project": {
     "name": "reflaxe.c",
     "licenseExpression": "GPL-3.0-only",
@@ -71,6 +71,38 @@
       "upstreamUrl": "https://github.com/lix-pm/lix",
       "licenseExpression": "MIT",
       "licenseUrl": "https://github.com/lix-pm/lix/blob/v17.0.2/LICENSE",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    },
+    {
+      "id": "gitleaks-secret-scanner",
+      "name": "Gitleaks",
+      "role": "repository-secret-scanning-tool",
+      "usage": "external-development-tool-not-redistributed",
+      "selectionStatus": "version-revision-and-binary-content-pinned",
+      "version": "8.30.0",
+      "sourceRevision": "6eaad039603a4de39fddd1cf5f727391efe9974e",
+      "observedRevision": "6eaad039603a4de39fddd1cf5f727391efe9974e",
+      "upstreamUrl": "https://github.com/gitleaks/gitleaks",
+      "licenseExpression": "MIT",
+      "licenseUrl": "https://github.com/gitleaks/gitleaks/blob/6eaad039603a4de39fddd1cf5f727391efe9974e/LICENSE",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    },
+    {
+      "id": "haxe-formatter",
+      "name": "Haxe Formatter",
+      "role": "repository-source-formatting-tool",
+      "usage": "external-development-tool-not-redistributed",
+      "selectionStatus": "version-and-source-revision-pinned",
+      "version": "1.18.0",
+      "sourceRevision": "93ba289893d515614298f4ce7cee8619c31b420c",
+      "observedRevision": "93ba289893d515614298f4ce7cee8619c31b420c",
+      "upstreamUrl": "https://github.com/HaxeCheckstyle/haxe-formatter",
+      "licenseExpression": "MIT",
+      "licenseUrl": "https://github.com/HaxeCheckstyle/haxe-formatter/blob/93ba289893d515614298f4ce7cee8619c31b420c/LICENSE",
       "bundled": false,
       "paths": [],
       "localLicenseFiles": []

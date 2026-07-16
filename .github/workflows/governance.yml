@@ -9,15 +9,58 @@ permissions:
   contents: read
 
 jobs:
+  secret-scan:
+    name: Full-history secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Install checksum-verified Gitleaks
+        run: |
+          set -euo pipefail
+          install_dir="$RUNNER_TEMP/gitleaks-bin"
+          bash scripts/ci/install-gitleaks.sh --install-dir "$install_dir"
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+      - name: Scan every reachable Git revision
+        run: gitleaks git . --redact --config .gitleaks.toml --log-opts="--all"
+
+  haxe-format:
+    name: Haxe formatter
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Install exact Haxe formatter
+        run: npx --no-install haxelib install formatter 1.18.0 --quiet
+
+      - name: Check repository-owned Haxe formatting
+        run: npm run format:haxe:check
+
   pinned-toolchain:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
           cache: npm
@@ -40,7 +83,7 @@ jobs:
           - clang
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Run required strict native toolchain
         run: python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"
@@ -71,7 +114,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Check out source
-        uses: actions/checkout@v7
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
 
       - name: Validate license and provenance policy
         run: python3 scripts/ci/check_license_policy.py

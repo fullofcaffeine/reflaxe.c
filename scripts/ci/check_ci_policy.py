@@ -13,8 +13,25 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/governance.yml"
 PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
+PRE_PUSH = ROOT / "scripts/hooks/pre-push"
+PUBLIC_PREFLIGHT_COMMAND = (
+    "npm run format:haxe:check && npm run security:gitleaks && "
+    "npm run test:security-tooling && npm run test:governance"
+)
 
 REQUIRED_GATE_FILES = (
+    ".gitignore",
+    ".gitleaks.toml",
+    ".beads/hooks/pre-commit",
+    ".beads/hooks/pre-push",
+    "scripts/hooks/install.sh",
+    "scripts/hooks/pre-commit",
+    "scripts/hooks/pre-push",
+    "scripts/lint/hx_format_guard.sh",
+    "scripts/lint/local_path_guard_staged.sh",
+    "scripts/security/run-gitleaks.sh",
+    "scripts/ci/install-gitleaks.sh",
+    "scripts/ci/check_security_tooling.py",
     "CONTRIBUTING.md",
     "SECURITY.md",
     "scripts/ci/check_governance_policy.py",
@@ -302,6 +319,8 @@ REQUIRED_GATE_FILES = (
 )
 
 REQUIRED_WORKFLOW_SNIPPETS = (
+    "  secret-scan:\n",
+    "  haxe-format:\n",
     "  pinned-toolchain:\n",
     "  native-smoke:\n",
     "  license-and-provenance:\n",
@@ -309,6 +328,11 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "        toolchain:\n",
     "          - gcc\n",
     "          - clang\n",
+    "fetch-depth: 0",
+    "bash scripts/ci/install-gitleaks.sh --install-dir",
+    'gitleaks git . --redact --config .gitleaks.toml --log-opts="--all"',
+    "npx --no-install haxelib install formatter 1.18.0 --quiet",
+    "npm run format:haxe:check",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -359,6 +383,25 @@ def validate() -> list[str]:
         scripts = {}
     if scripts.get("test:native") != "python3 scripts/ci/runtime_smoke.py":
         errors.append("package.json must retain the test:native entry point")
+    if scripts.get("format:haxe:check") != "bash scripts/lint/hx_format_guard.sh":
+        errors.append("package.json must retain the exact Haxe formatter gate")
+    if scripts.get("security:gitleaks") != "bash scripts/security/run-gitleaks.sh":
+        errors.append("package.json must retain the full-history Gitleaks gate")
+    if (
+        scripts.get("security:gitleaks:staged")
+        != "bash scripts/security/run-gitleaks.sh --staged"
+    ):
+        errors.append("package.json must retain the staged Gitleaks gate")
+    if (
+        scripts.get("test:security-tooling")
+        != "python3 scripts/ci/check_security_tooling.py"
+    ):
+        errors.append("package.json must retain the security-tooling policy gate")
+    if (
+        scripts.get("public:preflight")
+        != PUBLIC_PREFLIGHT_COMMAND
+    ):
+        errors.append("package.json must retain the complete public preflight gate")
     if scripts.get("test:diagnostics") != "python3 test/diagnostics/run.py":
         errors.append("package.json must retain the test:diagnostics entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
@@ -465,6 +508,12 @@ def validate() -> list[str]:
         scripts.get("test:governance", "")
     ):
         errors.append("package.json test:governance must execute the CI policy guard")
+    if "npm run test:security-tooling" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must execute the security-tooling guard"
+        )
     if "npm run test:fixture-policy" not in str(
         scripts.get("test:governance", "")
     ):
@@ -495,6 +544,10 @@ def validate() -> list[str]:
             errors.append(f"governance workflow is missing required CI contract: {snippet.strip()}")
 
     pre_commit = read_text(PRE_COMMIT, errors)
+    if "scripts/security/run-gitleaks.sh\" --staged" not in pre_commit:
+        errors.append("pre-commit must scan staged content for secrets")
+    if "scripts/lint/hx_format_guard.sh\" --tool-only" not in pre_commit:
+        errors.append("pre-commit must require the exact Haxe formatter")
     if "scripts/ci/runtime_smoke.py" not in pre_commit:
         errors.append("pre-commit must run the native smoke harness for relevant changes")
     if "scripts/ci/check_ci_policy.py" not in pre_commit:
@@ -545,6 +598,12 @@ def validate() -> list[str]:
         errors.append(
             "pre-commit must validate contribution, disclosure, and release policy"
         )
+
+    pre_push = read_text(PRE_PUSH, errors)
+    if "scripts/security/run-gitleaks.sh\"" not in pre_push or "--staged" in pre_push:
+        errors.append("pre-push must scan every reachable Git revision for secrets")
+    if "scripts/ci/check_security_tooling.py" not in pre_push:
+        errors.append("pre-push must validate security-tool and workflow pins")
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):

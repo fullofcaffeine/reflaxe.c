@@ -216,6 +216,8 @@ the C string contract.
 
 **Project stage:** `experimental-scaffold-with-primitive-executable-slice` (`M0`).
 
+This inventory combines product capability boundaries with repository infrastructure and evidence machinery. Governance, quality, and toolchain rows are not Haxe-to-C language or runtime features.
+
 | Status | Count | Meaning |
 | --- | ---: | --- |
 | `implemented` | 21 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
@@ -223,11 +225,11 @@ the C string contract.
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
-| Capability | Status | Current boundary |
+| Inventory item | Status | Current boundary |
 | --- | --- | --- |
-| `beads-bootstrap` | `implemented` | The checked-in Beads plan validates and previews deterministically without a live database. |
+| `beads-bootstrap` | `implemented` | Repository governance tooling validates and previews the checked-in Beads plan deterministically; this is not compiler or runtime functionality. |
 | `bindgen` | `unsupported` | No Clang-backed binding generator or user bindgen command exists. |
-| `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 capability and limitation inventory drives the README status table. |
+| `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table. |
 | `c-ast-printer` | `implemented` | Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run. |
 | `c-export` | `unsupported` | No Haxe export analyzer, public-header generator, library packaging, or ABI diff workflow exists. |
 | `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |
@@ -266,7 +268,7 @@ the C string contract.
 
 **Hard claim gates not passed:** `full-standard-library`, `general-haxe-to-c`, `performance-validated`, `production-ready`, `public-abi-stability`, `supported-platforms`, `supported-release`.
 
-**`hxc doctor`:** `unsupported`; implementation is absent and owned by `E8.T06`. Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these capability IDs rather than maintaining a second status list.
+**`hxc doctor`:** `unsupported`; implementation is absent and owned by `E8.T06`. Use the documented repository validation commands today. E8.T06 must make future human and JSON doctor output consume these inventory IDs rather than maintaining a second status list.
 <!-- END GENERATED BOOTSTRAP CAPABILITIES -->
 
 ## Explore the scaffold
@@ -275,14 +277,17 @@ Use Node.js 20 or newer; `npm ci` installs the pinned Lix shim and resolves the
 exact Haxe 5.0.0-preview.1 release. Contributors also need at least one matched
 GCC/G++ or Clang/Clang++ pair, plus `bd`, `jq`,
 [Gitleaks](https://github.com/gitleaks/gitleaks), and the Haxe formatter. Then
-activate the tracked pre-commit chain:
+activate the tracked pre-commit/pre-push chain:
 
 ```sh
 npm ci
 npm test
 
-haxelib install formatter
+haxelib install formatter 1.18.0
 scripts/hooks/install.sh
+
+# Required before changing visibility or publishing a new reachable ref.
+npm run public:preflight
 
 bd prime
 bd list --ready --type task

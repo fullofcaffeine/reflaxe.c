@@ -31,6 +31,7 @@ if [ "$MODE" = "staged" ]; then
 fi
 
 echo "[gitleaks] Scanning repository history"
+echo "[gitleaks] Reachable commits: $(git -C "$ROOT_DIR" rev-list --all --count)"
 if printf '%s' "$GITLEAKS_HELP" | grep -q '\<git\>'; then
   (cd "$ROOT_DIR" && gitleaks git . --redact --log-opts="--all" "${CONFIG_ARGS[@]}")
 elif printf '%s' "$GITLEAKS_HELP" | grep -q '\<detect\>'; then

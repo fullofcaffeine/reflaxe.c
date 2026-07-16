@@ -16,6 +16,8 @@ from typing import Any, Iterable
 EXPECTED_COMPONENT_LICENSES = {
     "reflaxe-framework": "MIT",
     "lix-package-manager": "MIT",
+    "gitleaks-secret-scanner": "MIT",
+    "haxe-formatter": "MIT",
     "haxe-compiler": "GPL-2.0-or-later",
     "haxe-standard-library": "MIT",
     "llvm-clang-tooling": "Apache-2.0 WITH LLVM-exception",

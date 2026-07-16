@@ -2483,6 +2483,11 @@ Performance claims in the README require reproducible benchmark definitions and 
   third-party code retains compatible notices, SPDX/provenance, and license
   review evidence.
 - Third-party runtime code has license and provenance records.
+- Every external GitHub Action is pinned to a reviewed full commit SHA. CI
+  installs Gitleaks from a versioned upstream archive only after its checked-in
+  SHA-256 matches, checks the exact Haxe formatter, and scans a depth-zero
+  checkout across all reachable Git history. Local pre-commit scans staged
+  content while pre-push repeats the full-history scan.
 - `docs/specs/third-party-provenance.json` is the fail-closed distribution
   inventory. External development tools are distinguished from redistributed
   source/binaries; reserved vendor/runtime roots reject unowned files; and every

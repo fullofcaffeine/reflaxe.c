@@ -206,7 +206,10 @@ class CapabilityManifestTests(unittest.TestCase):
             self.make_policy_root(root)
             readme = root / "README.md"
             text = readme.read_text(encoding="utf-8")
-            old = "The checked-in Beads plan validates and previews deterministically"
+            old = (
+                "Repository governance tooling validates and previews the checked-in "
+                "Beads plan deterministically"
+            )
             self.assertIn(old, text)
             readme.write_text(text.replace(old, "The plan probably works"), encoding="utf-8")
             rejected = self.run_policy(root)

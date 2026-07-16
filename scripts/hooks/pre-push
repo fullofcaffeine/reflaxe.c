@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${BD_GIT_HOOK:-}" == "1" ]]; then
+	exit 0
+fi
+
+ROOT_DIR="$(git rev-parse --show-toplevel)"
+
+echo "[pre-push] Scanning every reachable Git revision for secrets..."
+bash "$ROOT_DIR/scripts/security/run-gitleaks.sh"
+
+echo "[pre-push] Verifying pinned security tooling and workflow actions..."
+python3 "$ROOT_DIR/scripts/ci/check_security_tooling.py"
+
+echo "[pre-push] OK"
