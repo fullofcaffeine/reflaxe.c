@@ -163,7 +163,10 @@ warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
 [explicit evaluation order and control flow](evaluation-order.md); E2.T05 operation selection is
-in [UB-safe primitive arithmetic](arithmetic-semantics.md).
+in [UB-safe primitive arithmetic](arithmetic-semantics.md). E2.T08 adds typed
+fixed-array storage, borrowed span views, explicit bounds policies, and direct
+guarded span iteration; its representation and proof matrix are in
+[fixed arrays and span-based iteration](span-lowering.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function set, scans it for
 program-local primitive helper IDs, computes their dependency closure, and
@@ -180,7 +183,13 @@ order. Lazy/conditional expressions remain explicit labels and edges rather
 than C operators. `CPrimitiveHelperEmitter` builds only selected private
 `static inline` helpers through structural CAST; safe unsigned fast paths remain
 direct C, and floating modulo contributes the exact `m` build fact without a
-runtime feature. `CStaticFunctionProjectEmitter`
+runtime feature. Fixed arrays remain structural array declarators, while spans
+remain typed pointer-plus-`size_t` views. Bounds proof nodes survive through
+validated HxcIR; only exact static constants or typed `size_t` loop guards
+remove a check, and a dynamic index emits a signed/element-count fail-stop
+branch. The typed Haxe
+iterator surface is consumed at this boundary and never becomes an IR or C
+runtime object. `CStaticFunctionProjectEmitter`
 places all prototypes before definitions, partitions proven non-returning cycle
 members, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.

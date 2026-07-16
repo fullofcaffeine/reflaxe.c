@@ -3,7 +3,7 @@
 This document defines the first executable Haxe-facing contract for authoring C
 declarations in `reflaxe.c` and its first target-owned dependency planner. It
 refines [ADR 0002](adr/0002-haxe-first-typed-c-authoring.md) without claiming
-that Haxe lowering or production multi-file header emission exists yet.
+arbitrary `c.*` lowering or production public-header emission.
 
 ## Current status
 
@@ -21,10 +21,13 @@ The M0 contract plus M1 declaration-planning slice do five things:
    placement, includes, portable guards, forward declarations, and complete-type
    ordering before any file is emitted.
 
-It does **not** lower those types, emit C, prove an ABI layout, expose raw C, or
-make `c.Unsafe` operational. `c.Syntax` and `c.Unsafe` are deliberately empty
-authority markers until their owning safety and inspection work is complete.
-The explicit report status is `contract-seed-no-lowering`.
+The declaration-contract report itself does **not** lower types, emit C, prove
+an ABI layout, expose raw C, or make `c.Unsafe` operational; its explicit status
+remains `contract-seed-no-lowering`. Separately, E2.T08 admits one narrow local
+operation slice: nonempty literal-backed `CArray<T, N>` plus `Span<T>` and
+`ConstSpan<T>` borrowing, indexing, and iteration. Other `c.*` operations remain
+fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
+until their owning safety and inspection work is complete.
 
 ## Declaration planning boundary
 
@@ -64,7 +67,7 @@ lowering. Planning selects no `hxrt` feature.
 | Functions, modules, enums, constants | Ordinary typed Haxe declarations | Haxe already models them and supplies IDE/type-checker support. |
 | Exact integer widths and `size_t`-class types | `c.Int8` through `c.UInt64`, `c.Size`, `c.PtrDiff`, `c.IntPtr`, `c.UIntPtr` | They must not inherit Haxe `Int` semantics or an assumed host width. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
-| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. `N` is currently only a reserved type-level witness. |
+| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. E2.T08 preserves `N` as the typed identity of a directly assigned nonempty literal and lowers local span views without runtime objects; broader forms remain reserved. |
 | Ownership and allocation | `c.Owned<T>`, `Borrowed<T>`, `Allocator`, `Arena`, `Result<T, E>` | Ownership and failure cannot disappear behind a convenient call. |
 | Struct, union, enum, or opaque intent | ordinary declaration plus `@:c.layout(c.Layout.*)` | Layout is a declaration fact that Haxe syntax alone cannot state. |
 | Header group and stable native name | `@:c.header("path.h", c.Header.Public\|Private)` and `@:c.name("symbol")` | The compiler can derive guards, forward declarations, dependencies, and ordering. |
@@ -193,6 +196,8 @@ inspection, and no-runtime evidence; and document ownership and unsafe effects.
   include/forward/complete declaration planning; E1.T04 now supplies the
   deterministic symbol registry/default-name finalizer, and E1.T07 owns
   production multi-file emission of its manifest shape.
+- E2.T08 owns the narrow fixed-array/span operational slice documented in
+  [fixed arrays and span-based iteration](span-lowering.md).
 - E3 owns aggregate representation, pointer/ownership operations, and unsafe
   lexical enforcement.
 - E6 owns imported qualifiers, constants, layouts, functions, and exact external

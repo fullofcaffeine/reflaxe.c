@@ -161,6 +161,7 @@ class CASTPrinter {
 			case TInt(64, true): "int64_t";
 			case TInt(64, false): "uint64_t";
 			case TInt(bits, _): throw 'Unsupported exact-width C integer: $bits bits';
+			case TSizeT: "size_t";
 			case TFloat: "float";
 			case TDouble: "double";
 			case TLongDouble: "long double";

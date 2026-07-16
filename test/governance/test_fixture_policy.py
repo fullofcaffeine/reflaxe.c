@@ -63,6 +63,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "function-lowering",
                 "evaluation-order",
                 "arithmetic-semantics",
+                "span-lowering",
             ),
         )
 

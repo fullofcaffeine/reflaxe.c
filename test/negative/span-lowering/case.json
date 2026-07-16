@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "fixed-array-span-lowering-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-007",
+    "HXC-MAC-001"
+  ],
+  "sources": [
+    "src/reflaxe/c/BuildModeResolver.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/span_lowering/fixtures/NonLiteralFixture.hx",
+    "test/span_lowering/fixtures/LookalikeFixture.hx",
+    "test/span_lowering/fixtures/ZeroLengthFixture.hx",
+    "test/span_lowering/fixtures/UpperBoundsFixture.hx",
+    "test/span_lowering/fixtures/NegativeBoundsFixture.hx",
+    "test/span_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../span_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/span-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC0003",
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "bounds matrix"
+    }
+  }
+}

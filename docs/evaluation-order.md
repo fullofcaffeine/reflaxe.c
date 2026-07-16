@@ -24,6 +24,9 @@ The current source-backed slice covers:
 - pre-test and post-test loops as condition/body/exit blocks, with nested
   `break` and `continue` targeting the innermost active loop;
 - pinned-Reflaxe range `for` graphs through the same primitive loop path;
+- pinned-Reflaxe span iterator graphs recognized from typed `Span`/`ConstSpan`
+  and replaced by compiler-owned condition/body/increment/exit blocks, with no
+  iterator operation reaching HxcIR;
 - `Int` statement and value switches whose subject is evaluated once and
   whose ordered constant cases target explicit blocks; and
 - prefix/postfix primitive increment/decrement as load, constant, typed UB-safe
@@ -74,18 +77,21 @@ convenience alone is not authority to weaken sequencing.
 ## Boundaries
 
 This remains a primitive control-flow slice, not general pattern matching or
-collection iteration. Enum/string/object patterns, Float switches, arbitrary
-iterators, exception edges, and cleanup-bearing exits remain fail-closed.
+collection iteration. E2.T08 admits only local literal-backed fixed arrays and
+the exact typed span iterator shape. Enum/string/object patterns, Float
+switches, arbitrary iterators, general arrays, escaping views, exception edges,
+and cleanup-bearing exits remain fail-closed.
 E2.T05 routes signed updates through wrapping program-local helpers and keeps
 safe `UInt` updates as direct unsigned C. A
 right operand that creates control flow forces the already evaluated left value
 into a typed flow local before that control flow begins.
 
-Array representation and source `TArray` lowering remain E2.T08. The indexing
-acceptance evidence is therefore the existing representation-neutral HxcIR
-fixture for `arr[nextIndex()] += produce()`: it fixes the order as index call,
-stable element address, load, right-side call, and store. That fixture proves
-the semantic IR contract, not generated array support.
+The existing representation-neutral HxcIR fixture for
+`arr[nextIndex()] += produce()` continues to fix the general compound-index
+order as index call, stable element address, load, right-side call, and store.
+E2.T08 separately provides generated fixed-array/span evidence; it does not yet
+generalize that compound operation to arbitrary arrays. See
+[fixed arrays and span-based iteration](span-lowering.md).
 
 The entire admitted slice is compiler-lowered, identical in portable and metal,
 and runtime-free under `auto`, `minimal`, and `none`. It selects no `hxrt`
@@ -101,6 +107,7 @@ Run:
 ```sh
 npm run test:evaluation-order
 npm run test:arithmetic-semantics
+npm run test:span-lowering
 npm run snapshots:check
 ```
 
@@ -114,3 +121,6 @@ and production-generated C
 with required GCC and Clang lanes at `-O0` and `-O2` under warning-clean strict
 C11. The arithmetic suite extends that proof to signed updates, compound
 assignment, boundary arithmetic, and eligible UBSan execution.
+The span suite adds the six-way profile/build bounds-policy matrix, direct
+element-scaled indexing, fail-stop out-of-bounds execution, and linked
+zero-`hxrt` evidence.

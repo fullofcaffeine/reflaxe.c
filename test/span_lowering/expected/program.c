@@ -1,0 +1,106 @@
+#include "hxc/program.h"
+
+int32_t hxc_method_SpanFixture_checkedAt(int32_t hxc_local_SpanFixture_checkedAt_index_n0)
+{
+  int32_t hxc_local_SpanFixture_checkedAt_values_n1[4] = { 1, 3, 8, 21 };
+  const int32_t *hxc_local_SpanFixture_checkedAt_view_n2 = hxc_local_SpanFixture_checkedAt_values_n1;
+  size_t hxc_temp_SpanFixture_checkedAt_view_length_n2 = sizeof(hxc_local_SpanFixture_checkedAt_values_n1) / sizeof(hxc_local_SpanFixture_checkedAt_values_n1[0]);
+  if (hxc_local_SpanFixture_checkedAt_index_n0 < 0 || (size_t)hxc_local_SpanFixture_checkedAt_index_n0 >= hxc_temp_SpanFixture_checkedAt_view_length_n2)
+  {
+    abort();
+  }
+  int32_t hxc_temp_SpanFixture_checkedAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0 = hxc_local_SpanFixture_checkedAt_view_n2[(size_t)hxc_local_SpanFixture_checkedAt_index_n0];
+  return hxc_temp_SpanFixture_checkedAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0;
+}
+
+int32_t hxc_method_SpanFixture_constSum(void)
+{
+  int32_t hxc_local_SpanFixture_constSum_values_n0[4] = { 2, 4, 8, 16 };
+  const int32_t *hxc_local_SpanFixture_constSum_view_n1 = hxc_local_SpanFixture_constSum_values_n0;
+  size_t hxc_temp_SpanFixture_constSum_view_length_n1 = sizeof(hxc_local_SpanFixture_constSum_values_n0) / sizeof(hxc_local_SpanFixture_constSum_values_n0[0]);
+  (void)hxc_temp_SpanFixture_constSum_view_length_n1;
+  int32_t hxc_temp_SpanFixture_constSum_collectionzx2Dindexzx2Dloadzx2Dresult_n0 = hxc_local_SpanFixture_constSum_view_n1[(size_t)0];
+  int32_t hxc_local_SpanFixture_constSum_total_n2 = hxc_temp_SpanFixture_constSum_collectionzx2Dindexzx2Dloadzx2Dresult_n0;
+  size_t hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dindex_n3 = 0;
+  goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0:
+    ;
+  size_t hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n1 = hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dindex_n3;
+  if (hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n1 < 4)
+  {
+    goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1;
+  }
+  else
+  {
+    goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3;
+  }
+hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1:
+    ;
+  size_t hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n2 = hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dindex_n3;
+  int32_t hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Delementzx2Dresult_n3 = hxc_local_SpanFixture_constSum_view_n1[(size_t)hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n2];
+  int32_t hxc_temp_SpanFixture_constSum_compoundzx2Dloadzx2Dresult_n4 = hxc_local_SpanFixture_constSum_total_n2;
+  hxc_local_SpanFixture_constSum_total_n2 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_SpanFixture_constSum_compoundzx2Dloadzx2Dresult_n4, hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Delementzx2Dresult_n3);
+  goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2;
+hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3:
+    ;
+  int32_t hxc_temp_SpanFixture_constSum_loadzx2Dresult_n6 = hxc_local_SpanFixture_constSum_total_n2;
+  return hxc_temp_SpanFixture_constSum_loadzx2Dresult_n6;
+hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2:
+    ;
+  size_t hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n5 = hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dindex_n3;
+  hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dindex_n3 = hxc_temp_SpanFixture_constSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n5 + 1;
+  goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+}
+
+void hxc_method_SpanFixture_main(void)
+{
+  hxc_method_SpanFixture_mutableSum();
+  hxc_method_SpanFixture_constSum();
+  hxc_method_SpanFixture_checkedAt(2);
+  return;
+}
+
+int32_t hxc_method_SpanFixture_mutableSum(void)
+{
+  int32_t hxc_local_SpanFixture_mutableSum_values_n0[4] = { 3, 5, 7, 11 };
+  int32_t *hxc_local_SpanFixture_mutableSum_view_n1 = hxc_local_SpanFixture_mutableSum_values_n0;
+  size_t hxc_temp_SpanFixture_mutableSum_view_length_n1 = sizeof(hxc_local_SpanFixture_mutableSum_values_n0) / sizeof(hxc_local_SpanFixture_mutableSum_values_n0[0]);
+  (void)hxc_temp_SpanFixture_mutableSum_view_length_n1;
+  hxc_local_SpanFixture_mutableSum_view_n1[(size_t)1] = 13;
+  int32_t hxc_local_SpanFixture_mutableSum_total_n2 = 0;
+  size_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3 = 0;
+  goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0:
+    ;
+  size_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n0 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3;
+  if (hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n0 < 4)
+  {
+    goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1;
+  }
+  else
+  {
+    goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3;
+  }
+hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1:
+    ;
+  size_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n1 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3;
+  int32_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Delementzx2Dresult_n2 = hxc_local_SpanFixture_mutableSum_view_n1[(size_t)hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n1];
+  int32_t hxc_temp_SpanFixture_mutableSum_compoundzx2Dloadzx2Dresult_n3 = hxc_local_SpanFixture_mutableSum_total_n2;
+  hxc_local_SpanFixture_mutableSum_total_n2 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_SpanFixture_mutableSum_compoundzx2Dloadzx2Dresult_n3, hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Delementzx2Dresult_n2);
+  goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2;
+hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3:
+    ;
+  int32_t hxc_temp_SpanFixture_mutableSum_loadzx2Dresult_n5 = hxc_local_SpanFixture_mutableSum_total_n2;
+  return hxc_temp_SpanFixture_mutableSum_loadzx2Dresult_n5;
+hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2:
+    ;
+  size_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n4 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3;
+  hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n4 + 1;
+  goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+}
+
+int main(void)
+{
+  hxc_method_SpanFixture_main();
+  return 0;
+}

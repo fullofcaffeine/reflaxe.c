@@ -123,7 +123,7 @@ class CStaticFunctionProjectEmitter {
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
 				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
-					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds),
+					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames, lowered.boundsAbortName),
 				attributes: []
 			});
 			if (nonReturningFunctionIds.exists(fn.ir.id)) {

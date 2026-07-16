@@ -513,6 +513,8 @@ class CPrimitiveContract {
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeRef(pointee)}>';
 			case IRTNullable(inner, representation): 'nullable:${nullableRepresentation(representation)}<${typeRef(inner)}>';
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeRef).join(",")})->${typeRef(result)}';
+			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeRef(element)}>';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeRef(element)}>';
 			case IRTDynamic: "dynamic";
 		}
 	}

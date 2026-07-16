@@ -164,6 +164,30 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/arithmetic-semantics/case.json",
     "test/runtime/arithmetic-semantics/case.json",
     "test/differential/arithmetic-semantics/case.json",
+    "src/reflaxe/c/CBuildMode.hx",
+    "src/reflaxe/c/BuildModeResolver.hx",
+    "std/c/CArray.hx",
+    "std/c/Span.hx",
+    "std/c/ConstSpan.hx",
+    "docs/span-lowering.md",
+    "test/span_lowering/SpanLoweringProbe.hx",
+    "test/span_lowering/span_lowering.hxml",
+    "test/span_lowering/fixtures/Length4.hx",
+    "test/span_lowering/fixtures/SpanFixture.hx",
+    "test/span_lowering/fixtures/NonLiteralFixture.hx",
+    "test/span_lowering/fixtures/LookalikeFixture.hx",
+    "test/span_lowering/fixtures/ZeroLengthFixture.hx",
+    "test/span_lowering/fixtures/UpperBoundsFixture.hx",
+    "test/span_lowering/fixtures/NegativeBoundsFixture.hx",
+    "test/span_lowering/expected/span.hxcir",
+    "test/span_lowering/expected/program.h",
+    "test/span_lowering/expected/program.c",
+    "test/span_lowering/expected/symbols.json",
+    "test/span_lowering/run.py",
+    "test/positive/span-lowering/case.json",
+    "test/negative/span-lowering/case.json",
+    "test/snapshot/span-lowering/case.json",
+    "test/runtime/span-lowering/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -212,6 +236,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/ci/check_ci_policy.py",
 )
 
@@ -271,6 +296,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:evaluation-order entry point")
     if scripts.get("test:arithmetic-semantics") != "python3 test/arithmetic_semantics/run.py":
         errors.append("package.json must retain the test:arithmetic-semantics entry point")
+    if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
+        errors.append("package.json must retain the test:span-lowering entry point")
     if scripts.get("test:typed-ast") != "python3 test/typed_ast/run.py":
         errors.append("package.json must retain the test:typed-ast entry point")
     if scripts.get("test:fixture-policy") != "python3 scripts/ci/check_fixture_policy.py":
@@ -301,6 +328,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:evaluation-order")
     if "npm run test:arithmetic-semantics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:arithmetic-semantics")
+    if "npm run test:span-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:span-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -350,6 +379,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the explicit evaluation-order test")
     if "test/arithmetic_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the primitive arithmetic semantic test")
+    if "test/span_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the fixed-array/span lowering test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
@@ -508,6 +539,35 @@ def validate() -> list[str]:
     if "compiler_identity" not in arithmetic_runner or '"--version"' not in arithmetic_runner:
         errors.append(
             "arithmetic semantic runner must verify required compiler-family identity"
+        )
+
+    span_runner = read_text(ROOT / "test/span_lowering/run.py", errors)
+    for required_span_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-Wstrict-prototypes",
+        "-Wmissing-prototypes",
+        "-Wundef",
+        "-Wformat=2",
+        "-Wimplicit-fallthrough",
+        "-Wcast-align",
+        "-Wcast-qual",
+        "-O0",
+        "-O2",
+    ):
+        if required_span_flag not in span_runner:
+            errors.append(
+                "span-lowering native runner lost strict flag " + required_span_flag
+            )
+    if "--native-only" not in span_runner or "--toolchain" not in span_runner:
+        errors.append("span-lowering runner must expose the required native matrix seam")
+    if "compiler_identity" not in span_runner or '"--version"' not in span_runner:
+        errors.append(
+            "span-lowering runner must verify required compiler-family identity"
         )
 
     return errors

@@ -160,6 +160,9 @@ enum CTypeSpec {
 	/** An exact-width stdint typedef. Supported widths are validated by the printer. */
 	TInt(bits:Int, signed:Bool);
 
+	/** The standard `size_t` typedef from `<stddef.h>`. */
+	TSizeT;
+
 	TFloat;
 	TDouble;
 	TLongDouble;

@@ -9,14 +9,16 @@ import reflaxe.c.naming.CSymbolRegistry;
 /** Mutable compiler state has one instance per Haxe compilation request. */
 class CompilationContext {
 	public final profile:CProfile;
+	public final buildMode:CBuildMode;
 	public final symbols:CSymbolRegistry;
 
 	#if (macro || reflaxe_runtime)
 	public var typedProgram(default, null):Null<TypedProgramInput> = null;
 	#end
 
-	public function new(profile:CProfile) {
+	public function new(profile:CProfile, buildMode:CBuildMode = Debug) {
 		this.profile = profile;
+		this.buildMode = buildMode;
 		this.symbols = new CSymbolRegistry();
 	}
 

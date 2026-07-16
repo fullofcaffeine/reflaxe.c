@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "fixed-array-span-lowering-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-007",
+    "HXC-MAC-001"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/span_lowering/expected/span.hxcir",
+    "test/span_lowering/expected/program.h",
+    "test/span_lowering/expected/program.c",
+    "test/span_lowering/expected/symbols.json",
+    "test/span_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "span-lowering"
+    ],
+    "workingDirectory": "test/snapshot/span-lowering",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/span_lowering/expected/span.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/span_lowering/expected/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/span_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/span_lowering/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

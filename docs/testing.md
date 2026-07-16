@@ -12,18 +12,19 @@ real TypedExpr-to-HxcIR/C evidence. The function-lowering suite extends it to a
 production-emitted primitive private header/source/entry project. The
 evaluation-order suite now adds E2.T06 primitive statement/control-flow
 evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
-and optimized-shape evidence. None proves broader language, standard-library,
-public ABI, or `hxrt` support.
+and optimized-shape evidence. The span suite adds local fixed-array/view,
+bounds-policy, and runtime-free iteration evidence. None proves broader
+language, standard-library, public ABI, or `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, and arithmetic lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, and argument boundaries |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, arithmetic, and fixed-array/span lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
@@ -109,6 +110,7 @@ The registered snapshot selectors are:
 - `function-lowering`
 - `evaluation-order`
 - `arithmetic-semantics`
+- `span-lowering`
 
 List them from the executable registry with:
 
@@ -161,10 +163,11 @@ innermost `break`/`continue`, `Int` statement/value switches, and unsigned
 prefix/postfix increments through explicit HxcIR and structural C. It asserts
 that every C switch arm jumps to a typed target, each subject executes once,
 and the production value-switch carrier cannot expose uninitialized storage.
-It checks the pre-existing indexed compound-assignment HxcIR without claiming
-source array support, verifies the stable-value temporary proof, compares an
-Eval oracle with generated projects across both required and skipped lazy
-operands, and runs strict GCC/Clang at O0/O2 with a positive zero-runtime plan.
+It checks the pre-existing general indexed compound-assignment HxcIR separately
+from the narrow fixed-array/span source slice, verifies the stable-value
+temporary proof, compares an Eval oracle with generated projects across both
+required and skipped lazy operands, and runs strict GCC/Clang at O0/O2 with a
+positive zero-runtime plan.
 See [explicit evaluation
 order](evaluation-order.md).
 
@@ -180,6 +183,17 @@ infinities, signed zero, and floating-to-integer bounds. Required GCC and Clang
 lanes run `-O0`, `-O2`, and eligible UBSan builds and reject an out-of-line
 helper in optimized assembly. See [UB-safe primitive
 arithmetic](arithmetic-semantics.md).
+
+`test/span_lowering` is the focused positive/negative/snapshot/runtime suite for
+E2.T08. It admits typed nonempty `CArray` literals, mutable and const local span
+borrows, direct indexing, and exact typed span `for` iteration. Repeated and
+reversed renders cover both profiles and all three build modes; checked,
+static-proof, and loop-guarded bounds policies remain visible in HxcIR. The
+suite executes in-range behavior at O0/O2, executes both negative and upper
+out-of-range fail-stop paths in the six-way configuration matrix, rejects
+general/empty arrays and lookalike intrinsic names without output, validates the
+profile-aware `hxc_build` diagnostic, and inspects runtime-none links for zero
+`hxrt` symbols. See [fixed arrays and span-based iteration](span-lowering.md).
 
 ## Examples are product proofs, not implicit tests
 

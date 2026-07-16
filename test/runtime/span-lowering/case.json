@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "fixed-array-span-lowering-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-007",
+    "HXC-MAC-001"
+  ],
+  "sources": [
+    "test/span_lowering/expected/program.h",
+    "test/span_lowering/expected/program.c",
+    "test/span_lowering/expected/symbols.json",
+    "test/span_lowering/fixtures/SpanFixture.hx",
+    "test/span_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../span_lowering/run.py"
+    ],
+    "workingDirectory": "test/runtime/span-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "strict C11, and zero-hxrt links passed$"
+    },
+    "runtimePlan": {
+      "policy": "none",
+      "features": []
+    },
+    "artifacts": [
+      {
+        "path": "test/span_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

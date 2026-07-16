@@ -34,7 +34,8 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
-        "arithmetic-semantics"
+        "arithmetic-semantics",
+        "span-lowering"
       ]
     },
     {
@@ -57,7 +58,8 @@
         "project-emitter",
         "hxc-ir",
         "body-lowering",
-        "function-lowering"
+        "function-lowering",
+        "span-lowering"
       ]
     },
     {
@@ -100,7 +102,8 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
-        "arithmetic-semantics"
+        "arithmetic-semantics",
+        "span-lowering"
       ]
     },
     {
@@ -118,7 +121,8 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
-        "arithmetic-semantics"
+        "arithmetic-semantics",
+        "span-lowering"
       ]
     },
     {
@@ -459,6 +463,27 @@
       ]
     },
     {
+      "id": "span-lowering",
+      "directory": "test/span_lowering",
+      "runner": [
+        "python3",
+        "test/span_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "typed nonempty CArray literals lower to structural C arrays and Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects",
+        "compile-time and loop-guarded bounds proofs remain explicit in HxcIR while dynamic indexing emits a signed and size_t fail-stop check in every profile and build mode",
+        "span iteration is an element-scaled guarded index loop whose increment is proven free of signed overflow and whose generated C is byte-identical across profile and build mode",
+        "portable and metal runtime-none projects compile and execute as strict C11 under required GCC and Clang lanes with no hxrt artifact, include, library, or symbol"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -610,6 +635,18 @@
         "id": "arithmetic-semantics",
         "expectedRoots": [
           "test/arithmetic_semantics/expected"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "span-lowering",
+        "expectedRoots": [
+          "test/span_lowering/expected"
         ],
         "formats": [
           "c",

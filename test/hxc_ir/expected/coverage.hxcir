@@ -18,9 +18,16 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
     parameter "value.float-input" type=f64 @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     parameter "value.size" type=abi-int(size) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     parameter "value.nullable-reference" type=nullable(pointer,instance("instance.object")) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
+    local "local.fixed" type=fixed-array(length=2,witness="coverage.Length2",element=i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.owned" type=pointer(nonnull,instance("instance.object")) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
+    local "local.span" type=span(const,i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-39:2
       instruction "c00.one" result="value.one":i32 constant value=int(1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.fixed" result=- initialize-fixed-array place=local("local.fixed") values=["value.one","value.one"] transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.span" result=- initialize-span place=local("local.span") source=local("local.fixed") transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.bounds-static" result=- bounds-check collection=local("local.span") index="value.one" policy=static-proof(length=2,index=1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.span-load" result="value.span-one":i32 load place=index(local("local.span"),"value.one") @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.bounds-checked" result=- bounds-check collection=local("local.span") index="value.argument" policy=checked-abort(profile="portable",build="debug") @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c01.convert" result="value.float":f64 convert value="value.one" kind=numeric-exact target=f64 implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.saturating" result="value.saturated":i32 convert value="value.float-input" kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.checked" result="value.checked-i8":i8 convert value="value.argument" kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2

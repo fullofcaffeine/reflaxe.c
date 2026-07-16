@@ -43,7 +43,8 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Dynamic, Dynamic, Dyn
 	override public function onCompileStart():Void {
 		// Every compilation gets fresh mutable state. Never cache a context across
 		// compiler-server requests.
-		compilationContext = new CompilationContext(ProfileResolver.resolve());
+		final profile = ProfileResolver.resolve();
+		compilationContext = new CompilationContext(profile, BuildModeResolver.resolve(profile));
 		generatedFiles = [];
 		currentProgram = pendingProgram;
 		pendingProgram = null;

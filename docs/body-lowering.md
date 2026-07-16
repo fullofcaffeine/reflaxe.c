@@ -8,7 +8,9 @@ multi-block sequencing for assignments, primitive static fields, lazy Boolean
 operators, value conditionals, and unsigned increments. E2.T05 adds typed
 UB-safe primitive operators, compound updates, signed updates, and `Std.int`.
 E2.T06 adds statement conditionals, loops, primitive switches, and explicit
-loop jumps without changing the runtime-free compiler-first boundary.
+loop jumps without changing the runtime-free compiler-first boundary. E2.T08
+adds nonempty literal-backed `c.CArray` locals, borrowed `Span`/`ConstSpan`
+views, checked indexing, and direct span iteration.
 This document remains the contract for individual body semantics; [static function
 lowering](function-lowering.md) owns graph, prototype, call, and
 executable-entry behavior, while [evaluation order](evaluation-order.md) owns
@@ -41,6 +43,9 @@ the stable-value and control-flow proof.
   decrement through explicit load/operation/store;
 - `Std.int(Float)` through the defined saturating/truncating primitive
   conversion;
+- nonempty primitive array literals assigned directly to `c.CArray<T, N>`,
+  local mutable/const span borrows, checked element reads/writes, and `for`
+  iteration over those views through explicit guarded HxcIR blocks;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
@@ -64,10 +69,10 @@ return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Default/optional/rest parameters, indirect calls, collection/iterator `for`
-lowering, pattern/enum/string/Float switches, source array/index lowering,
-instance objects/fields, strings, closures, allocation, exceptions, and cleanup
-remain outside this slice. The first
+Default/optional/rest parameters, indirect calls, arbitrary collection/iterator
+lowering, general Haxe arrays, escaping spans, pattern/enum/string/Float
+switches, instance objects/fields, strings, closures, allocation, exceptions,
+and cleanup remain outside this slice. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 Source that remains after a terminating return or loop jump receives the same
@@ -89,6 +94,13 @@ output with typed `#line` statement/declaration nodes. It never interpolates a
 raw directive. Both forms are strict C11 and use only the required standard
 headers. Selected arithmetic helpers may add `<math.h>` or `<stdint.h>`, and
 floating modulo adds the exact `m` build fact.
+
+Fixed arrays use structural C array declarators. Span borrows use typed pointers
+plus `size_t` element counts, and array access uses structural subscripting.
+Static and loop-dominance proofs remove only redundant checks; all other
+admitted indexes retain an explicit negative/upper-bound fail-stop check. See
+[fixed arrays and span-based iteration](span-lowering.md) for the complete
+profile/build matrix and overflow/lifetime proof.
 
 Every local/global load first becomes a typed stable-value temporary; an unused
 read then becomes an explicit `(void)temporary` statement so source order is
@@ -122,6 +134,7 @@ Run:
 npm run test:body-lowering
 npm run test:evaluation-order
 npm run test:arithmetic-semantics
+npm run test:span-lowering
 npm run snapshots:check
 ```
 

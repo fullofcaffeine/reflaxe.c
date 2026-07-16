@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "fixed-array-span-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-007",
+    "HXC-MAC-001"
+  ],
+  "sources": [
+    "std/c/CArray.hx",
+    "std/c/Span.hx",
+    "std/c/ConstSpan.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/span_lowering/fixtures/SpanFixture.hx",
+    "test/span_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../span_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/span-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^span-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/span_lowering/expected/span.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/span_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

@@ -121,6 +121,12 @@ class HxcIRDumper {
 			case IRIOTrace(place, selected): 'trace place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIOInitialize(place, valueId, from, to):
 				'initialize place=${renderPlace(place)} value=${quote(valueId)} transition=${state(from)}->${state(to)}';
+			case IRIOInitializeFixedArray(place, values, from, to):
+				'initialize-fixed-array place=${renderPlace(place)} values=${strings(values)} transition=${state(from)}->${state(to)}';
+			case IRIOInitializeSpan(place, sourceArray, from, to):
+				'initialize-span place=${renderPlace(place)} source=${renderPlace(sourceArray)} transition=${state(from)}->${state(to)}';
+			case IRIOBoundsCheck(collection, indexValueId, policy):
+				'bounds-check collection=${renderPlace(collection)} index=${quote(indexValueId)} policy=${boundsPolicy(policy)}';
 			case IRIOLifetime(place, from, to, reason):
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
@@ -203,7 +209,19 @@ class HxcIRDumper {
 			case IRTPointer(pointee, nullable): 'pointer(${nullable ? "nullable" : "nonnull"},${typeRef(pointee)})';
 			case IRTNullable(inner, representation): 'nullable(${nullableRepresentation(representation)},${typeRef(inner)})';
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeRef).join(",")})->${typeRef(result)}';
+			case IRTFixedArray(element, length, witnessId):
+				'fixed-array(length=$length,witness=${quote(witnessId)},element=${typeRef(element)})';
+			case IRTSpan(element, mutable): 'span(${mutable ? "mutable" : "const"},${typeRef(element)})';
 			case IRTDynamic: "dynamic";
+		}
+	}
+
+	function boundsPolicy(value:HxcIRBoundsPolicy):String {
+		return switch value {
+			case IRBPCheckedAbort(profile, buildMode): 'checked-abort(profile=${quote(profile)},build=${quote(buildMode)})';
+			case IRBPStaticProof(length, index): 'static-proof(length=$length,index=$index)';
+			case IRBPLoopGuarded(guardInstructionId, indexLocalId, length):
+				'loop-guarded(guard=${quote(guardInstructionId)},index-local=${quote(indexLocalId)},length=$length)';
 		}
 	}
 

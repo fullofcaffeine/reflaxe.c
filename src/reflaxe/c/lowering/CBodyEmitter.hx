@@ -12,7 +12,7 @@ class CBodyEmitter {
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
-			?nonReturningFunctionIds:Map<String, Bool>):CStmt {
+			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier):CStmt {
 		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
 			fail('body lowering requires a cleanup-free entry-first block graph in `${fn.id}`');
 		}
@@ -20,6 +20,8 @@ class CBodyEmitter {
 		final declared:Map<String, Bool> = [];
 		final referencedValues = referencedValueIds(fn);
 		final referencedLocals = referencedLocalIds(fn);
+		final referencedSpanLengths = referencedSpanLengthIds(fn);
+		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
 		final statements:Array<CStmt> = [];
 		var terminatedByTailLoop = false;
 		for (parameter in fn.parameters) {
@@ -42,16 +44,28 @@ class CBodyEmitter {
 						final result = requireResult(instruction, fn.id);
 						values.set(result.id, constantExpression(value));
 					case IRIOLoad(place):
-						emitLoad(statements, values, referencedValues, instruction, placeExpression(place, localNames, globalNames, fn.id), temporaryNames,
-							lineDirectives, fn.id);
+						emitLoad(statements, values, referencedValues, instruction,
+							placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values), temporaryNames, lineDirectives, fn.id);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
+					case IRIOInitializeFixedArray(IRPLocal(localId), valueIds, IRISUninitialized, IRISInitialized):
+						emitFixedArrayInitialize(statements, values, declared, referencedLocals, instruction, localId, valueIds, fn, localNames,
+							lineDirectives);
+					case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
+						emitSpanInitialize(statements, declared, referencedLocals, referencedSpanLengths, instruction, localId, sourceArray, fn, localNames,
+							resolvedSpanLengthNames, globalNames, lineDirectives);
+					case IRIOBoundsCheck(collection, indexValueId, IRBPCheckedAbort(_, _)):
+						emitBoundsCheck(statements, values, instruction, collection, indexValueId, fn, localNames, globalNames, resolvedSpanLengthNames,
+							boundsAbortName, lineDirectives);
+					case IRIOBoundsCheck(_, _, IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _)):
+						// The semantic proof remains reviewable in HxcIR; no redundant C check survives.
 					case IRIOStore(place, valueId):
 						if (instruction.result != null) {
 							fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
 						}
 						addLineDirective(statements, instruction.source, lineDirectives);
-						statements.push(SExpr(EBinary(Assign, placeExpression(place, localNames, globalNames, fn.id), requireValue(values, valueId, fn.id))));
+						statements.push(SExpr(EBinary(Assign, placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values),
+							requireValue(values, valueId, fn.id))));
 					case IRIOUnary(operationId, valueId, implementation):
 						final result = requireResult(instruction, fn.id);
 						final expression = operationExpression(operationId, implementation, [requireValue(values, valueId, fn.id)], helperNames,
@@ -134,6 +148,12 @@ class CBodyEmitter {
 				switch instruction.kind {
 					case IRIOStore(_, valueId) | IRIOInitialize(_, valueId, _, _) | IRIOConvert(valueId, _, _, _, _):
 						referenced.set(valueId, true);
+					case IRIOInitializeFixedArray(_, valueIds, _, _):
+						for (valueId in valueIds) {
+							referenced.set(valueId, true);
+						}
+					case IRIOBoundsCheck(_, indexValueId, _):
+						referenced.set(indexValueId, true);
 					case IRIOUnary(_, valueId, _):
 						referenced.set(valueId, true);
 					case IRIOBinary(_, leftValueId, rightValueId, _):
@@ -166,8 +186,38 @@ class CBodyEmitter {
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
-					case IRIOLoad(IRPLocal(localId)) | IRIOStore(IRPLocal(localId), _) | IRIOAddress(IRPLocal(localId)):
-						referenced.set(localId, true);
+					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBoundsCheck(place, _, _):
+						markReferencedLocals(place, referenced);
+					case IRIOInitializeSpan(place, sourceArray, _, _):
+						markReferencedLocals(place, referenced);
+						markReferencedLocals(sourceArray, referenced);
+					case _:
+				}
+			}
+		}
+		return referenced;
+	}
+
+	static function markReferencedLocals(place:HxcIRPlace, referenced:Map<String, Bool>):Void {
+		switch place {
+			case IRPLocal(localId):
+				referenced.set(localId, true);
+			case IRPField(base, _) | IRPIndex(base, _):
+				markReferencedLocals(base, referenced);
+			case IRPGlobal(_) | IRPDereference(_):
+		}
+	}
+
+	static function referencedSpanLengthIds(fn:HxcIRFunction):Map<String, Bool> {
+		final referenced:Map<String, Bool> = [];
+		for (block in fn.blocks) {
+			for (instruction in block.instructions) {
+				switch instruction.kind {
+					case IRIOBoundsCheck(IRPLocal(localId), _, IRBPCheckedAbort(_, _)):
+						switch requireLocal(fn, localId).type {
+							case IRTSpan(_, _): referenced.set(localId, true);
+							case _:
+						}
 					case _:
 				}
 			}
@@ -225,6 +275,95 @@ class CBodyEmitter {
 		}
 	}
 
+	function emitFixedArrayInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+			instruction:HxcIRInstruction, localId:String, valueIds:Array<String>, fn:HxcIRFunction, localNames:Map<String, CIdentifier>,
+			lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId)) {
+			fail('fixed-array initializer `${instruction.id}` in `${fn.id}` has invalid declaration state');
+		}
+		final local = requireLocal(fn, localId);
+		final fixed = switch local.type {
+			case IRTFixedArray(element, length, _): {element: element, length: length};
+			case _: return fail('fixed-array initializer `${instruction.id}` in `${fn.id}` targets a non-array local');
+		};
+		if (valueIds.length != fixed.length) {
+			fail('fixed-array initializer `${instruction.id}` in `${fn.id}` lost its validated element count');
+		}
+		final name = requireLocalName(localNames, localId, fn.id);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(fixed.element),
+			declarator: DArray(DName(name), ABFixed(EInt(CIntegerLiteral.decimal(Std.string(fixed.length)))), []),
+			initializer: IList(valueIds.map(valueId -> {
+				designators: [],
+				value: IExpr(requireValue(values, valueId, fn.id))
+			})),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(name))));
+		}
+	}
+
+	function emitSpanInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+			referencedSpanLengths:Map<String, Bool>, instruction:HxcIRInstruction, localId:String, sourceArray:HxcIRPlace, fn:HxcIRFunction,
+			localNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId)) {
+			fail('span initializer `${instruction.id}` in `${fn.id}` has invalid declaration state');
+		}
+		final local = requireLocal(fn, localId);
+		final span = switch local.type {
+			case IRTSpan(element, mutable): {element: element, mutable: mutable};
+			case _: return fail('span initializer `${instruction.id}` in `${fn.id}` targets a non-span local');
+		};
+		final name = requireLocalName(localNames, localId, fn.id);
+		final lengthName = requireSpanLengthName(spanLengthNames, localId, fn.id);
+		final sourceExpression = placeExpression(sourceArray, fn, localNames, globalNames, spanLengthNames);
+		final sourceLength = collectionLengthExpression(sourceArray, fn, localNames, globalNames, spanLengthNames);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: span.mutable ? cType(span.element) : constType(span.element),
+			declarator: DPointer(DName(name), []),
+			initializer: IExpr(sourceExpression),
+			attributes: []
+		}));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TSizeT),
+			declarator: DName(lengthName),
+			initializer: IExpr(sourceLength),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(name))));
+		}
+		if (!referencedSpanLengths.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(lengthName))));
+		}
+	}
+
+	function emitBoundsCheck(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, collection:HxcIRPlace, indexValueId:String,
+			fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>,
+			boundsAbortName:Null<CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null) {
+			fail('bounds check `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+		}
+		final abortName:CIdentifier = requireBoundsAbortName(boundsAbortName, instruction.id, fn.id);
+		final index = requireValue(values, indexValueId, fn.id);
+		final negative = EBinary(Less, index, EInt(CIntegerLiteral.decimal("0")));
+		final outOfRange = EBinary(GreaterEqual, ECast(new CType(TSizeT), DName(null), index),
+			collectionLengthExpression(collection, fn, localNames, globalNames, spanLengthNames));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SIf(EBinary(LogicalOr, negative, outOfRange), SExpr(ECall(EIdentifier(abortName), [])), null));
+	}
+
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
 			functionId:String):Void {
 		switch terminator.kind {
@@ -270,12 +409,45 @@ class CBodyEmitter {
 		}
 	}
 
-	static function placeExpression(place:HxcIRPlace, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, functionId:String):CExpr {
+	static function placeExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			spanLengthNames:Map<String, CIdentifier>, ?values:Map<String, CExpr>):CExpr {
 		return switch place {
-			case IRPLocal(localId): EIdentifier(requireLocalName(localNames, localId, functionId));
-			case IRPGlobal(globalId): EIdentifier(requireGlobalName(globalNames, globalId, functionId));
-			case _: fail('function `$functionId` uses a place outside the admitted local/static sequencing subset');
+			case IRPLocal(localId): EIdentifier(requireLocalName(localNames, localId, fn.id));
+			case IRPGlobal(globalId): EIdentifier(requireGlobalName(globalNames, globalId, fn.id));
+			case IRPIndex(base, indexValueId):
+				if (values == null) {
+					return fail('function `${fn.id}` attempted to emit unresolved collection index `$indexValueId`');
+				}
+				final indexExpression = ECast(new CType(TSizeT), DName(null), requireValue(values, indexValueId, fn.id));
+				EIndex(placeExpression(base, fn, localNames, globalNames, spanLengthNames, values), indexExpression);
+			case _: fail('function `${fn.id}` uses a place outside the admitted local/static/index sequencing subset');
 		};
+	}
+
+	static function collectionLengthExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			spanLengthNames:Map<String, CIdentifier>):CExpr {
+		return switch place {
+			case IRPLocal(localId):
+				final local = requireLocal(fn, localId);
+				switch local.type {
+					case IRTFixedArray(_, _, _):
+						final array = EIdentifier(requireLocalName(localNames, localId, fn.id));
+						EBinary(Divide, EUnary(SizeOfExpr, array), EUnary(SizeOfExpr, EIndex(array, EInt(CIntegerLiteral.decimal("0")))));
+					case IRTSpan(_, _): EIdentifier(requireSpanLengthName(spanLengthNames, localId, fn.id));
+					case _: fail('function `${fn.id}` requested a length for non-collection local `$localId`');
+				}
+			case IRPGlobal(globalId):
+				fail('function `${fn.id}` does not yet admit fixed-array/span global `$globalId`');
+			case _:
+				fail('function `${fn.id}` requested a collection length from a non-root place');
+		};
+	}
+
+	function constType(type:HxcIRTypeRef):CType {
+		final base = cType(type);
+		final qualifiers = base.qualifiers.copy();
+		qualifiers.push(QConst);
+		return new CType(base.spec, qualifiers);
 	}
 
 	function recordPureResult(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
@@ -316,6 +488,8 @@ class CBodyEmitter {
 		final left = operands[0];
 		final right = operands[1];
 		return switch operationId {
+			case "hxc.size.add-one.span-index-proven": EBinary(Add, left, right);
+			case "hxc.size.less.span-index": EBinary(Less, left, right);
 			case "haxe.u32.add": widenedUInt32Binary(Add, left, right);
 			case "haxe.u32.subtract": widenedUInt32Binary(Subtract, left, right);
 			case "haxe.u32.multiply": widenedUInt32Binary(Multiply, left, right);
@@ -372,6 +546,7 @@ class CBodyEmitter {
 			case IRTVoid: new CType(TVoid);
 			case IRTBool: new CType(TBool);
 			case IRTInt(width, signed): new CType(TInt(width, signed));
+			case IRTAbiInteger(IRAKSize): new CType(TSizeT);
 			case IRTFloat(64): new CType(TDouble);
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted primitive C body subset');
@@ -406,6 +581,12 @@ class CBodyEmitter {
 				if (instruction.result != null) {
 					addTypeHeaders(headers, instruction.result.type);
 				}
+				switch instruction.kind {
+					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
+						addUnique(headers, "stddef.h");
+						addUnique(headers, "stdlib.h");
+					case _:
+				}
 			}
 		}
 		headers.sort(compareUtf8);
@@ -430,6 +611,13 @@ class CBodyEmitter {
 				addUnique(headers, "stdbool.h");
 			case IRTInt(_, _):
 				addUnique(headers, "stdint.h");
+			case IRTAbiInteger(IRAKSize):
+				addUnique(headers, "stddef.h");
+			case IRTFixedArray(element, _, _):
+				addTypeHeaders(headers, element);
+			case IRTSpan(element, _):
+				addTypeHeaders(headers, element);
+				addUnique(headers, "stddef.h");
 			case IRTVoid | IRTFloat(64):
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C body header mapping');
@@ -605,6 +793,21 @@ class CBodyEmitter {
 		return name;
 	}
 
+	static function requireSpanLengthName(spanLengthNames:Map<String, CIdentifier>, localId:String, functionId:String):CIdentifier {
+		final name = spanLengthNames.get(localId);
+		if (name == null) {
+			throw new CBodyEmissionError('function `$functionId` has no finalized C length name for span local `$localId`');
+		}
+		return name;
+	}
+
+	static function requireBoundsAbortName(name:Null<CIdentifier>, instructionId:String, functionId:String):CIdentifier {
+		if (name == null) {
+			throw new CBodyEmissionError('bounds check `$instructionId` in `$functionId` has no finalized C abort symbol');
+		}
+		return name;
+	}
+
 	static function requireGlobalName(globalNames:Map<String, CIdentifier>, globalId:String, functionId:String):CIdentifier {
 		final name = globalNames.get(globalId);
 		if (name == null) {
@@ -660,6 +863,8 @@ class CBodyEmitter {
 			case IRTPointer(_, nullable): 'pointer:${nullable ? "nullable" : "non-null"}';
 			case IRTNullable(_, representation): 'nullable:$representation';
 			case IRTFunction(_, _): "function";
+			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeKey(element)}>';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeKey(element)}>';
 			case IRTDynamic: "dynamic";
 		};
 	}

@@ -12,7 +12,8 @@ replacement Haxe compiler or a requirement imposed by Reflaxe.
 **Project status: M0 architecture scaffold with a primitive executable slice.**
 The complete target-owned Haxe source graph type-checks. Typed primitive static
 functions, arguments, conversions, calls, assignments, static fields, lazy and
-value-conditional expressions, and unsigned increments now pass through
+value/statement control flow, UB-safe arithmetic, local fixed arrays, checked
+span access, and direct span iteration now pass through
 explicitly sequenced validated HxcIR and emit an owned runtime-free strict-C11
 project with a private header and `int main(void)`. This is not general Haxe or
 standard-library support; every broader compiler path still fails closed
@@ -48,6 +49,7 @@ Runtime policy and target environment remain independent of that profile:
 -D hxc_runtime=auto|minimal|none
 -D hxc_runtime_diagnostics=off|summary|warn
 -D hxc_environment=hosted|freestanding|wasi|emscripten
+-D hxc_build=debug|release|minsizerel
 ```
 
 Direct idiomatic C is the first lowering choice in both profiles. The compiler
@@ -123,7 +125,10 @@ all prototypes before definitions, preserves ordered arguments with explicit
 temporaries, partitions compiler-proven closed recursion warning-cleanly, and
 packages the production primitive executable project. [Explicit evaluation
 order](docs/evaluation-order.md) documents the stable-value proof and Eval/C
-differential boundary.
+differential boundary. [Fixed arrays and span-based
+iteration](docs/span-lowering.md) documents the nonempty literal-backed
+`CArray`, pointer-and-length view, explicit bounds-policy, and zero-iterator
+lowering slice.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI
@@ -247,6 +252,9 @@ The current checkout contains:
 - explicit calls, assignments, primitive static fields, short circuit,
   value-form ternaries, and `UInt` increments with a stable-temporary proof and
   Eval-versus-generated-C differential execution at O0/O2;
+- typed nonempty fixed arrays, mutable/const local span borrows, explicit
+  static/loop/dynamic bounds policies, and direct element-scaled iteration with
+  six-way profile/build fail-stop evidence and no `hxrt` link symbols;
 - a structured C11 AST with deterministic declarator and exhaustive
   expression/statement precedence and escaping goldens, compiled and executed
   without `hxrt` by both GCC and Clang;
@@ -259,7 +267,8 @@ The current checkout contains:
 - a live Beads execution graph covering the planned milestones.
 
 It does **not** yet contain general Haxe-to-C semantic lowering, indirect or
-instance calls, general statement control flow/loops, source array lowering,
+instance calls, arbitrary collection/iterator lowering, general Haxe arrays,
+escaping span views,
 standard-library parity, a complete runtime, the `hxc` implementation,
 executable generated examples, or release tooling.
 The package metadata added at M0 is a reproducible development/package-layout
@@ -353,6 +362,7 @@ fail-closed.
 - [Primitive function-body lowering](docs/body-lowering.md)
 - [Static function and direct-call lowering](docs/function-lowering.md)
 - [Explicit Haxe evaluation order](docs/evaluation-order.md)
+- [Fixed arrays and span-based iteration](docs/span-lowering.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Deterministic C symbol naming](docs/symbol-naming.md)
 - [Fixture and snapshot policy](docs/testing.md)

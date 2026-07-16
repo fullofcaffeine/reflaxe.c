@@ -3,6 +3,11 @@ package reflaxe.c.ir;
 import haxe.io.Bytes;
 import reflaxe.c.ir.HxcIR;
 
+private typedef HxcIRInstructionSite = {
+	final instruction:HxcIRInstruction;
+	final block:HxcIRBlock;
+}
+
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
 	public function new() {}
@@ -205,6 +210,8 @@ private class HxcIRValidationState {
 
 		final blocks:Map<String, HxcIRBlock> = [];
 		final instructionIds:Map<String, Bool> = [];
+		final instructionSites:Map<String, HxcIRInstructionSite> = [];
+		final valueSites:Map<String, HxcIRInstructionSite> = [];
 		for (block in sorted(fn.blocks, item -> item.id)) {
 			final blockPath = '$path.block:${block.id}';
 			validateStableId(block.id, '$blockPath.id', block.source);
@@ -227,11 +234,15 @@ private class HxcIRValidationState {
 					add(instructionPath, 'duplicate instruction ID `${instruction.id}`', instruction.source);
 				} else {
 					instructionIds.set(instruction.id, true);
+					instructionSites.set(instruction.id, {instruction: instruction, block: block});
 				}
 				if (instruction.result != null) {
 					validateStableId(instruction.result.id, '$instructionPath.result.id', instruction.source);
 					validateTypeRef(instruction.result.type, '$instructionPath.result.type', instruction.source, false);
 					indexValue(values, instruction.result.id, instruction.result.type, '$instructionPath.result', instruction.source);
+					if (!valueSites.exists(instruction.result.id)) {
+						valueSites.set(instruction.result.id, {instruction: instruction, block: block});
+					}
 				}
 			}
 		}
@@ -261,7 +272,7 @@ private class HxcIRValidationState {
 		}
 
 		for (block in sorted(fn.blocks, item -> item.id)) {
-			validateBlock(fn, block, '$path.block:${block.id}', locals, blocks, regions);
+			validateBlock(fn, block, '$path.block:${block.id}', locals, blocks, regions, instructionSites, valueSites);
 		}
 	}
 
@@ -329,7 +340,7 @@ private class HxcIRValidationState {
 	}
 
 	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>,
-			regions:Map<String, HxcIRCleanupRegion>):Void {
+			regions:Map<String, HxcIRCleanupRegion>, instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>):Void {
 		final available:Map<String, HxcIRTypeRef> = [];
 		for (parameter in fn.parameters) {
 			available.set(parameter.id, parameter.type);
@@ -338,9 +349,10 @@ private class HxcIRValidationState {
 			available.set(parameter.id, parameter.type);
 		}
 
+		final boundsProofs:Map<String, Bool> = [];
 		for (index => instruction in block.instructions) {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
-			validateInstruction(instruction, instructionPath, available, locals, blocks, regions);
+			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
 			}
@@ -354,8 +366,9 @@ private class HxcIRValidationState {
 		validateTerminator(fn, block.terminator.kind, '$path.terminator', block.terminator.source, available, blocks, regions);
 	}
 
-	function validateInstruction(instruction:HxcIRInstruction, path:String, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>,
-			blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>):Void {
+	function validateInstruction(instruction:HxcIRInstruction, path:String, block:HxcIRBlock, available:Map<String, HxcIRTypeRef>,
+			locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>,
+			instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>, boundsProofs:Map<String, Bool>):Void {
 		final resultExpected = instructionProducesValue(instruction.kind);
 		if (resultExpected && instruction.result == null) {
 			add(path, "value-producing instruction has no result", instruction.source);
@@ -373,13 +386,18 @@ private class HxcIRValidationState {
 				}
 			case IRIOLoad(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final loadedType = knownPlaceType(place, available, locals);
 				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
 					add(path, "load result type does not match its place type", instruction.source);
 				}
 			case IRIOAddress(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final addressedType = knownPlaceType(place, available, locals);
+				if (isRootPlace(place) && addressedType != null && isCollectionType(addressedType)) {
+					add(path, "taking the address of fixed-array/span storage is outside the admitted bounds-proof model", instruction.source);
+				}
 				if (instruction.result != null && addressedType != null) {
 					switch instruction.result.type {
 						case IRTPointer(pointee, false) if (typeKey(pointee) == typeKey(addressedType)):
@@ -389,8 +407,12 @@ private class HxcIRValidationState {
 				}
 			case IRIOStore(place, valueId):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final storedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final storePlaceType = knownPlaceType(place, available, locals);
+				if (isRootPlace(place) && storePlaceType != null && isCollectionType(storePlaceType)) {
+					add(path, "whole fixed-array/span assignment is outside the admitted bounds-proof model", instruction.source);
+				}
 				if (storedType != null && storePlaceType != null && typeKey(storedType) != typeKey(storePlaceType)) {
 					add(path, "stored value type does not match its place type", instruction.source);
 				}
@@ -471,6 +493,60 @@ private class HxcIRValidationState {
 				if (to != IRISInitialized) {
 					add(path, "initialize instruction must end in initialized state", instruction.source);
 				}
+			case IRIOInitializeFixedArray(place, values, from, to):
+				validatePlace(place, '$path.place', instruction.source, available, locals);
+				final arrayType = knownPlaceType(place, available, locals);
+				switch arrayType {
+					case IRTFixedArray(element, length, _):
+						if (values.length != length) {
+							add(path, 'fixed-array initializer provides ${values.length} values for length $length', instruction.source);
+						}
+						for (index => valueId in values) {
+							final valueType = requireValue(valueId, '$path.value:$index', instruction.source, available);
+							if (valueType != null && typeKey(valueType) != typeKey(element)) {
+								add(path, 'fixed-array initializer value $index does not match the element type', instruction.source);
+							}
+						}
+					case _:
+						add(path, "fixed-array initialization requires a fixed-array place", instruction.source);
+				}
+				validateInitializeTransition(from, to, path, instruction.source);
+			case IRIOInitializeSpan(place, sourceArray, from, to):
+				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(sourceArray, '$path.sourceArray', instruction.source, available, locals);
+				final spanType = knownPlaceType(place, available, locals);
+				final sourceType = knownPlaceType(sourceArray, available, locals);
+				switch [spanType, sourceType] {
+					case [IRTSpan(spanElement, _), IRTFixedArray(arrayElement, _, _)] if (typeKey(spanElement) == typeKey(arrayElement)):
+					case [IRTSpan(_, _), IRTFixedArray(_, _, _)]:
+						add(path, "span element type does not match its fixed-array source", instruction.source);
+					case _:
+						add(path, "span initialization requires a span place and fixed-array source", instruction.source);
+				}
+				validateInitializeTransition(from, to, path, instruction.source);
+			case IRIOBoundsCheck(collection, indexValueId, policy):
+				validatePlace(collection, '$path.collection', instruction.source, available, locals);
+				switch knownPlaceType(collection, available, locals) {
+					case IRTFixedArray(_, _, _) | IRTSpan(_, _):
+					case _:
+						add(path, "bounds check requires a fixed array or span", instruction.source);
+				}
+				final indexType = requireValue(indexValueId, '$path.index', instruction.source, available);
+				final expectedIndexType = switch policy {
+					case IRBPLoopGuarded(_, _, _): "abi:size";
+					case IRBPCheckedAbort(_, _) | IRBPStaticProof(_, _): "i32";
+				};
+				if (indexType != null && typeKey(indexType) != expectedIndexType) {
+					add(path,
+						expectedIndexType == "abi:size" ? "compiler span-loop index must have size_t representation" : "safe source index must have Haxe Int representation",
+						instruction.source);
+				}
+				validateBoundsPolicy(policy, '$path.policy', instruction.source, collection, indexValueId, instruction.id, block, locals, instructionSites,
+					valueSites);
+				final proofKey = collectionProofKey(collection, indexValueId);
+				if (proofKey != null) {
+					boundsProofs.set(proofKey, true);
+				}
 			case IRIOLifetime(place, from, to, reason):
 				validatePlace(place, '$path.place', instruction.source, available, locals);
 				validateTransition(from, to, '$path.transition', instruction.source);
@@ -486,7 +562,7 @@ private class HxcIRValidationState {
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIOInitialize(_, _, _, _) |
-				IRIOLifetime(_, _, _, _):
+				IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
@@ -710,7 +786,10 @@ private class HxcIRValidationState {
 				validateStableId(fieldName, '$path.field', source);
 			case IRPIndex(base, indexValueId):
 				validatePlace(base, '$path.base', source, available, locals);
-				requireValue(indexValueId, '$path.index', source, available);
+				final indexType = requireValue(indexValueId, '$path.index', source, available);
+				if (indexType != null && !isInteger(indexType)) {
+					add(path, "index place requires an integer value", source);
+				}
 		}
 	}
 
@@ -727,8 +806,13 @@ private class HxcIRValidationState {
 					case IRTPointer(pointee, _): pointee;
 					case _: null;
 				}
-			case IRPField(_, _) | IRPIndex(_, _):
+			case IRPField(_, _):
 				null;
+			case IRPIndex(base, _):
+				switch knownPlaceType(base, available, locals) {
+					case IRTFixedArray(element, _, _) | IRTSpan(element, _): element;
+					case _: null;
+				}
 		};
 	}
 
@@ -872,6 +956,184 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function validateInitializeTransition(from:HxcIRInitializationState, to:HxcIRInitializationState, path:String, source:HxcSourceSpan):Void {
+		validateTransition(from, to, '$path.transition', source);
+		if (to != IRISInitialized) {
+			add(path, "initialize instruction must end in initialized state", source);
+		}
+	}
+
+	function validateCollectionAccessProof(place:HxcIRPlace, boundsProofs:Map<String, Bool>, path:String, source:HxcSourceSpan,
+			available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>):Void {
+		switch place {
+			case IRPIndex(base, indexValueId):
+				switch knownPlaceType(base, available, locals) {
+					case IRTFixedArray(_, _, _) | IRTSpan(_, _):
+						final key = collectionProofKey(base, indexValueId);
+						if (key == null || !boundsProofs.exists(key)) {
+							add(path, "fixed-array/span access requires a preceding bounds policy for the same collection and index", source);
+						}
+					case _:
+				}
+				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals);
+			case IRPField(base, _):
+				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals);
+			case IRPLocal(_) | IRPGlobal(_) | IRPDereference(_):
+		}
+	}
+
+	static function collectionProofKey(collection:HxcIRPlace, indexValueId:String):Null<String> {
+		return switch collection {
+			case IRPLocal(localId): 'local:$localId\x00$indexValueId';
+			case IRPGlobal(globalId): 'global:$globalId\x00$indexValueId';
+			case _: null;
+		};
+	}
+
+	function validateBoundsPolicy(policy:HxcIRBoundsPolicy, path:String, source:HxcSourceSpan, collection:HxcIRPlace, indexValueId:String,
+			boundsInstructionId:String, currentBlock:HxcIRBlock, locals:Map<String, HxcIRLocal>, instructionSites:Map<String, HxcIRInstructionSite>,
+			valueSites:Map<String, HxcIRInstructionSite>):Void {
+		final knownLength = knownCollectionLength(collection, locals, instructionSites);
+		switch policy {
+			case IRBPCheckedAbort(policyProfile, buildMode):
+				if (policyProfile != "portable" && policyProfile != "metal") {
+					add(path, 'bounds policy has unknown profile `$policyProfile`', source);
+				} else if (policyProfile != profile) {
+					add(path, 'bounds policy profile `$policyProfile` does not match validator profile `$profile`', source);
+				}
+				if (buildMode != "debug" && buildMode != "release" && buildMode != "minsizerel") {
+					add(path, 'bounds policy has unknown build mode `$buildMode`', source);
+				}
+			case IRBPStaticProof(length, index):
+				if (length <= 0 || index < 0 || index >= length) {
+					add(path, 'invalid static bounds proof for index $index and length $length', source);
+				}
+				if (knownLength == null) {
+					add(path, "static bounds proof cannot establish the collection's compiler-owned length", source);
+				} else if (knownLength != length) {
+					add(path, 'static bounds proof length $length does not match collection length $knownLength', source);
+				}
+				if (!isIntegerConstant(valueSites.get(indexValueId), index, currentBlock.id, "i32")) {
+					add(path, "static bounds proof index must be the exact in-block Haxe Int constant it claims", source);
+				}
+			case IRBPLoopGuarded(guardInstructionId, indexLocalId, length):
+				validateStableId(guardInstructionId, '$path.guardInstruction', source);
+				validateStableId(indexLocalId, '$path.indexLocal', source);
+				if (length <= 0) {
+					add(path, "loop-guarded bounds proof requires a positive length", source);
+				}
+				if (knownLength == null) {
+					add(path, "loop bounds proof cannot establish the collection's compiler-owned length", source);
+				} else if (knownLength != length) {
+					add(path, 'loop bounds length $length does not match collection length $knownLength', source);
+				}
+				final indexLocal = locals.get(indexLocalId);
+				if (indexLocal == null || typeKey(indexLocal.type) != "abi:size") {
+					add(path, "loop bounds proof index local must have size_t representation", source);
+				}
+				final guardSite = instructionSites.get(guardInstructionId);
+				if (guardSite == null) {
+					add(path, 'loop bounds proof refers to unknown guard instruction `$guardInstructionId`', source);
+				} else {
+					final guardResult = guardSite.instruction.result;
+					final shapeValid = switch guardSite.instruction.kind {
+						case IRIOBinary("hxc.size.less.span-index", leftValueId, rightValueId, IRIStatic): isLocalLoad(valueSites.get(leftValueId),
+								indexLocalId, guardSite.block.id,
+								"abi:size") && isIntegerConstant(valueSites.get(rightValueId), length, guardSite.block.id, "abi:size");
+						case _: false;
+					};
+					if (guardResult == null || typeKey(guardResult.type) != "bool" || !shapeValid) {
+						add(path, "loop bounds proof guard must be the exact static size_t index-local < length comparison", source);
+					} else {
+						final branchValid = guardSite.block.terminator != null && switch guardSite.block.terminator.kind {
+							case IRTBranch(conditionValueId, whenTrue, _): conditionValueId == guardResult.id && whenTrue.targetBlockId == currentBlock.id;
+							case _: false;
+						};
+						if (!branchValid) {
+							add(path, "loop bounds proof guard must branch directly to the checked body on true", source);
+						}
+					}
+				}
+				final indexSite = valueSites.get(indexValueId);
+				if (!isLocalLoad(indexSite, indexLocalId, currentBlock.id, "abi:size")
+					|| !immediatelyPrecedes(indexSite, boundsInstructionId, currentBlock)) {
+					add(path, "loop bounds proof index must immediately reload the guarded size_t local in the checked body", source);
+				}
+		}
+	}
+
+	static function knownCollectionLength(collection:HxcIRPlace, locals:Map<String, HxcIRLocal>, instructionSites:Map<String, HxcIRInstructionSite>):Null<Int> {
+		return switch collection {
+			case IRPLocal(localId):
+				final local = locals.get(localId);
+				if (local == null) {
+					null;
+				} else {
+					switch local.type {
+						case IRTFixedArray(_, length, _): length;
+						case IRTSpan(_, _):
+							var sourceLength:Null<Int> = null;
+							var initializerCount = 0;
+							for (site in instructionSites) {
+								switch site.instruction.kind {
+									case IRIOInitializeSpan(IRPLocal(targetId), IRPLocal(sourceId), _, _) if (targetId == localId):
+										initializerCount++;
+										final sourceLocal = locals.get(sourceId);
+										sourceLength = sourceLocal == null ? null : switch sourceLocal.type {
+											case IRTFixedArray(_, length, _): length;
+											case _: null;
+										};
+									case _:
+								}
+							}
+							initializerCount == 1 ? sourceLength : null;
+						case _: null;
+					}
+				}
+			case IRPGlobal(_) | IRPField(_, _) | IRPIndex(_, _) | IRPDereference(_): null;
+		};
+	}
+
+	static function immediatelyPrecedes(site:Null<HxcIRInstructionSite>, instructionId:String, block:HxcIRBlock):Bool {
+		if (site == null || site.block.id != block.id) {
+			return false;
+		}
+		for (index in 1...block.instructions.length) {
+			if (block.instructions[index - 1].id == site.instruction.id && block.instructions[index].id == instructionId) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	static function isLocalLoad(site:Null<HxcIRInstructionSite>, localId:String, blockId:String, expectedType:String):Bool {
+		return site != null && site.block.id == blockId && switch site.instruction.kind {
+			case IRIOLoad(IRPLocal(loadedLocalId)): site.instruction.result != null && loadedLocalId == localId && typeKey(site.instruction.result.type) == expectedType;
+			case _: false;
+		};
+	}
+
+	static function isIntegerConstant(site:Null<HxcIRInstructionSite>, expected:Int, blockId:String, expectedType:String):Bool {
+		return site != null && site.block.id == blockId && switch site.instruction.kind {
+			case IRIOConstant(IRCInt(value)): site.instruction.result != null && typeKey(site.instruction.result.type) == expectedType && Std.parseInt(value) == expected;
+			case _: false;
+		};
+	}
+
+	static function isRootPlace(place:HxcIRPlace):Bool {
+		return switch place {
+			case IRPLocal(_) | IRPGlobal(_): true;
+			case IRPField(_, _) | IRPIndex(_, _) | IRPDereference(_): false;
+		};
+	}
+
+	static function isCollectionType(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTFixedArray(_, _, _) | IRTSpan(_, _): true;
+			case _: false;
+		};
+	}
+
 	function validateTypeRef(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, allowVoid:Bool):Void {
 		switch type {
 			case IRTBool | IRTDynamic:
@@ -924,6 +1186,24 @@ private class HxcIRValidationState {
 					validateTypeRef(parameter, '$path.parameter:$index', source, false);
 				}
 				validateTypeRef(result, '$path.result', source, true);
+			case IRTFixedArray(element, length, witnessId):
+				validateTypeRef(element, '$path.element', source, false);
+				if (length <= 0) {
+					add(path, "fixed-array length must be positive for strict C11", source);
+				}
+				validateStableId(witnessId, '$path.witness', source);
+				switch element {
+					case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_):
+					case _:
+						add(path, "the admitted fixed-array slice requires a direct scalar element", source);
+				}
+			case IRTSpan(element, _):
+				validateTypeRef(element, '$path.element', source, false);
+				switch element {
+					case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_):
+					case _:
+						add(path, "the admitted span slice requires a direct scalar element", source);
+				}
 		}
 	}
 
@@ -1025,6 +1305,8 @@ private class HxcIRValidationState {
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
 			case IRTNullable(inner, representation): 'nullable:${nullableRepresentationKey(representation)}<${typeKey(inner)}>';
 			case IRTFunction(parameters, result): 'function(${parameters.map(typeKey).join(",")})->${typeKey(result)}';
+			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeKey(element)}>';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeKey(element)}>';
 			case IRTDynamic: "dynamic";
 		}
 	}

@@ -9,8 +9,9 @@ narrow production C consumer. E2.T04 adds primitive global places plus explicit
 branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
 typed unary/binary operation IDs with direct or request-local implementation
 intent. E2.T06 consumes branch, jump, and switch terminators for the admitted
-primitive statement/value control-flow slice. All other frontend and C lowering
-remains explicitly gated.
+primitive statement/value control-flow slice. E2.T08 adds fixed-array/span type
+identity, ordered initialization, and explicit checked/proven bounds policies.
+All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
@@ -32,6 +33,9 @@ AST node. Exact-width integers retain width and signedness, while `size_t`,
 `ptrdiff_t`, `intptr_t`, and `uintptr_t` retain distinct unresolved target-ABI
 identities. Nullability records either a tagged scalar payload or a pointer
 representation rather than being inferred from the eventual C spelling.
+`IRTFixedArray` retains the element type, literal length, and phantom Haxe
+witness identity. `IRTSpan` retains element type and mutability without
+pretending a borrowed view is an owned aggregate or runtime object.
 
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
@@ -65,6 +69,11 @@ need to recover intent from target syntax.
 - constant families match their result types; for structurally resolvable
   places, loads match the place type, initialization/store values match their
   destination, and address results are pointers to the addressed type;
+- fixed-array initialization supplies exactly the declared number and element
+  type of values; span initialization borrows compatible fixed storage; index
+  places resolve to the collection element type; and every admitted collection
+  access has a preceding checked-abort, compile-time static, or compiler
+  loop-guard proof for the same collection and immutable index;
 - return terminators carry no value for `Void`, carry exactly one value for a
   non-`Void` function, and match the declared return type;
 - calls, conversions, allocation, deallocation, retain, and trace operations
@@ -94,8 +103,16 @@ selection, ownership proofs, runtime-feature finalization, or exception-
 strategy selection. For the admitted primitive slice, E2.T05 now consumes the
 implementation intent with UB-safe structural C and request-local helpers;
 E2.T06 consumes branch/jump/switch terminators for primitive statement and
-value control flow. Future operation and control-flow families still require
-their own proof.
+value control flow. E2.T08 consumes array/span initialization and bounds intent;
+a static proof retains its literal length/index, a loop proof names the guard,
+compiler index local, and exact length, and a dynamic policy records the
+resolved profile and build mode. The validator checks that the loop guard is an
+exact `size_t index < length` comparison whose true edge enters the checked body
+and that the body immediately reloads the same index local. Static proofs must
+name the exact in-block `Int` constant, and both static and loop proofs must tie
+their length to the fixed-array storage behind the local span. Whole-view
+assignment and taking a view's address remain outside this admitted proof model.
+Future operation and control-flow families still require their own proof.
 
 ## Runtime and profile policy
 
@@ -103,7 +120,8 @@ The IR has no unconditional runtime concept. `IRIStatic` is a direct semantic
 operation, `IRIProgramLocal` names a compilation-local specialized helper, and
 `IRIRuntime` names the exact requested feature. Runtime call dispatch likewise
 records a feature and operation. Merely constructing a type, calling a direct
-function, or using cleanup selects nothing from `hxrt`.
+function, initializing a fixed array/span, checking bounds, or using cleanup
+selects nothing from `hxrt`.
 
 Portable and metal share this IR. Later analyses decide whether a representation
 is legal under the resolved profile and runtime policy. The IR must preserve the
@@ -116,9 +134,10 @@ The body frontend calls
 `HxcIRDiagnostic.unsupportedTypedAstNode(profile, nodeKind, context, span)` and
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
-of an unsupported node. A fully admitted primitive static graph reaches
-validated HxcIR, structural C, and an owned runtime-free executable project;
-unimplemented signatures or expressions still stop without output. See
+of an unsupported node. A fully admitted primitive or local fixed-array/span
+static graph reaches validated HxcIR, structural C, and an owned runtime-free
+executable project; unimplemented signatures or expressions still stop without
+output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md).
 
@@ -161,8 +180,10 @@ test translation unit from real typed Haxe. The function-lowering suite extends
 that evidence to parameters, conversions, calls, recursive prototypes, and the
 production private header/source-set/entry project. The evaluation-order suite
 adds source-backed calls, assignments, static fields, short circuit, ternary,
-and increments, and deliberately reuses the representation-neutral indexed
-compound-assignment IR until E2.T08 owns source array lowering. The arithmetic
+and increments, and retains the representation-neutral general indexed
+compound-assignment IR. The span-lowering suite adds source-backed fixed-array
+and view initialization, checked/static/loop bounds policies, direct guarded
+iteration, and strict generated-C execution. The arithmetic
 suite adds source-backed operation/helper decisions, `Std.int`, boundary
 execution, and eligible UBSan. All select no runtime files or public C ABI and
 compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.

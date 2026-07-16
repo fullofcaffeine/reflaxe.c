@@ -39,7 +39,21 @@ enum HxcIRTypeRef {
 	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
 	IRTNullable(value:HxcIRTypeRef, representation:HxcIRNullableRepresentation);
 	IRTFunction(parameters:Array<HxcIRTypeRef>, result:HxcIRTypeRef);
+
+	/** Inline storage with a compiler-proven element count and phantom identity. */
+	IRTFixedArray(element:HxcIRTypeRef, length:Int, witnessId:String);
+
+	/** Borrowed pointer-and-length view; `mutable` describes pointee access. */
+	IRTSpan(element:HxcIRTypeRef, mutable:Bool);
+
 	IRTDynamic;
+}
+
+/** Safe source indexing never becomes implicit unchecked pointer arithmetic. */
+enum HxcIRBoundsPolicy {
+	IRBPCheckedAbort(profile:String, buildMode:String);
+	IRBPStaticProof(length:Int, index:Int);
+	IRBPLoopGuarded(guardInstructionId:String, indexLocalId:String, length:Int);
 }
 
 enum HxcIRTypeKind {
@@ -247,6 +261,9 @@ enum HxcIRInstructionKind {
 	IRIORetain(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIOTrace(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);
 	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
 }
 

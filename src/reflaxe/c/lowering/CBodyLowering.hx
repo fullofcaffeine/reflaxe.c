@@ -2,6 +2,7 @@ package reflaxe.c.lowering;
 
 #if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
+import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Expr.Binop;
 import haxe.macro.Expr.Unop;
@@ -56,6 +57,7 @@ class CLoweredBodyFunction {
 	public final cName:CIdentifier;
 	public final parameterNames:Map<String, CIdentifier>;
 	public final localNames:Map<String, CIdentifier>;
+	public final spanLengthNames:Map<String, CIdentifier>;
 	public final temporaryNames:Map<String, CIdentifier>;
 	public final tailArgumentNames:Map<String, Array<CIdentifier>>;
 	public final labelNames:Map<String, CIdentifier>;
@@ -64,9 +66,9 @@ class CLoweredBodyFunction {
 	public final lineMappedBody:CStmt;
 
 	public function new(modulePath:String, declarationPath:String, fieldName:String, ir:HxcIRFunction, cName:CIdentifier,
-			parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>, temporaryNames:Map<String, CIdentifier>,
-			tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>, requiredHeaders:Array<String>, body:CStmt,
-			lineMappedBody:CStmt) {
+			parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>,
+			temporaryNames:Map<String, CIdentifier>, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
+			requiredHeaders:Array<String>, body:CStmt, lineMappedBody:CStmt) {
 		this.modulePath = modulePath;
 		this.declarationPath = declarationPath;
 		this.fieldName = fieldName;
@@ -74,6 +76,7 @@ class CLoweredBodyFunction {
 		this.cName = cName;
 		this.parameterNames = parameterNames;
 		this.localNames = localNames;
+		this.spanLengthNames = spanLengthNames;
 		this.temporaryNames = temporaryNames;
 		this.tailArgumentNames = tailArgumentNames;
 		this.labelNames = labelNames;
@@ -104,15 +107,17 @@ class CBodyLoweringResult {
 	public final helpers:Array<CPrimitiveHelperPlan>;
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
+	public final boundsAbortName:Null<CIdentifier>;
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>, helpers:Array<CPrimitiveHelperPlan>,
-			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot) {
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
 		this.helpers = helpers.copy();
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
+		this.boundsAbortName = boundsAbortName;
 	}
 }
 
@@ -151,7 +156,9 @@ class CBodyLowering {
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
 		helperSelection.register(context.symbols);
+		final boundsAbortRequest = registerBoundsAbort(program);
 		final symbolTable = context.symbols.finalizeSymbols();
+		final boundsAbortName = boundsAbortRequest == null ? null : context.symbols.identifierFor(boundsAbortRequest);
 		final helpers = helperSelection.finalize(context.symbols);
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in helpers) {
@@ -179,6 +186,10 @@ class CBodyLowering {
 			for (localId => request in item.localRequests) {
 				localNames.set(localId, context.symbols.identifierFor(request));
 			}
+			final spanLengthNames:Map<String, CIdentifier> = [];
+			for (localId => request in item.spanLengthRequests) {
+				spanLengthNames.set(localId, context.symbols.identifierFor(request));
+			}
 			final temporaryNames:Map<String, CIdentifier> = [];
 			for (valueId => request in item.temporaryRequests) {
 				temporaryNames.set(valueId, context.symbols.identifierFor(request));
@@ -193,15 +204,35 @@ class CBodyLowering {
 			}
 			final input = item.prepared.input;
 			lowered.push(new CLoweredBodyFunction(input.modulePath, input.declarationPath, input.fieldName, item.ir,
-				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, temporaryNames, tailArgumentNames, labelNames,
-				emitter.requiredHeaders(item.ir),
+				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, spanLengthNames, temporaryNames, tailArgumentNames,
+				labelNames, emitter.requiredHeaders(item.ir),
 				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false, tailArgumentNames,
-					labelNames),
+					labelNames, null, spanLengthNames, boundsAbortName),
 				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, true, tailArgumentNames,
-					labelNames)));
+					labelNames, null, spanLengthNames, boundsAbortName)));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable, boundsAbortName);
+	}
+
+	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
+		for (module in program.modules) {
+			for (fn in module.functions) {
+				for (block in fn.blocks) {
+					for (instruction in block.instructions) {
+						switch instruction.kind {
+							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
+								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
+									"abort");
+								context.symbols.register(request);
+								return request;
+							case _:
+						}
+					}
+				}
+			}
+		}
+		return null;
 	}
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>):HxcIRProgram {
@@ -308,9 +339,35 @@ private typedef BuiltBodyFunction = {
 	final prepared:PreparedBodyFunction;
 	final ir:HxcIRFunction;
 	final localRequests:Map<String, CSymbolRequest>;
+	final spanLengthRequests:Map<String, CSymbolRequest>;
 	final temporaryRequests:Map<String, CSymbolRequest>;
 	final tailArgumentRequests:Map<String, Array<CSymbolRequest>>;
 	final labelRequests:Map<String, CSymbolRequest>;
+}
+
+private enum BodyCollectionKind {
+	BCKFixedArray(witnessId:String);
+	BCKSpan(mutable:Bool);
+}
+
+private typedef BodyCollectionType = {
+	final kind:BodyCollectionKind;
+	final element:CPrimitiveTypeMapping;
+}
+
+private typedef BodyCollectionBinding = {
+	final localId:String;
+	final kind:BodyCollectionKind;
+	final element:CPrimitiveTypeMapping;
+	final length:Int;
+}
+
+private typedef SpanLoopPattern = {
+	final iteratorCompilerId:Int;
+	final loopVariable:TVar;
+	final span:BodyCollectionBinding;
+	final body:Array<TypedExpr>;
+	final sourceExpression:TypedExpr;
 }
 
 private typedef LoweredValue = {
@@ -632,7 +689,9 @@ private class FunctionBuilder {
 	final functionContext:String;
 	final parameterValuesByCompilerId:Map<Int, LoweredValue> = [];
 	final localIdsByCompilerId:Map<Int, String> = [];
+	final collectionBindingsByCompilerId:Map<Int, BodyCollectionBinding> = [];
 	final localRequests:Map<String, CSymbolRequest> = [];
+	final spanLengthRequests:Map<String, CSymbolRequest> = [];
 	final temporaryRequests:Map<String, CSymbolRequest> = [];
 	final tailArgumentRequests:Map<String, Array<CSymbolRequest>> = [];
 	final labelRequests:Map<String, CSymbolRequest> = [];
@@ -689,6 +748,7 @@ private class FunctionBuilder {
 			prepared: prepared,
 			ir: ir,
 			localRequests: localRequests,
+			spanLengthRequests: spanLengthRequests,
 			temporaryRequests: temporaryRequests,
 			tailArgumentRequests: tailArgumentRequests,
 			labelRequests: labelRequests
@@ -710,7 +770,7 @@ private class FunctionBuilder {
 				lowerStatement(inner);
 			case TMeta(_, inner):
 				lowerStatement(inner);
-			case TConst(_) | TLocal(_) | TField(_, _) | TCast(_, _) | TBinop(_, _, _) | TUnop(_, _, _):
+			case TConst(_) | TLocal(_) | TArray(_, _) | TField(_, _) | TCast(_, _) | TBinop(_, _, _) | TUnop(_, _, _):
 				lowerValue(expression);
 			case TCall(_, _):
 				lowerCall(expression, false);
@@ -730,7 +790,12 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
-		for (index in 0...expressions.length) {
+		var index = 0;
+		while (index < expressions.length) {
+			if (index + 1 < expressions.length && tryLowerSpanLoop(expressions[index], expressions[index + 1])) {
+				index += 2;
+				continue;
+			}
 			final nested = expressions[index];
 			switch nested.expr {
 				case TVar(variable, null) if (index + 1 < expressions.length
@@ -742,12 +807,160 @@ private class FunctionBuilder {
 				case _:
 					lowerStatement(nested);
 			}
+			index++;
 		}
+	}
+
+	function tryLowerSpanLoop(iteratorDeclaration:TypedExpr, loopExpression:TypedExpr):Bool {
+		final pattern = spanLoopPattern(iteratorDeclaration, loopExpression);
+		if (pattern == null) {
+			return false;
+		}
+		lowerSpanLoop(pattern);
+		return true;
+	}
+
+	function spanLoopPattern(iteratorDeclaration:TypedExpr, loopExpression:TypedExpr):Null<SpanLoopPattern> {
+		final iterator = switch iteratorDeclaration.expr {
+			case TVar(variable, initializer) if (initializer != null): {variable: variable, initializer: initializer};
+			case _: return null;
+		};
+		final spanVariable = switch iterator.initializer.expr {
+			case TCall(callee, [argument]) if (isAbstractMethod(callee, "c.Span", "iterator")
+				|| isAbstractMethod(callee, "c.ConstSpan", "iterator")):
+				switch unwrapExpression(argument).expr {
+					case TLocal(variable): variable;
+					case _: return null;
+				}
+			case _: return null;
+		};
+		final span = collectionBindingsByCompilerId.get(spanVariable.id);
+		if (span == null) {
+			return null;
+		}
+		switch span.kind {
+			case BCKSpan(_):
+			case BCKFixedArray(_):
+				return null;
+		}
+		final loop = switch loopExpression.expr {
+			case TWhile(condition, body, true): {condition: condition, body: body};
+			case _: return null;
+		};
+		if (!isIteratorCall(loop.condition, iterator.variable.id, "hasNext")) {
+			return null;
+		}
+		final expressions = switch unwrapExpression(loop.body).expr {
+			case TBlock(values): values;
+			case _: return null;
+		};
+		if (expressions.length == 0) {
+			return null;
+		}
+		final loopVariable = switch expressions[0].expr {
+			case TVar(variable, initializer) if (initializer != null
+				&& isIteratorCall(initializer, iterator.variable.id, "next")): variable;
+			case _: return null;
+		};
+		if (typeKey(span.element.irType) != typeKey(primitiveMapping(loopVariable.t, expressions[0].pos, 'TFor(${loopVariable.name}:type)').irType)) {
+			return null;
+		}
+		return {
+			iteratorCompilerId: iterator.variable.id,
+			loopVariable: loopVariable,
+			span: span,
+			body: expressions.slice(1),
+			sourceExpression: loopExpression
+		};
+	}
+
+	function lowerSpanLoop(pattern:SpanLoopPattern):Void {
+		final source = HaxeSourceSpan.fromPosition(pattern.sourceExpression.pos, input.sourcePath);
+		final indexMapping = compilerSpanIndexMapping(pattern.sourceExpression.pos);
+		final zero:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
+		appendInstruction(zero, IRIOConstant(IRCInt("0")), source, "span-loop-zero");
+		final indexLocalId = createFlowLocal(indexMapping, zero.id, source, "span-loop-index");
+
+		final conditionBlock = createGeneratedBlock("span-loop-condition", source);
+		final bodyBlock = createGeneratedBlock("span-loop-body", source);
+		final incrementBlock = reserveGeneratedBlock("span-loop-increment", source);
+		final exitBlock = createGeneratedBlock("span-loop-exit", source);
+		currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
+
+		currentBlock = conditionBlock;
+		final conditionIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
+			"span-loop-condition-index");
+		final length:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
+		appendInstruction(length, IRIOConstant(IRCInt(Std.string(pattern.span.length))), source, "span-loop-length");
+		final condition:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		final guardInstruction = appendInstruction(condition, IRIOBinary("hxc.size.less.span-index", conditionIndex.id, length.id, IRIStatic), source,
+			"span-loop-condition");
+		currentBlock.terminator = {kind: IRTBranch(condition.id, edge(bodyBlock.id), edge(exitBlock.id)), source: source};
+
+		final control = loopControl(exitBlock.id, incrementBlock.id);
+		loopControlStack.push(control);
+		currentBlock = bodyBlock;
+		final bodyIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
+			"span-loop-body-index");
+		appendInstruction(null,
+			IRIOBoundsCheck(IRPLocal(pattern.span.localId), bodyIndex.id, IRBPLoopGuarded(guardInstruction.id, indexLocalId, pattern.span.length)), source,
+			"span-loop-bounds");
+		final element = loadPlace({
+			place: IRPIndex(IRPLocal(pattern.span.localId), bodyIndex.id),
+			mapping: pattern.span.element,
+			mutable: switch pattern.span.kind {
+				case BCKSpan(mutable): mutable;
+				case BCKFixedArray(_): false;
+			}
+		}, pattern.sourceExpression.pos, "span-loop-element");
+		parameterValuesByCompilerId.set(pattern.loopVariable.id, element);
+		for (expression in pattern.body) {
+			lowerStatement(expression);
+		}
+		parameterValuesByCompilerId.remove(pattern.loopVariable.id);
+		loopControlStack.pop();
+		final bodyEnd = currentBlock;
+		final needsIncrement = bodyEnd.terminator == null || control.usedContinue;
+		if (needsIncrement) {
+			activateGeneratedBlock(incrementBlock);
+			if (bodyEnd.terminator == null) {
+				bodyEnd.terminator = {kind: IRTJump(edge(incrementBlock.id)), source: source};
+			}
+			currentBlock = incrementBlock;
+			final currentIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
+				"span-loop-increment-index");
+			final one:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
+			appendInstruction(one, IRIOConstant(IRCInt("1")), source, "span-loop-one");
+			final next:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
+			appendInstruction(next, IRIOBinary("hxc.size.add-one.span-index-proven", currentIndex.id, one.id, IRIStatic), source, "span-loop-increment");
+			appendInstruction(null, IRIOStore(IRPLocal(indexLocalId), next.id), source, "span-loop-increment-store");
+			currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
+		}
+		currentBlock = exitBlock;
+	}
+
+	function isIteratorCall(expression:TypedExpr, iteratorCompilerId:Int, methodName:String):Bool {
+		return switch unwrapExpression(expression).expr {
+			case TCall(callee, []):
+				switch unwrapExpression(callee).expr {
+					case TField(receiver, access): fieldAccessName(access) == methodName && switch unwrapExpression(receiver).expr {
+							case TLocal(variable): variable.id == iteratorCompilerId;
+							case _: false;
+						};
+					case _: false;
+				}
+			case _: false;
+		};
 	}
 
 	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerSwitchCarrier:Bool = false):Void {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
+		final collectionType = bodyCollectionType(variable.t, position, 'TVar(${variable.name}:type)');
+		if (collectionType != null) {
+			lowerCollectionVariable(variable, initializer, position, ordinal, localId, collectionType);
+			return;
+		}
 		final localMapping = primitiveMapping(variable.t, position, 'TVar(${variable.name}:type)');
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
@@ -781,6 +994,115 @@ private class FunctionBuilder {
 		localRequests.set(localId, request);
 		appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		localIdsByCompilerId.set(variable.id, localId);
+	}
+
+	function lowerCollectionVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, ordinal:Int, localId:String,
+			collectionType:BodyCollectionType):Void {
+		if (initializer == null) {
+			unsupportedAt(position, 'TVar(${variable.name}:collection-uninitialized)');
+		}
+		final expression:TypedExpr = initializer;
+		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		switch collectionType.kind {
+			case BCKFixedArray(witnessId):
+				final elements = requireArrayLiteral(expression, variable.name);
+				if (elements.length == 0) {
+					unsupported(expression, 'TArrayDecl(empty-fixed-array-not-strict-c11)');
+				}
+				final values:Array<String> = [];
+				for (element in elements) {
+					values.push(coerce(lowerValue(element, collectionType.element), collectionType.element, element.pos,
+						'TArrayDecl(element:${values.length})').id);
+				}
+				locals.push({
+					id: localId,
+					type: IRTFixedArray(collectionType.element.irType, elements.length, witnessId),
+					storage: IRLSAutomatic,
+					initialState: IRISUninitialized,
+					source: source
+				});
+				registerCollectionLocal(variable, ordinal, localId, false);
+				appendInstruction(null, IRIOInitializeFixedArray(IRPLocal(localId), values, IRISUninitialized, IRISInitialized), source,
+					"fixed-array-initialize");
+				collectionBindingsByCompilerId.set(variable.id, {
+					localId: localId,
+					kind: collectionType.kind,
+					element: collectionType.element,
+					length: elements.length
+				});
+			case BCKSpan(mutable):
+				final sourceVariable = requireSpanSource(expression, mutable);
+				final sourceBinding = collectionBindingsByCompilerId.get(sourceVariable.id);
+				if (sourceBinding == null) {
+					unsupported(expression, 'TCall(${mutable ? "span" : "constSpan"}:source-outside-admitted-fixed-array-local)');
+				}
+				switch sourceBinding.kind {
+					case BCKFixedArray(_):
+					case BCKSpan(_): unsupported(expression, 'TCall(${mutable ? "span" : "constSpan"}:span-source-not-fixed-array)');
+				}
+				if (typeKey(sourceBinding.element.irType) != typeKey(collectionType.element.irType)) {
+					unsupported(expression, 'TCall(${mutable ? "span" : "constSpan"}:element-type-mismatch)');
+				}
+				locals.push({
+					id: localId,
+					type: IRTSpan(collectionType.element.irType, mutable),
+					storage: IRLSAutomatic,
+					initialState: IRISUninitialized,
+					source: source
+				});
+				registerCollectionLocal(variable, ordinal, localId, true);
+				appendInstruction(null, IRIOInitializeSpan(IRPLocal(localId), IRPLocal(sourceBinding.localId), IRISUninitialized, IRISInitialized), source,
+					"span-initialize");
+				collectionBindingsByCompilerId.set(variable.id, {
+					localId: localId,
+					kind: collectionType.kind,
+					element: collectionType.element,
+					length: sourceBinding.length
+				});
+		}
+	}
+
+	function registerCollectionLocal(variable:TVar, ordinal:Int, localId:String, span:Bool):Void {
+		final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, variable.name]),
+			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		context.symbols.register(request);
+		localRequests.set(localId, request);
+		if (span) {
+			final lengthRequest = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, variable.name, "length"]),
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+			context.symbols.register(lengthRequest);
+			spanLengthRequests.set(localId, lengthRequest);
+		}
+	}
+
+	function requireArrayLiteral(expression:TypedExpr, variableName:String):Array<TypedExpr> {
+		return switch expression.expr {
+			case TArrayDecl(values): values;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): requireArrayLiteral(inner, variableName);
+			case _: unsupported(expression, 'TVar($variableName:fixed-array-requires-direct-literal)');
+		};
+	}
+
+	function requireSpanSource(expression:TypedExpr, mutable:Bool):TVar {
+		return switch expression.expr {
+			case TCall(callee, [argument]) if (isAbstractMethod(callee, "c.CArray", mutable ? "span" : "constSpan")):
+				switch argument.expr {
+					case TLocal(variable): variable;
+					case TParenthesis(inner) | TMeta(_,
+						inner) | TCast(inner, _): requireLocalVariable(inner, 'TCall(${mutable ? "span" : "constSpan"}:source)');
+					case _: unsupported(argument, 'TCall(${mutable ? "span" : "constSpan"}:source=${nodeName(argument)})');
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): requireSpanSource(inner, mutable);
+			case _: unsupported(expression, 'TVar(${mutable ? "Span" : "ConstSpan"}:requires-fixed-array-borrow)');
+		};
+	}
+
+	function requireLocalVariable(expression:TypedExpr, owner:String):TVar {
+		return switch expression.expr {
+			case TLocal(variable): variable;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): requireLocalVariable(inner, owner);
+			case _: unsupported(expression, '$owner:source=${nodeName(expression)}');
+		};
 	}
 
 	function followingSwitchInitializesLocal(expression:TypedExpr, compilerId:Int):Bool {
@@ -848,6 +1170,7 @@ private class FunctionBuilder {
 		return switch expression.expr {
 			case TConst(constant): lowerConstant(expression, constant, expectedMapping);
 			case TLocal(variable): lowerLocal(expression, variable);
+			case TArray(_, _): loadPlace(lowerPlace(expression), expression.pos, "collection-index-load");
 			case TField(_, FStatic(classReference, fieldReference)):
 				lowerStaticField(expression, classReference, fieldReference);
 			case TParenthesis(inner): lowerValue(inner, expectedMapping);
@@ -1536,6 +1859,7 @@ private class FunctionBuilder {
 
 	function lowerPlace(expression:TypedExpr):LoweredPlace {
 		return switch expression.expr {
+			case TArray(collection, index): lowerCollectionIndexPlace(expression, collection, index);
 			case TLocal(variable):
 				if (parameterValuesByCompilerId.exists(variable.id)) {
 					unsupported(expression, 'TLocal(${variable.name}:parameter-assignment-not-yet-lowered)');
@@ -1550,6 +1874,48 @@ private class FunctionBuilder {
 				{place: IRPGlobal(global.ir.id), mapping: global.mapping, mutable: global.ir.mutable};
 			case TParenthesis(inner) | TMeta(_, inner): lowerPlace(inner);
 			case _: unsupported(expression, 'place(${nodeName(expression)})');
+		};
+	}
+
+	function lowerCollectionIndexPlace(expression:TypedExpr, collection:TypedExpr, index:TypedExpr):LoweredPlace {
+		final binding = requireCollectionBinding(collection);
+		final indexMapping = primitiveMapping(index.t, index.pos, "TArray(index-type)");
+		switch indexMapping.irType {
+			case IRTInt(32, true):
+			case _:
+				unsupported(index, "TArray(index-must-be-Int)");
+		}
+		final indexValue = coerce(lowerValue(index, indexMapping), indexMapping, index.pos, "TArray(index)");
+		appendInstruction(null, IRIOBoundsCheck(IRPLocal(binding.localId), indexValue.id, boundsPolicy(binding, index)),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "collection-bounds");
+		final mutable = switch binding.kind {
+			case BCKFixedArray(_): true;
+			case BCKSpan(value): value;
+		};
+		return {place: IRPIndex(IRPLocal(binding.localId), indexValue.id), mapping: binding.element, mutable: mutable};
+	}
+
+	function requireCollectionBinding(expression:TypedExpr):BodyCollectionBinding {
+		return switch unwrapExpression(expression).expr {
+			case TLocal(variable):
+				final binding = collectionBindingsByCompilerId.get(variable.id);
+				binding == null ? unsupported(expression, 'TArray(collection-local-outside-admitted-slice:${variable.name})') : binding;
+			case _: unsupported(expression, 'TArray(collection=${nodeName(expression)})');
+		};
+	}
+
+	function boundsPolicy(binding:BodyCollectionBinding, index:TypedExpr):HxcIRBoundsPolicy {
+		final value = constantInt(index);
+		return value != null
+			&& value >= 0
+			&& value < binding.length ? IRBPStaticProof(binding.length, value) : IRBPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode));
+	}
+
+	static function constantInt(expression:TypedExpr):Null<Int> {
+		return switch expression.expr {
+			case TConst(TInt(value)): value;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): constantInt(inner);
+			case _: null;
 		};
 	}
 
@@ -1867,6 +2233,133 @@ private class FunctionBuilder {
 				unsupportedAt(position, '$node:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
 			case CTUnsupported(reason):
 				unsupportedAt(position, '$node:$reason');
+		};
+	}
+
+	function compilerSpanIndexMapping(position:Position):CPrimitiveTypeMapping {
+		return switch CPrimitiveTypeMapper.map(Context.getType("c.Size"), context.profile) {
+			case CTPrimitive(mapping) if (mapping.nullability == CPNonNullable):
+				switch mapping.irType {
+					case IRTAbiInteger(IRAKSize): mapping;
+					case _: unsupportedAt(position, "span-loop-index:compiler-size-type-unavailable");
+				}
+			case _:
+				unsupportedAt(position, "span-loop-index:compiler-size-type-unavailable");
+		};
+	}
+
+	function bodyCollectionType(type:Type, position:Position, node:String):Null<BodyCollectionType> {
+		return switch type {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? null : bodyCollectionType(resolved, position, node);
+			case TLazy(resolve): bodyCollectionType(resolve(), position, node);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				bodyCollectionType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, node);
+			case TAbstract(reference, parameters):
+				final abstractType = reference.get();
+				final path = abstractType.pack.concat([abstractType.name]).join(".");
+				switch path {
+					case "c.CArray" if (parameters.length == 2):
+						{
+							kind: BCKFixedArray(stableTypeIdentity(parameters[1], position, '$node:length-witness')),
+							element: collectionElement(parameters[0], position, node)
+						};
+					case "c.Span" if (parameters.length == 1):
+						{kind: BCKSpan(true), element: collectionElement(parameters[0], position, node)};
+					case "c.ConstSpan" if (parameters.length == 1):
+						{kind: BCKSpan(false), element: collectionElement(parameters[0], position, node)};
+					case _: null;
+				}
+			case _: null;
+		};
+	}
+
+	function collectionElement(type:Type, position:Position, node:String):CPrimitiveTypeMapping {
+		return switch CPrimitiveTypeMapper.map(type, context.profile) {
+			case CTPrimitive(mapping):
+				final admitted = mapping.nullability == CPNonNullable && switch mapping.irType {
+					case IRTBool | IRTInt(_, _) | IRTFloat(64): true;
+					case _: false;
+				};
+				if (!admitted) {
+					unsupportedAt(position, '$node:collection-element:${mapping.cSpelling}');
+				}
+				mapping;
+			case CTReference(identity, nullable):
+				unsupportedAt(position, '$node:collection-element:reference-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTNativePointer(identity, nullable):
+				unsupportedAt(position, '$node:collection-element:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTUnsupported(reason):
+				unsupportedAt(position, '$node:collection-element:$reason');
+		};
+	}
+
+	function stableTypeIdentity(type:Type, position:Position, node:String):String {
+		return switch type {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? unsupportedAt(position, '$node:unresolved') : stableTypeIdentity(resolved, position, node);
+			case TLazy(resolve): stableTypeIdentity(resolve(), position, node);
+			case TType(reference, _):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TAbstract(reference, _):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TInst(reference, _):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TEnum(reference, _):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case _: unsupportedAt(position, '$node:requires-named-type');
+		};
+	}
+
+	static function unwrapExpression(expression:TypedExpr):TypedExpr {
+		return switch expression.expr {
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): unwrapExpression(inner);
+			case _: expression;
+		};
+	}
+
+	static function isAbstractMethod(callee:TypedExpr, ownerPath:String, methodName:String):Bool {
+		return switch unwrapExpression(callee).expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (fieldReference.get().name == methodName):
+				switch classReference.get().kind {
+					case KAbstractImpl(abstractReference):
+						final owner = abstractReference.get();
+						owner.pack.concat([owner.name]).join(".") == ownerPath;
+					case _: false;
+				}
+			case _: false;
+		};
+	}
+
+	static function fieldAccessName(access:FieldAccess):String {
+		return switch access {
+			case FInstance(_, _, field) | FStatic(_, field) | FAnon(field) | FClosure(_, field): field.get().name;
+			case FDynamic(name): name;
+			case FEnum(_, field): field.name;
+		};
+	}
+
+	static function typeKey(type:HxcIRTypeRef):String {
+		return switch type {
+			case IRTBool: "bool";
+			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+			case IRTAbiInteger(kind): 'abi:$kind';
+			case IRTFloat(width): 'f$width';
+			case IRTVoid: "void";
+			case IRTInstance(instanceId): 'instance:$instanceId';
+			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
+			case IRTNullable(inner, representation): 'nullable:$representation<${typeKey(inner)}>';
+			case IRTFunction(parameters, result): 'function(${parameters.map(typeKey).join(",")})->${typeKey(result)}';
+			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeKey(element)}>';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeKey(element)}>';
+			case IRTDynamic: "dynamic";
 		};
 	}
 

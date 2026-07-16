@@ -454,6 +454,47 @@ def arithmetic_semantics_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def span_lowering_artifacts() -> list[Artifact]:
+    module = load_module("span_lowering", "test/span_lowering/run.py")
+    first_payload, report = module.render("snapshot first span-lowering render")
+    second_payload, repeated = module.render("snapshot second span-lowering render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input span-lowering render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "span-lowering snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report, profile="portable", build="debug")
+    values = {
+        "span.hxcir": report.get("hxcir"),
+        "symbols.json": report.get("symbols"),
+        **module.production_snapshot(),
+    }
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("span.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"span-lowering report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"span-lowering report omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/span_lowering/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -468,6 +509,7 @@ GENERATORS: dict[str, Generator] = {
     "function-lowering": function_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
+    "span-lowering": span_lowering_artifacts,
 }
 
 

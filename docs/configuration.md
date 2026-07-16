@@ -74,6 +74,7 @@ The canonical expert/debug defines are:
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 -D hxc_c_standard=c11|c17|c23
 -D hxc_c_extensions=none|gnu|msvc
+-D hxc_build=debug|release|minsizerel
 ```
 
 Profiles provide defaults for otherwise independent axes:
@@ -106,6 +107,16 @@ Runtime diagnostics do not change generated behavior:
 Transitive dependencies remain report entries rather than separate warnings.
 Policy violations are always errors. See
 [ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
+
+`hxc_build` is optimization intent, never permission to change source
+semantics. It defaults to `debug`; `release` and `minsizerel` may enable only
+transformations backed by the same semantic proof. The E2 fixed-array/span
+slice records the resolved build mode directly on dynamic bounds policy in
+HxcIR and executes the same fail-stop behavior in all three modes. An unknown
+value fails with `HXC0003` under the already resolved profile before output.
+The complete provenance-aware build model and manifest field remain owned by
+E8; no lowering may consult ambient optimization flags as a substitute. See
+[fixed arrays and span-based iteration](span-lowering.md).
 
 The accepted semantic implications of those independent axes are:
 
