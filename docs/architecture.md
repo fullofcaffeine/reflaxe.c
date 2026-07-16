@@ -23,11 +23,12 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> current E2.T06: collects reachable typed functions and captured primitive globals
+  -> plans deterministic class/static initialization and retains its request-local graph
+  -> collects reachable typed functions from entry and initializer bodies plus captured primitive globals
   -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, and UB-safe primitive operations
   -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
-  -> emits a private prototype header, source definitions, and int main(void)
+  -> emits a private prototype header, source definitions, an initialization wrapper when needed, and int main(void)
   -> invokes ProjectEmitter with analyzed zero-runtime primitive facts
 
 ProjectEmitter
@@ -36,7 +37,7 @@ ProjectEmitter
   -> boot/export/reflection units
   -> runtime slices
   -> tool-neutral manifest and typed build facts
-  -> runtime, symbol, stdlib, ABI, and lowering reports
+  -> initialization, runtime, symbol, stdlib, ABI, and lowering reports
 
 Build adapters (future E1.T08/E8)
   -> consume the one neutral manifest
@@ -107,8 +108,9 @@ ordinals, records primary/secondary module ownership, retains raw compiler
 objects for lowering, and carries `getMainModule()` plus
 `getMainExpr()` as the entry point, including an eagerly captured static target
 for the omitted-main-module fallback. A fresh `CompilationContext` owns the
-result once plus a fresh empty `CSymbolRegistry`; request-local captures are cleared
-before `CCompiler` runs. See
+result once plus a fresh empty `CSymbolRegistry`; E2.T09 adds the once-set typed
+static-initialization snapshot after planning. Neither input nor graph can
+survive the request, and adapter captures are cleared before `CCompiler` runs. See
 [typed-AST input boundary](typed-ast-input.md).
 
 `TypedAstInventory` exposes a path-stable implementation report for unsupported
@@ -177,6 +179,20 @@ fixed-array storage, borrowed span views, explicit bounds policies, and direct
 guarded span iteration; its representation and proof matrix are in
 [fixed arrays and span-based iteration](span-lowering.md).
 
+E2.T09 adds a whole-program static-initialization graph before body lowering.
+It follows source-positioned superclass/interface/type/static/constructor
+dependencies, including static-function bodies, and computes dependency-first
+type order from UTF-8-sorted roots and edges. Class `__init__` functions form
+the first execution phase; ordinary static fields form the second in type and
+source order; the Haxe entry is third. Explicit fields are HxcIR deferred
+globals whose private `():Void` initializer contains exactly one
+`initialize-global`. The validator proves that link, and the C emitter assigns
+zero-initialized storage through file-local initializer functions and one
+compiler-owned wrapper called once before Haxe `main`; the initializer
+prototypes stay out of the shared header, and an empty plan elides the wrapper
+and call. Cross-type cycles fail as `HXC1002`. See [deterministic static
+initialization](static-initialization.md).
+
 `CBodyLowering` prepares the complete admitted HxcIR function set, scans it for
 program-local primitive helper IDs, computes their dependency closure, and
 registers every helper/parameter/standard symbol before sealing the
@@ -200,7 +216,7 @@ branch. The typed Haxe
 iterator surface is consumed at this boundary and never becomes an IR or C
 runtime object. `CStaticFunctionProjectEmitter`
 places all prototypes before definitions, partitions proven non-returning cycle
-members, and produces a runtime-free project in
+members, emits the ordered initialization wrapper for a non-empty plan, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.
 
 The type model normalizes base specifiers and keeps them separate from a

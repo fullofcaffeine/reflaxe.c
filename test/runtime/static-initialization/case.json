@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "deterministic-static-initialization-runtime",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-003",
+    "HXC-SEM-004",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "test/static_initialization/expected/program.h",
+    "test/static_initialization/expected/program.c",
+    "test/static_initialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../static_initialization/run.py"
+    ],
+    "workingDirectory": "test/runtime/static-initialization",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "zero-runtime strict C passed"
+    },
+    "artifacts": [
+      {
+        "path": "test/static_initialization/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

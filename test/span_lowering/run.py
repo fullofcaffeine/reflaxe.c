@@ -45,6 +45,7 @@ STRICT_FLAGS = (
 PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "hxc.abi.json",
+    "hxc.initialization-plan.json",
     "hxc.manifest.json",
     "hxc.runtime-plan.json",
     "hxc.stdlib-report.json",
@@ -290,9 +291,15 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
     header = (root / "include/hxc/program.h").read_text(encoding="utf-8")
     source = (root / "src/program.c").read_text(encoding="utf-8")
     runtime_plan = json.loads((root / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    initialization_plan = json.loads(
+        (root / "hxc.initialization-plan.json").read_text(encoding="utf-8")
+    )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
     if (
-        runtime_plan.get("profile") != profile
+        initialization_plan.get("schemaVersion") != 1
+        or initialization_plan.get("strategy") != "eager-haxe-type-order"
+        or initialization_plan.get("runtimeFeatures") != []
+        or runtime_plan.get("profile") != profile
         or runtime_plan.get("resolvedPolicy") != "none"
         or runtime_plan.get("status") != "analyzed-runtime-free"
         or runtime_plan.get("features") != []

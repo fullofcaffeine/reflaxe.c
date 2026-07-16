@@ -1,0 +1,230 @@
+{
+  "typeOrder": [
+    "MStaticInitTrace",
+    "ZStaticInitPrerequisite",
+    "AStaticInitDependent"
+  ],
+  "entryFunctionId": "function.StaticInitializationFixture.main",
+  "dependencies": [
+    {
+      "prerequisiteTypeId": "MStaticInitTrace",
+      "dependentTypeId": "AStaticInitDependent",
+      "reason": "static-field-reference",
+      "source": {
+        "startLine": 7,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 3,
+        "endLine": 7,
+        "endColumn": 30
+      }
+    },
+    {
+      "prerequisiteTypeId": "ZStaticInitPrerequisite",
+      "dependentTypeId": "AStaticInitDependent",
+      "reason": "static-field-reference",
+      "source": {
+        "startLine": 2,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 32,
+        "endLine": 2,
+        "endColumn": 61
+      }
+    },
+    {
+      "prerequisiteTypeId": "MStaticInitTrace",
+      "dependentTypeId": "ZStaticInitPrerequisite",
+      "reason": "static-field-reference",
+      "source": {
+        "startLine": 5,
+        "file": "ZStaticInitPrerequisite.hx",
+        "startColumn": 3,
+        "endLine": 5,
+        "endColumn": 30
+      }
+    }
+  ],
+  "executionOrder": [
+    "initializer.MStaticInitTrace.class",
+    "initializer.ZStaticInitPrerequisite.class",
+    "initializer.AStaticInitDependent.class",
+    "initializer.MStaticInitTrace.field.classOrder",
+    "initializer.MStaticInitTrace.field.phaseValue",
+    "initializer.MStaticInitTrace.field.trace",
+    "initializer.ZStaticInitPrerequisite.field.value",
+    "initializer.AStaticInitDependent.field.first",
+    "initializer.AStaticInitDependent.field.second",
+    "initializer.AStaticInitDependent.field.value"
+  ],
+  "schemaVersion": 1,
+  "strategy": "eager-haxe-type-order",
+  "initializers": [
+    {
+      "functionId": "initializer.MStaticInitTrace.class",
+      "id": "initializer.MStaticInitTrace.class",
+      "sourceOrder": 0,
+      "typeId": "MStaticInitTrace",
+      "kind": "class-initializer",
+      "modulePath": "MStaticInitTrace",
+      "fieldName": null,
+      "source": {
+        "startLine": 6,
+        "file": "MStaticInitTrace.hx",
+        "startColumn": 34,
+        "endLine": 9,
+        "endColumn": 3
+      }
+    },
+    {
+      "functionId": "initializer.ZStaticInitPrerequisite.class",
+      "id": "initializer.ZStaticInitPrerequisite.class",
+      "sourceOrder": 0,
+      "typeId": "ZStaticInitPrerequisite",
+      "kind": "class-initializer",
+      "modulePath": "ZStaticInitPrerequisite",
+      "fieldName": null,
+      "source": {
+        "startLine": 5,
+        "file": "ZStaticInitPrerequisite.hx",
+        "startColumn": 3,
+        "endLine": 5,
+        "endColumn": 69
+      }
+    },
+    {
+      "functionId": "initializer.AStaticInitDependent.class",
+      "id": "initializer.AStaticInitDependent.class",
+      "sourceOrder": 0,
+      "typeId": "AStaticInitDependent",
+      "kind": "class-initializer",
+      "modulePath": "AStaticInitDependent",
+      "fieldName": null,
+      "source": {
+        "startLine": 7,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 3,
+        "endLine": 7,
+        "endColumn": 69
+      }
+    },
+    {
+      "functionId": "initializer.MStaticInitTrace.field.classOrder",
+      "id": "initializer.MStaticInitTrace.field.classOrder",
+      "sourceOrder": 0,
+      "typeId": "MStaticInitTrace",
+      "kind": "static-field-initializer",
+      "modulePath": "MStaticInitTrace",
+      "fieldName": "classOrder",
+      "source": {
+        "startLine": 2,
+        "file": "MStaticInitTrace.hx",
+        "startColumn": 37,
+        "endLine": 2,
+        "endColumn": 47
+      }
+    },
+    {
+      "functionId": "initializer.MStaticInitTrace.field.phaseValue",
+      "id": "initializer.MStaticInitTrace.field.phaseValue",
+      "sourceOrder": 1,
+      "typeId": "MStaticInitTrace",
+      "kind": "static-field-initializer",
+      "modulePath": "MStaticInitTrace",
+      "fieldName": "phaseValue",
+      "source": {
+        "startLine": 3,
+        "file": "MStaticInitTrace.hx",
+        "startColumn": 37,
+        "endLine": 3,
+        "endColumn": 38
+      }
+    },
+    {
+      "functionId": "initializer.MStaticInitTrace.field.trace",
+      "id": "initializer.MStaticInitTrace.field.trace",
+      "sourceOrder": 2,
+      "typeId": "MStaticInitTrace",
+      "kind": "static-field-initializer",
+      "modulePath": "MStaticInitTrace",
+      "fieldName": "trace",
+      "source": {
+        "startLine": 4,
+        "file": "MStaticInitTrace.hx",
+        "startColumn": 32,
+        "endLine": 4,
+        "endColumn": 38
+      }
+    },
+    {
+      "functionId": "initializer.ZStaticInitPrerequisite.field.value",
+      "id": "initializer.ZStaticInitPrerequisite.field.value",
+      "sourceOrder": 0,
+      "typeId": "ZStaticInitPrerequisite",
+      "kind": "static-field-initializer",
+      "modulePath": "ZStaticInitPrerequisite",
+      "fieldName": "value",
+      "source": {
+        "startLine": 2,
+        "file": "ZStaticInitPrerequisite.hx",
+        "startColumn": 32,
+        "endLine": 2,
+        "endColumn": 56
+      }
+    },
+    {
+      "functionId": "initializer.AStaticInitDependent.field.first",
+      "id": "initializer.AStaticInitDependent.field.first",
+      "sourceOrder": 0,
+      "typeId": "AStaticInitDependent",
+      "kind": "static-field-initializer",
+      "modulePath": "AStaticInitDependent",
+      "fieldName": "first",
+      "source": {
+        "startLine": 2,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 32,
+        "endLine": 2,
+        "endColumn": 61
+      }
+    },
+    {
+      "functionId": "initializer.AStaticInitDependent.field.second",
+      "id": "initializer.AStaticInitDependent.field.second",
+      "sourceOrder": 1,
+      "typeId": "AStaticInitDependent",
+      "kind": "static-field-initializer",
+      "modulePath": "AStaticInitDependent",
+      "fieldName": "second",
+      "source": {
+        "startLine": 3,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 33,
+        "endLine": 3,
+        "endColumn": 42
+      }
+    },
+    {
+      "functionId": "initializer.AStaticInitDependent.field.value",
+      "id": "initializer.AStaticInitDependent.field.value",
+      "sourceOrder": 2,
+      "typeId": "AStaticInitDependent",
+      "kind": "static-field-initializer",
+      "modulePath": "AStaticInitDependent",
+      "fieldName": "value",
+      "source": {
+        "startLine": 4,
+        "file": "AStaticInitDependent.hx",
+        "startColumn": 32,
+        "endLine": 4,
+        "endColumn": 97
+      }
+    }
+  ],
+  "runtimeFeatures": [],
+  "cyclePolicy": "reject-cross-type-cycles-with-canonical-path",
+  "phaseOrder": [
+    "class-initializers",
+    "static-field-initializers",
+    "entry"
+  ],
+  "oncePolicy": "one compiler-owned initialization call from the hosted executable entry when the plan is non-empty"
+}

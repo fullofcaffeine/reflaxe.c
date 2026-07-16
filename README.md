@@ -13,7 +13,8 @@ replacement Haxe compiler or a requirement imposed by Reflaxe.
 The complete target-owned Haxe source graph type-checks. Typed primitive static
 functions, arguments, conversions, calls, assignments, static fields, lazy and
 value/statement control flow, UB-safe arithmetic, local fixed arrays, checked
-span access, and direct span iteration now pass through
+span access, direct span iteration, and dependency-ordered class/static
+initialization now pass through
 explicitly sequenced validated HxcIR and emit an owned runtime-free strict-C11
 project with a private header and `int main(void)`. This is not general Haxe or
 standard-library support; every broader compiler path still fails closed
@@ -227,7 +228,7 @@ the C string contract.
 | `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |
 | `configuration-policies` | `scaffold-only` | Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
-| `diagnostics` | `implemented` | Twelve typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
+| `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
 | `example-portfolio` | `unsupported` | No repository-owned product example directories or executable generated examples exist. |
 | `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
 | `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
@@ -240,7 +241,7 @@ the C string contract.
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural and primitive native corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
-| `primitive-executable-lowering` | `implemented` | A bounded primitive static-function and local fixed-array/span graph emits and runs runtime-free strict C11. |
+| `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11. |
 | `primitive-semantics` | `implemented` | A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
@@ -362,6 +363,7 @@ fail-closed.
 - [Primitive function-body lowering](docs/body-lowering.md)
 - [Static function and direct-call lowering](docs/function-lowering.md)
 - [Explicit Haxe evaluation order](docs/evaluation-order.md)
+- [Deterministic static initialization](docs/static-initialization.md)
 - [Fixed arrays and span-based iteration](docs/span-lowering.md)
 - [Typed C authoring contract](docs/typed-c-authoring.md)
 - [Typed Haxe boundary policy](docs/typed-boundaries.md)

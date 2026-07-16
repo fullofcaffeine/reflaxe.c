@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "deterministic-static-initialization-cycle",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-003",
+    "HXC-SEM-004",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "src/reflaxe/c/CDiagnostic.hx",
+    "src/reflaxe/c/plan/CStaticInitializationPlanner.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleA.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleB.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleFixture.hx",
+    "test/static_initialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../static_initialization/run.py"
+    ],
+    "workingDirectory": "test/negative/static-initialization",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1002"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "HXC1002 cycles"
+    }
+  }
+}

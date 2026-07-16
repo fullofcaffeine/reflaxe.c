@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "deterministic-static-initialization-differential",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-003",
+    "HXC-SEM-004",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "test/static_initialization/fixtures/positive/AStaticInitDependent.hx",
+    "test/static_initialization/fixtures/positive/MStaticInitTrace.hx",
+    "test/static_initialization/fixtures/positive/ZStaticInitPrerequisite.hx",
+    "test/static_initialization/fixtures/positive/StaticInitializationFixture.hx",
+    "test/static_initialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../static_initialization/run.py"
+    ],
+    "workingDirectory": "test/differential/static-initialization",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "JS differential"
+    },
+    "oracle": "test/static_initialization/fixtures/positive/StaticInitializationFixture.hx"
+  }
+}

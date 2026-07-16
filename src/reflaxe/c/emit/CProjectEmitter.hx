@@ -6,6 +6,9 @@ import reflaxe.c.CProfile;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
+import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
+import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationStrategy;
+import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationPhase;
 
 /** Input status distinguishes structural fixtures, the admitted primitive slice, and unproven broader programs. */
 enum abstract CProjectCompilationStatus(String) to String {
@@ -54,6 +57,7 @@ typedef CProjectEmissionPlan = {
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
+	final ?staticInitialization:CStaticInitializationSnapshot;
 	final symbolTable:CSymbolTableSnapshot;
 }
 
@@ -213,6 +217,7 @@ class CProjectEmitter {
 
 	static final SIDECAR_PATHS = [
 		"hxc.abi.json",
+		"hxc.initialization-plan.json",
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
 		"hxc.stdlib-report.json",
@@ -234,6 +239,7 @@ class CProjectEmitter {
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiPlaceholder(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibPlaceholder(plan)));
 			case PrimitiveExecutable:
+				files.push(jsonFile("hxc.initialization-plan.json", GeneratedFileKind.InitializationPlan, requireStaticInitialization(plan)));
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanResolved(plan)));
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiResolved(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibResolved(plan)));
@@ -339,6 +345,54 @@ class CProjectEmitter {
 		if (plan.environment != CProjectEnvironment.Hosted) {
 			fail('primitive executable emission requires the hosted environment; found `${plan.environment}`');
 		}
+		final initialization = requireStaticInitialization(plan);
+		if (initialization.schemaVersion != 1
+			|| initialization.strategy != CStaticInitializationStrategy.EagerHaxeTypeOrder
+			|| initialization.entryFunctionId == ""
+			|| initialization.phaseOrder.join(",") != [
+				CStaticInitializationPhase.ClassInitializers,
+				CStaticInitializationPhase.StaticFieldInitializers,
+				CStaticInitializationPhase.Entry
+			].join(",")
+			|| initialization.runtimeFeatures.length != 0) {
+			fail("primitive executable emission requires a valid runtime-free schema-1 static-initialization plan");
+		}
+		if (initialization.executionOrder.length != initialization.initializers.length) {
+			fail("static-initialization execution order must address every initializer exactly once");
+		}
+		validateLogicalText(initialization.entryFunctionId, "static-initialization entry function ID");
+		validateLogicalText(initialization.cyclePolicy, "static-initialization cycle policy");
+		validateLogicalText(initialization.oncePolicy, "static-initialization once policy");
+		final typeIds:Map<String, Bool> = [];
+		for (typeId in initialization.typeOrder) {
+			validateLogicalText(typeId, "static-initialization type ID");
+			if (typeIds.exists(typeId)) {
+				fail('static-initialization type order repeats `$typeId`');
+			}
+			typeIds.set(typeId, true);
+		}
+		for (dependency in initialization.dependencies) {
+			validateLogicalText(dependency.dependentTypeId, "static-initialization dependent type ID");
+			validateLogicalText(dependency.prerequisiteTypeId, "static-initialization prerequisite type ID");
+			validateLogicalText(dependency.reason, "static-initialization dependency reason");
+			if (!typeIds.exists(dependency.dependentTypeId) || !typeIds.exists(dependency.prerequisiteTypeId)) {
+				fail('static-initialization dependency `${dependency.dependentTypeId}` -> `${dependency.prerequisiteTypeId}` escapes type order');
+			}
+			validateInitializationSource(dependency.source, 'dependency `${dependency.dependentTypeId}` -> `${dependency.prerequisiteTypeId}`');
+		}
+		final initializerIds:Map<String, Bool> = [];
+		for (index in 0...initialization.initializers.length) {
+			final initializer = initialization.initializers[index];
+			validateLogicalText(initializer.id, "static initializer ID");
+			if (initializerIds.exists(initializer.id) || initialization.executionOrder[index] != initializer.id) {
+				fail('static initializer `${initializer.id}` is duplicated or differs from its execution-order slot');
+			}
+			initializerIds.set(initializer.id, true);
+			if (initializer.functionId != initializer.id || !typeIds.exists(initializer.typeId)) {
+				fail('static initializer `${initializer.id}` lost its function or type-order identity');
+			}
+			validateInitializationSource(initializer.source, 'initializer `${initializer.id}`');
+		}
 		for (fact in plan.buildFacts) {
 			if (fact.kind != "link" || fact.name != "m" || fact.value != null || fact.valueKind != null || fact.ownerModulePaths.length == 0) {
 				fail('primitive executable emission only admits the compiler-selected C math link fact; found `${fact.kind}` `${fact.name}`');
@@ -372,6 +426,26 @@ class CProjectEmitter {
 		}
 		if (entryPoints != 1) {
 			fail('primitive executable symbol table requires exactly one compiler-owned exact `main`; found $entryPoints');
+		}
+	}
+
+	static function requireStaticInitialization(plan:CProjectEmissionPlan):CStaticInitializationSnapshot {
+		final initialization = plan.staticInitialization;
+		if (initialization == null) {
+			throw new ProjectEmissionError("primitive executable emission requires a static-initialization plan");
+		}
+		return initialization;
+	}
+
+	static function validateInitializationSource(source:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSource, label:String):Void {
+		if (!reflaxe.c.ir.HxcSourceSpan.isNormalizedFile(source.file)
+			|| source.startLine < 1
+			|| source.startColumn < 1
+			|| source.endLine < source.startLine
+			|| source.endColumn < 1
+			|| source.endLine == source.startLine
+			&& source.endColumn < source.startColumn) {
+			throw new ProjectEmissionError('static-initialization $label has malformed source `${source.file}`');
 		}
 	}
 
@@ -535,6 +609,12 @@ class CProjectEmitter {
 		if (helperIds.length > 0) {
 			directDecisions.insert(2, "selected-program-local-helpers");
 		}
+		final initialization = requireStaticInitialization(plan);
+		final hasStaticInitialization = initialization.executionOrder.length > 0;
+		if (hasStaticInitialization) {
+			directDecisions.insert(directDecisions.length - 1, "compiler-planned-eager-static-initialization");
+		}
+		final noRuntimeProof = helperIds.length == 0 ? "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls" : "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
 		return {
 			schemaVersion: SCHEMA_VERSION,
 			status: ResolvedAnalysisStatus.RuntimeFree,
@@ -552,7 +632,8 @@ class CProjectEmitter {
 			symbols: [],
 			libraries: [],
 			defines: [],
-			noRuntimeProof: helperIds.length == 0 ? "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls" : "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls"
+			noRuntimeProof: hasStaticInitialization ? noRuntimeProof +
+			", with eager static initialization planned and emitted entirely by the compiler" : noRuntimeProof
 		};
 	}
 

@@ -7,6 +7,7 @@ import haxe.macro.TypedExprTools;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
+import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 
 /** Reachable static-function inputs plus the semantic executable entry ID. */
 class CStaticFunctionGraph {
@@ -25,7 +26,7 @@ class CStaticFunctionGraph {
 class CStaticFunctionGraphCollector {
 	public function new() {}
 
-	public function collect(entry:CBodyFunctionInput, program:TypedProgramInput):CStaticFunctionGraph {
+	public function collect(entry:CBodyFunctionInput, program:TypedProgramInput, ?initializers:Array<CBodyInitializerInput>):CStaticFunctionGraph {
 		final available = staticFunctionInputs(program);
 		final byId:Map<String, CBodyFunctionInput> = [];
 		final pending:Array<CBodyFunctionInput> = [];
@@ -34,6 +35,14 @@ class CStaticFunctionGraphCollector {
 		var index = 0;
 		while (index < pending.length) {
 			collectExpression(pending[index++].expression, available, byId, pending);
+		}
+		if (initializers != null) {
+			for (initializer in initializers) {
+				collectExpression(initializer.expression, available, byId, pending);
+				while (index < pending.length) {
+					collectExpression(pending[index++].expression, available, byId, pending);
+				}
+			}
 		}
 		final functions = [for (fn in byId) fn];
 		functions.sort(compareInputs);
@@ -68,7 +77,7 @@ class CStaticFunctionGraphCollector {
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (declaration in program.declarations) {
 			for (field in declaration.fields) {
-				if (field.role != "static" || field.expression == null || field.rawClassField == null) {
+				if (declaration.isExtern || field.role != "static" || field.isExtern || field.expression == null || field.rawClassField == null) {
 					continue;
 				}
 				switch field.rawClassField.kind {
@@ -94,10 +103,11 @@ class CStaticFunctionGraphCollector {
 		final result:Array<CBodyGlobalInput> = [];
 		for (declaration in program.declarations) {
 			for (field in declaration.fields) {
-				if (field.role != "static" || field.rawClassField == null) {
+				if (declaration.isExtern || field.role != "static" || field.isExtern || field.rawClassField == null) {
 					continue;
 				}
 				switch field.rawClassField.kind {
+					case FVar(AccInline, _):
 					case FVar(_, write):
 						result.push({
 							modulePath: declaration.ownerModulePath,

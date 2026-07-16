@@ -14,6 +14,7 @@ enum abstract GeneratedFileKind(String) to String {
 	var AbiManifest = "abi-manifest";
 	var SymbolTable = "symbol-table";
 	var StdlibReport = "stdlib-report";
+	var InitializationPlan = "initialization-plan";
 }
 
 /** A validated, content-addressed, output-root-relative compiler artifact. */
@@ -70,14 +71,14 @@ class GeneratedFile {
 	public static function isPayloadKind(kind:GeneratedFileKind):Bool {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource: true;
-			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport: false;
+			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | InitializationPlan: false;
 		};
 	}
 
 	static function isKnownKind(kind:GeneratedFileKind):Bool {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource | CompilerManifest | RuntimePlan | AbiManifest | SymbolTable |
-				StdlibReport:
+				StdlibReport | InitializationPlan:
 				true;
 			case _: false;
 		};

@@ -64,6 +64,9 @@ Unsupported source and compiler defects are deliberately different:
 
 - `HXC1001` is `lowering` / `unsupported-source`: the user program contains a
   typed construct whose lowering is not yet admitted.
+- `HXC1002` is `lowering` / `unsupported-source`: cross-type static
+  dependencies form a cycle that the selected deterministic eager strategy
+  cannot order. Its detail names the canonical edge path and source spans.
 - `HXC9000` is `internal` / `internal-compiler-failure`: a compiler invariant
   or internal model is missing or malformed.
 - `HXC1000` is `compiler-capability`: the next honest unimplemented compiler

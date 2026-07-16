@@ -37,10 +37,31 @@ class CStaticFunctionProjectEmitter {
 
 	public function new() {}
 
-	public function plan(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier):CStaticFunctionDeclarationPlan {
+	public function plan(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
+			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier):CStaticFunctionDeclarationPlan {
 		final entry = findFunction(lowered.functions, entryFunctionId);
 		if (entry.ir.parameters.length != 0 || entry.ir.returnType != IRTVoid) {
 			throw new ProjectEmissionError('Haxe executable entry `${entry.ir.id}` must have signature `static function main():Void`');
+		}
+		final initializerIds:Map<String, Bool> = [];
+		final orderedInitializers:Array<CLoweredBodyFunction> = [];
+		if (initializerFunctionIds != null && initializerFunctionIds.length > 0) {
+			if (initializationName == null) {
+				throw new ProjectEmissionError("static initialization function IDs require a compiler-owned initialization name");
+			}
+			for (initializerFunctionId in initializerFunctionIds) {
+				if (initializerIds.exists(initializerFunctionId)) {
+					throw new ProjectEmissionError('static initialization order repeats `$initializerFunctionId`');
+				}
+				final initializer = findFunction(lowered.functions, initializerFunctionId);
+				if (initializer.ir.parameters.length != 0 || initializer.ir.returnType != IRTVoid) {
+					throw new ProjectEmissionError('static initializer `${initializer.ir.id}` must have signature `():Void`');
+				}
+				initializerIds.set(initializerFunctionId, true);
+				orderedInitializers.push(initializer);
+			}
+		} else if (initializationName != null) {
+			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
 		final bodyEmitter = new CBodyEmitter();
@@ -93,9 +114,11 @@ class CStaticFunctionProjectEmitter {
 			}));
 		}
 		for (fn in lowered.functions) {
-			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-			headerUnit.declarations.push(DPrototype([], functionSpecifiers, bodyEmitter.cType(fn.ir.returnType),
-				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)), []));
+			if (!initializerIds.exists(fn.ir.id)) {
+				final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
+				headerUnit.declarations.push(DPrototype([], functionSpecifiers, bodyEmitter.cType(fn.ir.returnType),
+					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)), []));
+			}
 		}
 
 		final programUnit = sourceUnit();
@@ -116,9 +139,13 @@ class CStaticFunctionProjectEmitter {
 		final sources:Array<CStaticFunctionSourcePlan> = [];
 		var nonReturningOrdinal = 0;
 		for (fn in lowered.functions) {
+			final isInitializer = initializerIds.exists(fn.ir.id);
+			if (isInitializer && nonReturningFunctionIds.exists(fn.ir.id)) {
+				throw new ProjectEmissionError('static initializer `${fn.ir.id}` unexpectedly participates in a closed call cycle');
+			}
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
 			final definition:CDecl = DFunction({
-				storage: [],
+				storage: isInitializer ? [SStatic] : [],
 				functionSpecifiers: functionSpecifiers,
 				returnType: bodyEmitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
@@ -134,15 +161,33 @@ class CStaticFunctionProjectEmitter {
 				programUnit.declarations.push(definition);
 			}
 		}
+		final entryStatements:Array<CStmt> = [];
+		if (orderedInitializers.length > 0) {
+			if (initializationName == null) {
+				throw new ProjectEmissionError("validated static initialization order lost its compiler-owned name");
+			}
+			final initializationStatements:Array<CStmt> = [];
+			for (initializer in orderedInitializers) {
+				initializationStatements.push(SExpr(ECall(EIdentifier(initializer.cName), [])));
+			}
+			programUnit.declarations.push(DFunction({
+				storage: [SStatic],
+				functionSpecifiers: [],
+				returnType: new CType(TVoid),
+				declarator: DFunction(DName(initializationName), FPPrototype([], false)),
+				body: SBlock(initializationStatements),
+				attributes: []
+			}));
+			entryStatements.push(SExpr(ECall(EIdentifier(initializationName), [])));
+		}
+		entryStatements.push(SExpr(ECall(EIdentifier(entry.cName), [])));
+		entryStatements.push(SReturn(EInt(CIntegerLiteral.decimal("0"))));
 		programUnit.declarations.push(DFunction({
 			storage: [],
 			functionSpecifiers: [],
 			returnType: new CType(TNativeInt(IRInt, true)),
 			declarator: DFunction(DName(entryName), FPPrototype([], false)),
-			body: SBlock([
-				SExpr(ECall(EIdentifier(entry.cName), [])),
-				SReturn(EInt(CIntegerLiteral.decimal("0")))
-			]),
+			body: SBlock(entryStatements),
 			attributes: []
 		}));
 		sources.push({path: SOURCE_PATH, unit: programUnit});
@@ -150,8 +195,9 @@ class CStaticFunctionProjectEmitter {
 		return new CStaticFunctionDeclarationPlan(HEADER_PATH, new CHeaderUnit(headerGuard, headerUnit), sources);
 	}
 
-	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier):Array<GeneratedFile> {
-		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard);
+	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
+			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier):Array<GeneratedFile> {
+		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard, initializerFunctionIds, initializationName);
 		final printer = new CASTPrinter();
 		final files = [
 			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader)

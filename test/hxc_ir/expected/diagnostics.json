@@ -42,6 +42,9 @@
     "HXC9000 error [profile=portable] test/negative/InvalidStaticBoundsProof.hx:3:1-3:2 [module:invalid.InvalidStaticBoundsProof.function:invalid.InvalidStaticBoundsProof.main.block:entry.instruction:1:bad.bounds-claimed.policy] Invalid HxcIR: static bounds proof index must be the exact in-block Haxe Int constant it claims Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
     "HXC9000 error [profile=portable] test/negative/InvalidStaticBoundsProof.hx:5:1-5:2 [module:invalid.InvalidStaticBoundsProof.function:invalid.InvalidStaticBoundsProof.main.block:entry.instruction:3:bad.bounds-range.policy] Invalid HxcIR: invalid static bounds proof for index 2 and length 2 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "deferredInitializerMissingWrite": [
+    "HXC9000 error [profile=portable] test/negative/DeferredInitializerMissingWrite.hx:1:1-1:2 [module:invalid.DeferredInitializerMissingWrite.global:global.value] Invalid HxcIR: global `global.value` initializer `invalid.DeferredInitializerMissingWrite.main` must initialize it exactly once; found 0 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "primitiveRuntimeConversion": [
     "HXC9000 error [profile=portable] test/negative/PrimitiveRuntimeConversion.hx:3:1-3:2 [module:invalid.PrimitiveRuntimeConversion.function:invalid.PrimitiveRuntimeConversion.main.block:entry.instruction:1:bad.convert] Invalid HxcIR: primitive conversion `IRCNumericExact` must use direct C or a program-local helper, not runtime feature `primitive-conversion` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

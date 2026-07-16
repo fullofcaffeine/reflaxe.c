@@ -7,6 +7,12 @@ private prototype header plus deterministic structural C translation units,
 and packages the result through Reflaxe output ownership. This is deliberately a narrow
 primitive capability, not a claim of general Haxe or standard-library support.
 
+E2.T09 adds every class/static initializer expression as another graph root.
+Direct static functions used only during initialization are therefore prepared
+and prototyped before initializer HxcIR is built. A separately typed plan—not
+function discovery order—selects the bootstrap calls made before Haxe `main`;
+see [deterministic static initialization](static-initialization.md).
+
 ## Typed function boundary
 
 Every admitted function has a compiler-provided `TFun` contract. Parameters and

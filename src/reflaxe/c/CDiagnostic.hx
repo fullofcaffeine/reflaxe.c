@@ -12,6 +12,7 @@ enum abstract CDiagnosticId(String) to String {
 	var InvalidConfiguration = "HXC0003";
 	var LoweringNotImplemented = "HXC1000";
 	var UnsupportedExpression = "HXC1001";
+	var StaticInitializationCycle = "HXC1002";
 	var RuntimePolicyViolation = "HXC2000";
 	var RuntimeFeatureSelected = "HXC2001";
 	var InvalidAbiBoundary = "HXC3000";
@@ -257,6 +258,7 @@ class CDiagnostic {
 			definition(InvalidConfiguration),
 			definition(LoweringNotImplemented),
 			definition(UnsupportedExpression),
+			definition(StaticInitializationCycle),
 			definition(RuntimePolicyViolation),
 			definition(RuntimeFeatureSelected),
 			definition(InvalidAbiBoundary),
@@ -286,6 +288,10 @@ class CDiagnostic {
 				makeDefinition(id, "unsupported-expression", Error, [Error], Lowering, UnsupportedSource,
 					"A typed Haxe expression has no supported C lowering.",
 					"Use a supported construct or implement its typed IR and C AST lowering with semantic tests.");
+			case StaticInitializationCycle:
+				makeDefinition(id, "static-initialization-cycle", Error, [Error], Lowering, UnsupportedSource,
+					"Static initialization dependencies form a cross-type cycle with no deterministic eager order.",
+					"Break the reported cycle by moving shared work into an explicit function or by removing a cyclic static dependency.");
 			case RuntimePolicyViolation:
 				makeDefinition(id, "runtime-policy-violation", Error, [Error], RuntimeAnalysis, RuntimePolicy,
 					"Source semantics require a runtime feature forbidden by the selected runtime policy.",

@@ -3,6 +3,7 @@ package reflaxe.c;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.frontend.TypedProgramInput;
+import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
 #end
 import reflaxe.c.naming.CSymbolRegistry;
 
@@ -14,6 +15,7 @@ class CompilationContext {
 
 	#if (macro || reflaxe_runtime)
 	public var typedProgram(default, null):Null<TypedProgramInput> = null;
+	public var staticInitialization(default, null):Null<CStaticInitializationSnapshot> = null;
 	#end
 
 	public function new(profile:CProfile, buildMode:CBuildMode = Debug) {
@@ -28,6 +30,13 @@ class CompilationContext {
 			throw CDiagnostic.codeMessage(CDiagnosticId.InternalCompilerError, "CompilationContext already owns a normalized typed program");
 		}
 		typedProgram = program;
+	}
+
+	public function setStaticInitialization(snapshot:CStaticInitializationSnapshot):Void {
+		if (staticInitialization != null) {
+			throw CDiagnostic.codeMessage(CDiagnosticId.InternalCompilerError, "CompilationContext already owns a static-initialization plan");
+		}
+		staticInitialization = snapshot;
 	}
 	#end
 }

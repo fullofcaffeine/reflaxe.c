@@ -45,6 +45,10 @@ Payload kinds have fixed locations:
 
 The emitter owns these schema-1 sidecars:
 
+- `hxc.initialization-plan.json`: the admitted primitive executable's
+  dependency-first type order, source-positioned reasons, class/field phases,
+  exact initializer execution order, entry ID, cycle policy, and empty runtime
+  feature set. Structural fixtures do not fabricate this semantic sidecar;
 - `hxc.manifest.json`: resolved logical configuration, typed build
   requirements, layout groups, artifact kinds, and SHA-256 digests;
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
@@ -133,7 +137,8 @@ lowered-program status. The native matrix independently compiles every emitted
 header and links/runs the emitted strict-C11 structural project under GCC and
 Clang. The function-lowering and arithmetic suites prove that the narrow
 primitive production path passes through this ownership boundary with analyzed
-empty runtime/ABI/stdlib records, optional request-local helpers, and the exact
+empty runtime/ABI/stdlib records, a typed static-initialization plan, optional
+request-local helpers, and the exact
 math build fact. The structural corpus itself remains emitted-C shape
 and ownership evidence, not generated-Haxe semantic evidence or a public ABI,
 runtime, standard-library, or generated-output licensing claim.

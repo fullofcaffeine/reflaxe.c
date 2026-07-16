@@ -88,6 +88,9 @@ need to recover intent from target syntax.
   feature is an internal invariant failure, not a fallback;
 - local entry states and every explicit lifetime transition are legal. An
   initialization ends in `initialized`; a destroy cleanup ends in `destroyed`;
+- a deferred global names an existing zero-argument `Void` initializer, and
+  that function contains exactly one `uninitialized -> initialized`
+  `initialize-global` instruction for the named global;
 - cleanup actions are listed in registration order. An edge lists actual
   execution order: reverse registration order within a region, then the direct
   parent region moving outward. Steps are unique and refer to stable
@@ -113,6 +116,14 @@ name the exact in-block `Int` constant, and both static and loop proofs must tie
 their length to the fixed-array storage behind the local span. Whole-view
 assignment and taking a view's address remain outside this admitted proof model.
 Future operation and control-flow families still require their own proof.
+
+E2.T09 consumes the deferred-global and initialization-transition model for
+real Haxe static fields. Each explicit primitive field is emitted as
+zero-initialized C storage plus one private HxcIR initializer; the separately
+inspectable whole-program plan determines when those functions run. HxcIR
+retains per-field semantic work and the exact-once link, while the plan retains
+cross-function/type order and dependency reasons. See [deterministic static
+initialization](static-initialization.md).
 
 ## Runtime and profile policy
 

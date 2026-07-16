@@ -27,8 +27,11 @@ import reflaxe.c.lowering.CBodyLoweringError;
 import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.ir.HxcIRValidationError;
+import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
+import reflaxe.c.plan.CStaticInitializationError;
+import reflaxe.c.plan.CStaticInitializationPlanner;
 
 private typedef ResolvedRuntimePolicy = {
 	final value:CProjectRuntimePolicy;
@@ -49,8 +52,17 @@ private typedef ResolvedProjectConfiguration = {
 	final runtimeDiagnosticsProvenance:String;
 }
 
+private typedef StaticInitializationInspection = {
+	final schemaVersion:Int;
+	final plan:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
+	final hxcir:String;
+}
+
 /** Whole-program adapter into the primitive static-function executable slice. */
 class CCompiler {
+	public static inline final STATIC_INITIALIZATION_REPORT_DEFINE = "reflaxe_c_static_initialization_report";
+	public static inline final STATIC_INITIALIZATION_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION=";
+
 	final context:CompilationContext;
 
 	public function new(context:CompilationContext) {
@@ -80,16 +92,34 @@ class CCompiler {
 					'primitive executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
 					input.expression.pos, context.profile);
 			}
-			final graph = new CStaticFunctionGraphCollector().collect(input, program);
+			final entryFunctionId = CBodyLowering.functionId(input.declarationPath, input.fieldName);
+			final staticInitialization = new CStaticInitializationPlanner().plan(program, entryFunctionId);
+			context.setStaticInitialization(staticInitialization.snapshot);
+			final graph = new CStaticFunctionGraphCollector().collect(input, program, staticInitialization.initializerInputs);
 			final entryRequest = new CSymbolRequest(CSKStaticInitializer, ["compiler", "executable-entry-point", graph.entryFunctionId],
 				CNSOrdinary("translation-unit"), CSVInternal, "main");
+			final initializationRequest:Null<CSymbolRequest> = staticInitialization.executionFunctionIds.length == 0 ? null : new CSymbolRequest(CSKStaticInitializer,
+				["compiler", "static-initialization", "hosted-executable", graph.entryFunctionId], CNSOrdinary("translation-unit"),
+				CSVInternal);
 			final headerGuardRequest = new CSymbolRequest(CSKModule, ["compiler", "program-header", "guard"], CNSPreprocessor, CSVInternal,
 				CDeclarationPlanner.headerGuardFor(CStaticFunctionProjectEmitter.HEADER_PATH));
 			context.symbols.register(entryRequest);
+			if (initializationRequest != null) {
+				context.symbols.register(initializationRequest);
+			}
 			context.symbols.register(headerGuardRequest);
-			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals);
+			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs);
+			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
+				final inspection:StaticInitializationInspection = {
+					schemaVersion: 1,
+					plan: staticInitialization.snapshot,
+					hxcir: new HxcIRDumper().dump(lowered.program)
+				};
+				Sys.println(STATIC_INITIALIZATION_REPORT_PREFIX + Json.stringify(inspection));
+			}
+			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
 			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
-				context.symbols.identifierFor(headerGuardRequest));
+				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName);
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
@@ -104,8 +134,11 @@ class CCompiler {
 				units: units,
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: lowered.helpers.map(helper -> helper.helperId),
+				staticInitialization: staticInitialization.snapshot,
 				symbolTable: lowered.symbolTable
 			});
+		} catch (error:CStaticInitializationError) {
+			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:CBodyLoweringError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:HxcIRValidationError) {

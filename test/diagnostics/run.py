@@ -110,7 +110,7 @@ def main() -> int:
         print(f"diagnostics: ERROR: {error}", file=sys.stderr)
         return 1
 
-    print("diagnostics: OK: 12 typed IDs, deterministic schema-1 records, severity/source guards, and registry drift checks passed")
+    print("diagnostics: OK: 13 typed IDs, deterministic schema-1 records, severity/source guards, and registry drift checks passed")
     return 0
 
 

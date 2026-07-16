@@ -48,6 +48,14 @@ class CBodyEmitter {
 							placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values), temporaryNames, lineDirectives, fn.id);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
+					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
+						if (instruction.result != null) {
+							fail('global initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+						}
+						addLineDirective(statements, instruction.source, lineDirectives);
+						statements.push(SExpr(EBinary(Assign,
+							placeExpression(IRPGlobal(globalId), fn, localNames, globalNames, resolvedSpanLengthNames, values),
+							requireValue(values, valueId, fn.id))));
 					case IRIOInitializeFixedArray(IRPLocal(localId), valueIds, IRISUninitialized, IRISInitialized):
 						emitFixedArrayInitialize(statements, values, declared, referencedLocals, instruction, localId, valueIds, fn, localNames,
 							lineDirectives);
@@ -553,11 +561,10 @@ class CBodyEmitter {
 		};
 	}
 
-	public function globalInitializer(global:HxcIRGlobal):CInitializer {
+	public function globalInitializer(global:HxcIRGlobal):Null<CInitializer> {
 		return switch global.initialization {
 			case IRGIConstant(value): IExpr(constantExpression(value));
-			case IRGIUninitialized | IRGIDeferred(_):
-				throw new CBodyEmissionError('primitive static global `${global.id}` requires a direct constant initializer');
+			case IRGIUninitialized | IRGIDeferred(_): null;
 		};
 	}
 

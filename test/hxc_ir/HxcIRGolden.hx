@@ -39,6 +39,7 @@ class HxcIRGolden {
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
 				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
+				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
 				fixedArrayInitializerMismatch: invalidDiagnostics(fixedArrayInitializerMismatchProgram()),
 				invalidStaticBoundsProof: invalidDiagnostics(invalidStaticBoundsProofProgram()),
 				uncheckedCollectionAccess: invalidDiagnostics(uncheckedCollectionAccessProgram()),
@@ -575,6 +576,19 @@ class HxcIRGolden {
 		], terminator(IRTReturn(null, []), file, 4), [
 			local("local.value", IRTInt(32, true), IRLSAutomatic, IRISUninitialized, file, 1)
 		], [], file);
+	}
+
+	static function deferredInitializerMissingWriteProgram():HxcIRProgram {
+		final file = "test/negative/DeferredInitializerMissingWrite.hx";
+		final program = minimalProgram("invalid.DeferredInitializerMissingWrite", [], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		program.modules[0].globals.push({
+			id: "global.value",
+			type: IRTInt(32, true),
+			mutable: true,
+			initialization: IRGIDeferred("invalid.DeferredInitializerMissingWrite.main"),
+			source: span(file, 1)
+		});
+		return program;
 	}
 
 	static function fixedArrayInitializerMismatchProgram():HxcIRProgram {

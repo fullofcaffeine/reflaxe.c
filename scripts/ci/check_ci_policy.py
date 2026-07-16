@@ -160,6 +160,27 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/evaluation-order/case.json",
     "test/runtime/evaluation-order/case.json",
     "test/differential/evaluation-order/case.json",
+    "src/reflaxe/c/plan/CStaticInitializationModel.hx",
+    "src/reflaxe/c/plan/CStaticInitializationPlanner.hx",
+    "src/reflaxe/c/plan/CStaticInitializationError.hx",
+    "docs/static-initialization.md",
+    "test/static_initialization/fixtures/positive/AStaticInitDependent.hx",
+    "test/static_initialization/fixtures/positive/MStaticInitTrace.hx",
+    "test/static_initialization/fixtures/positive/ZStaticInitPrerequisite.hx",
+    "test/static_initialization/fixtures/positive/StaticInitializationFixture.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleA.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleB.hx",
+    "test/static_initialization/fixtures/cycle/StaticInitializationCycleFixture.hx",
+    "test/static_initialization/expected/initialization-plan.json",
+    "test/static_initialization/expected/initialization.hxcir",
+    "test/static_initialization/expected/program.h",
+    "test/static_initialization/expected/program.c",
+    "test/static_initialization/run.py",
+    "test/positive/static-initialization/case.json",
+    "test/negative/static-initialization/case.json",
+    "test/snapshot/static-initialization/case.json",
+    "test/runtime/static-initialization/case.json",
+    "test/differential/static-initialization/case.json",
     "docs/arithmetic-semantics.md",
     "test/arithmetic_semantics/ArithmeticSemanticsProbe.hx",
     "test/arithmetic_semantics/arithmetic_semantics.hxml",
@@ -255,6 +276,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/beads/validate_plan.py --json",
@@ -319,6 +341,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:function-lowering entry point")
     if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
         errors.append("package.json must retain the test:evaluation-order entry point")
+    if scripts.get("test:static-initialization") != "python3 test/static_initialization/run.py":
+        errors.append("package.json must retain the test:static-initialization entry point")
     if scripts.get("test:arithmetic-semantics") != "python3 test/arithmetic_semantics/run.py":
         errors.append("package.json must retain the test:arithmetic-semantics entry point")
     if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
@@ -377,6 +401,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:function-lowering")
     if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:evaluation-order")
+    if "npm run test:static-initialization" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:static-initialization")
     if "npm run test:arithmetic-semantics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:arithmetic-semantics")
     if "npm run test:span-lowering" not in str(scripts.get("test:toolchain", "")):
@@ -447,6 +473,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed function-lowering test")
     if "test/evaluation_order/run.py" not in pre_commit:
         errors.append("pre-commit must run the explicit evaluation-order test")
+    if "test/static_initialization/run.py" not in pre_commit:
+        errors.append("pre-commit must run the deterministic static-initialization test")
     if "test/arithmetic_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the primitive arithmetic semantic test")
     if "test/span_lowering/run.py" not in pre_commit:
@@ -588,6 +616,46 @@ def validate() -> list[str]:
     if "compiler_identity" not in evaluation_runner or '"--version"' not in evaluation_runner:
         errors.append(
             "evaluation-order runner must verify required compiler-family identity"
+        )
+
+    static_initialization_runner = read_text(
+        ROOT / "test/static_initialization/run.py", errors
+    )
+    for required_static_initialization_flag in (
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        "-Wshadow",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "-Wstrict-prototypes",
+        "-Wmissing-prototypes",
+        "-Wundef",
+        "-Wformat=2",
+        "-Wimplicit-fallthrough",
+        "-Wcast-align",
+        "-Wcast-qual",
+        "-O0",
+        "-O2",
+    ):
+        if required_static_initialization_flag not in static_initialization_runner:
+            errors.append(
+                "static-initialization native runner lost strict flag "
+                + required_static_initialization_flag
+            )
+    if (
+        "--native-only" not in static_initialization_runner
+        or "--toolchain" not in static_initialization_runner
+    ):
+        errors.append(
+            "static-initialization runner must expose the required native matrix seam"
+        )
+    if (
+        "compiler_identity" not in static_initialization_runner
+        or '"--version"' not in static_initialization_runner
+    ):
+        errors.append(
+            "static-initialization runner must verify required compiler-family identity"
         )
 
     arithmetic_runner = read_text(ROOT / "test/arithmetic_semantics/run.py", errors)

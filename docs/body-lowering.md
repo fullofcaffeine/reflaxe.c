@@ -28,7 +28,9 @@ the stable-value and control-flow proof.
   the same admitted graph;
 - implicit direct primitive conversions recorded before their calls;
 - local assignment and referenced primitive static-field load/store with
-  captured constant initializers;
+  captured typed initializers; the focused body unit admits constants directly,
+  while production E2.T09 lowers every explicit field through a deferred
+  initializer function;
 - short-circuit `&&`/`||` and value-form ternary expressions through explicit
   HxcIR blocks;
 - statement `if`/`else`, pre-test `while`, post-test `do-while`, and range

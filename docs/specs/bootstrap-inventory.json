@@ -273,7 +273,7 @@
       "area": "diagnostics",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Twelve typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked.",
+      "summary": "Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked.",
       "scope": "Current bootstrap, configuration, lowering, runtime, target-contract, and internal failures use the target-owned catalog.",
       "evidence": [
         "docs/specs/diagnostics.json",
@@ -522,11 +522,12 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A bounded primitive static-function and local fixed-array/span graph emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans.",
+      "summary": "A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans.",
       "evidence": [
         "test/arithmetic_semantics/run.py",
         "test/function_lowering/run.py",
+        "test/static_initialization/run.py",
         "test/span_lowering/run.py"
       ],
       "owners": [
@@ -534,7 +535,8 @@
         "E2.T04",
         "E2.T05",
         "E2.T06",
-        "E2.T08"
+        "E2.T08",
+        "E2.T09"
       ],
       "limitations": [
         "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."

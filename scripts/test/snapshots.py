@@ -410,6 +410,39 @@ def evaluation_order_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def static_initialization_artifacts() -> list[Artifact]:
+    module = load_module(
+        "static_initialization", "test/static_initialization/run.py"
+    )
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure(
+            "two static-initialization snapshot renders were not byte-identical"
+        )
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("initialization-plan.json", "json"),
+        ("initialization.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+    ):
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"static-initialization report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"static-initialization report omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/static_initialization/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 def arithmetic_semantics_artifacts() -> list[Artifact]:
     module = load_module(
         "arithmetic_semantics", "test/arithmetic_semantics/run.py"
@@ -508,6 +541,7 @@ GENERATORS: dict[str, Generator] = {
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,
+    "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
     "span-lowering": span_lowering_artifacts,
 }

@@ -149,6 +149,20 @@
       "remediation": "Use a supported construct or implement its typed IR and C AST lowering with semantic tests."
     },
     {
+      "id": "HXC1002",
+      "name": "static-initialization-cycle",
+      "defaultSeverity": "error",
+      "allowedSeverities": [
+        "error"
+      ],
+      "phase": "lowering",
+      "kind": "unsupported-source",
+      "sourcePolicy": "required",
+      "idStability": "stable",
+      "summary": "Static initialization dependencies form a cross-type cycle with no deterministic eager order.",
+      "remediation": "Break the reported cycle by moving shared work into an explicit function or by removing a cyclic static dependency."
+    },
+    {
       "id": "HXC2000",
       "name": "runtime-policy-violation",
       "defaultSeverity": "error",

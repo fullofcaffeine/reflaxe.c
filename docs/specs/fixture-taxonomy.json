@@ -34,6 +34,7 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
+        "static-initialization",
         "arithmetic-semantics",
         "span-lowering"
       ]
@@ -59,6 +60,7 @@
         "hxc-ir",
         "body-lowering",
         "function-lowering",
+        "static-initialization",
         "span-lowering"
       ]
     },
@@ -102,6 +104,7 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
+        "static-initialization",
         "arithmetic-semantics",
         "span-lowering"
       ]
@@ -121,6 +124,7 @@
         "body-lowering",
         "function-lowering",
         "evaluation-order",
+        "static-initialization",
         "arithmetic-semantics",
         "span-lowering"
       ]
@@ -138,6 +142,7 @@
       "suiteIds": [
         "hxc-ir",
         "evaluation-order",
+        "static-initialization",
         "arithmetic-semantics"
       ]
     },
@@ -442,6 +447,29 @@
       ]
     },
     {
+      "id": "static-initialization",
+      "directory": "test/static_initialization",
+      "runner": [
+        "python3",
+        "test/static_initialization/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "the typed dependency graph records source-positioned reasons and produces dependency-first type order independently of compiler discovery order",
+        "class __init__ bodies run in type order before static fields, fields run in source order, and the hosted entry invokes the compiler-owned phase exactly once before Haxe main",
+        "deferred globals and initialize-global instructions remain inspectable in validated HxcIR while generated strict C uses zero-initialized storage plus ordered assignments",
+        "cross-type cycles fail without artifacts through deterministic HXC1002 paths naming every edge",
+        "portable, metal, and runtime-none output remains hxrt-free, warning-clean at O0/O2, and matches the pinned Haxe JavaScript generator oracle under GCC and Clang"
+      ]
+    },
+    {
       "id": "arithmetic-semantics",
       "directory": "test/arithmetic_semantics",
       "runner": [
@@ -623,6 +651,18 @@
           "test/evaluation_order/expected/program.h",
           "test/evaluation_order/expected/program.c",
           "test/evaluation_order/expected/symbols.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "static-initialization",
+        "expectedRoots": [
+          "test/static_initialization/expected"
         ],
         "formats": [
           "c",

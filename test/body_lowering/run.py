@@ -482,6 +482,7 @@ def check_production_boundaries() -> None:
         required = {
             "_GeneratedFiles.json",
             "hxc.abi.json",
+            "hxc.initialization-plan.json",
             "hxc.manifest.json",
             "hxc.runtime-plan.json",
             "hxc.stdlib-report.json",
@@ -505,6 +506,11 @@ def check_production_boundaries() -> None:
         runtime_plan = json.loads(
             (supported_output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
         )
+        initialization_plan = json.loads(
+            (supported_output / "hxc.initialization-plan.json").read_text(
+                encoding="utf-8"
+            )
+        )
         abi = json.loads(
             (supported_output / "hxc.abi.json").read_text(encoding="utf-8")
         )
@@ -516,15 +522,21 @@ def check_production_boundaries() -> None:
             or '#include "hxc/program.h"' not in source
             or "int main(void)" not in source
             or "hxc_method_BodyFixture_main();" not in source
+            or initialization_plan.get("schemaVersion") != 1
+            or initialization_plan.get("strategy") != "eager-haxe-type-order"
+            or initialization_plan.get("executionOrder") != []
+            or initialization_plan.get("runtimeFeatures") != []
             or runtime_plan.get("status") != "analyzed-runtime-free"
             or runtime_plan.get("features") != []
+            or "compiler-planned-eager-static-initialization"
+            in runtime_plan.get("directDecisions", [])
             or not runtime_plan.get("noRuntimeProof")
             or abi.get("status") != "analyzed-no-public-exports"
             or abi.get("executableEntryPoint") != "main"
             or stdlib.get("status") != "analyzed-no-stdlib-use"
         ):
             raise BodyLoweringFailure(
-                "supported production project lost its entry/runtime/ABI/stdlib proof"
+                "supported production project lost its entry/initialization/runtime/ABI/stdlib proof"
             )
         combined = "\n".join(
             path.read_text(encoding="utf-8")

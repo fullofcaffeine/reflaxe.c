@@ -41,6 +41,15 @@ class DiagnosticPolicyTests(unittest.TestCase):
         errors = policy.validate_catalog_document(catalog)
         self.assertTrue(any("HXC9000 must remain" in error for error in errors))
 
+    def test_static_initialization_cycle_has_its_own_stable_id(self) -> None:
+        definition = next(
+            entry for entry in self.catalog["diagnostics"] if entry["id"] == "HXC1002"
+        )
+        self.assertEqual(definition["name"], "static-initialization-cycle")
+        self.assertEqual(definition["phase"], "lowering")
+        self.assertEqual(definition["kind"], "unsupported-source")
+        self.assertEqual(definition["allowedSeverities"], ["error"])
+
     def test_disallowed_event_severity_and_missing_source_are_rejected(self) -> None:
         definition = next(entry for entry in self.catalog["diagnostics"] if entry["id"] == "HXC1001")
         event = {

@@ -25,7 +25,7 @@ language, standard-library, public ABI, or `hxrt` support.
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C, plus static initialization against the pinned Haxe JavaScript generator; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -170,6 +170,18 @@ required and skipped lazy operands, and runs strict GCC/Clang at O0/O2 with a
 positive zero-runtime plan.
 See [explicit evaluation
 order](evaluation-order.md).
+
+`test/static_initialization` is the focused
+positive/negative/snapshot/runtime/differential suite for E2.T09. Its lexically
+reversed three-class graph proves source-positioned dependency reasons,
+dependency-first type order, class-before-field phases, field source order,
+deferred HxcIR globals, and exactly one generated bootstrap call before Haxe
+entry. Repeated and reversed typed-module inputs must produce identical reports
+and output roots. A two-class cycle emits the same exact `HXC1002` path with no
+artifact. The pinned Haxe JavaScript generator supplies the phase-order oracle,
+and an independent C harness checks the initialized result under strict GCC and
+Clang at O0/O2 with portable, metal, and runtime-none no-`hxrt` evidence. See
+[deterministic static initialization](static-initialization.md).
 
 `test/arithmetic_semantics` is the focused
 positive/snapshot/runtime/differential suite for E2.T05. It lowers real typed

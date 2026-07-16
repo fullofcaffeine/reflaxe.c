@@ -48,6 +48,24 @@ typedef CBodyGlobalInput = {
 	final expression:Null<TypedExpr>;
 }
 
+/** The semantic work performed by one compiler-owned initializer body. */
+enum CBodyInitializerKind {
+	CBIClass;
+	CBIStaticField(globalId:String);
+}
+
+/** Stable coordinates plus one real typed initializer expression. */
+typedef CBodyInitializerInput = {
+	final id:String;
+	final modulePath:String;
+	final declarationPath:String;
+	final sourcePath:String;
+	final displayName:String;
+	final sourceOrder:Int;
+	final expression:TypedExpr;
+	final kind:CBodyInitializerKind;
+}
+
 /** One validated body with finalized C names and both source-mapping modes. */
 class CLoweredBodyFunction {
 	public final modulePath:String;
@@ -129,7 +147,8 @@ class CBodyLowering {
 		this.context = context;
 	}
 
-	public function lower(inputFunctions:Array<CBodyFunctionInput>, ?inputGlobals:Array<CBodyGlobalInput>):CBodyLoweringResult {
+	public function lower(inputFunctions:Array<CBodyFunctionInput>, ?inputGlobals:Array<CBodyGlobalInput>,
+			?inputInitializers:Array<CBodyInitializerInput>):CBodyLoweringResult {
 		if (inputFunctions.length == 0) {
 			throw new CBodyEmissionError("body lowering requires at least one typed function input");
 		}
@@ -145,7 +164,26 @@ class CBodyLowering {
 			prepared.push(fn);
 			preparedById.set(fn.irId, fn);
 		}
-		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals);
+		final initializers = inputInitializers == null ? [] : inputInitializers.copy();
+		initializers.sort(compareInitializerInputs);
+		final deferredInitializersByGlobal:Map<String, String> = [];
+		for (input in initializers) {
+			final fn = new InitializerPreparer(context, input).prepare();
+			if (preparedById.exists(fn.irId)) {
+				throw new CBodyEmissionError('body lowering received duplicate semantic function `${fn.irId}`');
+			}
+			switch input.kind {
+				case CBIStaticField(globalId):
+					if (deferredInitializersByGlobal.exists(globalId)) {
+						throw new CBodyEmissionError('body lowering received duplicate initializer for global `$globalId`');
+					}
+					deferredInitializersByGlobal.set(globalId, input.id);
+				case CBIClass:
+			}
+			prepared.push(fn);
+			preparedById.set(fn.irId, fn);
+		}
+		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
 		final built:Array<BuiltBodyFunction> = [];
 		for (fn in prepared) {
 			built.push(new FunctionBuilder(context, fn, preparedById, globalRegistry).build());
@@ -202,8 +240,8 @@ class CBodyLowering {
 			for (blockId => request in item.labelRequests) {
 				labelNames.set(blockId, context.symbols.identifierFor(request));
 			}
-			final input = item.prepared.input;
-			lowered.push(new CLoweredBodyFunction(input.modulePath, input.declarationPath, input.fieldName, item.ir,
+			final preparedFunction = item.prepared;
+			lowered.push(new CLoweredBodyFunction(preparedFunction.modulePath, preparedFunction.declarationPath, preparedFunction.displayName, item.ir,
 				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, spanLengthNames, temporaryNames, tailArgumentNames,
 				labelNames, emitter.requiredHeaders(item.ir),
 				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false, tailArgumentNames,
@@ -238,10 +276,10 @@ class CBodyLowering {
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
-			var moduleFunctions = byModule.get(fn.prepared.input.modulePath);
+			var moduleFunctions = byModule.get(fn.prepared.modulePath);
 			if (moduleFunctions == null) {
 				moduleFunctions = [];
-				byModule.set(fn.prepared.input.modulePath, moduleFunctions);
+				byModule.set(fn.prepared.modulePath, moduleFunctions);
 			}
 			moduleFunctions.push(fn);
 		}
@@ -318,8 +356,16 @@ class CBodyLowering {
 		return identity != 0 ? identity : left.sourceOrder - right.sourceOrder;
 	}
 
+	static function compareInitializerInputs(left:CBodyInitializerInput, right:CBodyInitializerInput):Int {
+		final identity = compareUtf8(left.id, right.id);
+		return identity != 0 ? identity : left.sourceOrder - right.sourceOrder;
+	}
+
 	public static function functionId(declarationPath:String, fieldName:String):String
 		return 'function.$declarationPath.$fieldName';
+
+	public static function globalId(declarationPath:String, fieldName:String):String
+		return 'global.$declarationPath.$fieldName';
 
 	public static function compareUtf8(left:String, right:String):Int {
 		final leftBytes = Bytes.ofString(left);
@@ -416,13 +462,25 @@ private typedef PreparedParameter = {
 }
 
 private typedef PreparedBodyFunction = {
-	final input:CBodyFunctionInput;
-	final functionValue:TFunc;
+	final modulePath:String;
+	final declarationPath:String;
+	final sourcePath:String;
+	final displayName:String;
+	final fieldName:String;
+	final sourceExpression:TypedExpr;
+	final bodyExpression:TypedExpr;
+	final role:PreparedBodyRole;
 	final irId:String;
 	final parameters:Array<PreparedParameter>;
 	final returnMapping:CPrimitiveTypeMapping;
 	final functionRequest:CSymbolRequest;
 	final parameterRequests:Map<String, CSymbolRequest>;
+}
+
+private enum PreparedBodyRole {
+	PBRFunction;
+	PBRClassInitializer;
+	PBRStaticFieldInitializer(globalId:String);
 }
 
 private typedef PreparedBodyGlobal = {
@@ -439,9 +497,11 @@ private class BodyGlobalRegistry {
 	final context:CompilationContext;
 	final byId:Map<String, PreparedBodyGlobal> = [];
 	final inputsById:Map<String, CBodyGlobalInput> = [];
+	final deferredInitializersByGlobal:Map<String, String>;
 
-	public function new(context:CompilationContext, inputs:Array<CBodyGlobalInput>) {
+	public function new(context:CompilationContext, inputs:Array<CBodyGlobalInput>, deferredInitializersByGlobal:Map<String, String>) {
 		this.context = context;
+		this.deferredInitializersByGlobal = deferredInitializersByGlobal;
 		for (input in inputs) {
 			final id = globalId(input.declarationPath, input.fieldName);
 			if (inputsById.exists(id)) {
@@ -457,14 +517,19 @@ private class BodyGlobalRegistry {
 		final field = fieldReference.get();
 		final declarationPath = owner.pack.concat([owner.name]).join(".");
 		final id = globalId(declarationPath, field.name);
+		return requireId(id, expression, fail);
+	}
+
+	public function requireId(id:String, expression:TypedExpr, fail:(Position, String) -> Void):PreparedBodyGlobal {
 		final existing = byId.get(id);
 		if (existing != null) {
 			return existing;
 		}
 		final input = inputsById.get(id);
 		if (input == null) {
-			return rejected(fail, expression.pos, 'TField(static:${field.name}:outside-captured-program)');
+			return rejected(fail, expression.pos, 'TField(static:$id:outside-captured-program)');
 		}
+		final fieldName = input.fieldName;
 		final mapping = switch CPrimitiveTypeMapper.map(input.fieldType, context.profile) {
 			case CTPrimitive(value):
 				final admitted = value.nullability == CPNonNullable && switch value.sourceType {
@@ -472,26 +537,31 @@ private class BodyGlobalRegistry {
 					case _: false;
 				};
 				if (!admitted) {
-					return rejected(fail, expression.pos, 'TField(static:${field.name}:type:${value.cSpelling})');
+					return rejected(fail, expression.pos, 'TField(static:$fieldName:type:${value.cSpelling})');
 				}
 				value;
 			case CTReference(identity, nullable):
-				return rejected(fail, expression.pos, 'TField(static:${field.name}:reference-$identity-${nullable ? "nullable" : "non-null"})');
+				return rejected(fail, expression.pos, 'TField(static:$fieldName:reference-$identity-${nullable ? "nullable" : "non-null"})');
 			case CTNativePointer(identity, nullable):
-				return rejected(fail, expression.pos, 'TField(static:${field.name}:native-pointer-$identity-${nullable ? "nullable" : "non-null"})');
+				return rejected(fail, expression.pos, 'TField(static:$fieldName:native-pointer-$identity-${nullable ? "nullable" : "non-null"})');
 			case CTUnsupported(reason):
-				return rejected(fail, expression.pos, 'TField(static:${field.name}:$reason)');
+				return rejected(fail, expression.pos, 'TField(static:$fieldName:$reason)');
 		};
-		final initializerExpression = input.expression;
-		final initializer = if (initializerExpression == null) {
-			return rejected(fail, input.position, 'TField(static:${field.name}:uninitialized)');
-		} else globalInitializer(initializerExpression, mapping.irType, fail, field.name);
-		final request = new CSymbolRequest(CSKField, declarationPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVInternal);
+		final deferredInitializerId = deferredInitializersByGlobal.get(id);
+		final initializer = if (deferredInitializerId != null) {
+			IRGIDeferred(deferredInitializerId);
+		} else if (input.expression == null) {
+			return rejected(fail, input.position, 'TField(static:$fieldName:uninitialized)');
+		} else {
+			globalInitializer(input.expression, mapping.irType, fail, fieldName);
+		}
+		final declarationPath = input.declarationPath;
+		final request = new CSymbolRequest(CSKField, declarationPath.split(".").concat([fieldName]), CNSOrdinary("translation-unit"), CSVInternal);
 		context.symbols.register(request);
 		final prepared:PreparedBodyGlobal = {
 			modulePath: input.modulePath,
 			declarationPath: declarationPath,
-			fieldName: field.name,
+			fieldName: fieldName,
 			mapping: mapping,
 			ir: {
 				id: id,
@@ -513,7 +583,7 @@ private class BodyGlobalRegistry {
 	}
 
 	public static function globalId(declarationPath:String, fieldName:String):String
-		return 'global.$declarationPath.$fieldName';
+		return CBodyLowering.globalId(declarationPath, fieldName);
 
 	static function globalInitializer(expression:TypedExpr, type:HxcIRTypeRef, fail:(Position, String) -> Void, fieldName:String):HxcIRGlobalInitialization {
 		return switch expression.expr {
@@ -615,8 +685,14 @@ private class FunctionPreparer {
 			parameterRequests.set(parameter.ir.id, request);
 		}
 		return {
-			input: input,
-			functionValue: functionValue,
+			modulePath: input.modulePath,
+			declarationPath: input.declarationPath,
+			sourcePath: input.sourcePath,
+			displayName: input.fieldName,
+			fieldName: input.fieldName,
+			sourceExpression: input.expression,
+			bodyExpression: functionValue.expr,
+			role: PBRFunction,
 			irId: CBodyLowering.functionId(input.declarationPath, input.fieldName),
 			parameters: parameters,
 			returnMapping: returnMapping,
@@ -680,10 +756,50 @@ private class FunctionPreparer {
 	}
 }
 
+private class InitializerPreparer {
+	final context:CompilationContext;
+	final input:CBodyInitializerInput;
+
+	public function new(context:CompilationContext, input:CBodyInitializerInput) {
+		this.context = context;
+		this.input = input;
+	}
+
+	public function prepare():PreparedBodyFunction {
+		final returnMapping = switch CPrimitiveTypeMapper.map(Context.getType("Void"), context.profile) {
+			case CTPrimitive(mapping) if (mapping.sourceType == CPHaxeVoid && mapping.nullability == CPNonNullable): mapping;
+			case _: throw new CBodyEmissionError('static initializer `${input.id}` could not resolve the target Void representation');
+		};
+		final role = switch input.kind {
+			case CBIClass: PBRClassInitializer;
+			case CBIStaticField(globalId): PBRStaticFieldInitializer(globalId);
+		};
+		final symbolPath = ["compiler", "static-initialization"].concat(input.declarationPath.split(".")).concat([input.displayName]);
+		final functionRequest = new CSymbolRequest(CSKStaticInitializer, symbolPath, CNSOrdinary("translation-unit"), CSVInternal, null, [], [],
+			input.sourceOrder);
+		context.symbols.register(functionRequest);
+		return {
+			modulePath: input.modulePath,
+			declarationPath: input.declarationPath,
+			sourcePath: input.sourcePath,
+			displayName: input.displayName,
+			fieldName: input.displayName,
+			sourceExpression: input.expression,
+			bodyExpression: input.expression,
+			role: role,
+			irId: input.id,
+			parameters: [],
+			returnMapping: returnMapping,
+			functionRequest: functionRequest,
+			parameterRequests: []
+		};
+	}
+}
+
 private class FunctionBuilder {
 	final context:CompilationContext;
 	final prepared:PreparedBodyFunction;
-	final input:CBodyFunctionInput;
+	final input:PreparedBodyFunction;
 	final functionsById:Map<String, PreparedBodyFunction>;
 	final globalRegistry:BodyGlobalRegistry;
 	final functionContext:String;
@@ -709,27 +825,35 @@ private class FunctionBuilder {
 			globalRegistry:BodyGlobalRegistry) {
 		this.context = context;
 		this.prepared = prepared;
-		this.input = prepared.input;
+		this.input = prepared;
 		this.functionsById = functionsById;
 		this.globalRegistry = globalRegistry;
-		this.functionContext = 'function ${input.declarationPath}.${input.fieldName} body';
+		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.localOrdinal = prepared.parameters.length;
-		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.functionValue.expr.pos, input.sourcePath));
+		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
 		for (parameter in prepared.parameters) {
 			parameterValuesByCompilerId.set(parameter.compilerId, {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping});
 		}
 	}
 
 	public function build():BuiltBodyFunction {
-		final functionValue = prepared.functionValue;
-		lowerStatement(functionValue.expr);
-		if (currentBlock.terminator == null) {
-			currentBlock.terminator = {kind: IRTReturn(null, []), source: HaxeSourceSpan.fromPosition(functionValue.expr.pos, input.sourcePath)};
+		final bodyExpression = prepared.bodyExpression;
+		switch prepared.role {
+			case PBRFunction | PBRClassInitializer:
+				lowerStatement(bodyExpression);
+			case PBRStaticFieldInitializer(globalId):
+				final global = globalRegistry.requireId(globalId, bodyExpression, unsupportedAt);
+				final value = coerce(lowerValue(bodyExpression, global.mapping), global.mapping, bodyExpression.pos, "static-field-initializer");
+				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
+					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
-		final functionSpan = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
+		if (currentBlock.terminator == null) {
+			currentBlock.terminator = {kind: IRTReturn(null, []), source: HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath)};
+		}
+		final functionSpan = HaxeSourceSpan.fromPosition(input.sourceExpression.pos, input.sourcePath);
 		final ir:HxcIRFunction = {
 			id: prepared.irId,
-			displayName: '${input.declarationPath}.${input.fieldName}',
+			displayName: '${input.declarationPath}.${input.displayName}',
 			parameters: prepared.parameters.map(parameter -> parameter.ir),
 			locals: locals,
 			returnType: prepared.returnMapping.irType,

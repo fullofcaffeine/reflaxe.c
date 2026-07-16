@@ -101,7 +101,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(BEADS
   npm run test:beads-plan
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|arithmetic-semantics|body-lowering|diagnostics|evaluation-order|function-lowering|primitive-semantics|project-emission|span-lowering|symbol-naming|testing|typed-ast-input)\.md|docs/specs/(fixture-(case|taxonomy).*|primitive-semantics.*)\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|arithmetic_semantics|body_lowering|diagnostics|evaluation_order|function_lowering|primitive_semantics|project_emitter|span_lowering|symbol_registry|typed_ast)/)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|docs/(PRD|architecture|arithmetic-semantics|body-lowering|diagnostics|evaluation-order|function-lowering|primitive-semantics|project-emission|span-lowering|static-initialization|symbol-naming|testing|typed-ast-input)\.md|docs/specs/(fixture-(case|taxonomy).*|primitive-semantics.*)\.json|package\.json|scripts/(ci/check_fixture_policy|test/snapshots)\.py|test/governance/test_fixture_policy\.py|test/(positive|negative|ast|snapshot|runtime|differential|abi|performance|arithmetic_semantics|body_lowering|diagnostics|evaluation_order|function_lowering|primitive_semantics|project_emitter|span_lowering|static_initialization|symbol_registry|typed_ast)/)'; then
   echo "[pre-commit] Validating fixture taxonomy, snapshot ownership, and example assertions..."
   python3 "$ROOT_DIR/scripts/ci/check_fixture_policy.py"
 fi
@@ -181,6 +181,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxe
   python3 "$ROOT_DIR/test/evaluation_order/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxeCompiler|CompilationContext)\.hx|src/reflaxe/c/(ast|emit|frontend|ir|lowering|naming|plan|semantics)/|test/static_initialization/|docs/(diagnostics|static-initialization|testing)\.md|docs/specs/(diagnostics|fixture-taxonomy)\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running deterministic static-initialization and cycle probes..."
+  python3 "$ROOT_DIR/test/static_initialization/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxeCompiler|CompilationContext)\.hx|src/reflaxe/c/(ast|emit|frontend|ir|lowering|naming|plan|semantics)/|test/(arithmetic_semantics|hxc_ir)/|docs/(adr/0008-primitive-representations-and-conversions|arithmetic-semantics|body-lowering|evaluation-order|primitive-semantics)\.md|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running primitive arithmetic boundary, sanitizer, and optimized-shape probes..."
   python3 "$ROOT_DIR/test/arithmetic_semantics/run.py"
@@ -191,12 +196,12 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/(CArray|ConstSpan|Span)\.hx
   python3 "$ROOT_DIR/test/span_lowering/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering)/expected/|test/(primitive_semantics|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering)/|docs/specs/primitive-semantics\.json|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/expected/|test/(primitive_semantics|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/|docs/specs/primitive-semantics\.json|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Checking registered snapshots without updating them..."
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering)/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization)/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

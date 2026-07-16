@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "id": "deterministic-static-initialization-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-003",
+    "HXC-SEM-004",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "src/reflaxe/c/plan/CStaticInitializationPlanner.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "test/static_initialization/fixtures/positive/AStaticInitDependent.hx",
+    "test/static_initialization/fixtures/positive/MStaticInitTrace.hx",
+    "test/static_initialization/fixtures/positive/ZStaticInitPrerequisite.hx",
+    "test/static_initialization/fixtures/positive/StaticInitializationFixture.hx",
+    "test/static_initialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../static_initialization/run.py"
+    ],
+    "workingDirectory": "test/positive/static-initialization",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^static-initialization: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/static_initialization/expected/initialization-plan.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/static_initialization/expected/initialization.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

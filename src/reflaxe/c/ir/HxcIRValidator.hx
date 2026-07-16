@@ -167,8 +167,27 @@ private class HxcIRValidationState {
 			case IRGIConstant(value):
 				validateConstant(value, '$path.initialization', global.source);
 			case IRGIDeferred(initializerFunctionId):
-				if (!functions.exists(initializerFunctionId)) {
+				final initializer = functions.get(initializerFunctionId);
+				if (initializer == null) {
 					add(path, 'global `${global.id}` refers to unknown initializer function `$initializerFunctionId`', global.source);
+				} else {
+					if (initializer.parameters.length != 0 || initializer.returnType != IRTVoid) {
+						add(path, 'global `${global.id}` initializer `$initializerFunctionId` must have signature `():Void`', global.source);
+					}
+					var initializeCount = 0;
+					for (block in initializer.blocks) {
+						for (instruction in block.instructions) {
+							switch instruction.kind {
+								case IRIOInitialize(IRPGlobal(globalId), _, IRISUninitialized, IRISInitialized) if (globalId == global.id):
+									initializeCount++;
+								case _:
+							}
+						}
+					}
+					if (initializeCount != 1) {
+						add(path, 'global `${global.id}` initializer `$initializerFunctionId` must initialize it exactly once; found $initializeCount',
+							global.source);
+					}
 				}
 		}
 	}

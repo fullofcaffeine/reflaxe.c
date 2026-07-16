@@ -37,8 +37,10 @@ The current source-backed slice covers:
 Static-field declarations and initializers come from the `TypedProgramInput`
 captured inside `filterTypes`. Lowering never asks a mutable `ClassField` for a
 later expression after Reflaxe preprocessing. Referenced primitive fields
-become typed HxcIR globals with registry-finalized internal C names and direct
-constant initialization.
+become typed HxcIR globals with registry-finalized internal C names. The focused
+evaluation-order unit retains direct constant initialization; the production
+whole-program path uses the E2.T09 deferred initializer and explicit bootstrap
+contract so class `__init__` ordering cannot be changed by C file-scope syntax.
 
 HxcIR instruction arrays remain semantic order. Lazy, conditional, loop, and
 switch expressions create explicit blocks and terminators; their C form uses
