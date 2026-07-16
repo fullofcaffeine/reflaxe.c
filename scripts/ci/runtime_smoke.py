@@ -16,9 +16,10 @@ from typing import Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
-RUNTIME_SOURCE = ROOT / "runtime/hxrt/src/hxc_runtime.c"
+RUNTIME_SOURCES = tuple(sorted((ROOT / "runtime/hxrt/src").glob("*.c")))
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
+RUNTIME_FEATURE_GRAPH = ROOT / "test/runtime/runtime-feature-graph/run.py"
 DECLARATION_PLAN = ROOT / "test/declaration_plan"
 DECLARATION_PLAN_INCLUDE = DECLARATION_PLAN / "expected/include"
 DECLARATION_PLAN_SUPPORT_INCLUDE = DECLARATION_PLAN / "support/include"
@@ -241,6 +242,17 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     family = toolchain.family
     lanes: list[str] = []
 
+    run_command(
+        [
+            sys.executable,
+            str(RUNTIME_FEATURE_GRAPH),
+            "--toolchain",
+            family,
+        ],
+        label=f"{family} selective runtime feature packaging",
+    )
+    lanes.append("runtime-feature-selective-packaging")
+
     for golden_name, golden_source, sentinel, lane in C_AST_GOLDENS:
         c_ast_object = build / f"c_ast_{golden_name}_golden.o"
         c_ast_executable = build / f"c_ast_{golden_name}_golden"
@@ -348,17 +360,22 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     lanes.append("project-emitter-structural-run")
 
-    runtime_object = build / "hxc_runtime.o"
+    runtime_objects: list[Path] = []
     runtime_smoke_object = build / "runtime_smoke.o"
     runtime_executable = build / "runtime_smoke"
-    compile_object(
-        toolchain.cc,
-        C_STRICT_FLAGS,
-        RUNTIME_SOURCE,
-        runtime_object,
-        includes=(RUNTIME_INCLUDE,),
-        label=f"{family} hosted runtime",
-    )
+    if not RUNTIME_SOURCES:
+        raise NativeSmokeFailure("runtime source feature slices are missing")
+    for index, source in enumerate(RUNTIME_SOURCES):
+        runtime_object = build / f"hxc_runtime_{index}.o"
+        compile_object(
+            toolchain.cc,
+            C_STRICT_FLAGS,
+            source,
+            runtime_object,
+            includes=(RUNTIME_INCLUDE,),
+            label=f"{family} hosted runtime {source.name}",
+        )
+        runtime_objects.append(runtime_object)
     compile_object(
         toolchain.cc,
         C_STRICT_FLAGS,
@@ -369,7 +386,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     link_executable(
         toolchain.cc,
-        (runtime_object, runtime_smoke_object),
+        (*runtime_objects, runtime_smoke_object),
         runtime_executable,
         label=f"{family} runtime link",
     )
@@ -388,7 +405,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
             "-DHXC_FREESTANDING=1",
             f"-I{RUNTIME_INCLUDE}",
             "-fsyntax-only",
-            str(RUNTIME_SOURCE),
+            *(str(source) for source in RUNTIME_SOURCES),
         ],
         label=f"{family} freestanding runtime compile-only",
     )
@@ -406,7 +423,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     link_executable(
         toolchain.cxx,
-        (runtime_object, cpp_header_object),
+        (*runtime_objects, cpp_header_object),
         cpp_header_executable,
         label=f"{family} C++ public-header link",
     )

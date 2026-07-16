@@ -13,8 +13,10 @@ production-emitted primitive private header/source/entry project. The
 evaluation-order suite now adds E2.T06 primitive statement/control-flow
 evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
 and optimized-shape evidence. The span suite adds local fixed-array/view,
-bounds-policy, and runtime-free iteration evidence. None proves broader
-language, standard-library, public ABI, or `hxrt` support.
+bounds-policy, and runtime-free iteration evidence. The runtime-feature suite
+adds deterministic graph/policy and selective provisional native-seed packaging
+evidence. None proves broader language, standard-library, public ABI, or
+generated-Haxe `hxrt` support.
 
 ## Canonical lanes
 
@@ -24,7 +26,7 @@ language, standard-library, public ABI, or `hxrt` support.
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, deterministic feature closure, and selective provisional native-seed packages; no generated-Haxe `hxrt` proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C, plus static initialization against the pinned Haxe JavaScript generator; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
@@ -110,6 +112,7 @@ The registered snapshot selectors are:
 - `function-lowering`
 - `evaluation-order`
 - `arithmetic-semantics`
+- `runtime-feature-graph`
 - `span-lowering`
 
 List them from the executable registry with:
@@ -206,6 +209,19 @@ out-of-range fail-stop paths in the six-way configuration matrix, rejects
 general/empty arrays and lookalike intrinsic names without output, validates the
 profile-aware `hxc_build` diagnostic, and inspects runtime-none links for zero
 `hxrt` symbols. See [fixed arrays and span-based iteration](span-lowering.md).
+
+`test/runtime/runtime-feature-graph` is the focused
+positive/negative/AST/snapshot/runtime suite for E4.T01. It renders the typed
+catalog and plans twice, reverses definition/reservation/reason input, and
+checks canonical cycle and unknown-dependency failures. Every selected root,
+transitive feature, and dependency edge must retain a source-reason ID. Policy
+fixtures cover `auto|minimal|none`, portable and metal presets, manual
+confirmation/forbid rules, environments, reserved features, and rejection of
+provisional seeds from generated-Haxe planning. The packager performs zero
+reads for an empty plan and materializes exact alloc-only and string closures;
+strict GCC and Clang lanes compile/run both and reject string symbols in the
+alloc-only link. See
+[runtime feature planning and selective packaging](runtime-feature-planning.md).
 
 ## Examples are product proofs, not implicit tests
 

@@ -32,6 +32,12 @@ import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
 import reflaxe.c.plan.CStaticInitializationError;
 import reflaxe.c.plan.CStaticInitializationPlanner;
+import reflaxe.c.runtime.RuntimeFeatureCatalog;
+import reflaxe.c.runtime.RuntimeFeatureError;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
+import reflaxe.c.runtime.RuntimeFeaturePlanner;
 
 private typedef ResolvedRuntimePolicy = {
 	final value:CProjectRuntimePolicy;
@@ -120,6 +126,9 @@ class CCompiler {
 			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
 			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
 				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName);
+			final helperIds = lowered.helpers.map(helper -> helper.helperId);
+			final runtimePlan = primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot);
+			context.setRuntimePlan(runtimePlan);
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
@@ -133,8 +142,9 @@ class CCompiler {
 				runtimeDiagnosticsProvenance: configuration.runtimeDiagnosticsProvenance,
 				units: units,
 				buildFacts: lowered.buildFacts,
-				primitiveHelperIds: lowered.helpers.map(helper -> helper.helperId),
+				primitiveHelperIds: helperIds,
 				staticInitialization: staticInitialization.snapshot,
+				runtimePlan: runtimePlan,
 				symbolTable: lowered.symbolTable
 			});
 		} catch (error:CStaticInitializationError) {
@@ -146,10 +156,41 @@ class CCompiler {
 			CDiagnostic.fatal(diagnostic.id, diagnostic.message, input.expression.pos, context.profile);
 		} catch (error:CBodyEmissionError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
+		} catch (error:RuntimeFeatureError) {
+			CDiagnostic.fatal(error.diagnosticId, error.message, input.expression.pos, context.profile);
 		} catch (error:ProjectEmissionError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
 		}
 		return [];
+	}
+
+	function primitiveRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
+			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot):RuntimeFeaturePlanSnapshot {
+		final directDecisions = [
+			"primitive-values",
+			"ub-safe-primitive-operations",
+			"primitive-static-storage",
+			"static-functions",
+			"direct-calls",
+			"explicit-evaluation-order",
+			"executable-entry-point"
+		];
+		if (helperIds.length > 0) {
+			directDecisions.push("selected-program-local-helpers");
+		}
+		if (staticInitialization.executionOrder.length > 0) {
+			directDecisions.push("compiler-planned-eager-static-initialization");
+		}
+		var proof = "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls";
+		if (helperIds.length > 0) {
+			proof = "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
+		}
+		if (staticInitialization.executionOrder.length > 0) {
+			proof += ", with eager static initialization planned and emitted entirely by the compiler";
+		}
+		return new RuntimeFeaturePlanner(RuntimeFeatureCatalog.registry()).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram,
+			context.profile, configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
+			configuration.runtimeDiagnosticsProvenance, [], [], directDecisions, proof));
 	}
 
 	static function resolveProjectConfiguration(profile:CProfile):ResolvedProjectConfiguration {

@@ -321,14 +321,22 @@ specialization. For each operation the compiler prefers, in order: direct
 idiomatic C, a program-local specialized helper, the narrowest dependency-closed
 `hxrt` feature, or a policy diagnostic. There is no unconditional runtime core.
 
-`RuntimeRequirementAnalyzer` records stable root reason kinds, consumed typed
-surfaces, and source spans. `RuntimeFeatureRegistry` resolves deterministic
-dependencies while preserving root-versus-transitive provenance.
-`ProjectEmitter` copies/emits only selected features.
-`hxc_runtime=none` asks `NoRuntimeEligibilityAnalyzer` for a proof; a failed
-proof returns every blocking feature and source site. A successful proof is also
-written to `hxc.runtime-plan.json` and means no `hxrt` include, source, define,
-library, or symbol exists in the build.
+`RuntimeFeatureRegistry` now validates stable definitions, artifact and symbol
+ownership, environment availability, and an acyclic dependency graph.
+`RuntimeFeaturePlanner` resolves source-rooted requests deterministically while
+preserving root-versus-transitive provenance; every selected feature and edge
+retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the
+selected artifact records into typed `GeneratedFile` values and performs no
+artifact read for an empty plan.
+
+The admitted primitive compiler path uses this planner for its positive empty
+plan, so its `hxc.runtime-plan.json` means no `hxrt` include, source, define,
+library, or symbol exists in the build. Runtime-requirement inference and the
+complete blocker-producing `hxc_runtime=none` eligibility pass remain later
+work. The checked-in allocator/status/string definitions are provisional
+`native-seed-only` evidence and are rejected for generated Haxe until their
+owning semantic and ABI tasks promote them. See
+[runtime feature planning](runtime-feature-planning.md).
 
 Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
 These are presets over independent axes, not separate compiler pipelines. See

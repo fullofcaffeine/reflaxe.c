@@ -1,0 +1,874 @@
+{
+  "empty": {
+    "selectedFeatures": [],
+    "directDecisions": [
+      "primitive-values",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [],
+    "manualOverrides": [],
+    "noRuntimeProof": "reachable fixture semantics use only direct C and program-local specialization",
+    "features": [],
+    "artifactDetails": [],
+    "status": "analyzed-runtime-free",
+    "schemaVersion": 1,
+    "diagnosticProvenance": "profile-preset:portable",
+    "symbols": [],
+    "diagnosticMode": "summary",
+    "resolvedPolicy": "auto",
+    "artifacts": [],
+    "libraries": [],
+    "rootReasons": [],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "compiler-program",
+    "algorithm": "hxc-runtime-plan-v1",
+    "policyProvenance": "profile-preset:portable"
+  },
+  "syntheticLink": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "fixture-link",
+        "reasonIds": [
+          "fixture.link"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_fixture_link"
+        ],
+        "artifacts": [],
+        "libraries": [
+          "m"
+        ],
+        "defines": [
+          "HXC_FIXTURE_LINK=1"
+        ],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "fixture-link"
+    ],
+    "artifactDetails": [],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 1,
+    "diagnosticProvenance": "fixture:off",
+    "symbols": [
+      "hxc_fixture_link"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [],
+    "libraries": [
+      "m"
+    ],
+    "rootReasons": [
+      {
+        "featureId": "fixture-link",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.link",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 174,
+            "column": 2
+          },
+          "start": {
+            "line": 174,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [
+      "HXC_FIXTURE_LINK=1"
+    ],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v1",
+    "policyProvenance": "fixture:auto"
+  },
+  "diagnostics": {
+    "forbidRequired": {
+      "featureIds": [
+        "alloc"
+      ],
+      "id": "HXC2000",
+      "message": "manual override forbids runtime feature `alloc` required by reachable semantics"
+    },
+    "invalidId": {
+      "featureIds": [],
+      "id": "HXC9000",
+      "message": "runtime feature ID must be lowercase kebab-case: `bad_id`"
+    },
+    "environment": {
+      "featureIds": [
+        "alloc"
+      ],
+      "id": "HXC2000",
+      "message": "runtime feature `alloc` is unavailable in environment `wasi`"
+    },
+    "cycle": {
+      "featureIds": [
+        "cycle-a",
+        "cycle-b",
+        "cycle-a"
+      ],
+      "id": "HXC9000",
+      "message": "runtime feature dependency cycle: cycle-a -> cycle-b -> cycle-a"
+    },
+    "unknownDependency": {
+      "featureIds": [
+        "known-feature",
+        "missing-feature"
+      ],
+      "id": "HXC9000",
+      "message": "runtime feature `known-feature` depends on unavailable `missing-feature`"
+    },
+    "tamperedPackage": {
+      "featureIds": [
+        "runtime-abi"
+      ],
+      "id": "HXC9000",
+      "message": "runtime package artifact `runtime/hxrt/include/hxrt/string.h` -> `runtime/include/hxrt/abi.h` is not the registered selection at index 0"
+    },
+    "minimalPolicy": {
+      "featureIds": [
+        "fixture-broad"
+      ],
+      "id": "HXC2000",
+      "message": "runtime feature `fixture-broad` is outside the minimal allowlist"
+    },
+    "reservedFeature": {
+      "featureIds": [
+        "reflection"
+      ],
+      "id": "HXC2000",
+      "message": "runtime feature `reflection` is reserved for E4.T08 and is not implemented"
+    },
+    "unusedManualRequire": {
+      "featureIds": [
+        "string"
+      ],
+      "id": "HXC2000",
+      "message": "manual override cannot force unused runtime feature `string`; no semantic root selected it"
+    },
+    "compilerSeed": {
+      "featureIds": [
+        "alloc"
+      ],
+      "id": "HXC2000",
+      "message": "runtime feature `alloc` is native-seed evidence and cannot be selected by generated Haxe"
+    },
+    "nonePolicy": {
+      "featureIds": [
+        "alloc"
+      ],
+      "id": "HXC2000",
+      "message": "runtime policy `none` forbids root feature `alloc`"
+    }
+  },
+  "minimalString": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-abi",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_runtime_abi_version"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/abi.h",
+          "runtime/include/hxrt/base.h",
+          "runtime/src/abi.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-abi"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_status_name"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/status.h",
+          "runtime/src/status.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocator_is_valid",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "string",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_owned_string_dispose",
+          "hxc_string_copy",
+          "hxc_string_view_from_cstr"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/string.h",
+          "runtime/src/string.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "dependencyId": "runtime-abi"
+      },
+      {
+        "featureId": "string",
+        "reasonIds": [
+          "fixture.minimal-string"
+        ],
+        "dependencyId": "alloc"
+      }
+    ],
+    "manualOverrides": [
+      {
+        "featureId": "string",
+        "provenance": "fixture:manual-confirmation",
+        "action": "require"
+      }
+    ],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-abi",
+      "status",
+      "alloc",
+      "string"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/abi.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/abi.c",
+        "sourcePath": "runtime/hxrt/src/abi.c"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/status.c",
+        "sourcePath": "runtime/hxrt/src/status.c"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/string.c",
+        "sourcePath": "runtime/hxrt/src/string.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 1,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocator_is_valid",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_owned_string_dispose",
+      "hxc_realloc",
+      "hxc_runtime_abi_version",
+      "hxc_status_name",
+      "hxc_string_copy",
+      "hxc_string_view_from_cstr"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "minimal",
+    "artifacts": [
+      "runtime/include/hxrt/abi.h",
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/string.h",
+      "runtime/src/abi.c",
+      "runtime/src/allocator.c",
+      "runtime/src/status.c",
+      "runtime/src/string.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "string",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.minimal-string",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 72,
+            "column": 2
+          },
+          "start": {
+            "line": 72,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "minimal",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v1",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "alloc": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-abi",
+        "reasonIds": [
+          "fixture.alloc"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_runtime_abi_version"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/abi.h",
+          "runtime/include/hxrt/base.h",
+          "runtime/src/abi.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-abi"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.alloc"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_status_name"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/status.h",
+          "runtime/src/status.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.alloc"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocator_is_valid",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.alloc"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.alloc"
+        ],
+        "dependencyId": "runtime-abi"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-abi",
+      "status",
+      "alloc"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/abi.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/abi.c",
+        "sourcePath": "runtime/hxrt/src/abi.c"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/status.c",
+        "sourcePath": "runtime/hxrt/src/status.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 1,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocator_is_valid",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_realloc",
+      "hxc_runtime_abi_version",
+      "hxc_status_name"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/abi.h",
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/src/abi.c",
+      "runtime/src/allocator.c",
+      "runtime/src/status.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "alloc",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.alloc",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 62,
+            "column": 2
+          },
+          "start": {
+            "line": 62,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v1",
+    "policyProvenance": "fixture:explicit-policy"
+  },
+  "string": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-abi",
+        "reasonIds": [
+          "fixture.owner-allocation",
+          "fixture.string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_runtime_abi_version"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/abi.h",
+          "runtime/include/hxrt/base.h",
+          "runtime/src/abi.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-abi"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.owner-allocation",
+          "fixture.string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_status_name"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/status.h",
+          "runtime/src/status.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.owner-allocation",
+          "fixture.string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocator_is_valid",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "string",
+        "reasonIds": [
+          "fixture.string"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_owned_string_dispose",
+          "hxc_string_copy",
+          "hxc_string_view_from_cstr"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/string.h",
+          "runtime/src/string.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.owner-allocation",
+          "fixture.string"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.owner-allocation",
+          "fixture.string"
+        ],
+        "dependencyId": "runtime-abi"
+      },
+      {
+        "featureId": "string",
+        "reasonIds": [
+          "fixture.string"
+        ],
+        "dependencyId": "alloc"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-abi",
+      "status",
+      "alloc",
+      "string"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/abi.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/string.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/string.h"
+      },
+      {
+        "featureId": "runtime-abi",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/abi.c",
+        "sourcePath": "runtime/hxrt/src/abi.c"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/status.c",
+        "sourcePath": "runtime/hxrt/src/status.c"
+      },
+      {
+        "featureId": "string",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/string.c",
+        "sourcePath": "runtime/hxrt/src/string.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 1,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocator_is_valid",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_owned_string_dispose",
+      "hxc_realloc",
+      "hxc_runtime_abi_version",
+      "hxc_status_name",
+      "hxc_string_copy",
+      "hxc_string_view_from_cstr"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/abi.h",
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/include/hxrt/string.h",
+      "runtime/src/abi.c",
+      "runtime/src/allocator.c",
+      "runtime/src/status.c",
+      "runtime/src/string.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "alloc",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.owner-allocation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 64,
+            "column": 2
+          },
+          "start": {
+            "line": 64,
+            "column": 1
+          }
+        }
+      },
+      {
+        "featureId": "string",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.string",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 63,
+            "column": 2
+          },
+          "start": {
+            "line": 63,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v1",
+    "policyProvenance": "fixture:explicit-policy"
+  }
+}

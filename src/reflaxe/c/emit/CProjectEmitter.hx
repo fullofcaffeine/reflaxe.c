@@ -2,13 +2,20 @@ package reflaxe.c.emit;
 
 import haxe.Json;
 import haxe.io.Bytes;
+import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
+import reflaxe.c.CRuntimeDiagnostics;
+import reflaxe.c.CRuntimePolicy;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationStrategy;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationPhase;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanStatus;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
+import reflaxe.c.runtime.RuntimeFeaturePlanner;
 
 /** Input status distinguishes structural fixtures, the admitted primitive slice, and unproven broader programs. */
 enum abstract CProjectCompilationStatus(String) to String {
@@ -17,12 +24,7 @@ enum abstract CProjectCompilationStatus(String) to String {
 	var LoweredProgram = "lowered-program";
 }
 
-enum abstract CProjectEnvironment(String) to String {
-	var Hosted = "hosted";
-	var Freestanding = "freestanding";
-	var Wasi = "wasi";
-	var Emscripten = "emscripten";
-}
+typedef CProjectEnvironment = CEnvironment;
 
 enum abstract CProjectStandard(String) to String {
 	var C11 = "c11";
@@ -30,17 +32,8 @@ enum abstract CProjectStandard(String) to String {
 	var C23Experimental = "c23-experimental";
 }
 
-enum abstract CProjectRuntimePolicy(String) to String {
-	var Auto = "auto";
-	var Minimal = "minimal";
-	var None = "none";
-}
-
-enum abstract CProjectRuntimeDiagnostics(String) to String {
-	var Off = "off";
-	var Summary = "summary";
-	var Warn = "warn";
-}
+typedef CProjectRuntimePolicy = CRuntimePolicy;
+typedef CProjectRuntimeDiagnostics = CRuntimeDiagnostics;
 
 /** Complete logical input to deterministic project packaging; it contains no output root. */
 typedef CProjectEmissionPlan = {
@@ -58,6 +51,7 @@ typedef CProjectEmissionPlan = {
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
+	final ?runtimePlan:RuntimeFeaturePlanSnapshot;
 	final symbolTable:CSymbolTableSnapshot;
 }
 
@@ -84,7 +78,6 @@ private enum abstract PlaceholderStatus(String) to String {
 }
 
 private enum abstract ResolvedAnalysisStatus(String) to String {
-	var RuntimeFree = "analyzed-runtime-free";
 	var NoExports = "analyzed-no-public-exports";
 	var NoStdlib = "analyzed-no-stdlib-use";
 }
@@ -154,26 +147,6 @@ private typedef RuntimePlanPlaceholder = {
 	final libraries:Array<String>;
 	final defines:Array<String>;
 	final noRuntimeProof:Null<String>;
-}
-
-private typedef RuntimePlanResolved = {
-	final schemaVersion:Int;
-	final status:ResolvedAnalysisStatus;
-	final profile:CProfile;
-	final requestedPolicy:CProjectRuntimePolicy;
-	final resolvedPolicy:CProjectRuntimePolicy;
-	final policyProvenance:String;
-	final diagnosticMode:CProjectRuntimeDiagnostics;
-	final diagnosticProvenance:String;
-	final environment:CProjectEnvironment;
-	final rootReasons:Array<String>;
-	final directDecisions:Array<String>;
-	final features:Array<String>;
-	final artifacts:Array<String>;
-	final symbols:Array<String>;
-	final libraries:Array<String>;
-	final defines:Array<String>;
-	final noRuntimeProof:String;
 }
 
 private typedef AbiPlaceholder = {
@@ -346,6 +319,8 @@ class CProjectEmitter {
 			fail('primitive executable emission requires the hosted environment; found `${plan.environment}`');
 		}
 		final initialization = requireStaticInitialization(plan);
+		final runtimePlan = requireRuntimePlan(plan);
+		validatePrimitiveRuntimePlan(plan, runtimePlan);
 		if (initialization.schemaVersion != 1
 			|| initialization.strategy != CStaticInitializationStrategy.EagerHaxeTypeOrder
 			|| initialization.entryFunctionId == ""
@@ -429,12 +404,79 @@ class CProjectEmitter {
 		}
 	}
 
+	function validatePrimitiveRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
+			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
+			|| runtimePlan.status != RuntimeFeaturePlanStatus.RuntimeFree
+			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
+			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v1 runtime-free analysis");
+		}
+		if (runtimePlan.profile != plan.profile
+			|| runtimePlan.environment != plan.environment
+			|| runtimePlan.requestedPolicy != plan.runtimePolicy
+			|| runtimePlan.resolvedPolicy != plan.runtimePolicy
+			|| runtimePlan.diagnosticMode != plan.runtimeDiagnostics
+			|| runtimePlan.policyProvenance != plan.runtimePolicyProvenance
+			|| runtimePlan.diagnosticProvenance != plan.runtimeDiagnosticsProvenance) {
+			fail("primitive executable runtime analysis differs from resolved project configuration");
+		}
+		if (runtimePlan.rootReasons.length != 0
+			|| runtimePlan.manualOverrides.length != 0
+			|| runtimePlan.dependencyEdges.length != 0
+			|| runtimePlan.selectedFeatures.length != 0
+			|| runtimePlan.features.length != 0
+			|| runtimePlan.artifactDetails.length != 0
+			|| runtimePlan.artifacts.length != 0
+			|| runtimePlan.symbols.length != 0
+			|| runtimePlan.libraries.length != 0
+			|| runtimePlan.defines.length != 0
+			|| !hasRuntimeProof(runtimePlan.noRuntimeProof)) {
+			fail("primitive executable runtime analysis must prove complete hxrt absence");
+		}
+		final helperIds = plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds;
+		final expectedDirectDecisions = [
+			"primitive-values",
+			"ub-safe-primitive-operations",
+			"primitive-static-storage",
+			"static-functions",
+			"direct-calls",
+			"explicit-evaluation-order",
+			"executable-entry-point"
+		];
+		if (helperIds.length > 0) {
+			expectedDirectDecisions.push("selected-program-local-helpers");
+		}
+		final initialization = requireStaticInitialization(plan);
+		if (initialization.executionOrder.length > 0) {
+			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
+		}
+		expectedDirectDecisions.sort(compareUtf8);
+		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
+			fail("primitive executable runtime analysis differs from compiler-owned direct and program-local decisions");
+		}
+	}
+
 	static function requireStaticInitialization(plan:CProjectEmissionPlan):CStaticInitializationSnapshot {
 		final initialization = plan.staticInitialization;
 		if (initialization == null) {
 			throw new ProjectEmissionError("primitive executable emission requires a static-initialization plan");
 		}
 		return initialization;
+	}
+
+	static function requireRuntimePlan(plan:CProjectEmissionPlan):RuntimeFeaturePlanSnapshot {
+		final runtimePlan = plan.runtimePlan;
+		if (runtimePlan == null) {
+			throw new ProjectEmissionError("primitive executable emission requires a runtime feature plan");
+		}
+		return runtimePlan;
+	}
+
+	static function hasRuntimeProof(value:Null<String>):Bool {
+		return switch value {
+			case null: false;
+			case proof: StringTools.trim(proof) != "";
+		};
 	}
 
 	static function validateInitializationSource(source:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSource, label:String):Void {
@@ -590,52 +632,8 @@ class CProjectEmitter {
 		};
 	}
 
-	function runtimePlanResolved(plan:CProjectEmissionPlan):RuntimePlanResolved {
-		final policyProvenance = plan.runtimePolicyProvenance;
-		final diagnosticProvenance = plan.runtimeDiagnosticsProvenance;
-		if (policyProvenance == null || diagnosticProvenance == null) {
-			throw new ProjectEmissionError("primitive executable lost validated runtime-policy provenance");
-		}
-		final helperIds = plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds;
-		final directDecisions = [
-			"primitive-values",
-			"ub-safe-primitive-operations",
-			"primitive-static-storage",
-			"static-functions",
-			"direct-calls",
-			"explicit-evaluation-order",
-			"executable-entry-point"
-		];
-		if (helperIds.length > 0) {
-			directDecisions.insert(2, "selected-program-local-helpers");
-		}
-		final initialization = requireStaticInitialization(plan);
-		final hasStaticInitialization = initialization.executionOrder.length > 0;
-		if (hasStaticInitialization) {
-			directDecisions.insert(directDecisions.length - 1, "compiler-planned-eager-static-initialization");
-		}
-		final noRuntimeProof = helperIds.length == 0 ? "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls" : "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
-		return {
-			schemaVersion: SCHEMA_VERSION,
-			status: ResolvedAnalysisStatus.RuntimeFree,
-			profile: plan.profile,
-			requestedPolicy: plan.runtimePolicy,
-			resolvedPolicy: plan.runtimePolicy,
-			policyProvenance: policyProvenance,
-			diagnosticMode: plan.runtimeDiagnostics,
-			diagnosticProvenance: diagnosticProvenance,
-			environment: plan.environment,
-			rootReasons: [],
-			directDecisions: directDecisions,
-			features: [],
-			artifacts: [],
-			symbols: [],
-			libraries: [],
-			defines: [],
-			noRuntimeProof: hasStaticInitialization ? noRuntimeProof +
-			", with eager static initialization planned and emitted entirely by the compiler" : noRuntimeProof
-		};
-	}
+	function runtimePlanResolved(plan:CProjectEmissionPlan):RuntimeFeaturePlanSnapshot
+		return requireRuntimePlan(plan);
 
 	function abiPlaceholder(plan:CProjectEmissionPlan):AbiPlaceholder {
 		return {

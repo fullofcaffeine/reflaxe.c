@@ -108,6 +108,16 @@ Transitive dependencies remain report entries rather than separate warnings.
 Policy violations are always errors. See
 [ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
 
+The typed runtime planner also accepts internal manual feature constraints.
+They never override semantic inference: `require` can only confirm a feature
+already selected by a reachable source reason, and `forbid` fails when that
+feature is required. A manual control cannot force unused runtime code into an
+`auto` or `minimal` build, cannot bypass the minimal allowlist or environment,
+and cannot add anything under `none`. Duplicate or conflicting controls fail
+with `HXC2000`. No public feature-level override define or project-file spelling
+exists at M0; future configuration work must preserve these rules and record
+provenance. See [runtime feature planning](runtime-feature-planning.md).
+
 `hxc_build` is optimization intent, never permission to change source
 semantics. It defaults to `debug`; `release` and `minsizerel` may enable only
 transformations backed by the same semantic proof. The E2 fixed-array/span

@@ -156,6 +156,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxe
   python3 "$ROOT_DIR/test/project_emitter/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CompilationContext|CEnvironment|CRuntimeDiagnostics|CRuntimePolicy)\.hx|src/reflaxe/c/(emit|runtime)/|runtime/hxrt/|test/runtime/runtime-feature-graph/|docs/(architecture|configuration|project-emission|runtime-feature-planning|testing)\.md|docs/specs/(fixture-taxonomy|runtime-features).*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running deterministic runtime feature and selective packaging probes..."
+  python3 "$ROOT_DIR/test/runtime/runtime-feature-graph/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ir/|test/hxc_ir/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running HxcIR semantic invariant and golden probes..."
   python3 "$ROOT_DIR/test/hxc_ir/run.py"
@@ -196,12 +201,12 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/(CArray|ConstSpan|Span)\.hx
   python3 "$ROOT_DIR/test/span_lowering/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/expected/|test/(primitive_semantics|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/|docs/specs/primitive-semantics\.json|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/features\.json|test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/expected/|test/runtime/runtime-feature-graph/expected/|test/(primitive_semantics|arithmetic_semantics|body_lowering|function_lowering|evaluation_order|span_lowering|static_initialization)/|docs/specs/primitive-semantics\.json|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Checking registered snapshots without updating them..."
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization)/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

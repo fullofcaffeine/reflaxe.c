@@ -213,10 +213,10 @@ the C string contract.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 19 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 20 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 5 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
-| `unsupported` | 13 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
+| `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
 | Capability | Status | Current boundary |
 | --- | --- | --- |
@@ -246,7 +246,7 @@ the C string contract.
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
-| `runtime-feature-planning` | `unsupported` | No whole-program runtime feature graph or selective hxrt packaging implementation exists. |
+| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices. |
 | `runtime-hxrt-seed` | `scaffold-only` | A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `scaffold-only` | An initial standard-library strategy and ownership ledger exists as planning data. |
@@ -293,6 +293,7 @@ jq empty \
   docs/specs/diagnostic-event.schema.json \
   docs/specs/diagnostics.json \
   docs/specs/diagnostics.schema.json \
+  docs/specs/runtime-features.schema.json \
   docs/specs/stdlib-ledger.json \
   docs/specs/third-party-provenance.json \
   docs/specs/typed-boundaries.json \
@@ -306,6 +307,7 @@ python3 test/typed_ast/run.py
 python3 test/c_ast/run.py
 python3 test/declaration_plan/run.py
 python3 test/symbol_registry/run.py
+python3 test/runtime/runtime-feature-graph/run.py
 python3 test/hxc_ir/run.py
 python3 test/body_lowering/run.py
 python3 test/function_lowering/run.py
@@ -358,6 +360,7 @@ fail-closed.
 - [Product requirements](docs/PRD.md)
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
+- [Runtime feature planning and selective packaging](docs/runtime-feature-planning.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Primitive function-body lowering](docs/body-lowering.md)

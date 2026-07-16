@@ -1,0 +1,22 @@
+#include "hxrt/status.h"
+
+const char *hxc_status_name(hxc_status status) {
+  switch (status) {
+    case HXC_STATUS_OK:
+      return "HXC_STATUS_OK";
+    case HXC_STATUS_INVALID_ARGUMENT:
+      return "HXC_STATUS_INVALID_ARGUMENT";
+    case HXC_STATUS_OUT_OF_MEMORY:
+      return "HXC_STATUS_OUT_OF_MEMORY";
+    case HXC_STATUS_SIZE_OVERFLOW:
+      return "HXC_STATUS_SIZE_OVERFLOW";
+    case HXC_STATUS_UNSUPPORTED_ALIGNMENT:
+      return "HXC_STATUS_UNSUPPORTED_ALIGNMENT";
+    case HXC_STATUS_DIVISION_BY_ZERO:
+      return "HXC_STATUS_DIVISION_BY_ZERO";
+    case HXC_STATUS_INTERNAL_ERROR:
+      return "HXC_STATUS_INTERNAL_ERROR";
+    default:
+      return "HXC_STATUS_UNKNOWN";
+  }
+}

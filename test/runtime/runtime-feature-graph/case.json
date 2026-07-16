@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "selective-runtime-feature-packaging",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-RT-001",
+    "HXC-RT-002",
+    "HXC-RT-004",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/specs/runtime-features.schema.json",
+    "runtime/hxrt/features.json",
+    "runtime/hxrt/include/hxrt/abi.h",
+    "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/include/hxrt/base.h",
+    "runtime/hxrt/include/hxrt/status.h",
+    "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/src/abi.c",
+    "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/status.c",
+    "runtime/hxrt/src/string.c",
+    "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+    "test/runtime/runtime-feature-graph/alloc_consumer.c",
+    "test/runtime/runtime-feature-graph/run.py",
+    "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
+    "test/runtime/runtime-feature-graph/string_consumer.c"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/runtime/runtime-feature-graph",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "deterministic closure, policy diagnostics, and selective native packaging passed$"
+    },
+    "diagnostics": [
+      "HXC2000",
+      "HXC9000"
+    ],
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/features.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

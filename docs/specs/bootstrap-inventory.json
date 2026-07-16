@@ -621,20 +621,23 @@
     {
       "id": "runtime-feature-planning",
       "area": "runtime",
-      "status": "unsupported",
-      "disposition": "not-exposed",
-      "summary": "No whole-program runtime feature graph or selective hxrt packaging implementation exists.",
-      "scope": "Admitted primitive builds prove an empty analyzed plan; runtime-requiring semantics are not admitted.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices.",
+      "scope": "The production primitive compiler consumes the planner for positive empty plans; canonical native fixtures exercise exact alloc-only and string closures.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
-        "docs/specs/beads-plan.json",
-        "test/function_lowering/run.py"
+        "docs/runtime-feature-planning.md",
+        "runtime/hxrt/features.json",
+        "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
+        "test/runtime/runtime-feature-graph/run.py"
       ],
       "owners": [
         "E4.T01"
       ],
       "limitations": [
-        "An empty runtime plan is not evidence that runtime-requiring Haxe semantics work."
+        "No hxrt feature is compiler-selectable yet, so runtime-requiring Haxe semantics still fail closed.",
+        "The provisional catalog and plan formats are not a stable public runtime ABI."
       ]
     },
     {
@@ -643,10 +646,12 @@
       "status": "scaffold-only",
       "disposition": "reserved",
       "summary": "A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently.",
-      "scope": "Hosted/freestanding C compilation and C++17 public-header consumption validate only the seed itself.",
+      "scope": "Hosted/freestanding C, C++17 header consumption, and exact alloc-only/string packages validate only the split native seed itself.",
       "evidence": [
         "runtime/hxrt/include/hxc_runtime.h",
-        "runtime/hxrt/src/hxc_runtime.c",
+        "runtime/hxrt/include/hxrt/allocator.h",
+        "runtime/hxrt/src/allocator.c",
+        "runtime/hxrt/features.json",
         "runtime/hxrt/test/runtime_smoke.c"
       ],
       "owners": [

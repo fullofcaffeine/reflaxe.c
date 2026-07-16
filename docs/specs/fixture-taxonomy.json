@@ -36,7 +36,8 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
-        "span-lowering"
+        "span-lowering",
+        "runtime-feature-graph"
       ]
     },
     {
@@ -61,7 +62,8 @@
         "body-lowering",
         "function-lowering",
         "static-initialization",
-        "span-lowering"
+        "span-lowering",
+        "runtime-feature-graph"
       ]
     },
     {
@@ -78,7 +80,8 @@
         "c-ast",
         "declaration-plan",
         "project-emitter",
-        "hxc-ir"
+        "hxc-ir",
+        "runtime-feature-graph"
       ]
     },
     {
@@ -106,7 +109,8 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
-        "span-lowering"
+        "span-lowering",
+        "runtime-feature-graph"
       ]
     },
     {
@@ -126,7 +130,8 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
-        "span-lowering"
+        "span-lowering",
+        "runtime-feature-graph"
       ]
     },
     {
@@ -512,6 +517,29 @@
       ]
     },
     {
+      "id": "runtime-feature-graph",
+      "directory": "test/runtime/runtime-feature-graph",
+      "runner": [
+        "python3",
+        "test/runtime/runtime-feature-graph/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "ast",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "the typed registry validates stable IDs, is byte-identical across discovery order, and rejects unknown or cyclic dependencies with canonical HXC9000 evidence",
+        "every root and transitive selected feature retains source-reason IDs while manual constraints cannot add unused code or remove required dependencies",
+        "auto, minimal, none, availability, environment, provisional-seed, and reserved-feature policy boundaries emit deterministic HXC2000 evidence",
+        "alloc-only and string native-seed plans package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
+        "the production primitive compiler consumes the same planner only for its positive empty runtime plan; generated Haxe cannot select provisional seed slices"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -680,6 +708,16 @@
           "c",
           "header",
           "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "runtime-feature-graph",
+        "expectedRoots": [
+          "runtime/hxrt/features.json",
+          "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json"
+        ],
+        "formats": [
           "json"
         ]
       },

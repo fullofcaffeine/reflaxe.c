@@ -64,6 +64,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "evaluation-order",
                 "static-initialization",
                 "arithmetic-semantics",
+                "runtime-feature-graph",
                 "span-lowering",
             ),
         )

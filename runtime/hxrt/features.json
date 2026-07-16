@@ -1,0 +1,226 @@
+{
+  "reservedFeatures": [
+    {
+      "id": "array",
+      "summary": "Resizable typed Haxe Array runtime slice.",
+      "ownerTask": "E4.T04"
+    },
+    {
+      "id": "closure",
+      "summary": "Escaping closure environment support after escape analysis.",
+      "ownerTask": "E3.T08"
+    },
+    {
+      "id": "date-time",
+      "summary": "Date, timezone, wall-clock, and monotonic-time adapters.",
+      "ownerTask": "E5.T08"
+    },
+    {
+      "id": "dynamic",
+      "summary": "Source-required tagged Haxe dynamic values and operations.",
+      "ownerTask": "E4.T07"
+    },
+    {
+      "id": "exception",
+      "summary": "Contained general exception frames after result lowering is ineligible.",
+      "ownerTask": "E4.T09"
+    },
+    {
+      "id": "export-error",
+      "summary": "Thread-safe exported status and error-detail boundary.",
+      "ownerTask": "E7.T04"
+    },
+    {
+      "id": "filesystem",
+      "summary": "Hosted filesystem and file-resource adapters.",
+      "ownerTask": "E5.T09"
+    },
+    {
+      "id": "gc",
+      "summary": "Precise non-moving tracing collector and exact roots.",
+      "ownerTask": "E4.T06"
+    },
+    {
+      "id": "io",
+      "summary": "Byte streams and hosted or custom I/O adapters.",
+      "ownerTask": "E5.T04"
+    },
+    {
+      "id": "object",
+      "summary": "Reachable object and type descriptors.",
+      "ownerTask": "E4.T05"
+    },
+    {
+      "id": "process",
+      "summary": "Hosted environment and process adapters.",
+      "ownerTask": "E5.T09"
+    },
+    {
+      "id": "reflection",
+      "summary": "Reachability-selected type and member reflection metadata.",
+      "ownerTask": "E4.T08"
+    },
+    {
+      "id": "regex",
+      "summary": "Selected regular-expression backend and adapter.",
+      "ownerTask": "E5.T07"
+    },
+    {
+      "id": "socket",
+      "summary": "Network address, socket, and error adapters.",
+      "ownerTask": "E5.T10"
+    },
+    {
+      "id": "thread",
+      "summary": "Threads, synchronization, thread roots, TLS, and atomics.",
+      "ownerTask": "E5.T11"
+    },
+    {
+      "id": "unicode",
+      "summary": "Unicode scalar algorithms not feasible as direct or local specialized C.",
+      "ownerTask": "E5.T02"
+    }
+  ],
+  "requirements": [
+    "HXC-RT-001",
+    "HXC-RT-002",
+    "HXC-RT-004",
+    "HXC-RT-008"
+  ],
+  "noUnconditionalCore": true,
+  "features": [
+    {
+      "dependencies": [
+        "status"
+      ],
+      "id": "alloc",
+      "availability": "native-seed-only",
+      "symbols": [
+        "hxc_alloc",
+        "hxc_allocator_is_valid",
+        "hxc_default_allocator",
+        "hxc_free",
+        "hxc_realloc"
+      ],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/allocator.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+        },
+        {
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/allocator.c",
+          "sourcePath": "runtime/hxrt/src/allocator.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Provisional allocator callbacks and checked allocation operations for native seed evidence.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [],
+      "id": "runtime-abi",
+      "availability": "native-seed-only",
+      "symbols": [
+        "hxc_runtime_abi_version"
+      ],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/abi.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
+        },
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/base.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+        },
+        {
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/abi.c",
+          "sourcePath": "runtime/hxrt/src/abi.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Provisional runtime ABI version query used only by native seed evidence.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [
+        "runtime-abi"
+      ],
+      "id": "status",
+      "availability": "native-seed-only",
+      "symbols": [
+        "hxc_status_name"
+      ],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/status.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+        },
+        {
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/status.c",
+          "sourcePath": "runtime/hxrt/src/status.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Provisional status values and symbolic names for native seed evidence.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [
+        "alloc"
+      ],
+      "id": "string",
+      "availability": "native-seed-only",
+      "symbols": [
+        "hxc_owned_string_dispose",
+        "hxc_string_copy",
+        "hxc_string_view_from_cstr"
+      ],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string.h"
+        },
+        {
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string.c",
+          "sourcePath": "runtime/hxrt/src/string.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Provisional byte-view and owned-copy string seed; full Haxe String semantics remain E4.T03.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    }
+  ],
+  "status": "provisional-native-seed-packaging",
+  "schemaVersion": 1,
+  "compilerSelectableFeatures": [],
+  "algorithm": "hxc-runtime-feature-graph-v1"
+}

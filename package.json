@@ -14,6 +14,7 @@
     "test:declaration-plan": "python3 test/declaration_plan/run.py",
     "test:symbol-registry": "python3 test/symbol_registry/run.py",
     "test:project-emitter": "python3 test/project_emitter/run.py",
+    "test:runtime-features": "python3 test/runtime/runtime-feature-graph/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",
     "test:primitive-semantics": "python3 test/primitive_semantics/run.py",
     "test:body-lowering": "python3 test/body_lowering/run.py",
@@ -33,7 +34,7 @@
     "test:typed-c": "python3 test/typed_c/run.py",
     "test:native": "python3 scripts/ci/runtime_smoke.py",
     "test:governance": "python3 scripts/ci/check_ci_policy.py && npm run test:capabilities && npm run test:typed-boundaries && npm run test:governance-policy && npm run test:fixture-policy && python3 scripts/ci/check_license_policy.py && python3 -m unittest discover -s test/governance -p 'test_*.py'",
-    "test:toolchain": "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && npm run test:all-sources && npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && npm run test:hxc-ir && npm run test:primitive-semantics && npm run test:body-lowering && npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && npm run test:arithmetic-semantics && npm run test:span-lowering && npm run snapshots:check",
+    "test:toolchain": "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && npm run test:all-sources && npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && npm run test:runtime-features && npm run test:hxc-ir && npm run test:primitive-semantics && npm run test:body-lowering && npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && npm run test:arithmetic-semantics && npm run test:span-lowering && npm run snapshots:check",
     "test": "npm run test:toolchain && npm run test:native && npm run test:governance"
   },
   "devDependencies": {

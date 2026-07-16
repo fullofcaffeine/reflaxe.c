@@ -528,6 +528,25 @@ def span_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def runtime_feature_graph_artifacts() -> list[Artifact]:
+    module = load_module(
+        "runtime_feature_graph", "test/runtime/runtime-feature-graph/run.py"
+    )
+    rendered = module.render_reports()
+    module.validate_schema_document()
+    module.validate_catalog(rendered.catalog)
+    module.validate_plans(rendered.plans)
+    module.validate_package(rendered.package, rendered.plans)
+    return [
+        Artifact(Path("runtime/hxrt/features.json"), "json", rendered.catalog),
+        Artifact(
+            Path("test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json"),
+            "json",
+            rendered.plans,
+        ),
+    ]
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -543,6 +562,7 @@ GENERATORS: dict[str, Generator] = {
     "evaluation-order": evaluation_order_artifacts,
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
+    "runtime-feature-graph": runtime_feature_graph_artifacts,
     "span-lowering": span_lowering_artifacts,
 }
 

@@ -54,10 +54,14 @@ The emitter owns these schema-1 sidecars:
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
-  primitive executable's `analyzed-runtime-free` record with resolved policy,
-  provenance, direct decisions, and a positive empty-runtime proof. The
-  `selected-program-local-helpers` decision appears only when that compilation
-  selected at least one helper;
+  primitive executable's schema-1 `hxc-runtime-plan-v1`
+  `analyzed-runtime-free` record. The latter is produced by the typed runtime
+  feature planner and contains resolved policy/diagnostic provenance, planning
+  purpose and environment, direct decisions, root reasons, manual constraints,
+  dependency edges, selected feature/artifact/symbol/library/define sets, and a
+  positive empty-runtime proof. The admitted path requires all selected sets to
+  be empty. The `selected-program-local-helpers` decision appears only when that
+  compilation selected at least one helper;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
@@ -71,6 +75,13 @@ Floating modulo contributes a provenance-bearing `m` link fact to the neutral
 manifest. This is an ordinary C build requirement and does not change the empty
 runtime plan. CMake, Meson, direct command plans, and stable runtime/ABI schemas
 remain owned by their later Beads issues.
+
+The separate `RuntimeFeaturePackager` can materialize an already validated
+non-empty plan as exact runtime `GeneratedFile` values, but no provisional
+feature is compiler-selectable yet. Its alloc/string native-seed fixture is
+selective-packaging evidence, not permission for `CProjectEmitter` to claim a
+runtime-using generated-Haxe program. See
+[runtime feature planning](runtime-feature-planning.md).
 
 ## Ownership and filesystem safety
 
@@ -116,6 +127,7 @@ Run:
 
 ```sh
 npm run test:project-emitter
+npm run test:runtime-features
 npm run test:arithmetic-semantics
 npm run snapshots:check
 npm run test:native

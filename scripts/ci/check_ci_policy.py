@@ -38,9 +38,26 @@ REQUIRED_GATE_FILES = (
     "test/diagnostics/run.py",
     "test/governance/test_diagnostic_policy.py",
     "runtime/hxrt/include/hxc_runtime.h",
-    "runtime/hxrt/src/hxc_runtime.c",
+    "runtime/hxrt/include/hxrt/base.h",
+    "runtime/hxrt/include/hxrt/abi.h",
+    "runtime/hxrt/include/hxrt/status.h",
+    "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/src/abi.c",
+    "runtime/hxrt/src/status.c",
+    "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/string.c",
+    "runtime/hxrt/features.json",
+    "docs/specs/runtime-features.schema.json",
     "runtime/hxrt/test/runtime_smoke.c",
     "runtime/hxrt/test/public_header_cpp.cpp",
+    "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+    "test/runtime/runtime-feature-graph/case.json",
+    "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
+    "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json",
+    "test/runtime/runtime-feature-graph/alloc_consumer.c",
+    "test/runtime/runtime-feature-graph/string_consumer.c",
+    "test/runtime/runtime-feature-graph/run.py",
     "test/c_ast/CASTGolden.hx",
     "test/c_ast/ExpressionGolden.hx",
     "test/c_ast/c_ast.hxml",
@@ -79,6 +96,16 @@ REQUIRED_GATE_FILES = (
     "test/project_emitter/expected/src/emitter_fixture.c",
     "test/project_emitter/expected/src/hxc_boot.c",
     "test/project_emitter/run.py",
+    "src/reflaxe/c/CEnvironment.hx",
+    "src/reflaxe/c/CRuntimeDiagnostics.hx",
+    "src/reflaxe/c/CRuntimePolicy.hx",
+    "src/reflaxe/c/runtime/RuntimeFeatureModel.hx",
+    "src/reflaxe/c/runtime/RuntimeFeatureError.hx",
+    "src/reflaxe/c/runtime/RuntimeFeatureCatalog.hx",
+    "src/reflaxe/c/runtime/RuntimeFeatureRegistry.hx",
+    "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
+    "src/reflaxe/c/runtime/RuntimeFeaturePackager.hx",
+    "docs/runtime-feature-planning.md",
     "test/hxc_ir/HxcIRGolden.hx",
     "test/hxc_ir/hxc_ir.hxml",
     "test/hxc_ir/oracle.hxml",
@@ -331,6 +358,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:symbol-registry entry point")
     if scripts.get("test:project-emitter") != "python3 test/project_emitter/run.py":
         errors.append("package.json must retain the test:project-emitter entry point")
+    if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
+        errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
@@ -391,6 +420,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:symbol-registry")
     if "npm run test:project-emitter" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:project-emitter")
+    if "npm run test:runtime-features" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:runtime-features")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
@@ -463,6 +494,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the deterministic symbol registry test")
     if "test/project_emitter/run.py" not in pre_commit:
         errors.append("pre-commit must run the deterministic project emitter test")
+    if "test/runtime/runtime-feature-graph/run.py" not in pre_commit:
+        errors.append("pre-commit must run the selective runtime feature test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
@@ -510,6 +543,29 @@ def validate() -> list[str]:
         errors.append("native smoke runner must independently compile and execute declaration-plan headers")
     if "project-emitter-header-independent-compile" not in runner or "project-emitter-structural-run" not in runner:
         errors.append("native smoke runner must independently compile and execute project-emitter output")
+    if "runtime-feature-selective-packaging" not in runner or "RUNTIME_FEATURE_GRAPH" not in runner:
+        errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
+
+    runtime_feature_runner = read_text(
+        ROOT / "test/runtime/runtime-feature-graph/run.py", errors
+    )
+    for required_runtime_feature_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "compiler_identity",
+        "render_reports",
+        "hxc_string_",
+        "nm",
+    ):
+        if required_runtime_feature_contract not in runtime_feature_runner:
+            errors.append(
+                "runtime feature runner lost selective native evidence: "
+                + required_runtime_feature_contract
+            )
 
     primitive_runner = read_text(ROOT / "test/primitive_semantics/run.py", errors)
     for required_primitive_flag in (
