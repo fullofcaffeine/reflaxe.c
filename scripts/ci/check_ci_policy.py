@@ -83,13 +83,22 @@ REQUIRED_GATE_FILES = (
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
     "test/runtime/runtime-feature-graph/string_consumer.c",
     "test/runtime/runtime-feature-graph/run.py",
+    "scripts/test/c_fixture_harness.py",
+    "test/c_ast/ASTFixtureCompiler.hx",
+    "test/c_ast/ASTFixtureCompilerProbe.hx",
     "test/c_ast/CASTGolden.hx",
     "test/c_ast/ExpressionGolden.hx",
     "test/c_ast/c_ast.hxml",
     "test/c_ast/expression.hxml",
+    "test/c_ast/fixture_compiler.hxml",
+    "test/c_ast/expected/attributes.c",
     "test/c_ast/expected/declarators.c",
     "test/c_ast/expected/expressions.c",
+    "test/c_ast/expected/include/hxc/ast_fixture.h",
+    "test/c_ast/expected/src/ast_fixture.c",
+    "test/c_ast/expected/src/main.c",
     "test/c_ast/run.py",
+    "test/ast/c-ast-roundtrip/case.json",
     "test/declaration_plan/DeclarationPlanGolden.hx",
     "test/declaration_plan/declaration_plan.hxml",
     "test/declaration_plan/expected/plan.json",
@@ -588,6 +597,10 @@ def validate() -> list[str]:
         errors.append("pre-commit must validate required CI wiring")
     if "test/c_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the structural C AST golden test")
+    if "c_fixture_harness" not in pre_commit or "c-ast-roundtrip" not in pre_commit:
+        errors.append(
+            "pre-commit must route reusable C fixture harness and canonical AST case changes"
+        )
     if "test/diagnostics/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed diagnostic policy test")
     if "test/declaration_plan/run.py" not in pre_commit:
@@ -645,10 +658,18 @@ def validate() -> list[str]:
             errors.append(f"native smoke runner lost strict flag {required_flag}")
     if "required toolchain" not in runner or "SKIP" not in runner:
         errors.append("native smoke runner must distinguish required failures from optional skips")
-    if "structural-c-ast-golden-run" not in runner or "C_AST_GOLDENS" not in runner:
-        errors.append("native smoke runner must compile and execute the declarator C AST golden")
-    if "expression-precedence-golden-run" not in runner or "expressions.c" not in runner:
-        errors.append("native smoke runner must compile and execute the expression C AST golden")
+    for required_c_ast_lane in (
+        "C_AST_RUNNER",
+        "structural-c-ast-golden-run",
+        "expression-precedence-golden-run",
+        "c-ast-attribute-run",
+        "c-ast-header-source-run",
+    ):
+        if required_c_ast_lane not in runner:
+            errors.append(
+                "native smoke runner lost reusable C AST lane: "
+                + required_c_ast_lane
+            )
     if "declaration-header-independent-compile" not in runner or "declaration-plan-header-run" not in runner:
         errors.append("native smoke runner must independently compile and execute declaration-plan headers")
     if "project-emitter-header-independent-compile" not in runner or "project-emitter-structural-run" not in runner:
@@ -657,6 +678,37 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if '"--native-only"' not in runner:
         errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
+
+    c_ast_runner = read_text(ROOT / "test/c_ast/run.py", errors)
+    for required_c_ast_contract in (
+        "ASTFixtureCompiler.run",
+        "run_c_fixture_corpus",
+        "validate_report",
+        "REQUIRED_COVERAGE",
+        "--native-only",
+        "--report",
+    ):
+        if required_c_ast_contract not in c_ast_runner:
+            errors.append(
+                "C AST fixture compiler lost reproducibility contract: "
+                + required_c_ast_contract
+            )
+
+    c_fixture_harness = read_text(ROOT / "scripts/test/c_fixture_harness.py", errors)
+    for required_harness_contract in (
+        "C11_STRICT_FLAGS",
+        "compiler_identity",
+        "arguments",
+        "versionLine",
+        "sha256",
+        "stdout",
+        "stderr",
+    ):
+        if required_harness_contract not in c_fixture_harness:
+            errors.append(
+                "reusable C fixture harness lost recorded field: "
+                + required_harness_contract
+            )
 
     build_adapter_runner = read_text(ROOT / "test/project_emitter/run.py", errors)
     for required_build_adapter_contract in (

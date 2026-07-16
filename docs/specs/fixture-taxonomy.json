@@ -128,6 +128,7 @@
       ],
       "suiteIds": [
         "native-smoke",
+        "c-ast",
         "body-lowering",
         "function-lowering",
         "evaluation-order",
@@ -286,13 +287,15 @@
       ],
       "types": [
         "ast",
-        "snapshot"
+        "snapshot",
+        "runtime"
       ],
       "status": "active",
       "assertions": [
-        "two structural renders are byte-identical",
-        "declarator and expression/statement C11 goldens match",
-        "native-smoke compiles and runs both goldens without hxrt"
+        "two Reflaxe-owned structural renders from unrelated absolute roots are byte-identical and match the complete registered snapshot tree",
+        "the direct AST corpus covers declarations, precedence, initializers, control flow, typed GNU attributes, and a structurally guarded header/source split",
+        "the reusable argument-array harness records compiler family and version, normalized compile/link/run commands, source hashes, exit codes, stdout, and stderr without host paths",
+        "required GCC and Clang native-smoke lanes compile, link, and run every corpus project without hxrt"
       ]
     },
     {
@@ -623,7 +626,8 @@
           "test/c_ast/expected"
         ],
         "formats": [
-          "c"
+          "c",
+          "header"
         ]
       },
       {

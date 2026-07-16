@@ -201,19 +201,25 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run.",
-      "scope": "Direct Haxe fixtures build typed C AST nodes and emit deterministic strict-C11 translation units.",
+      "summary": "Target-owned AST corpora deterministically emit and native-run single-file and header/source C projects.",
+      "scope": "Direct typed Haxe builders cover declarations, precedence, initializers, control flow, explicit extension attributes, and guarded header/source output through Reflaxe ownership. A reusable argument-array harness records compiler identity, normalized commands, hashes, and process results.",
       "evidence": [
+        "test/c_ast/ASTFixtureCompiler.hx",
         "test/c_ast/expected/declarators.c",
         "test/c_ast/expected/expressions.c",
-        "test/c_ast/run.py"
+        "test/c_ast/expected/include/hxc/ast_fixture.h",
+        "test/c_ast/run.py",
+        "scripts/test/c_fixture_harness.py",
+        "test/ast/c-ast-roundtrip/case.json"
       ],
       "owners": [
         "E1.T01",
-        "E1.T02"
+        "E1.T02",
+        "E1.T10"
       ],
       "limitations": [
-        "Direct AST fixtures alone do not prove Haxe-language lowering."
+        "Direct AST fixtures alone do not prove Haxe-language lowering.",
+        "Compiler attributes remain explicit GNU/Clang extension evidence; strict ISO C11 is still the normative default."
       ]
     },
     {

@@ -198,11 +198,17 @@ missing-metadata or missing-adapter assumptions.
   never interpolate user text into comments, literals, directives, or tokens.
 - `CASTPrinter` defaults to strict ISO C11. GNU/Clang attribute output requires
   an explicit dialect and must never leak into the normative strict lane.
-  Update `test/c_ast/expected/declarators.c` or `expressions.c` only from an
-  intentional structural fixture change, then run both `npm run test:c-ast`
-  and the native matrix. The expression fixture's literal 6×6 family matrix is
-  the reviewable contract; do not replace it with expected values derived from
-  the printer's own precedence table.
+  Update `test/c_ast/expected/` only from an intentional structural fixture
+  change and only through the registered snapshot updater, then run both
+  `npm run test:c-ast` and the native matrix. The expression fixture's literal
+  6×6 family matrix is the reviewable contract; do not replace it with expected
+  values derived from the printer's own precedence table.
+- Extend the direct C AST corpus through `ASTFixtureCompiler` and typed AST
+  builders, then update its centrally owned snapshots; never add separately
+  authored C and describe it as AST-emission evidence. Native fixture projects
+  use the argument-array `c_fixture_harness.py` boundary. Its report must retain
+  compiler identity, normalized compile/link/run arguments, input hashes, exit,
+  stdout, and stderr without serializing temporary or checkout paths.
 - Write generated artifacts only through Reflaxe output ownership. Never
   hand-manage stale output outside its generated-file manifest.
 - Construct every project artifact as a validated, typed `GeneratedFile` and

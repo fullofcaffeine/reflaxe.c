@@ -130,6 +130,34 @@ pre-body-lowering inventory; it does not itself prove HxcIR or C lowering. The
 internal report and reverse-order defines are test/diagnostic seams, not
 user-facing compiler configuration. See [typed-AST input boundary](typed-ast-input.md).
 
+`test/c_ast` is the direct AST fixture-compiler and native round-trip boundary.
+One typed Haxe macro constructs declarations, precedence expressions,
+initializers, control flow, an explicit GNU-attribute unit, and a guarded
+header/source/consumer project, then writes the complete tree through Reflaxe
+ownership. Two unrelated absolute output roots must be byte-identical and match
+the centrally owned snapshots. The canonical case is
+`test/ast/c-ast-roundtrip/case.json`.
+
+The shared `scripts/test/c_fixture_harness.py` consumes closed project records,
+never shell command strings. It verifies the requested `gcc` or `clang`
+identity, compiles each source independently with the strict C11 warning floor,
+links, runs, and captures a schema-1 report containing the compiler version,
+normalized argument arrays, input hashes, exit codes, stdout, and stderr. Save
+that report explicitly when reproducing a native result:
+
+```sh
+python3 test/c_ast/run.py --toolchain clang --report /tmp/c-ast-report.json
+python3 test/c_ast/run.py --native-only --toolchain gcc
+```
+
+`--native-only` consumes the checked-in AST outputs and is the entry used by
+the required native matrix. Local `auto` mode runs every available
+identity-matching family and requires at least one. Report normalization names
+only `${CC}`, `${FIXTURE_ROOT}`, `${BUILD_ROOT}`, and `${REPOSITORY_ROOT}`;
+native compiler versions remain deliberately factual. This harness is reusable
+by later lowering suites, but direct AST construction still proves no
+typed-Haxe lowering semantics.
+
 `test/primitive_semantics` is the focused positive/snapshot contract for
 ADR 0008. A typed initialization macro classifies real pinned-compiler fields
 in portable and metal, while a second typed fixture renders the exact mapping,

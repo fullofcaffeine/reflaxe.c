@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "id": "c-ast-roundtrip-corpus",
+  "role": "fixture",
+  "type": "ast",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-004",
+    "HXC-COMP-005",
+    "HXC-QA-001"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "src/reflaxe/c/ast/CAST.hx",
+    "src/reflaxe/c/ast/CASTPrinter.hx",
+    "test/c_ast/ASTFixtureCompiler.hx",
+    "test/c_ast/ASTFixtureCompilerProbe.hx",
+    "test/c_ast/CASTGolden.hx",
+    "test/c_ast/ExpressionGolden.hx",
+    "test/c_ast/fixture_compiler.hxml",
+    "test/c_ast/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../c_ast/run.py",
+      "--toolchain",
+      "auto"
+    ],
+    "workingDirectory": "test/ast/c-ast-roundtrip",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "c-ast-golden: OK: deterministic owned declarations, precedence, initializers, control flow, attributes, and header/source projects"
+    },
+    "artifacts": [
+      {
+        "path": "test/c_ast/expected/attributes.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_ast/expected/declarators.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_ast/expected/expressions.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_ast/expected/include/hxc/ast_fixture.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_ast/expected/src/ast_fixture.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_ast/expected/src/main.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

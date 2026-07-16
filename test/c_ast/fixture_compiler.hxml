@@ -1,0 +1,7 @@
+# E1.T10 direct C AST fixture compiler.
+
+-cp test/c_ast/
+-lib reflaxe.c
+
+-main ASTFixtureCompilerProbe
+--interp

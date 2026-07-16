@@ -137,7 +137,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxe
   python3 "$ROOT_DIR/test/typed_ast/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ast/|test/c_ast/|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/ast/|test/c_ast/|test/ast/c-ast-roundtrip/|scripts/test/c_fixture_harness\.py|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running structural C11 AST golden probes..."
   python3 "$ROOT_DIR/test/c_ast/run.py"
 fi
@@ -212,7 +212,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/features\.json|test/
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/ci/(check_ci_policy|runtime_smoke)\.py|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(arithmetic_semantics|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

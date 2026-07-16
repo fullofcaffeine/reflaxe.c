@@ -231,7 +231,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `bindgen` | `unsupported` | No Clang-backed binding generator or user bindgen command exists. |
 | `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table. |
 | `build-adapter-seeds` | `implemented` | One typed neutral executable plan deterministically drives optional CMake and Meson files plus a direct argument-array consumer. |
-| `c-ast-printer` | `implemented` | Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run. |
+| `c-ast-printer` | `implemented` | Target-owned AST corpora deterministically emit and native-run single-file and header/source C projects. |
 | `c-export` | `unsupported` | No Haxe export analyzer, public-header generator, library packaging, or ABI diff workflow exists. |
 | `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |
 | `configuration-policies` | `scaffold-only` | Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts. |

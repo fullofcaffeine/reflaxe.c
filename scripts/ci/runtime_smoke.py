@@ -41,20 +41,7 @@ PROJECT_EMITTER_SOURCES = (
     PROJECT_EMITTER / "src/emitter_fixture.c",
     PROJECT_EMITTER / "src/hxc_boot.c",
 )
-C_AST_GOLDENS = (
-    (
-        "declarator",
-        ROOT / "test/c_ast/expected/declarators.c",
-        "c-ast-golden: OK",
-        "structural-c-ast-golden-run",
-    ),
-    (
-        "expression",
-        ROOT / "test/c_ast/expected/expressions.c",
-        "c-expression-golden: OK",
-        "expression-precedence-golden-run",
-    ),
-)
+C_AST_RUNNER = ROOT / "test/c_ast/run.py"
 POINTLIB = ROOT / "test/native/pointlib"
 CPP_SHIM = ROOT / "test/native/cpp_shim"
 
@@ -192,7 +179,7 @@ def selected_toolchains(requested: str) -> list[Toolchain]:
     return resolved
 
 
-def run_command(command: list[str], *, label: str) -> None:
+def run_command(command: list[str], *, label: str, echo_output: bool = False) -> None:
     print(f"native-smoke: RUN {label}: {shlex.join(command)}")
     result = command_result(command)
     if result.returncode != 0:
@@ -201,6 +188,8 @@ def run_command(command: list[str], *, label: str) -> None:
             f"command: {shlex.join(command)}\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
+    if echo_output and result.stdout:
+        print(result.stdout, end="" if result.stdout.endswith("\n") else "\n")
 
 
 def compile_object(
@@ -254,29 +243,25 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     lanes.append("runtime-feature-selective-packaging")
 
-    for golden_name, golden_source, sentinel, lane in C_AST_GOLDENS:
-        c_ast_object = build / f"c_ast_{golden_name}_golden.o"
-        c_ast_executable = build / f"c_ast_{golden_name}_golden"
-        compile_object(
-            toolchain.cc,
-            C_STRICT_FLAGS,
-            golden_source,
-            c_ast_object,
-            includes=(),
-            label=f"{family} {golden_name} C AST golden",
+    run_command(
+        [
+            sys.executable,
+            str(C_AST_RUNNER),
+            "--native-only",
+            "--toolchain",
+            family,
+        ],
+        label=f"{family} reusable direct C AST fixture corpus",
+        echo_output=True,
+    )
+    lanes.extend(
+        (
+            "structural-c-ast-golden-run",
+            "expression-precedence-golden-run",
+            "c-ast-attribute-run",
+            "c-ast-header-source-run",
         )
-        link_executable(
-            toolchain.cc,
-            (c_ast_object,),
-            c_ast_executable,
-            label=f"{family} {golden_name} C AST golden link",
-        )
-        run_executable(
-            c_ast_executable,
-            sentinel,
-            label=f"{family} {golden_name} C AST golden execution",
-        )
-        lanes.append(lane)
+    )
 
     declaration_includes = (
         DECLARATION_PLAN_INCLUDE,

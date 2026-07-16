@@ -8,7 +8,7 @@ class CASTGolden {
 		Sys.print(new CASTPrinter().printTranslationUnit(buildUnit()));
 	}
 
-	static function buildUnit():CTranslationUnit {
+	public static function buildUnit():CTranslationUnit {
 		final unit = new CTranslationUnit();
 		unit.includes.push({path: "stdio.h", kind: System});
 		unit.includes.push({path: "stdint.h", kind: System});
@@ -112,7 +112,7 @@ class CASTGolden {
 		return unit;
 	}
 
-	static function verifyModelGuards():Void {
+	public static function verifyModelGuards():Void {
 		final strict = new CASTPrinter();
 		assertEqual("int32_t (*callback)(int32_t value)",
 			strict.printTypedDeclarator(i32(), DFunction(DGroup(DPointer(name("callback"), [])), FPPrototype([param(i32(), name("value"))], false))));

@@ -239,13 +239,22 @@ sidecar provenance, and diagnostic remapping remain owned by E8.T08.
 
 The printer's default dialect is strict ISO C11. Compiler attributes are
 explicit extension nodes and require an explicit GNU or Clang mode. The
-`test/c_ast` Haxe fixtures render deterministic declarator and
-expression/statement goldens. The latter includes a literal 6×6 ordered
-precedence-family matrix, every unary and binary operator, adversarial escaping,
-and all statement shapes. Required GCC and Clang lanes compile and execute both
-checked-in C files with no `hxrt` selection. Those broad printer fixtures remain
-direct AST proofs; the separate body suite exercises only the admitted real
-TypedExpr-to-HxcIR/C subset. Broader lowering remains fail-closed.
+`test/c_ast` fixture compiler builds the complete corpus from typed nodes and
+writes it only through Reflaxe ownership. In addition to the difficult
+declarator and literal 6×6 expression-family goldens, the corpus contains every
+statement family, designated initializers, an explicit GNU-attribute unit, and
+a structurally guarded header with separately compiled implementation and
+consumer units. Renders under unrelated absolute roots are byte-identical.
+
+The reusable `scripts/test/c_fixture_harness.py` boundary accepts closed project
+records and invokes the native compiler only through argument arrays. Its
+schema-1 run report records the identity-verified compiler family/version,
+strict flags, normalized compile/link/run arguments, input SHA-256 values,
+working directories, exits, stdout, and stderr. Temporary checkout/build paths
+never enter that record. Required GCC and Clang native lanes execute every
+project with no `hxrt` selection. These remain direct AST proofs; the separate
+body suite exercises only the admitted real TypedExpr-to-HxcIR/C subset.
+Broader lowering remains fail-closed.
 
 `CSymbolRegistry` owns the boundary before any finalized name reaches that C
 AST. It batch-finalizes path-independent semantic requests against C's ordinary,

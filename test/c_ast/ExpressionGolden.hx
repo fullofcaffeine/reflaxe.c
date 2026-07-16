@@ -6,11 +6,15 @@ class ExpressionGolden {
 	static final printer = new CASTPrinter();
 
 	static function main():Void {
+		verifyModelGuards();
+		Sys.print(printer.printTranslationUnit(buildUnit()));
+	}
+
+	public static function verifyModelGuards():Void {
 		verifyFamilyPrecedenceMatrix();
 		verifyOperatorsAndGrammarEdges();
 		verifyLiteralsAndSourceSafety();
 		verifyStatementGuards();
-		Sys.print(printer.printTranslationUnit(buildUnit()));
 	}
 
 	/**
@@ -259,7 +263,7 @@ class ExpressionGolden {
 		])));
 	}
 
-	static function buildUnit():CTranslationUnit {
+	public static function buildUnit():CTranslationUnit {
 		final unit = new CTranslationUnit();
 		unit.includes.push({path: "stdio.h", kind: System});
 		unit.includes.push({path: "stdint.h", kind: System});

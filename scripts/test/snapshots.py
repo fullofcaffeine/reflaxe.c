@@ -130,18 +130,10 @@ def typed_ast_artifacts() -> list[Artifact]:
 
 def c_ast_artifacts() -> list[Artifact]:
     module = load_module("c_ast", "test/c_ast/run.py")
-    artifacts: list[Artifact] = []
-    for case in module.CASES:
-        first = module.render(case, f"snapshot first {case.label} AST render")
-        second = module.render(case, f"snapshot second {case.label} AST render")
-        if first != second:
-            raise SnapshotFailure(
-                f"two {case.label} C AST snapshot renders were not byte-identical"
-            )
-        artifacts.append(
-            Artifact(case.expected.relative_to(ROOT), "c", first)
-        )
-    return artifacts
+    return [
+        Artifact(artifact.relative_path, artifact.format, artifact.value)
+        for artifact in module.render_snapshot()
+    ]
 
 
 def declaration_plan_artifacts() -> list[Artifact]:
