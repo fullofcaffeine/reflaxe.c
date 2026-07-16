@@ -248,6 +248,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
             str(RUNTIME_FEATURE_GRAPH),
             "--toolchain",
             family,
+            "--native-only",
         ],
         label=f"{family} selective runtime feature packaging",
     )

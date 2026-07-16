@@ -120,6 +120,13 @@ GCC and Clang lanes and inspects the alloc-only link for omitted string symbols.
 It also covers cycle, unknown-dependency, policy, override, environment,
 reserved-feature, and provisional-availability failures.
 
+The focused Haxe gate renders and packages twice before comparing the canonical
+snapshots. Native CI then uses `--native-only` to validate the checked-in catalog
+and plan against one another, reread exactly their selected `runtime/hxrt`
+artifacts, and compile them with the required C compiler. This keeps native jobs
+independent of Haxe installation while preserving the full typed-render proof in
+the pinned-toolchain job.
+
 Run the focused evidence with:
 
 ```sh

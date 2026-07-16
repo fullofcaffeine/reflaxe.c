@@ -545,6 +545,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must independently compile and execute project-emitter output")
     if "runtime-feature-selective-packaging" not in runner or "RUNTIME_FEATURE_GRAPH" not in runner:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
+    if '"--native-only"' not in runner:
+        errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
 
     runtime_feature_runner = read_text(
         ROOT / "test/runtime/runtime-feature-graph/run.py", errors
@@ -556,6 +558,7 @@ def validate() -> list[str]:
         "-Wconversion",
         "-Wsign-conversion",
         "--toolchain",
+        "--native-only",
         "compiler_identity",
         "render_reports",
         "hxc_string_",

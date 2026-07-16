@@ -219,8 +219,10 @@ fixtures cover `auto|minimal|none`, portable and metal presets, manual
 confirmation/forbid rules, environments, reserved features, and rejection of
 provisional seeds from generated-Haxe planning. The packager performs zero
 reads for an empty plan and materializes exact alloc-only and string closures;
-strict GCC and Clang lanes compile/run both and reject string symbols in the
-alloc-only link. See
+the full focused gate proves those files came from two byte-identical Haxe
+renders. Strict GCC and Clang jobs separately rebuild both closures from the
+validated checked-in catalog and plan, without needing Haxe in the native-only
+environment, then reject string symbols in the alloc-only link. See
 [runtime feature planning and selective packaging](runtime-feature-planning.md).
 
 ## Examples are product proofs, not implicit tests

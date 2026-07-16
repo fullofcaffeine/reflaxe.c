@@ -23,6 +23,7 @@ HXML = CASE / "runtime_feature_graph.hxml"
 CATALOG_EXPECTED = ROOT / "runtime/hxrt/features.json"
 PLANS_EXPECTED = CASE / "expected/runtime-feature-plans.json"
 CATALOG_SCHEMA = ROOT / "docs/specs/runtime-features.schema.json"
+RUNTIME_SOURCE_ROOT = ROOT / "runtime/hxrt"
 ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
@@ -377,6 +378,122 @@ def safe_output_path(root: Path, relative: str) -> Path:
     return output
 
 
+def load_snapshot(path: Path, label: str) -> dict[str, object]:
+    if not path.is_file():
+        raise RuntimeFeatureFailure(f"{label} snapshot is missing: {path.relative_to(ROOT)}")
+    return record(json.loads(path.read_text(encoding="utf-8")), f"{label} snapshot")
+
+
+def selected_artifacts_from_snapshot(
+    catalog: dict[str, object], plan: dict[str, object], label: str
+) -> list[dict[str, object]]:
+    if (
+        plan.get("schemaVersion") != 1
+        or plan.get("algorithm") != "hxc-runtime-plan-v1"
+        or plan.get("status") != "analyzed-native-seed-features"
+        or plan.get("planPurpose") != "native-seed-fixture"
+        or plan.get("noRuntimeProof") is not None
+    ):
+        raise RuntimeFeatureFailure(f"{label} is not a packageable native-seed plan")
+    feature_by_id: dict[str, dict[str, object]] = {}
+    for value in records(catalog.get("features"), "catalog features"):
+        feature = record(value, "catalog feature")
+        identifier = feature.get("id")
+        if not isinstance(identifier, str) or identifier in feature_by_id:
+            raise RuntimeFeatureFailure("catalog feature IDs must be unique strings")
+        feature_by_id[identifier] = feature
+
+    selected = text_list(plan.get("features"), f"{label} features")
+    positions: dict[str, int] = {}
+    expected: list[dict[str, object]] = []
+    for index, identifier in enumerate(selected):
+        if identifier in positions:
+            raise RuntimeFeatureFailure(f"{label} repeats selected feature {identifier}")
+        feature = feature_by_id.get(identifier)
+        if feature is None:
+            raise RuntimeFeatureFailure(f"{label} selects unknown feature {identifier}")
+        if feature.get("availability") != "native-seed-only":
+            raise RuntimeFeatureFailure(f"{label} selects non-seed feature {identifier}")
+        positions[identifier] = index
+        for value in records(feature.get("artifacts"), f"feature {identifier} artifacts"):
+            artifact = record(value, f"feature {identifier} artifact")
+            source_path = artifact.get("sourcePath")
+            output_path = artifact.get("outputPath")
+            kind = artifact.get("kind")
+            if not all(isinstance(item, str) for item in (source_path, output_path, kind)):
+                raise RuntimeFeatureFailure(f"feature {identifier} has an incomplete artifact")
+            assert isinstance(source_path, str)
+            assert isinstance(output_path, str)
+            assert isinstance(kind, str)
+            source = safe_output_path(ROOT, source_path)
+            try:
+                source.resolve(strict=False).relative_to(RUNTIME_SOURCE_ROOT.resolve())
+            except ValueError as error:
+                raise RuntimeFeatureFailure(
+                    f"feature {identifier} artifact escapes runtime/hxrt: {source_path}"
+                ) from error
+            safe_output_path(ROOT, output_path)
+            if kind not in ("runtime-header", "runtime-source"):
+                raise RuntimeFeatureFailure(f"feature {identifier} has invalid artifact kind {kind}")
+            expected_prefix = "runtime/include/" if kind == "runtime-header" else "runtime/src/"
+            if not output_path.startswith(expected_prefix):
+                raise RuntimeFeatureFailure(
+                    f"feature {identifier} artifact {output_path} does not match kind {kind}"
+                )
+            expected.append(
+                {
+                    "featureId": identifier,
+                    "kind": kind,
+                    "outputPath": output_path,
+                    "sourcePath": source_path,
+                }
+            )
+
+    for identifier in selected:
+        feature = feature_by_id[identifier]
+        for dependency in text_list(feature.get("dependencies"), f"feature {identifier} dependencies"):
+            if dependency not in positions or positions[dependency] >= positions[identifier]:
+                raise RuntimeFeatureFailure(
+                    f"{label} is not dependency-closed before {identifier} -> {dependency}"
+                )
+
+    expected.sort(key=lambda artifact: str(artifact["outputPath"]).encode("utf-8"))
+    expected_paths = [str(artifact["outputPath"]) for artifact in expected]
+    if len(expected_paths) != len(set(expected_paths)):
+        raise RuntimeFeatureFailure(f"{label} registry selection repeats an output path")
+    actual = [
+        record(value, f"{label} artifactDetails[{index}]")
+        for index, value in enumerate(records(plan.get("artifactDetails"), f"{label} artifactDetails"))
+    ]
+    if actual != expected or text_list(plan.get("artifacts"), f"{label} artifacts") != expected_paths:
+        raise RuntimeFeatureFailure(f"{label} artifact selection differs from the checked-in registry")
+    return expected
+
+
+def package_from_snapshots(
+    catalog: dict[str, object], plans: dict[str, object]
+) -> dict[str, object]:
+    package: dict[str, object] = {}
+    for name in ("alloc", "string"):
+        plan = record(plans.get(name), f"{name} plan")
+        files: list[dict[str, object]] = []
+        for artifact in selected_artifacts_from_snapshot(catalog, plan, name):
+            source_path = str(artifact["sourcePath"])
+            contents = safe_output_path(ROOT, source_path).read_text(encoding="utf-8")
+            if "\x00" in contents or "\r" in contents:
+                raise RuntimeFeatureFailure(f"selected runtime artifact is not canonical text: {source_path}")
+            files.append(
+                {
+                    "path": artifact["outputPath"],
+                    "kind": artifact["kind"],
+                    "sha256": hashlib.sha256(contents.encode("utf-8")).hexdigest(),
+                    "contents": contents,
+                }
+            )
+        package[name] = files
+    return package
+
+
 def materialize_package(root: Path, values: list[object]) -> tuple[Path, ...]:
     sources: list[Path] = []
     for index, value in enumerate(values):
@@ -440,28 +557,43 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", *TOOLCHAINS), default="auto")
+    parser.add_argument(
+        "--native-only",
+        action="store_true",
+        help="compile checked-in validated plans without requiring the Haxe toolchain",
+    )
     return parser.parse_args(list(argv))
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
-        rendered = render_reports()
         validate_schema_document()
-        validate_catalog(rendered.catalog)
-        validate_plans(rendered.plans)
-        validate_package(rendered.package, rendered.plans)
-        semantic_snapshot(CATALOG_EXPECTED, rendered.catalog, "runtime feature catalog")
-        semantic_snapshot(PLANS_EXPECTED, rendered.plans, "runtime feature plans")
+        if args.native_only:
+            catalog = load_snapshot(CATALOG_EXPECTED, "runtime feature catalog")
+            plans = load_snapshot(PLANS_EXPECTED, "runtime feature plans")
+        else:
+            rendered = render_reports()
+            catalog = rendered.catalog
+            plans = rendered.plans
+            package = rendered.package
+            semantic_snapshot(CATALOG_EXPECTED, catalog, "runtime feature catalog")
+            semantic_snapshot(PLANS_EXPECTED, plans, "runtime feature plans")
+        validate_catalog(catalog)
+        validate_plans(plans)
+        if args.native_only:
+            package = package_from_snapshots(catalog, plans)
+        validate_package(package, plans)
         toolchains = selected_toolchains(args.toolchain)
-        run_native(rendered.package, toolchains)
+        run_native(package, toolchains)
     except (OSError, UnicodeError, ValueError, RuntimeFeatureFailure, subprocess.TimeoutExpired) as error:
         print(f"runtime-feature-graph: ERROR: {error}", file=sys.stderr)
         return 1
     families = ", ".join(toolchain.family for toolchain in toolchains)
+    evidence = "checked-in plans" if args.native_only else "deterministic Haxe renders"
     print(
         "runtime-feature-graph: OK: "
-        f"{families} deterministic closure, policy diagnostics, and selective native packaging passed"
+        f"{families} {evidence}, policy diagnostics, and selective native packaging passed"
     )
     return 0
 
