@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import argparse
 import difflib
 import hashlib
 import importlib.util
@@ -26,6 +27,9 @@ HXML = Path(__file__).with_name("project_emitter.hxml")
 EXPECTED = Path(__file__).with_name("expected")
 OWNERSHIP = "_GeneratedFiles.json"
 MANIFEST = "hxc.manifest.json"
+CMAKE_ADAPTER = "cmake/CMakeLists.txt"
+MESON_ADAPTER = "meson.build"
+BUILD_TARGET = "hxc_program"
 REMOVED_HEADER = "include/hxc/removed_module.h"
 SUCCESS_LINES = ("project-emitter-macro: OK", "project-emitter-fixture: OK")
 ORIGINAL_PAYLOADS = frozenset(
@@ -63,6 +67,25 @@ UNSTABLE_JSON_KEYS = frozenset(
         "uuid",
     }
 )
+C_STRICT_FLAGS = (
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-pedantic",
+    "-Wshadow",
+    "-Wconversion",
+    "-Wsign-conversion",
+    "-Wstrict-prototypes",
+    "-Wmissing-prototypes",
+    "-Wundef",
+    "-Wformat=2",
+    "-Wimplicit-fallthrough",
+    "-Wcast-align",
+    "-Wcast-qual",
+)
+TOOLCHAIN_COMPILERS = {"gcc": "gcc", "clang": "clang"}
+HAXE_TIMEOUT_SECONDS = 90
 
 
 class ProjectEmitterFailure(RuntimeError):
@@ -98,6 +121,22 @@ class ArtifactDifference:
             f"{location} (expected {byte_description(self.expected_byte)}, "
             f"actual {byte_description(self.actual_byte)})"
         )
+
+
+@dataclass(frozen=True)
+class BuildAdapterCase:
+    mode: str
+    label: str
+    sentinel: str
+
+
+BUILD_ADAPTER_CASES = (
+    BuildAdapterCase("full", "structural project", "project-emitter: OK"),
+    BuildAdapterCase("ast-declarators", "declarator AST", "c-ast-golden: OK"),
+    BuildAdapterCase(
+        "ast-expressions", "expression/statement AST", "c-expression-golden: OK"
+    ),
+)
 
 
 def development_tool(name: str) -> str:
@@ -149,7 +188,7 @@ def run_emitter(
         check=False,
         capture_output=True,
         text=True,
-        timeout=45,
+        timeout=HAXE_TIMEOUT_SECONDS,
     )
     if result.returncode != expected_code:
         raise ProjectEmitterFailure(
@@ -370,6 +409,8 @@ def json_value(path: Path) -> object:
 
 
 def snapshot_format(relative: str) -> str:
+    if relative in {CMAKE_ADAPTER, MESON_ADAPTER}:
+        return "text"
     suffix = Path(relative).suffix
     if suffix == ".json":
         return "json"
@@ -454,7 +495,7 @@ def check_expected(output: Path) -> None:
             )
 
 
-def check_manifest(output: Path) -> None:
+def check_manifest(output: Path, *, expected_original_build: bool = True) -> None:
     tree = output_tree(output)
     manifest = json_value(output / MANIFEST)
     if not isinstance(manifest, dict):
@@ -475,6 +516,66 @@ def check_manifest(output: Path) -> None:
         "runtimeDiagnostics": "off",
     }:
         raise ProjectEmitterFailure("compiler manifest lost resolved structural configuration")
+    build = manifest.get("build")
+    if not isinstance(build, dict):
+        raise ProjectEmitterFailure("compiler manifest omitted its neutral build plan")
+    expected_build = {
+        "schemaVersion": 1,
+        "artifact": {"kind": "executable", "targetName": BUILD_TARGET},
+        "cStandard": "c11",
+        "extensions": False,
+        "warningPolicy": "strict",
+        "sources": ["src/emitter_fixture.c", "src/hxc_boot.c"],
+        "publicHeaders": [
+            "include/hxc/emitter_fixture.h",
+            "include/hxc/removed_module.h",
+        ],
+        "privateHeaders": ["include/hxc/detail/emitter_fixture_internal.h"],
+        "runtimeHeaders": [],
+        "includeDirectories": ["include"],
+        "requiredHeaders": [
+            {
+                "path": "stdio.h",
+                "kind": "system",
+                "ownerModulePaths": ["fixture.Api", "fixture.Main"],
+            }
+        ],
+        "definitions": [
+            {
+                "name": "HXC_ADAPTER_TEXT",
+                "value": "adapter;$<ignored>;quote'\"\\end",
+                "valueKind": "string",
+                "compilerValue": '"adapter\\073\\044\\074ignored\\076\\073quote\\047\\042\\134end"',
+                "ownerModulePaths": ["fixture.Api"],
+            },
+            {
+                "name": "HXC_EMITTER_FIXTURE",
+                "value": "1",
+                "valueKind": "integer",
+                "compilerValue": "1",
+                "ownerModulePaths": ["fixture.Main"],
+            },
+        ],
+        "libraries": [{"name": "m", "ownerModulePaths": ["fixture.Main"]}],
+        "pkgConfigPackages": [],
+        "frameworks": [],
+    }
+    if expected_original_build and build != expected_build:
+        raise ProjectEmitterFailure(
+            "compiler manifest neutral build plan drifted:\n"
+            + "".join(
+                difflib.unified_diff(
+                    (json.dumps(expected_build, indent=2, sort_keys=True) + "\n").splitlines(
+                        keepends=True
+                    ),
+                    (json.dumps(build, indent=2, sort_keys=True) + "\n").splitlines(
+                        keepends=True
+                    ),
+                    fromfile="expected/build",
+                    tofile="actual/build",
+                )
+            )
+        )
     raw_artifacts = manifest.get("artifacts")
     if not isinstance(raw_artifacts, list):
         raise ProjectEmitterFailure("compiler manifest omitted content-addressed artifacts")
@@ -500,6 +601,23 @@ def check_manifest(output: Path) -> None:
         if digest != actual_digest:
             raise ProjectEmitterFailure(
                 f"content digest mismatch for {path}: {digest} != {actual_digest}"
+            )
+    if not (output / CMAKE_ADAPTER).is_file() or not (output / MESON_ADAPTER).is_file():
+        raise ProjectEmitterFailure("compiler manifest omitted a generated build adapter")
+    cmake = (output / CMAKE_ADAPTER).read_text(encoding="utf-8")
+    meson = (output / MESON_ADAPTER).read_text(encoding="utf-8")
+    dangerous_raw_value = "adapter;$<ignored>;quote'\"\\end"
+    if dangerous_raw_value in cmake or dangerous_raw_value in meson:
+        raise ProjectEmitterFailure(
+            "build adapter interpolated a raw string definition instead of its typed C literal"
+        )
+    required_values = ["hxc.manifest.json build schema 1", BUILD_TARGET]
+    if expected_original_build:
+        required_values.extend(["HXC_ADAPTER_TEXT", "HXC_EMITTER_FIXTURE"])
+    for required in required_values:
+        if required not in cmake or required not in meson:
+            raise ProjectEmitterFailure(
+                f"generated adapters lost neutral build-plan value {required!r}"
             )
 
     ownership = json_value(output / OWNERSHIP)
@@ -538,6 +656,283 @@ def check_manifest(output: Path) -> None:
     combined = b"\n".join(tree.values())
     if b"hxrt" in combined or b"hxc_runtime" in combined:
         raise ProjectEmitterFailure("structural project emission selected a hidden runtime")
+
+
+def run_native_command(
+    command: list[str],
+    *,
+    cwd: Path,
+    label: str,
+    environment: Mapping[str, str] | None = None,
+    timeout: int = 60,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(
+        command,
+        cwd=cwd,
+        env=None if environment is None else dict(environment),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+    )
+    if result.returncode != 0:
+        raise ProjectEmitterFailure(
+            f"{label} returned {result.returncode}\n"
+            f"command: {command!r}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return result
+
+
+def run_built_executable(executable: Path, sentinel: str, label: str) -> None:
+    result = run_native_command([str(executable)], cwd=executable.parent, label=label)
+    if result.stdout != sentinel + "\n" or result.stderr:
+        raise ProjectEmitterFailure(
+            f"{label} emitted an invalid runtime envelope\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def compiler_identity(executable: str) -> str:
+    result = subprocess.run(
+        [executable, "--version"],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if result.returncode != 0:
+        raise ProjectEmitterFailure(
+            f"cannot identify C compiler {executable!r}\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    version = (result.stdout + "\n" + result.stderr).lower()
+    if "clang" in version:
+        return "clang"
+    if "gcc" in version or "free software foundation" in version:
+        return "gcc"
+    return "unknown"
+
+
+def resolve_c_compiler(requested: str, required: bool) -> str | None:
+    candidates = (
+        (TOOLCHAIN_COMPILERS[requested],)
+        if requested in TOOLCHAIN_COMPILERS
+        else ("clang", "gcc", "cc")
+    )
+    for candidate in candidates:
+        resolved = shutil.which(candidate)
+        if resolved is not None:
+            identity = compiler_identity(resolved)
+            if requested in TOOLCHAIN_COMPILERS and identity != requested:
+                message = (
+                    f"requested {requested} but {resolved} identifies as {identity}"
+                )
+                if required:
+                    raise ProjectEmitterFailure(message)
+                print(f"project-emitter: SKIP build adapters: {message}")
+                return None
+            return resolved
+    message = f"C compiler unavailable for requested toolchain {requested!r}"
+    if required:
+        raise ProjectEmitterFailure(message)
+    print(f"project-emitter: SKIP build adapters: {message}")
+    return None
+
+
+def build_plan(output: Path) -> dict[str, object]:
+    manifest = json_value(output / MANIFEST)
+    if not isinstance(manifest, dict) or not isinstance(manifest.get("build"), dict):
+        raise ProjectEmitterFailure("raw manifest consumer found no typed build object")
+    build = manifest["build"]
+    if (
+        build.get("schemaVersion") != 1
+        or build.get("artifact")
+        != {"kind": "executable", "targetName": BUILD_TARGET}
+        or build.get("extensions") is not False
+        or build.get("warningPolicy") != "strict"
+    ):
+        raise ProjectEmitterFailure("raw manifest consumer rejected build schema/policy")
+    return build
+
+
+def string_list(value: object, label: str) -> list[str]:
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ProjectEmitterFailure(f"raw manifest field {label} is not a string array")
+    return list(value)
+
+
+def object_list(value: object, label: str) -> list[dict[str, object]]:
+    if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+        raise ProjectEmitterFailure(f"raw manifest field {label} is not an object array")
+    return list(value)
+
+
+def direct_manifest_build(
+    output: Path, build_root: Path, compiler: str, case: BuildAdapterCase
+) -> None:
+    build = build_plan(output)
+    standard = build.get("cStandard")
+    if standard != "c11":
+        raise ProjectEmitterFailure(
+            f"raw manifest fixture expected c11, found {standard!r}"
+        )
+    command = [compiler, *C_STRICT_FLAGS]
+    for directory in string_list(build.get("includeDirectories"), "includeDirectories"):
+        command.extend(["-I", str(output / directory)])
+    for definition in object_list(build.get("definitions"), "definitions"):
+        name = definition.get("name")
+        value = definition.get("compilerValue")
+        if not isinstance(name, str) or not isinstance(value, str):
+            raise ProjectEmitterFailure(
+                f"raw manifest contains an invalid compile definition: {definition!r}"
+            )
+        command.append(f"-D{name}={value}")
+    command.extend(
+        str(output / source)
+        for source in string_list(build.get("sources"), "sources")
+    )
+    for library in object_list(build.get("libraries"), "libraries"):
+        name = library.get("name")
+        if not isinstance(name, str):
+            raise ProjectEmitterFailure(
+                f"raw manifest contains an invalid logical library: {library!r}"
+            )
+        command.append(f"-l{name}")
+    if object_list(build.get("pkgConfigPackages"), "pkgConfigPackages"):
+        raise ProjectEmitterFailure(
+            "raw seed consumer fixture does not resolve pkg-config dependencies"
+        )
+    if object_list(build.get("frameworks"), "frameworks"):
+        raise ProjectEmitterFailure(
+            "raw seed consumer fixture does not resolve Apple frameworks"
+        )
+    executable = build_root / "raw" / BUILD_TARGET
+    executable.parent.mkdir(parents=True)
+    command.extend(["-o", str(executable)])
+    run_native_command(
+        command,
+        cwd=output,
+        label=f"raw manifest {case.label} compile/link",
+    )
+    run_built_executable(
+        executable, case.sentinel, f"raw manifest {case.label} execution"
+    )
+
+
+def cmake_build(
+    output: Path, build_root: Path, compiler: str, cmake: str, case: BuildAdapterCase
+) -> None:
+    build = build_root / "cmake"
+    run_native_command(
+        [
+            cmake,
+            "-S",
+            str(output / "cmake"),
+            "-B",
+            str(build),
+            f"-DCMAKE_C_COMPILER={compiler}",
+        ],
+        cwd=output,
+        label=f"CMake {case.label} configure",
+    )
+    run_native_command(
+        [cmake, "--build", str(build), "--target", BUILD_TARGET],
+        cwd=output,
+        label=f"CMake {case.label} build",
+    )
+    run_built_executable(
+        build / "bin" / BUILD_TARGET,
+        case.sentinel,
+        f"CMake {case.label} execution",
+    )
+
+
+def meson_build(
+    output: Path,
+    build_root: Path,
+    compiler: str,
+    meson: str,
+    case: BuildAdapterCase,
+) -> None:
+    build = build_root / "meson"
+    environment = os.environ.copy()
+    environment["CC"] = compiler
+    run_native_command(
+        [meson, "setup", str(build), str(output), "--backend=ninja"],
+        cwd=output,
+        environment=environment,
+        label=f"Meson {case.label} configure",
+    )
+    run_native_command(
+        [meson, "compile", "-C", str(build)],
+        cwd=output,
+        environment=environment,
+        label=f"Meson {case.label} build",
+    )
+    run_built_executable(
+        build / BUILD_TARGET,
+        case.sentinel,
+        f"Meson {case.label} execution",
+    )
+
+
+def check_build_adapters(policy: str, toolchain: str) -> tuple[str, ...]:
+    if policy == "off":
+        return ()
+    required = policy == "required"
+    compiler = resolve_c_compiler(toolchain, required)
+    if compiler is None:
+        return ()
+    cmake = shutil.which("cmake")
+    meson = shutil.which("meson")
+    ninja = shutil.which("ninja")
+    missing = [
+        name
+        for name, executable in (("cmake", cmake), ("meson", meson), ("ninja", ninja))
+        if executable is None
+    ]
+    if missing and required:
+        raise ProjectEmitterFailure(
+            "required build adapter tools are missing: " + ", ".join(missing)
+        )
+    if cmake is None:
+        print("project-emitter: SKIP optional CMake execution: cmake unavailable")
+    if meson is None or ninja is None:
+        absent = "meson" if meson is None else "ninja"
+        print(f"project-emitter: SKIP optional Meson execution: {absent} unavailable")
+
+    c_ast = run_native_command(
+        [sys.executable, str(ROOT / "test/c_ast/run.py")],
+        cwd=ROOT,
+        label="C AST source render before build-adapter consumption",
+    )
+    if "c-ast-golden: OK" not in c_ast.stdout or c_ast.stderr:
+        raise ProjectEmitterFailure(
+            "C AST renderer did not establish the adapter fixture provenance"
+        )
+
+    lanes = ["raw-manifest"]
+    if cmake is not None:
+        lanes.append("cmake")
+    if meson is not None and ninja is not None:
+        lanes.append("meson")
+    with tempfile.TemporaryDirectory(prefix="reflaxe-c-build-adapters-") as temporary:
+        root = Path(temporary)
+        for ordinal, case in enumerate(BUILD_ADAPTER_CASES):
+            output = root / f"{ordinal:02d} {case.label}'s generated project"
+            builds = root / f"{ordinal:02d} {case.label}'s native builds"
+            run_emitter(case.mode, output, label=f"{case.label} adapter render")
+            direct_manifest_build(output, builds, compiler, case)
+            if cmake is not None:
+                cmake_build(output, builds, compiler, cmake, case)
+            if meson is not None and ninja is not None:
+                meson_build(output, builds, compiler, meson, case)
+    print(
+        "project-emitter: BUILD-ADAPTERS: "
+        + ", ".join(lanes)
+        + f" built {len(BUILD_ADAPTER_CASES)} project(s) with {compiler}"
+    )
+    return tuple(lanes)
 
 
 def check_cross_root_order_locale_and_line_endings() -> None:
@@ -739,7 +1134,7 @@ def check_renamed_symbol_and_module_cleanup() -> None:
             "incremental renamed-project determinism failure",
         )
         check_no_unstable_facts(output_tree(fresh), (ROOT, root, output, fresh))
-        check_manifest(fresh)
+        check_manifest(fresh, expected_original_build=False)
 
 
 def available_port() -> int:
@@ -884,6 +1279,10 @@ def check_negative_guards() -> None:
     for mode in (
         "duplicate",
         "invalid-path",
+        "invalid-adapter-path",
+        "invalid-define",
+        "conflicting-define",
+        "conflicting-include",
         "invalid-layout",
         "invalid-line-endings",
         "lowered",
@@ -1056,7 +1455,27 @@ def check_production_boundary() -> None:
         raise ProjectEmitterFailure(str(error)) from error
 
 
+def parse_arguments() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Validate deterministic project emission and optional build adapters."
+    )
+    parser.add_argument(
+        "--build-adapters",
+        choices=("auto", "required", "off"),
+        default="auto",
+        help="Run raw/CMake/Meson builds when available, require all tools, or disable native adapter builds.",
+    )
+    parser.add_argument(
+        "--toolchain",
+        choices=("auto", "gcc", "clang"),
+        default="auto",
+        help="Select the C compiler used by executable build-adapter proofs.",
+    )
+    return parser.parse_args()
+
+
 def main() -> int:
+    arguments = parse_arguments()
     if not HXML.is_file():
         print(f"project-emitter: ERROR: missing HXML: {HXML}", file=sys.stderr)
         return 1
@@ -1071,6 +1490,9 @@ def main() -> int:
         check_renamed_symbol_and_module_cleanup()
         check_compiler_server_determinism()
         check_negative_guards()
+        adapter_lanes = check_build_adapters(
+            arguments.build_adapters, arguments.toolchain
+        )
         check_production_boundary()
     except (
         OSError,
@@ -1084,7 +1506,9 @@ def main() -> int:
     print(
         "project-emitter: OK: precise byte-difference reports, isolated-root/order/"
         "locale/CRLF/server determinism, renamed-symbol stale ownership, skipped "
-        "writes, path guards, strict placeholders, and exact HXC1001 no-output passed"
+        "writes, path/build-language guards, strict placeholders, neutral manifest, "
+        f"CMake/Meson seeds ({','.join(adapter_lanes) if adapter_lanes else 'native execution disabled'}), "
+        "and exact HXC1001 no-output passed"
     )
     return 0
 

@@ -14,6 +14,11 @@ WORKFLOW = ROOT / ".github/workflows/governance.yml"
 PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 PRE_PUSH = ROOT / "scripts/hooks/pre-push"
+BUILD_ADAPTER_REQUIREMENTS = ROOT / "scripts/ci/build-adapter-requirements.txt"
+EXPECTED_BUILD_ADAPTER_REQUIREMENTS = """# Pure-Python Meson wheel used only by the required CI build-adapter proof.
+meson==1.11.1 \\
+    --hash=sha256:9b3a023657e393dbc5335b95c561337d49b7a458f5541e47ec44f2cc566e0d80
+"""
 PUBLIC_PREFLIGHT_COMMAND = (
     "npm run format:haxe:check && npm run security:gitleaks && "
     "npm run security:beads-history && npm run test:security-tooling && "
@@ -108,7 +113,12 @@ REQUIRED_GATE_FILES = (
     "test/project_emitter/ProjectEmitterGolden.hx",
     "test/project_emitter/ProjectEmitterProbe.hx",
     "test/project_emitter/project_emitter.hxml",
+    "src/reflaxe/c/emit/CBuildPlan.hx",
+    "src/reflaxe/c/emit/CBuildAdapterEmitter.hx",
+    "scripts/ci/build-adapter-requirements.txt",
     "test/project_emitter/expected/hxc.manifest.json",
+    "test/project_emitter/expected/cmake/CMakeLists.txt",
+    "test/project_emitter/expected/meson.build",
     "test/project_emitter/expected/hxc.runtime-plan.json",
     "test/project_emitter/expected/hxc.abi.json",
     "test/project_emitter/expected/hxc.symbols.json",
@@ -326,6 +336,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  haxe-format:\n",
     "  pinned-toolchain:\n",
     "  native-smoke:\n",
+    "  build-adapters:\n",
     "  license-and-provenance:\n",
     "      fail-fast: false\n",
     "        toolchain:\n",
@@ -344,6 +355,11 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    "--require-hashes",
+    "--no-input",
+    "--only-binary=:all:",
+    "-r scripts/ci/build-adapter-requirements.txt",
+    'npm run test:build-adapters -- --toolchain "${{ matrix.toolchain }}"',
     "python3 scripts/beads/validate_plan.py --json",
     "python3 scripts/beads/bootstrap.py --json",
     "python3 scripts/ci/check_governance_policy.py",
@@ -422,6 +438,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:symbol-registry entry point")
     if scripts.get("test:project-emitter") != "python3 test/project_emitter/run.py":
         errors.append("package.json must retain the test:project-emitter entry point")
+    if (
+        scripts.get("test:build-adapters")
+        != "python3 test/project_emitter/run.py --build-adapters required"
+    ):
+        errors.append("package.json must retain the required build-adapter entry point")
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
@@ -553,6 +574,9 @@ def validate() -> list[str]:
         if snippet not in workflow:
             errors.append(f"governance workflow is missing required CI contract: {snippet.strip()}")
 
+    if read_text(BUILD_ADAPTER_REQUIREMENTS, errors) != EXPECTED_BUILD_ADAPTER_REQUIREMENTS:
+        errors.append("build-adapter Meson version and wheel SHA-256 pin drifted")
+
     pre_commit = read_text(PRE_COMMIT, errors)
     if "scripts/security/run-gitleaks.sh\" --staged" not in pre_commit:
         errors.append("pre-commit must scan staged content for secrets")
@@ -633,6 +657,21 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if '"--native-only"' not in runner:
         errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
+
+    build_adapter_runner = read_text(ROOT / "test/project_emitter/run.py", errors)
+    for required_build_adapter_contract in (
+        "--build-adapters",
+        "compiler_identity",
+        "direct_manifest_build",
+        "cmake_build",
+        "meson_build",
+        "BUILD_ADAPTER_CASES",
+    ):
+        if required_build_adapter_contract not in build_adapter_runner:
+            errors.append(
+                "project-emitter runner lost required build-adapter contract "
+                + required_build_adapter_contract
+            )
 
     runtime_feature_runner = read_text(
         ROOT / "test/runtime/runtime-feature-graph/run.py", errors

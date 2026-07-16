@@ -481,6 +481,7 @@ def check_production_boundaries() -> None:
             )
         required = {
             "_GeneratedFiles.json",
+            "cmake/CMakeLists.txt",
             "hxc.abi.json",
             "hxc.initialization-plan.json",
             "hxc.manifest.json",
@@ -488,6 +489,7 @@ def check_production_boundaries() -> None:
             "hxc.stdlib-report.json",
             "hxc.symbols.json",
             "include/hxc/program.h",
+            "meson.build",
             "src/program.c",
         }
         actual = {

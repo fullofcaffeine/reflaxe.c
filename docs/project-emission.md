@@ -21,8 +21,9 @@ placeholders; it is not relabeled as generated-Haxe semantic evidence.
 ## Typed model and layout
 
 Compiler state does not flow through open JSON objects. `CProjectEmissionPlan`,
-its configuration, build facts, content-address records, and every sidecar
-record are explicit Haxe types. Closed states use enum abstracts. The one
+`CBuildPlanSnapshot`, their configuration and build facts, content-address
+records, and every sidecar record are explicit Haxe types. Closed states use
+enum abstracts. The one
 inherently untyped operation is decoding Reflaxe's existing JSON ownership
 file; it is isolated in a private decoder, checked as schema 1, and converted
 immediately to `ReflaxeOwnershipMetadata`.
@@ -49,8 +50,8 @@ The emitter owns these schema-1 sidecars:
   dependency-first type order, source-positioned reasons, class/field phases,
   exact initializer execution order, entry ID, cycle policy, and empty runtime
   feature set. Structural fixtures do not fabricate this semantic sidecar;
-- `hxc.manifest.json`: resolved logical configuration, typed build
-  requirements, layout groups, artifact kinds, and SHA-256 digests;
+- `hxc.manifest.json`: resolved logical configuration, the typed neutral build
+  plan, artifact kinds, and SHA-256 digests;
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
@@ -67,14 +68,48 @@ The emitter owns these schema-1 sidecars:
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
   primitive executable's `analyzed-no-stdlib-use`.
 
+Two optional non-payload adapters are compiler-owned and content-addressed in
+the same manifest: `cmake/CMakeLists.txt` and `meson.build`. They are derived
+views, not independent configuration authorities.
+
 The compiler manifest cannot contain its own digest without a recursive
 definition, so its declared hash scope is every compiler artifact except
 `hxc.manifest.json` and Reflaxe's `_GeneratedFiles.json`. The `GeneratedFile`
 value for the manifest still carries and verifies its own in-memory SHA-256.
 Floating modulo contributes a provenance-bearing `m` link fact to the neutral
 manifest. This is an ordinary C build requirement and does not change the empty
-runtime plan. CMake, Meson, direct command plans, and stable runtime/ABI schemas
-remain owned by their later Beads issues.
+runtime plan. Stable runtime/ABI schemas remain owned by their later Beads
+issues.
+
+## Neutral build plan and adapters
+
+`hxc.manifest.json.build` is the schema-1 authority consumed by all three build
+lanes. The M1 seed records one non-installing executable target, strict
+`c11|c17|c23-experimental` mode with extensions disabled, warning policy,
+owned source/header groups, include directories, source-provenance-bearing
+header requirements, typed definitions, logical libraries, pkg-config
+packages, and Apple frameworks. A consumer may ignore both generated adapters
+and construct an argument array directly from this object; no shell command is
+stored or required by the schema.
+
+`CBuildAdapterEmitter` renders the same immutable snapshot into CMake and Meson:
+
+- CMake values use dynamically delimited bracket arguments, which do not
+  perform variable substitution or escape processing;
+- Meson values use escaped single-quoted literals;
+- compile definitions retain their literal source value and a separately
+  validated `compilerValue`. String definitions are encoded as C string
+  literals with fixed-width octal escapes where punctuation could be
+  interpreted by a build language;
+- source paths containing `$` or `;` fail closed because those bytes carry
+  generator/list meaning. Ordinary spaces and apostrophes remain supported and
+  are exercised in real build directories and source names.
+
+This seed intentionally stops at one executable named `hxc_program`. Static or
+shared libraries, installed exports, configurable target names, direct/Ninja
+orchestration, toolchain/sysroot/cross files, and the full CLI build plan remain
+E7/E8 work. The adapters therefore do not imply a public ABI, supported
+platform, or release artifact.
 
 The separate `RuntimeFeaturePackager` can materialize an already validated
 non-empty plan as exact runtime `GeneratedFile` values, but no provisional
@@ -116,8 +151,9 @@ same ID.
 ## Determinism and evidence
 
 The plan contains no output root, timestamp, locale, random value, discovery
-counter, or process identity. Payloads and build requirements are sorted by
-UTF-8 bytes; identical build facts merge their sorted declaration provenance.
+counter, or process identity. Artifacts and build-plan collections are sorted
+by UTF-8 bytes; identical build facts merge their sorted declaration
+provenance.
 Path layout, artifact hash coverage, and sidecar status are snapshot-owned.
 The adversarial comparator orders relative paths by UTF-8 and compares raw
 bytes, reporting the first differing artifact and exact byte offset (including
@@ -127,11 +163,18 @@ Run:
 
 ```sh
 npm run test:project-emitter
+npm run test:build-adapters -- --toolchain clang
 npm run test:runtime-features
 npm run test:arithmetic-semantics
 npm run snapshots:check
 npm run test:native
 ```
+
+The required build-adapter command expects CMake 3.21 or newer, Meson 1.4 or
+newer, Ninja, and the selected C compiler on `PATH`; CI installs Meson from the
+checksum-pinned requirements file and runs separate GCC and Clang lanes. The
+ordinary project-emitter gate uses explicit `SKIP` messages for unavailable
+optional adapters.
 
 `test/project_emitter` proves byte identity across isolated roots, reversed
 discovery, a fixed explicit locale, CRLF source/HXML inputs with an absolute
@@ -145,9 +188,14 @@ normal-artifact server comparison. The suite also rejects unowned collisions,
 invalid paths, existing or dangling symlinks, malformed ownership JSON, and
 non-canonical line endings before a partial write, while preserving the
 production exact-`HXC1001` unsupported boundary and rejection of unproven generic
-lowered-program status. The native matrix independently compiles every emitted
-header and links/runs the emitted strict-C11 structural project under GCC and
-Clang. The function-lowering and arithmetic suites prove that the narrow
+lowered-program status. The required adapter matrix reads the raw JSON with an
+argument-array consumer, then independently configures, builds, and runs the
+same strict-C11 structural project and both checked-in C AST/printer translation
+units through CMake and Meson. Paths include spaces and apostrophes, and an
+adversarial string definition contains semicolon, CMake generator-expression,
+quote, and backslash characters. The native matrix also compiles every emitted
+header and links/runs the structural project under GCC and Clang. The
+function-lowering and arithmetic suites prove that the narrow
 primitive production path passes through this ownership boundary with analyzed
 empty runtime/ABI/stdlib records, a typed static-initialization plan, optional
 request-local helpers, and the exact

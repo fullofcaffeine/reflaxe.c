@@ -15,6 +15,8 @@ enum abstract GeneratedFileKind(String) to String {
 	var SymbolTable = "symbol-table";
 	var StdlibReport = "stdlib-report";
 	var InitializationPlan = "initialization-plan";
+	var CMakeAdapter = "cmake-adapter";
+	var MesonAdapter = "meson-adapter";
 }
 
 /** A validated, content-addressed, output-root-relative compiler artifact. */
@@ -71,14 +73,14 @@ class GeneratedFile {
 	public static function isPayloadKind(kind:GeneratedFileKind):Bool {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource: true;
-			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | InitializationPlan: false;
+			case CompilerManifest | RuntimePlan | AbiManifest | SymbolTable | StdlibReport | InitializationPlan | CMakeAdapter | MesonAdapter: false;
 		};
 	}
 
 	static function isKnownKind(kind:GeneratedFileKind):Bool {
 		return switch kind {
 			case PublicHeader | PrivateHeader | Source | RuntimeHeader | RuntimeSource | CompilerManifest | RuntimePlan | AbiManifest | SymbolTable |
-				StdlibReport | InitializationPlan:
+				StdlibReport | InitializationPlan | CMakeAdapter | MesonAdapter:
 				true;
 			case _: false;
 		};

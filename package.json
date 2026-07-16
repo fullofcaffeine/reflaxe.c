@@ -21,6 +21,7 @@
     "test:declaration-plan": "python3 test/declaration_plan/run.py",
     "test:symbol-registry": "python3 test/symbol_registry/run.py",
     "test:project-emitter": "python3 test/project_emitter/run.py",
+    "test:build-adapters": "python3 test/project_emitter/run.py --build-adapters required",
     "test:runtime-features": "python3 test/runtime/runtime-feature-graph/run.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",

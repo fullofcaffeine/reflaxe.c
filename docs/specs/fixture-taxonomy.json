@@ -133,6 +133,7 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
+        "project-emitter",
         "span-lowering",
         "runtime-feature-graph"
       ]
@@ -341,13 +342,15 @@
       "types": [
         "negative",
         "ast",
-        "snapshot"
+        "snapshot",
+        "runtime"
       ],
       "status": "active",
       "assertions": [
-        "typed multi-file project artifacts and manifests are deterministic across roots and discovery order",
+        "one typed neutral compile/link plan drives the raw manifest plus optional CMake and Meson adapters deterministically",
+        "raw-manifest, CMake, and Meson consumers compile and run both structural C AST/printer corpora with adversarial quoted paths",
         "Reflaxe ownership removes only listed stale outputs and skips unchanged artifact writes",
-        "path traversal, symlinks, unowned collisions, malformed ownership JSON, and premature lowered-program claims fail closed"
+        "path traversal, build-language injection, conflicting typed build facts, symlinks, unowned collisions, malformed ownership JSON, and premature lowered-program claims fail closed"
       ]
     },
     {
@@ -650,7 +653,8 @@
         "formats": [
           "json",
           "header",
-          "c"
+          "c",
+          "text"
         ]
       },
       {

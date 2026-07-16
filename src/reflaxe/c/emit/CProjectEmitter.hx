@@ -7,6 +7,9 @@ import reflaxe.c.CProfile;
 import reflaxe.c.CRuntimeDiagnostics;
 import reflaxe.c.CRuntimePolicy;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
+import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
+import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
+import reflaxe.c.emit.CBuildPlan.CBuildStandard;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
@@ -25,13 +28,7 @@ enum abstract CProjectCompilationStatus(String) to String {
 }
 
 typedef CProjectEnvironment = CEnvironment;
-
-enum abstract CProjectStandard(String) to String {
-	var C11 = "c11";
-	var C17 = "c17";
-	var C23Experimental = "c23-experimental";
-}
-
+typedef CProjectStandard = CBuildStandard;
 typedef CProjectRuntimePolicy = CRuntimePolicy;
 typedef CProjectRuntimeDiagnostics = CRuntimeDiagnostics;
 
@@ -55,22 +52,6 @@ typedef CProjectEmissionPlan = {
 	final symbolTable:CSymbolTableSnapshot;
 }
 
-private enum abstract BuildFactKind(String) to String {
-	var Include = "include";
-	var Link = "link";
-	var PkgConfig = "pkg-config";
-	var Framework = "framework";
-	var Define = "define";
-}
-
-private enum abstract BuildFactValueKind(String) to String {
-	var EnumValue = "enum";
-	var StringValue = "string";
-	var IntegerValue = "integer";
-	var FloatValue = "float";
-	var BooleanValue = "boolean";
-}
-
 private enum abstract PlaceholderStatus(String) to String {
 	var RuntimeNotAnalyzed = "placeholder-no-runtime-analysis";
 	var AbiNotAnalyzed = "placeholder-no-export-analysis";
@@ -84,14 +65,6 @@ private enum abstract ResolvedAnalysisStatus(String) to String {
 
 private enum abstract AbiStability(String) to String {
 	var Experimental = "experimental";
-}
-
-private typedef CanonicalBuildFact = {
-	final kind:BuildFactKind;
-	final name:String;
-	final value:Null<String>;
-	final valueKind:Null<BuildFactValueKind>;
-	final ownerModulePaths:Array<String>;
 }
 
 private typedef AddressedArtifact = {
@@ -113,15 +86,6 @@ private typedef ContentAddressingRecord = {
 	final scope:String;
 }
 
-private typedef ProjectBuildMetadata = {
-	final sources:Array<String>;
-	final publicHeaders:Array<String>;
-	final privateHeaders:Array<String>;
-	final runtimeHeaders:Array<String>;
-	final includeDirectories:Array<String>;
-	final requirements:Array<CanonicalBuildFact>;
-}
-
 private typedef CompilerManifestRecord = {
 	final schemaVersion:Int;
 	final generator:String;
@@ -130,7 +94,7 @@ private typedef CompilerManifestRecord = {
 	final configuration:ProjectConfigurationRecord;
 	final contentAddressing:ContentAddressingRecord;
 	final artifacts:Array<AddressedArtifact>;
-	final build:ProjectBuildMetadata;
+	final build:CBuildPlanSnapshot;
 	final ownershipManifest:String;
 }
 
@@ -194,7 +158,9 @@ class CProjectEmitter {
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
 		"hxc.stdlib-report.json",
-		"hxc.symbols.json"
+		"hxc.symbols.json",
+		CBuildAdapterEmitter.CMAKE_PATH,
+		CBuildAdapterEmitter.MESON_PATH
 	];
 
 	public function new() {}
@@ -202,7 +168,7 @@ class CProjectEmitter {
 	public function emit(plan:CProjectEmissionPlan):Array<GeneratedFile> {
 		validatePlan(plan);
 		final units = canonicalUnits(plan.units);
-		final buildFacts = canonicalBuildFacts(plan.buildFacts);
+		final buildPlan = new CBuildPlanBuilder().build(plan.projectName, plan.cStandard, units, plan.buildFacts);
 		final files = units.copy();
 
 		files.push(jsonFile("hxc.symbols.json", GeneratedFileKind.SymbolTable, plan.symbolTable));
@@ -220,6 +186,9 @@ class CProjectEmitter {
 				throw new ProjectEmissionError("unreachable generic lowered-program plan passed validation");
 			case _:
 				throw new ProjectEmissionError('unreachable project compilation status `${Std.string(plan.compilationStatus)}`');
+		}
+		for (adapter in new CBuildAdapterEmitter().emit(plan.projectName, buildPlan)) {
+			files.push(adapter);
 		}
 
 		files.sort(compareFiles);
@@ -245,7 +214,7 @@ class CProjectEmitter {
 				scope: "all compiler artifacts except hxc.manifest.json and _GeneratedFiles.json"
 			},
 			artifacts: addressedArtifacts,
-			build: buildMetadata(units, buildFacts),
+			build: buildPlan,
 			ownershipManifest: GeneratedFile.OWNERSHIP_MANIFEST
 		};
 		files.push(jsonFile("hxc.manifest.json", GeneratedFileKind.CompilerManifest, manifest));
@@ -512,96 +481,6 @@ class CProjectEmitter {
 		return units;
 	}
 
-	function canonicalBuildFacts(input:Array<TypedCBuildFact>):Array<CanonicalBuildFact> {
-		final byKey:Map<String, CanonicalBuildFact> = [];
-		for (fact in input) {
-			final kind = buildFactKind(fact.kind);
-			validateLogicalText(fact.name, 'build fact `${fact.kind}` name');
-			if (kind == BuildFactKind.Include && !GeneratedFile.isNormalizedRelativePath(fact.name)) {
-				fail('include build fact must use a normalized logical path: `${fact.name}`');
-			}
-			if (fact.value != null) {
-				validateLogicalText(fact.value, 'build fact `${fact.kind}` value');
-			}
-			if (fact.valueKind != null) {
-				validateLogicalText(fact.valueKind, 'build fact `${fact.kind}` value kind');
-			}
-			final valueKind = buildFactValueKind(kind, fact.value, fact.valueKind);
-			final key = factKey(kind, fact.name, fact.value, valueKind);
-			var canonical = byKey.get(key);
-			if (canonical == null) {
-				canonical = {
-					kind: kind,
-					name: fact.name,
-					value: fact.value,
-					valueKind: valueKind,
-					ownerModulePaths: []
-				};
-				byKey.set(key, canonical);
-			}
-			if (fact.ownerModulePaths.length == 0) {
-				fail('build fact `${fact.kind}` `${fact.name}` has no declaration provenance');
-			}
-			for (owner in fact.ownerModulePaths) {
-				validateLogicalText(owner, 'build fact `${fact.kind}` owner');
-				if (owner.indexOf("/") != -1 || owner.indexOf("\\") != -1 || ~/^[A-Za-z]:/.match(owner) || owner.split(".").indexOf("") != -1) {
-					fail('build fact owner must be a logical module identity: `$owner`');
-				}
-				if (canonical.ownerModulePaths.indexOf(owner) == -1) {
-					canonical.ownerModulePaths.push(owner);
-				}
-			}
-		}
-		final keys = [for (key in byKey.keys()) key];
-		keys.sort(compareUtf8);
-		final result:Array<CanonicalBuildFact> = [];
-		for (key in keys) {
-			final fact = byKey.get(key);
-			if (fact != null) {
-				fact.ownerModulePaths.sort(compareUtf8);
-				result.push(fact);
-			}
-		}
-		return result;
-	}
-
-	function buildFactKind(value:String):BuildFactKind {
-		return switch value {
-			case "include": BuildFactKind.Include;
-			case "link": BuildFactKind.Link;
-			case "pkg-config": BuildFactKind.PkgConfig;
-			case "framework": BuildFactKind.Framework;
-			case "define": BuildFactKind.Define;
-			case _: throw new ProjectEmissionError('unknown typed build fact kind `$value`');
-		};
-	}
-
-	function buildFactValueKind(kind:BuildFactKind, value:Null<String>, rawKind:Null<String>):Null<BuildFactValueKind> {
-		return switch kind {
-			case BuildFactKind.Include:
-				if (rawKind != "enum" || (value != "system" && value != "local")) {
-					throw new ProjectEmissionError("include build facts must carry c.IncludeKind.System or c.IncludeKind.Local");
-				}
-				BuildFactValueKind.EnumValue;
-			case BuildFactKind.Define:
-				if (value == null) {
-					throw new ProjectEmissionError("define build facts require a literal value");
-				}
-				switch rawKind {
-					case "string": BuildFactValueKind.StringValue;
-					case "integer": BuildFactValueKind.IntegerValue;
-					case "float": BuildFactValueKind.FloatValue;
-					case "boolean": BuildFactValueKind.BooleanValue;
-					case _: throw new ProjectEmissionError('define build fact has unknown literal kind `${Std.string(rawKind)}`');
-				}
-			case BuildFactKind.Link | BuildFactKind.PkgConfig | BuildFactKind.Framework:
-				if (value != null || rawKind != null) {
-					throw new ProjectEmissionError('`${Std.string(kind)}` build facts must not carry a value');
-				}
-				null;
-		};
-	}
-
 	function validateLayout(file:GeneratedFile):Void {
 		final valid = switch file.kind {
 			case PublicHeader | PrivateHeader: StringTools.startsWith(file.relativePath, "include/") && StringTools.endsWith(file.relativePath, ".h");
@@ -678,39 +557,6 @@ class CProjectEmitter {
 		};
 	}
 
-	function buildMetadata(units:Array<GeneratedFile>, facts:Array<CanonicalBuildFact>):ProjectBuildMetadata {
-		final sources = pathsOfKinds(units, [GeneratedFileKind.Source, GeneratedFileKind.RuntimeSource]);
-		final publicHeaders = pathsOfKinds(units, [GeneratedFileKind.PublicHeader]);
-		final privateHeaders = pathsOfKinds(units, [GeneratedFileKind.PrivateHeader]);
-		final runtimeHeaders = pathsOfKinds(units, [GeneratedFileKind.RuntimeHeader]);
-		final includeDirectories:Array<String> = [];
-		if (publicHeaders.length > 0 || privateHeaders.length > 0) {
-			includeDirectories.push("include");
-		}
-		if (runtimeHeaders.length > 0) {
-			includeDirectories.push("runtime/include");
-		}
-		return {
-			sources: sources,
-			publicHeaders: publicHeaders,
-			privateHeaders: privateHeaders,
-			runtimeHeaders: runtimeHeaders,
-			includeDirectories: includeDirectories,
-			requirements: facts
-		};
-	}
-
-	function pathsOfKinds(files:Array<GeneratedFile>, kinds:Array<GeneratedFileKind>):Array<String> {
-		final result = [];
-		for (file in files) {
-			if (kinds.indexOf(file.kind) != -1) {
-				result.push(file.relativePath);
-			}
-		}
-		result.sort(compareUtf8);
-		return result;
-	}
-
 	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile
 		return new GeneratedFile(path, Json.stringify(value, null, "  ") + "\n", kind);
 
@@ -725,15 +571,6 @@ class CProjectEmitter {
 			}
 		}
 	}
-
-	static function factKey(kind:BuildFactKind, name:String, value:Null<String>, valueKind:Null<BuildFactValueKind>):String
-		return canonicalPart(Std.string(kind))
-			+ canonicalPart(name)
-			+ canonicalPart(value == null ? "" : value)
-			+ canonicalPart(valueKind == null ? "" : Std.string(valueKind));
-
-	static function canonicalPart(value:String):String
-		return '${Bytes.ofString(value).length}:$value';
 
 	static function compareFiles(left:GeneratedFile, right:GeneratedFile):Int
 		return compareUtf8(left.relativePath, right.relativePath);

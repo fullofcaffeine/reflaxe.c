@@ -220,7 +220,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 21 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 22 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -230,6 +230,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `beads-bootstrap` | `implemented` | Repository governance tooling validates and previews the checked-in Beads plan deterministically; this is not compiler or runtime functionality. |
 | `bindgen` | `unsupported` | No Clang-backed binding generator or user bindgen command exists. |
 | `bootstrap-capability-manifest` | `implemented` | A schema-checked M0 product, infrastructure, and limitation inventory drives the README status table. |
+| `build-adapter-seeds` | `implemented` | One typed neutral executable plan deterministically drives optional CMake and Meson files plus a direct argument-array consumer. |
 | `c-ast-printer` | `implemented` | Target-owned structural C11 declarator, expression, statement, literal, and escaping corpora compile and run. |
 | `c-export` | `unsupported` | No Haxe export analyzer, public-header generator, library packaging, or ABI diff workflow exists. |
 | `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |

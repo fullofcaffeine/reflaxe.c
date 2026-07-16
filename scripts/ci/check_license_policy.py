@@ -21,6 +21,7 @@ EXPECTED_COMPONENT_LICENSES = {
     "haxe-compiler": "GPL-2.0-or-later",
     "haxe-standard-library": "MIT",
     "llvm-clang-tooling": "Apache-2.0 WITH LLVM-exception",
+    "meson-build-system": "Apache-2.0",
 }
 EXPECTED_RELEASE_FILES = {
     "LICENSE",
@@ -31,6 +32,7 @@ EXPECTED_RELEASE_FILES = {
 }
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
+MESON_WHEEL_SHA256 = "9b3a023657e393dbc5335b95c561337d49b7a458f5541e47ec44f2cc566e0d80"
 
 
 def sha256(path: Path) -> str:
@@ -306,6 +308,22 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
             errors.append(f"{component_id} version must be 5.0.0-preview.1")
         if component and component.get("sourceRevision") != "2c1e544e0a2c7524ef4c8e103f1b0580362ea538":
             errors.append(f"{component_id} must resolve the Haxe 5.0.0-preview.1 tag commit")
+
+    meson = component_map.get("meson-build-system", {})
+    if meson and (
+        meson.get("version") != "1.11.1"
+        or meson.get("selectionStatus") != "version-and-wheel-content-pinned"
+        or meson.get("usage") != "external-development-tool-not-redistributed"
+        or meson.get("bundled") is not False
+    ):
+        errors.append("Meson must remain a non-redistributed 1.11.1 checksum-pinned CI tool")
+    try:
+        third_party_notice = (root / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+    except (OSError, UnicodeError) as error:
+        errors.append(f"cannot read THIRD_PARTY_NOTICES.md: {error}")
+    else:
+        if "| Meson |" not in third_party_notice or MESON_WHEEL_SHA256 not in third_party_notice:
+            errors.append("THIRD_PARTY_NOTICES.md must retain the Meson wheel provenance and SHA-256")
 
     raw_runtime = data.get("runtimeDependencies")
     runtime_dependencies: list[Any] = raw_runtime if isinstance(raw_runtime, list) else []

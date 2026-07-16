@@ -73,7 +73,7 @@ lowering. Planning selects no `hxrt` feature.
 | Header group and stable native name | `@:c.header("path.h", c.Header.Public\|Private)` and `@:c.name("symbol")` | The compiler can derive guards, forward declarations, dependencies, and ordering. |
 | Packing, alignment, bit fields | `@:c.pack(n)`, `@:c.align(n)`, `@:c.bitField(n)` | Literal validation is source-local; native `_Static_assert` and ABI probes remain authoritative. |
 | Linkage, visibility, convention, section | `@:c.linkage(c.Linkage.*)`, `@:c.visibility(c.Visibility.*)`, `@:c.callingConvention(c.CallingConvention.*)`, `@:c.section("...")` | These are explicit, inspectable target boundaries and can be rejected against capabilities. |
-| External build inputs | `@:c.include`, `@:c.link`, `@:c.define`, `@:c.pkgConfig`, `@:c.framework` | Literal facts enter a neutral manifest; they are never concatenated into shell or preprocessor code. |
+| External build inputs | `@:c.include`, `@:c.link`, `@:c.define`, `@:c.pkgConfig`, `@:c.framework` | Literal facts enter one neutral manifest; optional CMake/Meson files derive from its typed values and never concatenate shell or raw preprocessor code. |
 | Compile-time invariant | `c.StaticAssert.require(literalBool, "reason")` | It gives an immediate Haxe diagnostic. Native size/alignment facts still require emitted C assertions. |
 
 Empty `c.Lib`, `c.Build`, or `c.Export` marker objects were not added merely to
@@ -204,6 +204,8 @@ inspection, and no-runtime evidence; and document ownership and unsafe effects.
   build facts derived from Clang.
 - E7 owns export discovery, ABI-safe type validation, generated public headers,
   and independent consumers.
-- E8.T04 and E8.T07 own the neutral build manifest and inspection product.
+- E1.T08 owns the executable-only schema-1 neutral build plan and optional
+  CMake/Meson seeds; E8.T04 and E8.T07 own the full toolchain plan and
+  inspection product.
 - E9 owns application DSL admission and examples; E10.T09 owns stable public ABI
   spellings.

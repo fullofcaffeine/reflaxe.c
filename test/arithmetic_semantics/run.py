@@ -678,13 +678,10 @@ def check_production(selected: str | None = None) -> None:
                     f"portable and metal arithmetic artifact {relative} diverged"
                 )
         manifest = json.loads((portable / "hxc.manifest.json").read_text())
-        requirements = manifest.get("build", {}).get("requirements")
-        if requirements != [
+        libraries = manifest.get("build", {}).get("libraries")
+        if libraries != [
             {
-                "kind": "link",
                 "name": "m",
-                "value": None,
-                "valueKind": None,
                 "ownerModulePaths": ["ArithmeticFixture"],
             }
         ]:

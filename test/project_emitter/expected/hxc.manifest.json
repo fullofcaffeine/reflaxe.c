@@ -16,39 +16,71 @@
       "src/emitter_fixture.c",
       "src/hxc_boot.c"
     ],
-    "requirements": [
+    "cStandard": "c11",
+    "definitions": [
+      {
+        "ownerModulePaths": [
+          "fixture.Api"
+        ],
+        "name": "HXC_ADAPTER_TEXT",
+        "valueKind": "string",
+        "compilerValue": "\"adapter\\073\\044\\074ignored\\076\\073quote\\047\\042\\134end\"",
+        "value": "adapter;$<ignored>;quote'\"\\end"
+      },
       {
         "ownerModulePaths": [
           "fixture.Main"
         ],
         "name": "HXC_EMITTER_FIXTURE",
         "valueKind": "integer",
-        "kind": "define",
+        "compilerValue": "1",
         "value": "1"
-      },
+      }
+    ],
+    "extensions": false,
+    "schemaVersion": 1,
+    "privateHeaders": [
+      "include/hxc/detail/emitter_fixture_internal.h"
+    ],
+    "frameworks": [],
+    "includeDirectories": [
+      "include"
+    ],
+    "requiredHeaders": [
       {
+        "path": "stdio.h",
         "ownerModulePaths": [
           "fixture.Api",
           "fixture.Main"
         ],
-        "name": "stdio.h",
-        "valueKind": "enum",
-        "kind": "include",
-        "value": "system"
+        "kind": "system"
       }
     ],
-    "privateHeaders": [
-      "include/hxc/detail/emitter_fixture_internal.h"
+    "libraries": [
+      {
+        "ownerModulePaths": [
+          "fixture.Main"
+        ],
+        "name": "m"
+      }
     ],
-    "includeDirectories": [
-      "include"
-    ],
-    "runtimeHeaders": []
+    "runtimeHeaders": [],
+    "artifact": {
+      "targetName": "hxc_program",
+      "kind": "executable"
+    },
+    "pkgConfigPackages": [],
+    "warningPolicy": "strict"
   },
   "schemaVersion": 1,
   "compilationStatus": "structural-fixture-no-haxe-lowering",
   "generator": "reflaxe.c",
   "artifacts": [
+    {
+      "sha256": "253191cab4978bfd48dc4f8153d9af7707b02490062375a15e82c072b5faba69",
+      "path": "cmake/CMakeLists.txt",
+      "kind": "cmake-adapter"
+    },
     {
       "sha256": "fa47ca7dc21884d5a936d0d67dcac41143571c731c683ddf30ed37f333610838",
       "path": "hxc.abi.json",
@@ -83,6 +115,11 @@
       "sha256": "828248baf11361244c2a258f3235dd0a0e83513faa4a1431e0be1aaffa595774",
       "path": "include/hxc/removed_module.h",
       "kind": "public-header"
+    },
+    {
+      "sha256": "53feae7eb677cda5adc90552e7001b33ac02560929bb7056d24078a1f60d00ce",
+      "path": "meson.build",
+      "kind": "meson-adapter"
     },
     {
       "sha256": "f7def93e6a119b88beb34f9f85157a256b82779218be78d08954a4877816f072",

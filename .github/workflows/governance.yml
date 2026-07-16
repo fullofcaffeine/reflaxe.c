@@ -109,6 +109,50 @@ jobs:
       - name: Verify fixed-array and span lowering at O0 and O2
         run: python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 
+  build-adapters:
+    name: Build adapters (${{ matrix.toolchain }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        toolchain:
+          - gcc
+          - clang
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Install checksum-pinned Meson
+        run: |
+          set -euo pipefail
+          python3 -m venv "$RUNNER_TEMP/build-adapter-tools"
+          "$RUNNER_TEMP/build-adapter-tools/bin/pip" install \
+            --disable-pip-version-check \
+            --no-input \
+            --only-binary=:all: \
+            --require-hashes \
+            -r scripts/ci/build-adapter-requirements.txt
+          echo "$RUNNER_TEMP/build-adapter-tools/bin" >> "$GITHUB_PATH"
+
+      - name: Require build-system tools
+        run: |
+          cmake --version
+          meson --version
+          ninja --version
+
+      - name: Build raw, CMake, and Meson plans from one manifest
+        run: npm run test:build-adapters -- --toolchain "${{ matrix.toolchain }}"
+
   license-and-provenance:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -2,6 +2,7 @@ import haxe.macro.Type.AbstractType;
 import haxe.macro.Type.ClassType;
 import haxe.macro.Type.DefType;
 import haxe.macro.Type.EnumType;
+import haxe.macro.Context;
 import reflaxe.BaseCompiler;
 import reflaxe.BaseCompiler.BaseCompilerFileOutputType;
 import reflaxe.c.CProfile;
@@ -26,6 +27,7 @@ import reflaxe.data.ClassVarData;
 import reflaxe.data.EnumOptionData;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
+import sys.io.File;
 
 private enum ProjectFixtureVariant {
 	PFVOriginal;
@@ -52,6 +54,8 @@ class ProjectEmitterGolden {
 			case "reverse": new CProjectEmitter().emit(plan(true, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "trimmed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal));
 			case "renamed": new CProjectEmitter().emit(plan(false, true, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVRenamed));
+			case "ast-declarators": new CProjectEmitter().emit(astPlan("declarators"));
+			case "ast-expressions": new CProjectEmitter().emit(astPlan("expressions"));
 			case "duplicate":
 				final duplicatePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
 				duplicatePlan.units.push(duplicatePlan.units[0]);
@@ -78,6 +82,40 @@ class ProjectEmitterGolden {
 					buildFacts: [],
 					symbolTable: emptySymbols()
 				});
+			case "invalid-adapter-path":
+				final invalidPathPlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
+				invalidPathPlan.units.push(new GeneratedFile("src/$<unsafe>.c", "int unsafe_adapter_path(void) { return 0; }\n", GeneratedFileKind.Source));
+				new CProjectEmitter().emit(invalidPathPlan);
+			case "invalid-define":
+				final invalidDefinePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
+				invalidDefinePlan.buildFacts.push({
+					kind: "define",
+					name: "HXC_INVALID_DEFINE",
+					value: "1;injected",
+					valueKind: "integer",
+					ownerModulePaths: ["fixture.Main"]
+				});
+				new CProjectEmitter().emit(invalidDefinePlan);
+			case "conflicting-define":
+				final conflictingDefinePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
+				conflictingDefinePlan.buildFacts.push({
+					kind: "define",
+					name: "HXC_EMITTER_FIXTURE",
+					value: "2",
+					valueKind: "integer",
+					ownerModulePaths: ["fixture.ConflictingMain"]
+				});
+				new CProjectEmitter().emit(conflictingDefinePlan);
+			case "conflicting-include":
+				final conflictingIncludePlan = plan(false, false, CProjectCompilationStatus.StructuralFixture, ProjectFixtureVariant.PFVOriginal);
+				conflictingIncludePlan.buildFacts.push({
+					kind: "include",
+					name: "stdio.h",
+					value: "local",
+					valueKind: "enum",
+					ownerModulePaths: ["fixture.ConflictingMain"]
+				});
+				new CProjectEmitter().emit(conflictingIncludePlan);
 			case "lowered":
 				new CProjectEmitter().emit(plan(false, false, CProjectCompilationStatus.LoweredProgram, ProjectFixtureVariant.PFVOriginal));
 			case _: throw 'unknown project emitter fixture mode `$mode`';
@@ -140,6 +178,20 @@ class ProjectEmitterGolden {
 				value: "1",
 				valueKind: "integer",
 				ownerModulePaths: ['fixture.${identity.mainType}']
+			},
+			{
+				kind: "define",
+				name: "HXC_ADAPTER_TEXT",
+				value: "adapter;$<ignored>;quote'\"\\end",
+				valueKind: "string",
+				ownerModulePaths: ['fixture.${identity.apiType}']
+			},
+			{
+				kind: "link",
+				name: "m",
+				value: null,
+				valueKind: null,
+				ownerModulePaths: ['fixture.${identity.mainType}']
 			}
 		];
 		if (reverse) {
@@ -161,6 +213,41 @@ class ProjectEmitterGolden {
 			units: units,
 			buildFacts: buildFacts,
 			symbolTable: symbolTable
+		};
+	}
+
+	static function astPlan(name:String):CProjectEmissionPlan {
+		final expectedPath = switch name {
+			case "declarators": "test/c_ast/expected/declarators.c";
+			case "expressions": "test/c_ast/expected/expressions.c";
+			case _: throw 'unknown C AST build-adapter fixture `$name`';
+		};
+		final source = "#if !defined(HXC_BUILD_ADAPTER_FIXTURE) || HXC_BUILD_ADAPTER_FIXTURE != 1\n"
+			+ '#error "build adapter lost the neutral compile definition"\n'
+			+ "#endif\n"
+			+ File.getContent(Context.resolvePath(expectedPath));
+		return {
+			schemaVersion: CProjectEmitter.SCHEMA_VERSION,
+			projectName: 'c-ast-$name',
+			compilationStatus: CProjectCompilationStatus.StructuralFixture,
+			profile: CProfile.Portable,
+			environment: CProjectEnvironment.Hosted,
+			cStandard: CProjectStandard.C11,
+			runtimePolicy: CProjectRuntimePolicy.None,
+			runtimeDiagnostics: CProjectRuntimeDiagnostics.Off,
+			units: [
+				new GeneratedFile('src/AST fixture\'s $name.c', source, GeneratedFileKind.Source)
+			],
+			buildFacts: [
+				{
+					kind: "define",
+					name: "HXC_BUILD_ADAPTER_FIXTURE",
+					value: "1",
+					valueKind: "integer",
+					ownerModulePaths: ['fixture.CAST.$name']
+				}
+			],
+			symbolTable: emptySymbols()
 		};
 	}
 

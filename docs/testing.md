@@ -271,8 +271,9 @@ failures and both collision origins, feeds finalized defaults into declaration
 planning, rejects host paths, and asserts an empty typed-contract runtime feature
 set. It proves naming analysis only; it does not claim production C emission.
 
-`test/project_emitter` is the negative/AST/snapshot suite for typed schema-1
-project packaging and the Reflaxe ownership boundary. It renders fresh projects
+`test/project_emitter` is the negative/AST/snapshot/runtime suite for typed
+schema-1 project packaging, neutral build planning, optional adapters, and the
+Reflaxe ownership boundary. It renders fresh projects
 under unrelated absolute roots, reversed discovery, a fixed locale, CRLF inputs,
 and real warm compiler-server reuse. Its raw-byte comparator reports the first
 UTF-8-ordered artifact difference and byte offset; normal-artifact scans reject
@@ -281,10 +282,16 @@ The suite validates every SHA-256, verifies unchanged artifact mtimes, and
 proves a full-to-renamed-symbol transition removes every prior owned payload
 while preserving an unlisted user file. It rejects traversal, descendant
 symlinks, unowned destinations, duplicate paths, malformed ownership JSON,
-non-canonical line endings, and premature lowered-program status before any
-partial write. Reflaxe invocation/activity metadata is validated separately.
-Its checked-in headers and C sources compile and run in the native matrix. They
-are built directly by a test macro, so the suite remains separate from the
+non-canonical line endings, adapter-sensitive source bytes, malformed or
+conflicting typed build facts, and premature lowered-program status before any
+partial write. Reflaxe invocation/activity metadata is validated separately. The
+required GCC/Clang adapter lanes consume the same manifest through a direct
+argument-array build, CMake, and Meson, then run the structural project plus
+both C AST/printer corpora from paths containing spaces and apostrophes. An
+adversarial string definition proves semicolons, generator-expression spelling,
+quotes, and backslashes cannot become build-language syntax. The checked-in
+headers and C sources also compile and run in the native matrix. They are built
+directly by a test macro, so the suite remains separate from the
 production generated-Haxe primitive project and exact-`HXC1001` unsupported
 boundaries. See [project-emission
 boundary](project-emission.md).

@@ -175,6 +175,28 @@
       ]
     },
     {
+      "id": "build-adapter-seeds",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "One typed neutral executable plan deterministically drives optional CMake and Meson files plus a direct argument-array consumer.",
+      "scope": "Schema 1 records strict C mode, owned sources and headers, include directories, typed definitions, logical libraries, pkg-config packages, frameworks, and source provenance once for every consumer.",
+      "evidence": [
+        "src/reflaxe/c/emit/CBuildPlan.hx",
+        "src/reflaxe/c/emit/CBuildAdapterEmitter.hx",
+        "test/project_emitter/run.py",
+        "test/project_emitter/expected/cmake/CMakeLists.txt",
+        "test/project_emitter/expected/meson.build"
+      ],
+      "owners": [
+        "E1.T08"
+      ],
+      "limitations": [
+        "The schema-1 seed emits one non-installing executable target; library artifacts, exports, toolchain and sysroot configuration, cross-compilation, and CLI orchestration remain E7/E8 work.",
+        "Building the structural C AST/printer corpus does not prove general Haxe lowering, a public ABI, platform support, or release readiness."
+      ]
+    },
+    {
       "id": "c-ast-printer",
       "area": "compiler",
       "status": "implemented",

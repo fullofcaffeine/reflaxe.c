@@ -64,6 +64,7 @@ REQUIRED_CLAIM_GATES = (
 REQUIRED_CAPABILITIES = frozenset(
     (
         "bootstrap-capability-manifest",
+        "build-adapter-seeds",
         "general-haxe-lowering",
         "hxc-cli",
         "hxc-doctor",

@@ -44,6 +44,7 @@ STRICT_FLAGS = (
 )
 PRODUCTION_FILES = {
     "_GeneratedFiles.json",
+    "cmake/CMakeLists.txt",
     "hxc.abi.json",
     "hxc.initialization-plan.json",
     "hxc.manifest.json",
@@ -51,6 +52,7 @@ PRODUCTION_FILES = {
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
     "include/hxc/program.h",
+    "meson.build",
     "src/program.c",
 }
 

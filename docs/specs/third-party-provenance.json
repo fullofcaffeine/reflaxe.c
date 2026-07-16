@@ -159,6 +159,22 @@
       "bundled": false,
       "paths": [],
       "localLicenseFiles": []
+    },
+    {
+      "id": "meson-build-system",
+      "name": "Meson",
+      "role": "generated-build-adapter-ci-tool",
+      "usage": "external-development-tool-not-redistributed",
+      "selectionStatus": "version-and-wheel-content-pinned",
+      "version": "1.11.1",
+      "sourceRevision": null,
+      "observedRevision": null,
+      "upstreamUrl": "https://github.com/mesonbuild/meson",
+      "licenseExpression": "Apache-2.0",
+      "licenseUrl": "https://github.com/mesonbuild/meson/blob/1.11.1/COPYING",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
     }
   ],
   "derivedSourcePolicies": [

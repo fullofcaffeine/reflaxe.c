@@ -39,9 +39,10 @@ ProjectEmitter
   -> tool-neutral manifest and typed build facts
   -> initialization, runtime, symbol, stdlib, ABI, and lowering reports
 
-Build adapters (future E1.T08/E8)
+Build adapter seeds (E1.T08)
   -> consume the one neutral manifest
-  -> CMake/Meson/direct compiler plans
+  -> optional CMake/Meson projects and direct argument-array consumption
+  -> executable-only; full toolchain/export orchestration remains E7/E8
 ```
 
 ## Why `Manual` Reflaxe output
@@ -453,7 +454,18 @@ The internal object representation is not the public ABI. Export lowering maps H
 
 ## Build boundary
 
-The compiler emits a tool-neutral `hxc.manifest.json`. CMake and Meson are adapters. Existing build systems can consume the manifest and generated source tree directly.
+The compiler emits one typed schema-1 executable plan inside the tool-neutral
+`hxc.manifest.json`. Optional `cmake/CMakeLists.txt` and `meson.build` files are
+pure derived views over its sources, include directories, typed definitions,
+logical libraries, pkg-config packages, frameworks, C standard, and strict
+warning policy. Existing build systems can consume the manifest and generated
+source tree directly with argument arrays; no adapter or shell command is the
+semantic authority. Build-language literals and C definition values use
+separate validators/escapers.
+
+The current seed deliberately has one non-installing executable target. Library
+artifacts, exports, configurable targets, toolchain/sysroot/cross files, and
+CLI/Ninja orchestration remain E7/E8 responsibilities.
 
 ## CLI bootstrap boundary
 
