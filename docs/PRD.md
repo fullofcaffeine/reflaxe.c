@@ -1530,24 +1530,51 @@ Every API is assigned one of:
 
 ### 14.3 Ledger
 
-`docs/specs/stdlib-ledger.json` is the source of truth. `docs/specs/stdlib-ledger.csv` is a review-friendly generated view. Entries use these fields:
+`docs/specs/stdlib-ledger.json` is the source of truth.
+`docs/specs/stdlib-ledger.csv` is a review-friendly generated view. Schema 2
+records the exact Haxe pin and source/API fingerprints, applicability and
+exclusion policy, compiler-first lowering order, diagnostic policies, module
+ownership rules, exact API evidence overrides, and materialized public typed
+API rows. Entries include these fields:
 
 ```json
 {
+  "id": "hxc-stdlib-api-v1:...",
+  "module": "haxe.io.Bytes",
+  "source": "haxe/io/Bytes.hx",
+  "sourceSha256": "...",
+  "probeScope": "c-common",
   "type": "haxe.io.Bytes",
   "member": "getInt32",
-  "owner": "runtime",
-  "feature": "bytes",
+  "owner": "target-source-override",
+  "runtimeFeatures": ["io"],
   "profiles": ["portable", "metal"],
   "environments": ["hosted", "wasi", "emscripten"],
   "status": "planned|partial|conformant",
-  "ownerBeads": "E5.T03",
+  "ownerBeads": "E5.T04",
+  "testOwnerBeads": "E5.T12",
+  "diagnosticPolicies": ["planned-unsupported"],
   "tests": ["unitstd/..."],
+  "ruleId": "binary-and-stream-storage",
   "notes": "..."
 }
 ```
 
-CI fails when an implemented override lacks a ledger entry or a conformant entry loses its tests.
+The real C custom target inventories common/hosted declarations. A separately
+labeled, no-generator test custom target may inspect only upstream declarations
+that intentionally reject C until an unadvertised capability such as threads or
+atomics has an adapter; that probe is not C typing or behavior evidence. Other targets'
+implementation trees and compiler-host-only macro/display/HXB APIs are explicit
+exclusions.
+
+Every module matches exactly one reviewed rule; there is no catch-all. Every
+planned/partial row links an implementation Beads owner, a test Beads owner,
+and a source-positioned diagnostic policy. Candidate runtime features never
+mean eager selection: direct idiomatic C, then program-local specialization,
+then the smallest justified `hxrt` slice remains mandatory. CI fails when the
+pinned source/API surface drifts, a module is unowned or multiply owned, an
+exact override becomes stale, an unknown feature/issue/diagnostic appears, the
+CSV diverges, or a partial/conformant entry loses executable tests.
 
 ### 14.4 Implementation order
 
@@ -4989,7 +5016,7 @@ changes must update both surfaces in one reviewed change.
 | Native smoke fixtures (`native-smoke-fixtures`) | `runtime/hxrt/test/**`, `scripts/ci/runtime_smoke.py`, `test/runtime/runtime-feature-graph/**`, `test/{arithmetic_semantics,c_ast,declaration_plan,project_emitter,body_lowering,function_lowering,evaluation_order,span_lowering}/**`, `test/native/{pointlib,cpp_shim}/**` | Verified selective native seed plus generated sequenced UB-safe primitive/span production projects | Local auto mode explicitly reports optional compiler-family skips and requires at least one complete pair. CI separately requires real GCC/G++ and Clang/Clang++ lanes with warnings as errors; each runs exact alloc-only/string runtime packages, the structural/native matrix, and typed-Haxe-generated primitive bodies, functions, evaluation-order projects, arithmetic boundaries, and fixed-array/span projects at O0/O2. The alloc-only lane rejects retained string symbols; arithmetic runs eligible sanitizers and optimized-shape checks; span executes fail-stop bounds paths and inspects links for zero `hxrt` symbols. Broader generated Haxe, platform matrices, ownership/failure paths, generated C++-compatible export headers, and installed external consumers remain later gates. |
 | Fixture taxonomy and snapshot policy (`fixture-policy`) | `docs/testing.md`, `docs/specs/fixture-{case,taxonomy}*.json`, `scripts/test/snapshots.py`, `scripts/ci/check_fixture_policy.py`, canonical `test/{positive,negative,ast,snapshot,runtime,differential,abi,performance}/` lanes | Verified policy, deterministic snapshots, active evaluation-order/arithmetic differential lanes, and span bounds matrix | Eight evidence lanes have explicit directory, runner, and expected-output contracts. Existing M0 suites plus E2.T04/E2.T06 evaluation order/control flow, E2.T05 arithmetic, and E2.T08 fixed-array/span evidence are mapped in place; every checked-in expected artifact is registry-owned and reproducible only through the explicit diffing updater, which cannot bless in CI. Direct AST/IR, generated primitive/span programs, independent runtime/ABI seeds, and oracle fixtures retain their precise limited claims; only mapped evaluation-order/control-flow and arithmetic cases currently compare generated C with Eval. Future examples require schema-valid declared assertions and may not become implicit tests. |
 | Diagnostics (`diagnostics`) | `CDiagnostic.hx`, `docs/diagnostics.md`, `docs/specs/diagnostics{,.schema}.json`, `diagnostic-event.schema.json`, `test/diagnostics/**`, policy checker | Compile-verified diagnostic core | Thirteen current IDs have typed call sites, exhaustive reserved ranges, declared severities/phases/kinds/source/profile/remediation policy, deterministic schema-1 records, Haxe/JSON parity, raw-prefix/reference drift checks, a dedicated deterministic `HXC1002` static-cycle family, and structural unsupported-source versus internal-failure tests. E8.T09 still owns the public CLI event stream, native-tool attachments, command context, and stdout/stderr integration. |
-| Requirements and ledgers (`requirements-and-ledgers`) | this PRD, `docs/specs/beads-plan.json`, `docs/specs/stdlib-ledger.json`, diagnostics/fixture/primitive registries | Scaffold-only where not separately implemented | The PRD and Beads plan carry 160 stable requirements, while the current stdlib ledger is only a planning seed. No separate `requirements.json` or stdlib-ledger schema is present. Keep task mappings, diagnostics, runtime features, and capability evidence synchronized as scope changes. |
+| Requirements and ledgers (`requirements-and-ledgers`) | this PRD, `docs/specs/beads-plan.json`, `docs/specs/stdlib-ledger.{json,csv}`, `docs/specs/stdlib-ledger.schema.json`, diagnostics/fixture/primitive registries | Compile-verified generated stdlib ownership contract; other requirement ledgers vary by row | The PRD and Beads plan carry 160 stable requirements. The exact Haxe 5 pin now produces a schema-2 typed stdlib source/API inventory with explicit exclusions, ownership, profile/environment/runtime/test/diagnostic policy, one exact conformant `Std.int` row, generated CSV review output, and fail-closed pin drift. This advances governance only: broad standard-library behavior remains unsupported. Keep task mappings, diagnostics, runtime features, and capability evidence synchronized as scope changes. |
 | Example portfolio (`example-portfolio`) | E2/E9 plan entries and independent fixtures under `test/native/` | Unsupported | No product example directory is present; planned hello, no-runtime, interop, shared-library, C++ shim, todo, and WebAssembly journeys remain future E2/E9 work. Independent native fixture fragments are not generated examples. Do not special-case the compiler or use raw C injection to make examples appear complete. |
 | Development runner and future CLI (`development-cli`) | E8 plan and direct Haxe/HXML recovery path | Unsupported | No CLI source, schema, or template is present. The production `hxc` command surface, stable exit categories, JSON outputs, native build adapters, bindgen/export orchestration, doctor, and packaging are planned under E8. |
 | Beads plan and materialization (`beads-bootstrap`) | `docs/specs/beads-plan.json`, schema, `scripts/beads/**`, `docs/BEADS_PLAN.md` | Verified governance bootstrap | The self-contained seed stores 11 epics, 122 tasks, their acceptance/requirement facts, 274 hard blocking edges, and 160 covered requirements. Standard-library-only validation and preview run without `bd`; the argument-array importer creates or reuses open/claimed/closed issues by stable identity, checks final ready-state parity, and writes only an ignored atomic recovery map outside Beads internals. |

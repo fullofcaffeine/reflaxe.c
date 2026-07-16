@@ -275,6 +275,15 @@ def primitive_semantics_artifacts() -> list[Artifact]:
     ]
 
 
+def stdlib_ledger_artifacts() -> list[Artifact]:
+    module = load_module("stdlib_ledger", "test/stdlib_ledger/run.py")
+    rendered = module.render_artifacts()
+    return [
+        Artifact(Path("docs/specs/stdlib-ledger.json"), "json", rendered.ledger),
+        Artifact(Path("docs/specs/stdlib-ledger.csv"), "text", rendered.csv),
+    ]
+
+
 def body_lowering_artifacts() -> list[Artifact]:
     module = load_module("body_lowering", "test/body_lowering/run.py")
     first_payload, report = module.render("snapshot first body-lowering render")
@@ -557,6 +566,7 @@ GENERATORS: dict[str, Generator] = {
     "project-emitter": project_emitter_artifacts,
     "hxc-ir": hxc_ir_artifacts,
     "primitive-semantics": primitive_semantics_artifacts,
+    "stdlib-ledger": stdlib_ledger_artifacts,
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,

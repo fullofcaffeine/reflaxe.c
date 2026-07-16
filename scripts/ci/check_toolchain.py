@@ -219,6 +219,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
     expected_primitive_semantics_script = "python3 test/primitive_semantics/run.py"
+    expected_stdlib_ledger_script = "python3 test/stdlib_ledger/run.py"
     expected_body_lowering_script = "python3 test/body_lowering/run.py"
     expected_function_lowering_script = "python3 test/function_lowering/run.py"
     expected_evaluation_order_script = "python3 test/evaluation_order/run.py"
@@ -233,6 +234,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:runtime-features && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && "
         "npm run test:arithmetic-semantics && npm run test:span-lowering && npm run snapshots:check"
@@ -288,6 +290,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         != expected_primitive_semantics_script
     ):
         errors.append("package.json must retain the primitive semantic gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:stdlib-ledger") != expected_stdlib_ledger_script
+    ):
+        errors.append("package.json must retain the pinned stdlib ledger gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:body-lowering") != expected_body_lowering_script

@@ -132,6 +132,17 @@ REQUIRED_GATE_FILES = (
     "test/primitive_semantics/run.py",
     "test/positive/primitive-semantics/case.json",
     "test/snapshot/primitive-semantics/case.json",
+    "docs/stdlib-ledger.md",
+    "docs/specs/stdlib-ledger.schema.json",
+    "docs/specs/stdlib-ledger.json",
+    "docs/specs/stdlib-ledger.csv",
+    "test/stdlib_ledger/StdlibLedgerFixture.hx",
+    "test/stdlib_ledger/StdlibSurfaceProbe.hx",
+    "test/stdlib_ledger/stdlibprobe/Init.hx",
+    "test/stdlib_ledger/run.py",
+    "test/positive/stdlib-ledger/case.json",
+    "test/negative/stdlib-ledger/case.json",
+    "test/snapshot/stdlib-ledger/case.json",
     "src/reflaxe/c/lowering/CBodyEmissionError.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
@@ -364,6 +375,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
         errors.append("package.json must retain the test:primitive-semantics entry point")
+    if scripts.get("test:stdlib-ledger") != "python3 test/stdlib_ledger/run.py":
+        errors.append("package.json must retain the test:stdlib-ledger entry point")
     if scripts.get("test:body-lowering") != "python3 test/body_lowering/run.py":
         errors.append("package.json must retain the test:body-lowering entry point")
     if scripts.get("test:function-lowering") != "python3 test/function_lowering/run.py":
@@ -426,6 +439,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:primitive-semantics")
+    if "npm run test:stdlib-ledger" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:stdlib-ledger")
     if "npm run test:body-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:body-lowering")
     if "npm run test:function-lowering" not in str(scripts.get("test:toolchain", "")):
@@ -500,6 +515,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed primitive semantic test")
+    if "test/stdlib_ledger/run.py" not in pre_commit:
+        errors.append("pre-commit must run the pinned stdlib ledger test")
     if "test/body_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed body-lowering test")
     if "test/function_lowering/run.py" not in pre_commit:

@@ -256,6 +256,17 @@ missing-metadata or missing-adapter assumptions.
   select `hxrt` only for semantics that genuinely depend on runtime state or
   values, justified shared machinery, or an unavoidable platform/ABI service.
   A one-wrapper-per-stdlib-method runtime is not an acceptable default design.
+- `docs/specs/stdlib-ledger.json` is the schema-2 pinned typed-surface authority;
+  `stdlib-ledger.csv` is its generated review view and must not be hand-edited.
+  Every applicable source module matches exactly one explicit ownership rule—no
+  catch-all—and every planned/partial API links implementation/test Beads owners
+  plus a source-positioned diagnostic policy. The real C carrier owns common
+  typing; the test-only no-generator custom target may inspect only declarations
+  that intentionally require an unadvertised thread/atomic capability, and that
+  never counts as C support.
+  Regenerate intentionally with `npm run snapshots:update -- --suite
+  stdlib-ledger`; a conformant/partial row requires named executable tests, and
+  a Haxe pin/surface drift must fail CI until its ownership is reviewed.
 - Treat selected `hxrt` code as production performance-critical code. Keep each
   slice narrow, typed, warning-clean, allocation- and code-size-conscious, and
   free of general boxing/reflection when reachability or specialization can

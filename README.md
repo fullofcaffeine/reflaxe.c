@@ -64,9 +64,14 @@ belongs in `hxc`: representation selection, specialization, constant/static
 dispatch, escape/lifetime analysis, layout/table construction, and dead-feature
 elimination. Standard-library operations lower to idiomatic C or a compatible C
 library/intrinsic first, a program-local specialized helper second, and only a
-narrow justified optimized `hxrt` feature last. The planned E5 stdlib epic owns
-the generated parity ledger and String/Unicode, collections, Bytes/I/O,
-Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading slices.
+narrow justified optimized `hxrt` feature last. The generated E5
+[standard-library ledger](docs/stdlib-ledger.md) now checks 183 applicable
+pinned-Haxe source modules and 2,311 public typed API rows, with explicit
+profile/environment/runtime/test/diagnostic ownership and no catch-all. This is
+planning evidence, not broad stdlib support: only the exact `Std.int` row is
+currently conformant. String/Unicode, collections, Bytes/I/O,
+Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading remain
+owned roadmap slices.
 
 With no explicit override, portable uses `auto` plus an aggregate runtime
 summary; metal uses the narrow `minimal` allowlist and warns at each root runtime
@@ -213,8 +218,8 @@ the C string contract.
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 20 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
-| `scaffold-only` | 5 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
+| `implemented` | 21 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
@@ -249,7 +254,7 @@ the C string contract.
 | `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices. |
 | `runtime-hxrt-seed` | `scaffold-only` | A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
-| `standard-library-ledger` | `scaffold-only` | An initial standard-library strategy and ownership ledger exists as planning data. |
+| `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |
 | `symbol-registry` | `implemented` | Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented. |
 | `target-activation` | `implemented` | The pinned Haxe 5 CustomTarget(c) carrier configures scalar Unicode facts and exactly-once target registration. |
 | `target-c-api` | `scaffold-only` | Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check. |
@@ -295,6 +300,7 @@ jq empty \
   docs/specs/diagnostics.schema.json \
   docs/specs/runtime-features.schema.json \
   docs/specs/stdlib-ledger.json \
+  docs/specs/stdlib-ledger.schema.json \
   docs/specs/third-party-provenance.json \
   docs/specs/typed-boundaries.json \
   docs/specs/typed-boundaries.schema.json
@@ -309,6 +315,7 @@ python3 test/declaration_plan/run.py
 python3 test/symbol_registry/run.py
 python3 test/runtime/runtime-feature-graph/run.py
 python3 test/hxc_ir/run.py
+python3 test/stdlib_ledger/run.py
 python3 test/body_lowering/run.py
 python3 test/function_lowering/run.py
 python3 test/evaluation_order/run.py

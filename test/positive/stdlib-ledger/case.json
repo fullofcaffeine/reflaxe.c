@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "stdlib-ledger-typed-surface",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-006",
+    "HXC-SEM-025",
+    "HXC-STD-001"
+  ],
+  "sources": [
+    "docs/specs/stdlib-ledger.json",
+    "docs/specs/stdlib-ledger.schema.json",
+    "test/stdlib_ledger/StdlibLedgerFixture.hx",
+    "test/stdlib_ledger/StdlibSurfaceProbe.hx",
+    "test/stdlib_ledger/stdlibprobe/Init.hx",
+    "test/stdlib_ledger/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../stdlib_ledger/run.py"
+    ],
+    "workingDirectory": "test/positive/stdlib-ledger",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "sources=[0-9]+, APIs=[0-9]+, planned=[0-9]+, conformant=1"
+    },
+    "artifacts": [
+      {
+        "path": "docs/specs/stdlib-ledger.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "docs/specs/stdlib-ledger.csv",
+        "format": "text",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

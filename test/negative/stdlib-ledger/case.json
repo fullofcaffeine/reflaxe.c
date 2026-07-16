@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "stdlib-ledger-policy-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-006",
+    "HXC-SEM-025",
+    "HXC-STD-001"
+  ],
+  "sources": [
+    "docs/specs/diagnostics.json",
+    "docs/specs/stdlib-ledger.json",
+    "runtime/hxrt/features.json",
+    "test/stdlib_ledger/stdlibprobe/Init.hx",
+    "test/stdlib_ledger/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../stdlib_ledger/run.py"
+    ],
+    "workingDirectory": "test/negative/stdlib-ledger",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001",
+      "HXC2000",
+      "HXC2001"
+    ],
+    "stdout": {
+      "mode": "contains",
+      "value": "typed C + declaration-only capability probes deterministic"
+    }
+  }
+}

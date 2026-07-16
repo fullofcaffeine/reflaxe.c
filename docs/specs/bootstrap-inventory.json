@@ -114,7 +114,7 @@
     {
       "id": "standard-library",
       "path": "docs/specs/stdlib-ledger.json",
-      "authority": "scaffold-only-planning-seed"
+      "authority": "generated-planning-contract"
     }
   ],
   "capabilities": [
@@ -685,19 +685,21 @@
     {
       "id": "standard-library-ledger",
       "area": "stdlib",
-      "status": "scaffold-only",
-      "disposition": "reserved",
-      "summary": "An initial standard-library strategy and ownership ledger exists as planning data.",
-      "scope": "The seed names representative APIs, intended strategies, runtime features, profiles, environments, and future owners.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger.",
+      "scope": "Typed probes inventory 183 applicable source modules and 2,311 public APIs, then assign implementation, profile, environment, candidate runtime, diagnostics, Beads, and test ownership with an exact generated CSV review view.",
       "evidence": [
+        "docs/stdlib-ledger.md",
         "docs/specs/stdlib-ledger.json",
-        "docs/specs/beads-plan.json"
+        "docs/specs/stdlib-ledger.schema.json",
+        "test/stdlib_ledger/run.py"
       ],
       "owners": [
         "E5.T01"
       ],
       "limitations": [
-        "It is not yet generated against the pinned Haxe std tree, schema-validated, or evidence-backed API parity data."
+        "This implements inventory and drift governance, not the APIs: only the exact Std.int row is currently conformant and broad standard-library behavior remains unsupported."
       ]
     },
     {

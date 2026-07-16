@@ -108,6 +108,7 @@ The registered snapshot selectors are:
 - `project-emitter`
 - `hxc-ir`
 - `primitive-semantics`
+- `stdlib-ledger`
 - `body-lowering`
 - `function-lowering`
 - `evaluation-order`
@@ -138,6 +139,17 @@ the accepted algorithms and target prerequisites only; it is not generated
 Haxe output. E2.T02 separately wires the admitted primitives into real bodies.
 See the
 [primitive semantic contract](primitive-semantics.md).
+
+`test/stdlib_ledger` is the focused positive/negative/snapshot contract for the
+pinned standard-library inventory. It renders the real C common surface and the
+separately labeled thread/atomic declaration-only surface twice, then requires
+exactly one ownership rule for every applicable source module and a stable row
+for every public typed API. In-memory negatives reject missing or overlapping
+ownership, stale exact overrides, unknown runtime features, missing diagnostic
+policy, and evidence-free partial/conformant status. The central snapshot owner
+manages both the semantic JSON authority and exact generated CSV. This is
+ownership and drift evidence, not generated-C stdlib behavior. See the
+[standard-library ledger](stdlib-ledger.md).
 
 `test/body_lowering` is the focused positive/negative/snapshot/runtime suite for
 the first real pinned-Haxe `TypedExpr -> HxcIR -> structural C` path. It renders

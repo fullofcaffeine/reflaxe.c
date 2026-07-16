@@ -1,0 +1,694 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/stdlib-ledger.schema.json",
+  "title": "Pinned Haxe standard-library ownership and parity ledger",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "algorithm",
+    "status",
+    "sourceOfTruth",
+    "requirements",
+    "source",
+    "applicability",
+    "loweringPolicy",
+    "diagnosticPolicies",
+    "ownershipRules",
+    "apiOverrides",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "stdlib-ledger.schema.json"
+    },
+    "schemaVersion": {
+      "const": 2
+    },
+    "algorithm": {
+      "const": "hxc-stdlib-ledger-v2"
+    },
+    "status": {
+      "const": "generated-planning-contract"
+    },
+    "sourceOfTruth": {
+      "const": true
+    },
+    "requirements": {
+      "const": [
+        "HXC-PROD-006",
+        "HXC-SEM-025",
+        "HXC-STD-001"
+      ]
+    },
+    "source": {
+      "$ref": "#/$defs/source"
+    },
+    "applicability": {
+      "$ref": "#/$defs/applicability"
+    },
+    "loweringPolicy": {
+      "$ref": "#/$defs/loweringPolicy"
+    },
+    "diagnosticPolicies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/diagnosticPolicy"
+      }
+    },
+    "ownershipRules": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/ownershipRule"
+      }
+    },
+    "apiOverrides": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/apiOverride"
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "normalizedPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "planKey": {
+      "type": "string",
+      "pattern": "^E(?:[0-9]|10)\\.T(?:0[1-9]|1[0-2])$"
+    },
+    "textList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "portable",
+          "metal"
+        ]
+      }
+    },
+    "environments": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "hosted",
+          "freestanding",
+          "wasi",
+          "emscripten"
+        ]
+      }
+    },
+    "owner": {
+      "enum": [
+        "direct-compiler-lowering",
+        "thin-c-os-wrapper",
+        "target-source-override",
+        "runtime-slice",
+        "platform-adapter",
+        "unsupported-target-specific"
+      ]
+    },
+    "parityStatus": {
+      "enum": [
+        "planned",
+        "partial",
+        "conformant"
+      ]
+    },
+    "sourceRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "sourceCount"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sourceCount": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "haxeVersion",
+        "sourceRevision",
+        "probeSchemaVersion",
+        "stdlibSourceCount",
+        "stdlibPathInventorySha256",
+        "topLevelRoots",
+        "applicableSourceCount",
+        "applicableSourceSha256",
+        "apiCount",
+        "apiSurfaceSha256"
+      ],
+      "properties": {
+        "haxeVersion": {
+          "const": "5.0.0-preview.1"
+        },
+        "sourceRevision": {
+          "const": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
+        },
+        "probeSchemaVersion": {
+          "const": 1
+        },
+        "stdlibSourceCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stdlibPathInventorySha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "topLevelRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/sourceRoot"
+          }
+        },
+        "applicableSourceCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "applicableSourceSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "apiCount": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "apiSurfaceSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "probeScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "carrier",
+        "sourcePatterns",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "c-common",
+            "capability-gated"
+          ]
+        },
+        "carrier": {
+          "enum": [
+            "custom-target-c",
+            "declaration-only-custom-target"
+          ]
+        },
+        "sourcePatterns": {
+          "$ref": "#/$defs/textList"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "patterns",
+        "reason"
+      ],
+      "properties": {
+        "patterns": {
+          "$ref": "#/$defs/textList"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "applicability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "publicSurface",
+        "probeScopes",
+        "exclusions"
+      ],
+      "properties": {
+        "publicSurface": {
+          "const": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded"
+        },
+        "probeScopes": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "$ref": "#/$defs/probeScope"
+          }
+        },
+        "exclusions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/exclusion"
+          }
+        }
+      }
+    },
+    "loweringPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "order",
+        "compileTimeWork",
+        "runtimeRule",
+        "runtimeFreeRule"
+      ],
+      "properties": {
+        "order": {
+          "const": [
+            "direct-idiomatic-c",
+            "program-local-specialization",
+            "smallest-dependency-closed-hxrt-slice",
+            "source-positioned-diagnostic"
+          ]
+        },
+        "compileTimeWork": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtimeRule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "runtimeFreeRule": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "diagnosticPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "diagnosticIds",
+        "when",
+        "remediation"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "diagnosticIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^HXC[0-9]{4}$"
+          }
+        },
+        "when": {
+          "type": "string",
+          "minLength": 1
+        },
+        "remediation": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ownershipFields": {
+      "type": "object",
+      "required": [
+        "owner",
+        "runtimeFeatures",
+        "profiles",
+        "environments",
+        "status",
+        "ownerBeads",
+        "testOwnerBeads",
+        "diagnosticPolicies",
+        "tests",
+        "notes"
+      ],
+      "properties": {
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "runtimeFeatures": {
+          "$ref": "#/$defs/textList"
+        },
+        "profiles": {
+          "$ref": "#/$defs/profiles"
+        },
+        "environments": {
+          "$ref": "#/$defs/environments"
+        },
+        "status": {
+          "$ref": "#/$defs/parityStatus"
+        },
+        "ownerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "testOwnerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "diagnosticPolicies": {
+          "$ref": "#/$defs/textList"
+        },
+        "tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/normalizedPath"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ownershipRule": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ownershipFields"
+        }
+      ],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "modulePatterns",
+        "owner",
+        "runtimeFeatures",
+        "profiles",
+        "environments",
+        "status",
+        "ownerBeads",
+        "testOwnerBeads",
+        "diagnosticPolicies",
+        "tests",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "modulePatterns": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "runtimeFeatures": {
+          "$ref": "#/$defs/textList"
+        },
+        "profiles": {
+          "$ref": "#/$defs/profiles"
+        },
+        "environments": {
+          "$ref": "#/$defs/environments"
+        },
+        "status": {
+          "$ref": "#/$defs/parityStatus"
+        },
+        "ownerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "testOwnerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "diagnosticPolicies": {
+          "$ref": "#/$defs/textList"
+        },
+        "tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/normalizedPath"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "apiSelector": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "member": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "isStatic": {
+          "type": "boolean"
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "apiOverride": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/ownershipFields"
+        }
+      ],
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "selector",
+        "owner",
+        "runtimeFeatures",
+        "profiles",
+        "environments",
+        "status",
+        "ownerBeads",
+        "testOwnerBeads",
+        "diagnosticPolicies",
+        "tests",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "selector": {
+          "$ref": "#/$defs/apiSelector"
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "runtimeFeatures": {
+          "$ref": "#/$defs/textList"
+        },
+        "profiles": {
+          "$ref": "#/$defs/profiles"
+        },
+        "environments": {
+          "$ref": "#/$defs/environments"
+        },
+        "status": {
+          "$ref": "#/$defs/parityStatus"
+        },
+        "ownerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "testOwnerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "diagnosticPolicies": {
+          "$ref": "#/$defs/textList"
+        },
+        "tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/normalizedPath"
+          }
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "module",
+        "source",
+        "sourceSha256",
+        "probeScope",
+        "type",
+        "member",
+        "kind",
+        "signature",
+        "isStatic",
+        "owner",
+        "runtimeFeatures",
+        "profiles",
+        "environments",
+        "status",
+        "ownerBeads",
+        "testOwnerBeads",
+        "diagnosticPolicies",
+        "tests",
+        "ruleId",
+        "notes"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^hxc-stdlib-api-v1:[0-9a-f]{64}$"
+        },
+        "module": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "$ref": "#/$defs/normalizedPath"
+        },
+        "sourceSha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "probeScope": {
+          "enum": [
+            "c-common",
+            "capability-gated"
+          ]
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1
+        },
+        "member": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "signature": {
+          "type": "string",
+          "minLength": 1
+        },
+        "isStatic": {
+          "type": "boolean"
+        },
+        "owner": {
+          "$ref": "#/$defs/owner"
+        },
+        "runtimeFeatures": {
+          "$ref": "#/$defs/textList"
+        },
+        "profiles": {
+          "$ref": "#/$defs/profiles"
+        },
+        "environments": {
+          "$ref": "#/$defs/environments"
+        },
+        "status": {
+          "$ref": "#/$defs/parityStatus"
+        },
+        "ownerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "testOwnerBeads": {
+          "$ref": "#/$defs/planKey"
+        },
+        "diagnosticPolicies": {
+          "$ref": "#/$defs/textList"
+        },
+        "tests": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/normalizedPath"
+          }
+        },
+        "ruleId": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

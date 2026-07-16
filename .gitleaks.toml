@@ -4,5 +4,13 @@ title = "reflaxe.c gitleaks config"
 useDefault = true
 
 [allowlist]
-# Keep this empty until a deterministic, non-secret fixture demonstrably needs
-# an exception. Every future entry must include a narrow justification.
+description = "Deterministic hashes in the generated pinned-stdlib ledger"
+condition = "AND"
+paths = ['''^docs/specs/stdlib-ledger\.json$''']
+regexTarget = "match"
+regexes = [
+  '''(hxc-stdlib-api-v1:|(stdlibPathInventory|applicableSource|apiSurface|source)Sha256"\s*:\s*")[0-9a-f]{64}''',
+]
+# These are source/content fingerprints and stable API identities, not keys.
+# Requiring both the generated ledger path and an admitted field prefix keeps
+# every other token in the file, repository, and generic-api-key rule scanned.

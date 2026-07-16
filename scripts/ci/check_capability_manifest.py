@@ -44,7 +44,12 @@ CAPABILITY_AREAS = frozenset(
     )
 )
 LEDGER_AUTHORITIES = frozenset(
-    ("implemented-contract", "test-policy", "scaffold-only-planning-seed")
+    (
+        "implemented-contract",
+        "test-policy",
+        "generated-planning-contract",
+        "scaffold-only-planning-seed",
+    )
 )
 REQUIRED_REQUIREMENTS = ("HXC-SCAF-001", "HXC-SCAF-004", "HXC-DOC-007")
 REQUIRED_CLAIM_GATES = (
@@ -626,9 +631,11 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
         validate_file(root, ledger.path, f"ledgers[{index}].path", errors)
     stdlib_ledgers = [ledger for ledger in manifest.ledgers if ledger.id == "standard-library"]
     if len(stdlib_ledgers) != 1 or stdlib_ledgers[0].authority != (
-        "scaffold-only-planning-seed"
+        "generated-planning-contract"
     ):
-        errors.append("standard-library ledger must remain a scaffold-only planning seed")
+        errors.append(
+            "standard-library ledger must remain a generated planning contract"
+        )
 
     capability_ids = tuple(capability.id for capability in manifest.capabilities)
     if len(manifest.capabilities) < 30:

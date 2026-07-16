@@ -226,6 +226,7 @@
           "enum": [
             "implemented-contract",
             "test-policy",
+            "generated-planning-contract",
             "scaffold-only-planning-seed"
           ]
         }

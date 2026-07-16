@@ -31,6 +31,7 @@
         "symbol-registry",
         "hxc-ir",
         "primitive-semantics",
+        "stdlib-ledger",
         "body-lowering",
         "function-lowering",
         "evaluation-order",
@@ -59,6 +60,7 @@
         "symbol-registry",
         "project-emitter",
         "hxc-ir",
+        "stdlib-ledger",
         "body-lowering",
         "function-lowering",
         "static-initialization",
@@ -104,6 +106,7 @@
         "project-emitter",
         "hxc-ir",
         "primitive-semantics",
+        "stdlib-ledger",
         "body-lowering",
         "function-lowering",
         "evaluation-order",
@@ -388,6 +391,26 @@
       ]
     },
     {
+      "id": "stdlib-ledger",
+      "directory": "test/stdlib_ledger",
+      "runner": [
+        "python3",
+        "test/stdlib_ledger/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "the exact pinned Haxe common and capability-gated typed API surface renders byte-identically and contains no host path",
+        "every applicable source module and public API resolves to exactly one profile, environment, runtime, diagnostic, implementation, and test owner",
+        "unowned modules, stale API overrides, unknown runtime features, missing diagnostics, and evidence-free conformant claims fail closed",
+        "the JSON authority and generated review CSV drift together through the central explicit snapshot update path"
+      ]
+    },
+    {
       "id": "body-lowering",
       "directory": "test/body_lowering",
       "runner": [
@@ -647,6 +670,17 @@
         ],
         "formats": [
           "json"
+        ]
+      },
+      {
+        "id": "stdlib-ledger",
+        "expectedRoots": [
+          "docs/specs/stdlib-ledger.json",
+          "docs/specs/stdlib-ledger.csv"
+        ],
+        "formats": [
+          "json",
+          "text"
         ]
       },
       {

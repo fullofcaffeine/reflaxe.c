@@ -342,6 +342,31 @@ Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
 These are presets over independent axes, not separate compiler pipelines. See
 [ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
 
+## Standard-library ownership boundary
+
+The schema-2 [standard-library ledger](stdlib-ledger.md) is generated from the
+exact pinned Haxe typed API surface. Its real `CustomTarget(c)` probe inventories
+the common and hosted declarations; a separately labeled, no-generator test
+custom target reads only the upstream declarations that intentionally require
+thread/atomic capabilities C does not yet advertise. The latter is planning
+input, never a production carrier or behavior claim.
+
+Every applicable module matches exactly one explicit ownership rule, and every
+public typed API receives profile, environment, candidate runtime-feature,
+implementation-Beads, test-Beads, diagnostic, status, source-hash, and test
+provenance. There is no catch-all: a Haxe pin that adds or changes surface fails
+the snapshot until the ownership decision is reviewed. Exact API overrides must
+match once, and only conformant/partial rows with executable evidence are
+admitted. The generated CSV is a review view of the JSON authority.
+
+The ledger applies the same hard compiler-first order as runtime planning:
+direct idiomatic C or a compatible native operation, then a program-local
+specialization, then the smallest proven `hxrt` slice, then a source-positioned
+diagnostic. Candidate runtime ownership never selects a feature from an import
+or type mention. The global parity ledger is also distinct from a program's
+`hxc.stdlib-report.json`: the former owns the pinned product surface, while the
+latter must eventually report only reachable operations analyzed in one build.
+
 ## String and managed-memory model
 
 Portable `String` is a private immutable valid-UTF-8 representation. Every Haxe
