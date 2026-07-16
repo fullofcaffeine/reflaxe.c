@@ -64,7 +64,7 @@ bash "$ROOT_DIR/scripts/security/run-gitleaks.sh" --staged
 
 STAGED_FILES="$(git diff --cached --name-only --diff-filter=ACMR || true)"
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.beads/hooks/(pre-commit|pre-push)|\.github/workflows/|\.gitignore|\.gitleaks\.toml|AGENTS\.md|CONTRIBUTING\.md|README\.md|package\.json|scripts/(ci/(check_ci_policy|check_security_tooling|install-gitleaks)\.py|ci/install-gitleaks\.sh|hooks/|lint/hx_format_guard\.sh|security/run-gitleaks\.sh))'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.beads/hooks/(pre-commit|pre-push)|\.github/workflows/|\.gitignore|\.gitleaks\.toml|AGENTS\.md|CONTRIBUTING\.md|README\.md|package\.json|scripts/(beads/push-safe\.sh|ci/(check_ci_policy|check_security_tooling|install-gitleaks)\.py|ci/install-gitleaks\.sh|hooks/|lint/hx_format_guard\.sh|security/run-(beads-)?gitleaks\.sh))'; then
   echo "[pre-commit] Validating security-tool pins, hooks, and public-repository leak guards..."
   python3 "$ROOT_DIR/scripts/ci/check_security_tooling.py"
 fi

@@ -30,7 +30,8 @@ EXPECTED_GITLEAKS_REGEX = (
 )
 PUBLIC_PREFLIGHT_COMMAND = (
     "npm run format:haxe:check && npm run security:gitleaks && "
-    "npm run test:security-tooling && npm run test:governance"
+    "npm run security:beads-history && npm run test:security-tooling && "
+    "npm run test:governance"
 )
 REQUIRED_IGNORES = {
     ".env",
@@ -186,7 +187,7 @@ def validate_workflows() -> int:
         "  haxe-format:\n",
         "fetch-depth: 0",
         "bash scripts/ci/install-gitleaks.sh --install-dir",
-        'gitleaks git . --redact --config .gitleaks.toml --log-opts="--all"',
+        "bash scripts/security/run-gitleaks.sh",
         "npx --no-install haxelib install formatter 1.18.0 --quiet",
         "npm run format:haxe:check",
     ):
@@ -233,6 +234,37 @@ def validate_config_and_hooks() -> None:
         raise SecurityToolingFailure("active Beads pre-commit wrapper lost repository checks")
     if "scripts/hooks/pre-push" not in beads_pre_push:
         raise SecurityToolingFailure("active Beads pre-push wrapper lost repository checks")
+
+    git_scan = read_text(ROOT / "scripts/security/run-gitleaks.sh")
+    for required in (
+        'readonly DOLT_REMOTE_REF="refs/dolt/data"',
+        "ls-remote",
+        'DOLT_REMOTE_REF:$DOLT_LOCAL_REF',
+        'gitleaks git . --redact --log-opts="--all"',
+    ):
+        if required not in git_scan:
+            raise SecurityToolingFailure(
+                f"full-history scan lost Beads/custom-ref coverage: {required}"
+            )
+
+    beads_scan = read_text(ROOT / "scripts/security/run-beads-gitleaks.sh")
+    for required in (
+        "export --all",
+        'history "$issue_id" --json',
+        "gitleaks stdin",
+    ):
+        if required not in beads_scan:
+            raise SecurityToolingFailure(
+                f"decoded Beads history scan lost required behavior: {required}"
+            )
+    safe_push = read_text(ROOT / "scripts/beads/push-safe.sh")
+    if (
+        "scripts/security/run-beads-gitleaks.sh" not in safe_push
+        or 'dolt push "$@"' not in safe_push
+    ):
+        raise SecurityToolingFailure(
+            "Beads publication must scan decoded history before Dolt push"
+        )
     installer = read_text(ROOT / "scripts/hooks/install.sh")
     if "core.hooksPath .beads/hooks" not in installer:
         raise SecurityToolingFailure("hook installer must preserve the Beads hook chain")
@@ -296,6 +328,8 @@ def validate_config_and_hooks() -> None:
         "format:haxe:check": "bash scripts/lint/hx_format_guard.sh",
         "security:gitleaks": "bash scripts/security/run-gitleaks.sh",
         "security:gitleaks:staged": "bash scripts/security/run-gitleaks.sh --staged",
+        "security:beads-history": "bash scripts/security/run-beads-gitleaks.sh",
+        "beads:push": "bash scripts/beads/push-safe.sh",
         "test:security-tooling": "python3 scripts/ci/check_security_tooling.py",
         "public:preflight": PUBLIC_PREFLIGHT_COMMAND,
     }
@@ -309,7 +343,9 @@ def validate_config_and_hooks() -> None:
         "scripts/hooks/install.sh",
         "scripts/hooks/pre-commit",
         "scripts/hooks/pre-push",
+        "scripts/beads/push-safe.sh",
         "scripts/lint/hx_format_guard.sh",
+        "scripts/security/run-beads-gitleaks.sh",
         "scripts/security/run-gitleaks.sh",
         "scripts/ci/install-gitleaks.sh",
     ):
@@ -324,7 +360,7 @@ def main() -> int:
         print(
             "security-tooling: OK: "
             f"Gitleaks {version} ({digest}), {action_count} commit-pinned Action uses, "
-            "staged/full-history hooks, formatter 1.18.0, and credential ignores"
+            "staged/Git/Dolt-history gates, formatter 1.18.0, and credential ignores"
         )
         return 0
     except (OSError, UnicodeError, json.JSONDecodeError, SecurityToolingFailure) as error:

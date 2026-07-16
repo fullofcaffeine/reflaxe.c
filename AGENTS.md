@@ -3,9 +3,11 @@
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
-> (`.beads/dolt/`); cross-machine sync uses `bd dolt push/pull` (a
-> git-compatible protocol), stored under `refs/dolt/data` on your git
-> remote — separate from `refs/heads/*` where your code lives.
+> (`.beads/dolt/`); cross-machine sync uses the guarded
+> `scripts/beads/push-safe.sh` wrapper and `bd dolt pull` (a git-compatible
+> protocol), stored under `refs/dolt/data` on your git remote — separate from
+> `refs/heads/*` where your code lives. The wrapper scans decoded current and
+> historical Beads records before it delegates to `bd dolt push`.
 > `.beads/issues.jsonl` is a passive export, not the wire protocol.
 >
 > See [SYNC_CONCEPTS.md](https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md)
@@ -20,7 +22,7 @@ bd ready              # Find available work
 bd show <id>          # View issue details
 bd update <id> --claim  # Claim work atomically
 bd close <id>         # Complete work
-bd dolt push          # Push beads data to remote
+npm run beads:push     # Scan and push Beads data to remote
 ```
 
 ## Commit Messages
@@ -687,8 +689,9 @@ missing-metadata or missing-adapter assumptions.
 - Do not publish packages, create release tags, rotate signing keys, or upload
   provenance without an owning release issue and explicit maintainer authority.
 - Maintainers push the implementation and require remote Governance success,
-  then close the Bead with evidence, run `bd dolt push`, commit/push the passive
-  export and interaction record, and verify a clean `0 0` Git state. A
+  then close the Bead with evidence, run `npm run beads:push`,
+  commit/push the passive export and interaction record, and verify a clean
+  `0 0` Git state. A
   contributor without publication authority leaves final closure and remote
   synchronization to a maintainer.
 
@@ -773,12 +776,16 @@ staged secrets and machine-local paths, checks whitespace, verifies dependency
 checksums, enforces the license/provenance and fixture/snapshot inventories, and
 runs relevant JSON, Haxe, or strict native gates. Gitleaks is required; the
 exact formatter haxelib is required when repository-owned Haxe files are
-staged. The tracked pre-push hook scans every reachable Git revision with the
-same narrow Gitleaks policy and revalidates security-tool/workflow pins. Public
-CI checks all repository-owned Haxe formatting, installs Gitleaks only after a
-reviewed SHA-256 match, scans full history from a depth-zero checkout, and pins
-every external GitHub Action to a full reviewed commit. Run `npm run
-public:preflight` before any visibility/publication change. Never broaden a
+staged. The tracked pre-push hook fetches the non-branch `refs/dolt/data` ref,
+scans every reachable Git revision with the same narrow Gitleaks policy, and
+revalidates security-tool/workflow pins. Because Dolt rows are opaque Git
+chunks, `scripts/beads/push-safe.sh` separately scans decoded current records
+and every historical issue version before synchronizing Beads. Never run `bd
+dolt push` directly. Public CI checks all repository-owned Haxe formatting,
+installs Gitleaks only after a reviewed SHA-256 match, fetches the Dolt ref,
+scans full history from a depth-zero checkout, and pins every external GitHub
+Action to a full reviewed commit. Run `npm run public:preflight` before any
+visibility/publication change. Never broaden a
 secret-scan allowlist to a whole generated file when a path-and-match rule can
 identify deterministic non-secret bytes. Do not bypass a hook to publish a
 failing change; record and fix the underlying gate instead.
@@ -797,7 +804,7 @@ Before session close, inspect `git remote -v`:
 
 - If a Git remote and the corresponding Beads remote are configured and the
   workflow authorizes publishing, rebase safely, push Git, push Beads with
-  `bd dolt push`, and verify both.
+  `npm run beads:push`, and verify both.
 - If no remote is configured, do not invent one and do not claim a push. Commit
   the in-scope tracked changes locally, verify the worktree/Beads state, and
   state explicitly in the handoff that synchronization was unavailable.

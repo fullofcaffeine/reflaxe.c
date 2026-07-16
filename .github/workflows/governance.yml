@@ -27,7 +27,7 @@ jobs:
           echo "$install_dir" >> "$GITHUB_PATH"
 
       - name: Scan every reachable Git revision
-        run: gitleaks git . --redact --config .gitleaks.toml --log-opts="--all"
+        run: bash scripts/security/run-gitleaks.sh
 
   haxe-format:
     name: Haxe formatter

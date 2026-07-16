@@ -92,9 +92,11 @@ Before asking for review or closing an issue:
 Before changing repository visibility or publishing a reachable Git ref, run
 `npm run public:preflight`. The active pre-commit hook formats staged Haxe and
 scans staged content; pre-push independently scans the complete reachable Git
-history. CI repeats both checks with checksum-verified Gitleaks and full-commit
-GitHub Action pins. Never bypass these gates or use a whole-file secret
-allowlist for generated output.
+history, including the non-branch Beads Dolt ref. CI repeats both checks with
+checksum-verified Gitleaks and full-commit GitHub Action pins. Dolt database
+chunks are opaque to Git scanners, so always use `npm run beads:push`; it scans
+decoded current records and every historical issue version before sync. Never
+bypass these gates or use a whole-file secret allowlist for generated output.
 
 A close reason must name the requirement IDs, exact commands and their results,
 produced artifacts, remote CI evidence when required, compatibility impact, and
@@ -187,7 +189,7 @@ Maintainers complete work in this order:
 1. Commit and push the implementation, then require the repository Governance
    workflow to pass.
 2. Close the issue with `bd close <id> --reason "Requirements HXC-...; ..."`.
-3. Synchronize execution state with `bd dolt push`.
+3. Synchronize execution state with `npm run beads:push`.
 4. Commit and push the passive Beads export/interaction record.
 5. Verify a clean worktree and `0 0` from
    `git rev-list --left-right --count origin/main...HEAD`.

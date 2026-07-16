@@ -16,7 +16,8 @@ PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 PRE_PUSH = ROOT / "scripts/hooks/pre-push"
 PUBLIC_PREFLIGHT_COMMAND = (
     "npm run format:haxe:check && npm run security:gitleaks && "
-    "npm run test:security-tooling && npm run test:governance"
+    "npm run security:beads-history && npm run test:security-tooling && "
+    "npm run test:governance"
 )
 
 REQUIRED_GATE_FILES = (
@@ -27,9 +28,11 @@ REQUIRED_GATE_FILES = (
     "scripts/hooks/install.sh",
     "scripts/hooks/pre-commit",
     "scripts/hooks/pre-push",
+    "scripts/beads/push-safe.sh",
     "scripts/lint/hx_format_guard.sh",
     "scripts/lint/local_path_guard_staged.sh",
     "scripts/security/run-gitleaks.sh",
+    "scripts/security/run-beads-gitleaks.sh",
     "scripts/ci/install-gitleaks.sh",
     "scripts/ci/check_security_tooling.py",
     "CONTRIBUTING.md",
@@ -330,7 +333,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "          - clang\n",
     "fetch-depth: 0",
     "bash scripts/ci/install-gitleaks.sh --install-dir",
-    'gitleaks git . --redact --config .gitleaks.toml --log-opts="--all"',
+    "bash scripts/security/run-gitleaks.sh",
     "npx --no-install haxelib install formatter 1.18.0 --quiet",
     "npm run format:haxe:check",
     'python3 scripts/ci/runtime_smoke.py --toolchain "${{ matrix.toolchain }}"',
@@ -392,6 +395,13 @@ def validate() -> list[str]:
         != "bash scripts/security/run-gitleaks.sh --staged"
     ):
         errors.append("package.json must retain the staged Gitleaks gate")
+    if (
+        scripts.get("security:beads-history")
+        != "bash scripts/security/run-beads-gitleaks.sh"
+    ):
+        errors.append("package.json must retain the decoded Beads history scan")
+    if scripts.get("beads:push") != "bash scripts/beads/push-safe.sh":
+        errors.append("package.json must retain the guarded Beads push entry point")
     if (
         scripts.get("test:security-tooling")
         != "python3 scripts/ci/check_security_tooling.py"

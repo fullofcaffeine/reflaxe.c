@@ -141,7 +141,7 @@ DOCUMENTS = (
 SHARED_WORKFLOW_TEXT = (
     "bd list --ready --type task --json",
     "bd update <id> --claim",
-    "bd dolt push",
+    "npm run beads:push",
     "npm test",
     "requirement IDs",
     "exact commands",

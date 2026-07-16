@@ -2486,8 +2486,11 @@ Performance claims in the README require reproducible benchmark definitions and 
 - Every external GitHub Action is pinned to a reviewed full commit SHA. CI
   installs Gitleaks from a versioned upstream archive only after its checked-in
   SHA-256 matches, checks the exact Haxe formatter, and scans a depth-zero
-  checkout across all reachable Git history. Local pre-commit scans staged
-  content while pre-push repeats the full-history scan.
+  checkout across all reachable Git history, including `refs/dolt/data`. Local
+  pre-commit scans staged content while pre-push fetches the custom Dolt ref and
+  repeats the full-history scan. Beads publication additionally scans decoded
+  current records and every historical issue version before Dolt sync because
+  database chunks are opaque to ordinary Git diff scanners.
 - `docs/specs/third-party-provenance.json` is the fail-closed distribution
   inventory. External development tools are distinguished from redistributed
   source/binaries; reserved vendor/runtime roots reject unowned files; and every
@@ -2613,7 +2616,7 @@ bd close <id> --reason "Requirements HXC-... satisfied; validation: <commands>; 
 
 The bootstrap is idempotent by matching stable plan keys stored in issue metadata or, as a fallback, exact prefixed titles. It MUST be previewed and validated before apply.
 
-Never run `bd init --force` over existing project state. Do not hand-author Beads database internals. JSONL is an export/interchange artifact when enabled, not a replacement for canonical Beads state. Git and Beads remote synchronization are separate, permissioned operations; run `bd dolt push` or equivalent only when a remote is configured and repository policy explicitly authorizes it.
+Never run `bd init --force` over existing project state. Do not hand-author Beads database internals. JSONL is an export/interchange artifact when enabled, not a replacement for canonical Beads state. Git and Beads remote synchronization are separate, permissioned operations; run the repository's guarded `scripts/beads/push-safe.sh` wrapper only when a remote is configured and repository policy explicitly authorizes it. The wrapper must scan decoded current and historical Beads records before delegating to `bd dolt push`.
 
 ### 24.2 Epic structure
 
@@ -5577,7 +5580,7 @@ bd close <id> \
   --json
 ```
 
-The repository's default agent policy is conservative: do not invent permission to push Git or Beads remotes. When a remote workflow is explicitly configured, use `bd dolt push`/`bd dolt pull` according to project policy.
+The repository's default agent policy is conservative: do not invent permission to push Git or Beads remotes. When a remote workflow is explicitly configured, use `scripts/beads/push-safe.sh`/`bd dolt pull` according to project policy.
 
 ### 36.7 Initial ready work
 

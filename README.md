@@ -289,6 +289,9 @@ scripts/hooks/install.sh
 # Required before changing visibility or publishing a new reachable ref.
 npm run public:preflight
 
+# Required instead of calling `bd dolt push` directly.
+npm run beads:push
+
 bd prime
 bd list --ready --type task
 
