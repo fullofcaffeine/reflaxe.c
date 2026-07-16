@@ -12,6 +12,7 @@ import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
+import reflaxe.c.lowering.CBodyLoweringError;
 
 typedef BodyLoweringFunctionRecord = {
 	final field:String;
@@ -36,6 +37,7 @@ typedef BodyLoweringProbeRecord = {
 	final symbols:reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 	final runtimeFeatures:Array<String>;
 	final runtimeArtifacts:Array<String>;
+	final unreachableDiagnostic:String;
 }
 #end
 
@@ -87,6 +89,7 @@ class BodyLoweringProbe {
 			inputs.reverse();
 		}
 		final profile = Context.definedValue("body_lowering_profile") == "metal" ? CProfile.Metal : CProfile.Portable;
+		final unreachableDiagnostic = renderUnreachableDiagnostic(inputs, profile);
 		final result = new CBodyLowering(new CompilationContext(profile)).lower(inputs);
 		final printer = new CASTPrinter();
 		final functionRecords:Array<BodyLoweringFunctionRecord> = [];
@@ -119,9 +122,68 @@ class BodyLoweringProbe {
 			functions: functionRecords,
 			symbols: result.symbolTable,
 			runtimeFeatures: [],
-			runtimeArtifacts: []
+			runtimeArtifacts: [],
+			unreachableDiagnostic: unreachableDiagnostic
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(record));
+	}
+
+	static function renderUnreachableDiagnostic(inputs:Array<CBodyFunctionInput>, profile:CProfile):String {
+		final direct = requireInput(inputs, "directInteger");
+		final nested = requireInput(inputs, "integerValue");
+		final directFunction = requireFunction(direct.expression, "directInteger");
+		final nestedFunction = requireFunction(nested.expression, "integerValue");
+		final returnExpression = requireFirstExpression(directFunction.expr, "directInteger");
+		final unreachableExpression = requireFirstExpression(nestedFunction.expr, "integerValue");
+		final syntheticBody:TypedExpr = {
+			expr: TBlock([returnExpression, unreachableExpression]),
+			pos: directFunction.expr.pos,
+			t: directFunction.expr.t
+		};
+		final syntheticExpression:TypedExpr = {
+			expr: TFunction({args: directFunction.args, t: directFunction.t, expr: syntheticBody}),
+			pos: direct.expression.pos,
+			t: direct.expression.t
+		};
+		try {
+			new CBodyLowering(new CompilationContext(profile)).lower([
+				{
+					modulePath: direct.modulePath,
+					declarationPath: direct.declarationPath,
+					sourcePath: direct.sourcePath,
+					fieldName: "unreachableControlFlow",
+					sourceOrder: direct.sourceOrder,
+					fieldType: direct.fieldType,
+					expression: syntheticExpression
+				}
+			]);
+		} catch (error:CBodyLoweringError) {
+			return error.diagnostic.render();
+		}
+		return fatal("synthetic unreachable control flow unexpectedly passed lowering", direct.expression.pos);
+	}
+
+	static function requireInput(inputs:Array<CBodyFunctionInput>, fieldName:String):CBodyFunctionInput {
+		for (input in inputs) {
+			if (input.fieldName == fieldName) {
+				return input;
+			}
+		}
+		return fatal('body fixture lost `$fieldName` for the unreachable diagnostic seam', Context.currentPos());
+	}
+
+	static function requireFunction(expression:TypedExpr, fieldName:String):TFunc {
+		return switch expression.expr {
+			case TFunction(value): value;
+			case _: fatal('body fixture `$fieldName` is not a typed function', expression.pos);
+		};
+	}
+
+	static function requireFirstExpression(expression:TypedExpr, fieldName:String):TypedExpr {
+		return switch expression.expr {
+			case TBlock(expressions) if (expressions.length > 0): expressions[0];
+			case _: fatal('body fixture `$fieldName` has no typed block expression', expression.pos);
+		};
 	}
 
 	/** Test-only static-function envelope; production function emission is E2.T03. */

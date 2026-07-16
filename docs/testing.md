@@ -9,21 +9,22 @@ The taxonomy describes evidence. It does not promote a seed into a supported
 compiler capability. Direct HxcIR/C AST fixtures and independent native C/C++
 inputs do not prove typed-Haxe lowering. The body-lowering suite is narrower
 real TypedExpr-to-HxcIR/C evidence. The function-lowering suite extends it to a
-production-emitted primitive private header/source/entry project, and the
-arithmetic suite adds generated UB-safe operation, sanitizer, and optimized-
-shape evidence. None proves broader language, standard-library, public ABI, or
-`hxrt` support.
+production-emitted primitive private header/source/entry project. The
+evaluation-order suite now adds E2.T06 primitive statement/control-flow
+evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
+and optimized-shape evidence. None proves broader language, standard-library,
+public ABI, or `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
 | Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, and arithmetic lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported body/signature/argument boundaries |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, and argument boundaries |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body execution, arithmetic UBSan, and native runtime seeds; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order and arithmetic Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C; HxcIR indexing oracle remains semantic-only |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -153,13 +154,18 @@ lanes compile and run its checked-in and production-generated strict C under GCC
 and Clang. See [static function lowering](function-lowering.md).
 
 `test/evaluation_order` is the focused positive/snapshot/runtime/differential
-suite for E2.T04. It proves source-backed call arguments, assignments,
-primitive static fields, lazy Boolean operators, value ternaries, and unsigned
-prefix/postfix increments through explicit HxcIR and structural C. It checks
-the pre-existing indexed compound-assignment HxcIR without claiming source
-array support, verifies the stable-value temporary proof, compares an Eval
-oracle with generated projects, and runs strict GCC/Clang at O0/O2 with a
-positive zero-runtime plan. See [explicit evaluation
+suite for E2.T04 and E2.T06. It proves source-backed call arguments,
+assignments, primitive static fields, lazy Boolean operators, value ternaries,
+statement `if`/`else`, nested pre/post-test loops, range-loop preprocessing,
+innermost `break`/`continue`, `Int` statement/value switches, and unsigned
+prefix/postfix increments through explicit HxcIR and structural C. It asserts
+that every C switch arm jumps to a typed target, each subject executes once,
+and the production value-switch carrier cannot expose uninitialized storage.
+It checks the pre-existing indexed compound-assignment HxcIR without claiming
+source array support, verifies the stable-value temporary proof, compares an
+Eval oracle with generated projects across both required and skipped lazy
+operands, and runs strict GCC/Clang at O0/O2 with a positive zero-runtime plan.
+See [explicit evaluation
 order](evaluation-order.md).
 
 `test/arithmetic_semantics` is the focused

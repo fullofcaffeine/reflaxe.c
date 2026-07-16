@@ -108,6 +108,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise BodyLoweringFailure(f"{key} selected an implicit runtime dependency")
     if report.get("runtimeFeatures") != [] or report.get("runtimeArtifacts") != []:
         raise BodyLoweringFailure("primitive body lowering selected runtime work")
+    missing = report.get("unreachableDiagnostic")
+    if (
+        not isinstance(missing, str)
+        or "HXC1001" not in missing
+        or "unreachable TVar(value)" not in missing
+        or "test/body_lowering/fixtures/positive/BodyFixture.hx:3:" not in missing
+        or f"[profile={profile}]" not in missing
+        or str(ROOT) in missing
+    ):
+        raise BodyLoweringFailure(
+            "unreachable control flow lost its stable HXC1001 diagnostic"
+        )
 
     functions = report.get("functions")
     if not isinstance(functions, list):
@@ -450,8 +462,8 @@ def check_production_boundaries() -> None:
             if (
                 unsupported.returncode != 1
                 or "HXC1001" not in combined
-                or "Unsupported typed Haxe node `TWhile`" not in combined
-                or "Main.hx:4: lines 4-5" not in combined
+                or "Unsupported typed Haxe node `TThrow`" not in combined
+                or "Main.hx:4: characters 3-8" not in combined
                 or f"[profile={profile}]" not in combined
             ):
                 raise BodyLoweringFailure(
@@ -619,8 +631,20 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise BodyLoweringFailure("body lowering changed with input discovery order")
         validate(first)
         validate(metal, profile="metal")
-        portable_without_profile = {**first, "profile": "<profile>"}
-        metal_without_profile = {**metal, "profile": "<profile>"}
+        portable_without_profile = {
+            **first,
+            "profile": "<profile>",
+            "unreachableDiagnostic": str(first["unreachableDiagnostic"]).replace(
+                "[profile=portable]", "[profile=<profile>]"
+            ),
+        }
+        metal_without_profile = {
+            **metal,
+            "profile": "<profile>",
+            "unreachableDiagnostic": str(metal["unreachableDiagnostic"]).replace(
+                "[profile=metal]", "[profile=<profile>]"
+            ),
+        }
         if portable_without_profile != metal_without_profile:
             raise BodyLoweringFailure("portable and metal primitive body lowering diverged")
         check_snapshots(first)

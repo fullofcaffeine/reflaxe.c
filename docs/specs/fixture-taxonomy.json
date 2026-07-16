@@ -350,7 +350,7 @@
       "status": "active",
       "assertions": [
         "canonical HxcIR dumps preserve source-aware semantic order",
-        "invalid or unsupported IR paths emit HXC9000 or HXC1001",
+        "invalid or unsupported IR paths, including mismatched switch subjects and cases, emit HXC9000 or HXC1001",
         "the Eval side-effect oracle matches the modeled order without claiming C execution"
       ]
     },
@@ -389,7 +389,7 @@
       "status": "active",
       "assertions": [
         "real pinned-compiler TypedExpr constants, locals, primitive blocks, and returns lower through validated HxcIR before structural C",
-        "local names are deterministic and shadowing-safe across discovery order while unsupported nodes emit exact source-positioned HXC1001",
+        "local names are deterministic and shadowing-safe across discovery order while unsupported and synthetic unreachable nodes emit exact source-positioned HXC1001",
         "portable and metal produce identical runtime-free strict C11 bodies with optional structured #line directives",
         "available local and separately required GCC/Clang CI lanes compile and execute both mapped and unmapped generated-body fixtures at O0 and O2 without warnings"
       ]
@@ -430,8 +430,9 @@
       ],
       "status": "active",
       "assertions": [
-        "typed calls, assignments, static fields, lazy operators, ternaries, and UInt increments lower into explicit HxcIR instruction/block order",
+        "typed calls, assignments, static fields, required and skipped lazy operands, ternaries, statement conditionals, nested pre/post-test and range loops, loop jumps, switches, and UInt increments lower into explicit HxcIR instruction/block order",
         "the indexed compound-assignment fixture proves receiver/index/address/load/right/store order before fixed-array representation is admitted",
+        "statement and value switch subjects execute once and every emitted C case/default immediately jumps to a typed target without user-observable fallthrough",
         "every effectful load and consumed call is materialized; only total pure expressions over stable values remain inline",
         "portable, metal, and runtime-none production C is byte-stable, warning-clean at O0/O2, runtime-free, and matches the pinned Eval oracle under GCC and Clang"
       ]

@@ -24,8 +24,8 @@ LOWERING_EXPECTATIONS = {
         "Main.hx:8: characters 3-38",
     ),
     "isolation": (
-        "Unsupported typed Haxe node `TIf`",
-        "Main.hx:4: lines 4-6",
+        "Unsupported typed Haxe node `TThrow`",
+        "Main.hx:5: characters 4-9",
     ),
 }
 

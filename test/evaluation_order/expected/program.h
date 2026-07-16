@@ -4,11 +4,27 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+{
+  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  {
+    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+  }
+  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+}
+
+static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+}
+
 extern bool hxc_field_EvaluationFixture_callFlag;
 
 extern uint32_t hxc_field_EvaluationFixture_counter;
 
 extern bool hxc_field_EvaluationFixture_shortCircuitIntact;
+
+extern uint32_t hxc_field_EvaluationFixture_switchCalls;
 
 extern bool hxc_field_EvaluationFixture_ternaryIntact;
 
@@ -27,5 +43,7 @@ bool hxc_method_EvaluationFixture_setCallFlag(bool hxc_local_EvaluationFixture_s
 bool hxc_method_EvaluationFixture_spoilShortCircuit(void);
 
 uint32_t hxc_method_EvaluationFixture_spoilTernary(void);
+
+int32_t hxc_method_EvaluationFixture_switchSubject(int32_t hxc_local_EvaluationFixture_switchSubject_value_n0);
 
 #endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

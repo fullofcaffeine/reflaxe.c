@@ -152,6 +152,8 @@ class CBodyEmitter {
 						referenced.set(valueId, true);
 					case IRTBranch(conditionValueId, _, _):
 						referenced.set(conditionValueId, true);
+					case IRTSwitch(valueId, _, _):
+						referenced.set(valueId, true);
 					case _:
 				}
 			}
@@ -240,6 +242,23 @@ class CBodyEmitter {
 				statements.push(SIf(requireValue(values, conditionValueId, functionId),
 					SGoto(requireLabelName(labelNames, whenTrue.targetBlockId, functionId)),
 					SGoto(requireLabelName(labelNames, whenFalse.targetBlockId, functionId))));
+			case IRTSwitch(valueId, cases, defaultEdge):
+				final emittedCases:Array<CCase> = [];
+				for (item in cases) {
+					requirePlainEdge(item.edge, functionId);
+					emittedCases.push({
+						values: [constantExpression(item.value)],
+						isDefault: false,
+						body: [SGoto(requireLabelName(labelNames, item.edge.targetBlockId, functionId))]
+					});
+				}
+				requirePlainEdge(defaultEdge, functionId);
+				emittedCases.push({
+					values: [],
+					isDefault: true,
+					body: [SGoto(requireLabelName(labelNames, defaultEdge.targetBlockId, functionId))]
+				});
+				statements.push(SSwitch(requireValue(values, valueId, functionId), emittedCases));
 			case _:
 				fail('function `$functionId` has a terminator outside the sequenced primitive subset');
 		}

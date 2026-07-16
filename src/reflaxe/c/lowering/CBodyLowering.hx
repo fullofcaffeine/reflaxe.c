@@ -334,7 +334,22 @@ private typedef MutableBodyBlock = {
 	final id:String;
 	final source:HxcSourceSpan;
 	final instructions:Array<HxcIRInstruction>;
+	final generatedOrdinal:Null<Int>;
+	final generatedRole:Null<String>;
+	var active:Bool;
 	var terminator:Null<HxcIRTerminator>;
+}
+
+private typedef LoopControlTargets = {
+	final breakTargetBlockId:String;
+	final continueTargetBlockId:String;
+	var usedBreak:Bool;
+	var usedContinue:Bool;
+}
+
+private typedef TypedSwitchArm = {
+	final values:Array<TypedExpr>;
+	final expr:TypedExpr;
 }
 
 private typedef PreparedParameter = {
@@ -623,6 +638,7 @@ private class FunctionBuilder {
 	final labelRequests:Map<String, CSymbolRequest> = [];
 	final locals:Array<HxcIRLocal> = [];
 	final blocks:Array<MutableBodyBlock> = [];
+	final loopControlStack:Array<LoopControlTargets> = [];
 	var localOrdinal = 0;
 	var temporaryOrdinal = 0;
 	var instructionOrdinal = 0;
@@ -639,7 +655,7 @@ private class FunctionBuilder {
 		this.globalRegistry = globalRegistry;
 		this.functionContext = 'function ${input.declarationPath}.${input.fieldName} body';
 		this.localOrdinal = prepared.parameters.length;
-		this.currentBlock = createBlock("entry", HaxeSourceSpan.fromPosition(prepared.functionValue.expr.pos, input.sourcePath), false);
+		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.functionValue.expr.pos, input.sourcePath));
 		for (parameter in prepared.parameters) {
 			parameterValuesByCompilerId.set(parameter.compilerId, {id: parameter.ir.id, type: parameter.ir.type, mapping: parameter.mapping});
 		}
@@ -685,41 +701,73 @@ private class FunctionBuilder {
 		}
 		switch expression.expr {
 			case TBlock(expressions):
-				for (nested in expressions) {
-					lowerStatement(nested);
-				}
+				lowerStatementBlock(expressions);
 			case TVar(variable, initializer):
 				lowerVariable(variable, initializer, expression.pos);
 			case TReturn(value):
 				lowerReturn(value, expression.pos);
 			case TParenthesis(inner):
 				lowerStatement(inner);
+			case TMeta(_, inner):
+				lowerStatement(inner);
 			case TConst(_) | TLocal(_) | TField(_, _) | TCast(_, _) | TBinop(_, _, _) | TUnop(_, _, _):
 				lowerValue(expression);
 			case TCall(_, _):
 				lowerCall(expression, false);
-			case TIf(_, _, _):
-				// Statement control flow belongs to E2.T06. A value-form ternary is
-				// admitted only when it reaches `lowerValue` in a value context.
-				unsupported(expression, "TIf");
+			case TIf(condition, whenTrue, whenFalse):
+				lowerStatementConditional(expression, condition, whenTrue, whenFalse);
+			case TWhile(condition, body, normalWhile):
+				lowerLoop(expression, condition, body, normalWhile);
+			case TSwitch(subject, cases, defaultExpression):
+				lowerStatementSwitch(expression, subject, cases, defaultExpression);
+			case TBreak:
+				lowerLoopJump(expression, true);
+			case TContinue:
+				lowerLoopJump(expression, false);
 			case _:
 				unsupported(expression, nodeName(expression));
 		}
 	}
 
-	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position):Void {
+	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
+		for (index in 0...expressions.length) {
+			final nested = expressions[index];
+			switch nested.expr {
+				case TVar(variable, null) if (index + 1 < expressions.length
+					&& followingSwitchInitializesLocal(expressions[index + 1], variable.id)):
+					if (currentBlock.terminator != null) {
+						unsupported(nested, 'unreachable ${nodeName(nested)}');
+					}
+					lowerVariable(variable, null, nested.pos, true);
+				case _:
+					lowerStatement(nested);
+			}
+		}
+	}
+
+	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerSwitchCarrier:Bool = false):Void {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		final localMapping = primitiveMapping(variable.t, position, 'TVar(${variable.name}:type)');
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
-		final initialExpression:TypedExpr = switch initializer {
-			case null: unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
-			case value: value;
-		};
-		final value = lowerValue(initialExpression, localMapping);
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
+		final value:LoweredValue = switch initializer {
+			case null if (compilerSwitchCarrier):
+				// Reflaxe exposes a value switch as a temporary followed by a switch
+				// that assigns it. The structural recognition below proves every arm
+				// assigns; this defensive value prevents C uninitialized storage without
+				// becoming observable on an admitted path.
+				final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
+				appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:switch-carrier)')), source,
+					"switch-carrier-default");
+				{id: result.id, type: result.type, mapping: localMapping};
+			case null:
+				unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
+			case expression:
+				lowerValue(expression, localMapping);
+		};
 		locals.push({
 			id: localId,
 			type: localMapping.irType,
@@ -733,6 +781,47 @@ private class FunctionBuilder {
 		localRequests.set(localId, request);
 		appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		localIdsByCompilerId.set(variable.id, localId);
+	}
+
+	function followingSwitchInitializesLocal(expression:TypedExpr, compilerId:Int):Bool {
+		return switch expression.expr {
+			case TSwitch(_, cases, defaultExpression): switchArmsAssignLocal(cases, defaultExpression, compilerId);
+			case TParenthesis(inner) | TMeta(_, inner): followingSwitchInitializesLocal(inner, compilerId);
+			case _: false;
+		};
+	}
+
+	function definitelyAssignsLocal(expression:TypedExpr, compilerId:Int):Bool {
+		return switch expression.expr {
+			case TBinop(OpAssign, left, _):
+				isLocalTarget(left, compilerId);
+			case TBlock(expressions): expressions.length > 0 && definitelyAssignsLocal(expressions[expressions.length - 1], compilerId);
+			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
+					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
+			case TSwitch(_, cases, defaultExpression): switchArmsAssignLocal(cases, defaultExpression, compilerId);
+			case TParenthesis(inner) | TMeta(_, inner): definitelyAssignsLocal(inner, compilerId);
+			case _: false;
+		};
+	}
+
+	function switchArmsAssignLocal(cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>, compilerId:Int):Bool {
+		if (defaultExpression == null || !definitelyAssignsLocal(defaultExpression, compilerId)) {
+			return false;
+		}
+		for (item in cases) {
+			if (!definitelyAssignsLocal(item.expr, compilerId)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	function isLocalTarget(expression:TypedExpr, compilerId:Int):Bool {
+		return switch expression.expr {
+			case TLocal(variable): variable.id == compilerId;
+			case TParenthesis(inner) | TMeta(_, inner): isLocalTarget(inner, compilerId);
+			case _: false;
+		};
 	}
 
 	function lowerReturn(value:Null<TypedExpr>, position:Position):Void {
@@ -787,9 +876,280 @@ private class FunctionBuilder {
 			case TUnop(OpDecrement, postFix, target): lowerUpdate(expression, target, postFix, false);
 			case TUnop(operation, _, operand): lowerUnary(expression, operation, operand);
 			case TIf(condition, whenTrue, whenFalse): lowerConditional(expression, condition, whenTrue, whenFalse, expectedMapping);
+			case TSwitch(subject, cases, defaultExpression):
+				lowerValueSwitch(expression, subject, cases, defaultExpression, expectedMapping);
 			case _: unsupported(expression, nodeName(expression));
 		};
 	}
+
+	function lowerStatementConditional(expression:TypedExpr, condition:TypedExpr, whenTrue:TypedExpr, whenFalse:Null<TypedExpr>):Void {
+		final conditionValue = lowerBooleanCondition(condition, "TIf");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final trueBlock = createGeneratedBlock("if-true", source);
+		if (whenFalse == null) {
+			final joinBlock = createGeneratedBlock("if-join", source);
+			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(joinBlock.id)), source: source};
+			currentBlock = trueBlock;
+			lowerStatement(whenTrue);
+			if (currentBlock.terminator == null) {
+				currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			}
+			currentBlock = joinBlock;
+			return;
+		}
+
+		final falseExpression:TypedExpr = whenFalse;
+		final falseBlock = createGeneratedBlock("if-false", source);
+		final dispatchBlock = currentBlock;
+		dispatchBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(trueBlock.id), edge(falseBlock.id)), source: source};
+
+		currentBlock = trueBlock;
+		lowerStatement(whenTrue);
+		final trueEnd = currentBlock;
+
+		currentBlock = falseBlock;
+		lowerStatement(falseExpression);
+		final falseEnd = currentBlock;
+
+		if (trueEnd.terminator == null || falseEnd.terminator == null) {
+			final joinBlock = createGeneratedBlock("if-join", source);
+			if (trueEnd.terminator == null) {
+				trueEnd.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			}
+			if (falseEnd.terminator == null) {
+				falseEnd.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+			}
+			currentBlock = joinBlock;
+		} else {
+			// Retain a terminated arm as the current point so a following source
+			// expression receives the stable unreachable-source diagnostic.
+			currentBlock = falseEnd;
+		}
+	}
+
+	function lowerLoop(expression:TypedExpr, condition:TypedExpr, body:TypedExpr, normalWhile:Bool):Void {
+		if (normalWhile) {
+			lowerPreTestLoop(expression, condition, body);
+		} else {
+			lowerPostTestLoop(expression, condition, body);
+		}
+	}
+
+	function lowerPreTestLoop(expression:TypedExpr, condition:TypedExpr, body:TypedExpr):Void {
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final conditionBlock = createGeneratedBlock("while-condition", source);
+		final bodyBlock = createGeneratedBlock("while-body", source);
+		final exitBlock = createGeneratedBlock("while-exit", source);
+		currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
+
+		currentBlock = conditionBlock;
+		final conditionValue = lowerBooleanCondition(condition, "TWhile");
+		currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(bodyBlock.id), edge(exitBlock.id)), source: source};
+
+		final control = loopControl(exitBlock.id, conditionBlock.id);
+		loopControlStack.push(control);
+		currentBlock = bodyBlock;
+		lowerStatement(body);
+		loopControlStack.pop();
+		if (currentBlock.terminator == null) {
+			currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
+		}
+		currentBlock = exitBlock;
+	}
+
+	function lowerPostTestLoop(expression:TypedExpr, condition:TypedExpr, body:TypedExpr):Void {
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final bodyBlock = createGeneratedBlock("do-body", source);
+		final conditionBlock = reserveGeneratedBlock("do-condition", source);
+		final exitBlock = reserveGeneratedBlock("do-exit", source);
+		currentBlock.terminator = {kind: IRTJump(edge(bodyBlock.id)), source: source};
+
+		final control = loopControl(exitBlock.id, conditionBlock.id);
+		loopControlStack.push(control);
+		currentBlock = bodyBlock;
+		lowerStatement(body);
+		loopControlStack.pop();
+		final bodyEnd = currentBlock;
+		final reachesCondition = bodyEnd.terminator == null || control.usedContinue;
+		if (bodyEnd.terminator == null) {
+			bodyEnd.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
+		}
+
+		if (reachesCondition) {
+			activateGeneratedBlock(conditionBlock);
+			activateGeneratedBlock(exitBlock);
+			currentBlock = conditionBlock;
+			final conditionValue = lowerBooleanCondition(condition, "TWhile");
+			currentBlock.terminator = {kind: IRTBranch(conditionValue.id, edge(bodyBlock.id), edge(exitBlock.id)), source: source};
+			currentBlock = exitBlock;
+		} else if (control.usedBreak) {
+			activateGeneratedBlock(exitBlock);
+			currentBlock = exitBlock;
+		} else {
+			// An unconditional return/throw from the body makes both the condition
+			// and loop exit unreachable; do not emit unused C labels for them.
+			currentBlock = bodyEnd;
+		}
+	}
+
+	function lowerLoopJump(expression:TypedExpr, isBreak:Bool):Void {
+		if (loopControlStack.length == 0) {
+			unsupported(expression, isBreak ? "TBreak(outside-loop)" : "TContinue(outside-loop)");
+		}
+		final control = loopControlStack[loopControlStack.length - 1];
+		if (isBreak) {
+			control.usedBreak = true;
+		} else {
+			control.usedContinue = true;
+		}
+		final target = isBreak ? control.breakTargetBlockId : control.continueTargetBlockId;
+		currentBlock.terminator = {
+			kind: IRTJump(edge(target)),
+			source: HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath)
+		};
+	}
+
+	function lowerStatementSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>):Void {
+		final subjectValue = lowerSwitchSubject(subject);
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length) {
+			caseBlocks.push(createGeneratedBlock('switch-case-$index', source));
+		}
+		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("switch-default", source);
+		final openEnds:Array<MutableBodyBlock> = [];
+
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			lowerStatement(cases[index].expr);
+			if (currentBlock.terminator == null) {
+				openEnds.push(currentBlock);
+			}
+		}
+		if (defaultExpression != null && defaultBlock != null) {
+			currentBlock = defaultBlock;
+			lowerStatement(defaultExpression);
+			if (currentBlock.terminator == null) {
+				openEnds.push(currentBlock);
+			}
+		}
+
+		final needsExit = defaultExpression == null || openEnds.length > 0;
+		final exitBlock = needsExit ? createGeneratedBlock("switch-exit", source) : null;
+		if (exitBlock != null) {
+			for (end in openEnds) {
+				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
+			}
+		}
+		final irCases = switchCases(cases, caseBlocks, subjectValue.mapping);
+		final defaultTarget = defaultBlock != null ? defaultBlock.id : requireBlock(exitBlock, "switch without default").id;
+		dispatchBlock.terminator = {kind: IRTSwitch(subjectValue.id, irCases, edge(defaultTarget)), source: source};
+		if (exitBlock != null) {
+			currentBlock = exitBlock;
+		} else if (defaultBlock != null) {
+			currentBlock = defaultBlock;
+		} else if (caseBlocks.length > 0) {
+			currentBlock = caseBlocks[caseBlocks.length - 1];
+		} else {
+			throw new CBodyEmissionError('switch in `${prepared.irId}` has no continuation block');
+		}
+	}
+
+	function lowerValueSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
+			expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
+		if (defaultExpression == null) {
+			return unsupported(expression, "TSwitch(value-without-default)");
+		}
+		final subjectValue = lowerSwitchSubject(subject);
+		final resultMapping = expectedMapping == null ? primitiveMapping(expression.t, expression.pos, "TSwitch(result-type)") : expectedMapping;
+		if (resultMapping.irType == IRTVoid) {
+			return unsupported(expression, "TSwitch(Void-as-value)");
+		}
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch")), source, "switch-default-result");
+		final resultLocalId = createFlowLocal(resultMapping, initialResult.id, source, "switch-result");
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length) {
+			caseBlocks.push(createGeneratedBlock('switch-value-case-$index', source));
+		}
+		final defaultBlock = createGeneratedBlock("switch-value-default", source);
+		final joinBlock = createGeneratedBlock("switch-value-join", source);
+
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(case-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "switch-case-store");
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		}
+
+		final resolvedDefault:TypedExpr = defaultExpression;
+		currentBlock = defaultBlock;
+		final defaultValue = coerce(lowerValue(resolvedDefault, resultMapping), resultMapping, resolvedDefault.pos, "TSwitch(default-value)");
+		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "switch-default-store");
+		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+
+		dispatchBlock.terminator = {
+			kind: IRTSwitch(subjectValue.id, switchCases(cases, caseBlocks, subjectValue.mapping), edge(defaultBlock.id)),
+			source: source
+		};
+		currentBlock = joinBlock;
+		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "switch-result-load");
+	}
+
+	function lowerSwitchSubject(expression:TypedExpr):LoweredValue {
+		final mapping = primitiveMapping(expression.t, expression.pos, "TSwitch(subject-type)");
+		switch mapping.irType {
+			case IRTBool | IRTInt(_, _):
+			case _:
+				unsupported(expression, 'TSwitch(non-integral-subject:${mapping.cSpelling})');
+		}
+		return coerce(lowerValue(expression, mapping), mapping, expression.pos, "TSwitch(subject)");
+	}
+
+	function switchCases(cases:Array<TypedSwitchArm>, blocks:Array<MutableBodyBlock>, mapping:CPrimitiveTypeMapping):Array<HxcIRSwitchCase> {
+		final result:Array<HxcIRSwitchCase> = [];
+		for (index in 0...cases.length) {
+			for (value in cases[index].values) {
+				result.push({value: switchConstant(value, mapping), edge: edge(blocks[index].id)});
+			}
+		}
+		return result;
+	}
+
+	function switchConstant(expression:TypedExpr, mapping:CPrimitiveTypeMapping):HxcIRConstant {
+		return switch expression.expr {
+			case TConst(TInt(value)):
+				switch mapping.irType {
+					case IRTInt(_, _): IRCInt(Std.string(value));
+					case _: unsupported(expression, "TSwitch(integer-case-for-non-integer-subject)");
+				}
+			case TConst(TBool(value)):
+				mapping.irType == IRTBool ? IRCBool(value) : unsupported(expression, "TSwitch(boolean-case-for-non-Bool-subject)");
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _):
+				switchConstant(inner, mapping);
+			case _:
+				unsupported(expression, 'TSwitch(case=${nodeName(expression)}:requires-typed-primitive-constant)');
+		};
+	}
+
+	function lowerBooleanCondition(expression:TypedExpr, owner:String):LoweredValue {
+		final boolMapping = primitiveMapping(expression.t, expression.pos, '$owner(condition-type)');
+		if (boolMapping.irType != IRTBool) {
+			unsupported(expression, '$owner(non-Bool-condition)');
+		}
+		return coerce(lowerValue(expression, boolMapping), boolMapping, expression.pos, '$owner(condition)');
+	}
+
+	static function loopControl(breakTargetBlockId:String, continueTargetBlockId:String):LoopControlTargets
+		return {
+			breakTargetBlockId: breakTargetBlockId,
+			continueTargetBlockId: continueTargetBlockId,
+			usedBreak: false,
+			usedContinue: false
+		};
 
 	function lowerValueBlock(expression:TypedExpr, expressions:Array<TypedExpr>, expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
 		if (expressions.length == 0) {
@@ -1145,11 +1505,7 @@ private class FunctionBuilder {
 		if (falseExpression == null) {
 			return unsupported(expression, "TIf(without-else-as-value)");
 		}
-		final boolMapping = primitiveMapping(condition.t, condition.pos, "TIf(condition-type)");
-		if (boolMapping.irType != IRTBool) {
-			unsupported(condition, "TIf(non-Bool-condition)");
-		}
-		final conditionValue = coerce(lowerValue(condition), boolMapping, condition.pos, "TIf(condition)");
+		final conditionValue = lowerBooleanCondition(condition, "TIf");
 		final resultMapping = expectedMapping == null ? primitiveMapping(expression.t, expression.pos, "TIf(result-type)") : expectedMapping;
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression,
@@ -1157,7 +1513,7 @@ private class FunctionBuilder {
 		}
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final defaultResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-		appendInstruction(defaultResult, IRIOConstant(defaultConstant(resultMapping.irType, expression)), source, "conditional-default");
+		appendInstruction(defaultResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TIf")), source, "conditional-default");
 		final resultLocalId = createFlowLocal(resultMapping, defaultResult.id, source, "conditional-result");
 		final trueBlock = createGeneratedBlock("conditional-true", source);
 		final falseBlock = createGeneratedBlock("conditional-false", source);
@@ -1333,27 +1689,53 @@ private class FunctionBuilder {
 		return localId;
 	}
 
-	function createGeneratedBlock(role:String, source:HxcSourceSpan):MutableBodyBlock {
+	function createEntryBlock(source:HxcSourceSpan):MutableBodyBlock {
+		final block:MutableBodyBlock = {
+			id: "entry",
+			source: source,
+			instructions: [],
+			generatedOrdinal: null,
+			generatedRole: null,
+			active: true,
+			terminator: null
+		};
+		blocks.push(block);
+		return block;
+	}
+
+	function reserveGeneratedBlock(role:String, source:HxcSourceSpan):MutableBodyBlock {
 		final ordinal = blockOrdinal++;
-		final block = createBlock('block.$ordinal.$role', source, true);
-		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "block-label", role]),
-			CNSLabel(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+		return {
+			id: 'block.$ordinal.$role',
+			source: source,
+			instructions: [],
+			generatedOrdinal: ordinal,
+			generatedRole: role,
+			active: false,
+			terminator: null
+		};
+	}
+
+	function activateGeneratedBlock(block:MutableBodyBlock):MutableBodyBlock {
+		if (block.active || block.generatedOrdinal == null || block.generatedRole == null) {
+			throw new CBodyEmissionError('invalid generated block activation `${block.id}` in `${prepared.irId}`');
+		}
+		block.active = true;
+		blocks.push(block);
+		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "block-label", block.generatedRole]),
+			CNSLabel(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], block.generatedOrdinal);
 		context.symbols.register(request);
 		labelRequests.set(block.id, request);
 		return block;
 	}
 
-	function createBlock(id:String, source:HxcSourceSpan, generated:Bool):MutableBodyBlock {
-		if ((generated && id == "entry") || (!generated && id != "entry")) {
-			throw new CBodyEmissionError('invalid body block identity `$id` in `${prepared.irId}`');
+	function createGeneratedBlock(role:String, source:HxcSourceSpan):MutableBodyBlock
+		return activateGeneratedBlock(reserveGeneratedBlock(role, source));
+
+	static function requireBlock(block:Null<MutableBodyBlock>, context:String):MutableBodyBlock {
+		if (block == null) {
+			throw new CBodyEmissionError('$context requires a generated continuation block');
 		}
-		final block:MutableBodyBlock = {
-			id: id,
-			source: source,
-			instructions: [],
-			terminator: null
-		};
-		blocks.push(block);
 		return block;
 	}
 
@@ -1370,12 +1752,21 @@ private class FunctionBuilder {
 		unsupportedAt(position, node);
 	}
 
-	function defaultConstant(type:HxcIRTypeRef, expression:TypedExpr):HxcIRConstant {
+	function defaultConstant(type:HxcIRTypeRef, expression:TypedExpr, owner:String):HxcIRConstant {
 		return switch type {
 			case IRTBool: IRCBool(false);
 			case IRTInt(_, _): IRCInt("0");
 			case IRTFloat(64): IRCFloat("0.0");
-			case _: unsupported(expression, "TIf(result-type-without-direct-default)");
+			case _: unsupported(expression, '$owner(result-type-without-direct-default)');
+		};
+	}
+
+	function defaultConstantAt(type:HxcIRTypeRef, position:Position, owner:String):HxcIRConstant {
+		return switch type {
+			case IRTBool: IRCBool(false);
+			case IRTInt(_, _): IRCInt("0");
+			case IRTFloat(64): IRCFloat("0.0");
+			case _: unsupportedAt(position, '$owner(result-type-without-direct-default)');
 		};
 	}
 
@@ -1428,7 +1819,7 @@ private class FunctionBuilder {
 
 	function expressionCreatesFlow(expression:TypedExpr):Bool {
 		return switch expression.expr {
-			case TIf(_, _, _): true;
+			case TIf(_, _, _) | TSwitch(_, _, _): true;
 			case TBinop(OpBoolAnd, _, _) | TBinop(OpBoolOr, _, _): true;
 			case TBinop(_, left, right): expressionCreatesFlow(left) || expressionCreatesFlow(right);
 			case TUnop(_, _, operand) | TParenthesis(operand) | TMeta(_, operand) | TCast(operand, _): expressionCreatesFlow(operand);

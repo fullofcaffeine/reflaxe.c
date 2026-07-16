@@ -8,7 +8,9 @@ typed parameters, ordered direct calls, explicit argument conversions, and a
 narrow production C consumer. E2.T04 adds primitive global places plus explicit
 branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
 typed unary/binary operation IDs with direct or request-local implementation
-intent. All other frontend and C lowering remains explicitly gated.
+intent. E2.T06 consumes branch, jump, and switch terminators for the admitted
+primitive statement/value control-flow slice. All other frontend and C lowering
+remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
 itself. It records evaluation order, immutable values, mutable places,
@@ -58,6 +60,8 @@ need to recover intent from target syntax.
 - every value-producing instruction has exactly one typed result, every
   effect-only instruction has none, every block terminates, and every branch,
   switch, failure, and `finally` target exists;
+- every switch constant matches the subject's literal/type family, case values
+  are unique, and every case/default edge validates arguments and cleanup;
 - constant families match their result types; for structurally resolvable
   places, loads match the place type, initialization/store values match their
   destination, and address results are pointers to the addressed type;
@@ -89,7 +93,9 @@ failure. They do not replace later semantic passes such as representation
 selection, ownership proofs, runtime-feature finalization, or exception-
 strategy selection. For the admitted primitive slice, E2.T05 now consumes the
 implementation intent with UB-safe structural C and request-local helpers;
-future operation families still require their own proof.
+E2.T06 consumes branch/jump/switch terminators for primitive statement and
+value control flow. Future operation and control-flow families still require
+their own proof.
 
 ## Runtime and profile policy
 
@@ -145,7 +151,8 @@ forms. Its named runtime requests are explicit non-primitive coverage.
 `diagnostics.json` covers missing termination, use-before-definition, invalid
 cleanup order, path redaction, constant/load/address/store/initializer type
 mismatches, primitive runtime rejection, missing nullable-unwrap failure,
-void/value return mismatches, return-type mismatch, and `HXC1001`.
+switch subject/case-family mismatch, void/value return mismatches, return-type
+mismatch, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 

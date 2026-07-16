@@ -568,10 +568,13 @@ private class HxcIRValidationState {
 				validateBlockEdge(whenTrue, '$path.true', source, available, blocks, regions);
 				validateBlockEdge(whenFalse, '$path.false', source, available, blocks, regions);
 			case IRTSwitch(valueId, cases, defaultEdge):
-				requireValue(valueId, '$path.value', source, available);
+				final switchType = requireValue(valueId, '$path.value', source, available);
 				final values:Map<String, Bool> = [];
 				for (index => item in cases) {
 					validateConstant(item.value, '$path.case:$index.value', source);
+					if (switchType != null && !constantMatchesType(item.value, switchType)) {
+						add(path, 'switch case $index literal family does not match its subject type', source);
+					}
 					final key = constantKey(item.value);
 					if (values.exists(key)) {
 						add(path, 'switch repeats case value `$key`', source);

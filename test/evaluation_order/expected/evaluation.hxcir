@@ -1,193 +1,462 @@
 hxcir schema=2
-module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-64:3
+module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-126:3
   global "global.EvaluationFixture.callFlag" type=bool mutable=true initialization=constant(bool(false)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-2:35
   global "global.EvaluationFixture.counter" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":5:2-5:30
   global "global.EvaluationFixture.shortCircuitIntact" type=bool mutable=true initialization=constant(bool(true)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":3:2-3:44
+  global "global.EvaluationFixture.switchCalls" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":6:2-6:34
   global "global.EvaluationFixture.ternaryIntact" type=bool mutable=true initialization=constant(bool(true)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":4:2-4:39
-  function "function.EvaluationFixture.consumePair" name="EvaluationFixture.consumePair" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":12:60-15:3
-    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":12:60-15:3
-    parameter "parameter.1" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":12:60-15:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":12:60-15:3
-      terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":12:60-15:3
+  function "function.EvaluationFixture.consumePair" name="EvaluationFixture.consumePair" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
+    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
+    parameter "parameter.1" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
+      terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
     end block "entry"
   end function "function.EvaluationFixture.consumePair"
-  function "function.EvaluationFixture.finish" name="EvaluationFixture.finish" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":31:42-33:3
-    parameter "parameter.0" type=u32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":31:42-33:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":31:42-33:3
-      terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:3-32:15
+  function "function.EvaluationFixture.finish" name="EvaluationFixture.finish" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
+    parameter "parameter.0" type=u32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
+      terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":33:3-33:15
     end block "entry"
   end function "function.EvaluationFixture.finish"
-  function "function.EvaluationFixture.keepTernary" name="EvaluationFixture.keepTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":22:37-24:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":22:37-24:3
-      instruction "instruction.0.constant" result="value.0":u32 constant value=int(7) @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:10-23:11
-      terminator return value="value.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:3-23:11
+  function "function.EvaluationFixture.keepTernary" name="EvaluationFixture.keepTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:37-25:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:37-25:3
+      instruction "instruction.0.constant" result="value.0":u32 constant value=int(7) @"test/evaluation_order/fixtures/EvaluationFixture.hx":24:10-24:11
+      terminator return value="value.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":24:3-24:11
     end block "entry"
   end function "function.EvaluationFixture.keepTernary"
-  function "function.EvaluationFixture.main" name="EvaluationFixture.main" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":58:30-64:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":58:30-64:3
-      instruction "instruction.0.call" result="value.0":u32 call dispatch=direct("function.EvaluationFixture.run") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":62:3-62:8
-      terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":58:30-64:3
+  function "function.EvaluationFixture.main" name="EvaluationFixture.main" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
+      instruction "instruction.0.call" result="value.0":u32 call dispatch=direct("function.EvaluationFixture.run") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":124:3-124:8
+      terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
     end block "entry"
   end function "function.EvaluationFixture.main"
-  function "function.EvaluationFixture.run" name="EvaluationFixture.run" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":35:29-57:3
-    local "local.0" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-    local "local.1" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-    local "local.10" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-    local "local.2" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:3-44:70
-    local "local.3" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-    local "local.4" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:3-47:28
-    local "local.5" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-48:30
-    local "local.6" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":53:3-53:26
-    local "local.7" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:3-55:97
-    local "local.8" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-    local "local.9" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":35:29-57:3
-      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:14-36:19
-      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.callFlag") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:3-36:19
-      instruction "instruction.2.constant" result="value.1":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:27-37:31
-      instruction "instruction.3.call" result="value.2":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.1"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:15-37:32
-      instruction "instruction.4.constant" result="value.3":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:46-37:51
-      instruction "instruction.5.call" result="value.4":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.3"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:34-37:52
-      instruction "instruction.6.call" result=- call dispatch=direct("function.EvaluationFixture.consumePair") arguments=["value.2","value.4"] returns=void failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:53
-      instruction "instruction.7.constant" result="value.5":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":39:24-39:28
-      instruction "instruction.8.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.5" @"test/evaluation_order/fixtures/EvaluationFixture.hx":39:3-39:28
-      instruction "instruction.9.constant" result="value.6":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:8
-      instruction "instruction.10.short-circuit-result-initialize" result=- initialize place=local("local.0") value="value.6" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-      terminator branch condition="value.6" true=edge(target="block.0.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
+  function "function.EvaluationFixture.run" name="EvaluationFixture.run" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:29-119:3
+    local "local.0" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+    local "local.1" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+    local "local.10" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+    local "local.11" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+    local "local.12" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+    local "local.13" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":74:3-74:21
+    local "local.14" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":75:3-75:21
+    local "local.15" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":80:4-80:22
+    local "local.16" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+    local "local.17" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":96:3-96:26
+    local "local.18" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":97:3-97:24
+    local "local.19" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:21
+    local "local.2" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+    local "local.20" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:21-98:29
+    local "local.21" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:8-98:21
+    local "local.22" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:3-106:5
+    local "local.23" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    local "local.24" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    local "local.25" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":107:3-107:33
+    local "local.3" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+    local "local.4" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:3-61:70
+    local "local.5" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+    local "local.6" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:3-64:28
+    local "local.7" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:3-65:30
+    local "local.8" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":70:3-70:26
+    local "local.9" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:3-72:97
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:29-119:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":42:14-42:19
+      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.callFlag") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":42:3-42:19
+      instruction "instruction.2.constant" result="value.1":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:27-43:31
+      instruction "instruction.3.call" result="value.2":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.1"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:15-43:32
+      instruction "instruction.4.constant" result="value.3":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:46-43:51
+      instruction "instruction.5.call" result="value.4":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.3"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:34-43:52
+      instruction "instruction.6.call" result=- call dispatch=direct("function.EvaluationFixture.consumePair") arguments=["value.2","value.4"] returns=void failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-43:53
+      instruction "instruction.7.constant" result="value.5":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":45:24-45:28
+      instruction "instruction.8.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.5" @"test/evaluation_order/fixtures/EvaluationFixture.hx":45:3-45:28
+      instruction "instruction.9.constant" result="value.6":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-46:8
+      instruction "instruction.10.short-circuit-result-initialize" result=- initialize place=local("local.0") value="value.6" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+      terminator branch condition="value.6" true=edge(target="block.0.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
     end block "entry"
-    block "block.0.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-      instruction "instruction.11.call" result="value.7":bool call dispatch=direct("function.EvaluationFixture.spoilShortCircuit") arguments=[] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:12-40:31
-      instruction "instruction.12.short-circuit-store" result=- store place=local("local.0") value="value.7" @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-      terminator jump edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
+    block "block.0.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+      instruction "instruction.11.call" result="value.7":bool call dispatch=direct("function.EvaluationFixture.spoilShortCircuit") arguments=[] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:6-47:25
+      instruction "instruction.12.short-circuit-store" result=- store place=local("local.0") value="value.7" @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+      terminator jump edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
     end block "block.0.short-circuit-rhs"
-    block "block.1.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-      instruction "instruction.13.short-circuit-load" result="value.8":bool load place=local("local.0") @"test/evaluation_order/fixtures/EvaluationFixture.hx":40:3-40:31
-      instruction "instruction.14.constant" result="value.9":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:7
-      instruction "instruction.15.short-circuit-result-initialize" result=- initialize place=local("local.1") value="value.9" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-      terminator branch condition="value.9" true=edge(target="block.3.short-circuit-join",arguments=[],cleanup=[]) false=edge(target="block.2.short-circuit-rhs",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
+    block "block.1.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+      instruction "instruction.13.short-circuit-load" result="value.8":bool load place=local("local.0") @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
+      instruction "instruction.14.constant" result="value.9":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-48:7
+      instruction "instruction.15.short-circuit-result-initialize" result=- initialize place=local("local.1") value="value.9" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+      terminator branch condition="value.9" true=edge(target="block.3.short-circuit-join",arguments=[],cleanup=[]) false=edge(target="block.2.short-circuit-rhs",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
     end block "block.1.short-circuit-join"
-    block "block.10.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      instruction "instruction.57.global-load" result="value.35":bool load place=global("global.EvaluationFixture.ternaryIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:73
-      instruction "instruction.58.conditional-default" result="value.36":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      instruction "instruction.59.conditional-result-initialize" result=- initialize place=local("local.10") value="value.36" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      terminator branch condition="value.35" true=edge(target="block.13.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.14.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-    end block "block.10.conditional-true"
-    block "block.11.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      instruction "instruction.66.constant" result="value.40":u32 constant value=int(94) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:93-55:95
-      instruction "instruction.67.conditional-false-store" result=- store place=local("local.9") value="value.40" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      terminator jump edge(target="block.12.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-    end block "block.11.conditional-false"
-    block "block.12.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      instruction "instruction.68.conditional-load" result="value.41":u32 load place=local("local.9") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      instruction "instruction.69.conditional-false-store" result=- store place=local("local.8") value="value.41" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      terminator jump edge(target="block.9.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-    end block "block.12.conditional-join"
-    block "block.13.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      instruction "instruction.60.load" result="value.37":u32 load place=local("local.6") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:76-55:84
-      instruction "instruction.61.conditional-true-store" result=- store place=local("local.10") value="value.37" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      terminator jump edge(target="block.15.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-    end block "block.13.conditional-true"
-    block "block.14.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      instruction "instruction.62.constant" result="value.38":u32 constant value=int(93) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:87-55:89
-      instruction "instruction.63.conditional-false-store" result=- store place=local("local.10") value="value.38" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      terminator jump edge(target="block.15.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-    end block "block.14.conditional-false"
-    block "block.15.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      instruction "instruction.64.conditional-load" result="value.39":u32 load place=local("local.10") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:60-55:89
-      instruction "instruction.65.conditional-true-store" result=- store place=local("local.9") value="value.39" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      terminator jump edge(target="block.12.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-    end block "block.15.conditional-join"
-    block "block.2.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-      instruction "instruction.16.call" result="value.10":bool call dispatch=direct("function.EvaluationFixture.spoilShortCircuit") arguments=[] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:11-41:30
-      instruction "instruction.17.short-circuit-store" result=- store place=local("local.1") value="value.10" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-      terminator jump edge(target="block.3.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
+    block "block.10.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:3-58:30
+      instruction "instruction.36.constant" result="value.24":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":58:25-58:30
+      instruction "instruction.37.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.24" @"test/evaluation_order/fixtures/EvaluationFixture.hx":58:4-58:30
+      terminator jump edge(target="block.11.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:3-58:30
+    end block "block.10.if-true"
+    block "block.11.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:3-58:30
+      instruction "instruction.38.constant" result="value.25":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":60:19-60:23
+      instruction "instruction.39.store" result=- store place=global("global.EvaluationFixture.ternaryIntact") value="value.25" @"test/evaluation_order/fixtures/EvaluationFixture.hx":60:3-60:23
+      instruction "instruction.40.global-load" result="value.26":bool load place=global("global.EvaluationFixture.ternaryIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:36
+      instruction "instruction.41.conditional-default" result="value.27":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      instruction "instruction.42.conditional-result-initialize" result=- initialize place=local("local.5") value="value.27" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      terminator branch condition="value.26" true=edge(target="block.12.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.13.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+    end block "block.11.if-join"
+    block "block.12.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      instruction "instruction.43.call" result="value.28":u32 call dispatch=direct("function.EvaluationFixture.keepTernary") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:39-61:52
+      instruction "instruction.44.conditional-true-store" result=- store place=local("local.5") value="value.28" @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      terminator jump edge(target="block.14.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+    end block "block.12.conditional-true"
+    block "block.13.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      instruction "instruction.45.call" result="value.29":u32 call dispatch=direct("function.EvaluationFixture.spoilTernary") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:55-61:69
+      instruction "instruction.46.conditional-false-store" result=- store place=local("local.5") value="value.29" @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      terminator jump edge(target="block.14.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+    end block "block.13.conditional-false"
+    block "block.14.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      instruction "instruction.47.conditional-load" result="value.30":u32 load place=local("local.5") @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:23-61:69
+      instruction "instruction.48.initialize" result=- initialize place=local("local.4") value="value.30" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":61:3-61:70
+      instruction "instruction.49.constant" result="value.31":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":63:13-63:14
+      instruction "instruction.50.store" result=- store place=global("global.EvaluationFixture.counter") value="value.31" @"test/evaluation_order/fixtures/EvaluationFixture.hx":63:3-63:14
+      instruction "instruction.51.increment-load" result="value.32":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:18-64:25
+      instruction "instruction.52.increment-one" result="value.33":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:18-64:27
+      instruction "instruction.53.increment" result="value.34":u32 binary operation="haxe.u32.add" left="value.32" right="value.33" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:18-64:27
+      instruction "instruction.54.increment-store" result=- store place=global("global.EvaluationFixture.counter") value="value.34" @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:18-64:27
+      instruction "instruction.55.initialize" result=- initialize place=local("local.6") value="value.32" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:3-64:28
+      instruction "instruction.56.increment-load" result="value.35":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:22-65:29
+      instruction "instruction.57.increment-one" result="value.36":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:20-65:29
+      instruction "instruction.58.increment" result="value.37":u32 binary operation="haxe.u32.add" left="value.35" right="value.36" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:20-65:29
+      instruction "instruction.59.increment-store" result=- store place=global("global.EvaluationFixture.counter") value="value.37" @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:20-65:29
+      instruction "instruction.60.initialize" result=- initialize place=local("local.7") value="value.37" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:3-65:30
+      instruction "instruction.61.load" result="value.38":u32 load place=local("local.6") @"test/evaluation_order/fixtures/EvaluationFixture.hx":66:3-66:6
+      instruction "instruction.62.load" result="value.39":u32 load place=local("local.7") @"test/evaluation_order/fixtures/EvaluationFixture.hx":67:3-67:8
+      instruction "instruction.63.load" result="value.40":u32 load place=local("local.4") @"test/evaluation_order/fixtures/EvaluationFixture.hx":68:3-68:11
+      instruction "instruction.64.constant" result="value.41":u32 constant value=int(99) @"test/evaluation_order/fixtures/EvaluationFixture.hx":70:23-70:25
+      instruction "instruction.65.initialize" result=- initialize place=local("local.8") value="value.41" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":70:3-70:26
+      instruction "instruction.66.global-load" result="value.42":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":71:14-71:21
+      instruction "instruction.67.store" result=- store place=local("local.8") value="value.42" @"test/evaluation_order/fixtures/EvaluationFixture.hx":71:3-71:21
+      instruction "instruction.68.global-load" result="value.43":bool load place=global("global.EvaluationFixture.callFlag") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:29
+      instruction "instruction.69.conditional-default" result="value.44":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      instruction "instruction.70.conditional-result-initialize" result=- initialize place=local("local.10") value="value.44" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      terminator branch condition="value.43" true=edge(target="block.15.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.16.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+    end block "block.14.conditional-join"
+    block "block.15.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      instruction "instruction.71.constant" result="value.45":u32 constant value=int(91) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:32-72:34
+      instruction "instruction.72.conditional-true-store" result=- store place=local("local.10") value="value.45" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      terminator jump edge(target="block.17.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+    end block "block.15.conditional-true"
+    block "block.16.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      instruction "instruction.73.global-load" result="value.46":bool load place=global("global.EvaluationFixture.shortCircuitIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:56
+      instruction "instruction.74.conditional-default" result="value.47":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      instruction "instruction.75.conditional-result-initialize" result=- initialize place=local("local.11") value="value.47" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      terminator branch condition="value.46" true=edge(target="block.18.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.19.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+    end block "block.16.conditional-false"
+    block "block.17.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      instruction "instruction.89.conditional-load" result="value.55":u32 load place=local("local.10") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      instruction "instruction.90.initialize" result=- initialize place=local("local.9") value="value.55" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:3-72:97
+      instruction "instruction.91.constant" result="value.56":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":74:19-74:20
+      instruction "instruction.92.initialize" result=- initialize place=local("local.13") value="value.56" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":74:3-74:21
+      instruction "instruction.93.constant" result="value.57":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":75:19-75:20
+      instruction "instruction.94.initialize" result=- initialize place=local("local.14") value="value.57" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":75:3-75:21
+      terminator jump edge(target="block.24.while-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+    end block "block.17.conditional-join"
+    block "block.18.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      instruction "instruction.76.global-load" result="value.48":bool load place=global("global.EvaluationFixture.ternaryIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:73
+      instruction "instruction.77.conditional-default" result="value.49":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      instruction "instruction.78.conditional-result-initialize" result=- initialize place=local("local.12") value="value.49" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      terminator branch condition="value.48" true=edge(target="block.21.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.22.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+    end block "block.18.conditional-true"
+    block "block.19.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      instruction "instruction.85.constant" result="value.53":u32 constant value=int(94) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:93-72:95
+      instruction "instruction.86.conditional-false-store" result=- store place=local("local.11") value="value.53" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      terminator jump edge(target="block.20.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+    end block "block.19.conditional-false"
+    block "block.2.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+      instruction "instruction.16.call" result="value.10":bool call dispatch=direct("function.EvaluationFixture.spoilShortCircuit") arguments=[] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":49:6-49:25
+      instruction "instruction.17.short-circuit-store" result=- store place=local("local.1") value="value.10" @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+      terminator jump edge(target="block.3.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
     end block "block.2.short-circuit-rhs"
-    block "block.3.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-      instruction "instruction.18.short-circuit-load" result="value.11":bool load place=local("local.1") @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:3-41:30
-      instruction "instruction.19.constant" result="value.12":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:19-43:23
-      instruction "instruction.20.store" result=- store place=global("global.EvaluationFixture.ternaryIntact") value="value.12" @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-43:23
-      instruction "instruction.21.global-load" result="value.13":bool load place=global("global.EvaluationFixture.ternaryIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:36
-      instruction "instruction.22.conditional-default" result="value.14":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      instruction "instruction.23.conditional-result-initialize" result=- initialize place=local("local.3") value="value.14" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      terminator branch condition="value.13" true=edge(target="block.4.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.5.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
+    block "block.20.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      instruction "instruction.87.conditional-load" result="value.54":u32 load place=local("local.11") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      instruction "instruction.88.conditional-false-store" result=- store place=local("local.10") value="value.54" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+      terminator jump edge(target="block.17.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
+    end block "block.20.conditional-join"
+    block "block.21.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      instruction "instruction.79.load" result="value.50":u32 load place=local("local.8") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:76-72:84
+      instruction "instruction.80.conditional-true-store" result=- store place=local("local.12") value="value.50" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      terminator jump edge(target="block.23.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+    end block "block.21.conditional-true"
+    block "block.22.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      instruction "instruction.81.constant" result="value.51":u32 constant value=int(93) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:87-72:89
+      instruction "instruction.82.conditional-false-store" result=- store place=local("local.12") value="value.51" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      terminator jump edge(target="block.23.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+    end block "block.22.conditional-false"
+    block "block.23.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      instruction "instruction.83.conditional-load" result="value.52":u32 load place=local("local.12") @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:60-72:89
+      instruction "instruction.84.conditional-true-store" result=- store place=local("local.11") value="value.52" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+      terminator jump edge(target="block.20.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:38-72:95
+    end block "block.23.conditional-join"
+    block "block.24.while-condition" @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+      instruction "instruction.95.load" result="value.58":i32 load place=local("local.14") @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:10-76:15
+      instruction "instruction.96.constant" result="value.59":i32 constant value=int(4) @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:18-76:19
+      instruction "instruction.97.binary" result="value.60":bool binary operation="haxe.i32.less" left="value.58" right="value.59" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:10-76:19
+      terminator branch condition="value.60" true=edge(target="block.25.while-body",arguments=[],cleanup=[]) false=edge(target="block.26.while-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+    end block "block.24.while-condition"
+    block "block.25.while-body" @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+      instruction "instruction.98.increment-load" result="value.61":i32 load place=local("local.14") @"test/evaluation_order/fixtures/EvaluationFixture.hx":77:4-77:9
+      instruction "instruction.99.increment-one" result="value.62":i32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":77:4-77:11
+      instruction "instruction.100.increment" result="value.63":i32 binary operation="haxe.i32.add" left="value.61" right="value.62" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":77:4-77:11
+      instruction "instruction.101.increment-store" result=- store place=local("local.14") value="value.63" @"test/evaluation_order/fixtures/EvaluationFixture.hx":77:4-77:11
+      instruction "instruction.102.load" result="value.64":i32 load place=local("local.14") @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:8-78:13
+      instruction "instruction.103.constant" result="value.65":i32 constant value=int(2) @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:17-78:18
+      instruction "instruction.104.binary" result="value.66":bool binary operation="haxe.i32.equal" left="value.64" right="value.65" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:8-78:18
+      terminator branch condition="value.66" true=edge(target="block.27.if-true",arguments=[],cleanup=[]) false=edge(target="block.28.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:4-79:13
+    end block "block.25.while-body"
+    block "block.26.while-exit" @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+      instruction "instruction.136.constant" result="value.91":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":96:24-96:25
+      instruction "instruction.137.initialize" result=- initialize place=local("local.17") value="value.91" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":96:3-96:26
+      instruction "instruction.138.constant" result="value.92":i32 constant value=int(3) @"test/evaluation_order/fixtures/EvaluationFixture.hx":97:22-97:23
+      instruction "instruction.139.initialize" result=- initialize place=local("local.18") value="value.92" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":97:3-97:24
+      instruction "instruction.140.constant" result="value.93":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:21
+      instruction "instruction.141.initialize" result=- initialize place=local("local.19") value="value.93" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:21
+      instruction "instruction.142.load" result="value.94":i32 load place=local("local.18") @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:21-98:29
+      instruction "instruction.143.initialize" result=- initialize place=local("local.20") value="value.94" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:21-98:29
+      terminator jump edge(target="block.40.while-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+    end block "block.26.while-exit"
+    block "block.27.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:4-79:13
+      terminator jump edge(target="block.24.while-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":79:5-79:13
+    end block "block.27.if-true"
+    block "block.28.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:4-79:13
+      instruction "instruction.105.constant" result="value.67":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":80:20-80:21
+      instruction "instruction.106.initialize" result=- initialize place=local("local.15") value="value.67" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":80:4-80:22
+      terminator jump edge(target="block.29.do-body",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+    end block "block.28.if-join"
+    block "block.29.do-body" @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+      instruction "instruction.107.increment-load" result="value.68":i32 load place=local("local.15") @"test/evaluation_order/fixtures/EvaluationFixture.hx":82:5-82:10
+      instruction "instruction.108.increment-one" result="value.69":i32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":82:5-82:12
+      instruction "instruction.109.increment" result="value.70":i32 binary operation="haxe.i32.add" left="value.68" right="value.69" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":82:5-82:12
+      instruction "instruction.110.increment-store" result=- store place=local("local.15") value="value.70" @"test/evaluation_order/fixtures/EvaluationFixture.hx":82:5-82:12
+      instruction "instruction.111.load" result="value.71":i32 load place=local("local.15") @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:14
+      instruction "instruction.112.constant" result="value.72":i32 constant value=int(2) @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:18-83:19
+      instruction "instruction.113.binary" result="value.73":bool binary operation="haxe.i32.equal" left="value.71" right="value.72" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:19
+      instruction "instruction.114.short-circuit-result-initialize" result=- initialize place=local("local.16") value="value.73" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+      terminator branch condition="value.73" true=edge(target="block.32.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.33.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+    end block "block.29.do-body"
+    block "block.3.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+      instruction "instruction.18.short-circuit-load" result="value.11":bool load place=local("local.1") @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
+      instruction "instruction.19.constant" result="value.12":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-50:7
+      instruction "instruction.20.short-circuit-result-initialize" result=- initialize place=local("local.2") value="value.12" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+      terminator branch condition="value.12" true=edge(target="block.4.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.5.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
     end block "block.3.short-circuit-join"
-    block "block.4.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      instruction "instruction.24.call" result="value.15":u32 call dispatch=direct("function.EvaluationFixture.keepTernary") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:39-44:52
-      instruction "instruction.25.conditional-true-store" result=- store place=local("local.3") value="value.15" @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      terminator jump edge(target="block.6.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-    end block "block.4.conditional-true"
-    block "block.5.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      instruction "instruction.26.call" result="value.16":u32 call dispatch=direct("function.EvaluationFixture.spoilTernary") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:55-44:69
-      instruction "instruction.27.conditional-false-store" result=- store place=local("local.3") value="value.16" @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      terminator jump edge(target="block.6.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-    end block "block.5.conditional-false"
-    block "block.6.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      instruction "instruction.28.conditional-load" result="value.17":u32 load place=local("local.3") @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:23-44:69
-      instruction "instruction.29.initialize" result=- initialize place=local("local.2") value="value.17" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":44:3-44:70
-      instruction "instruction.30.constant" result="value.18":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:13-46:14
-      instruction "instruction.31.store" result=- store place=global("global.EvaluationFixture.counter") value="value.18" @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-46:14
-      instruction "instruction.32.increment-load" result="value.19":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:18-47:25
-      instruction "instruction.33.increment-one" result="value.20":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:18-47:27
-      instruction "instruction.34.increment" result="value.21":u32 binary operation="haxe.u32.add" left="value.19" right="value.20" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:18-47:27
-      instruction "instruction.35.increment-store" result=- store place=global("global.EvaluationFixture.counter") value="value.21" @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:18-47:27
-      instruction "instruction.36.initialize" result=- initialize place=local("local.4") value="value.19" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":47:3-47:28
-      instruction "instruction.37.increment-load" result="value.22":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:22-48:29
-      instruction "instruction.38.increment-one" result="value.23":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:20-48:29
-      instruction "instruction.39.increment" result="value.24":u32 binary operation="haxe.u32.add" left="value.22" right="value.23" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:20-48:29
-      instruction "instruction.40.increment-store" result=- store place=global("global.EvaluationFixture.counter") value="value.24" @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:20-48:29
-      instruction "instruction.41.initialize" result=- initialize place=local("local.5") value="value.24" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-48:30
-      instruction "instruction.42.load" result="value.25":u32 load place=local("local.4") @"test/evaluation_order/fixtures/EvaluationFixture.hx":49:3-49:6
-      instruction "instruction.43.load" result="value.26":u32 load place=local("local.5") @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-50:8
-      instruction "instruction.44.load" result="value.27":u32 load place=local("local.2") @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:3-51:11
-      instruction "instruction.45.constant" result="value.28":u32 constant value=int(99) @"test/evaluation_order/fixtures/EvaluationFixture.hx":53:23-53:25
-      instruction "instruction.46.initialize" result=- initialize place=local("local.6") value="value.28" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":53:3-53:26
-      instruction "instruction.47.global-load" result="value.29":u32 load place=global("global.EvaluationFixture.counter") @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:14-54:21
-      instruction "instruction.48.store" result=- store place=local("local.6") value="value.29" @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-54:21
-      instruction "instruction.49.global-load" result="value.30":bool load place=global("global.EvaluationFixture.callFlag") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:29
-      instruction "instruction.50.conditional-default" result="value.31":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      instruction "instruction.51.conditional-result-initialize" result=- initialize place=local("local.8") value="value.31" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      terminator branch condition="value.30" true=edge(target="block.7.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.8.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-    end block "block.6.conditional-join"
-    block "block.7.conditional-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      instruction "instruction.52.constant" result="value.32":u32 constant value=int(91) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:32-55:34
-      instruction "instruction.53.conditional-true-store" result=- store place=local("local.8") value="value.32" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      terminator jump edge(target="block.9.conditional-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-    end block "block.7.conditional-true"
-    block "block.8.conditional-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      instruction "instruction.54.global-load" result="value.33":bool load place=global("global.EvaluationFixture.shortCircuitIntact") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:56
-      instruction "instruction.55.conditional-default" result="value.34":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      instruction "instruction.56.conditional-result-initialize" result=- initialize place=local("local.9") value="value.34" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-      terminator branch condition="value.33" true=edge(target="block.10.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.11.conditional-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:38-55:95
-    end block "block.8.conditional-false"
-    block "block.9.conditional-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      instruction "instruction.70.conditional-load" result="value.42":u32 load place=local("local.8") @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:21-55:96
-      instruction "instruction.71.initialize" result=- initialize place=local("local.7") value="value.42" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:3-55:97
-      instruction "instruction.72.load" result="value.43":u32 load place=local("local.7") @"test/evaluation_order/fixtures/EvaluationFixture.hx":56:17-56:23
-      instruction "instruction.73.call" result="value.44":u32 call dispatch=direct("function.EvaluationFixture.finish") arguments=["value.43"] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":56:10-56:24
-      terminator return value="value.44" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":56:3-56:24
-    end block "block.9.conditional-join"
+    block "block.30.do-condition" @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+      instruction "instruction.133.load" result="value.88":i32 load place=local("local.15") @"test/evaluation_order/fixtures/EvaluationFixture.hx":93:13-93:18
+      instruction "instruction.134.constant" result="value.89":i32 constant value=int(3) @"test/evaluation_order/fixtures/EvaluationFixture.hx":93:21-93:22
+      instruction "instruction.135.binary" result="value.90":bool binary operation="haxe.i32.less" left="value.88" right="value.89" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":93:13-93:22
+      terminator branch condition="value.90" true=edge(target="block.29.do-body",arguments=[],cleanup=[]) false=edge(target="block.31.do-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+    end block "block.30.do-condition"
+    block "block.31.do-exit" @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+      terminator jump edge(target="block.24.while-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-94:4
+    end block "block.31.do-exit"
+    block "block.32.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+      instruction "instruction.115.load" result="value.74":i32 load place=local("local.14") @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:23-83:28
+      instruction "instruction.116.constant" result="value.75":i32 constant value=int(3) @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:32-83:33
+      instruction "instruction.117.binary" result="value.76":bool binary operation="haxe.i32.equal" left="value.74" right="value.75" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:23-83:33
+      instruction "instruction.118.short-circuit-store" result=- store place=local("local.16") value="value.76" @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+      terminator jump edge(target="block.33.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+    end block "block.32.short-circuit-rhs"
+    block "block.33.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+      instruction "instruction.119.short-circuit-load" result="value.77":bool load place=local("local.16") @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:9-83:33
+      terminator branch condition="value.77" true=edge(target="block.34.if-true",arguments=[],cleanup=[]) false=edge(target="block.35.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:5-84:11
+    end block "block.33.short-circuit-join"
+    block "block.34.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:5-84:11
+      terminator jump edge(target="block.31.do-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":84:6-84:11
+    end block "block.34.if-true"
+    block "block.35.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":83:5-84:11
+      instruction "instruction.120.load" result="value.78":i32 load place=local("local.15") @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:13-85:18
+      terminator switch value="value.78" cases=[int(1)=>edge(target="block.36.switch-case-0",arguments=[],cleanup=[]),int(2)=>edge(target="block.37.switch-case-1",arguments=[],cleanup=[]),int(3)=>edge(target="block.37.switch-case-1",arguments=[],cleanup=[])] default=edge(target="block.38.switch-default",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+    end block "block.35.if-join"
+    block "block.36.switch-case-0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+      instruction "instruction.121.compound-load" result="value.79":i32 load place=local("local.13") @"test/evaluation_order/fixtures/EvaluationFixture.hx":87:7-87:12
+      instruction "instruction.122.load" result="value.80":i32 load place=local("local.14") @"test/evaluation_order/fixtures/EvaluationFixture.hx":87:16-87:21
+      instruction "instruction.123.compound" result="value.81":i32 binary operation="haxe.i32.add" left="value.79" right="value.80" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":87:7-87:21
+      instruction "instruction.124.compound-store" result=- store place=local("local.13") value="value.81" @"test/evaluation_order/fixtures/EvaluationFixture.hx":87:7-87:21
+      terminator jump edge(target="block.39.switch-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+    end block "block.36.switch-case-0"
+    block "block.37.switch-case-1" @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+      instruction "instruction.125.compound-load" result="value.82":i32 load place=local("local.13") @"test/evaluation_order/fixtures/EvaluationFixture.hx":89:7-89:12
+      instruction "instruction.126.load" result="value.83":i32 load place=local("local.15") @"test/evaluation_order/fixtures/EvaluationFixture.hx":89:16-89:21
+      instruction "instruction.127.compound" result="value.84":i32 binary operation="haxe.i32.add" left="value.82" right="value.83" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":89:7-89:21
+      instruction "instruction.128.compound-store" result=- store place=local("local.13") value="value.84" @"test/evaluation_order/fixtures/EvaluationFixture.hx":89:7-89:21
+      terminator jump edge(target="block.39.switch-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+    end block "block.37.switch-case-1"
+    block "block.38.switch-default" @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+      instruction "instruction.129.compound-load" result="value.85":i32 load place=local("local.13") @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:7-91:12
+      instruction "instruction.130.constant" result="value.86":i32 constant value=int(9) @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:16-91:17
+      instruction "instruction.131.compound" result="value.87":i32 binary operation="haxe.i32.add" left="value.85" right="value.86" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:7-91:17
+      instruction "instruction.132.compound-store" result=- store place=local("local.13") value="value.87" @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:7-91:17
+      terminator jump edge(target="block.39.switch-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+    end block "block.38.switch-default"
+    block "block.39.switch-exit" @"test/evaluation_order/fixtures/EvaluationFixture.hx":85:5-92:6
+      terminator jump edge(target="block.30.do-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":81:4-93:23
+    end block "block.39.switch-exit"
+    block "block.4.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+      instruction "instruction.21.constant" result="value.13":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:18-51:22
+      instruction "instruction.22.call" result="value.14":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.13"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:6-51:23
+      instruction "instruction.23.short-circuit-store" result=- store place=local("local.2") value="value.14" @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+      terminator jump edge(target="block.5.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+    end block "block.4.short-circuit-rhs"
+    block "block.40.while-condition" @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+      instruction "instruction.144.load" result="value.95":i32 load place=local("local.19") @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:21
+      instruction "instruction.145.load" result="value.96":i32 load place=local("local.20") @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:21-98:29
+      instruction "instruction.146.binary" result="value.97":bool binary operation="haxe.i32.less" left="value.95" right="value.96" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:8-98:29
+      terminator branch condition="value.97" true=edge(target="block.41.while-body",arguments=[],cleanup=[]) false=edge(target="block.42.while-exit",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+    end block "block.40.while-condition"
+    block "block.41.while-body" @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+      instruction "instruction.147.increment-load" result="value.98":i32 load place=local("local.19") @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:21
+      instruction "instruction.148.increment-one" result="value.99":i32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:29
+      instruction "instruction.149.increment" result="value.100":i32 binary operation="haxe.i32.add" left="value.98" right="value.99" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:29
+      instruction "instruction.150.increment-store" result=- store place=local("local.19") value="value.100" @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:17-98:29
+      instruction "instruction.151.initialize" result=- initialize place=local("local.21") value="value.98" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:8-98:21
+      instruction "instruction.152.compound-load" result="value.101":i32 load place=local("local.17") @"test/evaluation_order/fixtures/EvaluationFixture.hx":99:4-99:14
+      instruction "instruction.153.load" result="value.102":i32 load place=local("local.21") @"test/evaluation_order/fixtures/EvaluationFixture.hx":99:18-99:23
+      instruction "instruction.154.compound" result="value.103":i32 binary operation="haxe.i32.add" left="value.101" right="value.102" implementation=program-local("hxc.i32.add.wrapping") @"test/evaluation_order/fixtures/EvaluationFixture.hx":99:4-99:23
+      instruction "instruction.155.compound-store" result=- store place=local("local.17") value="value.103" @"test/evaluation_order/fixtures/EvaluationFixture.hx":99:4-99:23
+      terminator jump edge(target="block.40.while-condition",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+    end block "block.41.while-body"
+    block "block.42.while-exit" @"test/evaluation_order/fixtures/EvaluationFixture.hx":98:3-99:23
+      instruction "instruction.156.constant" result="value.104":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":101:17-101:18
+      instruction "instruction.157.store" result=- store place=global("global.EvaluationFixture.switchCalls") value="value.104" @"test/evaluation_order/fixtures/EvaluationFixture.hx":101:3-101:18
+      instruction "instruction.158.load" result="value.105":i32 load place=local("local.13") @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:53-102:58
+      instruction "instruction.159.call" result="value.106":i32 call dispatch=direct("function.EvaluationFixture.switchSubject") arguments=["value.105"] returns=i32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.160.initialize" result=- initialize place=local("local.23") value="value.106" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.161.load" result="value.107":i32 load place=local("local.23") @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.162.switch-default-result" result="value.108":u32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.163.switch-result-initialize" result=- initialize place=local("local.24") value="value.108" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      terminator switch value="value.107" cases=[int(18)=>edge(target="block.43.switch-value-case-0",arguments=[],cleanup=[]),int(19)=>edge(target="block.44.switch-value-case-1",arguments=[],cleanup=[])] default=edge(target="block.45.switch-value-default",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    end block "block.42.while-exit"
+    block "block.43.switch-value-case-0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.164.constant" result="value.109":u32 constant value=int(2) @"test/evaluation_order/fixtures/EvaluationFixture.hx":103:13-103:14
+      instruction "instruction.165.switch-case-store" result=- store place=local("local.24") value="value.109" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      terminator jump edge(target="block.46.switch-value-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    end block "block.43.switch-value-case-0"
+    block "block.44.switch-value-case-1" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.166.constant" result="value.110":u32 constant value=int(3) @"test/evaluation_order/fixtures/EvaluationFixture.hx":104:13-104:14
+      instruction "instruction.167.switch-case-store" result=- store place=local("local.24") value="value.110" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      terminator jump edge(target="block.46.switch-value-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    end block "block.44.switch-value-case-1"
+    block "block.45.switch-value-default" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.168.constant" result="value.111":u32 constant value=int(95) @"test/evaluation_order/fixtures/EvaluationFixture.hx":105:13-105:15
+      instruction "instruction.169.switch-default-store" result=- store place=local("local.24") value="value.111" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      terminator jump edge(target="block.46.switch-value-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+    end block "block.45.switch-value-default"
+    block "block.46.switch-value-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.170.switch-result-load" result="value.112":u32 load place=local("local.24") @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:39-102:59
+      instruction "instruction.171.initialize" result=- initialize place=local("local.22") value="value.112" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:3-106:5
+      instruction "instruction.172.constant" result="value.113":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":107:28-107:32
+      instruction "instruction.173.initialize" result=- initialize place=local("local.25") value="value.113" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":107:3-107:33
+      instruction "instruction.174.load" result="value.114":i32 load place=local("local.13") @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:7-108:12
+      instruction "instruction.175.constant" result="value.115":i32 constant value=int(18) @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:16-108:18
+      instruction "instruction.176.binary" result="value.116":bool binary operation="haxe.i32.not-equal" left="value.114" right="value.115" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:7-108:18
+      terminator branch condition="value.116" true=edge(target="block.47.if-true",arguments=[],cleanup=[]) false=edge(target="block.48.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:3-109:25
+    end block "block.46.switch-value-join"
+    block "block.47.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:3-109:25
+      instruction "instruction.177.constant" result="value.117":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":109:20-109:25
+      instruction "instruction.178.store" result=- store place=local("local.25") value="value.117" @"test/evaluation_order/fixtures/EvaluationFixture.hx":109:4-109:25
+      terminator jump edge(target="block.48.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:3-109:25
+    end block "block.47.if-true"
+    block "block.48.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":108:3-109:25
+      instruction "instruction.179.load" result="value.118":i32 load place=local("local.17") @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:7-110:17
+      instruction "instruction.180.constant" result="value.119":i32 constant value=int(3) @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:21-110:22
+      instruction "instruction.181.binary" result="value.120":bool binary operation="haxe.i32.not-equal" left="value.118" right="value.119" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:7-110:22
+      terminator branch condition="value.120" true=edge(target="block.49.if-true",arguments=[],cleanup=[]) false=edge(target="block.50.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:3-111:25
+    end block "block.48.if-join"
+    block "block.49.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:3-111:25
+      instruction "instruction.182.constant" result="value.121":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":111:20-111:25
+      instruction "instruction.183.store" result=- store place=local("local.25") value="value.121" @"test/evaluation_order/fixtures/EvaluationFixture.hx":111:4-111:25
+      terminator jump edge(target="block.50.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:3-111:25
+    end block "block.49.if-true"
+    block "block.5.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+      instruction "instruction.24.short-circuit-load" result="value.15":bool load place=local("local.2") @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:3-51:23
+      instruction "instruction.25.global-load" result="value.16":bool load place=global("global.EvaluationFixture.callFlag") @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:8-52:16
+      instruction "instruction.26.unary" result="value.17":bool unary operation="haxe.bool.not" value="value.16" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:7-52:16
+      terminator branch condition="value.17" true=edge(target="block.6.if-true",arguments=[],cleanup=[]) false=edge(target="block.7.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:3-53:30
+    end block "block.5.short-circuit-join"
+    block "block.50.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:3-111:25
+      instruction "instruction.184.global-load" result="value.122":u32 load place=global("global.EvaluationFixture.switchCalls") @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:7-112:18
+      instruction "instruction.185.convert" result="value.123":i32 convert value="value.122" kind=numeric-wrapping target=i32 implementation=program-local("hxc.u32.to.i32.bits") failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:7-112:23
+      instruction "instruction.186.constant" result="value.124":i32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:22-112:23
+      instruction "instruction.187.binary" result="value.125":bool binary operation="haxe.i32.not-equal" left="value.123" right="value.124" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:7-112:23
+      terminator branch condition="value.125" true=edge(target="block.51.if-true",arguments=[],cleanup=[]) false=edge(target="block.52.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:3-113:25
+    end block "block.50.if-join"
+    block "block.51.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:3-113:25
+      instruction "instruction.188.constant" result="value.126":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":113:20-113:25
+      instruction "instruction.189.store" result=- store place=local("local.25") value="value.126" @"test/evaluation_order/fixtures/EvaluationFixture.hx":113:4-113:25
+      terminator jump edge(target="block.52.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:3-113:25
+    end block "block.51.if-true"
+    block "block.52.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":112:3-113:25
+      instruction "instruction.190.load" result="value.127":bool load place=local("local.25") @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:7-114:20
+      terminator branch condition="value.127" true=edge(target="block.53.if-true",arguments=[],cleanup=[]) false=edge(target="block.54.if-false",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+    end block "block.52.if-join"
+    block "block.53.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+      instruction "instruction.191.load" result="value.128":u32 load place=local("local.22") @"test/evaluation_order/fixtures/EvaluationFixture.hx":115:13-115:29
+      instruction "instruction.192.store" result=- store place=local("local.9") value="value.128" @"test/evaluation_order/fixtures/EvaluationFixture.hx":115:4-115:29
+      terminator jump edge(target="block.55.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+    end block "block.53.if-true"
+    block "block.54.if-false" @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+      instruction "instruction.193.constant" result="value.129":u32 constant value=int(96) @"test/evaluation_order/fixtures/EvaluationFixture.hx":117:13-117:15
+      instruction "instruction.194.store" result=- store place=local("local.9") value="value.129" @"test/evaluation_order/fixtures/EvaluationFixture.hx":117:4-117:15
+      terminator jump edge(target="block.55.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+    end block "block.54.if-false"
+    block "block.55.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":114:3-117:15
+      instruction "instruction.195.load" result="value.130":u32 load place=local("local.9") @"test/evaluation_order/fixtures/EvaluationFixture.hx":118:17-118:23
+      instruction "instruction.196.call" result="value.131":u32 call dispatch=direct("function.EvaluationFixture.finish") arguments=["value.130"] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":118:10-118:24
+      terminator return value="value.131" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":118:3-118:24
+    end block "block.55.if-join"
+    block "block.6.if-true" @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:3-53:30
+      instruction "instruction.27.constant" result="value.18":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":53:25-53:30
+      instruction "instruction.28.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.18" @"test/evaluation_order/fixtures/EvaluationFixture.hx":53:4-53:30
+      terminator jump edge(target="block.7.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:3-53:30
+    end block "block.6.if-true"
+    block "block.7.if-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":52:3-53:30
+      instruction "instruction.29.constant" result="value.19":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-54:8
+      instruction "instruction.30.short-circuit-result-initialize" result=- initialize place=local("local.3") value="value.19" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+      terminator branch condition="value.19" true=edge(target="block.9.short-circuit-join",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-rhs",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+    end block "block.7.if-join"
+    block "block.8.short-circuit-rhs" @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+      instruction "instruction.31.constant" result="value.20":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:18-55:23
+      instruction "instruction.32.call" result="value.21":bool call dispatch=direct("function.EvaluationFixture.setCallFlag") arguments=["value.20"] returns=bool failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":55:6-55:24
+      instruction "instruction.33.short-circuit-store" result=- store place=local("local.3") value="value.21" @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+      terminator jump edge(target="block.9.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+    end block "block.8.short-circuit-rhs"
+    block "block.9.short-circuit-join" @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+      instruction "instruction.34.short-circuit-load" result="value.22":bool load place=local("local.3") @"test/evaluation_order/fixtures/EvaluationFixture.hx":54:3-55:24
+      instruction "instruction.35.global-load" result="value.23":bool load place=global("global.EvaluationFixture.callFlag") @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:7-57:15
+      terminator branch condition="value.23" true=edge(target="block.10.if-true",arguments=[],cleanup=[]) false=edge(target="block.11.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:3-58:30
+    end block "block.9.short-circuit-join"
   end function "function.EvaluationFixture.run"
-  function "function.EvaluationFixture.setCallFlag" name="EvaluationFixture.setCallFlag" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":7:47-10:3
-    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":7:47-10:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":7:47-10:3
-      instruction "instruction.0.store" result=- store place=global("global.EvaluationFixture.callFlag") value="parameter.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:3-8:19
-      terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:3-9:15
+  function "function.EvaluationFixture.setCallFlag" name="EvaluationFixture.setCallFlag" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
+    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
+      instruction "instruction.0.store" result=- store place=global("global.EvaluationFixture.callFlag") value="parameter.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:3-9:19
+      terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":10:3-10:15
     end block "entry"
   end function "function.EvaluationFixture.setCallFlag"
-  function "function.EvaluationFixture.spoilShortCircuit" name="EvaluationFixture.spoilShortCircuit" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":17:43-20:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":17:43-20:3
-      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:24-18:29
-      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:3-18:29
-      instruction "instruction.2.constant" result="value.1":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:10-19:14
-      terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:3-19:14
+  function "function.EvaluationFixture.spoilShortCircuit" name="EvaluationFixture.spoilShortCircuit" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:43-21:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:43-21:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:24-19:29
+      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:3-19:29
+      instruction "instruction.2.constant" result="value.1":bool constant value=bool(true) @"test/evaluation_order/fixtures/EvaluationFixture.hx":20:10-20:14
+      terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":20:3-20:14
     end block "entry"
   end function "function.EvaluationFixture.spoilShortCircuit"
-  function "function.EvaluationFixture.spoilTernary" name="EvaluationFixture.spoilTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":26:38-29:3
-    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":26:38-29:3
-      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:19-27:24
-      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.ternaryIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:3-27:24
-      instruction "instruction.2.constant" result="value.1":u32 constant value=int(8) @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:10-28:11
-      terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:3-28:11
+  function "function.EvaluationFixture.spoilTernary" name="EvaluationFixture.spoilTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:38-30:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:38-30:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:19-28:24
+      instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.ternaryIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:3-28:24
+      instruction "instruction.2.constant" result="value.1":u32 constant value=int(8) @"test/evaluation_order/fixtures/EvaluationFixture.hx":29:10-29:11
+      terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":29:3-29:11
     end block "entry"
   end function "function.EvaluationFixture.spoilTernary"
+  function "function.EvaluationFixture.switchSubject" name="EvaluationFixture.switchSubject" returns=i32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
+    parameter "parameter.0" type=i32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
+    block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
+      instruction "instruction.0.increment-load" result="value.0":u32 load place=global("global.EvaluationFixture.switchCalls") @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:14
+      instruction "instruction.1.increment-one" result="value.1":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:16
+      instruction "instruction.2.increment" result="value.2":u32 binary operation="haxe.u32.add" left="value.0" right="value.1" implementation=static @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:16
+      instruction "instruction.3.increment-store" result=- store place=global("global.EvaluationFixture.switchCalls") value="value.2" @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:16
+      terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":38:3-38:15
+    end block "entry"
+  end function "function.EvaluationFixture.switchSubject"
 end module "EvaluationFixture"

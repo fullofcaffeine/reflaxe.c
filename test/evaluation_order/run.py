@@ -174,10 +174,20 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "short-circuit-store",
         "conditional-true-store",
         "conditional-false-store",
+        "terminator switch",
+        "while-condition",
+        "do-condition",
+        "switch-case-0",
+        "switch-case-1",
+        "switch-exit",
         'load place=global("global.EvaluationFixture.callFlag")',
     ):
         if marker not in run_ir:
             raise EvaluationOrderFailure(f"HxcIR lost explicit sequencing marker {marker!r}")
+    if len(re.findall(r'^    block "[^"]+\.while-condition"', run_ir, re.MULTILINE)) != 2:
+        raise EvaluationOrderFailure("source while and range-for condition blocks drifted")
+    if run_ir.count('direct("function.EvaluationFixture.setCallFlag")') != 4:
+        raise EvaluationOrderFailure("required short-circuit RHS calls drifted")
     if re.search(
         r'instruction "[^"]+\.store" result=- store place=local\(', run_ir
     ) is None:
@@ -190,8 +200,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         r'\s+instruction "[^"]+\.initialize" result=- initialize [^\n]+ value="([^"]+)"',
         run_ir,
     )
-    if len(increment_sequences) != 2:
-        raise EvaluationOrderFailure("increment load/operate/store sequences drifted")
+    if len(increment_sequences) < 2:
+        raise EvaluationOrderFailure("source increment load/operate/store sequences drifted")
     postfix_old, _, postfix_new, postfix_store, postfix_result = increment_sequences[0]
     prefix_old, _, prefix_new, prefix_store, prefix_result = increment_sequences[1]
     if (
@@ -232,11 +242,41 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ]
     if -1 in c_calls or c_calls != sorted(c_calls):
         raise EvaluationOrderFailure("generated C did not materialize call arguments left-to-right")
+    if run_c.count("hxc_method_EvaluationFixture_setCallFlag(") != 4:
+        raise EvaluationOrderFailure("generated C lost a required short-circuit RHS call")
     if "globalzx2Dloadzx2Dresult" not in run_c or "goto hxc_temp_" not in run_c:
         raise EvaluationOrderFailure("generated C lost stable loads or explicit CFG edges")
+    if run_c.count("switch (") != 2:
+        raise EvaluationOrderFailure("generated C lost its statement/value structural switches")
+    for label in (
+        "case 1:",
+        "case 2:",
+        "case 3:",
+        "case 18:",
+        "case 19:",
+        "default:",
+    ):
+        start = run_c.find(label)
+        if start < 0 or "goto hxc_temp_" not in run_c[start : start + 180]:
+            raise EvaluationOrderFailure(
+                f"generated switch arm {label!r} lost its explicit non-fallthrough jump"
+            )
+    arm_labels = re.findall(r'(?m)^\s+(?:case [^:]+|default):$', run_c)
+    jump_arms = re.findall(
+        r'(?m)^\s+(?:case [^:]+|default):\n\s+\{\n\s+goto hxc_temp_[^;]+;\n\s+\}',
+        run_c,
+    )
+    if len(arm_labels) != 7 or len(jump_arms) != len(arm_labels):
+        raise EvaluationOrderFailure("a generated C switch arm can fall through")
+    if "break;" in run_c or "continue;" in run_c:
+        raise EvaluationOrderFailure(
+            "source break/continue escaped the explicit HxcIR edge lowering"
+        )
+    if run_c.count("hxc_method_EvaluationFixture_switchSubject(") != 1:
+        raise EvaluationOrderFailure("switch subject was not evaluated exactly once")
 
     globals_value = report.get("globals")
-    if not isinstance(globals_value, list) or len(globals_value) != 4:
+    if not isinstance(globals_value, list) or len(globals_value) != 5:
         raise EvaluationOrderFailure("referenced static-field registry drifted")
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
@@ -418,6 +458,24 @@ def function_c_name(symbols: dict[str, object], source_symbol: str) -> str:
     return matches[0]
 
 
+def c_name_with_source_prefix(symbols: dict[str, object], source_prefix: str) -> str:
+    entries = symbols.get("symbols")
+    if not isinstance(entries, list):
+        raise EvaluationOrderFailure("symbol table entries are missing")
+    matches = [
+        item.get("cName")
+        for item in entries
+        if isinstance(item, dict)
+        and isinstance(item.get("sourceSymbol"), str)
+        and item["sourceSymbol"].startswith(source_prefix)
+    ]
+    if len(matches) != 1 or not isinstance(matches[0], str):
+        raise EvaluationOrderFailure(
+            f"cannot resolve unique C name with source prefix {source_prefix}"
+        )
+    return matches[0]
+
+
 def compile_and_run_project(
     root: Path,
     sources: list[Path],
@@ -591,6 +649,21 @@ def check_production(selected: str | None = None) -> None:
         if b"hxrt" in b"\n".join(generated_tree(portable).values()).lower():
             raise EvaluationOrderFailure("sequenced primitive project selected hxrt")
         symbols = json.loads((portable / "hxc.symbols.json").read_text())
+        production_source = (portable / "src/program.c").read_text(encoding="utf-8")
+        carrier_name = c_name_with_source_prefix(
+            symbols, "EvaluationFixture.run.selectedBySwitch#"
+        )
+        carrier_declaration = f"uint32_t {carrier_name} = 0;"
+        declaration_index = production_source.find(carrier_declaration)
+        switch_index = production_source.find("switch (", declaration_index)
+        if (
+            declaration_index < 0
+            or switch_index < 0
+            or switch_index - declaration_index > 1000
+        ):
+            raise EvaluationOrderFailure(
+                "production value-switch carrier lost its typed defensive initialization"
+            )
         sources = sorted((portable / "src").glob("*.c"))
         for toolchain in available_compilers(selected):
             for optimization in ("-O0", "-O2"):
@@ -663,7 +736,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"evaluation-order: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "evaluation-order: OK: explicit calls/assignments/static fields/indexing/lazy/ternary/increments, "
+        "evaluation-order: OK: explicit calls/assignments/lazy values, nested loops/jumps, non-fallthrough switches, "
         "Eval differential, and zero-runtime strict C passed"
     )
     return 0

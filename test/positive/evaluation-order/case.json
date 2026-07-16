@@ -7,7 +7,10 @@
   "requirements": [
     "HXC-PROD-002",
     "HXC-COMP-003",
-    "HXC-SEM-004"
+    "HXC-SEM-004",
+    "HXC-SEM-022",
+    "HXC-SEM-023",
+    "HXC-SCAF-004"
   ],
   "sources": [
     "src/reflaxe/c/CCompiler.hx",

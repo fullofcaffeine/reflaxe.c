@@ -1,10 +1,11 @@
-# Explicit Haxe evaluation order
+# Explicit Haxe evaluation order and control flow
 
 E2.T04 makes Haxe sequencing a semantic compiler decision rather than an
 accident of C expression evaluation. The admitted primitive frontend records
 order in validated HxcIR, and `CBodyEmitter` consumes that order as structural
 strict-C11 statements and control flow. It never relies on C operand or
-argument evaluation order.
+argument evaluation order. E2.T06 extends the same edge model to statement
+conditionals, loops, switches, `break`, and `continue`.
 
 ## Sequencing contract
 
@@ -17,7 +18,14 @@ The current source-backed slice covers:
 - `&&` and `||` as branch edges that evaluate the right side only when Haxe
   requires it;
 - value-form `if`/ternary expressions as true/false blocks that store into a
-  typed flow local and rejoin explicitly; and
+  typed flow local and rejoin explicitly;
+- statement `if`/`else` as explicit branch targets, with a join only when at
+  least one source arm continues;
+- pre-test and post-test loops as condition/body/exit blocks, with nested
+  `break` and `continue` targeting the innermost active loop;
+- pinned-Reflaxe range `for` graphs through the same primitive loop path;
+- `Int` statement and value switches whose subject is evaluated once and
+  whose ordered constant cases target explicit blocks; and
 - prefix/postfix primitive increment/decrement as load, constant, typed UB-safe
   operation, store, then selection of the new or old value; and
 - compound arithmetic assignment as one stable destination load, left-to-right
@@ -29,9 +37,13 @@ later expression after Reflaxe preprocessing. Referenced primitive fields
 become typed HxcIR globals with registry-finalized internal C names and direct
 constant initialization.
 
-HxcIR instruction arrays remain semantic order. Lazy and conditional
-expressions create explicit blocks and terminators; their C form uses typed
-labels, `if`, and `goto` nodes. Loads and stores retain structural local/global
+HxcIR instruction arrays remain semantic order. Lazy, conditional, loop, and
+switch expressions create explicit blocks and terminators; their C form uses
+typed labels, `if`, `switch`, and `goto` nodes. Every emitted C case body ends
+in a structural `goto`, including grouped Haxe cases and `default`, so there is
+no user-observable C fallthrough. Source `break` and `continue` are already
+resolved to HxcIR edges and are not reconstructed from C lexical nesting.
+Loads and stores retain structural local/global
 places. No source-derived C fragment, C ternary, raw injection, reflection,
 `Dynamic`, `Any`, or untyped escape is used.
 
@@ -61,10 +73,11 @@ convenience alone is not authority to weaken sequencing.
 
 ## Boundaries
 
-This is expression-valued control flow, not the general statement-control-flow
-implementation. Statement `if`, loops, switches, breaks, and continues remain
-fail-closed for E2.T06. E2.T05 now routes signed updates through wrapping
-program-local helpers and keeps safe `UInt` updates as direct unsigned C. A
+This remains a primitive control-flow slice, not general pattern matching or
+collection iteration. Enum/string/object patterns, Float switches, arbitrary
+iterators, exception edges, and cleanup-bearing exits remain fail-closed.
+E2.T05 routes signed updates through wrapping program-local helpers and keeps
+safe `UInt` updates as direct unsigned C. A
 right operand that creates control flow forces the already evaluated left value
 into a typed flow local before that control flow begins.
 
@@ -92,9 +105,12 @@ npm run snapshots:check
 ```
 
 The suite renders repeated, reversed-input, portable, and metal reports;
-checks exact HxcIR/header/C/symbol snapshots; checks the indexed compound
-assignment IR; runs an Eval oracle; builds real production projects including
-`hxc_runtime=none`; and compiles/runs checked-in and production-generated C
+checks exact HxcIR/header/C/symbol snapshots; checks nested `while`/`do-while`
+and range-loop graphs, innermost jumps, statement/value switches, explicit
+non-fallthrough case edges, exact-once subjects, both required and skipped lazy
+operands, and the indexed compound-assignment IR; runs an Eval oracle; builds
+real production projects including `hxc_runtime=none`; and compiles/runs checked-in
+and production-generated C
 with required GCC and Clang lanes at `-O0` and `-O2` under warning-clean strict
 C11. The arithmetic suite extends that proof to signed updates, compound
 assignment, boundary arithmetic, and eligible UBSan execution.

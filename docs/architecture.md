@@ -23,7 +23,7 @@ CReflaxeCompiler
 
 CCompiler
   -> consumes TypedProgramInput from CompilationContext
-  -> current E2.T05: collects reachable typed functions and captured primitive globals
+  -> current E2.T06: collects reachable typed functions and captured primitive globals
   -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, and UB-safe primitive operations
   -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
@@ -148,7 +148,12 @@ E2.T04 adds captured primitive globals, stable loads, local/global assignment,
 lazy Boolean and value-conditional block graphs, and unsigned increment. E2.T05
 adds typed arithmetic/comparison operations, wrapping signed updates, compound
 assignment, masked shifts, zero-safe division/modulo, bit operations, and the
-defined `Std.int` conversion. Within the remaining unconditional single-block subset, a
+defined `Std.int` conversion. E2.T06 adds statement conditionals, primitive
+pre/post-test and range-loop graphs, innermost loop jumps, and `Int`
+statement/value switches. Every C switch arm jumps explicitly to its HxcIR
+target, and a compiler-exposed value-switch carrier is admitted only after all
+case/default assignments are structurally proven. Within the remaining
+unconditional single-block subset, a
 closed direct-call cycle is compiler-proven non-returning and emitted with
 structural C11 `_Noreturn` plus no unreachable return. Direct
 self-tail calls use registry-named typed argument temporaries and a structural
@@ -157,7 +162,7 @@ units behind the shared header so strict optimized compilation remains
 warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
-[explicit evaluation order](evaluation-order.md); E2.T05 operation selection is
+[explicit evaluation order and control flow](evaluation-order.md); E2.T05 operation selection is
 in [UB-safe primitive arithmetic](arithmetic-semantics.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function set, scans it for

@@ -37,6 +37,7 @@ class HxcIRGolden {
 				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
 				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
+				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
 				voidReturnWithValue: invalidDiagnostics(voidReturnWithValueProgram()),
 				valueReturnWithoutValue: invalidDiagnostics(valueReturnWithoutValueProgram()),
@@ -534,6 +535,19 @@ class HxcIRGolden {
 			instruction("bad.store", null, IRIOStore(IRPLocal("local.value"), "value.bad"), file, 3)
 		],
 			terminator(IRTReturn(null, []), file, 4), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function switchCaseTypeMismatchProgram():HxcIRProgram {
+		final file = "test/negative/SwitchCaseTypeMismatch.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return minimalProgram("invalid.SwitchCaseTypeMismatch", [
+			instruction("bad.subject", result("value.subject", IRTBool), IRIOConstant(IRCBool(true)), file, 2)
+		], terminator(IRTSwitch("value.subject", [
+			{
+				value: IRCInt("1"),
+				edge: loopEdge
+			}
+			], loopEdge), file, 3), [], [], file);
 	}
 
 	static function initializerTypeMismatchProgram():HxcIRProgram {

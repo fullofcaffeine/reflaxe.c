@@ -5,6 +5,9 @@
   "constantTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/ConstantTypeMismatch.hx:2:1-2:2 [module:invalid.ConstantTypeMismatch.function:invalid.ConstantTypeMismatch.main.block:entry.instruction:0:bad.constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "switchCaseTypeMismatch": [
+    "HXC9000 error [profile=portable] test/negative/SwitchCaseTypeMismatch.hx:3:1-3:2 [module:invalid.SwitchCaseTypeMismatch.function:invalid.SwitchCaseTypeMismatch.main.block:entry.terminator] Invalid HxcIR: switch case 0 literal family does not match its subject type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "returnTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/ReturnTypeMismatch.hx:3:1-3:2 [module:invalid.ReturnTypeMismatch.function:invalid.ReturnTypeMismatch.main.block:entry.terminator] Invalid HxcIR: return value type does not match the function return type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

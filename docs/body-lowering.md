@@ -7,8 +7,9 @@ admitted primitive graph as a production C project. E2.T04 adds explicit
 multi-block sequencing for assignments, primitive static fields, lazy Boolean
 operators, value conditionals, and unsigned increments. E2.T05 adds typed
 UB-safe primitive operators, compound updates, signed updates, and `Std.int`.
-This document remains
-the contract for individual body semantics; [static function
+E2.T06 adds statement conditionals, loops, primitive switches, and explicit
+loop jumps without changing the runtime-free compiler-first boundary.
+This document remains the contract for individual body semantics; [static function
 lowering](function-lowering.md) owns graph, prototype, call, and
 executable-entry behavior, while [evaluation order](evaluation-order.md) owns
 the stable-value and control-flow proof.
@@ -28,6 +29,12 @@ the stable-value and control-flow proof.
   captured constant initializers;
 - short-circuit `&&`/`||` and value-form ternary expressions through explicit
   HxcIR blocks;
+- statement `if`/`else`, pre-test `while`, post-test `do-while`, and range
+  `for` forms that the pinned Reflaxe preprocessing exposes as typed primitive
+  loop graphs;
+- nested loop `break`/`continue` through explicit target-owned jump edges;
+- `Int` statement/value switches with typed integer cases and a value-form
+  `default`;
 - `Int`/`UInt`/`Float` arithmetic and comparisons, Haxe division, integer and
   floating modulo, masked integer shifts, and integer bit operations;
 - arithmetic compound assignment plus prefix/postfix numeric increment and
@@ -39,20 +46,32 @@ the stable-value and control-flow proof.
 
 The lowering preserves each typed instruction in Haxe evaluation order. Nested
 lexical blocks may share a semantic block only while they introduce no edge;
-lazy and value-conditional forms create explicit branch/jump blocks and typed
-flow locals. Locals and globals remain addressable HxcIR places, while
-constants, loads, calls, and pure operators produce immutable values.
+lazy, conditional, loop, and switch forms create explicit branch/jump/switch
+blocks and typed flow locals. Each Haxe switch arm has its own HxcIR target and
+the structural C switch immediately jumps to that target, so one arm can never
+fall through into another. Locals and globals remain addressable HxcIR places,
+while constants, loads, calls, and pure operators produce immutable values.
+
+The pinned Reflaxe pass may expose a value switch as an uninitialized temporary
+followed by a switch that assigns it. The frontend admits that carrier only
+after structurally proving that every case and `default` assigns the same typed
+local. It emits a defensive typed initialization before those stores, so no C
+path can read indeterminate storage and general uninitialized Haxe locals remain
+fail-closed.
 
 Return validity is checked twice. Frontend lowering maps the typed function and
 return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Default/optional/rest parameters, indirect calls, statement control flow,
-source array/index lowering, instance objects/fields, strings, closures,
-allocation, exceptions, and cleanup remain outside this slice. The first
+Default/optional/rest parameters, indirect calls, collection/iterator `for`
+lowering, pattern/enum/string/Float switches, source array/index lowering,
+instance objects/fields, strings, closures, allocation, exceptions, and cleanup
+remain outside this slice. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
+Source that remains after a terminating return or loop jump receives the same
+stable source-positioned `HXC1001` family.
 
 ## Names, source mapping, and C shape
 
@@ -106,9 +125,11 @@ npm run test:arithmetic-semantics
 npm run snapshots:check
 ```
 
-The focused suite renders twice, reverses function discovery order, compares
-portable with metal, checks exact HxcIR/C/symbol snapshots, proves shadow-safe
-names and exact diagnostic ranges, and compiles/runs mapped and unmapped C with
+The focused body and evaluation suites render twice, reverse function discovery
+order, compare portable with metal, check exact HxcIR/C/symbol snapshots, prove
+shadow-safe names, exact unsupported/unreachable diagnostic ranges, nested loop jumps,
+non-fallthrough switches, and exact-once short-circuit/switch evaluation. They
+compile/run mapped and unmapped C with
 available GCC and Clang at `-O0` and `-O2` under
 `-std=c11 -Wall -Wextra -Werror -Wconversion -Wsign-conversion` and
 `-pedantic-errors`. Required CI lanes pin each compiler family and verify its

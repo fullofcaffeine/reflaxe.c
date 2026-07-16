@@ -179,7 +179,11 @@ def check_diagnostics(report: dict[str, object]) -> None:
     serialized = json.dumps(actual, sort_keys=True)
     if "HXC1001" not in serialized or "HXC9000" not in serialized:
         raise HxcIRFailure("negative fixtures lost stable unsupported/internal diagnostic IDs")
-    for diagnostic_key in ("primitiveRuntimeConversion", "nullableUnwrapWithoutFailure"):
+    for diagnostic_key in (
+        "primitiveRuntimeConversion",
+        "nullableUnwrapWithoutFailure",
+        "switchCaseTypeMismatch",
+    ):
         if diagnostic_key not in actual:
             raise HxcIRFailure(f"negative fixtures lost {diagnostic_key} validation")
     if str(ROOT) in serialized or re.search(r"\[profile=[^]]+\] (?:/|[A-Za-z]:\\)", serialized):
@@ -206,7 +210,7 @@ def main() -> int:
 
     print(
         "hxc-ir: OK: deterministic source-aware dumps, explicit side effects/cleanup, "
-        "typed dispatch/runtime intent, and stable negative diagnostics"
+        "typed dispatch/runtime intent, switch validation, and stable negative diagnostics"
     )
     return 0
 
