@@ -20,18 +20,20 @@ hxc_status hxc_string_copy(
 ) {
   void *memory = NULL;
   uint8_t *data;
+  size_t capacity;
   size_t index;
   hxc_status status;
 
   if (out_string == NULL || (source.data == NULL && source.length != 0u)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
-  if (source.length == SIZE_MAX) {
-    return HXC_STATUS_SIZE_OVERFLOW;
+  status = hxc_size_add(source.length, 1u, &capacity);
+  if (status != HXC_STATUS_OK) {
+    return status;
   }
   status = hxc_alloc(
     allocator,
-    source.length + 1u,
+    capacity,
     HXC_ALIGNOF(uint8_t),
     &memory
   );
@@ -47,7 +49,7 @@ hxc_status hxc_string_copy(
 
   out_string->data = data;
   out_string->length = source.length;
-  out_string->capacity = source.length + 1u;
+  out_string->capacity = capacity;
   out_string->allocator = *allocator;
   return HXC_STATUS_OK;
 }

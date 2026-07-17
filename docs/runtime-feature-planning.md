@@ -98,9 +98,9 @@ a generated-Haxe support claim.
 | --- | --- |
 | Portable/metal | One planner serves both. Portable defaults to `auto + summary`; metal defaults to `minimal + warn`; explicit valid combinations remain available. |
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. |
-| Environment | The provisional native seed is compile-checked only for hosted and freestanding C; WASI and Emscripten requests fail until dedicated evidence exists. |
+| Environment | The native allocator has hosted execution and freestanding custom-allocator/no-libc-allocation evidence. Other seed surfaces are compile-checked for hosted/freestanding only; WASI and Emscripten requests fail until dedicated evidence exists. |
 | Generated C | Existing admitted Haxe programs remain byte-stable runtime-free C. Selective seed packages are independently authored native evidence, not generated Haxe output. |
-| Public ABI | The split headers and `hxc_` symbols are provisional. E4.T02/E4.T03 harden allocator/string contracts, and E4.T11 owns ABI/manifest stabilization. |
+| Public ABI | The allocator's internal ownership/callback contract and C/C++ layout are hardened, but every split header and `hxc_` symbol remains provisional. E4.T03 owns strings, E4.T11 owns runtime ABI/manifest stabilization, and E7 owns exported APIs. |
 
 ## Exact packaging
 
@@ -119,6 +119,13 @@ header, source, and symbols. It compiles and runs both packages under strict
 GCC and Clang lanes and inspects the alloc-only link for omitted string symbols.
 It also covers cycle, unknown-dependency, policy, override, environment,
 reserved-feature, and provisional-availability failures.
+
+The separate [allocator ownership contract](allocator-abi.md) defines the
+E4.T02 zero-size, alignment, checked-size, out-parameter, failure-atomicity, and
+identity rules. Required native lanes additionally run the alloc slice against
+a static custom arena in `HXC_FREESTANDING` mode, reject undefined libc
+allocation symbols, and compare C and C++ layout facts. This stronger native
+evidence does not make `alloc` compiler-selectable.
 
 The focused Haxe gate renders and packages twice before comparing the canonical
 snapshots. Native CI then uses `--native-only` to validate the checked-in catalog

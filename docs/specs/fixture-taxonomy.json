@@ -582,6 +582,8 @@
       "status": "seed-only",
       "assertions": [
         "strict C11 and C++17 compile/link/run with available matched toolchains",
+        "hosted and custom freestanding allocator cases prove checked sizes, over-alignment, failure atomicity, identity-preserving ownership, address/undefined sanitizer cleanliness, and no freestanding libc allocation symbols",
+        "C and C++ consumers agree on allocator callback types, sizes, alignments, and field offsets",
         "independent C-library and opaque-handle C++-shim fixtures run",
         "these native inputs are not described as Haxe-generated output"
       ]

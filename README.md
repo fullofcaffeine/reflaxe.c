@@ -255,7 +255,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
 | `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices. |
-| `runtime-hxrt-seed` | `scaffold-only` | A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently. |
+| `runtime-hxrt-seed` | `scaffold-only` | A hardened native allocator contract plus provisional string, status, and Int32 runtime seeds compile independently. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |
 | `symbol-registry` | `implemented` | Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented. |

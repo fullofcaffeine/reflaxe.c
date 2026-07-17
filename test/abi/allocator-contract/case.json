@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "allocator-contract",
+  "role": "fixture",
+  "type": "abi",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-019",
+    "HXC-RT-005",
+    "HXC-RT-011"
+  ],
+  "sources": [
+    "docs/allocator-abi.md",
+    "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/test/allocator_abi.c",
+    "runtime/hxrt/test/allocator_contract.c",
+    "runtime/hxrt/test/public_header_cpp.cpp",
+    "runtime/hxrt/test/runtime_smoke.c",
+    "scripts/ci/runtime_smoke.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/ci/runtime_smoke.py"
+    ],
+    "workingDirectory": "test/abi/allocator-contract",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "native-smoke: OK: .*freestanding-custom-allocator-run.*c-cxx17-allocator-layout-run"
+    },
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/allocator.h",
+        "format": "header",
+        "comparison": "layout"
+      },
+      {
+        "path": "runtime/hxrt/test/allocator_abi.c",
+        "format": "c",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

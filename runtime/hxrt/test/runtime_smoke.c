@@ -13,39 +13,66 @@
 
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
+  hxc_allocation allocation = HXC_ALLOCATION_INITIALIZER;
   hxc_owned_string owned = {0};
   hxc_string_view view;
   void *memory = NULL;
+  void *previous;
+  size_t checked_size = 0u;
   int32_t quotient = 0;
   int32_t remainder = 0;
 
   HXC_CHECK(hxc_runtime_abi_version() == HXC_RUNTIME_ABI_VERSION);
+  HXC_CHECK(HXC_RUNTIME_ABI_MAJOR == 0u && HXC_RUNTIME_ABI_MINOR == 2u);
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_OK), "HXC_STATUS_OK") == 0);
   HXC_CHECK(strcmp(hxc_status_name((hxc_status)42), "HXC_STATUS_UNKNOWN") == 0);
   HXC_CHECK(hxc_allocator_is_valid(&allocator));
+  HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocator));
+  HXC_CHECK(hxc_size_add(SIZE_MAX, 1u, &checked_size) == HXC_STATUS_SIZE_OVERFLOW);
+  HXC_CHECK(hxc_size_mul(SIZE_MAX, 2u, &checked_size) == HXC_STATUS_SIZE_OVERFLOW);
+
+  memory = &checked_size;
+  HXC_CHECK(hxc_alloc(&allocator, 0u, 256u, &memory) == HXC_STATUS_OK);
+  HXC_CHECK(memory == NULL);
 
   HXC_CHECK(
-    hxc_alloc(&allocator, 16u, HXC_ALIGNOF(max_align_t), &memory)
+    hxc_alloc(&allocator, 16u, 256u, &memory)
       == HXC_STATUS_OK
   );
   HXC_CHECK(memory != NULL);
+  HXC_CHECK(((uintptr_t)memory % (uintptr_t)256u) == (uintptr_t)0u);
   ((uint8_t *)memory)[0] = UINT8_C(0xA5);
+  previous = memory;
+  HXC_CHECK(
+    hxc_realloc(&allocator, memory, 16u, SIZE_MAX, 256u, &memory)
+      == HXC_STATUS_SIZE_OVERFLOW
+  );
+  HXC_CHECK(memory == previous);
+  HXC_CHECK(((uint8_t *)memory)[0] == UINT8_C(0xA5));
   HXC_CHECK(
     hxc_realloc(
       &allocator,
       memory,
       16u,
       32u,
-      HXC_ALIGNOF(max_align_t),
+      256u,
       &memory
     ) == HXC_STATUS_OK
   );
   HXC_CHECK(memory != NULL);
   HXC_CHECK(((uint8_t *)memory)[0] == UINT8_C(0xA5));
   HXC_CHECK(
-    hxc_free(&allocator, memory, 32u, HXC_ALIGNOF(max_align_t))
+    hxc_free(&allocator, memory, 32u, 256u)
       == HXC_STATUS_OK
   );
+
+  HXC_CHECK(
+    hxc_allocation_allocate(&allocator, 8u, 8u, 128u, &allocation)
+      == HXC_STATUS_OK
+  );
+  HXC_CHECK(hxc_allocation_is_valid(&allocation));
+  HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocation.allocator));
+  HXC_CHECK(hxc_allocation_dispose(&allocation) == HXC_STATUS_OK);
 
   view = hxc_string_view_from_cstr("h\xC3\xA9");
   HXC_CHECK(view.length == 3u);

@@ -673,21 +673,25 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "A provisional native allocator, string, status, and Int32 runtime ABI seed compiles independently.",
-      "scope": "Hosted/freestanding C, C++17 header consumption, and exact alloc-only/string packages validate only the split native seed itself.",
+      "summary": "A hardened native allocator contract plus provisional string, status, and Int32 runtime seeds compile independently.",
+      "scope": "Hosted and custom freestanding allocator behavior, C/C++ layout agreement, and exact alloc-only/string packages validate only the split native seed itself.",
       "evidence": [
+        "docs/allocator-abi.md",
         "runtime/hxrt/include/hxc_runtime.h",
         "runtime/hxrt/include/hxrt/allocator.h",
         "runtime/hxrt/src/allocator.c",
         "runtime/hxrt/features.json",
-        "runtime/hxrt/test/runtime_smoke.c"
+        "runtime/hxrt/test/allocator_contract.c",
+        "runtime/hxrt/test/runtime_smoke.c",
+        "test/abi/allocator-contract/case.json"
       ],
       "owners": [
         "E4.T01",
         "E4.T02"
       ],
       "limitations": [
-        "Generated Haxe does not select or link this seed, and it is not an unconditional runtime core."
+        "Generated Haxe does not select or link this seed, and it is not an unconditional runtime core.",
+        "The allocator structs are an internal native-seed contract, not a stable generated public C ABI."
       ]
     },
     {

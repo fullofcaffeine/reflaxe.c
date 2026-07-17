@@ -24,13 +24,21 @@ class RuntimeFeatureCatalog {
 				environments, [], [header("base.h"), header("abi.h"), source("abi.c")], ["hxc_runtime_abi_version"], [], []),
 			new RuntimeFeatureDefinition(status, "Provisional status values and symbolic names for native seed evidence.", NativeSeedOnly, true, environments,
 				[runtimeAbi], [header("status.h"), source("status.c")], ["hxc_status_name"], [], []),
-			new RuntimeFeatureDefinition(alloc, "Provisional allocator callbacks and checked allocation operations for native seed evidence.", NativeSeedOnly,
+			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.", NativeSeedOnly,
 				true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
 					"hxc_allocator_is_valid",
+					"hxc_allocator_same_identity",
+					"hxc_size_add",
+					"hxc_size_mul",
 					"hxc_alloc",
 					"hxc_realloc",
-					"hxc_free"
+					"hxc_free",
+					"hxc_allocation_is_valid",
+					"hxc_allocation_allocate",
+					"hxc_allocation_resize",
+					"hxc_allocation_move",
+					"hxc_allocation_dispose"
 				],
 				[], []),
 			new RuntimeFeatureDefinition(string, "Provisional byte-view and owned-copy string seed; full Haxe String semantics remain E4.T03.",

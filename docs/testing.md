@@ -28,7 +28,7 @@ generated-Haxe `hxrt` support.
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, deterministic feature closure, and selective provisional native-seed packages; no generated-Haxe `hxrt` proof yet |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C, plus static initialization against the pinned Haxe JavaScript generator; HxcIR indexing oracle remains semantic-only |
-| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Independent native seed only |
+| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator seed plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
 The canonical directories are stable homes for new cases. Existing focused
@@ -264,6 +264,18 @@ renders. Strict GCC and Clang jobs separately rebuild both closures from the
 validated checked-in catalog and plan, without needing Haxe in the native-only
 environment, then reject string symbols in the alloc-only link. See
 [runtime feature planning and selective packaging](runtime-feature-planning.md).
+
+`test/abi/allocator-contract` registers the E4.T02 internal allocator boundary.
+The native matrix proves checked overflow and zero-size behavior, hosted
+over-alignment, failure-atomic resize/out-parameters, optional-reallocate
+fallback, identity-preserving owner moves, and disposal through the stored
+allocator, then repeats the hosted path under address/undefined sanitizers. Its
+freestanding object is inspected for undefined libc allocation symbols before
+a static-arena/failure-injection fixture is linked and run. A C layout producer
+and C++17 consumer compare callback types plus every allocator and owner size,
+alignment, and field offset. This is an internal native-seed contract, not
+generated-Haxe runtime selection or public ABI stability. See
+[allocator ownership](allocator-abi.md).
 
 ## Examples are product proofs, not implicit tests
 

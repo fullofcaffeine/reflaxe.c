@@ -97,10 +97,18 @@
       "availability": "native-seed-only",
       "symbols": [
         "hxc_alloc",
+        "hxc_allocation_allocate",
+        "hxc_allocation_dispose",
+        "hxc_allocation_is_valid",
+        "hxc_allocation_move",
+        "hxc_allocation_resize",
         "hxc_allocator_is_valid",
+        "hxc_allocator_same_identity",
         "hxc_default_allocator",
         "hxc_free",
-        "hxc_realloc"
+        "hxc_realloc",
+        "hxc_size_add",
+        "hxc_size_mul"
       ],
       "artifacts": [
         {
@@ -116,7 +124,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Provisional allocator callbacks and checked allocation operations for native seed evidence.",
+      "summary": "Hardened allocator ownership and failure contracts with hosted and custom native evidence.",
       "defines": [],
       "environments": [
         "freestanding",

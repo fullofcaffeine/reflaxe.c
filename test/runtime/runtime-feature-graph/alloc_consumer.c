@@ -4,16 +4,29 @@
 
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
-  void *memory = NULL;
+  hxc_allocation allocation = HXC_ALLOCATION_INITIALIZER;
 
   if (hxc_runtime_abi_version() != HXC_RUNTIME_ABI_VERSION) {
     return 1;
   }
-  if (hxc_alloc(&allocator, 8u, HXC_ALIGNOF(max_align_t), &memory) != HXC_STATUS_OK) {
+  if (hxc_allocation_allocate(
+      &allocator,
+      2u,
+      4u,
+      HXC_ALIGNOF(max_align_t),
+      &allocation
+    ) != HXC_STATUS_OK) {
     return 2;
   }
-  if (hxc_free(&allocator, memory, 8u, HXC_ALIGNOF(max_align_t)) != HXC_STATUS_OK) {
+  if (!hxc_allocation_is_valid(&allocation)
+    || !hxc_allocator_same_identity(&allocator, &allocation.allocator)) {
     return 3;
+  }
+  if (hxc_allocation_resize(&allocation, 4u, 4u) != HXC_STATUS_OK) {
+    return 4;
+  }
+  if (hxc_allocation_dispose(&allocation) != HXC_STATUS_OK) {
+    return 5;
   }
   (void)puts("runtime-feature-alloc: OK");
   return 0;

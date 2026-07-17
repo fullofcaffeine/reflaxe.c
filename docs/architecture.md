@@ -343,9 +343,12 @@ The admitted primitive compiler path uses this planner for its positive empty
 plan, so its `hxc.runtime-plan.json` means no `hxrt` include, source, define,
 library, or symbol exists in the build. Runtime-requirement inference and the
 complete blocker-producing `hxc_runtime=none` eligibility pass remain later
-work. The checked-in allocator/status/string definitions are provisional
-`native-seed-only` evidence and are rejected for generated Haxe until their
-owning semantic and ABI tasks promote them. See
+work. The checked-in allocator contract now has E4.T02 native evidence for
+checked sizes, over-alignment, failure atomicity, custom freestanding
+allocation, cross-boundary identity, and C/C++ layout agreement. Status and
+string remain broader provisional seeds, and every slice is still
+`native-seed-only` and rejected for generated Haxe until its semantic and ABI
+owners promote it. See [allocator ownership](allocator-abi.md) and
 [runtime feature planning](runtime-feature-planning.md).
 
 Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.

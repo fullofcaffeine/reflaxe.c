@@ -233,10 +233,18 @@
         "availability": "native-seed-only",
         "symbols": [
           "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
           "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
           "hxc_default_allocator",
           "hxc_free",
-          "hxc_realloc"
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
         ],
         "artifacts": [
           "runtime/include/hxrt/allocator.h",
@@ -373,12 +381,20 @@
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
       "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
       "hxc_default_allocator",
       "hxc_free",
       "hxc_owned_string_dispose",
       "hxc_realloc",
       "hxc_runtime_abi_version",
+      "hxc_size_add",
+      "hxc_size_mul",
       "hxc_status_name",
       "hxc_string_copy",
       "hxc_string_view_from_cstr"
@@ -475,10 +491,18 @@
         "availability": "native-seed-only",
         "symbols": [
           "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
           "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
           "hxc_default_allocator",
           "hxc_free",
-          "hxc_realloc"
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
         ],
         "artifacts": [
           "runtime/include/hxrt/allocator.h",
@@ -567,11 +591,19 @@
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
       "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
       "hxc_default_allocator",
       "hxc_free",
       "hxc_realloc",
       "hxc_runtime_abi_version",
+      "hxc_size_add",
+      "hxc_size_mul",
       "hxc_status_name"
     ],
     "diagnosticMode": "off",
@@ -667,10 +699,18 @@
         "availability": "native-seed-only",
         "symbols": [
           "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
           "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
           "hxc_default_allocator",
           "hxc_free",
-          "hxc_realloc"
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
         ],
         "artifacts": [
           "runtime/include/hxrt/allocator.h",
@@ -803,12 +843,20 @@
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
       "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
       "hxc_default_allocator",
       "hxc_free",
       "hxc_owned_string_dispose",
       "hxc_realloc",
       "hxc_runtime_abi_version",
+      "hxc_size_add",
+      "hxc_size_mul",
       "hxc_status_name",
       "hxc_string_copy",
       "hxc_string_view_from_cstr"

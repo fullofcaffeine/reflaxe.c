@@ -18,6 +18,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_INCLUDE = ROOT / "runtime/hxrt/include"
 RUNTIME_SOURCES = tuple(sorted((ROOT / "runtime/hxrt/src").glob("*.c")))
 RUNTIME_SMOKE = ROOT / "runtime/hxrt/test/runtime_smoke.c"
+ALLOCATOR_CONTRACT = ROOT / "runtime/hxrt/test/allocator_contract.c"
+ALLOCATOR_ABI = ROOT / "runtime/hxrt/test/allocator_abi.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
 RUNTIME_FEATURE_GRAPH = ROOT / "test/runtime/runtime-feature-graph/run.py"
 DECLARATION_PLAN = ROOT / "test/declaration_plan"
@@ -226,6 +228,48 @@ def run_executable(executable: Path, sentinel: str, *, label: str) -> None:
         )
 
 
+def run_silent_executable(executable: Path, *, label: str) -> None:
+    print(f"native-smoke: RUN {label}: {executable}")
+    result = command_result([str(executable)])
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise NativeSmokeFailure(
+            f"{label} produced unexpected results\n"
+            f"exit: {result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
+def require_no_allocator_libc_symbols(object_path: Path, *, label: str) -> None:
+    nm = shutil.which("nm")
+    if nm is None:
+        raise NativeSmokeFailure(f"{label} requires nm for undefined-symbol evidence")
+    result = command_result([nm, "-u", str(object_path)])
+    if result.returncode != 0:
+        raise NativeSmokeFailure(
+            f"{label} could not inspect undefined symbols\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    forbidden = {
+        "aligned_alloc",
+        "calloc",
+        "free",
+        "malloc",
+        "posix_memalign",
+        "realloc",
+    }
+    found: set[str] = set()
+    for line in result.stdout.splitlines():
+        parts = line.split()
+        if not parts:
+            continue
+        symbol = parts[-1].lstrip("_").split("@", 1)[0]
+        if symbol in forbidden:
+            found.add(symbol)
+    if found:
+        raise NativeSmokeFailure(
+            f"{label} retained forbidden libc symbols: {', '.join(sorted(found))}"
+        )
+
+
 def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     build.mkdir(parents=True, exist_ok=True)
     family = toolchain.family
@@ -383,6 +427,31 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     lanes.append("hosted-runtime-run")
 
+    allocator_sanitizer_executable = build / "allocator_sanitizer"
+    run_command(
+        [
+            toolchain.cc,
+            *C_STRICT_FLAGS,
+            "-O1",
+            "-g",
+            "-fno-omit-frame-pointer",
+            "-fno-sanitize-recover=all",
+            "-fsanitize=address,undefined",
+            f"-I{RUNTIME_INCLUDE}",
+            *(str(source) for source in RUNTIME_SOURCES),
+            str(RUNTIME_SMOKE),
+            "-o",
+            str(allocator_sanitizer_executable),
+        ],
+        label=f"{family} hosted allocator address/undefined sanitizer build",
+    )
+    run_executable(
+        allocator_sanitizer_executable,
+        "runtime-smoke: OK",
+        label=f"{family} hosted allocator address/undefined sanitizer execution",
+    )
+    lanes.append("allocator-address-undefined-sanitizer-run")
+
     run_command(
         [
             toolchain.cc,
@@ -397,8 +466,57 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     lanes.append("freestanding-runtime-compile")
 
+    freestanding_flags = (
+        *C_STRICT_FLAGS,
+        "-ffreestanding",
+        "-DHXC_FREESTANDING=1",
+    )
+    freestanding_allocator_object = build / "freestanding_allocator.o"
+    allocator_contract_object = build / "allocator_contract.o"
+    allocator_contract_executable = build / "allocator_contract"
+    compile_object(
+        toolchain.cc,
+        freestanding_flags,
+        ROOT / "runtime/hxrt/src/allocator.c",
+        freestanding_allocator_object,
+        includes=(RUNTIME_INCLUDE,),
+        label=f"{family} freestanding allocator object",
+    )
+    require_no_allocator_libc_symbols(
+        freestanding_allocator_object,
+        label=f"{family} freestanding allocator",
+    )
+    compile_object(
+        toolchain.cc,
+        freestanding_flags,
+        ALLOCATOR_CONTRACT,
+        allocator_contract_object,
+        includes=(RUNTIME_INCLUDE,),
+        label=f"{family} custom allocator contract fixture",
+    )
+    link_executable(
+        toolchain.cc,
+        (freestanding_allocator_object, allocator_contract_object),
+        allocator_contract_executable,
+        label=f"{family} custom allocator contract link",
+    )
+    run_silent_executable(
+        allocator_contract_executable,
+        label=f"{family} custom allocator contract execution",
+    )
+    lanes.append("freestanding-custom-allocator-run")
+
+    allocator_abi_object = build / "allocator_abi.o"
     cpp_header_object = build / "public_header_cpp.o"
     cpp_header_executable = build / "public_header_cpp"
+    compile_object(
+        toolchain.cc,
+        C_STRICT_FLAGS,
+        ALLOCATOR_ABI,
+        allocator_abi_object,
+        includes=(RUNTIME_INCLUDE,),
+        label=f"{family} C allocator ABI layout producer",
+    )
     compile_object(
         toolchain.cxx,
         CXX_STRICT_FLAGS,
@@ -409,7 +527,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
     )
     link_executable(
         toolchain.cxx,
-        (*runtime_objects, cpp_header_object),
+        (*runtime_objects, allocator_abi_object, cpp_header_object),
         cpp_header_executable,
         label=f"{family} C++ public-header link",
     )
@@ -418,7 +536,7 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         "public-header-cpp: OK",
         label=f"{family} C++ public-header execution",
     )
-    lanes.append("cxx17-public-header-run")
+    lanes.append("c-cxx17-allocator-layout-run")
 
     point_include = POINTLIB / "include"
     point_object = build / "pointlib.o"
