@@ -1,0 +1,11 @@
+{
+  "capabilities": [
+    "sys-println-literal"
+  ],
+  "profile": "portable",
+  "modules": [
+    "Sys"
+  ],
+  "status": "analyzed-selected-stdlib-use",
+  "schemaVersion": 1
+}

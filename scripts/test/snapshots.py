@@ -573,6 +573,33 @@ def string_output_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def hello_artifacts() -> list[Artifact]:
+    module = load_module("hello", "examples/hello/run.py")
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure("two hello snapshot renders were not byte-identical")
+    artifacts: list[Artifact] = []
+    formats = {
+        "hello.hxcir": "hxcir",
+        "include/hxc/program.h": "header",
+        "src/program.c": "c",
+        "hxc.runtime-plan.json": "json",
+        "hxc.stdlib-report.json": "json",
+    }
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"hello snapshot omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"hello snapshot omitted {name}")
+        artifacts.append(
+            Artifact(Path("examples/hello/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -591,6 +618,7 @@ GENERATORS: dict[str, Generator] = {
     "arithmetic-semantics": arithmetic_semantics_artifacts,
     "runtime-feature-graph": runtime_feature_graph_artifacts,
     "string-output": string_output_artifacts,
+    "hello": hello_artifacts,
     "span-lowering": span_lowering_artifacts,
 }
 

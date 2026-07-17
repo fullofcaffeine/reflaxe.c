@@ -2,7 +2,7 @@
 
 This document is the human-readable contract for HXC-COMP-014, HXC-QA-001,
 and HXC-QA-007. The machine-readable join point is
-[`fixture-taxonomy.json`](specs/fixture-taxonomy.json); individual future cases
+[`fixture-taxonomy.json`](specs/fixture-taxonomy.json); individual cases
 use [`fixture-case.schema.json`](specs/fixture-case.schema.json).
 
 The taxonomy describes evidence. It does not promote a seed into a supported
@@ -18,19 +18,21 @@ adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
 trace. The string-output suite adds the narrow generated-Haxe `Sys.println` and
-default `trace` proof. None proves broader language, standard-library, public
-ABI, general String, or general `hxrt` support.
+default `trace` proof. The declared `examples/hello` product proof composes that
+same reusable compiler slice into the first ordinary Haxe-to-C executable. None
+proves broader language, standard-library, public ABI, general String, or
+general `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, arithmetic, fixed-array/span, and literal-output lowering |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites and the declared hello example, including primitive body, static-function, evaluation-order, arithmetic, fixed-array/span, and literal-output lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
-| Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, allocator/string native contracts, and the generated literal-output slice |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, native string scalars, and exact generated literal output against pinned Haxe oracles |
+| Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, allocator/string native contracts, generated literal output, and the hello executable |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, native string scalars, generated literal output, and exact hello stdout against pinned Haxe oracles |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -117,8 +119,9 @@ The registered snapshot selectors are:
 - `evaluation-order`
 - `arithmetic-semantics`
 - `runtime-feature-graph`
-- `span-lowering`
 - `string-output`
+- `hello`
+- `span-lowering`
 
 List them from the executable registry with:
 
@@ -306,12 +309,25 @@ the bytes, while a closed stdout descriptor proves the generated caller aborts
 on write/flush failure. Nonliteral String values, `Dynamic`, `Sys.print`, and
 custom trace information remain exact `HXC1001` boundaries.
 
+`examples/hello` is the focused E2.T10 product-level composition of that
+literal-output support. Its ordinary `Main.hx` and `build.hxml` enter the real
+custom target; no example-specific compiler branch or raw C is involved. The
+runner compares exact `Hello from hxc\n` bytes with Haxe Eval, verifies that the
+single `Main.hx` runtime reason reaches all four selected feature records,
+compares normal artifacts across output roots, caller directories, and locales,
+and checks the centrally owned readable HxcIR/header/C/runtime-plan/stdlib
+baseline. Full mode builds generated output under available GCC/Clang at O0/O2;
+the required native matrix uses `--native-only` to rebuild the checked-in
+generated baseline under separately required GCC and Clang jobs without needing
+Haxe in those jobs.
+
 ## Examples are product proofs, not implicit tests
 
-The current checkout has no `examples/` directory; that inventory mismatch is
-tracked separately. When examples are restored or added, every immediate
-`examples/<name>/` directory must contain a schema-valid `case.json` with
-`role: "example"` and explicit commands and expected assertions.
+The examples policy is active with one immediate child: `examples/hello`. Its
+schema-valid `case.json` has `role: "example"`, an argument-array runner, an
+exact expected exit, generated artifacts, runtime-plan evidence, and a named
+Haxe oracle. Every additional immediate `examples/<name>/` directory must meet
+the same declaration rule before any harness may run it.
 
 A test harness may run an example only through that declared case. It must not
 glob `examples/**`, infer success from compilation alone, or treat README prose
@@ -328,10 +344,10 @@ npm run test:fixture-policy
 ```
 
 The guard validates the catalog/schema shape, all canonical directories,
-registered runners and expected roots, complete ownership of existing expected
-files, snapshot-registry parity, package/pre-commit/CI wiring, and the example
-manifest rule. It is part of `npm test` and the pre-commit path for relevant
-changes.
+registered runners and expected roots, complete ownership of existing test and
+example expected files, snapshot-registry parity, package/pre-commit/CI wiring,
+and the example manifest rule. It is part of `npm test` and the pre-commit path
+for relevant changes.
 
 `test/symbol_registry` is the focused positive/negative/snapshot suite for the
 schema-1 `hxc.symbols.json` shape. It renders twice, reverses request and typed

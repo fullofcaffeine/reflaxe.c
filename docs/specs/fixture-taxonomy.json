@@ -39,7 +39,8 @@
         "arithmetic-semantics",
         "span-lowering",
         "runtime-feature-graph",
-        "string-output"
+        "string-output",
+        "hello"
       ]
     },
     {
@@ -116,7 +117,8 @@
         "arithmetic-semantics",
         "span-lowering",
         "runtime-feature-graph",
-        "string-output"
+        "string-output",
+        "hello"
       ]
     },
     {
@@ -141,7 +143,8 @@
         "span-lowering",
         "runtime-feature-graph",
         "string-runtime",
-        "string-output"
+        "string-output",
+        "hello"
       ]
     },
     {
@@ -160,7 +163,8 @@
         "static-initialization",
         "arithmetic-semantics",
         "string-runtime",
-        "string-output"
+        "string-output",
+        "hello"
       ]
     },
     {
@@ -621,6 +625,28 @@
       ]
     },
     {
+      "id": "hello",
+      "directory": "examples/hello",
+      "runner": [
+        "python3",
+        "examples/hello/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary examples/hello/Main.hx compiles through the production custom C target without raw C injection or an example-specific compiler path",
+        "the generated executable and the pinned Haxe Eval oracle both emit exactly Hello from hxc followed by one newline",
+        "two unrelated generated trees are byte-identical and match the centrally owned readable HxcIR, private-header, C-source, runtime-plan, and stdlib-report baseline",
+        "every selected runtime-base, status, string-literal, and io feature retains the one Main.hx source reason while allocator, full-string, object, GC, dynamic, reflection, and exception slices remain absent",
+        "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -637,6 +663,7 @@
         "hosted and custom freestanding allocator cases prove checked sizes, over-alignment, failure atomicity, identity-preserving ownership, address/undefined sanitizer cleanliness, and no freestanding libc allocation symbols",
         "C and C++ consumers agree on allocator callback types, sizes, alignments, and field offsets",
         "the UTF-8 scalar string contract runs at O0/O2 and under address/undefined sanitizers with explicit CString ownership and selective link inspection",
+        "the centrally owned generated hello baseline compiles and emits exact stdout at O0/O2 in each required C compiler lane without requiring Haxe in the native job",
         "independent C-library and opaque-handle C++-shim fixtures run",
         "these native inputs are not described as Haxe-generated output"
       ]
@@ -831,6 +858,18 @@
         ]
       },
       {
+        "id": "hello",
+        "expectedRoots": [
+          "examples/hello/expected"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
         "id": "span-lowering",
         "expectedRoots": [
           "test/span_lowering/expected"
@@ -846,7 +885,7 @@
   },
   "examplesPolicy": {
     "directory": "examples",
-    "status": "absent",
+    "status": "active",
     "caseManifest": "case.json",
     "requiredExpectedAssertions": [
       "exitCode",

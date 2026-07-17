@@ -330,6 +330,17 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/string-output/case.json",
     "test/runtime/string-output/case.json",
     "test/differential/string-output/case.json",
+    "examples/hello/Main.hx",
+    "examples/hello/build.hxml",
+    "examples/hello/oracle.hxml",
+    "examples/hello/README.md",
+    "examples/hello/case.json",
+    "examples/hello/run.py",
+    "examples/hello/expected/hello.hxcir",
+    "examples/hello/expected/include/hxc/program.h",
+    "examples/hello/expected/src/program.c",
+    "examples/hello/expected/hxc.runtime-plan.json",
+    "examples/hello/expected/hxc.stdlib-report.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -491,6 +502,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:string-runtime entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
         errors.append("package.json must retain the test:string-output entry point")
+    if scripts.get("test:hello") != "python3 examples/hello/run.py":
+        errors.append("package.json must retain the test:hello entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
@@ -559,6 +572,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:string-runtime")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-output")
+    if "npm run test:hello" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:hello")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
@@ -656,6 +671,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the UTF-8 scalar string runtime test")
     if "test/string_output/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated literal-output test")
+    if "examples/hello/run.py" not in pre_commit:
+        errors.append("pre-commit must run the generated hello product example")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:
@@ -723,6 +740,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if "string-runtime-contract" not in runner or "STRING_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the UTF-8 scalar string contract in each toolchain lane")
+    if "generated-hello-example-run" not in runner or "HELLO_EXAMPLE" not in runner:
+        errors.append("native smoke runner must execute the generated hello example in each toolchain lane")
     if '"--native-only"' not in runner:
         errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
 

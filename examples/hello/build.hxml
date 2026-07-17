@@ -1,0 +1,7 @@
+# E2.T10 production C-target input. The caller supplies --custom-target so the
+# generated tree can live outside the source directory.
+
+-cp .
+-lib reflaxe.c
+
+-main Main

@@ -9,14 +9,17 @@ separately proposes an optional future `hxc` orchestration tool for project buil
 diagnostics, bindings, exports, and other end-to-end workflows; it is not a
 replacement Haxe compiler or a requirement imposed by Reflaxe.
 
-**Project status: M0 architecture scaffold with a primitive executable slice.**
+**Project status: M0 architecture scaffold with primitive and literal-output
+executable slices.**
 The complete target-owned Haxe source graph type-checks. Typed primitive static
 functions, arguments, conversions, calls, assignments, static fields, lazy and
 value/statement control flow, UB-safe arithmetic, local fixed arrays, checked
 span access, direct span iteration, and dependency-ordered class/static
 initialization now pass through
 explicitly sequenced validated HxcIR and emit an owned runtime-free strict-C11
-project with a private header and `int main(void)`. This is not general Haxe or
+project with a private header and `int main(void)`. Compiler-known String
+literals additionally support the exact hosted `Sys.println`/default `trace`
+path through a selective runtime closure. This is not general Haxe or
 standard-library support; every broader compiler path still fails closed
 instead of producing plausible but incorrect C.
 
@@ -85,6 +88,12 @@ UTF-8 String literal passed to hosted `Sys.println` or default `trace` packages
 only `runtime-base`, `status`, `string-literal`, and `io`. Embedded NUL is written
 by length, and write/flush failure aborts the generated program. Nonliteral
 String output and general I/O still fail closed.
+
+The bounded [`examples/hello`](examples/hello/) proof composes that reusable
+path into the first repository-owned product executable. It emits exact
+`Hello from hxc\n`, matches Haxe Eval, snapshots readable generated C and its
+runtime reasons, and is rebuilt warning-clean under required GCC and Clang
+lanes. It does not broaden the supported language subset.
 
 The `c.*` source contract is designed to make C itself pleasant to author from Haxe:
 typed pointers, spans, ownership, layouts, header groups, linkage, calling
@@ -227,10 +236,10 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 24 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 25 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
-| `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
+| `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
 | Inventory item | Status | Current boundary |
 | --- | --- | --- |
@@ -244,7 +253,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `configuration-policies` | `scaffold-only` | Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
-| `example-portfolio` | `unsupported` | No repository-owned product example directories or executable generated examples exist. |
+| `example-portfolio` | `implemented` | The repository-owned hello example compiles ordinary Haxe through generated C and runs with exact output. |
 | `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
 | `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
 | `generated-file-ownership` | `implemented` | Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling. |
@@ -254,7 +263,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `hxc-ir` | `implemented` | Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent. |
 | `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes. |
-| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural and primitive native corpus. |
+| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, and hello corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11. |
@@ -337,6 +346,7 @@ python3 test/stdlib_ledger/run.py
 python3 test/body_lowering/run.py
 python3 test/function_lowering/run.py
 python3 test/evaluation_order/run.py
+python3 examples/hello/run.py
 python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/ci/check_capability_manifest.py
@@ -369,10 +379,10 @@ haxe -lib reflaxe.c --custom-target c=build/c -main Main
 ```
 
 At M0 that real production path emits an owned C project only for the admitted
-primitive static-function subset and reports exact `HXC1001` without output at
-the first unsupported signature or expression. It is documented now so
-`c_output`, Eval, or the future `hxc` wrapper are not mistaken for alternate
-user-program carriers.
+primitive/static-array/span subset plus compiler-known literal output, and
+reports exact `HXC1001` without output at the first unsupported signature or
+expression. It is documented now so `c_output`, Eval, or the future `hxc`
+wrapper are not mistaken for alternate user-program carriers.
 
 The complete target-owned Haxe graph type-checks under the dedicated all-source
 gate. E2.T03 supplies static functions, arguments, direct calls, recursive

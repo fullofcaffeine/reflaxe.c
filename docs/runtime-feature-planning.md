@@ -11,7 +11,9 @@ and exact packager are implemented. Primitive-only generated programs remain
 runtime-free. E2.T07 additionally admits compiler-known String literals passed
 to hosted `Sys.println` or default `trace`; that edge selects only the literal
 carrier and minimal output closure. The allocator and full string-operation
-implementations remain `native-seed-only`.
+implementations remain `native-seed-only`. E2.T10 composes exactly that edge in
+`examples/hello`; its plan propagates the one `Main.hx` reason through every
+selected transitive feature and adds no broader slice.
 
 ## Typed graph contract
 
@@ -166,12 +168,15 @@ Run the focused evidence with:
 
 ```sh
 npm run test:runtime-features
+npm run test:string-output
+npm run test:hello
 npm run snapshots:check
 npm run test:native
 ```
 
-This evidence proves deterministic planning, selective packaging, and the one
-generated-Haxe literal-output selection. The separate E4.T02/E4.T03 fixtures
+This evidence proves deterministic planning, selective packaging, the one
+generated-Haxe literal-output selection, and its bounded hello product
+composition. The separate E4.T02/E4.T03 fixtures
 prove their bounded native allocator and string contracts. None of this proves
 broad `String` lowering, general I/O, object graphs, exceptions, reflection,
 broad standard-library support, or a stable runtime ABI.

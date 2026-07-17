@@ -163,18 +163,24 @@ def validate_case(
 
 def expected_output_files() -> set[Path]:
     files: set[Path] = set()
-    test_root = ROOT / "test"
-    for path in test_root.rglob("*"):
-        if not path.is_file():
+    for tree_name in ("test", "examples"):
+        tree_root = ROOT / tree_name
+        if not tree_root.is_dir():
             continue
-        relative = path.relative_to(test_root)
-        parents = relative.parts[:-1]
-        if (
-            any(part == "expected" or part.startswith("expected_") for part in parents)
-            or relative.name.startswith("expected.")
-            or relative.name.startswith("expected_")
-        ):
-            files.add(path)
+        for path in tree_root.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(tree_root)
+            parents = relative.parts[:-1]
+            if (
+                any(
+                    part == "expected" or part.startswith("expected_")
+                    for part in parents
+                )
+                or relative.name.startswith("expected.")
+                or relative.name.startswith("expected_")
+            ):
+                files.add(path)
     return files
 
 

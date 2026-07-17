@@ -101,8 +101,10 @@ the hosted runtime seed and native fixtures, independently compile each planned
 declaration header, run their combined C consumer, compile the freestanding
 runtime path, and link a C++17 consumer of the runtime public header. The
 runtime feature lane also rebuilds the exact compiler-selected literal/I/O
-package. The `.cpp` consumer verifies C++17 compatibility and C linkage for the
-C header; it is deliberately not generated C++ output. The
+package, and each required C lane rebuilds the centrally owned generated hello
+baseline at O0/O2 and checks exact stdout without needing Haxe in that job. The
+`.cpp` consumer verifies C++17 compatibility and C linkage for the C header; it
+is deliberately not generated C++ output. The
 declarator, expression/statement, and declaration-header goldens are rendered
 from target-owned structures by Haxe test fixtures. They are runtime-free
 printer/planner proofs; they are not evidence that Haxe application lowering or

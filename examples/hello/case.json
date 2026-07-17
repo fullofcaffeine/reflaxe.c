@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "hello-vertical-slice",
+  "role": "example",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-001",
+    "HXC-EX-001",
+    "HXC-QA-002",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "examples/hello/Main.hx",
+    "examples/hello/build.hxml",
+    "examples/hello/oracle.hxml",
+    "examples/hello/README.md",
+    "examples/hello/run.py",
+    "examples/hello/expected/hello.hxcir",
+    "examples/hello/expected/include/hxc/program.h",
+    "examples/hello/expected/src/program.c",
+    "examples/hello/expected/hxc.runtime-plan.json",
+    "examples/hello/expected/hxc.stdlib-report.json"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "examples/hello",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "hello-example: OK:.*Hello from hxc\\\\n.*strict C11"
+    },
+    "artifacts": [
+      {
+        "path": "examples/hello/expected/hello.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/hello/expected/include/hxc/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/hello/expected/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/hello/expected/hxc.runtime-plan.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "examples/hello/expected/hxc.stdlib-report.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ],
+    "runtimePlan": "examples/hello/expected/hxc.runtime-plan.json",
+    "oracle": "examples/hello/oracle.hxml"
+  }
+}

@@ -23,6 +23,7 @@ ALLOCATOR_ABI = ROOT / "runtime/hxrt/test/allocator_abi.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
 RUNTIME_FEATURE_GRAPH = ROOT / "test/runtime/runtime-feature-graph/run.py"
 STRING_RUNTIME = ROOT / "test/differential/string-runtime/run.py"
+HELLO_EXAMPLE = ROOT / "examples/hello/run.py"
 DECLARATION_PLAN = ROOT / "test/declaration_plan"
 DECLARATION_PLAN_INCLUDE = DECLARATION_PLAN / "expected/include"
 DECLARATION_PLAN_SUPPORT_INCLUDE = DECLARATION_PLAN / "support/include"
@@ -299,6 +300,18 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         label=f"{family} UTF-8 scalar string runtime contract",
     )
     lanes.append("string-runtime-contract")
+
+    run_command(
+        [
+            sys.executable,
+            str(HELLO_EXAMPLE),
+            "--toolchain",
+            family,
+            "--native-only",
+        ],
+        label=f"{family} generated hello example",
+    )
+    lanes.append("generated-hello-example-run")
 
     run_command(
         [

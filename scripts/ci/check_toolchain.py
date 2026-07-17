@@ -219,6 +219,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
     expected_string_runtime_script = "python3 test/differential/string-runtime/run.py"
     expected_string_output_script = "python3 test/string_output/run.py"
+    expected_hello_script = "python3 examples/hello/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
     expected_primitive_semantics_script = "python3 test/primitive_semantics/run.py"
     expected_stdlib_ledger_script = "python3 test/stdlib_ledger/run.py"
@@ -235,7 +236,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:string-runtime && npm run test:string-output && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && "
@@ -291,6 +292,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:string-output") != expected_string_output_script
     ):
         errors.append("package.json must retain the generated literal-output gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:hello") != expected_hello_script
+    ):
+        errors.append("package.json must retain the generated hello example gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:hxc-ir") != expected_hxc_ir_script

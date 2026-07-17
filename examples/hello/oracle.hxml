@@ -1,0 +1,5 @@
+# Accepted Haxe behavior oracle for the exact hello stdout contract.
+
+-cp .
+-main Main
+--interp

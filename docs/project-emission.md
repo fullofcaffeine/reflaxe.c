@@ -122,6 +122,11 @@ alloc/full-string fixtures remain native-seed evidence. `CProjectEmitter`
 rejects any unrelated runtime plan or payload. See
 [runtime feature planning](runtime-feature-planning.md).
 
+`examples/hello` is the first product consumer of that same emission path. Its
+checked-in baseline retains the private header/source shape and runtime plan,
+while the example runner recompiles the manifest-owned generated tree rather
+than maintaining a second writer or hand-authored C implementation.
+
 ## Ownership and filesystem safety
 
 `_GeneratedFiles.json` remains Reflaxe's stale-file authority. The target never

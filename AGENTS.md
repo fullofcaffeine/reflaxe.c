@@ -91,8 +91,8 @@ acceptance criteria, scaffold code, then examples/comments.
 The current checkout is a deliberately partial slice of the fuller scaffold
 described by PRD Section 32. Verify files with `rg --files` before citing or
 running them. In particular, this checkout currently lacks several documented
-assets, including `CODEX_HANDOFF.md`, some schemas, examples, runtime feature
-planning and broad runtime implementation, and the CLI implementation. The
+assets, including `CODEX_HANDOFF.md`, some schemas, broad runtime
+implementation, and the CLI implementation. The
 pinned Haxe/Reflaxe/Lix package metadata, M0 target API contracts, and minimal
 compiler lifecycle are present and compile-verified; do not repeat older
 missing-metadata or missing-adapter assumptions.
@@ -594,7 +594,7 @@ missing-metadata or missing-adapter assumptions.
   the corresponding generated-Haxe, sanitizer, differential, consumer, or
   benchmark evidence actually exists.
 - Examples are explicit product proofs, never an implicit test glob. Every
-  future `examples/<name>/` requires a `case.json` with `role: "example"` and
+  `examples/<name>/` requires a `case.json` with `role: "example"` and
   declared assertions before a runner may execute it. Put reusable compiler
   regressions in a focused fixture when that gives a smaller diagnostic proof.
 - When adding a runner or expected tree, update the taxonomy, snapshot registry,

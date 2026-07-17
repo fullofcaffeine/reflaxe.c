@@ -1,0 +1,197 @@
+{
+  "selectedFeatures": [
+    {
+      "dependencies": [],
+      "id": "runtime-base",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        "runtime/include/hxrt/base.h"
+      ],
+      "libraries": [],
+      "defines": [],
+      "root": false
+    },
+    {
+      "dependencies": [
+        "runtime-base"
+      ],
+      "id": "status",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        "runtime/include/hxrt/status.h"
+      ],
+      "libraries": [],
+      "defines": [],
+      "root": false
+    },
+    {
+      "dependencies": [
+        "runtime-base"
+      ],
+      "id": "string-literal",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        "runtime/include/hxrt/string_literal.h"
+      ],
+      "libraries": [],
+      "defines": [],
+      "root": false
+    },
+    {
+      "dependencies": [
+        "status",
+        "string-literal"
+      ],
+      "id": "io",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_io_println"
+      ],
+      "artifacts": [
+        "runtime/include/hxrt/io.h",
+        "runtime/src/io.c"
+      ],
+      "libraries": [],
+      "defines": [],
+      "root": true
+    }
+  ],
+  "directDecisions": [
+    "direct-calls",
+    "direct-utf8-string-literals",
+    "executable-entry-point",
+    "explicit-evaluation-order",
+    "primitive-static-storage",
+    "primitive-values",
+    "static-functions",
+    "ub-safe-primitive-operations"
+  ],
+  "profile": "portable",
+  "environment": "hosted",
+  "dependencyEdges": [
+    {
+      "featureId": "io",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "dependencyId": "status"
+    },
+    {
+      "featureId": "io",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "dependencyId": "string-literal"
+    },
+    {
+      "featureId": "status",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "dependencyId": "runtime-base"
+    },
+    {
+      "featureId": "string-literal",
+      "reasonIds": [
+        "io.output.0"
+      ],
+      "dependencyId": "runtime-base"
+    }
+  ],
+  "manualOverrides": [],
+  "noRuntimeProof": null,
+  "features": [
+    "runtime-base",
+    "status",
+    "string-literal",
+    "io"
+  ],
+  "artifactDetails": [
+    {
+      "featureId": "runtime-base",
+      "kind": "runtime-header",
+      "outputPath": "runtime/include/hxrt/base.h",
+      "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+    },
+    {
+      "featureId": "io",
+      "kind": "runtime-header",
+      "outputPath": "runtime/include/hxrt/io.h",
+      "sourcePath": "runtime/hxrt/include/hxrt/io.h"
+    },
+    {
+      "featureId": "status",
+      "kind": "runtime-header",
+      "outputPath": "runtime/include/hxrt/status.h",
+      "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+    },
+    {
+      "featureId": "string-literal",
+      "kind": "runtime-header",
+      "outputPath": "runtime/include/hxrt/string_literal.h",
+      "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
+    },
+    {
+      "featureId": "io",
+      "kind": "runtime-source",
+      "outputPath": "runtime/src/io.c",
+      "sourcePath": "runtime/hxrt/src/io.c"
+    }
+  ],
+  "status": "analyzed-runtime-features",
+  "schemaVersion": 1,
+  "diagnosticProvenance": "direct-define:hxc_runtime_diagnostics",
+  "symbols": [
+    "hxc_io_println"
+  ],
+  "diagnosticMode": "off",
+  "resolvedPolicy": "auto",
+  "artifacts": [
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/io.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/include/hxrt/string_literal.h",
+    "runtime/src/io.c"
+  ],
+  "libraries": [],
+  "rootReasons": [
+    {
+      "featureId": "io",
+      "alternative": null,
+      "id": "io.output.0",
+      "kind": "hosted-output",
+      "surface": "Sys.println(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 3,
+          "column": 32
+        },
+        "start": {
+          "line": 3,
+          "column": 3
+        }
+      }
+    }
+  ],
+  "requestedPolicy": "auto",
+  "defines": [],
+  "planPurpose": "compiler-program",
+  "algorithm": "hxc-runtime-plan-v1",
+  "policyProvenance": "profile-preset:portable"
+}
