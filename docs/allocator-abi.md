@@ -5,8 +5,9 @@ It hardens the internal native-seed boundary used by future runtime features; it
 does not make `hxrt` compiler-selectable, define a generated public C ABI, or
 promise compatibility for these structs. E4.T11 still owns runtime ABI and
 feature-manifest versioning, while E7 owns exported application APIs.
-The incompatible callback/owner revision advances the provisional runtime ABI
-marker from 0.1.0 to 0.2.0; that marker is not yet a compatibility policy.
+The incompatible callback/owner revision advanced the provisional runtime ABI
+marker from 0.1.0 to 0.2.0. E4.T03's later private string-contract revision
+advances the current marker to 0.3.0; neither marker is a compatibility policy.
 
 ## Allocator handle and callback protocol
 

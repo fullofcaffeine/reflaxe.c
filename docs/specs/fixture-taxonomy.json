@@ -136,7 +136,8 @@
         "arithmetic-semantics",
         "project-emitter",
         "span-lowering",
-        "runtime-feature-graph"
+        "runtime-feature-graph",
+        "string-runtime"
       ]
     },
     {
@@ -153,7 +154,8 @@
         "hxc-ir",
         "evaluation-order",
         "static-initialization",
-        "arithmetic-semantics"
+        "arithmetic-semantics",
+        "string-runtime"
       ]
     },
     {
@@ -167,7 +169,8 @@
         "ABI manifest or explicit native-seed limitation"
       ],
       "suiteIds": [
-        "native-smoke"
+        "native-smoke",
+        "string-runtime"
       ]
     },
     {
@@ -569,6 +572,27 @@
       ]
     },
     {
+      "id": "string-runtime",
+      "directory": "test/differential/string-runtime",
+      "runner": [
+        "python3",
+        "test/differential/string-runtime/run.py"
+      ],
+      "types": [
+        "runtime",
+        "differential",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "the private immutable representation admits only shortest-form UTF-8 scalars, preserves embedded NUL and normalization distinctions, and indexes length, access, and slices by Unicode scalar",
+        "checked external decoding rejects before allocation while lossy decoding emits one U+FFFD per maximal ill-formed subpart and publishes only valid UTF-8",
+        "literal, slice, compare, and hash paths allocate nothing; owned decode, concat, builder growth, and CString copies retain exact allocator identity and failure atomicity",
+        "borrowed CString conversion requires stable trailing-NUL storage and an owner-tied lifetime, while both borrowed and owned paths reject embedded NUL without truncation",
+        "strict GCC and Clang O0/O2/sanitizer lanes match the pinned Haxe scalar oracle and link no object, GC, reflection, or dynamic symbol family"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -584,6 +608,7 @@
         "strict C11 and C++17 compile/link/run with available matched toolchains",
         "hosted and custom freestanding allocator cases prove checked sizes, over-alignment, failure atomicity, identity-preserving ownership, address/undefined sanitizer cleanliness, and no freestanding libc allocation symbols",
         "C and C++ consumers agree on allocator callback types, sizes, alignments, and field offsets",
+        "the UTF-8 scalar string contract runs at O0/O2 and under address/undefined sanitizers with explicit CString ownership and selective link inspection",
         "independent C-library and opaque-handle C++-shim fixtures run",
         "these native inputs are not described as Haxe-generated output"
       ]

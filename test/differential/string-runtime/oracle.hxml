@@ -1,0 +1,3 @@
+-cp test/differential/string-runtime
+-main StringRuntimeOracle
+--interp

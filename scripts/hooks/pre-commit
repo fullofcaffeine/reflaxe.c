@@ -162,6 +162,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|Compilat
   python3 "$ROOT_DIR/test/runtime/runtime-feature-graph/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(abi|status|string)\.h|src/(status|string)\.c|test/(runtime_smoke\.c|public_header_cpp\.cpp))|src/reflaxe/c/runtime/RuntimeFeatureCatalog\.hx|test/differential/string-runtime/|docs/(adr/0004-utf8-scalar-string-contract|string-runtime|runtime-feature-planning|testing)\.md|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+  echo "[pre-commit] Running UTF-8 scalar string runtime and CString probes..."
+  python3 "$ROOT_DIR/test/differential/string-runtime/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.haxerc|package(-lock)?\.json|docs/(PRD|architecture|stdlib-ledger|testing)\.md|docs/specs/(beads-plan|diagnostics|fixture-taxonomy|stdlib-ledger|toolchain-lock).*\.(json|csv)|runtime/hxrt/features\.json|scripts/(ci/check_ci_policy|test/snapshots)\.py|test/(stdlib_ledger|positive/stdlib-ledger|negative/stdlib-ledger|snapshot/stdlib-ledger)/)'; then
   echo "[pre-commit] Checking pinned standard-library ownership and parity ledger..."
   python3 "$ROOT_DIR/test/stdlib_ledger/run.py"

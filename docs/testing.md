@@ -15,8 +15,9 @@ evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
 and optimized-shape evidence. The span suite adds local fixed-array/view,
 bounds-policy, and runtime-free iteration evidence. The runtime-feature suite
 adds deterministic graph/policy and selective provisional native-seed packaging
-evidence. None proves broader language, standard-library, public ABI, or
-generated-Haxe `hxrt` support.
+evidence. The string-runtime suite adds a bounded native UTF-8/scalar/CString
+contract plus an Eval differential trace. None proves broader language,
+standard-library, public ABI, or generated-Haxe `hxrt` support.
 
 ## Canonical lanes
 
@@ -26,9 +27,9 @@ generated-Haxe `hxrt` support.
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, bounds fail-stop behavior, arithmetic UBSan, deterministic feature closure, and selective provisional native-seed packages; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation-order/control-flow and arithmetic Eval versus generated strict C, plus static initialization against the pinned Haxe JavaScript generator; HxcIR indexing oracle remains semantic-only |
-| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator seed plus independent interop seeds; no generated public ABI |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, and the allocator/string native contracts; no generated-Haxe `hxrt` proof yet |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, and the native string slice's scalar behavior against pinned Haxe oracles |
+| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
 The canonical directories are stable homes for new cases. Existing focused
@@ -276,6 +277,19 @@ and C++17 consumer compare callback types plus every allocator and owner size,
 alignment, and field offset. This is an internal native-seed contract, not
 generated-Haxe runtime selection or public ABI stability. See
 [allocator ownership](allocator-abi.md).
+
+`test/differential/string-runtime` registers the E4.T03 internal string
+boundary across differential, runtime, and ABI evidence lanes. The pinned Haxe
+Eval oracle supplies the scalar trace for BMP/non-BMP length, scalar access,
+embedded NUL, composed/decomposed text, and slicing. An independent C fixture
+then covers checked and maximal-subpart lossy UTF-8, scalar bounds, comparison,
+stable hashing, allocation-free literals/slices/compare, exact owned allocation,
+mutable-builder aliasing and failure atomicity, allocator identity, and distinct
+borrowed/owned CString lifetime rules. GCC and Clang run it at O0/O2 and under
+address/undefined sanitizers, and link inspection rejects object, collector,
+reflection, and dynamic symbol families. This is native runtime evidence, not
+generated-Haxe `String` lowering or public layout stability. See the
+[string runtime contract](string-runtime.md).
 
 ## Examples are product proofs, not implicit tests
 

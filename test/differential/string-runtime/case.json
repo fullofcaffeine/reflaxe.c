@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "string-runtime",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-005",
+    "HXC-SEM-006",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/adr/0004-utf8-scalar-string-contract.md",
+    "docs/string-runtime.md",
+    "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/src/string.c",
+    "test/differential/string-runtime/StringRuntimeOracle.hx",
+    "test/differential/string-runtime/oracle.hxml",
+    "test/differential/string-runtime/run.py",
+    "test/differential/string-runtime/string_runtime.c"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/string-runtime",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "string-runtime: OK: .*checked/lossy UTF-8, scalar indexing, allocation, CString lifetime, sanitizers, and selective symbols passed$"
+    },
+    "oracle": "test/differential/string-runtime/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/string.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

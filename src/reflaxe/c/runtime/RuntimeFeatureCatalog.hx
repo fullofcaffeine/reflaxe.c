@@ -41,9 +41,32 @@ class RuntimeFeatureCatalog {
 					"hxc_allocation_dispose"
 				],
 				[], []),
-			new RuntimeFeatureDefinition(string, "Provisional byte-view and owned-copy string seed; full Haxe String semantics remain E4.T03.",
-				NativeSeedOnly, true, environments, [alloc], [header("string.h"), source("string.c")],
-				["hxc_string_view_from_cstr", "hxc_string_copy", "hxc_owned_string_dispose"], [], [])
+			new RuntimeFeatureDefinition(string,
+				"Valid UTF-8 scalar primitives, owned construction, mutable building, and explicit CString conversion with native evidence.", NativeSeedOnly,
+				true, environments, [alloc], [header("string.h"), source("string.c")], [
+					"hxc_byte_view_from_cstring",
+					"hxc_utf8_validate",
+					"hxc_string_is_valid",
+					"hxc_string_from_utf8_checked",
+					"hxc_string_from_utf8_lossy",
+					"hxc_string_copy",
+					"hxc_string_concat",
+					"hxc_owned_string_dispose",
+					"hxc_string_scalar_length",
+					"hxc_string_scalar_at",
+					"hxc_string_slice",
+					"hxc_string_compare",
+					"hxc_string_hash",
+					"hxc_string_buffer_init",
+					"hxc_string_buffer_view",
+					"hxc_string_buffer_append_utf8_checked",
+					"hxc_string_buffer_append_scalar",
+					"hxc_string_buffer_finish",
+					"hxc_string_buffer_dispose",
+					"hxc_string_borrow_cstring",
+					"hxc_string_to_cstring_owned",
+					"hxc_owned_cstring_dispose"
+				], [], [])
 		];
 	}
 

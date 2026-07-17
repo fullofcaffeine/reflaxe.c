@@ -217,6 +217,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
+    expected_string_runtime_script = "python3 test/differential/string-runtime/run.py"
     expected_hxc_ir_script = "python3 test/hxc_ir/run.py"
     expected_primitive_semantics_script = "python3 test/primitive_semantics/run.py"
     expected_stdlib_ledger_script = "python3 test/stdlib_ledger/run.py"
@@ -233,7 +234,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:string-runtime && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && "
@@ -279,6 +280,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:runtime-features") != expected_runtime_features_script
     ):
         errors.append("package.json must retain the selective runtime feature gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:string-runtime") != expected_string_runtime_script
+    ):
+        errors.append("package.json must retain the UTF-8 scalar string runtime gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:hxc-ir") != expected_hxc_ir_script

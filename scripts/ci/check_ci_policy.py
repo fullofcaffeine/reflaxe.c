@@ -75,11 +75,17 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/features.json",
     "docs/specs/runtime-features.schema.json",
     "docs/allocator-abi.md",
+    "docs/string-runtime.md",
     "runtime/hxrt/test/allocator_abi.c",
     "runtime/hxrt/test/allocator_contract.c",
     "runtime/hxrt/test/runtime_smoke.c",
     "runtime/hxrt/test/public_header_cpp.cpp",
     "test/abi/allocator-contract/case.json",
+    "test/differential/string-runtime/StringRuntimeOracle.hx",
+    "test/differential/string-runtime/case.json",
+    "test/differential/string-runtime/oracle.hxml",
+    "test/differential/string-runtime/run.py",
+    "test/differential/string-runtime/string_runtime.c",
     "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
     "test/runtime/runtime-feature-graph/case.json",
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
@@ -458,6 +464,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the required build-adapter entry point")
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
+    if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
+        errors.append("package.json must retain the test:string-runtime entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
@@ -522,6 +530,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:runtime-features" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:runtime-features")
+    if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:string-runtime")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
@@ -680,6 +690,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must independently compile and execute project-emitter output")
     if "runtime-feature-selective-packaging" not in runner or "RUNTIME_FEATURE_GRAPH" not in runner:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
+    if "string-runtime-contract" not in runner or "STRING_RUNTIME" not in runner:
+        errors.append("native smoke runner must execute the UTF-8 scalar string contract in each toolchain lane")
     if '"--native-only"' not in runner:
         errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
 
@@ -749,6 +761,29 @@ def validate() -> list[str]:
             errors.append(
                 "runtime feature runner lost selective native evidence: "
                 + required_runtime_feature_contract
+            )
+
+    string_runtime_runner = read_text(
+        ROOT / "test/differential/string-runtime/run.py", errors
+    )
+    for required_string_runtime_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "--native-only",
+        "run_oracle",
+        "-fsanitize=address,undefined",
+        "hxc_string_concat",
+        "hxc_gc",
+        "nm",
+    ):
+        if required_string_runtime_contract not in string_runtime_runner:
+            errors.append(
+                "string runtime runner lost UTF-8/allocator/selective-link evidence: "
+                + required_string_runtime_contract
             )
 
     primitive_runner = read_text(ROOT / "test/primitive_semantics/run.py", errors)

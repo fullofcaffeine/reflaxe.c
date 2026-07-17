@@ -673,25 +673,55 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "A hardened native allocator contract plus provisional string, status, and Int32 runtime seeds compile independently.",
-      "scope": "Hosted and custom freestanding allocator behavior, C/C++ layout agreement, and exact alloc-only/string packages validate only the split native seed itself.",
+      "summary": "Hardened native allocator and UTF-8 scalar string contracts coexist with provisional status and Int32 runtime seeds.",
+      "scope": "Allocator ownership, string semantics, C/C++ header consumption, and exact alloc-only/string packages validate only bounded split native slices.",
       "evidence": [
         "docs/allocator-abi.md",
+        "docs/string-runtime.md",
         "runtime/hxrt/include/hxc_runtime.h",
         "runtime/hxrt/include/hxrt/allocator.h",
+        "runtime/hxrt/include/hxrt/string.h",
         "runtime/hxrt/src/allocator.c",
+        "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
         "runtime/hxrt/test/allocator_contract.c",
         "runtime/hxrt/test/runtime_smoke.c",
-        "test/abi/allocator-contract/case.json"
+        "test/abi/allocator-contract/case.json",
+        "test/differential/string-runtime/case.json"
       ],
       "owners": [
         "E4.T01",
-        "E4.T02"
+        "E4.T02",
+        "E4.T03"
       ],
       "limitations": [
         "Generated Haxe does not select or link this seed, and it is not an unconditional runtime core.",
-        "The allocator structs are an internal native-seed contract, not a stable generated public C ABI."
+        "The allocator and string structs are internal native-seed contracts, not a stable generated public C ABI."
+      ]
+    },
+    {
+      "id": "runtime-string-contract",
+      "area": "runtime",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes.",
+      "scope": "Strict C11 native evidence covers literal, checked/lossy decode, concat, slice, compare, hash, builder, and borrowed/owned CString primitives.",
+      "evidence": [
+        "docs/adr/0004-utf8-scalar-string-contract.md",
+        "docs/string-runtime.md",
+        "runtime/hxrt/include/hxrt/string.h",
+        "runtime/hxrt/src/string.c",
+        "runtime/hxrt/features.json",
+        "test/differential/string-runtime/case.json",
+        "test/differential/string-runtime/run.py",
+        "test/differential/string-runtime/string_runtime.c"
+      ],
+      "owners": [
+        "E4.T03"
+      ],
+      "limitations": [
+        "Generated Haxe cannot select this native-seed-only feature; general String and standard-library lowering remain unsupported.",
+        "The private runtime structs and symbols are not a stable exported C ABI, and broader Unicode algorithms remain separately owned."
       ]
     },
     {
@@ -711,7 +741,7 @@
         "E10.T10"
       ],
       "limitations": [
-        "String, collections, Bytes/I/O, general Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading remain roadmap work."
+        "General String APIs, collections, Bytes/I/O, Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading remain roadmap work."
       ]
     },
     {

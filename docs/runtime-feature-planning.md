@@ -100,7 +100,7 @@ a generated-Haxe support claim.
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. |
 | Environment | The native allocator has hosted execution and freestanding custom-allocator/no-libc-allocation evidence. Other seed surfaces are compile-checked for hosted/freestanding only; WASI and Emscripten requests fail until dedicated evidence exists. |
 | Generated C | Existing admitted Haxe programs remain byte-stable runtime-free C. Selective seed packages are independently authored native evidence, not generated Haxe output. |
-| Public ABI | The allocator's internal ownership/callback contract and C/C++ layout are hardened, but every split header and `hxc_` symbol remains provisional. E4.T03 owns strings, E4.T11 owns runtime ABI/manifest stabilization, and E7 owns exported APIs. |
+| Public ABI | The allocator and UTF-8 scalar string slices have hardened internal native contracts, but every split header and `hxc_` symbol remains provisional. E4.T11 owns runtime ABI/manifest stabilization, and E7 owns exported APIs. |
 
 ## Exact packaging
 
@@ -127,6 +127,14 @@ a static custom arena in `HXC_FREESTANDING` mode, reject undefined libc
 allocation symbols, and compare C and C++ layout facts. This stronger native
 evidence does not make `alloc` compiler-selectable.
 
+The [UTF-8 scalar string contract](string-runtime.md) defines the E4.T03 valid
+immutable representation, maximal-subpart lossy decoding, scalar-indexed
+operations, builder failure atomicity, allocation accounting, and distinct
+borrowed/owned CString lifetimes. Its exact feature closure remains
+`string -> alloc -> status -> runtime-abi`; required native links reject object,
+GC, reflection, and dynamic symbol families. This evidence likewise does not
+make `string` compiler-selectable or prove Haxe `String` lowering.
+
 The focused Haxe gate renders and packages twice before comparing the canonical
 snapshots. Native CI then uses `--native-only` to validate the checked-in catalog
 and plan against one another, reread exactly their selected `runtime/hxrt`
@@ -142,6 +150,8 @@ npm run snapshots:check
 npm run test:native
 ```
 
-This evidence proves deterministic planning and selective packaging. It does
-not prove Haxe `String`, allocation, object graphs, exceptions, reflection, the
-standard library, stable runtime ABI, or generated-Haxe runtime selection.
+This evidence proves deterministic planning and selective packaging. The
+separate E4.T02/E4.T03 fixtures prove their bounded native allocator and string
+contracts. Neither proves generated-Haxe runtime selection, broad `String`
+lowering, object graphs, exceptions, reflection, the standard library, or a
+stable runtime ABI.

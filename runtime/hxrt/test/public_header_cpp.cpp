@@ -32,9 +32,15 @@ static_assert(std::is_standard_layout<hxc_allocator>::value, "allocator must be 
 static_assert(std::is_trivially_copyable<hxc_allocator>::value, "allocator handle must be copyable across C ABI calls");
 static_assert(std::is_standard_layout<hxc_allocation>::value, "allocation owner must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_allocation>::value, "allocation owner must cross C ABI calls by value");
-static_assert(std::is_standard_layout<hxc_string_view>::value, "string view must be C-compatible");
+static_assert(std::is_standard_layout<hxc_string>::value, "private string value must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_string>::value, "private string value must cross internal C ABI calls by value");
+static_assert(std::is_standard_layout<hxc_owned_string>::value, "owned string must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_owned_string>::value, "owned string must cross internal C ABI calls by value");
+static_assert(std::is_standard_layout<hxc_borrowed_cstring>::value, "borrowed CString must be C-compatible");
+static_assert(std::is_standard_layout<hxc_owned_cstring>::value, "owned CString must be C-compatible");
 
 int main() {
+  const hxc_string literal = HXC_STRING_LITERAL("C++ UTF-8 \xF0\x9F\x98\x80");
   const auto version = &hxc_runtime_abi_version;
   hxc_allocation empty = HXC_ALLOCATION_INITIALIZER;
   std::array<std::size_t, 12> c_layout{};
@@ -54,6 +60,9 @@ int main() {
   };
   if (version() != HXC_RUNTIME_ABI_VERSION) {
     return 1;
+  }
+  if (!hxc_string_is_valid(literal) || literal.byte_length != 14u) {
+    return 4;
   }
   hxc_test_c_allocator_layout(c_layout.data());
   if (c_layout != cpp_layout) {

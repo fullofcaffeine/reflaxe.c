@@ -14,8 +14,8 @@
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
   hxc_allocation allocation = HXC_ALLOCATION_INITIALIZER;
-  hxc_owned_string owned = {0};
-  hxc_string_view view;
+  hxc_owned_string owned = HXC_OWNED_STRING_INITIALIZER;
+  const hxc_string view = HXC_STRING_LITERAL("h\xC3\xA9");
   void *memory = NULL;
   void *previous;
   size_t checked_size = 0u;
@@ -23,8 +23,9 @@ int main(void) {
   int32_t remainder = 0;
 
   HXC_CHECK(hxc_runtime_abi_version() == HXC_RUNTIME_ABI_VERSION);
-  HXC_CHECK(HXC_RUNTIME_ABI_MAJOR == 0u && HXC_RUNTIME_ABI_MINOR == 2u);
+  HXC_CHECK(HXC_RUNTIME_ABI_MAJOR == 0u && HXC_RUNTIME_ABI_MINOR == 3u);
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_OK), "HXC_STATUS_OK") == 0);
+  HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_INVALID_UTF8), "HXC_STATUS_INVALID_UTF8") == 0);
   HXC_CHECK(strcmp(hxc_status_name((hxc_status)42), "HXC_STATUS_UNKNOWN") == 0);
   HXC_CHECK(hxc_allocator_is_valid(&allocator));
   HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocator));
@@ -74,17 +75,16 @@ int main(void) {
   HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocation.allocator));
   HXC_CHECK(hxc_allocation_dispose(&allocation) == HXC_STATUS_OK);
 
-  view = hxc_string_view_from_cstr("h\xC3\xA9");
-  HXC_CHECK(view.length == 3u);
+  HXC_CHECK(view.byte_length == 3u);
   HXC_CHECK(hxc_string_copy(view, &allocator, &owned) == HXC_STATUS_OK);
-  HXC_CHECK(owned.length == 3u);
-  HXC_CHECK(owned.capacity == 4u);
-  HXC_CHECK(owned.data[0] == UINT8_C('h'));
-  HXC_CHECK(owned.data[1] == UINT8_C(0xC3));
-  HXC_CHECK(owned.data[2] == UINT8_C(0xA9));
-  HXC_CHECK(owned.data[3] == UINT8_C(0));
-  hxc_owned_string_dispose(&owned);
-  HXC_CHECK(owned.data == NULL && owned.length == 0u && owned.capacity == 0u);
+  HXC_CHECK(owned.value.byte_length == 3u);
+  HXC_CHECK(owned.storage.size == 4u);
+  HXC_CHECK(owned.value.data[0] == UINT8_C('h'));
+  HXC_CHECK(owned.value.data[1] == UINT8_C(0xC3));
+  HXC_CHECK(owned.value.data[2] == UINT8_C(0xA9));
+  HXC_CHECK(owned.value.data[3] == UINT8_C(0));
+  HXC_CHECK(hxc_owned_string_dispose(&owned) == HXC_STATUS_OK);
+  HXC_CHECK(owned.value.data == NULL && owned.storage.memory == NULL);
 
   HXC_CHECK(hxc_i32_add_wrap(INT32_MAX, 1) == INT32_MIN);
   HXC_CHECK(hxc_i32_sub_wrap(INT32_MIN, 1) == INT32_MAX);
