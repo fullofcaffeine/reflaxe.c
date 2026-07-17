@@ -160,6 +160,14 @@ selection. Its independently authored strict-C11 probe validates the ratified
 algorithms at O0/O2. The E2.T02 body fixture separately proves the admitted
 primitive mappings in generated strict C11.
 
+The [seeded primitive differential suite](docs/primitive-differential.md)
+regenerates 128 boundary-biased calls from a reviewed SplitMix64 seed, compares
+the common result domain exactly with pinned Haxe Eval, reduces a mismatch to a
+single replay case, and runs the checked-in generated C under GCC and Clang at
+O0/O2 plus combined ASan/UBSan. Target-specific modulo-zero and positive
+`Std.int` overflow behavior remains explicit in a schema-backed divergence
+ledger; the suite does not broaden the supported language slice.
+
 The [typed-AST input adapter](docs/typed-ast-input.md) now captures and
 normalizes Haxe's complete module set and original field expressions before
 Reflaxe callback filtering, records module and declaration ownership, retains

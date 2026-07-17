@@ -290,6 +290,24 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/arithmetic-semantics/case.json",
     "test/runtime/arithmetic-semantics/case.json",
     "test/differential/arithmetic-semantics/case.json",
+    "docs/primitive-differential.md",
+    "docs/specs/primitive-divergences.schema.json",
+    "docs/specs/primitive-divergences.json",
+    "test/primitive_differential/seed.json",
+    "test/primitive_differential/regressions/minimizer-regression.json",
+    "test/primitive_differential/expected/PrimitiveDifferentialFixture.hx",
+    "test/primitive_differential/expected/corpus.json",
+    "test/primitive_differential/expected/divergence-oracle.txt",
+    "test/primitive_differential/expected/oracle.txt",
+    "test/primitive_differential/expected/program.h",
+    "test/primitive_differential/expected/program.c",
+    "test/primitive_differential/expected/runtime-plan.json",
+    "test/primitive_differential/expected/symbols.json",
+    "test/primitive_differential/run.py",
+    "test/positive/primitive-differential/case.json",
+    "test/snapshot/primitive-differential/case.json",
+    "test/runtime/primitive-differential/case.json",
+    "test/differential/primitive-differential/case.json",
     "src/reflaxe/c/CBuildMode.hx",
     "src/reflaxe/c/BuildModeResolver.hx",
     "std/c/CArray.hx",
@@ -520,6 +538,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:static-initialization entry point")
     if scripts.get("test:arithmetic-semantics") != "python3 test/arithmetic_semantics/run.py":
         errors.append("package.json must retain the test:arithmetic-semantics entry point")
+    if scripts.get("test:primitive-differential") != "python3 test/primitive_differential/run.py":
+        errors.append("package.json must retain the test:primitive-differential entry point")
     if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
         errors.append("package.json must retain the test:span-lowering entry point")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))
@@ -590,6 +610,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:static-initialization")
     if "npm run test:arithmetic-semantics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:arithmetic-semantics")
+    if "npm run test:primitive-differential" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:primitive-differential")
     if "npm run test:span-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:span-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
@@ -689,6 +711,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the deterministic static-initialization test")
     if "test/arithmetic_semantics/run.py" not in pre_commit:
         errors.append("pre-commit must run the primitive arithmetic semantic test")
+    if "test/primitive_differential/run.py" not in pre_commit:
+        errors.append("pre-commit must run the seeded primitive differential test")
     if "test/span_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the fixed-array/span lowering test")
     if "test/typed_ast/run.py" not in pre_commit:
@@ -742,6 +766,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute the UTF-8 scalar string contract in each toolchain lane")
     if "generated-hello-example-run" not in runner or "HELLO_EXAMPLE" not in runner:
         errors.append("native smoke runner must execute the generated hello example in each toolchain lane")
+    if "primitive-differential-sanitizer-run" not in runner or "PRIMITIVE_DIFFERENTIAL" not in runner:
+        errors.append("native smoke runner must execute the seeded primitive sanitizer corpus in each toolchain lane")
     if '"--native-only"' not in runner:
         errors.append("native smoke must consume checked-in runtime plans without requiring Haxe")
 
@@ -1013,6 +1039,27 @@ def validate() -> list[str]:
         errors.append(
             "arithmetic semantic runner must verify required compiler-family identity"
         )
+
+    primitive_differential_runner = read_text(
+        ROOT / "test/primitive_differential/run.py", errors
+    )
+    for required_primitive_differential_contract in (
+        "SplitMix64",
+        "splitmix64-v1",
+        "minimize_first_mismatch",
+        "primitive-divergences.json",
+        "run_c_fixture_corpus",
+        "-fsanitize=address,undefined",
+        "-O0",
+        "-O2",
+        "--native-only",
+        "--toolchain",
+    ):
+        if required_primitive_differential_contract not in primitive_differential_runner:
+            errors.append(
+                "primitive differential runner lost reproducibility/sanitizer contract: "
+                + required_primitive_differential_contract
+            )
 
     span_runner = read_text(ROOT / "test/span_lowering/run.py", errors)
     for required_span_flag in (

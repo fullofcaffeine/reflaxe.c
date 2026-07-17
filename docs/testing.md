@@ -12,8 +12,11 @@ real TypedExpr-to-HxcIR/C evidence. The function-lowering suite extends it to a
 production-emitted primitive private header/source/entry project. The
 evaluation-order suite now adds E2.T06 primitive statement/control-flow
 evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
-and optimized-shape evidence. The span suite adds local fixed-array/view,
-bounds-policy, and runtime-free iteration evidence. The runtime-feature suite
+and optimized-shape evidence. The primitive-differential suite adds a
+reproducible generated corpus, exact Eval comparison, mismatch reduction,
+ledgered target refinements, and combined ASan/UBSan evidence. The span suite
+adds local fixed-array/view, bounds-policy, and runtime-free iteration evidence.
+The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
@@ -27,12 +30,12 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites and the declared hello example, including primitive body, static-function, evaluation-order, arithmetic, fixed-array/span, and literal-output lowering |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites and the declared hello example, including primitive body, static-function, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, allocator/string native contracts, generated literal output, and the hello executable |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, native string scalars, generated literal output, and exact hello stdout against pinned Haxe oracles |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string native contracts, generated literal output, and the hello executable |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars, generated literal output, and exact hello stdout against pinned Haxe oracles |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -118,6 +121,7 @@ The registered snapshot selectors are:
 - `function-lowering`
 - `evaluation-order`
 - `arithmetic-semantics`
+- `primitive-differential`
 - `runtime-feature-graph`
 - `string-output`
 - `hello`
@@ -245,6 +249,20 @@ infinities, signed zero, and floating-to-integer bounds. Required GCC and Clang
 lanes run `-O0`, `-O2`, and eligible UBSan builds and reject an out-of-line
 helper in optimized assembly. See [UB-safe primitive
 arithmetic](arithmetic-semantics.md).
+
+`test/primitive_differential` is the focused
+positive/snapshot/runtime/differential suite for E2.T11. A versioned SplitMix64
+seed deterministically builds 128 boundary-biased calls across the admitted
+`Int`, `UInt`, finite `Float`, conversion, shift, bit, arithmetic, and comparison
+surface. It snapshots both the corpus and ordinary generated Haxe fixture,
+compares exact `Int`/`UInt`/`Bool` traces with pinned Eval, and checks production
+artifacts across unrelated roots with an empty runtime plan. Target-specific
+zero-modulo and positive `Std.int` overflow results are allowed only through the
+schema-backed divergence ledger and remain executable on both sides. A stored
+reducer regression proves that a mismatch becomes one stable typed replay case.
+Required GCC and Clang lanes consume the checked-in C without Haxe at O0/O2 and
+under combined AddressSanitizer/UndefinedBehaviorSanitizer. See the
+[seeded primitive differential suite](primitive-differential.md).
 
 `test/span_lowering` is the focused positive/negative/snapshot/runtime suite for
 E2.T08. It admits typed nonempty `CArray` literals, mutable and const local span

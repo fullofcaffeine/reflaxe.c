@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-differential-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-QA-004",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "docs/specs/primitive-divergences.json",
+    "test/primitive_differential/expected/PrimitiveDifferentialFixture.hx",
+    "test/primitive_differential/expected/corpus.json",
+    "test/primitive_differential/run.py",
+    "test/primitive_differential/seed.json"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../primitive_differential/run.py"
+    ],
+    "workingDirectory": "test/positive/primitive-differential",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^primitive-differential: (AVAILABLE|SKIP|OK):"
+    },
+    "artifacts": [
+      {
+        "path": "test/primitive_differential/expected/corpus.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/primitive_differential/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

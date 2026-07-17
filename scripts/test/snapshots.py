@@ -488,6 +488,46 @@ def arithmetic_semantics_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def primitive_differential_artifacts() -> list[Artifact]:
+    module = load_module(
+        "primitive_differential", "test/primitive_differential/run.py"
+    )
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure(
+            "two primitive-differential snapshot renders were not byte-identical"
+        )
+    formats = {
+        "corpus.json": "json",
+        "PrimitiveDifferentialFixture.hx": "text",
+        "oracle.txt": "text",
+        "divergence-oracle.txt": "text",
+        "program.h": "header",
+        "program.c": "c",
+        "symbols.json": "json",
+        "runtime-plan.json": "json",
+    }
+    artifacts: list[Artifact] = []
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(
+                    f"primitive-differential snapshot omitted {name}"
+                )
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"primitive-differential snapshot omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/primitive_differential/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 def span_lowering_artifacts() -> list[Artifact]:
     module = load_module("span_lowering", "test/span_lowering/run.py")
     first_payload, report = module.render("snapshot first span-lowering render")
@@ -616,6 +656,7 @@ GENERATORS: dict[str, Generator] = {
     "evaluation-order": evaluation_order_artifacts,
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
+    "primitive-differential": primitive_differential_artifacts,
     "runtime-feature-graph": runtime_feature_graph_artifacts,
     "string-output": string_output_artifacts,
     "hello": hello_artifacts,

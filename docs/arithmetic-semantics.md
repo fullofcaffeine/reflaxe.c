@@ -93,3 +93,9 @@ This proves the currently admitted primitive operations and conversions. It
 does not claim general statement control flow, arrays, objects, strings,
 exceptions, the broader Haxe standard library, or any generated-Haxe `hxrt`
 feature.
+
+The [seeded primitive differential suite](primitive-differential.md) complements
+this fixed boundary matrix with a reproducible 128-case generated corpus,
+mismatch reduction, an explicit target-refinement ledger, and combined
+AddressSanitizer/UndefinedBehaviorSanitizer runs. It does not replace the
+reviewable edge and optimized-shape assertions above.

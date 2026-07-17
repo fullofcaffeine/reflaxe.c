@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/primitive-divergences.schema.json",
+  "title": "Intentional primitive oracle divergences",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "ledgerId",
+    "oracle",
+    "entries"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "primitive-divergences.schema.json"
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "ledgerId": {
+      "const": "hxc-primitive-divergences-v1"
+    },
+    "oracle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "version",
+        "authority"
+      ],
+      "properties": {
+        "kind": {
+          "const": "haxe-eval"
+        },
+        "version": {
+          "const": "5.0.0-preview.1"
+        },
+        "authority": {
+          "const": "docs/specs/toolchain-lock.json"
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/entry"
+      }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "ownerBeads",
+        "operation",
+        "input",
+        "oracleValue",
+        "targetValue",
+        "contract",
+        "rationale",
+        "tests"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^div-[a-z0-9-]+$"
+        },
+        "status": {
+          "const": "intentional-target-refinement"
+        },
+        "ownerBeads": {
+          "const": "E2.T11"
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "input": {
+          "type": "string",
+          "minLength": 1
+        },
+        "oracleValue": {
+          "type": "string"
+        },
+        "targetValue": {
+          "type": "string"
+        },
+        "contract": {
+          "type": "string",
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tests": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+          }
+        }
+      }
+    }
+  }
+}

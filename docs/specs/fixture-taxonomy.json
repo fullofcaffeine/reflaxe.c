@@ -37,6 +37,7 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
+        "primitive-differential",
         "span-lowering",
         "runtime-feature-graph",
         "string-output",
@@ -115,6 +116,7 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
+        "primitive-differential",
         "span-lowering",
         "runtime-feature-graph",
         "string-output",
@@ -139,6 +141,7 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
+        "primitive-differential",
         "project-emitter",
         "span-lowering",
         "runtime-feature-graph",
@@ -162,6 +165,7 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
+        "primitive-differential",
         "string-runtime",
         "string-output",
         "hello"
@@ -537,6 +541,28 @@
       ]
     },
     {
+      "id": "primitive-differential",
+      "directory": "test/primitive_differential",
+      "runner": [
+        "python3",
+        "test/primitive_differential/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "a checked SplitMix64 seed regenerates the same boundary-biased 128-case primitive corpus and Haxe source byte for byte",
+        "the common Int, UInt, Float-to-Int, and Boolean result domain matches pinned Haxe Eval exactly while every admitted target refinement is replayed from the closed divergence ledger",
+        "a deterministic mismatch reducer isolates the first failing semantic case and is locked by a stored replay fixture",
+        "checked-in generated strict C11 runs at O0 and O2 and under combined address and undefined-behavior sanitizers in required GCC and Clang lanes without selecting hxrt",
+        "the reusable argument-array native harness records normalized compiler, command, input-hash, exit, stdout, and stderr evidence without host paths"
+      ]
+    },
+    {
       "id": "span-lowering",
       "directory": "test/span_lowering",
       "runner": [
@@ -833,6 +859,25 @@
           "header",
           "hxcir",
           "json"
+        ]
+      },
+      {
+        "id": "primitive-differential",
+        "expectedRoots": [
+          "test/primitive_differential/expected/corpus.json",
+          "test/primitive_differential/expected/PrimitiveDifferentialFixture.hx",
+          "test/primitive_differential/expected/oracle.txt",
+          "test/primitive_differential/expected/divergence-oracle.txt",
+          "test/primitive_differential/expected/program.h",
+          "test/primitive_differential/expected/program.c",
+          "test/primitive_differential/expected/symbols.json",
+          "test/primitive_differential/expected/runtime-plan.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "json",
+          "text"
         ]
       },
       {

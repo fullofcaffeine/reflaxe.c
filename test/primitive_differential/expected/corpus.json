@@ -1,0 +1,1948 @@
+{
+  "schemaVersion": 1,
+  "generator": "splitmix64-v1",
+  "seed": "0x6a09e667f3bcc909",
+  "caseCount": 128,
+  "minimumCasesPerOperation": 3,
+  "oracle": {
+    "kind": "haxe-eval",
+    "version": "5.0.0-preview.1",
+    "authority": "docs/specs/toolchain-lock.json"
+  },
+  "operationCounts": {
+    "iadd": 3,
+    "iand": 6,
+    "idivInt": 7,
+    "ieq": 3,
+    "ilt": 5,
+    "imod": 4,
+    "imul": 5,
+    "inot": 4,
+    "ior": 5,
+    "ishl": 5,
+    "ishr": 4,
+    "isub": 6,
+    "iushr": 4,
+    "ixor": 6,
+    "faddInt": 4,
+    "fdivInt": 6,
+    "feq": 4,
+    "flt": 7,
+    "fmodInt": 4,
+    "fmulInt": 3,
+    "fsubInt": 4,
+    "uadd": 3,
+    "ult": 4,
+    "umod": 3,
+    "umul": 5,
+    "ushl": 3,
+    "ushr": 6,
+    "usub": 5
+  },
+  "cases": [
+    {
+      "id": "case-000",
+      "operation": "usub",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2
+        },
+        {
+          "type": "u32",
+          "value": 65536
+        }
+      ]
+    },
+    {
+      "id": "case-001",
+      "operation": "usub",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 1242540958
+        },
+        {
+          "type": "u32",
+          "value": 2807177410
+        }
+      ]
+    },
+    {
+      "id": "case-002",
+      "operation": "iushr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1529960360
+        },
+        {
+          "type": "i32",
+          "value": -595944127
+        }
+      ]
+    },
+    {
+      "id": "case-003",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4294967295
+        },
+        {
+          "type": "i32",
+          "value": -1
+        }
+      ]
+    },
+    {
+      "id": "case-004",
+      "operation": "ushl",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2
+        },
+        {
+          "type": "i32",
+          "value": -1942861741
+        }
+      ]
+    },
+    {
+      "id": "case-005",
+      "operation": "umul",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 31
+        },
+        {
+          "type": "u32",
+          "value": 65536
+        }
+      ]
+    },
+    {
+      "id": "case-006",
+      "operation": "ishl",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 663349440
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-007",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1.0"
+        },
+        {
+          "type": "f64",
+          "value": "2411.0"
+        }
+      ]
+    },
+    {
+      "id": "case-008",
+      "operation": "ishl",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1
+        },
+        {
+          "type": "i32",
+          "value": 2147483646
+        }
+      ]
+    },
+    {
+      "id": "case-009",
+      "operation": "inot",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-010",
+      "operation": "umul",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2147483648
+        },
+        {
+          "type": "u32",
+          "value": 4294967294
+        }
+      ]
+    },
+    {
+      "id": "case-011",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2140014822
+        },
+        {
+          "type": "i32",
+          "value": 65535
+        }
+      ]
+    },
+    {
+      "id": "case-012",
+      "operation": "ishr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2147483646
+        },
+        {
+          "type": "i32",
+          "value": -17340960
+        }
+      ]
+    },
+    {
+      "id": "case-013",
+      "operation": "feq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        },
+        {
+          "type": "f64",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-014",
+      "operation": "fsubInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1563.25"
+        },
+        {
+          "type": "f64",
+          "value": "-0.0"
+        }
+      ]
+    },
+    {
+      "id": "case-015",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        },
+        {
+          "type": "f64",
+          "value": "-5133.75"
+        }
+      ]
+    },
+    {
+      "id": "case-016",
+      "operation": "imul",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        },
+        {
+          "type": "i32",
+          "value": 1659658283
+        }
+      ]
+    },
+    {
+      "id": "case-017",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -192194838
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-018",
+      "operation": "iushr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2147483647
+        },
+        {
+          "type": "i32",
+          "value": 864338147
+        }
+      ]
+    },
+    {
+      "id": "case-019",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": 1889045594
+        }
+      ]
+    },
+    {
+      "id": "case-020",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        },
+        {
+          "type": "i32",
+          "value": 65535
+        }
+      ]
+    },
+    {
+      "id": "case-021",
+      "operation": "umod",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2
+        },
+        {
+          "type": "u32",
+          "value": 31
+        }
+      ]
+    },
+    {
+      "id": "case-022",
+      "operation": "umod",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2147483647
+        },
+        {
+          "type": "u32",
+          "value": 2329801756
+        }
+      ]
+    },
+    {
+      "id": "case-023",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -2146252034
+        },
+        {
+          "type": "i32",
+          "value": 555746818
+        }
+      ]
+    },
+    {
+      "id": "case-024",
+      "operation": "fmodInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-5015.25"
+        },
+        {
+          "type": "f64",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-025",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-026",
+      "operation": "ishr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 31
+        },
+        {
+          "type": "i32",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "case-027",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-0.0"
+        },
+        {
+          "type": "f64",
+          "value": "6775.0"
+        }
+      ]
+    },
+    {
+      "id": "case-028",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "0.0"
+        },
+        {
+          "type": "f64",
+          "value": "4015.0"
+        }
+      ]
+    },
+    {
+      "id": "case-029",
+      "operation": "fmulInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1.0"
+        },
+        {
+          "type": "f64",
+          "value": "-130.5"
+        }
+      ]
+    },
+    {
+      "id": "case-030",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-031",
+      "operation": "fmulInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1.0"
+        },
+        {
+          "type": "f64",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-032",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2409346495
+        },
+        {
+          "type": "i32",
+          "value": -31
+        }
+      ]
+    },
+    {
+      "id": "case-033",
+      "operation": "ishl",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -394090625
+        },
+        {
+          "type": "i32",
+          "value": -478136379
+        }
+      ]
+    },
+    {
+      "id": "case-034",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": -1590363146
+        }
+      ]
+    },
+    {
+      "id": "case-035",
+      "operation": "ushl",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4294967294
+        },
+        {
+          "type": "i32",
+          "value": -33295407
+        }
+      ]
+    },
+    {
+      "id": "case-036",
+      "operation": "imul",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1371727805
+        },
+        {
+          "type": "i32",
+          "value": 42081295
+        }
+      ]
+    },
+    {
+      "id": "case-037",
+      "operation": "inot",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 33
+        }
+      ]
+    },
+    {
+      "id": "case-038",
+      "operation": "ult",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 2998556375
+        },
+        {
+          "type": "u32",
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-039",
+      "operation": "iadd",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": 65535
+        }
+      ]
+    },
+    {
+      "id": "case-040",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 31
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-041",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 65536
+        },
+        {
+          "type": "i32",
+          "value": -2
+        }
+      ]
+    },
+    {
+      "id": "case-042",
+      "operation": "ior",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1546044362
+        },
+        {
+          "type": "i32",
+          "value": 1723067671
+        }
+      ]
+    },
+    {
+      "id": "case-043",
+      "operation": "imod",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1772570994
+        },
+        {
+          "type": "i32",
+          "value": -32
+        }
+      ]
+    },
+    {
+      "id": "case-044",
+      "operation": "fmodInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-6818.0"
+        },
+        {
+          "type": "f64",
+          "value": "-8052.75"
+        }
+      ]
+    },
+    {
+      "id": "case-045",
+      "operation": "inot",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -456293137
+        }
+      ]
+    },
+    {
+      "id": "case-046",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "-2246.25"
+        }
+      ]
+    },
+    {
+      "id": "case-047",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1687817877
+        },
+        {
+          "type": "i32",
+          "value": -865181082
+        }
+      ]
+    },
+    {
+      "id": "case-048",
+      "operation": "ult",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 625950247
+        },
+        {
+          "type": "u32",
+          "value": 1730156747
+        }
+      ]
+    },
+    {
+      "id": "case-049",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "1024.5"
+        }
+      ]
+    },
+    {
+      "id": "case-050",
+      "operation": "faddInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1.0"
+        },
+        {
+          "type": "f64",
+          "value": "-4873.0"
+        }
+      ]
+    },
+    {
+      "id": "case-051",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": 33
+        }
+      ]
+    },
+    {
+      "id": "case-052",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 660778134
+        },
+        {
+          "type": "i32",
+          "value": 138556725
+        }
+      ]
+    },
+    {
+      "id": "case-053",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "8191.75"
+        },
+        {
+          "type": "f64",
+          "value": "3211.5"
+        }
+      ]
+    },
+    {
+      "id": "case-054",
+      "operation": "feq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "5275.5"
+        },
+        {
+          "type": "f64",
+          "value": "1024.5"
+        }
+      ]
+    },
+    {
+      "id": "case-055",
+      "operation": "ushl",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4271441218
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-056",
+      "operation": "ior",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 574871839
+        },
+        {
+          "type": "i32",
+          "value": -2
+        }
+      ]
+    },
+    {
+      "id": "case-057",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": 2147483646
+        }
+      ]
+    },
+    {
+      "id": "case-058",
+      "operation": "uadd",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 65535
+        },
+        {
+          "type": "u32",
+          "value": 32
+        }
+      ]
+    },
+    {
+      "id": "case-059",
+      "operation": "faddInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "0.25"
+        },
+        {
+          "type": "f64",
+          "value": "8191.75"
+        }
+      ]
+    },
+    {
+      "id": "case-060",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1625540872
+        },
+        {
+          "type": "i32",
+          "value": -62965307
+        }
+      ]
+    },
+    {
+      "id": "case-061",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -2
+        },
+        {
+          "type": "i32",
+          "value": 1547661062
+        }
+      ]
+    },
+    {
+      "id": "case-062",
+      "operation": "imul",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -2147483648
+        },
+        {
+          "type": "i32",
+          "value": -1816108123
+        }
+      ]
+    },
+    {
+      "id": "case-063",
+      "operation": "iadd",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2147483646
+        },
+        {
+          "type": "i32",
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "case-064",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -33
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-065",
+      "operation": "ieq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -2147483647
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-066",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-0.0"
+        },
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        }
+      ]
+    },
+    {
+      "id": "case-067",
+      "operation": "ult",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 65536
+        },
+        {
+          "type": "u32",
+          "value": 31
+        }
+      ]
+    },
+    {
+      "id": "case-068",
+      "operation": "inot",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1243861418
+        }
+      ]
+    },
+    {
+      "id": "case-069",
+      "operation": "ieq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-070",
+      "operation": "ior",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 0
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-071",
+      "operation": "umul",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 1
+        },
+        {
+          "type": "u32",
+          "value": 33
+        }
+      ]
+    },
+    {
+      "id": "case-072",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-073",
+      "operation": "iushr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 2
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-074",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 487681730
+        },
+        {
+          "type": "i32",
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-075",
+      "operation": "faddInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "-1024.25"
+        }
+      ]
+    },
+    {
+      "id": "case-076",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": 374364252
+        }
+      ]
+    },
+    {
+      "id": "case-077",
+      "operation": "usub",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 0
+        },
+        {
+          "type": "u32",
+          "value": 4294967294
+        }
+      ]
+    },
+    {
+      "id": "case-078",
+      "operation": "umul",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4294967295
+        },
+        {
+          "type": "u32",
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-079",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -685406939
+        },
+        {
+          "type": "i32",
+          "value": -2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-080",
+      "operation": "ishr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -31
+        },
+        {
+          "type": "i32",
+          "value": -2
+        }
+      ]
+    },
+    {
+      "id": "case-081",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1574636976
+        },
+        {
+          "type": "i32",
+          "value": -31
+        }
+      ]
+    },
+    {
+      "id": "case-082",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-083",
+      "operation": "flt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "8191.75"
+        },
+        {
+          "type": "f64",
+          "value": "-1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-084",
+      "operation": "ieq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1
+        },
+        {
+          "type": "i32",
+          "value": 932078650
+        }
+      ]
+    },
+    {
+      "id": "case-085",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1772983708
+        },
+        {
+          "type": "i32",
+          "value": 65535
+        }
+      ]
+    },
+    {
+      "id": "case-086",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "0.0"
+        },
+        {
+          "type": "f64",
+          "value": "8191.75"
+        }
+      ]
+    },
+    {
+      "id": "case-087",
+      "operation": "feq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "0.0"
+        }
+      ]
+    },
+    {
+      "id": "case-088",
+      "operation": "feq",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        },
+        {
+          "type": "f64",
+          "value": "-2758.0"
+        }
+      ]
+    },
+    {
+      "id": "case-089",
+      "operation": "umod",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 65535
+        },
+        {
+          "type": "u32",
+          "value": 237502992
+        }
+      ]
+    },
+    {
+      "id": "case-090",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "0.0"
+        },
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        }
+      ]
+    },
+    {
+      "id": "case-091",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 0
+        },
+        {
+          "type": "i32",
+          "value": -2
+        }
+      ]
+    },
+    {
+      "id": "case-092",
+      "operation": "imul",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -31
+        },
+        {
+          "type": "i32",
+          "value": 1421103656
+        }
+      ]
+    },
+    {
+      "id": "case-093",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -2
+        },
+        {
+          "type": "i32",
+          "value": 1035513225
+        }
+      ]
+    },
+    {
+      "id": "case-094",
+      "operation": "usub",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4214746046
+        },
+        {
+          "type": "u32",
+          "value": 4294967295
+        }
+      ]
+    },
+    {
+      "id": "case-095",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        },
+        {
+          "type": "i32",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "case-096",
+      "operation": "iadd",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        },
+        {
+          "type": "i32",
+          "value": 1636456628
+        }
+      ]
+    },
+    {
+      "id": "case-097",
+      "operation": "fmodInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1.0"
+        },
+        {
+          "type": "f64",
+          "value": "1024.5"
+        }
+      ]
+    },
+    {
+      "id": "case-098",
+      "operation": "ior",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -33
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-099",
+      "operation": "fsubInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-0.0"
+        },
+        {
+          "type": "f64",
+          "value": "1024.5"
+        }
+      ]
+    },
+    {
+      "id": "case-100",
+      "operation": "usub",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 31
+        },
+        {
+          "type": "u32",
+          "value": 32
+        }
+      ]
+    },
+    {
+      "id": "case-101",
+      "operation": "iushr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 65535
+        },
+        {
+          "type": "i32",
+          "value": 31
+        }
+      ]
+    },
+    {
+      "id": "case-102",
+      "operation": "fmulInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "0.25"
+        },
+        {
+          "type": "f64",
+          "value": "-6485.5"
+        }
+      ]
+    },
+    {
+      "id": "case-103",
+      "operation": "fmodInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1887.0"
+        },
+        {
+          "type": "f64",
+          "value": "-1024.25"
+        }
+      ]
+    },
+    {
+      "id": "case-104",
+      "operation": "imod",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -65536
+        },
+        {
+          "type": "i32",
+          "value": -32
+        }
+      ]
+    },
+    {
+      "id": "case-105",
+      "operation": "fsubInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "-8192.0"
+        }
+      ]
+    },
+    {
+      "id": "case-106",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -353266926
+        },
+        {
+          "type": "i32",
+          "value": -31
+        }
+      ]
+    },
+    {
+      "id": "case-107",
+      "operation": "fdivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-1.0"
+        },
+        {
+          "type": "f64",
+          "value": "757.25"
+        }
+      ]
+    },
+    {
+      "id": "case-108",
+      "operation": "uadd",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 65536
+        },
+        {
+          "type": "u32",
+          "value": 3949886732
+        }
+      ]
+    },
+    {
+      "id": "case-109",
+      "operation": "imod",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1864848646
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-110",
+      "operation": "isub",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": 2147483646
+        }
+      ]
+    },
+    {
+      "id": "case-111",
+      "operation": "imod",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -33
+        },
+        {
+          "type": "i32",
+          "value": -290659865
+        }
+      ]
+    },
+    {
+      "id": "case-112",
+      "operation": "faddInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "1024.5"
+        },
+        {
+          "type": "f64",
+          "value": "1.0"
+        }
+      ]
+    },
+    {
+      "id": "case-113",
+      "operation": "ior",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 389429777
+        },
+        {
+          "type": "i32",
+          "value": -2147483648
+        }
+      ]
+    },
+    {
+      "id": "case-114",
+      "operation": "fsubInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "f64",
+          "value": "-0.0"
+        },
+        {
+          "type": "f64",
+          "value": "-6050.0"
+        }
+      ]
+    },
+    {
+      "id": "case-115",
+      "operation": "umul",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 0
+        },
+        {
+          "type": "u32",
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-116",
+      "operation": "imul",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": 1375878956
+        }
+      ]
+    },
+    {
+      "id": "case-117",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 32
+        },
+        {
+          "type": "i32",
+          "value": -2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-118",
+      "operation": "uadd",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 3917613234
+        },
+        {
+          "type": "u32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-119",
+      "operation": "ishl",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 33
+        },
+        {
+          "type": "i32",
+          "value": -607981955
+        }
+      ]
+    },
+    {
+      "id": "case-120",
+      "operation": "ishr",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -126297699
+        },
+        {
+          "type": "i32",
+          "value": -31
+        }
+      ]
+    },
+    {
+      "id": "case-121",
+      "operation": "iand",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -33
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-122",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -31
+        },
+        {
+          "type": "i32",
+          "value": -2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-123",
+      "operation": "ult",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4294967294
+        },
+        {
+          "type": "u32",
+          "value": 4266525625
+        }
+      ]
+    },
+    {
+      "id": "case-124",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 0
+        },
+        {
+          "type": "i32",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "case-125",
+      "operation": "ishl",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1221893229
+        },
+        {
+          "type": "i32",
+          "value": -65536
+        }
+      ]
+    },
+    {
+      "id": "case-126",
+      "operation": "idivInt",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1159360382
+        },
+        {
+          "type": "i32",
+          "value": 2147483647
+        }
+      ]
+    },
+    {
+      "id": "case-127",
+      "operation": "ushr",
+      "resultType": "u32",
+      "arguments": [
+        {
+          "type": "u32",
+          "value": 4294967295
+        },
+        {
+          "type": "i32",
+          "value": -32
+        }
+      ]
+    }
+  ]
+}

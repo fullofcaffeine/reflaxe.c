@@ -1,0 +1,54 @@
+{
+  "$schema": "primitive-divergences.schema.json",
+  "schemaVersion": 1,
+  "ledgerId": "hxc-primitive-divergences-v1",
+  "oracle": {
+    "kind": "haxe-eval",
+    "version": "5.0.0-preview.1",
+    "authority": "docs/specs/toolchain-lock.json"
+  },
+  "entries": [
+    {
+      "id": "div-int-modulo-zero",
+      "status": "intentional-target-refinement",
+      "ownerBeads": "E2.T11",
+      "operation": "Int.%",
+      "input": "7 % 0",
+      "oracleValue": "nan",
+      "targetValue": "0",
+      "contract": "docs/adr/0008-primitive-representations-and-conversions.md",
+      "rationale": "The pinned Eval carrier exposes its own exceptional result, while hxc defines zero so generated C never executes undefined integer remainder.",
+      "tests": [
+        "test/primitive_differential/run.py"
+      ]
+    },
+    {
+      "id": "div-std-int-positive-infinity",
+      "status": "intentional-target-refinement",
+      "ownerBeads": "E2.T11",
+      "operation": "Std.int(Float)",
+      "input": "Math.POSITIVE_INFINITY",
+      "oracleValue": "-1",
+      "targetValue": "2147483647",
+      "contract": "docs/adr/0008-primitive-representations-and-conversions.md",
+      "rationale": "The C target saturates positive infinity before conversion instead of inheriting Eval's host-specific overflow result.",
+      "tests": [
+        "test/primitive_differential/run.py"
+      ]
+    },
+    {
+      "id": "div-std-int-positive-overflow",
+      "status": "intentional-target-refinement",
+      "ownerBeads": "E2.T11",
+      "operation": "Std.int(Float)",
+      "input": "2147483648.0",
+      "oracleValue": "-2147483648",
+      "targetValue": "2147483647",
+      "contract": "docs/adr/0008-primitive-representations-and-conversions.md",
+      "rationale": "The C target saturates a finite positive overflow before conversion so it never relies on undefined floating-to-integer C behavior.",
+      "tests": [
+        "test/primitive_differential/run.py"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "id": "first-semantic-mismatch",
+  "corpus": [
+    {
+      "id": "regression-case-000",
+      "operation": "iadd",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 1
+        },
+        {
+          "type": "i32",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "id": "regression-case-001",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 85
+        },
+        {
+          "type": "i32",
+          "value": 15
+        }
+      ]
+    },
+    {
+      "id": "regression-case-002",
+      "operation": "ilt",
+      "resultType": "bool",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": -1
+        },
+        {
+          "type": "i32",
+          "value": 1
+        }
+      ]
+    }
+  ],
+  "oracleTrace": [
+    "regression-case-000:i32:3",
+    "regression-case-001:i32:90",
+    "regression-case-002:bool:true"
+  ],
+  "targetTrace": [
+    "regression-case-000:i32:3",
+    "regression-case-001:i32:95",
+    "regression-case-002:bool:true"
+  ],
+  "expectedMinimized": {
+    "schemaVersion": 1,
+    "reason": "first-semantic-mismatch",
+    "case": {
+      "id": "regression-case-001",
+      "operation": "ixor",
+      "resultType": "i32",
+      "arguments": [
+        {
+          "type": "i32",
+          "value": 85
+        },
+        {
+          "type": "i32",
+          "value": 15
+        }
+      ]
+    },
+    "oracleLine": "regression-case-001:i32:90",
+    "targetLine": "regression-case-001:i32:95"
+  }
+}

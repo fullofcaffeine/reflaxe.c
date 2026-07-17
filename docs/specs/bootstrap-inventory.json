@@ -107,6 +107,11 @@
       "authority": "test-policy"
     },
     {
+      "id": "primitive-divergences",
+      "path": "docs/specs/primitive-divergences.json",
+      "authority": "test-policy"
+    },
+    {
       "id": "primitive-semantics",
       "path": "docs/specs/primitive-semantics.json",
       "authority": "implemented-contract"
@@ -525,15 +530,17 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set plus the checked-in generated hello baseline registered by the runner.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, checked-in generated hello baseline, and seeded primitive ASan/UBSan corpus registered by the runner.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
+        "test/primitive_differential/run.py",
         "test/governance/test_runtime_smoke_policy.py"
       ],
       "owners": [
         "E0.T05",
-        "E2.T10"
+        "E2.T10",
+        "E2.T11"
       ],
       "limitations": [
         "Component-native evidence is not a complete supported-platform or release matrix."
@@ -583,10 +590,11 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
       "evidence": [
         "test/arithmetic_semantics/run.py",
         "test/function_lowering/run.py",
+        "test/primitive_differential/run.py",
         "test/static_initialization/run.py",
         "test/span_lowering/run.py"
       ],
@@ -596,7 +604,8 @@
         "E2.T05",
         "E2.T06",
         "E2.T08",
-        "E2.T09"
+        "E2.T09",
+        "E2.T11"
       ],
       "limitations": [
         "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."

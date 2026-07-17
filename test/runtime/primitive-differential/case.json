@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-differential-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-QA-004",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/primitive_differential/expected/corpus.json",
+    "test/primitive_differential/expected/oracle.txt",
+    "test/primitive_differential/expected/program.c",
+    "test/primitive_differential/expected/program.h",
+    "test/primitive_differential/expected/symbols.json",
+    "test/primitive_differential/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../primitive_differential/run.py",
+      "--native-only"
+    ],
+    "workingDirectory": "test/runtime/primitive-differential",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "checked-in seeded corpus passed O0/O2 and ASan/UBSan$"
+    },
+    "runtimePlan": "test/primitive_differential/expected/runtime-plan.json"
+  }
+}

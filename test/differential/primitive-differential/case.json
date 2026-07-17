@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "primitive-differential-eval",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-QA-004",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "docs/specs/primitive-divergences.json",
+    "test/primitive_differential/expected/PrimitiveDifferentialFixture.hx",
+    "test/primitive_differential/expected/corpus.json",
+    "test/primitive_differential/expected/divergence-oracle.txt",
+    "test/primitive_differential/expected/oracle.txt",
+    "test/primitive_differential/regressions/minimizer-regression.json",
+    "test/primitive_differential/run.py",
+    "test/primitive_differential/seed.json"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../primitive_differential/run.py"
+    ],
+    "workingDirectory": "test/differential/primitive-differential",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "reproducible seeded Eval differential, minimized regression, ledgered refinements, runtime-free C11, and ASan/UBSan passed$"
+    },
+    "oracle": "test/primitive_differential/expected/oracle.txt"
+  }
+}

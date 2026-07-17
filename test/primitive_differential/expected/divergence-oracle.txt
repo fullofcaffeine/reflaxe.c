@@ -1,0 +1,3 @@
+div-int-modulo-zero:i32:nan
+div-std-int-positive-infinity:i32:-1
+div-std-int-positive-overflow:i32:-2147483648

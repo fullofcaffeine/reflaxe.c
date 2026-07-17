@@ -65,6 +65,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "evaluation-order",
                 "static-initialization",
                 "arithmetic-semantics",
+                "primitive-differential",
                 "runtime-feature-graph",
                 "string-output",
                 "hello",

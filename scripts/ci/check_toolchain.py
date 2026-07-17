@@ -228,6 +228,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_evaluation_order_script = "python3 test/evaluation_order/run.py"
     expected_static_initialization_script = "python3 test/static_initialization/run.py"
     expected_arithmetic_semantics_script = "python3 test/arithmetic_semantics/run.py"
+    expected_primitive_differential_script = "python3 test/primitive_differential/run.py"
     expected_span_lowering_script = "python3 test/span_lowering/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
@@ -240,7 +241,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:span-lowering && npm run snapshots:check"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -340,6 +341,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         != expected_arithmetic_semantics_script
     ):
         errors.append("package.json must retain the primitive arithmetic semantic gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:primitive-differential")
+        != expected_primitive_differential_script
+    ):
+        errors.append("package.json must retain the seeded primitive differential gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:span-lowering") != expected_span_lowering_script
