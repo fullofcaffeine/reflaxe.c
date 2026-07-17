@@ -1046,6 +1046,7 @@ def validate() -> list[str]:
     for required_primitive_differential_contract in (
         "SplitMix64",
         "splitmix64-v1",
+        "host-dependent-int32",
         "minimize_first_mismatch",
         "primitive-divergences.json",
         "run_c_fixture_corpus",

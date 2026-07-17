@@ -59,7 +59,7 @@
         "ownerBeads",
         "operation",
         "input",
-        "oracleValue",
+        "oracleExpectation",
         "targetValue",
         "contract",
         "rationale",
@@ -84,8 +84,8 @@
           "type": "string",
           "minLength": 1
         },
-        "oracleValue": {
-          "type": "string"
+        "oracleExpectation": {
+          "$ref": "#/$defs/oracleExpectation"
         },
         "targetValue": {
           "type": "string"
@@ -108,6 +108,43 @@
           }
         }
       }
+    },
+    "oracleExpectation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "value"
+          ],
+          "properties": {
+            "kind": {
+              "const": "exact"
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "canonicalValue"
+          ],
+          "properties": {
+            "kind": {
+              "const": "host-dependent-int32"
+            },
+            "canonicalValue": {
+              "const": "<host-dependent-int32>"
+            }
+          }
+        }
+      ]
     }
   }
 }

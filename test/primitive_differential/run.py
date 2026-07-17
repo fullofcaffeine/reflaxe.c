@@ -46,6 +46,9 @@ SANITIZER_FLAGS = (
     "-fno-sanitize-recover=all",
     "-fno-omit-frame-pointer",
 )
+ORACLE_EXACT = "exact"
+ORACLE_HOST_DEPENDENT_INT32 = "host-dependent-int32"
+ORACLE_HOST_DEPENDENT_INT32_CANONICAL = "<host-dependent-int32>"
 SNAPSHOT_FORMATS = {
     "corpus.json": "json",
     "PrimitiveDifferentialFixture.hx": "text",
@@ -135,6 +138,7 @@ class Divergence:
     haxe_call: str
     target_haxe_call: str
     c_call_arguments: tuple[str, ...]
+    oracle_kind: str
     result_type: str = "i32"
 
 
@@ -145,6 +149,7 @@ DIVERGENCES = (
         "imod(7, 0)",
         "imod(7, 0)",
         ("INT32_C(7)", "INT32_C(0)"),
+        ORACLE_EXACT,
     ),
     Divergence(
         "div-std-int-positive-infinity",
@@ -152,6 +157,7 @@ DIVERGENCES = (
         "fint(Math.POSITIVE_INFINITY)",
         "fint(0.0)",
         ("INFINITY",),
+        ORACLE_HOST_DEPENDENT_INT32,
     ),
     Divergence(
         "div-std-int-positive-overflow",
@@ -159,6 +165,7 @@ DIVERGENCES = (
         "fint(2147483648.0)",
         "fint(2147483648.0)",
         ("2147483648.0",),
+        ORACLE_EXACT,
     ),
 )
 
@@ -603,6 +610,12 @@ def validate_schema_authority() -> None:
     entry = definitions.get("entry") if isinstance(definitions, dict) else None
     if not isinstance(entry, dict) or entry.get("additionalProperties") is not False:
         raise PrimitiveDifferentialFailure("primitive divergence schema must close every entry")
+    expectation = definitions.get("oracleExpectation") if isinstance(definitions, dict) else None
+    variants = expectation.get("oneOf") if isinstance(expectation, dict) else None
+    if not isinstance(variants, list) or len(variants) != 2:
+        raise PrimitiveDifferentialFailure(
+            "primitive divergence schema must close the two oracle expectation variants"
+        )
 
 
 def validate_ledger_document(document: Mapping[str, object]) -> dict[str, dict[str, str]]:
@@ -633,7 +646,7 @@ def validate_ledger_document(document: Mapping[str, object]) -> dict[str, dict[s
         "ownerBeads",
         "operation",
         "input",
-        "oracleValue",
+        "oracleExpectation",
         "targetValue",
         "contract",
         "rationale",
@@ -649,9 +662,39 @@ def validate_ledger_document(document: Mapping[str, object]) -> dict[str, dict[s
             raise PrimitiveDifferentialFailure(f"duplicate primitive divergence {identifier}")
         if raw.get("status") != "intentional-target-refinement" or raw.get("ownerBeads") != "E2.T11":
             raise PrimitiveDifferentialFailure(f"primitive divergence {identifier} lost status or ownership")
-        strings = ("operation", "input", "oracleValue", "targetValue", "contract", "rationale")
+        strings = ("operation", "input", "targetValue", "contract", "rationale")
         if any(not isinstance(raw.get(key), str) or not raw.get(key) for key in strings):
             raise PrimitiveDifferentialFailure(f"primitive divergence {identifier} has an invalid text field")
+        expectation = raw.get("oracleExpectation")
+        if not isinstance(expectation, dict):
+            raise PrimitiveDifferentialFailure(
+                f"primitive divergence {identifier} has no closed oracle expectation"
+            )
+        kind = expectation.get("kind")
+        if kind == ORACLE_EXACT:
+            if (
+                set(expectation) != {"kind", "value"}
+                or not isinstance(expectation.get("value"), str)
+                or not expectation.get("value")
+            ):
+                raise PrimitiveDifferentialFailure(
+                    f"primitive divergence {identifier} has an invalid exact oracle expectation"
+                )
+            canonical_oracle = str(expectation["value"])
+        elif kind == ORACLE_HOST_DEPENDENT_INT32:
+            if (
+                set(expectation) != {"kind", "canonicalValue"}
+                or expectation.get("canonicalValue")
+                != ORACLE_HOST_DEPENDENT_INT32_CANONICAL
+            ):
+                raise PrimitiveDifferentialFailure(
+                    f"primitive divergence {identifier} has an invalid host-dependent oracle expectation"
+                )
+            canonical_oracle = ORACLE_HOST_DEPENDENT_INT32_CANONICAL
+        else:
+            raise PrimitiveDifferentialFailure(
+                f"primitive divergence {identifier} uses unknown oracle expectation {kind!r}"
+            )
         contract = raw["contract"]
         tests = raw.get("tests")
         if (
@@ -665,13 +708,19 @@ def validate_ledger_document(document: Mapping[str, object]) -> dict[str, dict[s
             raise PrimitiveDifferentialFailure(f"primitive divergence {identifier} has stale evidence")
         actual_ids.append(identifier)
         result[identifier] = {
-            "oracleValue": str(raw["oracleValue"]),
+            "oracleKind": str(kind),
+            "oracleValue": canonical_oracle,
             "targetValue": str(raw["targetValue"]),
         }
     if actual_ids != expected_ids:
         raise PrimitiveDifferentialFailure(
             f"primitive divergence coverage drifted: expected={expected_ids!r} actual={actual_ids!r}"
         )
+    for divergence in DIVERGENCES:
+        if result[divergence.identifier]["oracleKind"] != divergence.oracle_kind:
+            raise PrimitiveDifferentialFailure(
+                f"primitive divergence {divergence.identifier} changed oracle expectation kind"
+            )
     return result
 
 
@@ -692,12 +741,33 @@ def validate_ledger() -> dict[str, dict[str, str]]:
     unknown_entries = unknown.get("entries")
     if isinstance(unknown_entries, list) and isinstance(unknown_entries[0], dict):
         unknown_entries[0]["id"] = "div-unregistered-edge"
-    for label, malformed in (("duplicate", duplicate), ("stale", stale), ("unknown", unknown)):
+    broad = copy.deepcopy(document)
+    broad_entries = broad.get("entries")
+    if isinstance(broad_entries, list) and isinstance(broad_entries[1], dict):
+        broad_entries[1]["oracleExpectation"] = {
+            "kind": ORACLE_HOST_DEPENDENT_INT32,
+            "canonicalValue": "*",
+        }
+    wrong_kind = copy.deepcopy(document)
+    wrong_kind_entries = wrong_kind.get("entries")
+    if isinstance(wrong_kind_entries, list) and isinstance(wrong_kind_entries[0], dict):
+        wrong_kind_entries[0]["oracleExpectation"] = {
+            "kind": ORACLE_HOST_DEPENDENT_INT32,
+            "canonicalValue": ORACLE_HOST_DEPENDENT_INT32_CANONICAL,
+        }
+    for label, malformed in (
+        ("duplicate", duplicate),
+        ("stale", stale),
+        ("unknown", unknown),
+        ("broad", broad),
+        ("wrong-kind", wrong_kind),
+    ):
         try:
             validate_ledger_document(malformed)
         except PrimitiveDifferentialFailure:
             continue
         raise PrimitiveDifferentialFailure(f"{label} divergence ledger self-test was accepted")
+    validate_oracle_expectation_regression(values)
     return values
 
 
@@ -711,6 +781,93 @@ def trace_map(lines: Sequence[str], label: str) -> dict[str, str]:
             raise PrimitiveDifferentialFailure(f"{label} repeats trace ID {parts[0]}")
         result[parts[0]] = line
     return result
+
+
+def canonicalize_oracle_divergences(
+    raw_trace: str, ledger: Mapping[str, Mapping[str, str]]
+) -> str:
+    observed = trace_map(raw_trace.splitlines(), "raw Eval divergence trace")
+    expected_ids = {divergence.identifier for divergence in DIVERGENCES}
+    if set(observed) != expected_ids:
+        raise PrimitiveDifferentialFailure(
+            "raw Eval divergence trace IDs drifted: "
+            f"expected={sorted(expected_ids)!r} actual={sorted(observed)!r}"
+        )
+    canonical: list[str] = []
+    for divergence in DIVERGENCES:
+        prefix = f"{divergence.identifier}:{divergence.result_type}:"
+        line = observed[divergence.identifier]
+        if not line.startswith(prefix):
+            raise PrimitiveDifferentialFailure(
+                f"raw Eval divergence {divergence.identifier} changed result type: {line!r}"
+            )
+        value = line[len(prefix) :]
+        expectation = ledger[divergence.identifier]
+        kind = expectation["oracleKind"]
+        if kind == ORACLE_EXACT:
+            canonical_value = expectation["oracleValue"]
+            if value != canonical_value:
+                raise PrimitiveDifferentialFailure(
+                    f"raw Eval divergence {divergence.identifier} expected exact "
+                    f"{canonical_value!r}, observed {value!r}"
+                )
+        elif kind == ORACLE_HOST_DEPENDENT_INT32:
+            try:
+                parsed = int(value, 10)
+            except ValueError as error:
+                raise PrimitiveDifferentialFailure(
+                    f"raw Eval divergence {divergence.identifier} expected a host-dependent "
+                    f"Int32, observed {value!r}"
+                ) from error
+            if str(parsed) != value or not I32_MIN <= parsed <= I32_MAX:
+                raise PrimitiveDifferentialFailure(
+                    f"raw Eval divergence {divergence.identifier} observed a non-canonical "
+                    f"or out-of-range Int32 {value!r}"
+                )
+            if value == expectation["targetValue"]:
+                raise PrimitiveDifferentialFailure(
+                    f"primitive divergence {divergence.identifier} disappeared on this host"
+                )
+            canonical_value = expectation["oracleValue"]
+        else:
+            raise PrimitiveDifferentialFailure(
+                f"primitive divergence {divergence.identifier} has unknown oracle kind {kind!r}"
+            )
+        canonical.append(f"{prefix}{canonical_value}")
+    return "\n".join(canonical) + "\n"
+
+
+def validate_oracle_expectation_regression(
+    ledger: Mapping[str, Mapping[str, str]]
+) -> None:
+    representative = "\n".join(
+        (
+            "div-int-modulo-zero:i32:nan",
+            "div-std-int-positive-infinity:i32:-1",
+            "div-std-int-positive-overflow:i32:-2147483648",
+            "",
+        )
+    )
+    if canonicalize_oracle_divergences(
+        representative, ledger
+    ) != expected_divergence_trace(ledger, "oracleValue"):
+        raise PrimitiveDifferentialFailure("host-dependent oracle canonicalization drifted")
+    malformed = representative.replace(
+        "div-std-int-positive-infinity:i32:-1",
+        "div-std-int-positive-infinity:i32:2147483648",
+    )
+    converged = representative.replace(
+        "div-std-int-positive-infinity:i32:-1",
+        f"div-std-int-positive-infinity:i32:{I32_MAX}",
+    )
+    for label, trace in (("out-of-range", malformed), ("converged", converged)):
+        try:
+            canonicalize_oracle_divergences(trace, ledger)
+        except PrimitiveDifferentialFailure:
+            continue
+        raise PrimitiveDifferentialFailure(
+            f"{label} host-dependent oracle self-test was accepted"
+        )
 
 
 def minimize_first_mismatch(
@@ -820,12 +977,17 @@ def snapshot_values() -> dict[str, object]:
     source = render_fixture(cases)
     if source != render_fixture(repeated_cases):
         raise PrimitiveDifferentialFailure("generated Haxe source changed across repeated generation")
-    oracle, divergence_oracle = render_oracle(source)
-    repeated_oracle, repeated_divergence = render_oracle(source)
-    if oracle != repeated_oracle or divergence_oracle != repeated_divergence:
+    oracle, raw_divergence_oracle = render_oracle(source)
+    repeated_oracle, repeated_raw_divergence = render_oracle(source)
+    if oracle != repeated_oracle or raw_divergence_oracle != repeated_raw_divergence:
         raise PrimitiveDifferentialFailure("pinned Eval oracle changed across repeated execution")
+    divergence_oracle = canonicalize_oracle_divergences(
+        raw_divergence_oracle, ledger
+    )
     if divergence_oracle != expected_divergence_trace(ledger, "oracleValue"):
-        raise PrimitiveDifferentialFailure("pinned Eval divergence observations drifted from the ledger")
+        raise PrimitiveDifferentialFailure(
+            "canonical Eval divergence observations drifted from the ledger"
+        )
     return {
         "corpus.json": corpus,
         "PrimitiveDifferentialFixture.hx": source,

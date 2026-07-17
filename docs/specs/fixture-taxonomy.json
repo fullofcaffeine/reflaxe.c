@@ -556,7 +556,7 @@
       "status": "active",
       "assertions": [
         "a checked SplitMix64 seed regenerates the same boundary-biased 128-case primitive corpus and Haxe source byte for byte",
-        "the common Int, UInt, Float-to-Int, and Boolean result domain matches pinned Haxe Eval exactly while every admitted target refinement is replayed from the closed divergence ledger",
+        "the common Int, UInt, Float-to-Int, and Boolean result domain matches pinned Haxe Eval exactly while every admitted target refinement is replayed from the closed divergence ledger and only the non-finite positive-infinity Eval Int32 observation receives its named host-dependent normalization",
         "a deterministic mismatch reducer isolates the first failing semantic case and is locked by a stored replay fixture",
         "checked-in generated strict C11 runs at O0 and O2 and under combined address and undefined-behavior sanitizers in required GCC and Clang lanes without selecting hxrt",
         "the reusable argument-array native harness records normalized compiler, command, input-hash, exit, stdout, and stderr evidence without host paths"

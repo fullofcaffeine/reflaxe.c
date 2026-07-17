@@ -33,12 +33,24 @@ conversion crosses the common range.
 
 Target-specific behavior is not hidden by filtering a failed comparison.
 [`primitive-divergences.json`](specs/primitive-divergences.json) is a closed,
-schema-backed ledger that records the exact input, pinned Eval value, hxc value,
-ADR contract, rationale, owner, and executable test for every admitted
+schema-backed ledger that records the exact input, typed Eval expectation, hxc
+value, ADR contract, rationale, owner, and executable test for every admitted
 divergence. The suite currently replays integer modulo by zero and the positive
 infinity/overflow sides of `Std.int`. An unknown, duplicate, unowned, stale, or
-unexecuted ledger entry fails the suite, and the observed Eval and native traces
-must still equal the ledger exactly.
+unexecuted ledger entry fails the suite.
+
+Modulo by zero retains an exact `nan` Eval expectation, and finite positive
+overflow retains its exact wrapping observation. Positive infinity does not:
+the [pinned Eval implementation](https://github.com/HaxeFoundation/haxe/blob/2c1e544e0a2c7524ef4c8e103f1b0580362ea538/src/macro/eval/evalStdLib.ml#L2206-L2208)
+delegates that non-finite conversion to OCaml's host conversion, whose result is
+host-dependent. That entry therefore uses the only admitted normalization,
+`host-dependent-int32`. The runner still executes the raw Eval call, requires
+the observation to be a canonical signed 32-bit integer different from the
+exact hxc saturation value, and only then records the stable
+`<host-dependent-int32>` snapshot token. Common-domain cases, the other two
+divergences, and all generated-C target values remain exact. The expectation
+kind and canonical token are closed by the schema and negative self-tests, so
+this normalization cannot expand into a general mismatch filter.
 
 ## Mismatch reduction
 

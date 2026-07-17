@@ -255,11 +255,14 @@ positive/snapshot/runtime/differential suite for E2.T11. A versioned SplitMix64
 seed deterministically builds 128 boundary-biased calls across the admitted
 `Int`, `UInt`, finite `Float`, conversion, shift, bit, arithmetic, and comparison
 surface. It snapshots both the corpus and ordinary generated Haxe fixture,
-compares exact `Int`/`UInt`/`Bool` traces with pinned Eval, and checks production
-artifacts across unrelated roots with an empty runtime plan. Target-specific
-zero-modulo and positive `Std.int` overflow results are allowed only through the
-schema-backed divergence ledger and remain executable on both sides. A stored
-reducer regression proves that a mismatch becomes one stable typed replay case.
+compares exact common-domain `Int`/`UInt`/`Bool` traces with pinned Eval, and
+checks production artifacts across unrelated roots with an empty runtime plan.
+Target-specific zero-modulo and positive `Std.int` overflow results are allowed
+only through the schema-backed divergence ledger and remain executable on both
+sides. Only the non-finite positive-infinity Eval conversion uses the ledger's
+closed host-dependent-Int32 normalization; the finite overflow observation and
+every generated-C value remain exact. A stored reducer regression proves that a
+mismatch becomes one stable typed replay case.
 Required GCC and Clang lanes consume the checked-in C without Haxe at O0/O2 and
 under combined AddressSanitizer/UndefinedBehaviorSanitizer. See the
 [seeded primitive differential suite](primitive-differential.md).
