@@ -859,9 +859,9 @@ def validate_generated(ledger: dict[str, object]) -> None:
     statuses = {status: 0 for status in STATUSES}
     for entry in entries:
         statuses[str(entry["status"])] += 1
-    if statuses["conformant"] != 1 or statuses["partial"] != 0:
+    if statuses["conformant"] != 1 or statuses["partial"] != 2:
         raise StdlibLedgerFailure(
-            "M2 evidence should promote exactly Std.int; broader stdlib parity is not yet proven"
+            "evidence should mark exactly Std.int conformant plus literal Sys.println and trace partial; broader stdlib parity is not yet proven"
         )
 
 
@@ -1086,6 +1086,9 @@ def main() -> int:
         planned = sum(
             1 for item in entries if record(item, "entry").get("status") == "planned"
         )
+        partial = sum(
+            1 for item in entries if record(item, "entry").get("status") == "partial"
+        )
         conformant = sum(
             1
             for item in entries
@@ -1095,7 +1098,7 @@ def main() -> int:
             "stdlib-ledger: OK: "
             f"Haxe {record(generated['source'], 'source')['haxeVersion']}; "
             f"sources={len(surface.sources)}, APIs={len(entries)}, "
-            f"planned={planned}, conformant={conformant}; typed C + declaration-only capability probes deterministic"
+            f"planned={planned}, partial={partial}, conformant={conformant}; typed C + declaration-only capability probes deterministic"
         )
         return 0
     except (OSError, UnicodeError, StdlibLedgerFailure) as error:

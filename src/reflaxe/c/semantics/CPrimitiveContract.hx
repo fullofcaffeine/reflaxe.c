@@ -508,6 +508,7 @@ class CPrimitiveContract {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi-int:${abiInteger(kind)}';
 			case IRTFloat(width): 'f$width';
+			case IRTString: "string-utf8";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeRef(pointee)}>';

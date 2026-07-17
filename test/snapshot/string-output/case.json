@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "string-literal-output-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-006"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/string_output/expected/output.hxcir",
+    "test/string_output/expected/program.h",
+    "test/string_output/expected/program.c",
+    "test/string_output/expected/runtime-plan.json",
+    "test/string_output/expected/stdlib-report.json",
+    "test/string_output/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "string-output"
+    ],
+    "workingDirectory": "test/snapshot/string-output",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/string_output/expected/output.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/string_output/expected/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/string_output/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/string_output/expected/runtime-plan.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/string_output/expected/stdlib-report.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

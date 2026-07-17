@@ -73,10 +73,12 @@ The probes cover:
 - two byte-identical declaration plans and planned-header renders, matched
   against `test/declaration_plan/expected/**`, including actionable complete
   cycle/source-placement diagnostics and no runtime selection;
-- two byte-identical canonical HxcIR reports, including reversed unordered
-  inputs, source-aware semantic/coverage goldens, explicit side-effect and
-  cleanup order, every call dispatch form, named runtime intent, and stable
-  negative diagnostics, plus an Eval oracle for the source-side effect trace;
+- two byte-identical schema-3 HxcIR reports, including reversed unordered
+  inputs, source-aware semantic/coverage goldens, exact UTF-8 String constants,
+  explicit side-effect and cleanup order, every call dispatch form, named
+  runtime intent, and stable negative diagnostics, plus Eval oracles;
+- the generated literal-output project with exact ASCII/non-ASCII/NUL bytes,
+  hosted error handling, and only the selected literal/I/O runtime closure;
 - a temporary package layout with Reflaxe flattened into the package classpath;
 - required license and provenance files in that staged package.
 
@@ -98,11 +100,14 @@ with warnings as errors, compile and execute both structural C AST goldens, run
 the hosted runtime seed and native fixtures, independently compile each planned
 declaration header, run their combined C consumer, compile the freestanding
 runtime path, and link a C++17 consumer of the runtime public header. The
+runtime feature lane also rebuilds the exact compiler-selected literal/I/O
+package. The `.cpp` consumer verifies C++17 compatibility and C linkage for the
+C header; it is deliberately not generated C++ output. The
 declarator, expression/statement, and declaration-header goldens are rendered
 from target-owned structures by Haxe test fixtures. They are runtime-free
 printer/planner proofs; they are not evidence that Haxe application lowering or
-production multi-file emission exists. The remaining native lanes are
-seed/interop checks, not runtime feature-selection claims.
+production multi-file emission exists. The remaining native lanes retain their
+bounded seed/interop claims.
 
 ## Activation sequence
 

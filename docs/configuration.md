@@ -108,6 +108,14 @@ Transitive dependencies remain report entries rather than separate warnings.
 Policy violations are always errors. See
 [ADR 0001](adr/0001-direct-c-and-selective-runtime.md).
 
+The current generated-Haxe runtime selection is deliberately narrower than the
+configuration surface: only compiler-known String literals passed to hosted
+`Sys.println` or default `trace` request `io`. Portable defaults report one
+summary; metal defaults warn once per source root; `off` stays silent. `none`
+rejects the source requirement with `HXC2000`, and non-hosted environments fail
+planning before any artifact is written. Primitive-only programs retain their
+positive empty-plan proof.
+
 The typed runtime planner also accepts internal manual feature constraints.
 They never override semantic inference: `require` can only confirm a feature
 already selected by a reachable source reason, and `forbid` fails when that

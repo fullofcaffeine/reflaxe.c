@@ -86,7 +86,7 @@ class RuntimeFeatureRegistry {
 		return {
 			schemaVersion: SCHEMA_VERSION,
 			algorithm: ALGORITHM,
-			status: RuntimeFeatureCatalogStatus.ProvisionalNativeSeedPackaging,
+			status: compilerSelectableFeatures.length == 0 ? RuntimeFeatureCatalogStatus.ProvisionalNativeSeedPackaging : RuntimeFeatureCatalogStatus.SelectiveCompilerPackaging,
 			requirements: ["HXC-RT-001", "HXC-RT-002", "HXC-RT-004", "HXC-RT-008"],
 			noUnconditionalCore: true,
 			compilerSelectableFeatures: compilerSelectableFeatures,

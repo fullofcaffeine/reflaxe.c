@@ -56,17 +56,21 @@ The emitter owns these schema-1 sidecars:
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   primitive executable's schema-1 `hxc-runtime-plan-v1`
-  `analyzed-runtime-free` record. The latter is produced by the typed runtime
-  feature planner and contains resolved policy/diagnostic provenance, planning
+  analyzed record. Primitive-only graphs use `analyzed-runtime-free`; literal
+  hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
+  `status`, `string-literal`, and `io`. Both are produced by the typed runtime
+  feature planner and contain resolved policy/diagnostic provenance, planning
   purpose and environment, direct decisions, root reasons, manual constraints,
   dependency edges, selected feature/artifact/symbol/library/define sets, and a
-  positive empty-runtime proof. The admitted path requires all selected sets to
-  be empty. The `selected-program-local-helpers` decision appears only when that
-  compilation selected at least one helper;
+  positive empty-runtime proof only for the empty case. The
+  `selected-program-local-helpers` decision appears only when that compilation
+  selected at least one helper;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
-  primitive executable's `analyzed-no-stdlib-use`.
+  executable's exact `analyzed-no-stdlib-use` or bounded
+  `analyzed-selected-stdlib-use` record. The latter currently admits only
+  literal `Sys.println` and default `haxe.Log.trace` capabilities.
 
 Two optional non-payload adapters are compiler-owned and content-addressed in
 the same manifest: `cmake/CMakeLists.txt` and `meson.build`. They are derived
@@ -111,11 +115,11 @@ orchestration, toolchain/sysroot/cross files, and the full CLI build plan remain
 E7/E8 work. The adapters therefore do not imply a public ABI, supported
 platform, or release artifact.
 
-The separate `RuntimeFeaturePackager` can materialize an already validated
-non-empty plan as exact runtime `GeneratedFile` values, but no provisional
-feature is compiler-selectable yet. Its alloc/string native-seed fixture is
-selective-packaging evidence, not permission for `CProjectEmitter` to claim a
-runtime-using generated-Haxe program. See
+`RuntimeFeaturePackager` materializes an already validated non-empty plan as
+exact runtime `GeneratedFile` values. The generated literal-output path packages
+only the compiler-selectable foundation/status/literal/I/O artifacts; the
+alloc/full-string fixtures remain native-seed evidence. `CProjectEmitter`
+rejects any unrelated runtime plan or payload. See
 [runtime feature planning](runtime-feature-planning.md).
 
 ## Ownership and filesystem safety

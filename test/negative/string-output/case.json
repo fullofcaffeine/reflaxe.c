@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "id": "string-literal-output-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-006"
+  ],
+  "sources": [
+    "test/string_output/fixtures/nonliteral/Main.hx",
+    "test/string_output/fixtures/nonstring/Main.hx",
+    "test/string_output/fixtures/sys_print/Main.hx",
+    "test/string_output/fixtures/trace_custom/Main.hx",
+    "test/string_output/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../string_output/run.py"
+    ],
+    "workingDirectory": "test/negative/string-output",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "string-output: OK:"
+    },
+    "diagnostics": [
+      "HXC1001",
+      "HXC2000"
+    ]
+  }
+}

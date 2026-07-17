@@ -1,11 +1,7 @@
 #ifndef HXRT_STATUS_H_INCLUDED
 #define HXRT_STATUS_H_INCLUDED
 
-#include "hxrt/abi.h"
-
-#if defined(__cplusplus)
-extern "C" {
-#endif
+#include "hxrt/base.h"
 
 typedef enum hxc_status {
   HXC_STATUS_OK = 0,
@@ -18,14 +14,8 @@ typedef enum hxc_status {
   HXC_STATUS_OUT_OF_RANGE = 7,
   HXC_STATUS_EMBEDDED_NUL = 8,
   HXC_STATUS_BORROW_UNAVAILABLE = 9,
+  HXC_STATUS_IO_ERROR = 10,
   HXC_STATUS_INTERNAL_ERROR = 255
 } hxc_status;
-
-/** Stable symbolic status name; never returns null. */
-HXC_API const char *hxc_status_name(hxc_status status);
-
-#if defined(__cplusplus)
-} /* extern "C" */
-#endif
 
 #endif /* HXRT_STATUS_H_INCLUDED */

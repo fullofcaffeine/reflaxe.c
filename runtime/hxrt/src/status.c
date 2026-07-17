@@ -1,4 +1,4 @@
-#include "hxrt/status.h"
+#include "hxrt/status_name.h"
 
 const char *hxc_status_name(hxc_status status) {
   switch (status) {
@@ -22,6 +22,8 @@ const char *hxc_status_name(hxc_status status) {
       return "HXC_STATUS_EMBEDDED_NUL";
     case HXC_STATUS_BORROW_UNAVAILABLE:
       return "HXC_STATUS_BORROW_UNAVAILABLE";
+    case HXC_STATUS_IO_ERROR:
+      return "HXC_STATUS_IO_ERROR";
     case HXC_STATUS_INTERNAL_ERROR:
       return "HXC_STATUS_INTERNAL_ERROR";
     default:

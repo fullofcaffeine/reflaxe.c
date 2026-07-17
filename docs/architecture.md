@@ -29,7 +29,9 @@ CCompiler
   -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
   -> emits a private prototype header, source definitions, an initialization wrapper when needed, and int main(void)
-  -> invokes ProjectEmitter with analyzed zero-runtime primitive facts
+  -> resolves an empty primitive plan or exact source-rooted literal-output runtime requirements
+  -> packages selected runtime artifacts as GeneratedFile records
+  -> invokes ProjectEmitter with the analyzed runtime, stdlib, and primitive facts
 
 ProjectEmitter
   -> public/private headers
@@ -78,7 +80,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-2 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-3 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -86,6 +88,9 @@ parameters. Cleanup actions are registered in source order while every edge
 records their validated reverse, inner-to-outer execution order. Calls and
 memory operations distinguish static/direct, program-local, and named runtime
 implementations, so the IR never selects an implicit runtime core.
+Validated UTF-8 String constants additionally retain their exact byte length;
+the only admitted String consumer is the explicit hosted literal-output call
+with a native-status abort edge.
 
 Primitive representation is owned by the typed
 `src/reflaxe/c/semantics/` layer. It maps real Haxe compiler types to exact
@@ -149,8 +154,10 @@ source spans. `HxcIRValidator` rejects missing targets/results/terminators,
 use-before-definition, illegal lifetime transitions, malformed cleanup paths,
 primitive runtime fallback, or checked/nullable unwraps without a failure
 edge. It also checks constant/result and return types plus load, initialization,
-store, and address types whenever the place type is structurally resolvable;
-the E2.T02 slice uses local places. Unsupported typed nodes use exact
+store, and address types whenever the place type is structurally resolvable.
+Unicode-scalar String constants, exact UTF-8 byte lengths, and the narrow
+hosted-output signature/failure policy are validated too. The E2.T02 slice uses
+local places. Unsupported typed nodes use exact
 source-positioned `HXC1001`; they never become an opaque value. E2.T02 lowers
 primitive constants, initialized locals/reads, nested cleanup-free blocks, and
 returns. E2.T03 adds primitive parameters, explicit argument conversions, and
@@ -341,16 +348,21 @@ artifact read for an empty plan.
 
 The admitted primitive compiler path uses this planner for its positive empty
 plan, so its `hxc.runtime-plan.json` means no `hxrt` include, source, define,
-library, or symbol exists in the build. Runtime-requirement inference and the
+library, or symbol exists in the build. E2.T07 adds one exact compiler-selected
+edge: literal-only hosted `Sys.println` and default `trace` request `io`, whose
+closure is `runtime-base + status + string-literal + io`. It packages one C
+source and no allocator, full string operations, objects, collector, dynamic,
+reflection, or exceptions. Broader runtime-requirement inference and the
 complete blocker-producing `hxc_runtime=none` eligibility pass remain later
 work. The checked-in allocator contract has E4.T02 native evidence for checked
 sizes, over-alignment, failure atomicity, custom freestanding allocation,
 cross-boundary identity, and C/C++ layout agreement. The E4.T03 string contract
 adds valid UTF-8 scalar storage and indexing, checked/maximal-subpart decoding,
 allocation-aware concatenation and building, and explicit borrowed/owned
-CString lifetimes without object, GC, reflection, or dynamic dependencies.
-Every slice is still `native-seed-only` and rejected for generated Haxe until
-its compiler and ABI owners promote it. See [allocator ownership](allocator-abi.md),
+CString lifetimes without object, GC, reflection, or dynamic dependencies. The
+full allocator and string-operation features remain `native-seed-only`; only
+the runtime foundation, status definitions, literal carrier, and minimal hosted
+output are compiler-selectable. See [allocator ownership](allocator-abi.md),
 [string runtime](string-runtime.md), and
 [runtime feature planning](runtime-feature-planning.md).
 
@@ -381,7 +393,9 @@ specialization, then the smallest proven `hxrt` slice, then a source-positioned
 diagnostic. Candidate runtime ownership never selects a feature from an import
 or type mention. The global parity ledger is also distinct from a program's
 `hxc.stdlib-report.json`: the former owns the pinned product surface, while the
-latter must eventually report only reachable operations analyzed in one build.
+latter reports only reachable operations analyzed in one build. The current
+bounded report does that for the literal `Sys.println` and default `trace`
+capabilities; all other stdlib use remains fail-closed.
 
 ## String and managed-memory model
 
@@ -389,9 +403,10 @@ Portable `String` is a private immutable valid-UTF-8 representation. Every Haxe
 index counts Unicode scalar values, embedded NUL is content, normalization is
 never implicit, and malformed external UTF-8 has distinct lossy and checked
 paths. Binary `Bytes`, NUL-terminated `c.CString`, and exported UTF-8 views keep
-their own units, ownership, and lifetime contracts. String support is a separate
-runtime feature and does not by itself require objects, reflection, or the
-collector. See [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
+their own units, ownership, and lifetime contracts. The literal carrier is an
+independent allocation-free feature; full String operations remain a separate
+native seed. Neither by itself requires objects, reflection, or the collector.
+See [ADR 0004](adr/0004-utf8-scalar-string-contract.md).
 
 When object-graph semantics still require tracing after escape/region analysis,
 the default `gc` slice is precise, non-moving, stop-the-world mark-and-sweep.

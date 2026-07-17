@@ -23,9 +23,10 @@ int main(void) {
   int32_t remainder = 0;
 
   HXC_CHECK(hxc_runtime_abi_version() == HXC_RUNTIME_ABI_VERSION);
-  HXC_CHECK(HXC_RUNTIME_ABI_MAJOR == 0u && HXC_RUNTIME_ABI_MINOR == 3u);
+  HXC_CHECK(HXC_RUNTIME_ABI_MAJOR == 0u && HXC_RUNTIME_ABI_MINOR == 4u);
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_OK), "HXC_STATUS_OK") == 0);
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_INVALID_UTF8), "HXC_STATUS_INVALID_UTF8") == 0);
+  HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_IO_ERROR), "HXC_STATUS_IO_ERROR") == 0);
   HXC_CHECK(strcmp(hxc_status_name((hxc_status)42), "HXC_STATUS_UNKNOWN") == 0);
   HXC_CHECK(hxc_allocator_is_valid(&allocator));
   HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocator));

@@ -3,6 +3,9 @@
 
 /* Provisional all-seed umbrella. Selective packaging uses hxrt feature headers. */
 
+#include "hxrt/abi.h"
+#include "hxrt/io.h"
+#include "hxrt/status_name.h"
 #include "hxrt/string.h"
 
 /** Convert modulo-2^32 bits to Haxe's signed 32-bit value without UB. */

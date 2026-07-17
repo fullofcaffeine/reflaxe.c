@@ -455,18 +455,44 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-2 HxcIR structurally records values, places, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive lowering slice.",
+      "summary": "Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive and literal-output lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
         "test/hxc_ir/run.py"
       ],
       "owners": [
-        "E1.T05"
+        "E1.T05",
+        "E2.T07"
       ],
       "limitations": [
         "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
+      ]
+    },
+    {
+      "id": "literal-string-output",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling.",
+      "scope": "Portable auto and metal minimal builds lower literal-only output through HxcIR, package only runtime-base/status/string-literal/io, and run as strict C11.",
+      "evidence": [
+        "docs/specs/stdlib-ledger.json",
+        "runtime/hxrt/include/hxrt/io.h",
+        "runtime/hxrt/include/hxrt/string_literal.h",
+        "runtime/hxrt/src/io.c",
+        "test/string_output/expected/output.hxcir",
+        "test/string_output/expected/program.c",
+        "test/string_output/expected/runtime-plan.json",
+        "test/string_output/run.py"
+      ],
+      "owners": [
+        "E2.T07"
+      ],
+      "limitations": [
+        "Only compiler-known valid String literals are admitted; general String values, Dynamic formatting, Sys.print, custom trace parameters, and trace rebinding still fail closed.",
+        "The feature is hosted-only and does not establish general standard-library, platform, release, or public runtime ABI support."
       ]
     },
     {
@@ -651,21 +677,24 @@
       "area": "runtime",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices.",
-      "scope": "The production primitive compiler consumes the planner for positive empty plans; canonical native fixtures exercise exact alloc-only and string closures.",
+      "summary": "A typed deterministic feature graph resolves source-rooted closure and packages only selected compiler-admitted runtime slices.",
+      "scope": "Runtime-free primitive programs retain empty plans, while literal hosted output selects exactly runtime-base/status/string-literal/io; canonical native fixtures independently exercise alloc, full-string, and literal-I/O packages.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/runtime-feature-planning.md",
         "runtime/hxrt/features.json",
         "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
-        "test/runtime/runtime-feature-graph/run.py"
+        "test/runtime/runtime-feature-graph/run.py",
+        "test/string_output/expected/runtime-plan.json",
+        "test/string_output/run.py"
       ],
       "owners": [
+        "E2.T07",
         "E4.T01"
       ],
       "limitations": [
-        "No hxrt feature is compiler-selectable yet, so runtime-requiring Haxe semantics still fail closed.",
-        "The provisional catalog and plan formats are not a stable public runtime ABI."
+        "Only the bounded literal-output edge currently selects hxrt; unrelated runtime-requiring Haxe semantics still fail closed.",
+        "The catalog and plan formats are internal planning contracts, not a stable public runtime ABI."
       ]
     },
     {
@@ -673,29 +702,34 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Hardened native allocator and UTF-8 scalar string contracts coexist with provisional status and Int32 runtime seeds.",
-      "scope": "Allocator ownership, string semantics, C/C++ header consumption, and exact alloc-only/string packages validate only bounded split native slices.",
+      "summary": "Hardened native allocator, UTF-8 scalar string, status, and hosted output slices coexist with other provisional runtime seeds.",
+      "scope": "Allocator ownership, string semantics, hosted length-delimited output, C/C++ header consumption, and exact selected packages validate only bounded split runtime slices.",
       "evidence": [
         "docs/allocator-abi.md",
         "docs/string-runtime.md",
         "runtime/hxrt/include/hxc_runtime.h",
         "runtime/hxrt/include/hxrt/allocator.h",
+        "runtime/hxrt/include/hxrt/io.h",
         "runtime/hxrt/include/hxrt/string.h",
+        "runtime/hxrt/include/hxrt/string_literal.h",
         "runtime/hxrt/src/allocator.c",
+        "runtime/hxrt/src/io.c",
         "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
         "runtime/hxrt/test/allocator_contract.c",
         "runtime/hxrt/test/runtime_smoke.c",
         "test/abi/allocator-contract/case.json",
-        "test/differential/string-runtime/case.json"
+        "test/differential/string-runtime/case.json",
+        "test/runtime/string-output/case.json"
       ],
       "owners": [
+        "E2.T07",
         "E4.T01",
         "E4.T02",
         "E4.T03"
       ],
       "limitations": [
-        "Generated Haxe does not select or link this seed, and it is not an unconditional runtime core.",
+        "Only literal hosted output selects a dependency-closed subset; there is still no unconditional runtime core or general runtime fallback.",
         "The allocator and string structs are internal native-seed contracts, not a stable generated public C ABI."
       ]
     },
@@ -720,7 +754,7 @@
         "E4.T03"
       ],
       "limitations": [
-        "Generated Haxe cannot select this native-seed-only feature; general String and standard-library lowering remain unsupported.",
+        "Generated literal output selects only the independent string-literal carrier; the full string feature remains native-seed-only and general String lowering remains unsupported.",
         "The private runtime structs and symbols are not a stable exported C ABI, and broader Unicode algorithms remain separately owned."
       ]
     },
@@ -730,10 +764,11 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe standard-library parity is not implemented.",
-      "scope": "Only compiler-recognized primitive operations such as the admitted Std.int path are covered by their exact lowering tests.",
+      "scope": "Only exact compiler-recognized slices are covered: Std.int plus compiler-known literal Sys.println and default trace in hosted builds.",
       "evidence": [
         "docs/specs/stdlib-ledger.json",
         "test/arithmetic_semantics/run.py",
+        "test/string_output/run.py",
         "test/negative/body-lowering/case.json"
       ],
       "owners": [

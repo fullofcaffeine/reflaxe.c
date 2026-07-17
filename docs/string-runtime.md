@@ -3,13 +3,15 @@
 This document records the bounded E4.T03 native `hxrt` string slice. It
 implements the storage and operation contract from
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md), but it does not make the
-slice compiler-selectable, expose the private layout as a public ABI, or claim
-general Haxe `String`/standard-library lowering. E2.T07 and E5.T02 own those
-later compiler and library connections; E4.T11 owns runtime ABI stabilization.
+full operation slice compiler-selectable, expose the private layout as a public
+ABI, or claim general Haxe `String`/standard-library lowering. E2.T07 now selects
+only the independently packaged literal carrier for hosted literal output;
+E5.T02 owns broader compiler and library connections, and E4.T11 owns runtime
+ABI stabilization.
 
-The incompatible provisional native-seed revision advances the runtime marker
-from 0.2.0 to 0.3.0. That marker remains an inspection aid, not a compatibility
-promise.
+E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
+E2.T07 adds the provisional hosted output API and advances it again to 0.4.0.
+That marker remains an inspection aid, not a compatibility promise.
 
 ## Representation and invariants
 
@@ -28,10 +30,11 @@ shortest-form UTF-8 for Unicode scalar values:
 - scalar positions, never byte or UTF-16-unit positions, drive length, access,
   and slicing.
 
-`HXC_STRING_LITERAL` is a compiler-owned direct initializer for an actual valid
-UTF-8 C literal array. It uses static storage and `sizeof`, so it allocates
-nothing and preserves embedded NUL. The macro is not an unchecked user-facing
-raw-string API; later compiler emission owns its valid input.
+`HXC_STRING_LITERAL` and the private `hxc_string` carrier live in the narrow
+`string_literal.h` header. The initializer accepts an actual valid UTF-8 C
+literal array and uses static storage plus `sizeof`, so it allocates nothing and
+preserves embedded NUL. It is not an unchecked user-facing raw-string API;
+compiler emission owns its valid input.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -121,11 +124,19 @@ lowering owner is implemented.
 
 ## Feature and evidence boundary
 
-The `string` feature remains `native-seed-only` and depends only on
-`alloc -> status -> runtime-abi`. It has no object, tracing collector, dynamic,
-reflection, exception, thread, or Unicode-table dependency. A generated Haxe
-program still cannot request it; current admitted generated programs retain an
-empty runtime plan.
+The full `string` feature remains `native-seed-only` and depends on `alloc` plus
+the compiler-selectable `string-literal` carrier. It has no object, tracing
+collector, dynamic, reflection, exception, thread, or Unicode-table dependency.
+A generated Haxe program cannot request the full feature.
+
+E2.T07 admits only compiler-known literals passed to hosted `Sys.println` or
+default `trace`. Those programs select
+`runtime-base + status + string-literal + io`; they package no allocator or
+`string.c` operation symbols. Generated C
+stores exact validated UTF-8 bytes and byte length, including embedded NUL, and
+the output helper writes by length, adds a newline, flushes, and returns
+`HXC_STATUS_IO_ERROR` on write or flush failure. The generated caller follows
+the admitted fail-stop policy by aborting on any non-OK status.
 
 [`test/differential/string-runtime`](../test/differential/string-runtime)
 compares BMP/non-BMP/embedded-NUL/composed/decomposed scalar behavior with the
@@ -137,11 +148,18 @@ lifetime, and exact allocation counts. Required GCC and Clang lanes run at
 inspect the link for the string symbols and absence of object/GC/reflection/
 dynamic families.
 
+[`test/string_output`](../test/string_output) adds generated-Haxe evidence for
+the narrow literal carrier and output edge. It compares exact bytes with Eval,
+checks UTF-8 scalars and embedded NUL, exercises portable and metal policy,
+rejects nonliteral/general output forms, and closes stdout to prove error
+handling. That evidence is not general String or I/O support.
+
 Run the focused evidence with:
 
 ```sh
 python3 test/differential/string-runtime/run.py
 python3 test/differential/string-runtime/run.py --native-only --toolchain clang
 npm run test:runtime-features
+npm run test:string-output
 npm run test:native
 ```

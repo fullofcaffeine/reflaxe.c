@@ -1,0 +1,13 @@
+{
+  "capabilities": [
+    "sys-println-literal",
+    "trace-literal"
+  ],
+  "profile": "portable",
+  "modules": [
+    "Sys",
+    "haxe.Log"
+  ],
+  "status": "analyzed-selected-stdlib-use",
+  "schemaVersion": 1
+}

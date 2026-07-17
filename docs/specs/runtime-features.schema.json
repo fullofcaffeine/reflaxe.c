@@ -22,7 +22,10 @@
       "const": "hxc-runtime-feature-graph-v1"
     },
     "status": {
-      "const": "provisional-native-seed-packaging"
+      "enum": [
+        "provisional-native-seed-packaging",
+        "selective-compiler-packaging"
+      ]
     },
     "requirements": {
       "type": "array",

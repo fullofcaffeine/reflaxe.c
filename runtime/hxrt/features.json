@@ -41,11 +41,6 @@
       "ownerTask": "E4.T06"
     },
     {
-      "id": "io",
-      "summary": "Byte streams and hosted or custom I/O adapters.",
-      "ownerTask": "E5.T04"
-    },
-    {
       "id": "object",
       "summary": "Reachable object and type descriptors.",
       "ownerTask": "E4.T05"
@@ -132,7 +127,39 @@
       ]
     },
     {
-      "dependencies": [],
+      "dependencies": [
+        "status",
+        "string-literal"
+      ],
+      "id": "io",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_io_println"
+      ],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/io.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/io.h"
+        },
+        {
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/io.c",
+          "sourcePath": "runtime/hxrt/src/io.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
+      "defines": [],
+      "environments": [
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [
+        "runtime-base"
+      ],
       "id": "runtime-abi",
       "availability": "native-seed-only",
       "symbols": [
@@ -143,11 +170,6 @@
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/abi.h",
           "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
-        },
-        {
-          "kind": "runtime-header",
-          "outputPath": "runtime/include/hxrt/base.h",
-          "sourcePath": "runtime/hxrt/include/hxrt/base.h"
         },
         {
           "kind": "runtime-source",
@@ -165,10 +187,54 @@
       ]
     },
     {
+      "dependencies": [],
+      "id": "runtime-base",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/base.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Shared C types and visibility/alignment macros for selectively packaged runtime slices.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
       "dependencies": [
-        "runtime-abi"
+        "runtime-base"
       ],
       "id": "status",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/status.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Status value definitions used by selected runtime failure boundaries.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [
+        "status"
+      ],
+      "id": "status-name",
       "availability": "native-seed-only",
       "symbols": [
         "hxc_status_name"
@@ -176,8 +242,8 @@
       "artifacts": [
         {
           "kind": "runtime-header",
-          "outputPath": "runtime/include/hxrt/status.h",
-          "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+          "outputPath": "runtime/include/hxrt/status_name.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/status_name.h"
         },
         {
           "kind": "runtime-source",
@@ -187,7 +253,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Provisional status values and symbolic names for native seed evidence.",
+      "summary": "Symbolic status-name helper used only by native seed evidence.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -196,7 +262,8 @@
     },
     {
       "dependencies": [
-        "alloc"
+        "alloc",
+        "string-literal"
       ],
       "id": "string",
       "availability": "native-seed-only",
@@ -244,10 +311,38 @@
         "freestanding",
         "hosted"
       ]
+    },
+    {
+      "dependencies": [
+        "runtime-base"
+      ],
+      "id": "string-literal",
+      "availability": "compiler-selectable",
+      "symbols": [],
+      "artifacts": [
+        {
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_literal.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Immutable valid UTF-8 literal carrier with explicit byte length and no allocation or object dependency.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
     }
   ],
-  "status": "provisional-native-seed-packaging",
+  "status": "selective-compiler-packaging",
   "schemaVersion": 1,
-  "compilerSelectableFeatures": [],
+  "compilerSelectableFeatures": [
+    "io",
+    "runtime-base",
+    "status",
+    "string-literal"
+  ],
   "algorithm": "hxc-runtime-feature-graph-v1"
 }

@@ -1,5 +1,11 @@
 package reflaxe.c.runtime;
 
+#if macro
+import haxe.io.Path;
+import haxe.macro.Context;
+import sys.FileSystem;
+import sys.io.File;
+#end
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeArtifactRecord;
@@ -13,6 +19,31 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
 interface RuntimeArtifactSource {
 	public function read(sourcePath:String):Null<String>;
 }
+
+#if macro
+/** Caller-CWD-independent reader rooted beside the installed target sources. */
+class PackageRuntimeArtifactSource implements RuntimeArtifactSource {
+	final packageRoot:String;
+
+	public function new() {
+		final catalogPath = Context.resolvePath("reflaxe/c/runtime/RuntimeFeatureCatalog.hx");
+		packageRoot = Path.normalize(Path.join([Path.directory(catalogPath), "..", "..", "..", ".."]));
+	}
+
+	public function read(sourcePath:String):Null<String> {
+		if (!StringTools.startsWith(sourcePath, "runtime/hxrt/") || sourcePath.indexOf("\\") != -1) {
+			return null;
+		}
+		for (part in sourcePath.split("/")) {
+			if (part == "" || part == "." || part == "..") {
+				return null;
+			}
+		}
+		final absolute = Path.normalize(Path.join([packageRoot, sourcePath]));
+		return FileSystem.exists(absolute) && !FileSystem.isDirectory(absolute) ? File.getContent(absolute) : null;
+	}
+}
+#end
 
 /** Materializes exactly the artifact records already selected by the planner. */
 class RuntimeFeaturePackager {

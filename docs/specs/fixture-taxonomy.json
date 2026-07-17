@@ -38,7 +38,8 @@
         "static-initialization",
         "arithmetic-semantics",
         "span-lowering",
-        "runtime-feature-graph"
+        "runtime-feature-graph",
+        "string-output"
       ]
     },
     {
@@ -65,7 +66,8 @@
         "function-lowering",
         "static-initialization",
         "span-lowering",
-        "runtime-feature-graph"
+        "runtime-feature-graph",
+        "string-output"
       ]
     },
     {
@@ -113,7 +115,8 @@
         "static-initialization",
         "arithmetic-semantics",
         "span-lowering",
-        "runtime-feature-graph"
+        "runtime-feature-graph",
+        "string-output"
       ]
     },
     {
@@ -137,7 +140,8 @@
         "project-emitter",
         "span-lowering",
         "runtime-feature-graph",
-        "string-runtime"
+        "string-runtime",
+        "string-output"
       ]
     },
     {
@@ -155,7 +159,8 @@
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
-        "string-runtime"
+        "string-runtime",
+        "string-output"
       ]
     },
     {
@@ -566,9 +571,9 @@
       "assertions": [
         "the typed registry validates stable IDs, is byte-identical across discovery order, and rejects unknown or cyclic dependencies with canonical HXC9000 evidence",
         "every root and transitive selected feature retains source-reason IDs while manual constraints cannot add unused code or remove required dependencies",
-        "auto, minimal, none, availability, environment, provisional-seed, and reserved-feature policy boundaries emit deterministic HXC2000 evidence",
-        "alloc-only and string native-seed plans package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
-        "the production primitive compiler consumes the same planner only for its positive empty runtime plan; generated Haxe cannot select provisional seed slices"
+        "auto, minimal, none, availability, environment, native-only, and reserved-feature policy boundaries emit deterministic HXC2000 evidence",
+        "alloc-only and full-string native plans plus the compiler-selected literal-I/O plan package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
+        "the production compiler retains positive empty primitive plans and selects only runtime-base, status, string-literal, and io for hosted literal output"
       ]
     },
     {
@@ -590,6 +595,29 @@
         "literal, slice, compare, and hash paths allocate nothing; owned decode, concat, builder growth, and CString copies retain exact allocator identity and failure atomicity",
         "borrowed CString conversion requires stable trailing-NUL storage and an owner-tied lifetime, while both borrowed and owned paths reject embedded NUL without truncation",
         "strict GCC and Clang O0/O2/sanitizer lanes match the pinned Haxe scalar oracle and link no object, GC, reflection, or dynamic symbol family"
+      ]
+    },
+    {
+      "id": "string-output",
+      "directory": "test/string_output",
+      "runner": [
+        "python3",
+        "test/string_output/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "real typed String literals lower through schema-3 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
+        "portable auto and metal minimal builds emit source-rooted runtime diagnostics, runtime none and freestanding fail closed, and nonliteral or neighboring output surfaces retain HXC1001",
+        "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",
+        "target bytes match the pinned Haxe Eval oracle exactly, and a closed stdout descriptor proves that hosted output failure cannot return success"
       ]
     },
     {
@@ -787,6 +815,18 @@
           "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json"
         ],
         "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "string-output",
+        "expectedRoots": [
+          "test/string_output/expected"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
           "json"
         ]
       },

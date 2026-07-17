@@ -52,6 +52,8 @@ class HxcIRGolden {
 				absoluteSource: invalidDiagnostics(absoluteSourceProgram()),
 				primitiveRuntimeConversion: invalidDiagnostics(primitiveRuntimeConversionProgram()),
 				nullableUnwrapWithoutFailure: invalidDiagnostics(nullableUnwrapWithoutFailureProgram()),
+				stringByteLengthMismatch: invalidDiagnostics(stringByteLengthMismatchProgram()),
+				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
 				unsupportedTypedNode: [
 					HxcIRDiagnostic.unsupportedTypedAstNode(PROFILE, "TUnop(OpIncrement,Postfix)", "function app.Main.main expression", span(MAIN_SOURCE, 18))
 						.render()]
@@ -146,7 +148,7 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: 2, modules: modules};
+		return {schemaVersion: 3, modules: modules};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -321,7 +323,7 @@ class HxcIRGolden {
 			}
 		];
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			modules: [
 				{
 					id: "coverage.IR",
@@ -409,6 +411,15 @@ class HxcIRGolden {
 					parameters: [],
 					instructions: [
 						instruction("c00.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), COVERAGE_SOURCE, 18),
+						instruction("c00.string", result("value.string", IRTString), IRIOConstant(IRCString("line\x00é🙂", 11)), COVERAGE_SOURCE, 18),
+						instruction("c00.output", null, IRIOCall(call(IRCDRuntime("io", "sys-println-literal"), ["value.string"], IRTVoid,
+							{
+								kind: IRFNativeStatus,
+								target: IRFTAbort,
+								arguments: [],
+								cleanup: []
+							})),
+							COVERAGE_SOURCE, 18),
 						instruction("c00.fixed", null,
 							IRIOInitializeFixedArray(IRPLocal("local.fixed"), ["value.one", "value.one"], IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 18),
@@ -711,11 +722,26 @@ class HxcIRGolden {
 		], terminator(IRTReturn(null, []), file, 4), [], [], file);
 	}
 
+	static function stringByteLengthMismatchProgram():HxcIRProgram {
+		final file = "test/negative/StringByteLengthMismatch.hx";
+		return minimalProgram("invalid.StringByteLengthMismatch", [
+			instruction("bad.string", result("value.string", IRTString), IRIOConstant(IRCString("é🙂", 3)), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function ioFailurePolicyProgram():HxcIRProgram {
+		final file = "test/negative/IoFailurePolicy.hx";
+		return minimalProgram("invalid.IoFailurePolicy", [
+			instruction("bad.string", result("value.string", IRTString), IRIOConstant(IRCString("output", 6)), file, 2),
+			instruction("bad.output", null, IRIOCall(call(IRCDRuntime("io", "sys-println-literal"), ["value.string"], IRTVoid)), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
 			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		return {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			modules: [
 				{
 					id: moduleId,

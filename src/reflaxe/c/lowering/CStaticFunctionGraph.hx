@@ -53,7 +53,7 @@ class CStaticFunctionGraphCollector {
 			pending:Array<CBodyFunctionInput>):Void {
 		switch expression.expr {
 			case TCall(callee, _):
-				final targetId = directStaticFunctionId(callee);
+				final targetId = isCompilerIntrinsicCall(callee) ? null : directStaticFunctionId(callee);
 				final target = targetId == null ? null : available.get(targetId);
 				if (target != null) {
 					add(target, byId, pending);
@@ -61,6 +61,15 @@ class CStaticFunctionGraphCollector {
 			case _:
 		}
 		TypedExprTools.iter(expression, child -> collectExpression(child, available, byId, pending));
+	}
+
+	static function isCompilerIntrinsicCall(callee:TypedExpr):Bool {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.join(".") == "haxe" && owner.name == "Log" && fieldReference.get()
+					.name == "trace";
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isCompilerIntrinsicCall(inner);
+			case _: false;
+		};
 	}
 
 	static function directStaticFunctionId(callee:TypedExpr):Null<String> {

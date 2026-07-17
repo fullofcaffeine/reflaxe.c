@@ -38,6 +38,10 @@ static_assert(std::is_standard_layout<hxc_owned_string>::value, "owned string mu
 static_assert(std::is_trivially_copyable<hxc_owned_string>::value, "owned string must cross internal C ABI calls by value");
 static_assert(std::is_standard_layout<hxc_borrowed_cstring>::value, "borrowed CString must be C-compatible");
 static_assert(std::is_standard_layout<hxc_owned_cstring>::value, "owned CString must be C-compatible");
+static_assert(
+  std::is_same<decltype(&hxc_io_println), hxc_status (*)(hxc_string)>::value,
+  "hosted output signature must agree in C++"
+);
 
 int main() {
   const hxc_string literal = HXC_STRING_LITERAL("C++ UTF-8 \xF0\x9F\x98\x80");

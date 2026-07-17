@@ -1066,6 +1066,78 @@
         "test/arithmetic_semantics/run.py"
       ],
       "notes": "Typed Std.int lowering and its defined NaN, infinity, overflow, and truncation behavior are covered by ADR 0008 differential, strict-C, optimization, and UBSan evidence for the hosted production environment; other environment adapters are not yet claimed."
+    },
+    {
+      "id": "literal-sys-println-partial",
+      "selector": {
+        "module": "Sys",
+        "type": "Sys",
+        "member": "println",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(v : Dynamic) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "io",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E2.T07",
+      "testOwnerBeads": "E2.T07",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/nonstring/Main.hx",
+        "test/string_output/run.py"
+      ],
+      "notes": "Only a compiler-known valid String literal is admitted. It emits a byte-counted UTF-8 value and selects the hosted io closure; general Dynamic or runtime String values remain source-positioned HXC1001 boundaries."
+    },
+    {
+      "id": "literal-trace-partial",
+      "selector": {
+        "module": "haxe.Log",
+        "type": "haxe.Log",
+        "member": "trace",
+        "kind": "dynamic-method",
+        "isStatic": true,
+        "signature": "(v : Dynamic, ?infos : Null<haxe.PosInfos>) -> Void"
+      },
+      "owner": "direct-compiler-lowering",
+      "runtimeFeatures": [
+        "io",
+        "string"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted"
+      ],
+      "status": "partial",
+      "ownerBeads": "E2.T07",
+      "testOwnerBeads": "E2.T07",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/trace_custom/Main.hx",
+        "test/string_output/run.py"
+      ],
+      "notes": "Only a compiler-known String literal with the pinned compiler's exact default position object is admitted. The logical file and line prefix is folded deterministically; custom parameters, rebinding, and general Dynamic values remain unsupported."
     }
   ],
   "entries": [
@@ -9311,10 +9383,9 @@
       "kind": "method",
       "signature": "(v : Dynamic) -> Void",
       "isStatic": true,
-      "owner": "platform-adapter",
+      "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
         "io",
-        "process",
         "string"
       ],
       "profiles": [
@@ -9322,20 +9393,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
-      "ownerBeads": "E5.T09",
-      "testOwnerBeads": "E5.T12",
+      "status": "partial",
+      "ownerBeads": "E2.T07",
+      "testOwnerBeads": "E2.T07",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Arguments, environment, process, clocks, and sinks use direct libc/OS calls where valid, with explicit capability and escaping policies.",
-      "ruleId": "system-core"
+      "tests": [
+        "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/nonstring/Main.hx",
+        "test/string_output/run.py"
+      ],
+      "notes": "Only a compiler-known valid String literal is admitted. It emits a byte-counted UTF-8 value and selects the hosted io closure; general Dynamic or runtime String values remain source-positioned HXC1001 boundaries.",
+      "ruleId": "literal-sys-println-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:ac1b7d8a8c1f2960c63ff9e76ff5433af43c3816fc1188baac396a8eda3f0f11",
@@ -21508,6 +21581,7 @@
       "isStatic": true,
       "owner": "direct-compiler-lowering",
       "runtimeFeatures": [
+        "io",
         "string"
       ],
       "profiles": [
@@ -21515,21 +21589,22 @@
         "metal"
       ],
       "environments": [
-        "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "hosted"
       ],
-      "status": "planned",
-      "ownerBeads": "E5.T05",
-      "testOwnerBeads": "E5.T12",
+      "status": "partial",
+      "ownerBeads": "E2.T07",
+      "testOwnerBeads": "E2.T07",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Compile-time position facts and static formatting belong in generated C; an actual output sink is an explicit I/O decision.",
-      "ruleId": "logging-and-position-info"
+      "tests": [
+        "test/string_output/fixtures/positive/Main.hx",
+        "test/string_output/fixtures/trace_custom/Main.hx",
+        "test/string_output/run.py"
+      ],
+      "notes": "Only a compiler-known String literal with the pinned compiler's exact default position object is admitted. The logical file and line prefix is folded deterministically; custom parameters, rebinding, and general Dynamic values remain unsupported.",
+      "ruleId": "literal-trace-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:0410b7b1799ec0326799976aa4126a13a4d166bd5db80645d53160ba870122f3",

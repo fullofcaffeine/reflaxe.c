@@ -14,21 +14,23 @@ evaluation-order suite now adds E2.T06 primitive statement/control-flow
 evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
 and optimized-shape evidence. The span suite adds local fixed-array/view,
 bounds-policy, and runtime-free iteration evidence. The runtime-feature suite
-adds deterministic graph/policy and selective provisional native-seed packaging
-evidence. The string-runtime suite adds a bounded native UTF-8/scalar/CString
-contract plus an Eval differential trace. None proves broader language,
-standard-library, public ABI, or generated-Haxe `hxrt` support.
+adds deterministic graph/policy, selective provisional native-seed packaging,
+and the exact compiler-selected literal-output closure. The string-runtime suite
+adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
+trace. The string-output suite adds the narrow generated-Haxe `Sys.println` and
+default `trace` proof. None proves broader language, standard-library, public
+ABI, general String, or general `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, arithmetic, and fixed-array/span lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites, including primitive body, static-function, evaluation-order, arithmetic, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing expected trees remain mapped in place |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, and the allocator/string native contracts; no generated-Haxe `hxrt` proof yet |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, and the native string slice's scalar behavior against pinned Haxe oracles |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, arithmetic UBSan, selective native-seed packages, allocator/string native contracts, and the generated literal-output slice |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, arithmetic, static initialization, native string scalars, and exact generated literal output against pinned Haxe oracles |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -116,6 +118,7 @@ The registered snapshot selectors are:
 - `arithmetic-semantics`
 - `runtime-feature-graph`
 - `span-lowering`
+- `string-output`
 
 List them from the executable registry with:
 
@@ -258,10 +261,10 @@ checks canonical cycle and unknown-dependency failures. Every selected root,
 transitive feature, and dependency edge must retain a source-reason ID. Policy
 fixtures cover `auto|minimal|none`, portable and metal presets, manual
 confirmation/forbid rules, environments, reserved features, and rejection of
-provisional seeds from generated-Haxe planning. The packager performs zero
-reads for an empty plan and materializes exact alloc-only and string closures;
-the full focused gate proves those files came from two byte-identical Haxe
-renders. Strict GCC and Clang jobs separately rebuild both closures from the
+native-only features from generated-Haxe planning. The packager performs zero
+reads for an empty plan and materializes exact alloc-only, full-string, and
+compiler-selected literal-I/O closures; the full focused gate proves those files
+came from two byte-identical Haxe renders. Strict GCC and Clang jobs separately rebuild all closures from the
 validated checked-in catalog and plan, without needing Haxe in the native-only
 environment, then reject string symbols in the alloc-only link. See
 [runtime feature planning and selective packaging](runtime-feature-planning.md).
@@ -290,6 +293,18 @@ address/undefined sanitizers, and link inspection rejects object, collector,
 reflection, and dynamic symbol families. This is native runtime evidence, not
 generated-Haxe `String` lowering or public layout stability. See the
 [string runtime contract](string-runtime.md).
+
+`test/string_output` is the focused E2.T07
+positive/negative/AST/snapshot/runtime/differential suite. It lowers real
+compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
+schema-3 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+and the `runtime-base + status + string-literal + io` closure; and compares the
+generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
+both pass, `runtime=none` and freestanding fail before output, and diagnostic
+`off|summary|warn` changes presentation only. Strict GCC/Clang O0/O2 runs prove
+the bytes, while a closed stdout descriptor proves the generated caller aborts
+on write/flush failure. Nonliteral String values, `Dynamic`, `Sys.print`, and
+custom trace information remain exact `HXC1001` boundaries.
 
 ## Examples are product proofs, not implicit tests
 

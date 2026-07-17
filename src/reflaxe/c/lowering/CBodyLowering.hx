@@ -15,6 +15,7 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRValidator;
+import reflaxe.c.ir.HxcUtf8;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.naming.CSymbolRequest;
@@ -117,6 +118,21 @@ class CLoweredBodyGlobal {
 	}
 }
 
+/** One source-rooted hosted-output requirement retained for planning/diagnostics. */
+class CBodyRuntimeRequirement {
+	public final operationId:String;
+	public final surface:String;
+	public final source:HxcSourceSpan;
+	public final position:Position;
+
+	public function new(operationId:String, surface:String, source:HxcSourceSpan, position:Position) {
+		this.operationId = operationId;
+		this.surface = surface;
+		this.source = source;
+		this.position = position;
+	}
+}
+
 /** Complete deterministic result for the admitted body subset. */
 class CBodyLoweringResult {
 	public final program:HxcIRProgram;
@@ -126,9 +142,11 @@ class CBodyLoweringResult {
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
 	public final boundsAbortName:Null<CIdentifier>;
+	public final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>, helpers:Array<CPrimitiveHelperPlan>,
-			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>) {
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -136,6 +154,7 @@ class CBodyLoweringResult {
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
 		this.boundsAbortName = boundsAbortName;
+		this.runtimeRequirements = runtimeRequirements.copy();
 	}
 }
 
@@ -250,7 +269,15 @@ class CBodyLowering {
 					labelNames, null, spanLengthNames, boundsAbortName)));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable, boundsAbortName);
+		final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
+		for (item in built) {
+			for (requirement in item.runtimeRequirements) {
+				runtimeRequirements.push(requirement);
+			}
+		}
+		runtimeRequirements.sort(compareRuntimeRequirements);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable, boundsAbortName,
+			runtimeRequirements);
 	}
 
 	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
@@ -322,7 +349,7 @@ class CBodyLowering {
 				source: enclosingSpan(spans)
 			});
 		}
-		return {schemaVersion: 2, modules: modules};
+		return {schemaVersion: 3, modules: modules};
 	}
 
 	static function enclosingSpan(spans:Array<HxcSourceSpan>):HxcSourceSpan {
@@ -361,6 +388,12 @@ class CBodyLowering {
 		return identity != 0 ? identity : left.sourceOrder - right.sourceOrder;
 	}
 
+	static function compareRuntimeRequirements(left:CBodyRuntimeRequirement, right:CBodyRuntimeRequirement):Int {
+		final semantic = compareUtf8('${left.operationId}\x00${left.surface}\x00${left.source.display()}',
+			'${right.operationId}\x00${right.surface}\x00${right.source.display()}');
+		return semantic;
+	}
+
 	public static function functionId(declarationPath:String, fieldName:String):String
 		return 'function.$declarationPath.$fieldName';
 
@@ -389,6 +422,7 @@ private typedef BuiltBodyFunction = {
 	final temporaryRequests:Map<String, CSymbolRequest>;
 	final tailArgumentRequests:Map<String, Array<CSymbolRequest>>;
 	final labelRequests:Map<String, CSymbolRequest>;
+	final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 }
 
 private enum BodyCollectionKind {
@@ -814,6 +848,7 @@ private class FunctionBuilder {
 	final locals:Array<HxcIRLocal> = [];
 	final blocks:Array<MutableBodyBlock> = [];
 	final loopControlStack:Array<LoopControlTargets> = [];
+	final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
 	var localOrdinal = 0;
 	var temporaryOrdinal = 0;
 	var instructionOrdinal = 0;
@@ -875,7 +910,8 @@ private class FunctionBuilder {
 			spanLengthRequests: spanLengthRequests,
 			temporaryRequests: temporaryRequests,
 			tailArgumentRequests: tailArgumentRequests,
-			labelRequests: labelRequests
+			labelRequests: labelRequests,
+			runtimeRequirements: runtimeRequirements
 		};
 	}
 
@@ -2055,6 +2091,12 @@ private class FunctionBuilder {
 			case TCall(callee, arguments): {callee: callee, arguments: arguments};
 			case _: return unsupported(expression, nodeName(expression));
 		};
+		if (isSysPrintln(call.callee)) {
+			return lowerLiteralOutput(expression, call.arguments, "sys-println-literal", "Sys.println(String literal)", false);
+		}
+		if (isHaxeLogTrace(call.callee)) {
+			return lowerLiteralOutput(expression, call.arguments, "trace-literal", "trace(String literal)", true);
+		}
 		if (isStdInt(call.callee)) {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
@@ -2124,6 +2166,111 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function lowerLiteralOutput(expression:TypedExpr, arguments:Array<TypedExpr>, operationId:String, surface:String, traceFormatting:Bool):Null<LoweredValue> {
+		if (prepared.role != PBRFunction) {
+			return unsupported(expression, 'TCall($surface:initializer-output-not-admitted)');
+		}
+		final expectedArguments = traceFormatting ? 2 : 1;
+		if (arguments.length != expectedArguments) {
+			return unsupported(expression, 'TCall($surface:argument-count=${arguments.length},expected=$expectedArguments)');
+		}
+		final literal = stringLiteral(arguments[0]);
+		if (literal == null) {
+			return unsupported(arguments[0], 'TCall($surface:requires-String-literal)');
+		}
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final output = traceFormatting ? traceOutput(literal, arguments[1], source) : literal;
+		final byteLength = HxcUtf8.byteLength(output);
+		if (byteLength == null) {
+			return unsupported(arguments[0], 'TCall($surface:malformed-Unicode-literal)');
+		}
+		final literalResult:HxcIRResult = {id: nextValueId(), type: IRTString};
+		appendInstruction(literalResult, IRIOConstant(IRCString(output, byteLength)), source, "string-literal");
+		appendInstruction(null, IRIOCall({
+			dispatch: IRCDRuntime("io", operationId),
+			arguments: [literalResult.id],
+			returnType: IRTVoid,
+			failure: {
+				kind: IRFNativeStatus,
+				target: IRFTAbort,
+				arguments: [],
+				cleanup: []
+			}
+		}), source, "hosted-output");
+		runtimeRequirements.push(new CBodyRuntimeRequirement(operationId, surface, source, expression.pos));
+		return null;
+	}
+
+	function traceOutput(literal:String, infoExpression:TypedExpr, source:HxcSourceSpan):String {
+		final info = unwrapExpression(infoExpression);
+		return switch info.expr {
+			case TConst(TNull): literal;
+			case TObjectDecl(fields):
+				if (!isDefaultTraceInfo(fields, source)) {
+					unsupported(infoExpression, "TCall(trace(String literal):custom-position-info-not-admitted)");
+				}
+				'${source.file}:${source.startLine}: $literal';
+			case _:
+				unsupported(infoExpression, 'TCall(trace(String literal):position-info=${nodeName(infoExpression)})');
+		};
+	}
+
+	function isDefaultTraceInfo(fields:Array<{name:String, expr:TypedExpr}>, source:HxcSourceSpan):Bool {
+		if (fields.length != 4) {
+			return false;
+		}
+		var fileMatches = false;
+		var lineMatches = false;
+		var classMatches = false;
+		var methodMatches = false;
+		var unknownField = false;
+		for (field in fields) {
+			switch field.name {
+				case "fileName":
+					final injectedFile = stringLiteral(field.expr);
+					if (injectedFile != null) {
+						final normalized = StringTools.replace(injectedFile, "\\", "/");
+						fileMatches = normalized == source.file || StringTools.endsWith(normalized, "/" + source.file);
+					}
+				case "lineNumber":
+					lineMatches = switch unwrapExpression(field.expr).expr {
+						case TConst(TInt(value)): value == source.startLine;
+						case _: false;
+					};
+				case "className":
+					classMatches = stringLiteral(field.expr) == input.declarationPath;
+				case "methodName":
+					methodMatches = stringLiteral(field.expr) == input.fieldName;
+				case _:
+					unknownField = true;
+			}
+		}
+		return fileMatches && lineMatches && classMatches && methodMatches && !unknownField;
+	}
+
+	static function stringLiteral(expression:TypedExpr):Null<String> {
+		return switch expression.expr {
+			case TConst(TString(value)): value;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): stringLiteral(inner);
+			case _: null;
+		};
+	}
+
+	static function isSysPrintln(callee:TypedExpr):Bool
+		return isStaticMethod(callee, "", "Sys", "println");
+
+	static function isHaxeLogTrace(callee:TypedExpr):Bool
+		return isStaticMethod(callee, "haxe", "Log", "trace");
+
+	static function isStaticMethod(callee:TypedExpr, ownerPackage:String, ownerName:String, fieldName:String):Bool {
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.join(".") == ownerPackage && owner.name == ownerName && fieldReference.get()
+					.name == fieldName;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isStaticMethod(inner, ownerPackage, ownerName, fieldName);
+			case _: false;
+		};
 	}
 
 	function isStdInt(callee:TypedExpr):Bool {
@@ -2476,6 +2623,7 @@ private class FunctionBuilder {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi:$kind';
 			case IRTFloat(width): 'f$width';
+			case IRTString: "string-utf8";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';

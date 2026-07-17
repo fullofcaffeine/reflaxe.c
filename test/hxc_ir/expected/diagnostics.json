@@ -2,6 +2,9 @@
   "addressTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/AddressTypeMismatch.hx:2:1-2:2 [module:invalid.AddressTypeMismatch.function:invalid.AddressTypeMismatch.main.block:entry.instruction:0:bad.address] Invalid HxcIR: address result must be a non-null pointer to its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "ioFailurePolicy": [
+    "HXC9000 error [profile=portable] test/negative/IoFailurePolicy.hx:3:1-3:2 [module:invalid.IoFailurePolicy.function:invalid.IoFailurePolicy.main.block:entry.instruction:1:bad.output] Invalid HxcIR: hosted output requires an explicit native-status failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "constantTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/ConstantTypeMismatch.hx:2:1-2:2 [module:invalid.ConstantTypeMismatch.function:invalid.ConstantTypeMismatch.main.block:entry.instruction:0:bad.constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -56,6 +59,9 @@
   ],
   "initializerTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/InitializerTypeMismatch.hx:3:1-3:2 [module:invalid.InitializerTypeMismatch.function:invalid.InitializerTypeMismatch.main.block:entry.instruction:1:bad.initialize] Invalid HxcIR: initializer value type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "stringByteLengthMismatch": [
+    "HXC9000 error [profile=portable] test/negative/StringByteLengthMismatch.hx:2:1-2:2 [module:invalid.StringByteLengthMismatch.function:invalid.StringByteLengthMismatch.main.block:entry.instruction:0:bad.string.constant] Invalid HxcIR: string constant records UTF-8 byte length 3 but encodes to 6 byte(s) Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unsupportedTypedNode": [
     "HXC1001 error [profile=portable] test/hxc_ir/fixtures/SideEffects.hx:18:1-18:2 [function app.Main.main expression] Unsupported typed Haxe node `TUnop(OpIncrement,Postfix)` while lowering function app.Main.main expression. Remediation: Use a supported construct or implement its typed IR and C AST lowering with semantic tests."

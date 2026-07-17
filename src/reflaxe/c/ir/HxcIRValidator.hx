@@ -38,8 +38,8 @@ private class HxcIRValidationState {
 	}
 
 	public function validate():Array<HxcIRDiagnostic> {
-		if (program.schemaVersion != 2) {
-			add("program", 'schema version ${program.schemaVersion} is unsupported; expected 2', programSource());
+		if (program.schemaVersion != 3) {
+			add("program", 'schema version ${program.schemaVersion} is unsupported; expected 3', programSource());
 		}
 		indexProgram();
 		validateProgramContents();
@@ -627,11 +627,35 @@ private class HxcIRValidationState {
 			case IRCDRuntime(featureId, operationId):
 				validateStableId(featureId, '$path.runtimeFeature', source);
 				validateStableId(operationId, '$path.runtimeOperation', source);
+				if (featureId == "io") {
+					validateHostedOutputCall(call, argumentTypes, path, source);
+				}
 			case IRCDIntrinsic(intrinsicId):
 				validateStableId(intrinsicId, '$path.intrinsic', source);
 		}
 		if (call.failure != null) {
 			validateFailureEdge(call.failure, '$path.failure', source, available, blocks, regions);
+		}
+	}
+
+	function validateHostedOutputCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("io", value): value;
+			case _: return;
+		};
+		if (operationId != "sys-println-literal" && operationId != "trace-literal") {
+			add(path, 'io runtime call names unsupported operation `$operationId`', source);
+		}
+		if (call.returnType != IRTVoid || argumentTypes.length != 1 || argumentTypes[0] != IRTString) {
+			add(path, "literal hosted output requires exactly one UTF-8 String argument and a Void semantic result", source);
+		}
+		final failure = call.failure;
+		if (failure == null) {
+			add(path, "hosted output requires an explicit native-status failure edge", source);
+			return;
+		}
+		if (failure.kind != IRFNativeStatus || failure.target != IRFTAbort || failure.arguments.length != 0 || failure.cleanup.length != 0) {
+			add(path, "the admitted hosted output policy requires a cleanup-free native-status abort edge", source);
 		}
 	}
 
@@ -1155,7 +1179,7 @@ private class HxcIRValidationState {
 
 	function validateTypeRef(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, allowVoid:Bool):Void {
 		switch type {
-			case IRTBool | IRTDynamic:
+			case IRTBool | IRTString | IRTDynamic:
 			case IRTInt(width, _):
 				if (width != 8 && width != 16 && width != 32 && width != 64) {
 					add(path, 'integer width $width is unsupported; expected 8, 16, 32, or 64', source);
@@ -1236,7 +1260,14 @@ private class HxcIRValidationState {
 				if (!~/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?$/.match(text)) {
 					add(path, 'floating constant `$text` is not canonical decimal', source);
 				}
-			case IRCBool(_) | IRCString(_) | IRCNull:
+			case IRCBool(_) | IRCNull:
+			case IRCString(text, byteLength):
+				final actual = HxcUtf8.byteLength(text);
+				if (actual == null) {
+					add(path, "string constant is not a valid Unicode-scalar sequence", source);
+				} else if (byteLength != actual) {
+					add(path, 'string constant records UTF-8 byte length $byteLength but encodes to $actual byte(s)', source);
+				}
 		}
 	}
 
@@ -1253,11 +1284,7 @@ private class HxcIRValidationState {
 					case _: false;
 				}
 			case IRCBool(_): type == IRTBool;
-			case IRCString(_):
-				switch type {
-					case IRTInstance(_): true;
-					case _: false;
-				}
+			case IRCString(_, _): type == IRTString;
 			case IRCNull:
 				switch type {
 					case IRTPointer(_, true) | IRTNullable(_, _): true;
@@ -1319,6 +1346,7 @@ private class HxcIRValidationState {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
 			case IRTFloat(width): 'f$width';
+			case IRTString: "string-utf8";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
@@ -1351,13 +1379,13 @@ private class HxcIRValidationState {
 			case IRCInt(text): 'int:$text';
 			case IRCFloat(text): 'float:$text';
 			case IRCBool(flag): 'bool:$flag';
-			case IRCString(text): 'string:${escaped(text)}';
+			case IRCString(text, byteLength): 'string-utf8:$byteLength:${escaped(text)}';
 			case IRCNull: "null";
 		}
 	}
 
 	static function escaped(value:String):String
-		return haxe.Json.stringify(value);
+		return HxcJsonString.quote(value);
 
 	static function sorted<T>(values:Array<T>, key:T->String):Array<T> {
 		final copy = values.copy();

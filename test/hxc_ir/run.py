@@ -100,7 +100,7 @@ def check_dump(report: dict[str, object], key: str, name: str) -> str:
     expected = expected_text(name)
     if actual != expected:
         raise HxcIRFailure(f"{key} dump drifted:\n" + difference(expected, actual, name))
-    if str(ROOT) in actual or '@"/' in actual or "\\" in actual:
+    if str(ROOT) in actual or '@"/' in actual or re.search(r'@"[^"\n]*\\\\', actual):
         raise HxcIRFailure(f"{key} dump leaked an absolute/non-portable source path")
     return actual
 
@@ -139,6 +139,12 @@ def check_semantics(semantic: str, coverage: str) -> None:
     for explicit_runtime in ('runtime(feature="exception"', 'implementation=runtime("object")', 'implementation=runtime("gc")'):
         if explicit_runtime not in coverage:
             raise HxcIRFailure(f"coverage dump lost explicit runtime provenance: {explicit_runtime}")
+    if 'result="value.string":string-utf8 constant value=string-utf8(bytes=11,value="line\\u0000é🙂")' not in coverage:
+        raise HxcIRFailure("coverage dump lost validated UTF-8 string bytes or explicit embedded NUL")
+    if 'runtime(feature="io",operation="sys-println-literal")' not in coverage:
+        raise HxcIRFailure("coverage dump lost typed hosted-output runtime intent")
+    if "kind=native-status,target=abort" not in coverage:
+        raise HxcIRFailure("coverage dump lost hosted-output fail-stop policy")
     for failure_shape in (
         "kind=result-error,target=block(\"result-error\")",
         "kind=allocation-failure,target=propagate",

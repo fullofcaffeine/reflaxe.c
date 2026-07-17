@@ -23,6 +23,7 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
 import reflaxe.c.lowering.CBodyEmissionError;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
+import reflaxe.c.lowering.CBodyLowering.CBodyRuntimeRequirement;
 import reflaxe.c.lowering.CBodyLoweringError;
 import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
@@ -34,9 +35,13 @@ import reflaxe.c.plan.CStaticInitializationError;
 import reflaxe.c.plan.CStaticInitializationPlanner;
 import reflaxe.c.runtime.RuntimeFeatureCatalog;
 import reflaxe.c.runtime.RuntimeFeatureError;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementReason;
+import reflaxe.c.runtime.RuntimeFeaturePackager;
+import reflaxe.c.runtime.RuntimeFeaturePackager.PackageRuntimeArtifactSource;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
 
 private typedef ResolvedRuntimePolicy = {
@@ -127,8 +132,13 @@ class CCompiler {
 			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
 				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName);
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
-			final runtimePlan = primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot);
+			final registry = RuntimeFeatureCatalog.registry();
+			final runtimePlan = primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.runtimeRequirements, registry);
 			context.setRuntimePlan(runtimePlan);
+			emitRuntimeDiagnostics(configuration.runtimeDiagnostics, runtimePlan, lowered.runtimeRequirements, input.expression.pos);
+			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
+				units.push(runtimeFile);
+			}
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
@@ -143,6 +153,8 @@ class CCompiler {
 				units: units,
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: helperIds,
+				stdlibModules: stdlibModules(lowered.runtimeRequirements),
+				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
 				staticInitialization: staticInitialization.snapshot,
 				runtimePlan: runtimePlan,
 				symbolTable: lowered.symbolTable
@@ -165,7 +177,8 @@ class CCompiler {
 	}
 
 	function primitiveRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
-			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot):RuntimeFeaturePlanSnapshot {
+			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, runtimeRequirements:Array<CBodyRuntimeRequirement>,
+			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -181,6 +194,9 @@ class CCompiler {
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
+		if (runtimeRequirements.length > 0) {
+			directDecisions.push("direct-utf8-string-literals");
+		}
 		var proof = "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls";
 		if (helperIds.length > 0) {
 			proof = "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
@@ -188,9 +204,56 @@ class CCompiler {
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";
 		}
-		return new RuntimeFeaturePlanner(RuntimeFeatureCatalog.registry()).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram,
-			context.profile, configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
-			configuration.runtimeDiagnosticsProvenance, [], [], directDecisions, proof));
+		final reasons:Array<RuntimeRequirementReason> = [];
+		for (index in 0...runtimeRequirements.length) {
+			final requirement = runtimeRequirements[index];
+			reasons.push(new RuntimeRequirementReason('io.output.$index', RuntimeFeatureId.parse("io"), "hosted-output", requirement.surface,
+				requirement.source));
+		}
+		return new RuntimeFeaturePlanner(registry).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, context.profile,
+			configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
+			configuration.runtimeDiagnosticsProvenance, reasons, [], directDecisions, reasons.length == 0 ? proof : null));
+	}
+
+	static function emitRuntimeDiagnostics(mode:CProjectRuntimeDiagnostics, plan:RuntimeFeaturePlanSnapshot, requirements:Array<CBodyRuntimeRequirement>,
+			summaryPosition:Position):Void {
+		if (requirements.length == 0 || mode == CProjectRuntimeDiagnostics.Off) {
+			return;
+		}
+		if (mode == CProjectRuntimeDiagnostics.Summary) {
+			CDiagnostic.info(CDiagnosticId.RuntimeFeatureSelected,
+				'hxrt selected ${plan.features.length} dependency-closed feature(s) for ${requirements.length} hosted output root(s): ${plan.features.join(", ")}.',
+				summaryPosition, Std.string(plan.profile));
+			return;
+		}
+		for (requirement in requirements) {
+			CDiagnostic.warning(CDiagnosticId.RuntimeFeatureSelected,
+				'Runtime feature `io` was selected for `${requirement.surface}`; transitive dependencies are recorded only in hxc.runtime-plan.json.',
+				requirement.position, Std.string(plan.profile));
+		}
+	}
+
+	static function stdlibModules(requirements:Array<CBodyRuntimeRequirement>):Array<String> {
+		final modules:Array<String> = [];
+		for (requirement in requirements) {
+			final module = requirement.operationId == "trace-literal" ? "haxe.Log" : "Sys";
+			if (modules.indexOf(module) == -1) {
+				modules.push(module);
+			}
+		}
+		modules.sort(CBodyLowering.compareUtf8);
+		return modules;
+	}
+
+	static function stdlibCapabilities(requirements:Array<CBodyRuntimeRequirement>):Array<String> {
+		final capabilities:Array<String> = [];
+		for (requirement in requirements) {
+			if (capabilities.indexOf(requirement.operationId) == -1) {
+				capabilities.push(requirement.operationId);
+			}
+		}
+		capabilities.sort(CBodyLowering.compareUtf8);
+		return capabilities;
 	}
 
 	static function resolveProjectConfiguration(profile:CProfile):ResolvedProjectConfiguration {

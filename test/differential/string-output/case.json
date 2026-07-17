@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "string-literal-output-differential",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-006",
+    "HXC-EX-001"
+  ],
+  "sources": [
+    "test/string_output/fixtures/positive/Main.hx",
+    "test/string_output/expected/program.c",
+    "test/string_output/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../string_output/run.py"
+    ],
+    "workingDirectory": "test/differential/string-output",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "exact UTF-8/NUL output, trace formatting"
+    },
+    "artifacts": [
+      {
+        "path": "test/string_output/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

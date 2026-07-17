@@ -1,7 +1,7 @@
 #ifndef HXRT_BASE_H_INCLUDED
 #define HXRT_BASE_H_INCLUDED
 
-/* Provisional native-seed surface. Generated Haxe does not select it yet. */
+/* Provisional internal runtime foundation; this is not a stable public ABI. */
 
 #include <limits.h>
 #include <stdbool.h>

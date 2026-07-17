@@ -548,6 +548,31 @@ def runtime_feature_graph_artifacts() -> list[Artifact]:
     ]
 
 
+def string_output_artifacts() -> list[Artifact]:
+    module = load_module("string_output", "test/string_output/run.py")
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure("two literal string-output snapshot renders were not byte-identical")
+    artifacts: list[Artifact] = []
+    formats = {
+        "output.hxcir": "hxcir",
+        "program.h": "header",
+        "program.c": "c",
+        "runtime-plan.json": "json",
+        "stdlib-report.json": "json",
+    }
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"string-output snapshot omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"string-output snapshot omitted {name}")
+        artifacts.append(Artifact(Path("test/string_output/expected") / name, format_name, value))
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -565,6 +590,7 @@ GENERATORS: dict[str, Generator] = {
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
     "runtime-feature-graph": runtime_feature_graph_artifacts,
+    "string-output": string_output_artifacts,
     "span-lowering": span_lowering_artifacts,
 }
 

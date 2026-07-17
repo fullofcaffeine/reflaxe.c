@@ -26,6 +26,7 @@ CATALOG_SCHEMA = ROOT / "docs/specs/runtime-features.schema.json"
 RUNTIME_SOURCE_ROOT = ROOT / "runtime/hxrt"
 ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
+IO_CONSUMER = CASE / "io_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
 PLANS_PREFIX = "HXC_RUNTIME_FEATURE_PLANS="
 PACKAGE_PREFIX = "HXC_RUNTIME_FEATURE_PACKAGE="
@@ -156,23 +157,51 @@ def validate_schema_document() -> None:
 def validate_catalog(catalog: dict[str, object]) -> None:
     if catalog.get("schemaVersion") != 1 or catalog.get("algorithm") != "hxc-runtime-feature-graph-v1":
         raise RuntimeFeatureFailure("runtime feature catalog schema or algorithm drifted")
-    if catalog.get("status") != "provisional-native-seed-packaging":
-        raise RuntimeFeatureFailure("runtime feature catalog overstated seed readiness")
-    if catalog.get("noUnconditionalCore") is not True or catalog.get("compilerSelectableFeatures") != []:
-        raise RuntimeFeatureFailure("catalog introduced a baseline or compiler-selectable provisional feature")
+    if catalog.get("status") != "selective-compiler-packaging":
+        raise RuntimeFeatureFailure("runtime feature catalog readiness drifted")
+    if catalog.get("noUnconditionalCore") is not True or catalog.get("compilerSelectableFeatures") != [
+        "io",
+        "runtime-base",
+        "status",
+        "string-literal",
+    ]:
+        raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     feature_values = records(catalog.get("features"), "catalog features")
     features = {str(record(value, "feature").get("id")): record(value, "feature") for value in feature_values}
-    if set(features) != {"runtime-abi", "status", "alloc", "string"}:
-        raise RuntimeFeatureFailure(f"provisional feature set drifted: {sorted(features)!r}")
+    if set(features) != {
+        "runtime-base",
+        "runtime-abi",
+        "status",
+        "status-name",
+        "alloc",
+        "string-literal",
+        "string",
+        "io",
+    }:
+        raise RuntimeFeatureFailure(f"selective feature set drifted: {sorted(features)!r}")
     expected_dependencies = {
-        "runtime-abi": [],
-        "status": ["runtime-abi"],
+        "runtime-base": [],
+        "runtime-abi": ["runtime-base"],
+        "status": ["runtime-base"],
+        "status-name": ["status"],
         "alloc": ["status"],
-        "string": ["alloc"],
+        "string-literal": ["runtime-base"],
+        "string": ["alloc", "string-literal"],
+        "io": ["status", "string-literal"],
+    }
+    expected_availability = {
+        "runtime-base": "compiler-selectable",
+        "runtime-abi": "native-seed-only",
+        "status": "compiler-selectable",
+        "status-name": "native-seed-only",
+        "alloc": "native-seed-only",
+        "string-literal": "compiler-selectable",
+        "string": "native-seed-only",
+        "io": "compiler-selectable",
     }
     for identifier, dependencies in expected_dependencies.items():
         feature = features[identifier]
-        if feature.get("availability") != "native-seed-only" or feature.get("dependencies") != dependencies:
+        if feature.get("availability") != expected_availability[identifier] or feature.get("dependencies") != dependencies:
             raise RuntimeFeatureFailure(f"feature {identifier} availability/dependencies drifted")
         if feature.get("minimalAllowed") is not True:
             raise RuntimeFeatureFailure(f"seed feature {identifier} left the narrow allowlist")
@@ -183,6 +212,8 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     for required in ("array", "object", "gc", "dynamic", "reflection", "exception", "thread"):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
+    if "io" in reserved:
+        raise RuntimeFeatureFailure("compiler-selectable io remains reserved")
     serialized = json.dumps(catalog, sort_keys=True, ensure_ascii=False)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
         raise RuntimeFeatureFailure("runtime feature catalog leaked a host path")
@@ -233,13 +264,25 @@ def validate_plans(plans: dict[str, object]) -> None:
     alloc = record(plans.get("alloc"), "alloc plan")
     string = record(plans.get("string"), "string plan")
     minimal = record(plans.get("minimalString"), "minimal string plan")
-    if alloc.get("features") != ["runtime-abi", "status", "alloc"]:
+    compiler_io = record(plans.get("compilerIo"), "compiler io plan")
+    if alloc.get("features") != ["runtime-base", "status", "alloc"]:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
-    if string.get("features") != ["runtime-abi", "status", "alloc", "string"]:
+    if string.get("features") != ["runtime-base", "status", "alloc", "string-literal", "string"]:
         raise RuntimeFeatureFailure("string closure is incomplete or nondeterministic")
     validate_selected_reasons(alloc, "alloc")
     validate_selected_reasons(string, "string")
     validate_selected_reasons(minimal, "minimal string")
+    if (
+        compiler_io.get("features") != ["runtime-base", "status", "string-literal", "io"]
+        or compiler_io.get("status") != "analyzed-runtime-features"
+        or compiler_io.get("planPurpose") != "compiler-program"
+    ):
+        raise RuntimeFeatureFailure("compiler io closure or purpose drifted")
+    validate_selected_reasons(compiler_io, "compiler io")
+    if "runtime/src/io.c" not in text_list(compiler_io.get("artifacts"), "compiler io artifacts"):
+        raise RuntimeFeatureFailure("compiler io plan omitted its selected source")
+    if "hxc_io_println" not in text_list(compiler_io.get("symbols"), "compiler io symbols"):
+        raise RuntimeFeatureFailure("compiler io plan omitted its selected symbol")
 
     alloc_artifacts = text_list(alloc.get("artifacts"), "alloc artifacts")
     alloc_symbols = text_list(alloc.get("symbols"), "alloc symbols")
@@ -271,7 +314,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         "minimalPolicy": "HXC2000",
         "unusedManualRequire": "HXC2000",
         "forbidRequired": "HXC2000",
-        "compilerSeed": "HXC2000",
+        "compilerNativeSeed": "HXC2000",
         "reservedFeature": "HXC2000",
         "environment": "HXC2000",
         "tamperedPackage": "HXC9000",
@@ -290,8 +333,9 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "string"):
-        plan = record(plans.get(name), f"{name} plan")
+    for name in ("alloc", "string", "io"):
+        plan_key = "compilerIo" if name == "io" else name
+        plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
         values = records(package.get(name), f"{name} package")
         actual_paths: list[str] = []
@@ -387,14 +431,21 @@ def load_snapshot(path: Path, label: str) -> dict[str, object]:
 def selected_artifacts_from_snapshot(
     catalog: dict[str, object], plan: dict[str, object], label: str
 ) -> list[dict[str, object]]:
+    purpose = plan.get("planPurpose")
+    expected_status = (
+        "analyzed-runtime-features"
+        if purpose == "compiler-program"
+        else "analyzed-native-seed-features"
+        if purpose == "native-seed-fixture"
+        else None
+    )
     if (
         plan.get("schemaVersion") != 1
         or plan.get("algorithm") != "hxc-runtime-plan-v1"
-        or plan.get("status") != "analyzed-native-seed-features"
-        or plan.get("planPurpose") != "native-seed-fixture"
+        or plan.get("status") != expected_status
         or plan.get("noRuntimeProof") is not None
     ):
-        raise RuntimeFeatureFailure(f"{label} is not a packageable native-seed plan")
+        raise RuntimeFeatureFailure(f"{label} is not a packageable selected-feature plan")
     feature_by_id: dict[str, dict[str, object]] = {}
     for value in records(catalog.get("features"), "catalog features"):
         feature = record(value, "catalog feature")
@@ -412,8 +463,11 @@ def selected_artifacts_from_snapshot(
         feature = feature_by_id.get(identifier)
         if feature is None:
             raise RuntimeFeatureFailure(f"{label} selects unknown feature {identifier}")
-        if feature.get("availability") != "native-seed-only":
-            raise RuntimeFeatureFailure(f"{label} selects non-seed feature {identifier}")
+        availability = feature.get("availability")
+        if purpose == "compiler-program" and availability != "compiler-selectable":
+            raise RuntimeFeatureFailure(f"{label} selects a non-compiler feature {identifier}")
+        if purpose == "native-seed-fixture" and availability not in ("compiler-selectable", "native-seed-only"):
+            raise RuntimeFeatureFailure(f"{label} selects a feature with unknown availability {identifier}")
         positions[identifier] = index
         for value in records(feature.get("artifacts"), f"feature {identifier} artifacts"):
             artifact = record(value, f"feature {identifier} artifact")
@@ -474,8 +528,9 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "string"):
-        plan = record(plans.get(name), f"{name} plan")
+    for name in ("alloc", "string", "io"):
+        plan_key = "compilerIo" if name == "io" else name
+        plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
         for artifact in selected_artifacts_from_snapshot(catalog, plan, name):
             source_path = str(artifact["sourcePath"])
@@ -546,12 +601,14 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
 def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     alloc = records(package.get("alloc"), "alloc package")
     string = records(package.get("string"), "string package")
+    io = records(package.get("io"), "io package")
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-runtime-feature-") as temporary:
         root = Path(temporary)
         for toolchain in toolchains:
             family_root = root / toolchain.family
             run_native_case(toolchain, "alloc", alloc, ALLOC_CONSUMER, "runtime-feature-alloc: OK\n", family_root)
             run_native_case(toolchain, "string", string, STRING_CONSUMER, "runtime-feature-string: OK\n", family_root)
+            run_native_case(toolchain, "io", io, IO_CONSUMER, "runtime-feature-io\n", family_root)
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:

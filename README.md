@@ -69,7 +69,8 @@ narrow justified optimized `hxrt` feature last. The generated E5
 pinned-Haxe source modules and 2,311 public typed API rows, with explicit
 profile/environment/runtime/test/diagnostic ownership and no catch-all. This is
 planning evidence, not broad stdlib support: only the exact `Std.int` row is
-currently conformant. String/Unicode, collections, Bytes/I/O,
+currently conformant, while literal-only `Sys.println` and default `trace` are
+the two exact partial rows. String/Unicode, collections, Bytes/I/O,
 Std/Math/Type/Reflect, JSON, regex, time, sys, networking, and threading remain
 owned roadmap slices.
 
@@ -78,6 +79,12 @@ summary; metal uses the narrow `minimal` allowlist and warns at each root runtim
 requirement. `hxc_runtime=none` turns runtime freedom into a hard whole-program
 proof. Every successful build is planned to emit `hxc.runtime-plan.json`, even
 when the selected feature set is empty.
+
+The first compiler-selected slice is intentionally tiny: a compiler-known valid
+UTF-8 String literal passed to hosted `Sys.println` or default `trace` packages
+only `runtime-base`, `status`, `string-literal`, and `io`. Embedded NUL is written
+by length, and write/flush failure aborts the generated program. Nonliteral
+String output and general I/O still fail closed.
 
 The `c.*` source contract is designed to make C itself pleasant to author from Haxe:
 typed pointers, spans, ownership, layouts, header groups, linkage, calling
@@ -220,7 +227,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 23 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 24 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 12 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -244,7 +251,8 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
-| `hxc-ir` | `implemented` | Schema-2 HxcIR structurally records values, places, ordering, control flow, failures, cleanup, and runtime intent. |
+| `hxc-ir` | `implemented` | Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent. |
+| `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes. |
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural and primitive native corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
@@ -254,8 +262,8 @@ This inventory combines product capability boundaries with repository infrastruc
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
-| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected provisional native-seed slices. |
-| `runtime-hxrt-seed` | `scaffold-only` | Hardened native allocator and UTF-8 scalar string contracts coexist with provisional status and Int32 runtime seeds. |
+| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected compiler-admitted runtime slices. |
+| `runtime-hxrt-seed` | `scaffold-only` | Hardened native allocator, UTF-8 scalar string, status, and hosted output slices coexist with other provisional runtime seeds. |
 | `runtime-string-contract` | `implemented` | The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |

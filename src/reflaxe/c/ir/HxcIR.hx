@@ -34,6 +34,10 @@ enum HxcIRTypeRef {
 	IRTInt(width:Int, signed:Bool);
 	IRTAbiInteger(kind:HxcIRAbiIntegerKind);
 	IRTFloat(width:Int);
+
+	/** Immutable valid UTF-8 with Unicode-scalar Haxe indexing semantics. */
+	IRTString;
+
 	IRTVoid;
 	IRTInstance(instanceId:String);
 	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
@@ -104,7 +108,10 @@ enum HxcIRConstant {
 	IRCInt(value:String);
 	IRCFloat(value:String);
 	IRCBool(value:Bool);
-	IRCString(value:String);
+
+	/** Source text plus its independently validated UTF-8 byte length. */
+	IRCString(value:String, byteLength:Int);
+
 	IRCNull;
 }
 

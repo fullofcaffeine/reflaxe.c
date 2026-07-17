@@ -1,4 +1,4 @@
-hxcir schema=2
+hxcir schema=3
 module "FunctionFixture" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":2:45-53:3
   function "function.FunctionFixture.asFloat" name="FunctionFixture.asFloat" returns=f64 entry="entry" @"test/function_lowering/fixtures/positive/FunctionFixture.hx":6:45-8:3
     parameter "parameter.0" type=f64 @"test/function_lowering/fixtures/positive/FunctionFixture.hx":6:45-8:3

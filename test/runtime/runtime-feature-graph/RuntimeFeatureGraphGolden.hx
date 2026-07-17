@@ -72,12 +72,14 @@ class RuntimeFeatureGraphGolden {
 		final minimalString = planner.plan(featureRequest(CRuntimePolicy.Minimal, [reason("fixture.minimal-string", "string")], [
 			new RuntimeFeatureOverride(RuntimeFeatureId.parse("string"), RuntimeFeatureOverrideAction.Require, "fixture:manual-confirmation")
 		]));
+		final compilerIo = planner.plan(compilerFeatureRequest());
 		final syntheticLink = syntheticLinkPlan();
 
 		final repositorySource = new RepositoryRuntimeSource();
 		final packager = new RuntimeFeaturePackager(registry);
 		final allocFiles = packager.packageFiles(alloc, repositorySource);
 		final stringFiles = packager.packageFiles(stringPlan, repositorySource);
+		final ioFiles = packager.packageFiles(compilerIo, repositorySource);
 		final emptySource = new CountingRuntimeSource();
 		final emptyFiles = packager.packageFiles(empty, emptySource);
 		if (emptyFiles.length != 0 || emptySource.readCount != 0) {
@@ -105,6 +107,7 @@ class RuntimeFeatureGraphGolden {
 			alloc: alloc,
 			string: stringPlan,
 			minimalString: minimalString,
+			compilerIo: compilerIo,
 			syntheticLink: syntheticLink,
 			diagnostics: {
 				invalidId: expectFailure(() -> {
@@ -123,7 +126,7 @@ class RuntimeFeatureGraphGolden {
 					[
 						new RuntimeFeatureOverride(RuntimeFeatureId.parse("alloc"), RuntimeFeatureOverrideAction.Forbid, "fixture:forbid")
 					]))),
-				compilerSeed: expectFailure(() -> planner.plan(compilerFeatureRequest())),
+				compilerNativeSeed: compilerNativeSeedFailure(),
 				reservedFeature: expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.reflection", "reflection")], []))),
 				environment: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Portable,
 					CEnvironment.Wasi, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.wasi", "alloc")], [],
@@ -133,7 +136,8 @@ class RuntimeFeatureGraphGolden {
 		}));
 		Sys.println(PACKAGE_PREFIX + Json.stringify({
 			alloc: packageRecords(allocFiles),
-			string: packageRecords(stringFiles)
+			string: packageRecords(stringFiles),
+			io: packageRecords(ioFiles)
 		}));
 	}
 
@@ -151,8 +155,17 @@ class RuntimeFeatureGraphGolden {
 
 	static function compilerFeatureRequest():RuntimePlanningRequest {
 		return new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable, CEnvironment.Hosted, CRuntimePolicy.Auto,
-			"profile-preset:portable", CRuntimeDiagnostics.Summary, "profile-preset:portable", [reason("fixture.compiler", "alloc")], [],
-			["direct-c-considered"]);
+			"profile-preset:portable", CRuntimeDiagnostics.Summary, "profile-preset:portable", [reason("fixture.compiler-io", "io")], [],
+			["direct-utf8-string-literal", "program-local-output-considered"]);
+	}
+
+	static function compilerNativeSeedFailure():RuntimeFailureRecord {
+		final feature = new RuntimeFeatureDefinition(RuntimeFeatureId.parse("fixture-native-seed"), "Synthetic native-only feature.", NativeSeedOnly, true,
+			[CEnvironment.Hosted], [], [], [], [], []);
+		final planner = new RuntimeFeaturePlanner(new RuntimeFeatureRegistry([feature], []));
+		return expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable, CEnvironment.Hosted,
+			CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.compiler-native-seed", "fixture-native-seed")], [],
+			["direct-c-considered"])));
 	}
 
 	static function reason(id:String, featureId:String, ?source:PosInfos):RuntimeRequirementReason {

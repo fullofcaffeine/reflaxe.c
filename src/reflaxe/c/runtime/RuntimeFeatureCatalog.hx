@@ -8,22 +8,30 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefinition;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureReservation;
 
-/** Checked-in feature vocabulary; provisional slices are never compiler-selectable. */
+/** Checked-in feature vocabulary with evidence-bounded compiler selection. */
 class RuntimeFeatureCatalog {
 	public static function registry():RuntimeFeatureRegistry
 		return new RuntimeFeatureRegistry(definitions(), reservations());
 
 	public static function definitions():Array<RuntimeFeatureDefinition> {
 		final environments = [CEnvironment.Hosted, CEnvironment.Freestanding];
+		final runtimeBase = RuntimeFeatureId.parse("runtime-base");
 		final runtimeAbi = RuntimeFeatureId.parse("runtime-abi");
 		final status = RuntimeFeatureId.parse("status");
+		final statusName = RuntimeFeatureId.parse("status-name");
 		final alloc = RuntimeFeatureId.parse("alloc");
+		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final string = RuntimeFeatureId.parse("string");
+		final io = RuntimeFeatureId.parse("io");
 		return [
+			new RuntimeFeatureDefinition(runtimeBase, "Shared C types and visibility/alignment macros for selectively packaged runtime slices.",
+				CompilerSelectable, true, environments, [], [header("base.h")], [], [], []),
 			new RuntimeFeatureDefinition(runtimeAbi, "Provisional runtime ABI version query used only by native seed evidence.", NativeSeedOnly, true,
-				environments, [], [header("base.h"), header("abi.h"), source("abi.c")], ["hxc_runtime_abi_version"], [], []),
-			new RuntimeFeatureDefinition(status, "Provisional status values and symbolic names for native seed evidence.", NativeSeedOnly, true, environments,
-				[runtimeAbi], [header("status.h"), source("status.c")], ["hxc_status_name"], [], []),
+				environments, [runtimeBase], [header("abi.h"), source("abi.c")], ["hxc_runtime_abi_version"], [], []),
+			new RuntimeFeatureDefinition(status, "Status value definitions used by selected runtime failure boundaries.", CompilerSelectable, true,
+				environments, [runtimeBase], [header("status.h")], [], [], []),
+			new RuntimeFeatureDefinition(statusName, "Symbolic status-name helper used only by native seed evidence.", NativeSeedOnly, true, environments,
+				[status], [header("status_name.h"), source("status.c")], ["hxc_status_name"], [], []),
 			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.", NativeSeedOnly,
 				true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
@@ -41,9 +49,12 @@ class RuntimeFeatureCatalog {
 					"hxc_allocation_dispose"
 				],
 				[], []),
+			new RuntimeFeatureDefinition(stringLiteral,
+				"Immutable valid UTF-8 literal carrier with explicit byte length and no allocation or object dependency.", CompilerSelectable, true,
+				environments, [runtimeBase], [header("string_literal.h")], [], [], []),
 			new RuntimeFeatureDefinition(string,
 				"Valid UTF-8 scalar primitives, owned construction, mutable building, and explicit CString conversion with native evidence.", NativeSeedOnly,
-				true, environments, [alloc], [header("string.h"), source("string.c")], [
+				true, environments, [alloc, stringLiteral], [header("string.h"), source("string.c")], [
 					"hxc_byte_view_from_cstring",
 					"hxc_utf8_validate",
 					"hxc_string_is_valid",
@@ -66,7 +77,10 @@ class RuntimeFeatureCatalog {
 					"hxc_string_borrow_cstring",
 					"hxc_string_to_cstring_owned",
 					"hxc_owned_cstring_dispose"
-				], [], [])
+				],
+				[], []),
+			new RuntimeFeatureDefinition(io, "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
+				CompilerSelectable, true, [CEnvironment.Hosted], [status, stringLiteral], [header("io.h"), source("io.c")], ["hxc_io_println"], [], [])
 		];
 	}
 
@@ -80,7 +94,6 @@ class RuntimeFeatureCatalog {
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
 			reserved("gc", "E4.T06", "Precise non-moving tracing collector and exact roots."),
-			reserved("io", "E5.T04", "Byte streams and hosted or custom I/O adapters."),
 			reserved("object", "E4.T05", "Reachable object and type descriptors."),
 			reserved("process", "E5.T09", "Hosted environment and process adapters."),
 			reserved("reflection", "E4.T08", "Reachability-selected type and member reflection metadata."),

@@ -47,6 +47,7 @@ enum abstract RuntimeFeaturePlanStatus(String) to String {
 
 enum abstract RuntimeFeatureCatalogStatus(String) to String {
 	var ProvisionalNativeSeedPackaging = "provisional-native-seed-packaging";
+	var SelectiveCompilerPackaging = "selective-compiler-packaging";
 }
 
 enum abstract RuntimeFeatureOverrideAction(String) to String {

@@ -16,7 +16,7 @@ or dynamically typed placeholder. `CPrimitiveSemantics` then produces a closed
 typed mapping, conversion, or operation decision for the shared portable/metal
 pipeline.
 
-The HxcIR schema-2 additions keep four facts structural:
+The current HxcIR model keeps five primitive facts structural:
 
 - ABI-sized integer identity (`size`, `ptrdiff`, `intptr`, or `uintptr`);
 - tagged-scalar versus pointer nullability;

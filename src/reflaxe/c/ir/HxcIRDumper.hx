@@ -204,6 +204,7 @@ class HxcIRDumper {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTAbiInteger(kind): 'abi-int(${abiIntegerKind(kind)})';
 			case IRTFloat(width): 'f$width';
+			case IRTString: "string-utf8";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance(${quote(instanceId)})';
 			case IRTPointer(pointee, nullable): 'pointer(${nullable ? "nullable" : "nonnull"},${typeRef(pointee)})';
@@ -330,7 +331,7 @@ class HxcIRDumper {
 			case IRCInt(text): 'int($text)';
 			case IRCFloat(text): 'float($text)';
 			case IRCBool(flag): 'bool($flag)';
-			case IRCString(text): 'string(${quote(text)})';
+			case IRCString(text, byteLength): 'string-utf8(bytes=$byteLength,value=${quote(text)})';
 			case IRCNull: "null";
 		}
 	}
@@ -354,7 +355,7 @@ class HxcIRDumper {
 		output.push(value);
 
 	static function quote(value:String):String
-		return haxe.Json.stringify(value);
+		return HxcJsonString.quote(value);
 
 	static function sorted<T>(values:Array<T>, key:T->String):Array<T> {
 		final copy = values.copy();

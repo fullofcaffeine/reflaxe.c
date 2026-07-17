@@ -91,9 +91,10 @@ means no `hxrt` include, source, define, library, or symbol.
 
 The global ownership ledger is distinct from a generated program's
 `hxc.stdlib-report.json`. The ledger says who must implement and test the pinned
-surface. The per-program report must later say which reachable stdlib operations
-were analyzed for one build. Neither artifact can substitute for generated-C
-behavior evidence.
+surface. The per-program report says which reachable stdlib operations were
+analyzed for one build; its first bounded selected form lists only literal
+`Sys.println` and default `haxe.Log.trace`. Neither artifact can substitute for
+generated-C behavior evidence.
 
 ## Review and update workflow
 

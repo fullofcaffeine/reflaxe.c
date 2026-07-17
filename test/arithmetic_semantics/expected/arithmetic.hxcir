@@ -1,4 +1,4 @@
-hxcir schema=2
+hxcir schema=3
 module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-145:3
   function "function.ArithmeticFixture.fadd" name="ArithmeticFixture.fadd" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22

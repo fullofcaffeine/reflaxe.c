@@ -47,6 +47,8 @@ typedef CProjectEmissionPlan = {
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
+	final ?stdlibModules:Array<String>;
+	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
 	final ?runtimePlan:RuntimeFeaturePlanSnapshot;
 	final symbolTable:CSymbolTableSnapshot;
@@ -61,6 +63,7 @@ private enum abstract PlaceholderStatus(String) to String {
 private enum abstract ResolvedAnalysisStatus(String) to String {
 	var NoExports = "analyzed-no-public-exports";
 	var NoStdlib = "analyzed-no-stdlib-use";
+	var SelectedStdlib = "analyzed-selected-stdlib-use";
 }
 
 private enum abstract AbiStability(String) to String {
@@ -299,7 +302,7 @@ class CProjectEmitter {
 				CStaticInitializationPhase.Entry
 			].join(",")
 			|| initialization.runtimeFeatures.length != 0) {
-			fail("primitive executable emission requires a valid runtime-free schema-1 static-initialization plan");
+			fail("primitive executable emission requires a valid schema-1 static-initialization plan with no independent initializer runtime roots");
 		}
 		if (initialization.executionOrder.length != initialization.initializers.length) {
 			fail("static-initialization execution order must address every initializer exactly once");
@@ -350,7 +353,8 @@ class CProjectEmitter {
 					sources++;
 				case PrivateHeader:
 					privateHeaders++;
-				case PublicHeader | RuntimeHeader | RuntimeSource:
+				case RuntimeHeader | RuntimeSource:
+				case PublicHeader:
 					fail('primitive executable emission cannot package `${Std.string(unit.kind)}` `${unit.relativePath}`', [unit.relativePath]);
 				case _:
 					fail('primitive executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
@@ -376,9 +380,8 @@ class CProjectEmitter {
 	function validatePrimitiveRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
-			|| runtimePlan.status != RuntimeFeaturePlanStatus.RuntimeFree
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
-			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v1 runtime-free analysis");
+			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v1 analysis");
 		}
 		if (runtimePlan.profile != plan.profile
 			|| runtimePlan.environment != plan.environment
@@ -389,19 +392,29 @@ class CProjectEmitter {
 			|| runtimePlan.diagnosticProvenance != plan.runtimeDiagnosticsProvenance) {
 			fail("primitive executable runtime analysis differs from resolved project configuration");
 		}
-		if (runtimePlan.rootReasons.length != 0
-			|| runtimePlan.manualOverrides.length != 0
-			|| runtimePlan.dependencyEdges.length != 0
-			|| runtimePlan.selectedFeatures.length != 0
-			|| runtimePlan.features.length != 0
-			|| runtimePlan.artifactDetails.length != 0
-			|| runtimePlan.artifacts.length != 0
-			|| runtimePlan.symbols.length != 0
-			|| runtimePlan.libraries.length != 0
-			|| runtimePlan.defines.length != 0
-			|| !hasRuntimeProof(runtimePlan.noRuntimeProof)) {
-			fail("primitive executable runtime analysis must prove complete hxrt absence");
+		switch runtimePlan.status {
+			case RuntimeFeaturePlanStatus.RuntimeFree:
+				if (runtimePlan.rootReasons.length != 0
+					|| runtimePlan.manualOverrides.length != 0
+					|| runtimePlan.dependencyEdges.length != 0
+					|| runtimePlan.selectedFeatures.length != 0
+					|| runtimePlan.features.length != 0
+					|| runtimePlan.artifactDetails.length != 0
+					|| runtimePlan.artifacts.length != 0
+					|| runtimePlan.symbols.length != 0
+					|| runtimePlan.libraries.length != 0
+					|| runtimePlan.defines.length != 0
+					|| !hasRuntimeProof(runtimePlan.noRuntimeProof)) {
+					fail("runtime-free primitive analysis must prove complete hxrt absence");
+				}
+			case RuntimeFeaturePlanStatus.RuntimeFeatures:
+				validateHostedOutputRuntimePlan(runtimePlan);
+			case RuntimeFeaturePlanStatus.NativeSeedFeatures:
+				fail("generated Haxe cannot use a native-seed runtime plan");
+			case _:
+				fail('primitive executable runtime analysis has unknown status `${Std.string(runtimePlan.status)}`');
 		}
+		validateRuntimePayload(plan.units, runtimePlan);
 		final helperIds = plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds;
 		final expectedDirectDecisions = [
 			"primitive-values",
@@ -419,9 +432,51 @@ class CProjectEmitter {
 		if (initialization.executionOrder.length > 0) {
 			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
 		}
+		if (runtimePlan.status == RuntimeFeaturePlanStatus.RuntimeFeatures) {
+			expectedDirectDecisions.push("direct-utf8-string-literals");
+		}
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
 			fail("primitive executable runtime analysis differs from compiler-owned direct and program-local decisions");
+		}
+	}
+
+	function validateHostedOutputRuntimePlan(runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+		final expectedFeatures = ["runtime-base", "status", "string-literal", "io"];
+		if (runtimePlan.features.join("\n") != expectedFeatures.join("\n")
+			|| runtimePlan.rootReasons.length == 0
+			|| runtimePlan.manualOverrides.length != 0
+			|| runtimePlan.selectedFeatures.length != expectedFeatures.length
+			|| runtimePlan.artifactDetails.length == 0
+			|| runtimePlan.artifacts.length != runtimePlan.artifactDetails.length
+			|| runtimePlan.symbols.indexOf("hxc_io_println") == -1
+			|| runtimePlan.libraries.length != 0
+			|| runtimePlan.defines.length != 0
+			|| runtimePlan.noRuntimeProof != null) {
+			fail("the admitted runtime-using primitive slice requires exactly the dependency-closed hosted String output plan");
+		}
+		for (reason in runtimePlan.rootReasons) {
+			if (reason.featureId != "io" || reason.kind != "hosted-output") {
+				fail('hosted output runtime plan contains unrelated root reason `${reason.id}`');
+			}
+		}
+	}
+
+	function validateRuntimePayload(units:Array<GeneratedFile>, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+		final runtimeUnits:Array<GeneratedFile> = [];
+		for (unit in units) {
+			if (unit.kind == RuntimeHeader || unit.kind == RuntimeSource) {
+				runtimeUnits.push(unit);
+			}
+		}
+		runtimeUnits.sort(compareFiles);
+		if (runtimeUnits.map(unit -> unit.relativePath).join("\n") != runtimePlan.artifacts.join("\n")) {
+			fail("packaged runtime payload differs from the analyzed artifact selection");
+		}
+		for (index in 0...runtimeUnits.length) {
+			if (runtimeUnits[index].kind != runtimePlan.artifactDetails[index].kind) {
+				fail('packaged runtime artifact `${runtimeUnits[index].relativePath}` has the wrong generated-file kind');
+			}
 		}
 	}
 
@@ -548,13 +603,30 @@ class CProjectEmitter {
 	}
 
 	function stdlibResolved(plan:CProjectEmissionPlan):StdlibResolved {
+		final modules = canonicalLogicalValues(plan.stdlibModules == null ? [] : plan.stdlibModules, "stdlib module");
+		final capabilities = canonicalLogicalValues(plan.stdlibCapabilities == null ? [] : plan.stdlibCapabilities, "stdlib capability");
 		return {
 			schemaVersion: SCHEMA_VERSION,
-			status: ResolvedAnalysisStatus.NoStdlib,
+			status: modules.length == 0
+			&& capabilities.length == 0 ? ResolvedAnalysisStatus.NoStdlib : ResolvedAnalysisStatus.SelectedStdlib,
 			profile: plan.profile,
-			modules: [],
-			capabilities: []
+			modules: modules,
+			capabilities: capabilities
 		};
+	}
+
+	function canonicalLogicalValues(input:Array<String>, label:String):Array<String> {
+		final values = input.copy();
+		values.sort(compareUtf8);
+		var previous:Null<String> = null;
+		for (value in values) {
+			validateLogicalText(value, label);
+			if (value == previous) {
+				fail('$label `$value` is duplicated');
+			}
+			previous = value;
+		}
+		return values;
 	}
 
 	function jsonFile<T>(path:String, kind:GeneratedFileKind, value:T):GeneratedFile

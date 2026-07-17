@@ -66,6 +66,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "static-initialization",
                 "arithmetic-semantics",
                 "runtime-feature-graph",
+                "string-output",
                 "span-lowering",
             ),
         )

@@ -7,10 +7,11 @@ the narrowest dependency-closed `hxrt` slice only when neither compiler-owned
 option is feasible. There is no unconditional `core` feature.
 
 This is a bounded M0 capability. The graph, policy checks, reason propagation,
-and exact packager are implemented. The currently admitted generated-Haxe
-programs remain runtime-free, and every checked-in native runtime definition is
-marked `native-seed-only`. No runtime-requiring Haxe construct can select or
-link those provisional definitions yet.
+and exact packager are implemented. Primitive-only generated programs remain
+runtime-free. E2.T07 additionally admits compiler-known String literals passed
+to hosted `Sys.println` or default `trace`; that edge selects only the literal
+carrier and minimal output closure. The allocator and full string-operation
+implementations remain `native-seed-only`.
 
 ## Typed graph contract
 
@@ -25,13 +26,24 @@ of discovery and map iteration order.
 The machine-readable review view is
 [`runtime/hxrt/features.json`](../runtime/hxrt/features.json), validated against
 [`runtime-features.schema.json`](specs/runtime-features.schema.json). Its current
-provisional graph is:
+graph is:
 
 ```text
-string -> alloc -> status -> runtime-abi
+runtime-base
+├── status
+├── string-literal
+└── runtime-abi                   (native seed only)
+
+io -> status + string-literal    (compiler selectable, hosted only)
+alloc -> status                  (native seed only)
+string -> alloc + string-literal (native seed only)
+status-name -> status            (native seed only)
 ```
 
 These components are split into independently owned `hxrt/*.h` and `.c` files.
+The header-only `string-literal` slice owns only the private byte pointer, byte
+length, and trailing-NUL fact. It does not pull allocator or general string
+symbols into a literal-output program.
 The graph also reserves separate IDs for arrays, objects, tracing collection,
 dynamic values, reflection, exceptions, threads, platform services, and other planned
 features. Reservations fail closed and name the task that must implement them;
@@ -64,6 +76,11 @@ representations, request-local helpers, and static initialization have been
 decided. Its plan therefore contains no `hxrt` include, source, define, library,
 or symbol.
 
+Literal output is a nonempty request rooted at each admitted source call. It
+selects `runtime-base`, `status`, `string-literal`, and `io` in dependency order,
+packages one C source, and exposes only `hxc_io_println`. The exact plan records
+the direct UTF-8 literal decision before this hosted side-effect fallback.
+
 Runtime-requirement inference and the complete blocker-producing no-runtime
 eligibility analysis remain later compiler passes. This planner validates and
 resolves their typed inputs; it does not infer requirements from a type name,
@@ -88,9 +105,9 @@ model is an internal planning seam; no user-facing feature-override spelling is
 published at M0.
 
 Native-seed fixtures use the separate `native-seed-fixture` planning purpose.
-The production `compiler-program` purpose rejects every provisional seed
-definition even under `auto`, preventing independent C evidence from becoming
-a generated-Haxe support claim.
+The production `compiler-program` purpose rejects `runtime-abi`, `status-name`,
+`alloc`, and full `string` even under `auto`, preventing independent C evidence
+from becoming a generated-Haxe support claim.
 
 ## Compatibility boundary
 
@@ -98,9 +115,9 @@ a generated-Haxe support claim.
 | --- | --- |
 | Portable/metal | One planner serves both. Portable defaults to `auto + summary`; metal defaults to `minimal + warn`; explicit valid combinations remain available. |
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. |
-| Environment | The native allocator has hosted execution and freestanding custom-allocator/no-libc-allocation evidence. Other seed surfaces are compile-checked for hosted/freestanding only; WASI and Emscripten requests fail until dedicated evidence exists. |
-| Generated C | Existing admitted Haxe programs remain byte-stable runtime-free C. Selective seed packages are independently authored native evidence, not generated Haxe output. |
-| Public ABI | The allocator and UTF-8 scalar string slices have hardened internal native contracts, but every split header and `hxc_` symbol remains provisional. E4.T11 owns runtime ABI/manifest stabilization, and E7 owns exported APIs. |
+| Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
+| Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership. |
+| Public ABI | The literal carrier and output symbol are private provisional runtime facts. The internal marker advances to 0.4.0, but E4.T11 still owns runtime ABI/manifest stabilization and E7 owns exported APIs. |
 
 ## Exact packaging
 
@@ -109,16 +126,18 @@ artifact source. It materializes exactly the selected artifact records as
 `GeneratedFile` values in canonical order. Before its first read, it checks the
 dependency order and every source/output/kind tuple against the validated
 registry, so a fabricated plan cannot select another repository file. An empty
-plan returns no files and does not even consult the artifact source. Future
-compiler-selected runtime output must pass those values through normal Reflaxe
+plan returns no files and does not even consult the artifact source.
+Compiler-selected runtime output passes those values through normal Reflaxe
 output ownership; the packager never writes or deletes output itself.
 
-The canonical fixture proves an `alloc` request packages only
-`runtime-abi + status + alloc`, while a `string` request adds only the string
-header, source, and symbols. It compiles and runs both packages under strict
-GCC and Clang lanes and inspects the alloc-only link for omitted string symbols.
-It also covers cycle, unknown-dependency, policy, override, environment,
-reserved-feature, and provisional-availability failures.
+The canonical fixture proves an `alloc` native request packages only
+`runtime-base + status + alloc`, while a full `string` native request adds only
+`string-literal` plus the full string header, source, and symbols. Its compiler
+request packages exactly `runtime-base + status + string-literal + io`. It
+compiles and runs all three packages under strict GCC and Clang lanes and
+inspects the alloc-only link for omitted string symbols. It also covers cycle,
+unknown-dependency, policy, override, environment, reserved-feature, and
+native-only availability failures.
 
 The separate [allocator ownership contract](allocator-abi.md) defines the
 E4.T02 zero-size, alignment, checked-size, out-parameter, failure-atomicity, and
@@ -130,10 +149,11 @@ evidence does not make `alloc` compiler-selectable.
 The [UTF-8 scalar string contract](string-runtime.md) defines the E4.T03 valid
 immutable representation, maximal-subpart lossy decoding, scalar-indexed
 operations, builder failure atomicity, allocation accounting, and distinct
-borrowed/owned CString lifetimes. Its exact feature closure remains
-`string -> alloc -> status -> runtime-abi`; required native links reject object,
-GC, reflection, and dynamic symbol families. This evidence likewise does not
-make `string` compiler-selectable or prove Haxe `String` lowering.
+borrowed/owned CString lifetimes. Its exact feature closure is `runtime-base +
+status + alloc + string-literal + string`; required native links reject object,
+GC, reflection, and dynamic symbol families. This evidence does not make full
+`string` compiler-selectable. E2.T07 uses only its independently owned literal
+carrier and therefore does not prove general Haxe `String` lowering.
 
 The focused Haxe gate renders and packages twice before comparing the canonical
 snapshots. Native CI then uses `--native-only` to validate the checked-in catalog
@@ -150,8 +170,8 @@ npm run snapshots:check
 npm run test:native
 ```
 
-This evidence proves deterministic planning and selective packaging. The
-separate E4.T02/E4.T03 fixtures prove their bounded native allocator and string
-contracts. Neither proves generated-Haxe runtime selection, broad `String`
-lowering, object graphs, exceptions, reflection, the standard library, or a
-stable runtime ABI.
+This evidence proves deterministic planning, selective packaging, and the one
+generated-Haxe literal-output selection. The separate E4.T02/E4.T03 fixtures
+prove their bounded native allocator and string contracts. None of this proves
+broad `String` lowering, general I/O, object graphs, exceptions, reflection,
+broad standard-library support, or a stable runtime ABI.

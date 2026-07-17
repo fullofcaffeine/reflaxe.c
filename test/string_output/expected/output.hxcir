@@ -1,0 +1,16 @@
+hxcir schema=3
+module "Main" @"Main.hx":2:30-7:3
+  function "function.Main.main" name="Main.main" returns=void entry="entry" @"Main.hx":2:30-7:3
+    block "entry" @"Main.hx":2:30-7:3
+      instruction "instruction.0.string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":3:3-3:23
+      instruction "instruction.1.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.0"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":3:3-3:23
+      instruction "instruction.2.string-literal" result="value.1":string-utf8 constant value=string-utf8(bytes=6,value="é🙂") @"Main.hx":4:3-4:20
+      instruction "instruction.3.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.1"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":4:3-4:20
+      instruction "instruction.4.string-literal" result="value.2":string-utf8 constant value=string-utf8(bytes=12,value="embedded\u0000NUL") @"Main.hx":5:3-5:33
+      instruction "instruction.5.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.2"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":5:3-5:33
+      instruction "instruction.6.string-literal" result="value.3":string-utf8 constant value=string-utf8(bytes=17,value="Main.hx:6: traced") @"Main.hx":6:3-6:8
+      instruction "instruction.7.hosted-output" result=- call dispatch=runtime(feature="io",operation="trace-literal") arguments=["value.3"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":6:3-6:8
+      terminator return value=none cleanup=[] @"Main.hx":2:30-7:3
+    end block "entry"
+  end function "function.Main.main"
+end module "Main"

@@ -16,14 +16,18 @@
     "runtime/hxrt/include/hxrt/abi.h",
     "runtime/hxrt/include/hxrt/allocator.h",
     "runtime/hxrt/include/hxrt/base.h",
+    "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/status.h",
     "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/src/abi.c",
     "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/string.c",
     "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
+    "test/runtime/runtime-feature-graph/io_consumer.c",
     "test/runtime/runtime-feature-graph/run.py",
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
     "test/runtime/runtime-feature-graph/string_consumer.c"
@@ -41,7 +45,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "deterministic closure, policy diagnostics, and selective native packaging passed$"
+      "value": "deterministic Haxe renders, policy diagnostics, and selective native packaging passed$"
     },
     "diagnostics": [
       "HXC2000",

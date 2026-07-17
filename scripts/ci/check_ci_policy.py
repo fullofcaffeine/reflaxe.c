@@ -67,10 +67,13 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxrt/abi.h",
     "runtime/hxrt/include/hxrt/status.h",
     "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string.h",
+    "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/src/abi.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/features.json",
     "docs/specs/runtime-features.schema.json",
@@ -91,6 +94,7 @@ REQUIRED_GATE_FILES = (
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
     "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json",
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
+    "test/runtime/runtime-feature-graph/io_consumer.c",
     "test/runtime/runtime-feature-graph/string_consumer.c",
     "test/runtime/runtime-feature-graph/run.py",
     "scripts/test/c_fixture_harness.py",
@@ -156,6 +160,8 @@ REQUIRED_GATE_FILES = (
     "src/reflaxe/c/runtime/RuntimeFeaturePackager.hx",
     "docs/runtime-feature-planning.md",
     "test/hxc_ir/HxcIRGolden.hx",
+    "src/reflaxe/c/ir/HxcJsonString.hx",
+    "src/reflaxe/c/ir/HxcUtf8.hx",
     "test/hxc_ir/hxc_ir.hxml",
     "test/hxc_ir/oracle.hxml",
     "test/hxc_ir/fixtures/SideEffectSupport.hx",
@@ -196,6 +202,7 @@ REQUIRED_GATE_FILES = (
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyLoweringError.hx",
+    "src/reflaxe/c/lowering/CBodyRuntimeNames.hx",
     "src/reflaxe/c/lowering/CPrimitiveHelperEmitter.hx",
     "src/reflaxe/c/lowering/HaxeSourceSpan.hx",
     "docs/body-lowering.md",
@@ -307,6 +314,22 @@ REQUIRED_GATE_FILES = (
     "test/negative/span-lowering/case.json",
     "test/snapshot/span-lowering/case.json",
     "test/runtime/span-lowering/case.json",
+    "test/string_output/fixtures/positive/Main.hx",
+    "test/string_output/fixtures/nonliteral/Main.hx",
+    "test/string_output/fixtures/nonstring/Main.hx",
+    "test/string_output/fixtures/sys_print/Main.hx",
+    "test/string_output/fixtures/trace_custom/Main.hx",
+    "test/string_output/expected/output.hxcir",
+    "test/string_output/expected/program.h",
+    "test/string_output/expected/program.c",
+    "test/string_output/expected/runtime-plan.json",
+    "test/string_output/expected/stdlib-report.json",
+    "test/string_output/run.py",
+    "test/positive/string-output/case.json",
+    "test/negative/string-output/case.json",
+    "test/snapshot/string-output/case.json",
+    "test/runtime/string-output/case.json",
+    "test/differential/string-output/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -466,6 +489,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
+    if scripts.get("test:string-output") != "python3 test/string_output/run.py":
+        errors.append("package.json must retain the test:string-output entry point")
     if scripts.get("test:hxc-ir") != "python3 test/hxc_ir/run.py":
         errors.append("package.json must retain the test:hxc-ir entry point")
     if scripts.get("test:primitive-semantics") != "python3 test/primitive_semantics/run.py":
@@ -532,6 +557,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:runtime-features")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
+    if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:string-output")
     if "npm run test:hxc-ir" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:hxc-ir")
     if "npm run test:primitive-semantics" not in str(scripts.get("test:toolchain", "")):
@@ -625,6 +652,10 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the deterministic project emitter test")
     if "test/runtime/runtime-feature-graph/run.py" not in pre_commit:
         errors.append("pre-commit must run the selective runtime feature test")
+    if "test/differential/string-runtime/run.py" not in pre_commit:
+        errors.append("pre-commit must run the UTF-8 scalar string runtime test")
+    if "test/string_output/run.py" not in pre_commit:
+        errors.append("pre-commit must run the generated literal-output test")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:

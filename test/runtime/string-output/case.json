@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "string-literal-output-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-006",
+    "HXC-EX-001"
+  ],
+  "sources": [
+    "runtime/hxrt/include/hxrt/io.h",
+    "runtime/hxrt/include/hxrt/string_literal.h",
+    "runtime/hxrt/src/io.c",
+    "test/string_output/fixtures/positive/Main.hx",
+    "test/string_output/expected/program.c",
+    "test/string_output/expected/runtime-plan.json",
+    "test/string_output/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../string_output/run.py"
+    ],
+    "workingDirectory": "test/runtime/string-output",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "selective runtime closure, diagnostics, and fail-stop I/O passed$"
+    },
+    "diagnostics": [
+      "HXC2001"
+    ],
+    "artifacts": [
+      {
+        "path": "test/string_output/expected/runtime-plan.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

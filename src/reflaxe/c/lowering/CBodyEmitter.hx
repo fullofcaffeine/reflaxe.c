@@ -4,6 +4,7 @@ import haxe.io.Bytes;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 
 /** Lowers the admitted primitive HxcIR body subset into structural strict C11. */
 class CBodyEmitter {
@@ -556,6 +557,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): new CType(TInt(width, signed));
 			case IRTAbiInteger(IRAKSize): new CType(TSizeT);
 			case IRTFloat(64): new CType(TDouble);
+			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted primitive C body subset');
 		};
@@ -589,6 +591,9 @@ class CBodyEmitter {
 					addTypeHeaders(headers, instruction.result.type);
 				}
 				switch instruction.kind {
+					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
+						addUnique(headers, "hxrt/io.h");
+						addUnique(headers, "stdlib.h");
 					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
 						addUnique(headers, "stddef.h");
 						addUnique(headers, "stdlib.h");
@@ -620,6 +625,8 @@ class CBodyEmitter {
 				addUnique(headers, "stdint.h");
 			case IRTAbiInteger(IRAKSize):
 				addUnique(headers, "stddef.h");
+			case IRTString:
+				addUnique(headers, "hxrt/string_literal.h");
 			case IRTFixedArray(element, _, _):
 				addTypeHeaders(headers, element);
 			case IRTSpan(element, _):
@@ -636,9 +643,24 @@ class CBodyEmitter {
 			case IRCInt(text): integerExpression(text);
 			case IRCFloat(text): floatExpression(text);
 			case IRCBool(value): EBool(value);
-			case IRCString(_) | IRCNull:
-				throw new CBodyEmissionError("string and null constants are outside the admitted primitive C body subset");
+			case IRCString(text, byteLength): stringLiteralExpression(text, byteLength);
+			case IRCNull:
+				throw new CBodyEmissionError("null constants are outside the admitted body subset");
 		};
+	}
+
+	static function stringLiteralExpression(text:String, byteLength:Int):CExpr {
+		if (byteLength < 0) {
+			return fail('validated UTF-8 literal has negative byte length `$byteLength`');
+		}
+		return ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType))), DName(null), IList([
+			{
+				designators: [],
+				value: IExpr(ECast(new CType(TInt(8, false), [QConst]), DPointer(DName(null), []), EString(text)))
+			},
+			{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal(Std.string(byteLength))))},
+			{designators: [], value: IExpr(EBool(true))}
+		]));
 	}
 
 	static function integerExpression(text:String):CExpr {
@@ -679,7 +701,10 @@ class CBodyEmitter {
 			nonReturningFunctionIds:Null<Map<String, Bool>>, functionId:String):Bool {
 		final targetId = switch call.dispatch {
 			case IRCDDirect(value): value;
-			case _: return fail('call `${instruction.id}` in `$functionId` is not direct static dispatch');
+			case dispatch if (isHostedOutputDispatch(dispatch)):
+				emitHostedPrintln(statements, values, instruction, call, lineDirectives, functionId);
+				return false;
+			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
 		final doesNotReturn = nonReturningFunctionIds != null && nonReturningFunctionIds.exists(targetId);
 		final targetName = requireFunctionName(functionNames, targetId, functionId);
@@ -713,6 +738,28 @@ class CBodyEmitter {
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
 		return doesNotReturn;
+	}
+
+	static function isHostedOutputDispatch(dispatch:HxcIRCallDispatch):Bool {
+		return switch dispatch {
+			case IRCDRuntime("io", operationId): operationId == "sys-println-literal" || operationId == "trace-literal";
+			case _: false;
+		};
+	}
+
+	static function emitHostedPrintln(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, lineDirectives:Bool,
+			functionId:String):Void {
+		if (instruction.result != null || call.returnType != IRTVoid || call.arguments.length != 1) {
+			fail('hosted output call `${instruction.id}` in `$functionId` lost its validated Void/string signature');
+		}
+		final failure = call.failure;
+		if (failure == null || failure.kind != IRFNativeStatus || failure.target != IRFTAbort || failure.arguments.length != 0 || failure.cleanup.length != 0) {
+			fail('hosted output call `${instruction.id}` in `$functionId` lost its native-status abort edge');
+		}
+		final callExpression = ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNPrintln)), [requireValue(values, call.arguments[0], functionId)]);
+		final failed = EBinary(NotEqual, callExpression, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk)));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SIf(failed, SExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNAbort)), [])), null));
 	}
 
 	static function isNonReturningSelfCall(functionId:String, call:HxcIRCall, nonReturningFunctionIds:Null<Map<String, Bool>>):Bool {
@@ -865,6 +912,7 @@ class CBodyEmitter {
 			case IRTInt(width, signed): 'int:$width:${signed ? "signed" : "unsigned"}';
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
+			case IRTString: "string-utf8";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(_, nullable): 'pointer:${nullable ? "nullable" : "non-null"}';

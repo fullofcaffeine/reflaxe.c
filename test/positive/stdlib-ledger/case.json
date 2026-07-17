@@ -30,7 +30,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "sources=[0-9]+, APIs=[0-9]+, planned=[0-9]+, conformant=1"
+      "value": "sources=[0-9]+, APIs=[0-9]+, planned=[0-9]+, partial=2, conformant=1"
     },
     "artifacts": [
       {

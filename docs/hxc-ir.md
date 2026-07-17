@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 2
+the structural C AST. Its schema is internal to the compiler: schema version 3
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -9,7 +9,8 @@ narrow production C consumer. E2.T04 adds primitive global places plus explicit
 branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
 typed unary/binary operation IDs with direct or request-local implementation
 intent. E2.T06 consumes branch, jump, and switch terminators for the admitted
-primitive statement/value control-flow slice. E2.T08 adds fixed-array/span type
+primitive statement/value control-flow slice. E2.T07 adds validated immutable
+UTF-8 constants and explicit literal-only hosted output intent. E2.T08 adds fixed-array/span type
 identity, ordered initialization, and explicit checked/proven bounds policies.
 All other frontend and C lowering remains explicitly gated.
 
@@ -36,6 +37,10 @@ representation rather than being inferred from the eventual C spelling.
 `IRTFixedArray` retains the element type, literal length, and phantom Haxe
 witness identity. `IRTSpan` retains element type and mutability without
 pretending a borrowed view is an owned aggregate or runtime object.
+`IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
+`IRCString` constant records source text and an independently checked byte
+length, so embedded NUL and non-ASCII scalars cannot be confused with C string
+termination or character count.
 
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
@@ -69,6 +74,8 @@ need to recover intent from target syntax.
 - constant families match their result types; for structurally resolvable
   places, loads match the place type, initialization/store values match their
   destination, and address results are pointers to the addressed type;
+- every string constant is a valid Unicode-scalar sequence and its recorded
+  UTF-8 byte length is exact, including embedded NUL bytes;
 - fixed-array initialization supplies exactly the declared number and element
   type of values; span initialization borrows compatible fixed storage; index
   places resolve to the collection element type; and every admitted collection
@@ -98,7 +105,10 @@ need to recover intent from target syntax.
 - call/allocation failure edges and throw terminators identify exception,
   result-error, allocation-failure, or native-status behavior explicitly. The
   normal continuation of a successful instruction is the next instruction (or
-  its block terminator); the non-normal successor is never implicit.
+  its block terminator); the non-normal successor is never implicit;
+- the admitted `io` runtime call is exactly `sys-println-literal` or
+  `trace-literal`, accepts one `IRTString`, returns `Void`, and retains the
+  cleanup-free native-status abort edge used by the hosted fail-stop policy.
 
 These checks make a malformed internal IR an `HXC9000` compiler invariant
 failure. They do not replace later semantic passes such as representation
@@ -134,6 +144,14 @@ records a feature and operation. Merely constructing a type, calling a direct
 function, initializing a fixed array/span, checking bounds, or using cleanup
 selects nothing from `hxrt`.
 
+E2.T07 is the first bounded compiler-selected exception: a compiler-known
+literal remains direct static UTF-8 storage, while its observable hosted output
+requests the `io` feature. The exact closure is `runtime-base + status +
+string-literal + io`; it contains no allocator, full string operations, object,
+collector, dynamic, reflection, or exception machinery. Each source call is a
+root reason, and transitive dependencies remain plan evidence rather than
+duplicate warnings.
+
 Portable and metal share this IR. Later analyses decide whether a representation
 is legal under the resolved profile and runtime policy. The IR must preserve the
 reason and source span needed for those decisions; it must not preselect a broad
@@ -147,8 +165,9 @@ stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
 of an unsupported node. A fully admitted primitive or local fixed-array/span
 static graph reaches validated HxcIR, structural C, and an owned runtime-free
-executable project; unimplemented signatures or expressions still stop without
-output. See
+executable project. The separately admitted literal-output edge reaches the
+exact selective runtime plan above; nonliteral strings and broader output APIs
+still stop without output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md).
 
@@ -164,6 +183,9 @@ block, instruction, terminator, and cleanup node includes its span; nested edge
 data inherits the owning instruction or terminator span. Dumps contain no
 timestamps, random IDs, locale-dependent formatting, or normalized-away checkout
 paths.
+Control characters in dump strings use deterministic JSON-style escapes, so an
+embedded NUL appears as `\u0000` rather than becoming a raw byte in an
+inspection envelope.
 
 The executable contract is:
 
@@ -175,14 +197,15 @@ npm run test:hxc-ir
 for `arr[nextIndex()] += produce()` and its nested cleanup path without a
 runtime request. The checked-in Haxe fixture runs independently under Eval and
 asserts the oracle trace `nextIndex,produce:8`. `coverage.hxcir` exercises all
-dispatch forms plus ABI integers, tagged/pointer nullability, explicit primitive
+dispatch forms plus ABI integers, tagged/pointer nullability, an exact UTF-8
+string constant and hosted-output failure edge, explicit primitive
 conversion/failure forms, aggregate/tag, allocation, retain/trace, and lifetime
 forms. Its named runtime requests are explicit non-primitive coverage.
 `diagnostics.json` covers missing termination, use-before-definition, invalid
 cleanup order, path redaction, constant/load/address/store/initializer type
 mismatches, primitive runtime rejection, missing nullable-unwrap failure,
 switch subject/case-family mismatch, void/value return mismatches, return-type
-mismatch, and `HXC1001`.
+mismatch, a bad UTF-8 byte length, missing hosted-output failure, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
@@ -198,3 +221,7 @@ iteration, and strict generated-C execution. The arithmetic
 suite adds source-backed operation/helper decisions, `Std.int`, boundary
 execution, and eligible UBSan. All select no runtime files or public C ABI and
 compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.
+The separate string-output suite selects only the four-feature literal/I/O
+closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
+closed-stdout failure, and runs the generated project at both optimization
+levels.
