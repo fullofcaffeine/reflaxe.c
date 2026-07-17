@@ -14,6 +14,8 @@
 int main(void) {
   hxc_allocator allocator = hxc_default_allocator();
   hxc_allocation allocation = HXC_ALLOCATION_INITIALIZER;
+  hxc_array array = HXC_ARRAY_INITIALIZER;
+  hxc_array_element_ops array_elements;
   hxc_owned_string owned = HXC_OWNED_STRING_INITIALIZER;
   const hxc_string view = HXC_STRING_LITERAL("h\xC3\xA9");
   void *memory = NULL;
@@ -25,7 +27,7 @@ int main(void) {
   HXC_CHECK(hxc_runtime_abi_version() == HXC_RUNTIME_ABI_VERSION);
   HXC_CHECK(
     HXC_RUNTIME_ABI_MAJOR == 0u
-    && HXC_RUNTIME_ABI_MINOR == 4u
+    && HXC_RUNTIME_ABI_MINOR == 5u
     && HXC_RUNTIME_ABI_PATCH == 0u
   );
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_OK), "HXC_STATUS_OK") == 0);
@@ -79,6 +81,17 @@ int main(void) {
   HXC_CHECK(hxc_allocation_is_valid(&allocation));
   HXC_CHECK(hxc_allocator_same_identity(&allocator, &allocation.allocator));
   HXC_CHECK(hxc_allocation_dispose(&allocation) == HXC_STATUS_OK);
+
+  array_elements.size = sizeof(int32_t);
+  array_elements.alignment = HXC_ALIGNOF(int32_t);
+  array_elements.context = NULL;
+  array_elements.copy = NULL;
+  array_elements.assign = NULL;
+  array_elements.destroy = NULL;
+  HXC_CHECK(hxc_array_init(&allocator, array_elements, &array) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_array_push_copy(&array, &quotient) == HXC_STATUS_OK);
+  HXC_CHECK(array.length == 1u && array.capacity >= array.length);
+  HXC_CHECK(hxc_array_dispose(&array) == HXC_STATUS_OK);
 
   HXC_CHECK(view.byte_length == 3u);
   HXC_CHECK(hxc_string_copy(view, &allocator, &owned) == HXC_STATUS_OK);

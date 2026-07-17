@@ -688,12 +688,36 @@
       ]
     },
     {
+      "id": "runtime-array-contract",
+      "area": "runtime",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "The bounded native array slice provides checked contiguous growth and typed primitive/reference lifecycle operations.",
+      "scope": "Strict C11 evidence covers unboxed primitive and reference elements, relocation-safe aliasing, overflow, allocator failure, lifecycle rollback, owner move, and reverse destruction.",
+      "evidence": [
+        "docs/array-runtime.md",
+        "runtime/hxrt/features.json",
+        "runtime/hxrt/include/hxrt/array.h",
+        "runtime/hxrt/src/array.c",
+        "test/differential/array-runtime/array_runtime.c",
+        "test/differential/array-runtime/case.json",
+        "test/differential/array-runtime/run.py"
+      ],
+      "owners": [
+        "E4.T04"
+      ],
+      "limitations": [
+        "The array feature remains native-seed-only; generated Haxe Array lowering and standard-library collection parity remain unsupported.",
+        "Fixed arrays and spans remain runtime-free, while object descriptors, tracing collection, and stable public layouts are separately owned."
+      ]
+    },
+    {
       "id": "runtime-feature-planning",
       "area": "runtime",
       "status": "implemented",
       "disposition": "available",
       "summary": "A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract.",
-      "scope": "The schema-2 catalog pins internal ABI 0.4.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
+      "scope": "The schema-2 catalog pins internal ABI 0.5.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/runtime-feature-planning.md",
@@ -713,12 +737,13 @@
       "owners": [
         "E2.T07",
         "E4.T01",
+        "E4.T04",
         "E4.T10",
         "E4.T11"
       ],
       "limitations": [
         "Only the bounded literal-output edge currently selects hxrt; unsupported neighboring Haxe semantics still fail during lowering rather than being guessed as runtime blockers.",
-        "Runtime ABI 0.4.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
+        "Runtime ABI 0.5.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
       ]
     },
     {
@@ -726,19 +751,22 @@
       "area": "runtime",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Hardened native allocator, UTF-8 scalar string, status, and hosted output slices coexist with other provisional runtime seeds.",
-      "scope": "Allocator ownership, string semantics, hosted length-delimited output, C/C++ header consumption, and exact selected packages validate only bounded split runtime slices.",
+      "summary": "Hardened native allocator, UTF-8 scalar string, typed array, status, and hosted output slices coexist with other provisional runtime seeds.",
+      "scope": "Allocator ownership, string semantics, typed resizable arrays, hosted length-delimited output, C/C++ header consumption, and exact selected packages validate only bounded split runtime slices.",
       "evidence": [
         "docs/allocator-abi.md",
+        "docs/array-runtime.md",
         "docs/string-runtime.md",
         "runtime/hxrt/include/hxc_runtime.h",
         "runtime/hxrt/include/hxrt/abi.h",
         "runtime/hxrt/include/hxrt/allocator.h",
+        "runtime/hxrt/include/hxrt/array.h",
         "runtime/hxrt/include/hxrt/base.h",
         "runtime/hxrt/include/hxrt/io.h",
         "runtime/hxrt/include/hxrt/string.h",
         "runtime/hxrt/include/hxrt/string_literal.h",
         "runtime/hxrt/src/allocator.c",
+        "runtime/hxrt/src/array.c",
         "runtime/hxrt/src/io.c",
         "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
@@ -746,6 +774,7 @@
         "runtime/hxrt/test/public_header_cpp.cpp",
         "runtime/hxrt/test/runtime_smoke.c",
         "test/abi/allocator-contract/case.json",
+        "test/differential/array-runtime/case.json",
         "test/differential/string-runtime/case.json",
         "test/runtime/string-output/case.json"
       ],
@@ -754,11 +783,12 @@
         "E4.T01",
         "E4.T02",
         "E4.T03",
+        "E4.T04",
         "E4.T11"
       ],
       "limitations": [
         "Only literal hosted output selects a dependency-closed subset; there is still no unconditional runtime core or general runtime fallback.",
-        "The allocator and string structs are versioned internal native-seed contracts and are explicitly forbidden from a generated application public C ABI."
+        "The allocator, string, and array structs are versioned internal native-seed contracts and are explicitly forbidden from a generated application public C ABI."
       ]
     },
     {

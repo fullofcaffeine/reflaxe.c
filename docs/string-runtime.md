@@ -6,12 +6,14 @@ implements the storage and operation contract from
 full operation slice compiler-selectable, expose the private layout as a public
 ABI, or claim general Haxe `String`/standard-library lowering. E2.T07 now selects
 only the independently packaged literal carrier for hosted literal output;
-E5.T02 owns broader compiler and library connections, and E4.T11 owns runtime
-ABI stabilization.
+E5.T02 owns broader compiler and library connections, E4.T11 established the
+internal same-major runtime contract, and E7 owns any future public ABI.
 
 E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
-E2.T07 adds the provisional hosted output API and advances it again to 0.4.0.
-That marker remains an inspection aid, not a compatibility promise.
+E2.T07 added the provisional hosted output API and advanced it to 0.4.0;
+E4.T04's additive array slice advances the internal same-major contract to
+0.5.0. That marker does not stabilize the private string layout or application
+ABI.
 
 ## Representation and invariants
 

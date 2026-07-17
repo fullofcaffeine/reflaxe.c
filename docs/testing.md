@@ -20,7 +20,9 @@ The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
-trace. The string-output suite adds the narrow generated-Haxe `Sys.println` and
+trace. The array-runtime suite adds bounded native primitive/reference growth,
+aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
+The string-output suite adds the narrow generated-Haxe `Sys.println` and
 default `trace` proof. The declared `examples/hello` product proof composes that
 same reusable compiler slice into the first ordinary Haxe-to-C executable. None
 proves broader language, standard-library, public ABI, general String, or
@@ -34,9 +36,9 @@ general `hxrt` support.
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string native contracts, generated literal output, and the hello executable |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars, generated literal output, and exact hello stdout against pinned Haxe oracles |
-| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars and array mutation, generated literal output, and exact hello stdout against pinned Haxe oracles |
+| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator, array lifecycle, and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
 The canonical directories are stable homes for new cases. Existing focused
@@ -291,7 +293,7 @@ confirmation/forbid rules, environments, reserved features, and rejection of
 native-only features from generated-Haxe planning. Runtime-none fixtures retain
 all sorted blockers and root-to-leaf dependency chains, while missing,
 runtime-intent-bearing, or tampered positive proofs fail with `HXC9000` before
-an artifact read. The packager performs zero reads for an empty plan and materializes exact alloc-only, full-string, and
+an artifact read. The packager performs zero reads for an empty plan and materializes exact alloc-only, array, full-string, and
 compiler-selected literal-I/O closures; the full focused gate proves those files
 came from two byte-identical Haxe renders. Strict GCC and Clang jobs separately rebuild all closures from the
 validated checked-in catalog and plan, without needing Haxe in the native-only
@@ -322,6 +324,20 @@ address/undefined sanitizers, and link inspection rejects object, collector,
 reflection, and dynamic symbol families. This is native runtime evidence, not
 generated-Haxe `String` lowering or public layout stability. See the
 [string runtime contract](string-runtime.md).
+
+`test/differential/array-runtime` registers the E4.T04 internal array boundary
+across differential, runtime, and ABI evidence lanes. A static custom allocator
+forces every capacity growth to relocate and injects allocation failure. The C
+fixture covers primitive and reference elements, exact-slot aliasing across
+growth and insertion shifts, checked capacity overflow, failure-atomic reserve,
+retain-before-release assignment, balanced reverse destruction, and rollback
+after failed insert/partial resize construction. GCC and Clang run it at O0/O2
+and under address/undefined sanitizers, while link inspection rejects string,
+object, collector, reflection, and dynamic symbol families. A pinned Eval trace
+checks the common mutation sequence; static-target default initialization is
+asserted directly because Eval is a dynamic target. This proves the native
+runtime slice, not generated Haxe `Array<T>` lowering, full collection parity,
+or a public layout. See the [array runtime contract](array-runtime.md).
 
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real

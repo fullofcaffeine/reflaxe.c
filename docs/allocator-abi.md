@@ -3,12 +3,15 @@
 This document is the E4.T02 contract for the checked-in `hxrt` allocator slice.
 It hardens the internal native-seed boundary used by future runtime features; it
 does not make `alloc` compiler-selectable, define a generated public C ABI, or
-promise compatibility for these structs. E4.T11 still owns runtime ABI and
-feature-manifest versioning, while E7 owns exported application APIs.
+promise application compatibility for these structs. E4.T11 established the
+internal same-major runtime/versioned-manifest contract, while E7 owns exported
+application APIs.
 The incompatible callback/owner revision advanced the provisional runtime ABI
 marker from 0.1.0 to 0.2.0. E4.T03's private string-contract revision advanced
-it to 0.3.0, and E2.T07's hosted literal-output addition advances it to 0.4.0;
-none of these markers is a compatibility policy.
+it to 0.3.0, E2.T07's hosted literal-output addition advanced it to 0.4.0, and
+E4.T04's additive typed-array slice advances it to 0.5.0. The schema-2 ABI
+contract now defines same-major compatibility, but none of these internal
+markers is a stable application ABI promise.
 
 ## Allocator handle and callback protocol
 
@@ -85,7 +88,7 @@ allocator identity and alignment until disposal.
 | Freestanding | The default handle is invalid; a caller-supplied allocator is required. The compiled allocator object has no undefined libc allocation symbol. |
 | WASI/Emscripten | No environment-specific allocator evidence exists yet, so the feature remains unavailable there. |
 | Generated C | Primitive-only output stays runtime-free. Literal output selects its separate allocation-free carrier and does not include or link `allocator.c` or allocator symbols. |
-| Public ABI | C/C++ agree on the native-seed callback types and layouts, but the structs remain internal and provisional until E4.T11/E7. |
+| Public ABI | C/C++ agree on the native-seed callback types and layouts, but the structs remain internal, versioned, and forbidden from application exports; E7 owns future public admission. |
 
 The executable evidence is registered by
 [`test/abi/allocator-contract/case.json`](../test/abi/allocator-contract/case.json).

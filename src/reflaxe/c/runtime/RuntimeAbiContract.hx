@@ -13,7 +13,7 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePublicExportTypePolicy;
 /** One internal runtime compatibility contract shared by headers, manifests, and generated C. */
 class RuntimeAbiContract {
 	public static inline final MAJOR = 0;
-	public static inline final MINOR = 4;
+	public static inline final MINOR = 5;
 	public static inline final PATCH = 0;
 	public static inline final MAJOR_MACRO = "HXC_RUNTIME_ABI_MAJOR";
 	public static inline final SOURCE_HASH_ALGORITHM = "sha256";
@@ -23,6 +23,8 @@ class RuntimeAbiContract {
 	static final FORBIDDEN_APPLICATION_EXPORT_TYPES = [
 		"hxc_allocation",
 		"hxc_allocator",
+		"hxc_array",
+		"hxc_array_element_ops",
 		"hxc_borrowed_cstring",
 		"hxc_byte_view",
 		"hxc_owned_cstring",

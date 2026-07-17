@@ -67,23 +67,31 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxrt/abi.h",
     "runtime/hxrt/include/hxrt/status.h",
     "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/include/hxrt/array.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/src/abi.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/array.c",
     "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/features.json",
     "docs/specs/runtime-features.schema.json",
     "docs/allocator-abi.md",
+    "docs/array-runtime.md",
     "docs/string-runtime.md",
     "runtime/hxrt/test/allocator_abi.c",
     "runtime/hxrt/test/allocator_contract.c",
     "runtime/hxrt/test/runtime_smoke.c",
     "runtime/hxrt/test/public_header_cpp.cpp",
     "test/abi/allocator-contract/case.json",
+    "test/differential/array-runtime/ArrayRuntimeOracle.hx",
+    "test/differential/array-runtime/array_runtime.c",
+    "test/differential/array-runtime/case.json",
+    "test/differential/array-runtime/oracle.hxml",
+    "test/differential/array-runtime/run.py",
     "test/differential/string-runtime/StringRuntimeOracle.hx",
     "test/differential/string-runtime/case.json",
     "test/differential/string-runtime/oracle.hxml",
@@ -94,6 +102,7 @@ REQUIRED_GATE_FILES = (
     "test/runtime/runtime-feature-graph/runtime_feature_graph.hxml",
     "test/runtime/runtime-feature-graph/expected/runtime-feature-plans.json",
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
+    "test/runtime/runtime-feature-graph/array_consumer.c",
     "test/runtime/runtime-feature-graph/io_consumer.c",
     "test/runtime/runtime-feature-graph/string_consumer.c",
     "test/runtime/runtime-feature-graph/run.py",
@@ -517,6 +526,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the required build-adapter entry point")
     if scripts.get("test:runtime-features") != "python3 test/runtime/runtime-feature-graph/run.py":
         errors.append("package.json must retain the test:runtime-features entry point")
+    if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
+        errors.append("package.json must retain the test:array-runtime entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
@@ -589,6 +600,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:project-emitter")
     if "npm run test:runtime-features" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:runtime-features")
+    if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:array-runtime")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
@@ -690,6 +703,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the deterministic project emitter test")
     if "test/runtime/runtime-feature-graph/run.py" not in pre_commit:
         errors.append("pre-commit must run the selective runtime feature test")
+    if "test/differential/array-runtime/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed array runtime test")
     if "test/differential/string-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the UTF-8 scalar string runtime test")
     if "test/string_output/run.py" not in pre_commit:
@@ -763,6 +778,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must independently compile and execute project-emitter output")
     if "runtime-feature-selective-packaging" not in runner or "RUNTIME_FEATURE_GRAPH" not in runner:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
+    if "array-runtime-contract" not in runner or "ARRAY_RUNTIME" not in runner:
+        errors.append("native smoke runner must execute the typed array contract in each toolchain lane")
     if "string-runtime-contract" not in runner or "STRING_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the UTF-8 scalar string contract in each toolchain lane")
     if "generated-hello-example-run" not in runner or "HELLO_EXAMPLE" not in runner:
@@ -862,6 +879,29 @@ def validate() -> list[str]:
             errors.append(
                 "string runtime runner lost UTF-8/allocator/selective-link evidence: "
                 + required_string_runtime_contract
+            )
+
+    array_runtime_runner = read_text(
+        ROOT / "test/differential/array-runtime/run.py", errors
+    )
+    for required_array_runtime_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "--native-only",
+        "run_oracle",
+        "-fsanitize=address,undefined",
+        "hxc_array_insert_copy",
+        "hxc_gc",
+        "nm",
+    ):
+        if required_array_runtime_contract not in array_runtime_runner:
+            errors.append(
+                "array runtime runner lost growth/alias/lifecycle/selective-link evidence: "
+                + required_array_runtime_contract
             )
 
     primitive_runner = read_text(ROOT / "test/primitive_semantics/run.py", errors)

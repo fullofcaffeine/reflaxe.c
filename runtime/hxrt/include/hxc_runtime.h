@@ -4,6 +4,7 @@
 /* Provisional all-seed umbrella. Selective packaging uses hxrt feature headers. */
 
 #include "hxrt/abi.h"
+#include "hxrt/array.h"
 #include "hxrt/io.h"
 #include "hxrt/status_name.h"
 #include "hxrt/string.h"

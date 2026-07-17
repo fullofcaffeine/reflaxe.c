@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "array-runtime",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-007",
+    "HXC-RT-008"
+  ],
+  "sources": [
+    "docs/array-runtime.md",
+    "runtime/hxrt/include/hxrt/array.h",
+    "runtime/hxrt/src/array.c",
+    "test/differential/array-runtime/ArrayRuntimeOracle.hx",
+    "test/differential/array-runtime/array_runtime.c",
+    "test/differential/array-runtime/oracle.hxml",
+    "test/differential/array-runtime/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/array-runtime",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "array-runtime: OK: .*primitive/reference growth, aliasing, overflow, allocation failure, lifecycle rollback, sanitizers, and selective symbols passed$"
+    },
+    "oracle": "test/differential/array-runtime/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/array.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

@@ -1,11 +1,6 @@
 {
   "reservedFeatures": [
     {
-      "id": "array",
-      "summary": "Resizable typed Haxe Array runtime slice.",
-      "ownerTask": "E4.T04"
-    },
-    {
       "id": "closure",
       "summary": "Escaping closure environment support after escape analysis.",
       "ownerTask": "E3.T08"
@@ -132,6 +127,50 @@
     },
     {
       "dependencies": [
+        "alloc"
+      ],
+      "id": "array",
+      "availability": "native-seed-only",
+      "symbols": [
+        "hxc_array_at",
+        "hxc_array_at_const",
+        "hxc_array_dispose",
+        "hxc_array_element_ops_is_valid",
+        "hxc_array_init",
+        "hxc_array_insert_copy",
+        "hxc_array_is_valid",
+        "hxc_array_move",
+        "hxc_array_push_copy",
+        "hxc_array_remove_at",
+        "hxc_array_reserve",
+        "hxc_array_resize",
+        "hxc_array_set_copy"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "8304bc07cd59342e2bb9da83d7f275d03df76514f4e982fe8afd6c0a9fe50cce",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/array.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/array.h"
+        },
+        {
+          "sourceSha256": "06d81e843dbe5748ab45c32bae5e2514d67a18df27129c562fcaddfa2973beeb",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/array.c",
+          "sourcePath": "runtime/hxrt/src/array.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Resizable contiguous unboxed storage with checked growth and optional typed element lifecycle callbacks.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "dependencies": [
         "status",
         "string-literal"
       ],
@@ -201,7 +240,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "60d7a3332144b7913c1a663d39c4ceaf1fcd7da1e251a27bf37b0b0332aaddbf",
+          "sourceSha256": "39f4c67e61b692c5b1f67972bd7f2445774015fc43638d01be9798d26134ec38",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -366,13 +405,15 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 4
+      "minor": 5
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
       "forbiddenRuntimeTypes": [
         "hxc_allocation",
         "hxc_allocator",
+        "hxc_array",
+        "hxc_array_element_ops",
         "hxc_borrowed_cstring",
         "hxc_byte_view",
         "hxc_owned_cstring",
@@ -385,7 +426,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "d2814da4fa66518c24a7a7ca0fede71141be5f16f4f2d3c618fd5fca56fae0d0",
+      "sourceSetSha256": "af49ad943c13bd35bbedbf5c50cdefb21f4784beccb0794d4c0a5ab8cb139add",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

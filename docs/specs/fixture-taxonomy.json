@@ -145,6 +145,7 @@
         "project-emitter",
         "span-lowering",
         "runtime-feature-graph",
+        "array-runtime",
         "string-runtime",
         "string-output",
         "hello"
@@ -166,6 +167,7 @@
         "static-initialization",
         "arithmetic-semantics",
         "primitive-differential",
+        "array-runtime",
         "string-runtime",
         "string-output",
         "hello"
@@ -183,6 +185,7 @@
       ],
       "suiteIds": [
         "native-smoke",
+        "array-runtime",
         "string-runtime"
       ]
     },
@@ -604,8 +607,29 @@
         "every root and transitive selected feature retains source-reason IDs while manual constraints cannot add unused code or remove required dependencies",
         "auto, minimal, none, availability, environment, native-only, and reserved-feature policy boundaries emit deterministic HXC2000 evidence; none retains every sorted blocker, typed source fact, alternative, and root-to-leaf dependency chain",
         "schema-2 empty plans include the nested whole-program eligibility proof, and missing, runtime-intent-bearing, or tampered proofs fail before runtime artifact reads",
-        "alloc-only and full-string native plans plus the compiler-selected literal-I/O plan package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
+        "alloc-only, typed-array, and full-string native plans plus the compiler-selected literal-I/O plan package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
         "the production compiler retains positive empty primitive plans and selects only runtime-base, status, string-literal, and io for hosted literal output"
+      ]
+    },
+    {
+      "id": "array-runtime",
+      "directory": "test/differential/array-runtime",
+      "runner": [
+        "python3",
+        "test/differential/array-runtime/run.py"
+      ],
+      "types": [
+        "runtime",
+        "differential",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "contiguous unboxed primitive and reference elements grow with checked deterministic capacity while fixed arrays and spans remain separate runtime-free representations",
+        "exact existing-slot sources survive allocator relocation and insertion shifts, and output borrows are unchanged on bounds or validation failure",
+        "allocation and size-overflow failures preserve the old logical sequence while failed insertion and partial resize construction roll back lifecycle work",
+        "reference assignment retains before release, shrink/disposal destroy in reverse order, and all allocator/reference ownership balances at exit",
+        "strict GCC and Clang O0/O2/sanitizer lanes match the common pinned Haxe mutation trace and link no string, object, GC, reflection, or dynamic symbol family"
       ]
     },
     {

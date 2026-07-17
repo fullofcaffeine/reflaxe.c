@@ -12,8 +12,8 @@ exact packager are implemented for the admitted generated-program slice.
 Primitive and fixed-array/span programs remain runtime-free. E2.T07
 additionally admits compiler-known String literals passed to hosted
 `Sys.println` or default `trace`; that edge selects only the literal carrier and
-minimal output closure. The allocator and full string-operation implementations
-remain `native-seed-only`. E2.T10 composes exactly that edge in
+minimal output closure. The allocator, full string-operation, and resizable-
+array implementations remain `native-seed-only`. E2.T10 composes exactly that edge in
 `examples/hello`; its plan propagates the one `Main.hx` reason through every
 selected transitive feature and adds no broader slice.
 
@@ -40,6 +40,7 @@ runtime-base
 
 io -> status + string-literal    (compiler selectable, hosted only)
 alloc -> status                  (native seed only)
+array -> alloc                   (native seed only)
 string -> alloc + string-literal (native seed only)
 status-name -> status            (native seed only)
 ```
@@ -48,13 +49,13 @@ These components are split into independently owned `hxrt/*.h` and `.c` files.
 The header-only `string-literal` slice owns only the private byte pointer, byte
 length, and trailing-NUL fact. It does not pull allocator or general string
 symbols into a literal-output program.
-The graph also reserves separate IDs for arrays, objects, tracing collection,
-dynamic values, reflection, exceptions, threads, platform services, and other planned
+The graph also reserves separate IDs for objects, tracing collection, dynamic
+values, reflection, exceptions, threads, platform services, and other planned
 features. Reservations fail closed and name the task that must implement them;
 they are not empty features and cannot be selected.
 
 The catalog is the machine-diffable internal schema-2
-`hxc-runtime-feature-graph-v2` contract. It records internal ABI version 0.4.0,
+`hxc-runtime-feature-graph-v2` contract. It records internal ABI version 0.5.0,
 same-major generated-code compatibility, the exact application-export exclusion
 for runtime-owned types, every artifact digest, one digest over the sorted source
 set, and the strict C11/C++17 header build baselines. The runtime plan remains
@@ -137,7 +138,7 @@ published at M0.
 
 Native-seed fixtures use the separate `native-seed-fixture` planning purpose.
 The production `compiler-program` purpose rejects `runtime-abi`, `status-name`,
-`alloc`, and full `string` even under `auto`, preventing independent C evidence
+`alloc`, full `string`, and `array` even under `auto`, preventing independent C evidence
 from becoming a generated-Haxe support claim.
 
 ## Compatibility boundary
@@ -148,7 +149,7 @@ from becoming a generated-Haxe support claim.
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. `none` either records the structured whole-program proof or reports every blocker before output/native linking. |
 | Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
 | Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership, then checks ABI major 0 structurally. |
-| Public ABI | Runtime 0.4.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
+| Public ABI | Runtime 0.5.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
 
 ## Exact packaging
 
@@ -167,11 +168,13 @@ linking release output back to the schema-2 catalog without copying unselected
 runtime metadata into the project.
 
 The canonical fixture proves an `alloc` native request packages only
-`runtime-base + status + alloc`, while a full `string` native request adds only
+`runtime-base + status + alloc`; an `array` request adds only its header/source;
+and a full `string` native request adds only
 `string-literal` plus the full string header, source, and symbols. Its compiler
 request packages exactly `runtime-base + status + string-literal + io`. It
-compiles and runs all three packages under strict GCC and Clang lanes and
-inspects the alloc-only link for omitted string symbols. It also covers cycle,
+compiles and runs all four packages under strict GCC and Clang lanes and
+inspects the alloc-only link for omitted array/string symbols and the array link
+for omitted string symbols. It also covers cycle,
 unknown-dependency, policy, override, environment, reserved-feature, and
 native-only availability failures.
 
@@ -191,6 +194,14 @@ GC, reflection, and dynamic symbol families. This evidence does not make full
 `string` compiler-selectable. E2.T07 uses only its independently owned literal
 carrier and therefore does not prove general Haxe `String` lowering.
 
+The [typed resizable-array contract](array-runtime.md) defines the E4.T04
+contiguous unboxed owner, checked deterministic growth, exact-slot alias
+handling, and optional copy/assign/destroy lifecycle strategy. Its exact closure
+is `runtime-base + status + alloc + array`; required native links reject string,
+object, GC, reflection, and dynamic symbol families. The feature remains
+native-seed-only, and fixed C arrays/spans retain a separately proven empty
+runtime plan.
+
 The focused Haxe gate renders and packages twice before comparing the canonical
 snapshots. Native CI then uses `--native-only` to validate the checked-in catalog
 and plan against one another, reread exactly their selected `runtime/hxrt`
@@ -202,6 +213,7 @@ Run the focused evidence with:
 
 ```sh
 npm run test:runtime-features
+npm run test:array-runtime
 npm run test:string-output
 npm run test:primitive-differential
 npm run test:span-lowering
@@ -214,7 +226,8 @@ This evidence proves deterministic reachability reconciliation and no-runtime
 eligibility, selective packaging, the one generated-Haxe literal-output
 selection, its bounded hello product composition, exact runtime source/build
 provenance, and compatible-versus-incompatible internal ABI versions. The
-separate E4.T02/E4.T03 fixtures prove their bounded native allocator and string
-contracts. None of this proves broad `String` lowering, general I/O, object
+separate E4.T02/E4.T03/E4.T04 fixtures prove their bounded native allocator,
+string, and array contracts. None of this proves broad `String`/`Array`
+lowering, general I/O, object
 graphs, exceptions, reflection, broad standard-library support, a generated
 public application ABI, or a supported release.

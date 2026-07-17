@@ -112,11 +112,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 217,
+            "line": 221,
             "column": 2
           },
           "start": {
-            "line": 217,
+            "line": 221,
             "column": 1
           }
         }
@@ -129,6 +129,249 @@
     "planPurpose": "native-seed-fixture",
     "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "fixture:auto"
+  },
+  "array": {
+    "selectedFeatures": [
+      {
+        "dependencies": [],
+        "id": "runtime-base",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/base.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "runtime-base"
+        ],
+        "id": "status",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "availability": "compiler-selectable",
+        "symbols": [],
+        "artifacts": [
+          "runtime/include/hxrt/status.h"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "status"
+        ],
+        "id": "alloc",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_alloc",
+          "hxc_allocation_allocate",
+          "hxc_allocation_dispose",
+          "hxc_allocation_is_valid",
+          "hxc_allocation_move",
+          "hxc_allocation_resize",
+          "hxc_allocator_is_valid",
+          "hxc_allocator_same_identity",
+          "hxc_default_allocator",
+          "hxc_free",
+          "hxc_realloc",
+          "hxc_size_add",
+          "hxc_size_mul"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/allocator.h",
+          "runtime/src/allocator.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": false
+      },
+      {
+        "dependencies": [
+          "alloc"
+        ],
+        "id": "array",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "availability": "native-seed-only",
+        "symbols": [
+          "hxc_array_at",
+          "hxc_array_at_const",
+          "hxc_array_dispose",
+          "hxc_array_element_ops_is_valid",
+          "hxc_array_init",
+          "hxc_array_insert_copy",
+          "hxc_array_is_valid",
+          "hxc_array_move",
+          "hxc_array_push_copy",
+          "hxc_array_remove_at",
+          "hxc_array_reserve",
+          "hxc_array_resize",
+          "hxc_array_set_copy"
+        ],
+        "artifacts": [
+          "runtime/include/hxrt/array.h",
+          "runtime/src/array.c"
+        ],
+        "libraries": [],
+        "defines": [],
+        "root": true
+      }
+    ],
+    "directDecisions": [
+      "direct-c-considered",
+      "program-local-specialization-considered"
+    ],
+    "profile": "portable",
+    "environment": "hosted",
+    "dependencyEdges": [
+      {
+        "featureId": "alloc",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "dependencyId": "status"
+      },
+      {
+        "featureId": "array",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "dependencyId": "alloc"
+      },
+      {
+        "featureId": "status",
+        "reasonIds": [
+          "fixture.array"
+        ],
+        "dependencyId": "runtime-base"
+      }
+    ],
+    "manualOverrides": [],
+    "noRuntimeProof": null,
+    "features": [
+      "runtime-base",
+      "status",
+      "alloc",
+      "array"
+    ],
+    "artifactDetails": [
+      {
+        "featureId": "alloc",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/allocator.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/array.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/array.h"
+      },
+      {
+        "featureId": "runtime-base",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/base.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/base.h"
+      },
+      {
+        "featureId": "status",
+        "kind": "runtime-header",
+        "outputPath": "runtime/include/hxrt/status.h",
+        "sourcePath": "runtime/hxrt/include/hxrt/status.h"
+      },
+      {
+        "featureId": "alloc",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/allocator.c",
+        "sourcePath": "runtime/hxrt/src/allocator.c"
+      },
+      {
+        "featureId": "array",
+        "kind": "runtime-source",
+        "outputPath": "runtime/src/array.c",
+        "sourcePath": "runtime/hxrt/src/array.c"
+      }
+    ],
+    "status": "analyzed-native-seed-features",
+    "schemaVersion": 2,
+    "diagnosticProvenance": "fixture:diagnostics-off",
+    "symbols": [
+      "hxc_alloc",
+      "hxc_allocation_allocate",
+      "hxc_allocation_dispose",
+      "hxc_allocation_is_valid",
+      "hxc_allocation_move",
+      "hxc_allocation_resize",
+      "hxc_allocator_is_valid",
+      "hxc_allocator_same_identity",
+      "hxc_array_at",
+      "hxc_array_at_const",
+      "hxc_array_dispose",
+      "hxc_array_element_ops_is_valid",
+      "hxc_array_init",
+      "hxc_array_insert_copy",
+      "hxc_array_is_valid",
+      "hxc_array_move",
+      "hxc_array_push_copy",
+      "hxc_array_remove_at",
+      "hxc_array_reserve",
+      "hxc_array_resize",
+      "hxc_array_set_copy",
+      "hxc_default_allocator",
+      "hxc_free",
+      "hxc_realloc",
+      "hxc_size_add",
+      "hxc_size_mul"
+    ],
+    "diagnosticMode": "off",
+    "resolvedPolicy": "auto",
+    "artifacts": [
+      "runtime/include/hxrt/allocator.h",
+      "runtime/include/hxrt/array.h",
+      "runtime/include/hxrt/base.h",
+      "runtime/include/hxrt/status.h",
+      "runtime/src/allocator.c",
+      "runtime/src/array.c"
+    ],
+    "libraries": [],
+    "rootReasons": [
+      {
+        "featureId": "array",
+        "alternative": "use a direct fixture representation when it preserves semantics",
+        "id": "fixture.array",
+        "operationId": "fixture-runtime-operation",
+        "kind": "fixture-semantic-gap",
+        "surface": "fixture.RuntimeFeatureGraph",
+        "source": {
+          "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+          "end": {
+            "line": 68,
+            "column": 2
+          },
+          "start": {
+            "line": 68,
+            "column": 1
+          }
+        }
+      }
+    ],
+    "requestedPolicy": "auto",
+    "defines": [],
+    "planPurpose": "native-seed-fixture",
+    "algorithm": "hxc-runtime-plan-v2",
+    "policyProvenance": "fixture:explicit-policy"
   },
   "diagnostics": {
     "forbidRequired": {
@@ -263,11 +506,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 230,
+              "line": 234,
               "column": 2
             },
             "start": {
-              "line": 230,
+              "line": 234,
               "column": 1
             }
           }
@@ -289,11 +532,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 230,
+              "line": 234,
               "column": 2
             },
             "start": {
-              "line": 230,
+              "line": 234,
               "column": 1
             }
           }
@@ -307,7 +550,7 @@
         "string-literal"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:230:1-230:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:230:1-230:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:234:1-234:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:234:1-234:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -486,11 +729,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 188,
+            "line": 192,
             "column": 2
           },
           "start": {
-            "line": 188,
+            "line": 192,
             "column": 1
           }
         }
@@ -793,11 +1036,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 77,
+            "line": 78,
             "column": 2
           },
           "start": {
-            "line": 77,
+            "line": 78,
             "column": 1
           }
         }
@@ -1275,11 +1518,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 69,
+            "line": 70,
             "column": 2
           },
           "start": {
-            "line": 69,
+            "line": 70,
             "column": 1
           }
         }
@@ -1294,11 +1537,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 68,
+            "line": 69,
             "column": 2
           },
           "start": {
-            "line": 68,
+            "line": 69,
             "column": 1
           }
         }

@@ -5,8 +5,9 @@ native compilation, failure cleanup, and eligible sanitizer results. See
 [`docs/testing.md`](../../docs/testing.md).
 
 Current evidence includes runtime-free execution of the generated primitive
-body slice plus independent allocator and UTF-8 scalar string runtime contracts.
-The string fixture lives in the differential lane because it compares the
-native implementation with pinned Haxe Eval while also running sanitizer and
-allocation/lifetime assertions. No current generated Haxe case selects or links
-an `hxrt` feature.
+body/span slice plus independent allocator, UTF-8 scalar string, and typed
+resizable-array runtime contracts. The string and array fixtures live in the
+differential lane because each compares a bounded native trace with pinned Haxe
+Eval while also running sanitizer, failure, and ownership assertions. Generated
+Haxe currently selects only the separate literal-output closure; general Haxe
+String and Array operations remain unsupported.

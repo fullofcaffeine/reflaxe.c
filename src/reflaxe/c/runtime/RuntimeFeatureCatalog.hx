@@ -20,6 +20,7 @@ class RuntimeFeatureCatalog {
 		final status = RuntimeFeatureId.parse("status");
 		final statusName = RuntimeFeatureId.parse("status-name");
 		final alloc = RuntimeFeatureId.parse("alloc");
+		final array = RuntimeFeatureId.parse("array");
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final string = RuntimeFeatureId.parse("string");
 		final io = RuntimeFeatureId.parse("io");
@@ -47,6 +48,23 @@ class RuntimeFeatureCatalog {
 					"hxc_allocation_resize",
 					"hxc_allocation_move",
 					"hxc_allocation_dispose"
+				],
+				[], []),
+			new RuntimeFeatureDefinition(array, "Resizable contiguous unboxed storage with checked growth and optional typed element lifecycle callbacks.",
+				NativeSeedOnly, true, environments, [alloc], [header("array.h"), source("array.c")], [
+					"hxc_array_element_ops_is_valid",
+					"hxc_array_init",
+					"hxc_array_is_valid",
+					"hxc_array_reserve",
+					"hxc_array_resize",
+					"hxc_array_at",
+					"hxc_array_at_const",
+					"hxc_array_push_copy",
+					"hxc_array_insert_copy",
+					"hxc_array_set_copy",
+					"hxc_array_remove_at",
+					"hxc_array_move",
+					"hxc_array_dispose"
 				],
 				[], []),
 			new RuntimeFeatureDefinition(stringLiteral,
@@ -86,7 +104,6 @@ class RuntimeFeatureCatalog {
 
 	public static function reservations():Array<RuntimeFeatureReservation> {
 		return [
-			reserved("array", "E4.T04", "Resizable typed Haxe Array runtime slice."),
 			reserved("closure", "E3.T08", "Escaping closure environment support after escape analysis."),
 			reserved("date-time", "E5.T08", "Date, timezone, wall-clock, and monotonic-time adapters."),
 			reserved("dynamic", "E4.T07", "Source-required tagged Haxe dynamic values and operations."),
@@ -114,7 +131,8 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.h": "3f68191447abf3968d89d4b142a46cc08bc9a2caf288d7c0f3dbfc4698eee598";
 			case "allocator.h": "798393dd7eb85916cd48a7652ef970b6ca4417f29f21f6f751dbefdd006185d7";
-			case "base.h": "60d7a3332144b7913c1a663d39c4ceaf1fcd7da1e251a27bf37b0b0332aaddbf";
+			case "array.h": "8304bc07cd59342e2bb9da83d7f275d03df76514f4e982fe8afd6c0a9fe50cce";
+			case "base.h": "39f4c67e61b692c5b1f67972bd7f2445774015fc43638d01be9798d26134ec38";
 			case "io.h": "a80144f8bed89a7c9646b3cab2836417769f3c1eae213554c5c3268e96b2d5ca";
 			case "status.h": "51311f4276de1652b86b2b68d92f2aa35a578063c089bd2ca2a0f92353110aa7";
 			case "status_name.h": "601316d4420a87aedcf34459b39ad7e4cc44563b28047560013e011210f5f723";
@@ -128,6 +146,7 @@ class RuntimeFeatureCatalog {
 		return switch name {
 			case "abi.c": "84d79962524123be2840436c6e6c1756d79027be438fc6cee2350d26aea7957c";
 			case "allocator.c": "0a2d502da004f22db6e3412f3aebe6958230342d8e8f7b7e791f64f3be2bbcf5";
+			case "array.c": "06d81e843dbe5748ab45c32bae5e2514d67a18df27129c562fcaddfa2973beeb";
 			case "io.c": "66647082818392b58030adfa85e434525c2034d91234debe3dcb1a975c789866";
 			case "status.c": "cb5869a6a6a172560da82488b56a38c2cd8bec916661c1622c5e3aec70f3432b";
 			case "string.c": "355bb142d05e2a520b687bbb834bf084aa5f73e203fe17931dd780d5f71e31dd";

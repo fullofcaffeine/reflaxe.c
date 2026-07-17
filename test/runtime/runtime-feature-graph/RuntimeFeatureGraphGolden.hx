@@ -65,6 +65,7 @@ class RuntimeFeatureGraphGolden {
 		final planner = new RuntimeFeaturePlanner(registry);
 		final empty = planner.plan(emptyRequest());
 		final alloc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.alloc", "alloc")], []));
+		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
 		final stringReason = reason("fixture.string", "string");
 		final ownerAllocationReason = reason("fixture.owner-allocation", "alloc");
 		final stringReasons = [stringReason, ownerAllocationReason];
@@ -83,6 +84,7 @@ class RuntimeFeatureGraphGolden {
 		final repositorySource = new RepositoryRuntimeSource();
 		final packager = new RuntimeFeaturePackager(registry);
 		final allocFiles = packager.packageFiles(alloc, repositorySource);
+		final arrayFiles = packager.packageFiles(array, repositorySource);
 		final stringFiles = packager.packageFiles(stringPlan, repositorySource);
 		final ioFiles = packager.packageFiles(compilerIo, repositorySource);
 		final emptySource = new CountingRuntimeSource();
@@ -126,6 +128,7 @@ class RuntimeFeatureGraphGolden {
 		Sys.println(PLANS_PREFIX + Json.stringify({
 			empty: empty,
 			alloc: alloc,
+			array: array,
 			string: stringPlan,
 			minimalString: minimalString,
 			compilerIo: compilerIo,
@@ -164,6 +167,7 @@ class RuntimeFeatureGraphGolden {
 		}));
 		Sys.println(PACKAGE_PREFIX + Json.stringify({
 			alloc: packageRecords(allocFiles),
+			array: packageRecords(arrayFiles),
 			string: packageRecords(stringFiles),
 			io: packageRecords(ioFiles)
 		}));

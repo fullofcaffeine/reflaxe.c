@@ -8,7 +8,7 @@
 extern "C" void hxc_test_c_allocator_layout(std::size_t *values);
 
 static_assert(HXC_RUNTIME_ABI_MAJOR == 0u, "C++ consumer must see the reviewed runtime ABI major");
-static_assert(HXC_RUNTIME_ABI_MINOR == 4u, "C++ consumer must see the reviewed runtime ABI minor");
+static_assert(HXC_RUNTIME_ABI_MINOR == 5u, "C++ consumer must see the reviewed runtime ABI minor");
 static_assert(
   std::is_same<
     hxc_allocate_fn,
@@ -34,6 +34,28 @@ static_assert(std::is_standard_layout<hxc_allocator>::value, "allocator must be 
 static_assert(std::is_trivially_copyable<hxc_allocator>::value, "allocator handle must be copyable across C ABI calls");
 static_assert(std::is_standard_layout<hxc_allocation>::value, "allocation owner must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_allocation>::value, "allocation owner must cross C ABI calls by value");
+static_assert(std::is_standard_layout<hxc_array_element_ops>::value, "array element strategy must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_array_element_ops>::value, "array element strategy must cross C ABI calls by value");
+static_assert(std::is_standard_layout<hxc_array>::value, "array owner must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_array>::value, "array owner must cross C ABI calls by value");
+static_assert(
+  std::is_same<
+    hxc_array_copy_fn,
+    hxc_status (*)(void *, void *, const void *)
+  >::value,
+  "array copy callback signature must agree in C++"
+);
+static_assert(
+  std::is_same<
+    hxc_array_assign_fn,
+    hxc_status (*)(void *, void *, const void *)
+  >::value,
+  "array assignment callback signature must agree in C++"
+);
+static_assert(
+  std::is_same<hxc_array_destroy_fn, void (*)(void *, void *)>::value,
+  "array destructor callback signature must agree in C++"
+);
 static_assert(std::is_standard_layout<hxc_string>::value, "private string value must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_string>::value, "private string value must cross internal C ABI calls by value");
 static_assert(std::is_standard_layout<hxc_owned_string>::value, "owned string must be C-compatible");

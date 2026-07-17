@@ -349,7 +349,7 @@ retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the
 selected artifact records into typed `GeneratedFile` values and performs no
 artifact read for an empty plan.
 
-The schema-2 feature catalog also owns internal runtime ABI 0.4.0 and exact
+The schema-2 feature catalog also owns internal runtime ABI 0.5.0 and exact
 source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
@@ -376,10 +376,13 @@ cross-boundary identity, and C/C++ layout agreement. The E4.T03 string contract
 adds valid UTF-8 scalar storage and indexing, checked/maximal-subpart decoding,
 allocation-aware concatenation and building, and explicit borrowed/owned
 CString lifetimes without object, GC, reflection, or dynamic dependencies. The
-full allocator and string-operation features remain `native-seed-only`; only
+E4.T04 array contract adds overflow-safe contiguous growth, exact-slot aliasing,
+and optional typed element lifecycle callbacks without selecting those adjacent
+features. The full allocator, string-operation, and array features remain
+`native-seed-only`; only
 the runtime foundation, status definitions, literal carrier, and minimal hosted
 output are compiler-selectable. See [allocator ownership](allocator-abi.md),
-[string runtime](string-runtime.md), and
+[string runtime](string-runtime.md), [array runtime](array-runtime.md), and
 [runtime feature planning](runtime-feature-planning.md).
 
 Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
