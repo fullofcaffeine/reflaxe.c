@@ -9,6 +9,7 @@ import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter;
+import reflaxe.c.runtime.RuntimeAbiContract;
 
 /** Structural function prototype/definition plan for the first executable slice. */
 typedef CStaticFunctionSourcePlan = {
@@ -38,7 +39,7 @@ class CStaticFunctionProjectEmitter {
 	public function new() {}
 
 	public function plan(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
-			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier):CStaticFunctionDeclarationPlan {
+			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier, ?runtimeAbiMajor:Int):CStaticFunctionDeclarationPlan {
 		final entry = findFunction(lowered.functions, entryFunctionId);
 		if (entry.ir.parameters.length != 0 || entry.ir.returnType != IRTVoid) {
 			throw new ProjectEmissionError('Haxe executable entry `${entry.ir.id}` must have signature `static function main():Void`');
@@ -99,6 +100,18 @@ class CStaticFunctionProjectEmitter {
 		headers.sort(compareStrings);
 		for (header in headers) {
 			headerUnit.includes.push({path: header, kind: System});
+		}
+		final hasRuntimeHeader = headers.filter(header -> StringTools.startsWith(header, "hxrt/")).length > 0;
+		if (hasRuntimeHeader != (runtimeAbiMajor != null)) {
+			throw new ProjectEmissionError("runtime headers and the generated runtime ABI check must be selected together");
+		}
+		if (runtimeAbiMajor != null) {
+			if (runtimeAbiMajor != RuntimeAbiContract.MAJOR) {
+				throw new ProjectEmissionError('generated runtime ABI major `$runtimeAbiMajor` differs from the compiler contract `${RuntimeAbiContract.MAJOR}`');
+			}
+			headerUnit.declarations.push(DStaticAssert(EBinary(Equal, EIdentifier(new CIdentifier(RuntimeAbiContract.MAJOR_MACRO)),
+				EInt(CIntegerLiteral.decimal(Std.string(runtimeAbiMajor), ISUnsigned))),
+				'incompatible hxrt ABI major: generated code requires $runtimeAbiMajor'));
 		}
 		for (definition in helperEmitter.definitions(lowered.helpers)) {
 			headerUnit.declarations.push(definition);
@@ -196,8 +209,8 @@ class CStaticFunctionProjectEmitter {
 	}
 
 	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
-			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier):Array<GeneratedFile> {
-		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard, initializerFunctionIds, initializationName);
+			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier, ?runtimeAbiMajor:Int):Array<GeneratedFile> {
+		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard, initializerFunctionIds, initializationName, runtimeAbiMajor);
 		final printer = new CASTPrinter();
 		final files = [
 			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader)

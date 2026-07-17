@@ -112,11 +112,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 213,
+            "line": 217,
             "column": 2
           },
           "start": {
-            "line": 213,
+            "line": 217,
             "column": 1
           }
         }
@@ -230,6 +230,14 @@
       "id": "HXC9000",
       "message": "an eligible no-runtime proof contains an hxrt feature, include, source, define, library, or symbol"
     },
+    "tamperedSourceContent": {
+      "blockers": [],
+      "featureIds": [
+        "alloc"
+      ],
+      "id": "HXC9000",
+      "message": "selected runtime artifact `runtime/hxrt/include/hxrt/allocator.h` failed its registered SHA-256 provenance check"
+    },
     "nonePolicy": {
       "blockers": [
         {
@@ -255,11 +263,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 226,
+              "line": 230,
               "column": 2
             },
             "start": {
-              "line": 226,
+              "line": 230,
               "column": 1
             }
           }
@@ -281,11 +289,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 226,
+              "line": 230,
               "column": 2
             },
             "start": {
-              "line": 226,
+              "line": 230,
               "column": 1
             }
           }
@@ -299,7 +307,7 @@
         "string-literal"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:226:1-226:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:226:1-226:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:230:1-230:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:230:1-230:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -478,11 +486,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 184,
+            "line": 188,
             "column": 2
           },
           "start": {
-            "line": 184,
+            "line": 188,
             "column": 1
           }
         }

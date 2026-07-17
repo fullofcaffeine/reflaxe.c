@@ -50,6 +50,26 @@ enum abstract RuntimeFeatureCatalogStatus(String) to String {
 	var SelectiveCompilerPackaging = "selective-compiler-packaging";
 }
 
+enum abstract RuntimeAbiStability(String) to String {
+	var InternalVersioned = "internal-versioned";
+}
+
+enum abstract RuntimeAbiCompatibility(String) to String {
+	var SameMajor = "same-major";
+}
+
+enum abstract RuntimeGeneratedAbiCheck(String) to String {
+	var C11StaticAssert = "c11-static-assert";
+}
+
+enum abstract RuntimeApplicationAbiStatus(String) to String {
+	var Unsupported = "unsupported";
+}
+
+enum abstract RuntimePublicExportTypePolicy(String) to String {
+	var RuntimeStructsForbidden = "runtime-structs-forbidden";
+}
+
 enum abstract RuntimeFeatureOverrideAction(String) to String {
 	var Require = "require";
 	var Forbid = "forbid";
@@ -81,11 +101,13 @@ class RuntimeFeatureArtifact {
 	public final sourcePath:String;
 	public final outputPath:String;
 	public final kind:GeneratedFileKind;
+	public final sourceSha256:String;
 
-	public function new(sourcePath:String, outputPath:String, kind:GeneratedFileKind) {
+	public function new(sourcePath:String, outputPath:String, kind:GeneratedFileKind, sourceSha256:String) {
 		this.sourcePath = sourcePath;
 		this.outputPath = outputPath;
 		this.kind = kind;
+		this.sourceSha256 = sourceSha256;
 	}
 }
 
@@ -398,6 +420,36 @@ typedef RuntimeFeatureArtifactRecord = {
 	final sourcePath:String;
 	final outputPath:String;
 	final kind:GeneratedFileKind;
+	final sourceSha256:String;
+}
+
+typedef RuntimeAbiVersionRecord = {
+	final major:Int;
+	final minor:Int;
+	final patch:Int;
+}
+
+typedef RuntimePublicBoundaryRecord = {
+	final applicationAbiStatus:RuntimeApplicationAbiStatus;
+	final exportTypePolicy:RuntimePublicExportTypePolicy;
+	final forbiddenRuntimeTypes:Array<String>;
+}
+
+typedef RuntimeReleaseProvenanceRecord = {
+	final sourceHashAlgorithm:String;
+	final sourceSetSha256:String;
+	final runtimeCStandard:String;
+	final publicHeaderCppStandard:String;
+}
+
+typedef RuntimeAbiContractRecord = {
+	final stability:RuntimeAbiStability;
+	final version:RuntimeAbiVersionRecord;
+	final generatedCodeCompatibility:RuntimeAbiCompatibility;
+	final generatedCodeCheck:RuntimeGeneratedAbiCheck;
+	final runtimeMajorMacro:String;
+	final publicBoundary:RuntimePublicBoundaryRecord;
+	final releaseProvenance:RuntimeReleaseProvenanceRecord;
 }
 
 typedef RuntimeFeatureReservationRecord = {
@@ -412,6 +464,7 @@ typedef RuntimeFeatureCatalogSnapshot = {
 	final status:RuntimeFeatureCatalogStatus;
 	final requirements:Array<String>;
 	final noUnconditionalCore:Bool;
+	final runtimeAbi:RuntimeAbiContractRecord;
 	final compilerSelectableFeatures:Array<String>;
 	final features:Array<RuntimeFeatureDefinitionRecord>;
 	final reservedFeatures:Array<RuntimeFeatureReservationRecord>;

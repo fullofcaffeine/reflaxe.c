@@ -80,7 +80,9 @@
     "HXC-RT-001",
     "HXC-RT-002",
     "HXC-RT-004",
-    "HXC-RT-008"
+    "HXC-RT-008",
+    "HXC-RT-010",
+    "HXC-RT-012"
   ],
   "noUnconditionalCore": true,
   "features": [
@@ -107,11 +109,13 @@
       ],
       "artifacts": [
         {
+          "sourceSha256": "798393dd7eb85916cd48a7652ef970b6ca4417f29f21f6f751dbefdd006185d7",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/allocator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
         },
         {
+          "sourceSha256": "0a2d502da004f22db6e3412f3aebe6958230342d8e8f7b7e791f64f3be2bbcf5",
           "kind": "runtime-source",
           "outputPath": "runtime/src/allocator.c",
           "sourcePath": "runtime/hxrt/src/allocator.c"
@@ -138,11 +142,13 @@
       ],
       "artifacts": [
         {
+          "sourceSha256": "a80144f8bed89a7c9646b3cab2836417769f3c1eae213554c5c3268e96b2d5ca",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/io.h",
           "sourcePath": "runtime/hxrt/include/hxrt/io.h"
         },
         {
+          "sourceSha256": "66647082818392b58030adfa85e434525c2034d91234debe3dcb1a975c789866",
           "kind": "runtime-source",
           "outputPath": "runtime/src/io.c",
           "sourcePath": "runtime/hxrt/src/io.c"
@@ -167,11 +173,13 @@
       ],
       "artifacts": [
         {
+          "sourceSha256": "3f68191447abf3968d89d4b142a46cc08bc9a2caf288d7c0f3dbfc4698eee598",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/abi.h",
           "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
         },
         {
+          "sourceSha256": "84d79962524123be2840436c6e6c1756d79027be438fc6cee2350d26aea7957c",
           "kind": "runtime-source",
           "outputPath": "runtime/src/abi.c",
           "sourcePath": "runtime/hxrt/src/abi.c"
@@ -179,7 +187,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Provisional runtime ABI version query used only by native seed evidence.",
+      "summary": "Version query for the internal same-major runtime ABI, used only by native seed evidence.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -193,6 +201,7 @@
       "symbols": [],
       "artifacts": [
         {
+          "sourceSha256": "60d7a3332144b7913c1a663d39c4ceaf1fcd7da1e251a27bf37b0b0332aaddbf",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -200,7 +209,7 @@
       ],
       "libraries": [],
       "minimalAllowed": true,
-      "summary": "Shared C types and visibility/alignment macros for selectively packaged runtime slices.",
+      "summary": "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -216,6 +225,7 @@
       "symbols": [],
       "artifacts": [
         {
+          "sourceSha256": "51311f4276de1652b86b2b68d92f2aa35a578063c089bd2ca2a0f92353110aa7",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/status.h",
           "sourcePath": "runtime/hxrt/include/hxrt/status.h"
@@ -241,11 +251,13 @@
       ],
       "artifacts": [
         {
+          "sourceSha256": "601316d4420a87aedcf34459b39ad7e4cc44563b28047560013e011210f5f723",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/status_name.h",
           "sourcePath": "runtime/hxrt/include/hxrt/status_name.h"
         },
         {
+          "sourceSha256": "cb5869a6a6a172560da82488b56a38c2cd8bec916661c1622c5e3aec70f3432b",
           "kind": "runtime-source",
           "outputPath": "runtime/src/status.c",
           "sourcePath": "runtime/hxrt/src/status.c"
@@ -293,11 +305,13 @@
       ],
       "artifacts": [
         {
+          "sourceSha256": "4c1ccca0ff064a778594491b4e5d9946d592e51cd11876c8b2ef97cdb888e770",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
+          "sourceSha256": "355bb142d05e2a520b687bbb834bf084aa5f73e203fe17931dd780d5f71e31dd",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -321,6 +335,7 @@
       "symbols": [],
       "artifacts": [
         {
+          "sourceSha256": "1f24f1358fcfef03193d79f181b0499a295a53544a021bcf1063f2a36c12f1a4",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_literal.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
@@ -337,12 +352,43 @@
     }
   ],
   "status": "selective-compiler-packaging",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "compilerSelectableFeatures": [
     "io",
     "runtime-base",
     "status",
     "string-literal"
   ],
-  "algorithm": "hxc-runtime-feature-graph-v1"
+  "algorithm": "hxc-runtime-feature-graph-v2",
+  "runtimeAbi": {
+    "generatedCodeCheck": "c11-static-assert",
+    "stability": "internal-versioned",
+    "version": {
+      "major": 0,
+      "patch": 0,
+      "minor": 4
+    },
+    "publicBoundary": {
+      "applicationAbiStatus": "unsupported",
+      "forbiddenRuntimeTypes": [
+        "hxc_allocation",
+        "hxc_allocator",
+        "hxc_borrowed_cstring",
+        "hxc_byte_view",
+        "hxc_owned_cstring",
+        "hxc_owned_string",
+        "hxc_string",
+        "hxc_string_buffer"
+      ],
+      "exportTypePolicy": "runtime-structs-forbidden"
+    },
+    "releaseProvenance": {
+      "runtimeCStandard": "c11",
+      "sourceHashAlgorithm": "sha256",
+      "sourceSetSha256": "d2814da4fa66518c24a7a7ca0fede71141be5f16f4f2d3c618fd5fca56fae0d0",
+      "publicHeaderCppStandard": "c++17"
+    },
+    "generatedCodeCompatibility": "same-major",
+    "runtimeMajorMacro": "HXC_RUNTIME_ABI_MAJOR"
+  }
 }

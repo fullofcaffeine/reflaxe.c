@@ -34,6 +34,7 @@ import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
 import reflaxe.c.plan.CStaticInitializationError;
 import reflaxe.c.plan.CStaticInitializationPlanner;
+import reflaxe.c.runtime.RuntimeAbiContract;
 import reflaxe.c.runtime.RuntimeFeatureCatalog;
 import reflaxe.c.runtime.RuntimeFeatureError;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
@@ -132,9 +133,6 @@ class CCompiler {
 				};
 				Sys.println(STATIC_INITIALIZATION_REPORT_PREFIX + Json.stringify(inspection));
 			}
-			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
-			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
-				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName);
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
@@ -145,6 +143,10 @@ class CCompiler {
 			};
 			context.setRuntimePlan(runtimePlan);
 			emitRuntimeDiagnostics(configuration.runtimeDiagnostics, runtimePlan, lowered.runtimeRequirements, input.expression.pos);
+			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
+			final runtimeAbiMajor = runtimePlan.features.length == 0 ? null : RuntimeAbiContract.MAJOR;
+			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
+				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName, runtimeAbiMajor);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
 			}

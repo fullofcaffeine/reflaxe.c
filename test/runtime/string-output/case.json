@@ -9,14 +9,19 @@
     "HXC-SEM-006",
     "HXC-EX-001",
     "HXC-RT-002",
-    "HXC-RT-003"
+    "HXC-RT-003",
+    "HXC-RT-010",
+    "HXC-RT-012"
   ],
   "sources": [
+    "runtime/hxrt/features.json",
+    "runtime/hxrt/include/hxrt/base.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/src/io.c",
     "test/string_output/fixtures/positive/Main.hx",
     "test/string_output/expected/program.c",
+    "test/string_output/expected/program.h",
     "test/string_output/expected/runtime-plan.json",
     "test/string_output/run.py"
   ],

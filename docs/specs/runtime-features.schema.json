@@ -10,16 +10,17 @@
     "status",
     "requirements",
     "noUnconditionalCore",
+    "runtimeAbi",
     "compilerSelectableFeatures",
     "features",
     "reservedFeatures"
   ],
   "properties": {
     "schemaVersion": {
-      "const": 1
+      "const": 2
     },
     "algorithm": {
-      "const": "hxc-runtime-feature-graph-v1"
+      "const": "hxc-runtime-feature-graph-v2"
     },
     "status": {
       "enum": [
@@ -34,15 +35,20 @@
           "HXC-RT-001",
           "HXC-RT-002",
           "HXC-RT-004",
-          "HXC-RT-008"
+          "HXC-RT-008",
+          "HXC-RT-010",
+          "HXC-RT-012"
         ]
       },
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 6,
+      "maxItems": 6,
       "uniqueItems": true
     },
     "noUnconditionalCore": {
       "const": true
+    },
+    "runtimeAbi": {
+      "$ref": "#/$defs/runtimeAbi"
     },
     "compilerSelectableFeatures": {
       "type": "array",
@@ -166,7 +172,8 @@
       "required": [
         "sourcePath",
         "outputPath",
-        "kind"
+        "kind",
+        "sourceSha256"
       ],
       "properties": {
         "sourcePath": {
@@ -180,6 +187,91 @@
             "runtime-header",
             "runtime-source"
           ]
+        },
+        "sourceSha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runtimeAbi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stability",
+        "version",
+        "generatedCodeCompatibility",
+        "generatedCodeCheck",
+        "runtimeMajorMacro",
+        "publicBoundary",
+        "releaseProvenance"
+      ],
+      "properties": {
+        "stability": {
+          "const": "internal-versioned"
+        },
+        "version": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["major", "minor", "patch"],
+          "properties": {
+            "major": { "type": "integer", "minimum": 0, "maximum": 255 },
+            "minor": { "type": "integer", "minimum": 0, "maximum": 4095 },
+            "patch": { "type": "integer", "minimum": 0, "maximum": 4095 }
+          }
+        },
+        "generatedCodeCompatibility": {
+          "const": "same-major"
+        },
+        "generatedCodeCheck": {
+          "const": "c11-static-assert"
+        },
+        "runtimeMajorMacro": {
+          "const": "HXC_RUNTIME_ABI_MAJOR"
+        },
+        "publicBoundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["applicationAbiStatus", "exportTypePolicy", "forbiddenRuntimeTypes"],
+          "properties": {
+            "applicationAbiStatus": {
+              "const": "unsupported"
+            },
+            "exportTypePolicy": {
+              "const": "runtime-structs-forbidden"
+            },
+            "forbiddenRuntimeTypes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^hxc_[A-Za-z0-9_]+$"
+              }
+            }
+          }
+        },
+        "releaseProvenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sourceHashAlgorithm", "sourceSetSha256", "runtimeCStandard", "publicHeaderCppStandard"],
+          "properties": {
+            "sourceHashAlgorithm": {
+              "const": "sha256"
+            },
+            "sourceSetSha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "runtimeCStandard": {
+              "const": "c11"
+            },
+            "publicHeaderCppStandard": {
+              "const": "c++17"
+            }
+          }
         }
       }
     },

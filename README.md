@@ -282,7 +282,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
-| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves reachable source-rooted closure, proves no-runtime eligibility, and packages only selected compiler-admitted runtime slices. |
+| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract. |
 | `runtime-hxrt-seed` | `scaffold-only` | Hardened native allocator, UTF-8 scalar string, status, and hosted output slices coexist with other provisional runtime seeds. |
 | `runtime-string-contract` | `implemented` | The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |

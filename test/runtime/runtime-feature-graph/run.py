@@ -8,6 +8,7 @@ import difflib
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -149,13 +150,15 @@ def validate_schema_document() -> None:
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         raise RuntimeFeatureFailure("runtime feature schema must use JSON Schema 2020-12")
     properties = record(schema.get("properties"), "runtime feature schema properties")
-    for required in ("algorithm", "features", "reservedFeatures", "noUnconditionalCore"):
+    if record(properties.get("schemaVersion"), "schemaVersion schema").get("const") != 2:
+        raise RuntimeFeatureFailure("runtime feature schema must require version 2")
+    for required in ("algorithm", "features", "reservedFeatures", "noUnconditionalCore", "runtimeAbi"):
         if required not in properties:
             raise RuntimeFeatureFailure(f"runtime feature schema omitted {required}")
 
 
 def validate_catalog(catalog: dict[str, object]) -> None:
-    if catalog.get("schemaVersion") != 1 or catalog.get("algorithm") != "hxc-runtime-feature-graph-v1":
+    if catalog.get("schemaVersion") != 2 or catalog.get("algorithm") != "hxc-runtime-feature-graph-v2":
         raise RuntimeFeatureFailure("runtime feature catalog schema or algorithm drifted")
     if catalog.get("status") != "selective-compiler-packaging":
         raise RuntimeFeatureFailure("runtime feature catalog readiness drifted")
@@ -166,6 +169,32 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string-literal",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
+    runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
+    version = record(runtime_abi.get("version"), "runtime ABI version")
+    public_boundary = record(runtime_abi.get("publicBoundary"), "runtime public boundary")
+    provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
+    if (
+        runtime_abi.get("stability") != "internal-versioned"
+        or version != {"major": 0, "minor": 4, "patch": 0}
+        or runtime_abi.get("generatedCodeCompatibility") != "same-major"
+        or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
+        or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
+        or public_boundary.get("applicationAbiStatus") != "unsupported"
+        or public_boundary.get("exportTypePolicy") != "runtime-structs-forbidden"
+        or provenance.get("sourceHashAlgorithm") != "sha256"
+        or provenance.get("runtimeCStandard") != "c11"
+        or provenance.get("publicHeaderCppStandard") != "c++17"
+    ):
+        raise RuntimeFeatureFailure("runtime ABI compatibility or public-boundary policy drifted")
+    forbidden_types = text_list(public_boundary.get("forbiddenRuntimeTypes"), "forbidden runtime export types")
+    declared_runtime_structs: set[str] = set()
+    for header in (ROOT / "runtime/hxrt/include/hxrt").glob("*.h"):
+        declared_runtime_structs.update(
+            re.findall(r"typedef struct (hxc_[A-Za-z0-9_]+)\s*\{", header.read_text(encoding="utf-8"))
+        )
+    expected_forbidden_types = sorted(declared_runtime_structs, key=lambda value: value.encode("utf-8"))
+    if forbidden_types != expected_forbidden_types:
+        raise RuntimeFeatureFailure("runtime-private application export inventory drifted")
     feature_values = records(catalog.get("features"), "catalog features")
     features = {str(record(value, "feature").get("id")): record(value, "feature") for value in feature_values}
     if set(features) != {
@@ -199,12 +228,27 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "string": "native-seed-only",
         "io": "compiler-selectable",
     }
+    source_records: list[tuple[str, str]] = []
     for identifier, dependencies in expected_dependencies.items():
         feature = features[identifier]
         if feature.get("availability") != expected_availability[identifier] or feature.get("dependencies") != dependencies:
             raise RuntimeFeatureFailure(f"feature {identifier} availability/dependencies drifted")
         if feature.get("minimalAllowed") is not True:
             raise RuntimeFeatureFailure(f"seed feature {identifier} left the narrow allowlist")
+        for value in records(feature.get("artifacts"), f"feature {identifier} artifacts"):
+            artifact = record(value, f"feature {identifier} artifact")
+            source_path = artifact.get("sourcePath")
+            source_sha256 = artifact.get("sourceSha256")
+            if not isinstance(source_path, str) or not isinstance(source_sha256, str):
+                raise RuntimeFeatureFailure(f"feature {identifier} artifact lost source provenance")
+            source = safe_output_path(ROOT, source_path)
+            if hashlib.sha256(source.read_bytes()).hexdigest() != source_sha256:
+                raise RuntimeFeatureFailure(f"feature {identifier} artifact source digest drifted: {source_path}")
+            source_records.append((source_path, source_sha256))
+    source_records.sort(key=lambda entry: entry[0].encode("utf-8"))
+    source_set_payload = "".join(f"{path}\0{digest}\n" for path, digest in source_records).encode("utf-8")
+    if provenance.get("sourceSetSha256") != hashlib.sha256(source_set_payload).hexdigest():
+        raise RuntimeFeatureFailure("runtime release source-set digest drifted")
     reserved = {
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
@@ -364,6 +408,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         "reservedFeature": "HXC2000",
         "environment": "HXC2000",
         "tamperedPackage": "HXC9000",
+        "tamperedSourceContent": "HXC9000",
         "tamperedNoRuntimeProof": "HXC9000",
     }
     for name, identifier in expected_ids.items():
@@ -548,11 +593,13 @@ def selected_artifacts_from_snapshot(
             source_path = artifact.get("sourcePath")
             output_path = artifact.get("outputPath")
             kind = artifact.get("kind")
-            if not all(isinstance(item, str) for item in (source_path, output_path, kind)):
+            source_sha256 = artifact.get("sourceSha256")
+            if not all(isinstance(item, str) for item in (source_path, output_path, kind, source_sha256)):
                 raise RuntimeFeatureFailure(f"feature {identifier} has an incomplete artifact")
             assert isinstance(source_path, str)
             assert isinstance(output_path, str)
             assert isinstance(kind, str)
+            assert isinstance(source_sha256, str)
             source = safe_output_path(ROOT, source_path)
             try:
                 source.resolve(strict=False).relative_to(RUNTIME_SOURCE_ROOT.resolve())
@@ -561,6 +608,8 @@ def selected_artifacts_from_snapshot(
                     f"feature {identifier} artifact escapes runtime/hxrt: {source_path}"
                 ) from error
             safe_output_path(ROOT, output_path)
+            if hashlib.sha256(source.read_bytes()).hexdigest() != source_sha256:
+                raise RuntimeFeatureFailure(f"feature {identifier} artifact source provenance drifted")
             if kind not in ("runtime-header", "runtime-source"):
                 raise RuntimeFeatureFailure(f"feature {identifier} has invalid artifact kind {kind}")
             expected_prefix = "runtime/include/" if kind == "runtime-header" else "runtime/src/"

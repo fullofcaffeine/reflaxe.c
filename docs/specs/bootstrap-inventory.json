@@ -692,29 +692,33 @@
       "area": "runtime",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A typed deterministic feature graph resolves reachable source-rooted closure, proves no-runtime eligibility, and packages only selected compiler-admitted runtime slices.",
-      "scope": "Schema-2 plans give runtime-free primitive/span programs a structured whole-program proof; runtime-none failures retain every sorted blocker and dependency chain; literal hosted output selects exactly runtime-base/status/string-literal/io.",
+      "summary": "A typed deterministic feature graph resolves exact runtime closure under a versioned, provenance-locked internal ABI contract.",
+      "scope": "The schema-2 catalog pins internal ABI 0.4.0, same-major generated-C checks, forbidden application-export runtime types, source hashes, and strict C/C++ build baselines; schema-2 plans prove runtime-free programs or select exactly the justified closure.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/runtime-feature-planning.md",
         "runtime/hxrt/features.json",
+        "runtime/hxrt/include/hxrt/base.h",
+        "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
         "src/reflaxe/c/runtime/RuntimeNoRuntimeEligibilityAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeRequirementAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
         "test/primitive_differential/run.py",
         "test/runtime/runtime-feature-graph/run.py",
         "test/span_lowering/run.py",
+        "test/string_output/expected/program.h",
         "test/string_output/expected/runtime-plan.json",
         "test/string_output/run.py"
       ],
       "owners": [
         "E2.T07",
         "E4.T01",
-        "E4.T10"
+        "E4.T10",
+        "E4.T11"
       ],
       "limitations": [
         "Only the bounded literal-output edge currently selects hxrt; unsupported neighboring Haxe semantics still fail during lowering rather than being guessed as runtime blockers.",
-        "The catalog and plan formats are internal planning contracts, not a stable public runtime ABI."
+        "Runtime ABI 0.4.0 is an internal same-major contract; it does not expose or stabilize a generated application public ABI and does not establish a supported release."
       ]
     },
     {
@@ -728,7 +732,9 @@
         "docs/allocator-abi.md",
         "docs/string-runtime.md",
         "runtime/hxrt/include/hxc_runtime.h",
+        "runtime/hxrt/include/hxrt/abi.h",
         "runtime/hxrt/include/hxrt/allocator.h",
+        "runtime/hxrt/include/hxrt/base.h",
         "runtime/hxrt/include/hxrt/io.h",
         "runtime/hxrt/include/hxrt/string.h",
         "runtime/hxrt/include/hxrt/string_literal.h",
@@ -737,6 +743,7 @@
         "runtime/hxrt/src/string.c",
         "runtime/hxrt/features.json",
         "runtime/hxrt/test/allocator_contract.c",
+        "runtime/hxrt/test/public_header_cpp.cpp",
         "runtime/hxrt/test/runtime_smoke.c",
         "test/abi/allocator-contract/case.json",
         "test/differential/string-runtime/case.json",
@@ -746,11 +753,12 @@
         "E2.T07",
         "E4.T01",
         "E4.T02",
-        "E4.T03"
+        "E4.T03",
+        "E4.T11"
       ],
       "limitations": [
         "Only literal hosted output selects a dependency-closed subset; there is still no unconditional runtime core or general runtime fallback.",
-        "The allocator and string structs are internal native-seed contracts, not a stable generated public C ABI."
+        "The allocator and string structs are versioned internal native-seed contracts and are explicitly forbidden from a generated application public C ABI."
       ]
     },
     {

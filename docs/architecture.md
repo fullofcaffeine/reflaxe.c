@@ -349,6 +349,16 @@ retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the
 selected artifact records into typed `GeneratedFile` values and performs no
 artifact read for an empty plan.
 
+The schema-2 feature catalog also owns internal runtime ABI 0.4.0 and exact
+source/build provenance. Every artifact has a reviewed SHA-256, packaging
+rechecks those bytes, and the sorted source set has one aggregate digest. Every
+nonempty closure contains `runtime-base`; generated private headers therefore
+emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty
+plans emit no runtime version metadata or assertion. Runtime layouts are
+explicitly forbidden from future application exports; the current production
+slice admits no public headers, and E7 remains responsible for enforcing that
+policy in its future typed export model.
+
 The admitted primitive compiler path uses this planner for its positive empty
 plan. Its schema-2 `hxc.runtime-plan.json` contains a structured reachable-
 whole-program proof with zero runtime intents and no `hxrt` include, source,

@@ -4,7 +4,7 @@
 - Date: 2026-07-14
 - Decision owners: project owner and compiler maintainers
 - Related requirements: HXC-PROD-002, HXC-PROD-003, HXC-PROD-004,
-  HXC-PROD-005
+  HXC-PROD-005, HXC-RT-004, HXC-RT-010, HXC-RT-012
 
 ## Context
 
@@ -92,6 +92,29 @@ results, value layouts, ownership-aware handles, or compile-time generation when
 those alternatives preserve the intended source behavior. They must not suggest
 silently changing semantics merely to remove `hxrt`.
 
+### Runtime compatibility and provenance are explicit
+
+Every nonempty feature closure depends on `runtime-base`, whose public headers
+publish the internal `HXC_RUNTIME_ABI_{MAJOR,MINOR,PATCH}` version. Generated C
+that selects `hxrt` emits a structural C11 static assertion against the major
+version; a runtime-free build emits neither the header nor the assertion. Within
+this internal contract, equal major versions are compatible and a breaking
+change requires a major bump even while the version is below 1.0.
+
+The canonical feature manifest is schema-versioned and records the SHA-256 of
+every owned runtime source/header, a digest of the complete sorted source set,
+and the strict C11/C++17 public-header build baselines. Packaging rechecks the
+registered content hash before creating a `GeneratedFile`, while the generated
+project manifest content-addresses that packaged copy and records its build
+plan. This creates one traceable source-to-output chain without emitting the
+full feature catalog into a runtime-free build.
+
+This versioned runtime boundary is not an application ABI. Runtime-owned structs
+are forbidden in generated public application types; the current admitted
+compiler path has no public exports at all. E7 must enforce that policy in its
+typed export model before public headers are admitted, and E10.T09 still owns any
+stable application ABI promise.
+
 ## Consequences
 
 - Runtime helpers are a reviewed semantic fallback, not the compiler's default
@@ -102,6 +125,8 @@ silently changing semantics merely to remove `hxrt`.
 - Each lowering feature needs direct-C, runtime-plan, and no-runtime evidence.
 - Runtime footprint regressions become observable in snapshots and budgets.
 - The `minimal` allowlist and report schema are versioned product surfaces.
+- A selected runtime cannot silently cross an incompatible internal ABI major,
+  and release inputs retain exact source/build provenance.
 
 ## Rejected alternatives
 

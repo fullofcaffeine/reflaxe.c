@@ -9,7 +9,9 @@
     "HXC-RT-002",
     "HXC-RT-003",
     "HXC-RT-004",
-    "HXC-RT-008"
+    "HXC-RT-008",
+    "HXC-RT-010",
+    "HXC-RT-012"
   ],
   "sources": [
     "docs/specs/runtime-features.schema.json",
@@ -26,6 +28,7 @@
     "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/string.c",
+    "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
     "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
     "test/runtime/runtime-feature-graph/alloc_consumer.c",
     "test/runtime/runtime-feature-graph/io_consumer.c",

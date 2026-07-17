@@ -21,6 +21,7 @@ CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 POSITIVE = FIXTURES / "positive"
 EXPECTED = CASE / "expected"
+RUNTIME_CATALOG = ROOT / "runtime/hxrt/features.json"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 TOOLCHAINS = ("gcc", "clang")
 EXPECTED_STDOUT = b"ASCII\n" + "é🙂\n".encode() + b"embedded\x00NUL\nMain.hx:6: traced\n"
@@ -32,6 +33,10 @@ EXPECTED_RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/string_literal.h",
     "runtime/src/io.c",
 ]
+ABI_ASSERTION = (
+    '_Static_assert(HXC_RUNTIME_ABI_MAJOR == 0U, '
+    '"incompatible hxrt ABI major: generated code requires 0");'
+)
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -263,6 +268,30 @@ def validate_manifest(manifest: dict[str, object]) -> None:
         raise StringOutputFailure("generated build plan did not consume the exact selected runtime closure")
     if build.get("runtimeHeaders") != EXPECTED_RUNTIME_ARTIFACTS[:4]:
         raise StringOutputFailure("generated build plan runtime header closure drifted")
+    if build.get("publicHeaders") != []:
+        raise StringOutputFailure("primitive runtime-using output unexpectedly exposed a public header")
+
+
+def validate_public_abi_boundary(abi: dict[str, object]) -> None:
+    if (
+        abi.get("schemaVersion") != 1
+        or abi.get("status") != "analyzed-no-public-exports"
+        or abi.get("exports") != []
+        or abi.get("types") != []
+        or abi.get("executableEntryPoint") != "main"
+    ):
+        raise StringOutputFailure("primitive runtime-using output overstated its public ABI")
+    catalog = load_json(RUNTIME_CATALOG, "runtime feature catalog")
+    runtime_abi = catalog.get("runtimeAbi")
+    if not isinstance(runtime_abi, dict):
+        raise StringOutputFailure("runtime feature catalog omitted its ABI contract")
+    public_boundary = runtime_abi.get("publicBoundary")
+    if not isinstance(public_boundary, dict):
+        raise StringOutputFailure("runtime feature catalog omitted its public boundary")
+    forbidden = set(text_list(public_boundary.get("forbiddenRuntimeTypes"), "forbidden runtime export types"))
+    exposed = set(text_list(abi.get("types"), "generated public ABI types"))
+    if exposed & forbidden:
+        raise StringOutputFailure("generated public ABI exposed an unstable runtime struct")
 
 
 def validate_generated_c(output: Path) -> None:
@@ -281,6 +310,8 @@ def validate_generated_c(output: Path) -> None:
         raise StringOutputFailure("generated C lost explicit output status handling")
     if '#include <hxrt/io.h>' not in header or "<stdlib.h>" not in header:
         raise StringOutputFailure("generated private header omitted selected typed dependencies")
+    if header.count(ABI_ASSERTION) != 1:
+        raise StringOutputFailure("generated private header omitted its one structural runtime ABI major check")
     for forbidden in ("hxc_object", "hxc_gc", "hxc_dynamic", "hxc_reflection"):
         if forbidden in source or forbidden in header:
             raise StringOutputFailure(f"generated literal output retained {forbidden}")
@@ -301,10 +332,12 @@ def render_project(
     runtime_plan = load_json(output / "hxc.runtime-plan.json", "runtime plan")
     stdlib_report = load_json(output / "hxc.stdlib-report.json", "stdlib report")
     manifest = load_json(output / "hxc.manifest.json", "project manifest")
+    abi = load_json(output / "hxc.abi.json", "public ABI report")
     validate_hxcir(hxcir)
     validate_runtime_plan(runtime_plan, profile=profile, policy="minimal" if profile == "metal" else "auto")
     validate_stdlib_report(stdlib_report)
     validate_manifest(manifest)
+    validate_public_abi_boundary(abi)
     validate_generated_c(output)
     return RenderedProject(output, hxcir, runtime_plan, stdlib_report, manifest)
 
@@ -538,6 +571,53 @@ def compile_native(toolchain: NativeToolchain, rendered: RenderedProject, optimi
     return executable
 
 
+def project_with_runtime_macro(rendered: RenderedProject, output: Path, macro: str, old: str, new: str) -> RenderedProject:
+    shutil.copytree(rendered.output, output)
+    base_header = output / "runtime/include/hxrt/base.h"
+    contents = base_header.read_text(encoding="utf-8")
+    before = f"#define {macro} {old}"
+    after = f"#define {macro} {new}"
+    if contents.count(before) != 1:
+        raise StringOutputFailure(f"runtime compatibility fixture could not locate {before!r}")
+    base_header.write_text(contents.replace(before, after), encoding="utf-8", newline="\n")
+    return RenderedProject(
+        output,
+        rendered.hxcir,
+        rendered.runtime_plan,
+        rendered.stdlib_report,
+        rendered.manifest,
+    )
+
+
+def reject_incompatible_runtime(toolchain: NativeToolchain, rendered: RenderedProject, build: Path) -> None:
+    build_plan = rendered.manifest.get("build")
+    if not isinstance(build_plan, dict):
+        raise StringOutputFailure("runtime ABI mismatch probe lost the generated build plan")
+    sources = [safe_project_path(rendered.output, value) for value in text_list(build_plan.get("sources"), "build sources")]
+    includes = [
+        safe_project_directory(rendered.output, value)
+        for value in text_list(build_plan.get("includeDirectories"), "include directories")
+    ]
+    executable = build / f"{toolchain.family}-incompatible-runtime"
+    command = [
+        toolchain.compiler,
+        *STRICT_FLAGS,
+        "-O0",
+        *(f"-I{include}" for include in includes),
+        *(str(source) for source in sources),
+        "-o",
+        str(executable),
+    ]
+    result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
+    if result.returncode == 0 or result.stdout or "incompatible hxrt ABI major" not in result.stderr:
+        raise StringOutputFailure(
+            f"{toolchain.family} accepted an incompatible runtime ABI major\ncommand={command!r}\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    if executable.exists():
+        raise StringOutputFailure(f"{toolchain.family} runtime ABI mismatch left a plausible executable")
+
+
 def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject], build: Path) -> None:
     for toolchain in toolchains:
         failure_probe: Path | None = None
@@ -554,6 +634,18 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
                     failure_probe = executable
         if failure_probe is None:
             raise StringOutputFailure(f"{toolchain.family} produced no output-failure probe")
+
+        compatibility_root = build / f"{toolchain.family}-runtime-compatibility"
+        compatibility_root.mkdir()
+        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "4u", "999u")
+        compatible_build = compatibility_root / "compatible-build"
+        compatible_build.mkdir()
+        compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)
+        compatible_result = subprocess.run([str(compatible_executable)], cwd=build, check=False, capture_output=True, timeout=30)
+        if compatible_result.returncode != 0 or compatible_result.stdout != EXPECTED_STDOUT or compatible_result.stderr:
+            raise StringOutputFailure(f"{toolchain.family} rejected a same-major compatible runtime")
+        incompatible = project_with_runtime_macro(projects[0], compatibility_root / "incompatible-major", "HXC_RUNTIME_ABI_MAJOR", "0u", "1u")
+        reject_incompatible_runtime(toolchain, incompatible, compatibility_root)
 
         def close_standard_output() -> None:
             os.close(1)

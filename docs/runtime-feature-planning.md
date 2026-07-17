@@ -22,10 +22,10 @@ selected transitive feature and adds no broader slice.
 `RuntimeFeatureCatalog` supplies a fresh `RuntimeFeatureRegistry` for each
 compilation. Every definition has a validated stable ID, availability,
 environment set, minimal-policy eligibility, dependencies, owned headers and C
-sources, symbols, libraries, and defines. The registry rejects duplicate IDs,
-artifacts, or symbols; unavailable dependencies; invalid paths; and dependency
-cycles before planning. Canonical UTF-8 ordering makes the catalog independent
-of discovery and map iteration order.
+sources with reviewed SHA-256 digests, symbols, libraries, and defines. The
+registry rejects duplicate IDs, artifacts, or symbols; unavailable dependencies;
+invalid paths or hashes; and dependency cycles before planning. Canonical UTF-8
+ordering makes the catalog independent of discovery and map iteration order.
 
 The machine-readable review view is
 [`runtime/hxrt/features.json`](../runtime/hxrt/features.json), validated against
@@ -53,10 +53,20 @@ dynamic values, reflection, exceptions, threads, platform services, and other pl
 features. Reservations fail closed and name the task that must implement them;
 they are not empty features and cannot be selected.
 
-The catalog remains an internal schema-1 inspection contract. The runtime plan
-is now internal schema 2 (`hxc-runtime-plan-v2`), with a nested schema-1
-`hxc-no-runtime-eligibility-v1` proof for empty plans. Stabilization,
-compatibility rules, and public versioning remain owned by E4.T11.
+The catalog is the machine-diffable internal schema-2
+`hxc-runtime-feature-graph-v2` contract. It records internal ABI version 0.4.0,
+same-major generated-code compatibility, the exact application-export exclusion
+for runtime-owned types, every artifact digest, one digest over the sorted source
+set, and the strict C11/C++17 header build baselines. The runtime plan remains
+internal schema 2 (`hxc-runtime-plan-v2`), with a nested schema-1
+`hxc-no-runtime-eligibility-v1` proof for empty plans.
+
+Every nonempty closure includes `runtime-base`, so every selected public runtime
+header sees `HXC_RUNTIME_ABI_MAJOR`. The generated private program header emits
+one structural `_Static_assert` against the compiler's required major. Equal
+major versions—including a different minor or patch—compile and link; a changed
+major fails during native compilation with the assertion message. Runtime-free
+output contains neither the version macro nor the assertion.
 
 ## Source reasons and closure
 
@@ -137,8 +147,8 @@ from becoming a generated-Haxe support claim.
 | Portable/metal | One planner serves both. Portable defaults to `auto + summary`; metal defaults to `minimal + warn`; explicit valid combinations remain available. |
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. `none` either records the structured whole-program proof or reports every blocker before output/native linking. |
 | Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
-| Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership. |
-| Public ABI | The literal carrier and output symbol are private provisional runtime facts. The internal marker advances to 0.4.0, but E4.T11 still owns runtime ABI/manifest stabilization and E7 owns exported APIs. |
+| Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership, then checks ABI major 0 structurally. |
+| Public ABI | Runtime 0.4.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
 
 ## Exact packaging
 
@@ -150,6 +160,11 @@ registry, so a fabricated plan cannot select another repository file. An empty
 plan returns no files and does not even consult the artifact source.
 Compiler-selected runtime output passes those values through normal Reflaxe
 output ownership; the packager never writes or deletes output itself.
+For a nonempty plan, each read must also match its registered SHA-256 before the
+first corresponding `GeneratedFile` is admitted. `hxc.manifest.json` then hashes
+the packaged artifact and records the exact neutral source/include/build plan,
+linking release output back to the schema-2 catalog without copying unselected
+runtime metadata into the project.
 
 The canonical fixture proves an `alloc` native request packages only
 `runtime-base + status + alloc`, while a full `string` native request adds only
@@ -197,7 +212,9 @@ npm run test:native
 
 This evidence proves deterministic reachability reconciliation and no-runtime
 eligibility, selective packaging, the one generated-Haxe literal-output
-selection, and its bounded hello product composition. The separate E4.T02/E4.T03 fixtures
-prove their bounded native allocator and string contracts. None of this proves
-broad `String` lowering, general I/O, object graphs, exceptions, reflection,
-broad standard-library support, or a stable runtime ABI.
+selection, its bounded hello product composition, exact runtime source/build
+provenance, and compatible-versus-incompatible internal ABI versions. The
+separate E4.T02/E4.T03 fixtures prove their bounded native allocator and string
+contracts. None of this proves broad `String` lowering, general I/O, object
+graphs, exceptions, reflection, broad standard-library support, a generated
+public application ABI, or a supported release.

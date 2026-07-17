@@ -152,6 +152,7 @@ REQUIRED_GATE_FILES = (
     "src/reflaxe/c/CEnvironment.hx",
     "src/reflaxe/c/CRuntimeDiagnostics.hx",
     "src/reflaxe/c/CRuntimePolicy.hx",
+    "src/reflaxe/c/runtime/RuntimeAbiContract.hx",
     "src/reflaxe/c/runtime/RuntimeFeatureModel.hx",
     "src/reflaxe/c/runtime/RuntimeFeatureError.hx",
     "src/reflaxe/c/runtime/RuntimeFeatureCatalog.hx",
@@ -830,6 +831,7 @@ def validate() -> list[str]:
         "--native-only",
         "compiler_identity",
         "render_reports",
+        "sourceSetSha256",
         "hxc_string_",
         "nm",
     ):

@@ -24,10 +24,10 @@ class RuntimeFeatureCatalog {
 		final string = RuntimeFeatureId.parse("string");
 		final io = RuntimeFeatureId.parse("io");
 		return [
-			new RuntimeFeatureDefinition(runtimeBase, "Shared C types and visibility/alignment macros for selectively packaged runtime slices.",
+			new RuntimeFeatureDefinition(runtimeBase, "Shared C types, internal ABI version, and visibility/alignment macros for selected runtime slices.",
 				CompilerSelectable, true, environments, [], [header("base.h")], [], [], []),
-			new RuntimeFeatureDefinition(runtimeAbi, "Provisional runtime ABI version query used only by native seed evidence.", NativeSeedOnly, true,
-				environments, [runtimeBase], [header("abi.h"), source("abi.c")], ["hxc_runtime_abi_version"], [], []),
+			new RuntimeFeatureDefinition(runtimeAbi, "Version query for the internal same-major runtime ABI, used only by native seed evidence.",
+				NativeSeedOnly, true, environments, [runtimeBase], [header("abi.h"), source("abi.c")], ["hxc_runtime_abi_version"], [], []),
 			new RuntimeFeatureDefinition(status, "Status value definitions used by selected runtime failure boundaries.", CompilerSelectable, true,
 				environments, [runtimeBase], [header("status.h")], [], [], []),
 			new RuntimeFeatureDefinition(statusName, "Symbolic status-name helper used only by native seed evidence.", NativeSeedOnly, true, environments,
@@ -105,10 +105,35 @@ class RuntimeFeatureCatalog {
 	}
 
 	static function header(name:String):RuntimeFeatureArtifact
-		return new RuntimeFeatureArtifact('runtime/hxrt/include/hxrt/$name', 'runtime/include/hxrt/$name', GeneratedFileKind.RuntimeHeader);
+		return new RuntimeFeatureArtifact('runtime/hxrt/include/hxrt/$name', 'runtime/include/hxrt/$name', GeneratedFileKind.RuntimeHeader, headerSha256(name));
 
 	static function source(name:String):RuntimeFeatureArtifact
-		return new RuntimeFeatureArtifact('runtime/hxrt/src/$name', 'runtime/src/$name', GeneratedFileKind.RuntimeSource);
+		return new RuntimeFeatureArtifact('runtime/hxrt/src/$name', 'runtime/src/$name', GeneratedFileKind.RuntimeSource, sourceSha256(name));
+
+	static function headerSha256(name:String):String {
+		return switch name {
+			case "abi.h": "3f68191447abf3968d89d4b142a46cc08bc9a2caf288d7c0f3dbfc4698eee598";
+			case "allocator.h": "798393dd7eb85916cd48a7652ef970b6ca4417f29f21f6f751dbefdd006185d7";
+			case "base.h": "60d7a3332144b7913c1a663d39c4ceaf1fcd7da1e251a27bf37b0b0332aaddbf";
+			case "io.h": "a80144f8bed89a7c9646b3cab2836417769f3c1eae213554c5c3268e96b2d5ca";
+			case "status.h": "51311f4276de1652b86b2b68d92f2aa35a578063c089bd2ca2a0f92353110aa7";
+			case "status_name.h": "601316d4420a87aedcf34459b39ad7e4cc44563b28047560013e011210f5f723";
+			case "string.h": "4c1ccca0ff064a778594491b4e5d9946d592e51cd11876c8b2ef97cdb888e770";
+			case "string_literal.h": "1f24f1358fcfef03193d79f181b0499a295a53544a021bcf1063f2a36c12f1a4";
+			case _: throw 'runtime feature header `$name` has no reviewed SHA-256 provenance';
+		};
+	}
+
+	static function sourceSha256(name:String):String {
+		return switch name {
+			case "abi.c": "84d79962524123be2840436c6e6c1756d79027be438fc6cee2350d26aea7957c";
+			case "allocator.c": "0a2d502da004f22db6e3412f3aebe6958230342d8e8f7b7e791f64f3be2bbcf5";
+			case "io.c": "66647082818392b58030adfa85e434525c2034d91234debe3dcb1a975c789866";
+			case "status.c": "cb5869a6a6a172560da82488b56a38c2cd8bec916661c1622c5e3aec70f3432b";
+			case "string.c": "355bb142d05e2a520b687bbb834bf084aa5f73e203fe17931dd780d5f71e31dd";
+			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';
+		};
+	}
 
 	static function reserved(id:String, ownerTask:String, summary:String):RuntimeFeatureReservation
 		return new RuntimeFeatureReservation(RuntimeFeatureId.parse(id), ownerTask, summary);

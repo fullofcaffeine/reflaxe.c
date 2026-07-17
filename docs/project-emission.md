@@ -85,8 +85,9 @@ definition, so its declared hash scope is every compiler artifact except
 value for the manifest still carries and verifies its own in-memory SHA-256.
 Floating modulo contributes a provenance-bearing `m` link fact to the neutral
 manifest. This is an ordinary C build requirement and does not change the empty
-runtime plan. Stable runtime/ABI schemas remain owned by their later Beads
-issues.
+runtime plan. A nonempty runtime payload is additionally traced to the schema-2
+feature catalog: packaging verifies each registered source SHA-256, and this
+manifest hashes the emitted copy plus its exact source/include build plan.
 
 ## Neutral build plan and adapters
 
@@ -124,6 +125,15 @@ only the compiler-selectable foundation/status/literal/I/O artifacts; the
 alloc/full-string fixtures remain native-seed evidence. `CProjectEmitter`
 rejects any unrelated runtime plan or payload. See
 [runtime feature planning](runtime-feature-planning.md).
+
+Because every selected closure includes `runtime-base`, the private generated
+program header also carries one structural C11 assertion that the runtime ABI
+major matches the compiler's internal 0.4.0 contract. Same-major minor changes
+remain compatible; a changed major fails before linking. Runtime-free projects
+contain no `hxrt` include, version marker, or compatibility assertion. This is
+not a public application ABI: primitive production emission rejects public
+headers and records `analyzed-no-public-exports`; E7 owns the future typed export
+checker and wrappers.
 
 `examples/hello` is the first product consumer of that same emission path. Its
 checked-in baseline retains the private header/source shape and runtime plan,

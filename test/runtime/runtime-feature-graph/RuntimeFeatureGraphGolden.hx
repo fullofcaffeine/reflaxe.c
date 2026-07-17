@@ -118,6 +118,9 @@ class RuntimeFeatureGraphGolden {
 		if (tamperedSource.readCount != 0) {
 			throw "tampered runtime packaging consulted an artifact source";
 		}
+		final tamperedSourceContent = expectFailure(() -> {
+			packager.packageFiles(alloc, new TamperedRuntimeSource());
+		});
 
 		Sys.println(CATALOG_PREFIX + Json.stringify(registry.catalogSnapshot()));
 		Sys.println(PLANS_PREFIX + Json.stringify({
@@ -155,6 +158,7 @@ class RuntimeFeatureGraphGolden {
 					CEnvironment.Wasi, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.wasi", "alloc")], [],
 					["direct-c-fixture"]))),
 				tamperedPackage: tamperedPackage,
+				tamperedSourceContent: tamperedSourceContent,
 				tamperedNoRuntimeProof: tamperedNoRuntimeProof
 			}
 		}));
@@ -300,5 +304,14 @@ private class CountingRuntimeSource implements RuntimeArtifactSource {
 	public function read(sourcePath:String):Null<String> {
 		readCount++;
 		return null;
+	}
+}
+
+private class TamperedRuntimeSource implements RuntimeArtifactSource {
+	public function new() {}
+
+	public function read(sourcePath:String):Null<String> {
+		return FileSystem.exists(sourcePath)
+			&& !FileSystem.isDirectory(sourcePath) ? File.getContent(sourcePath) + "\n/* tampered fixture */\n" : null;
 	}
 }

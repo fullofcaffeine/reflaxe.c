@@ -14,8 +14,8 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureReservation;
 
 /** Validated immutable-by-convention graph with deterministic dependency order. */
 class RuntimeFeatureRegistry {
-	public static inline final ALGORITHM = "hxc-runtime-feature-graph-v1";
-	public static inline final SCHEMA_VERSION = 1;
+	public static inline final ALGORITHM = "hxc-runtime-feature-graph-v2";
+	public static inline final SCHEMA_VERSION = 2;
 
 	final definitions:Array<RuntimeFeatureDefinition>;
 	final reservations:Array<RuntimeFeatureReservation>;
@@ -62,7 +62,8 @@ class RuntimeFeatureRegistry {
 			final artifacts = definition.artifacts.map(artifact -> {
 				sourcePath: artifact.sourcePath,
 				outputPath: artifact.outputPath,
-				kind: artifact.kind
+				kind: artifact.kind,
+				sourceSha256: artifact.sourceSha256
 			});
 			artifacts.sort((left, right) -> compareUtf8(left.outputPath, right.outputPath));
 			final symbols = sortedUniqueCopy(definition.symbols);
@@ -87,8 +88,16 @@ class RuntimeFeatureRegistry {
 			schemaVersion: SCHEMA_VERSION,
 			algorithm: ALGORITHM,
 			status: compilerSelectableFeatures.length == 0 ? RuntimeFeatureCatalogStatus.ProvisionalNativeSeedPackaging : RuntimeFeatureCatalogStatus.SelectiveCompilerPackaging,
-			requirements: ["HXC-RT-001", "HXC-RT-002", "HXC-RT-004", "HXC-RT-008"],
+			requirements: [
+				"HXC-RT-001",
+				"HXC-RT-002",
+				"HXC-RT-004",
+				"HXC-RT-008",
+				"HXC-RT-010",
+				"HXC-RT-012"
+			],
 			noUnconditionalCore: true,
+			runtimeAbi: RuntimeAbiContract.snapshot(definitions),
 			compilerSelectableFeatures: compilerSelectableFeatures,
 			features: featureRecords,
 			reservedFeatures: reservations.map(reservation -> {
@@ -113,7 +122,7 @@ class RuntimeFeatureRegistry {
 			validateEnvironments(definition);
 			definitionsById.set(id, definition);
 			for (artifact in definition.artifacts) {
-				validateArtifact(id, artifact.sourcePath, artifact.outputPath, artifact.kind);
+				validateArtifact(id, artifact.sourcePath, artifact.outputPath, artifact.kind, artifact.sourceSha256);
 				final previousSourceOwner = artifactSourceOwners.get(artifact.sourcePath);
 				if (previousSourceOwner != null) {
 					internal('runtime artifact source `${artifact.sourcePath}` is owned by both `$previousSourceOwner` and `$id`', [previousSourceOwner, id]);
@@ -200,7 +209,7 @@ class RuntimeFeatureRegistry {
 		}
 	}
 
-	function validateArtifact(featureId:String, sourcePath:String, outputPath:String, kind:GeneratedFileKind):Void {
+	function validateArtifact(featureId:String, sourcePath:String, outputPath:String, kind:GeneratedFileKind, sourceSha256:String):Void {
 		if (!GeneratedFile.isNormalizedRelativePath(sourcePath) || !GeneratedFile.isNormalizedRelativePath(outputPath)) {
 			internal('runtime feature `$featureId` has a non-normalized artifact path `$sourcePath` -> `$outputPath`', [featureId]);
 		}
@@ -220,6 +229,9 @@ class RuntimeFeatureRegistry {
 		};
 		if (!valid) {
 			internal('runtime feature `$featureId` artifact `$sourcePath` -> `$outputPath` has invalid kind `${Std.string(kind)}`', [featureId]);
+		}
+		if (!~/^[0-9a-f]{64}$/.match(sourceSha256)) {
+			internal('runtime feature `$featureId` artifact `$sourcePath` has invalid SHA-256 provenance', [featureId]);
 		}
 	}
 

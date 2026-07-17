@@ -8,6 +8,13 @@
 #include <stddef.h>
 #include <stdint.h>
 
+/* Internal ABI changes are compatible only within one major version. */
+#define HXC_RUNTIME_ABI_MAJOR 0u
+#define HXC_RUNTIME_ABI_MINOR 4u
+#define HXC_RUNTIME_ABI_PATCH 0u
+#define HXC_RUNTIME_ABI_VERSION \
+  ((HXC_RUNTIME_ABI_MAJOR << 24u) | (HXC_RUNTIME_ABI_MINOR << 12u) | HXC_RUNTIME_ABI_PATCH)
+
 #if defined(_WIN32) || defined(__CYGWIN__)
   #if defined(HXC_RUNTIME_BUILD_SHARED)
     #define HXC_API __declspec(dllexport)

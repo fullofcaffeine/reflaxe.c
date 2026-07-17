@@ -1,5 +1,7 @@
 package reflaxe.c.runtime;
 
+import haxe.crypto.Sha256;
+import haxe.io.Bytes;
 #if macro
 import haxe.io.Path;
 import haxe.macro.Context;
@@ -88,6 +90,11 @@ class RuntimeFeaturePackager {
 				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
 					'selected runtime artifact `${artifact.sourcePath}` for `${artifact.featureId}` is unavailable', [artifact.featureId]);
 			}
+			final actualSha256 = Sha256.make(Bytes.ofString(contents)).toHex();
+			if (actualSha256 != registeredSourceSha256(artifact.featureId, artifact.sourcePath)) {
+				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
+					'selected runtime artifact `${artifact.sourcePath}` failed its registered SHA-256 provenance check', [artifact.featureId]);
+			}
 			files.push(new GeneratedFile(artifact.outputPath, contents, artifact.kind));
 		}
 		files.sort((left, right) -> RuntimeFeatureRegistry.compareUtf8(left.relativePath, right.relativePath));
@@ -95,6 +102,16 @@ class RuntimeFeaturePackager {
 			throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError, "runtime package artifact order differs from the resolved plan");
 		}
 		return files;
+	}
+
+	function registeredSourceSha256(featureId:String, sourcePath:String):String {
+		final definition = requireDefinition(featureId);
+		for (artifact in definition.artifacts) {
+			if (artifact.sourcePath == sourcePath) {
+				return artifact.sourceSha256;
+			}
+		}
+		return invalid('runtime feature `$featureId` has no registered source provenance for `$sourcePath`', [featureId]);
 	}
 
 	function validateArtifactSelection(plan:RuntimeFeaturePlanSnapshot):Void {
