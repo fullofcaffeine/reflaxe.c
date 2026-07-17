@@ -20,8 +20,12 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverride;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverrideAction;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeEvidence;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeScope;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePolicyBlockerRecord;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReachabilityEvidence;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementReason;
 import reflaxe.c.runtime.RuntimeFeaturePackager;
 import reflaxe.c.runtime.RuntimeFeaturePackager.RuntimeArtifactSource;
@@ -39,6 +43,7 @@ private typedef RuntimeFailureRecord = {
 	final id:CDiagnosticId;
 	final message:String;
 	final featureIds:Array<String>;
+	final blockers:Array<RuntimePolicyBlockerRecord>;
 }
 
 class RuntimeFeatureGraphGolden {
@@ -85,6 +90,19 @@ class RuntimeFeatureGraphGolden {
 		if (emptyFiles.length != 0 || emptySource.readCount != 0) {
 			throw "runtime-free packaging consulted an hxrt artifact";
 		}
+		final emptyProof = empty.noRuntimeProof;
+		if (emptyProof == null) {
+			throw "runtime-free plan lost its structured proof";
+		}
+		emptyProof.runtimeAbsence.symbols.push("hxc_tampered_runtime_symbol");
+		final tamperedEmptySource = new CountingRuntimeSource();
+		final tamperedNoRuntimeProof = expectFailure(() -> {
+			packager.packageFiles(empty, tamperedEmptySource);
+		});
+		emptyProof.runtimeAbsence.symbols.pop();
+		if (tamperedEmptySource.readCount != 0) {
+			throw "tampered no-runtime proof consulted an artifact source";
+		}
 		final originalArtifact = alloc.artifactDetails[0];
 		alloc.artifactDetails[0] = {
 			featureId: originalArtifact.featureId,
@@ -115,13 +133,18 @@ class RuntimeFeatureGraphGolden {
 				}),
 				cycle: cycleFailure(),
 				unknownDependency: unknownDependencyFailure(),
-				nonePolicy: expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.None, [reason("fixture.none", "alloc")], []))),
+				missingNoRuntimeProof: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable,
+					CEnvironment.Hosted, CRuntimePolicy.None, "fixture:none", CRuntimeDiagnostics.Off, "fixture:off", [], [], ["direct-c-fixture"]))),
+				survivingRuntimeIntentProof: survivingRuntimeIntentProof(planner),
+				nonePolicy: nonePolicyFailure(planner),
 				minimalPolicy: minimalPolicyFailure(),
 				unusedManualRequire: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Portable,
 					CEnvironment.Hosted, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [], [
 						new RuntimeFeatureOverride(RuntimeFeatureId.parse("string"), RuntimeFeatureOverrideAction.Require, "fixture:unused")
 					],
-					["direct-c-fixture"], "no semantic runtime requirement"))),
+					["direct-c-fixture"],
+					new RuntimeNoRuntimeEvidence(RuntimeNoRuntimeScope.NativeSeedFixture, "no semantic runtime requirement",
+						new RuntimeReachabilityEvidence(1, 0, 1, 1, 1, 0, 0), [])))),
 				forbidRequired: expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.forbid", "string")],
 					[
 						new RuntimeFeatureOverride(RuntimeFeatureId.parse("alloc"), RuntimeFeatureOverrideAction.Forbid, "fixture:forbid")
@@ -131,7 +154,8 @@ class RuntimeFeatureGraphGolden {
 				environment: expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Portable,
 					CEnvironment.Wasi, CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.wasi", "alloc")], [],
 					["direct-c-fixture"]))),
-				tamperedPackage: tamperedPackage
+				tamperedPackage: tamperedPackage,
+				tamperedNoRuntimeProof: tamperedNoRuntimeProof
 			}
 		}));
 		Sys.println(PACKAGE_PREFIX + Json.stringify({
@@ -144,7 +168,9 @@ class RuntimeFeatureGraphGolden {
 	static function emptyRequest():RuntimePlanningRequest {
 		return new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable, CEnvironment.Hosted, CRuntimePolicy.Auto,
 			"profile-preset:portable", CRuntimeDiagnostics.Summary, "profile-preset:portable", [], [],
-			["primitive-values", "program-local-specialization-considered"], "reachable fixture semantics use only direct C and program-local specialization");
+			["primitive-values", "program-local-specialization-considered"],
+			new RuntimeNoRuntimeEvidence(RuntimeNoRuntimeScope.ReachableWholeProgram,
+				"reachable fixture semantics use only direct C and program-local specialization", new RuntimeReachabilityEvidence(1, 0, 1, 1, 1, 0, 0), []));
 	}
 
 	static function featureRequest(policy:CRuntimePolicy, reasons:Array<RuntimeRequirementReason>,
@@ -173,8 +199,8 @@ class RuntimeFeatureGraphGolden {
 			case null: throw "runtime reason fixture lost its Haxe source anchor";
 			case value: value;
 		};
-		return new RuntimeRequirementReason(id, RuntimeFeatureId.parse(featureId), "fixture-semantic-gap", "fixture.RuntimeFeatureGraph",
-			new HxcSourceSpan(StringTools.replace(anchor.fileName, "\\", "/"), anchor.lineNumber, 1, anchor.lineNumber, 2),
+		return new RuntimeRequirementReason(id, RuntimeFeatureId.parse(featureId), "fixture-runtime-operation", "fixture-semantic-gap",
+			"fixture.RuntimeFeatureGraph", new HxcSourceSpan(StringTools.replace(anchor.fileName, "\\", "/"), anchor.lineNumber, 1, anchor.lineNumber, 2),
 			"use a direct fixture representation when it preserves semantics");
 	}
 
@@ -194,6 +220,24 @@ class RuntimeFeatureGraphGolden {
 		return expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Metal, CEnvironment.Hosted,
 			CRuntimePolicy.Minimal, "profile-preset:metal", CRuntimeDiagnostics.Warn, "profile-preset:metal", [reason("fixture.broad", "fixture-broad")], [],
 			["direct-c-considered"])));
+	}
+
+	static function nonePolicyFailure(planner:RuntimeFeaturePlanner):RuntimeFailureRecord {
+		final reasons = [reason("fixture.none.z", "alloc"), reason("fixture.none.a", "string")];
+		final forward = expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.None, reasons, [])));
+		reasons.reverse();
+		final reverse = expectFailure(() -> planner.plan(featureRequest(CRuntimePolicy.None, reasons, [])));
+		if (Json.stringify(forward) != Json.stringify(reverse)) {
+			throw "runtime-none blockers changed with root discovery order";
+		}
+		return forward;
+	}
+
+	static function survivingRuntimeIntentProof(planner:RuntimeFeaturePlanner):RuntimeFailureRecord {
+		return expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable, CEnvironment.Hosted,
+			CRuntimePolicy.None, "fixture:none", CRuntimeDiagnostics.Off, "fixture:off", [], [], ["direct-c-fixture"],
+			new RuntimeNoRuntimeEvidence(RuntimeNoRuntimeScope.ReachableWholeProgram, "invalid surviving runtime intent",
+				new RuntimeReachabilityEvidence(1, 0, 1, 1, 1, 0, 1), []))));
 	}
 
 	static function cycleFailure():RuntimeFailureRecord {
@@ -221,7 +265,12 @@ class RuntimeFeatureGraphGolden {
 		try {
 			operation();
 		} catch (error:RuntimeFeatureError) {
-			return {id: error.diagnosticId, message: error.message, featureIds: error.featureIds};
+			return {
+				id: error.diagnosticId,
+				message: error.message,
+				featureIds: error.featureIds,
+				blockers: error.blockers
+			};
 		}
 		throw "runtime feature negative fixture unexpectedly succeeded";
 	}

@@ -224,11 +224,17 @@ def validate_selected_reasons(plan: dict[str, object], label: str) -> None:
     for value in records(plan.get("rootReasons"), f"{label} rootReasons"):
         reason = record(value, f"{label} root reason")
         reason_id = reason.get("id")
+        operation_id = reason.get("operationId")
         source = record(reason.get("source"), f"{label} root reason source")
         start = record(source.get("start"), f"{label} root reason start")
         file_name = source.get("file")
         line_number = start.get("line")
-        if not isinstance(reason_id, str) or not isinstance(file_name, str) or not isinstance(line_number, int):
+        if (
+            not isinstance(reason_id, str)
+            or not isinstance(operation_id, str)
+            or not isinstance(file_name, str)
+            or not isinstance(line_number, int)
+        ):
             raise RuntimeFeatureFailure(f"{label} root reason omitted its typed source anchor")
         source_path = safe_output_path(ROOT, file_name)
         source_lines = source_path.read_text(encoding="utf-8").splitlines()
@@ -249,10 +255,47 @@ def validate_selected_reasons(plan: dict[str, object], label: str) -> None:
             raise RuntimeFeatureFailure(f"{label} dependency edge lost source-root provenance")
 
 
+def validate_no_runtime_proof(plan: dict[str, object], label: str) -> None:
+    proof = record(plan.get("noRuntimeProof"), f"{label} noRuntimeProof")
+    reachability = record(proof.get("reachability"), f"{label} reachability")
+    runtime_absence = record(proof.get("runtimeAbsence"), f"{label} runtime absence")
+    if (
+        proof.get("schemaVersion") != 1
+        or proof.get("algorithm") != "hxc-no-runtime-eligibility-v1"
+        or proof.get("status") != "eligible"
+        or proof.get("scope") != "reachable-whole-program"
+        or not proof.get("semanticProof")
+        or reachability
+        != {
+            "modules": 1,
+            "typeInstances": 0,
+            "functions": 1,
+            "blocks": 1,
+            "instructions": 1,
+            "cleanupActions": 0,
+            "runtimeIntents": 0,
+        }
+        or proof.get("directDecisions") != plan.get("directDecisions")
+        or proof.get("programLocalHelpers") != []
+        or runtime_absence
+        != {
+            "features": [],
+            "includes": [],
+            "sources": [],
+            "defines": [],
+            "libraries": [],
+            "symbols": [],
+        }
+    ):
+        raise RuntimeFeatureFailure(f"{label} structured no-runtime proof drifted")
+
+
 def validate_plans(plans: dict[str, object]) -> None:
     empty = record(plans.get("empty"), "empty plan")
     if (
-        empty.get("status") != "analyzed-runtime-free"
+        empty.get("schemaVersion") != 2
+        or empty.get("algorithm") != "hxc-runtime-plan-v2"
+        or empty.get("status") != "analyzed-runtime-free"
         or empty.get("planPurpose") != "compiler-program"
         or empty.get("features") != []
         or empty.get("artifacts") != []
@@ -260,6 +303,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         or not empty.get("noRuntimeProof")
     ):
         raise RuntimeFeatureFailure("empty compiler plan did not prove complete hxrt absence")
+    validate_no_runtime_proof(empty, "empty plan")
 
     alloc = record(plans.get("alloc"), "alloc plan")
     string = record(plans.get("string"), "string plan")
@@ -310,6 +354,8 @@ def validate_plans(plans: dict[str, object]) -> None:
         "invalidId": "HXC9000",
         "cycle": "HXC9000",
         "unknownDependency": "HXC9000",
+        "missingNoRuntimeProof": "HXC9000",
+        "survivingRuntimeIntentProof": "HXC9000",
         "nonePolicy": "HXC2000",
         "minimalPolicy": "HXC2000",
         "unusedManualRequire": "HXC2000",
@@ -318,6 +364,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         "reservedFeature": "HXC2000",
         "environment": "HXC2000",
         "tamperedPackage": "HXC9000",
+        "tamperedNoRuntimeProof": "HXC9000",
     }
     for name, identifier in expected_ids.items():
         diagnostic = record(diagnostics.get(name), f"diagnostic {name}")
@@ -326,9 +373,36 @@ def validate_plans(plans: dict[str, object]) -> None:
     cycle = record(diagnostics.get("cycle"), "cycle diagnostic")
     if cycle.get("featureIds") != ["cycle-a", "cycle-b", "cycle-a"]:
         raise RuntimeFeatureFailure("cycle path is not canonical")
+    none_policy = record(diagnostics.get("nonePolicy"), "runtime-none diagnostic")
+    blockers = [
+        record(value, f"runtime-none blocker[{index}]")
+        for index, value in enumerate(records(none_policy.get("blockers"), "runtime-none blockers"))
+    ]
+    if [blocker.get("id") for blocker in blockers] != ["fixture.none.a", "fixture.none.z"]:
+        raise RuntimeFeatureFailure("runtime-none blockers are incomplete or not sorted by stable root ID")
+    if blockers[0].get("dependencyChains") != [
+        ["string", "alloc", "status", "runtime-base"],
+        ["string", "string-literal", "runtime-base"],
+    ] or blockers[1].get("dependencyChains") != [["alloc", "status", "runtime-base"]]:
+        raise RuntimeFeatureFailure("runtime-none blockers lost dependency-chain provenance")
+    for blocker in blockers:
+        source = record(blocker.get("source"), "runtime-none blocker source")
+        if (
+            blocker.get("operationId") != "fixture-runtime-operation"
+            or blocker.get("kind") != "fixture-semantic-gap"
+            or blocker.get("surface") != "fixture.RuntimeFeatureGraph"
+            or not blocker.get("alternative")
+            or not isinstance(source.get("file"), str)
+            or "\\" in str(source.get("file"))
+        ):
+            raise RuntimeFeatureFailure("runtime-none blocker lost typed source or semantic provenance")
+    for name in expected_ids:
+        diagnostic = record(diagnostics.get(name), f"diagnostic {name}")
+        if name != "nonePolicy" and diagnostic.get("blockers") != []:
+            raise RuntimeFeatureFailure(f"non-aggregate diagnostic {name} unexpectedly contains blockers")
 
     serialized = json.dumps(plans, sort_keys=True, ensure_ascii=False)
-    if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
+    if str(ROOT) in serialized or "/Users/" in serialized:
         raise RuntimeFeatureFailure("runtime feature plans leaked a host path")
 
 
@@ -440,8 +514,8 @@ def selected_artifacts_from_snapshot(
         else None
     )
     if (
-        plan.get("schemaVersion") != 1
-        or plan.get("algorithm") != "hxc-runtime-plan-v1"
+        plan.get("schemaVersion") != 2
+        or plan.get("algorithm") != "hxc-runtime-plan-v2"
         or plan.get("status") != expected_status
         or plan.get("noRuntimeProof") is not None
     ):

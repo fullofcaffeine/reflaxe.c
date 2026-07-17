@@ -9,11 +9,39 @@
     "environment": "hosted",
     "dependencyEdges": [],
     "manualOverrides": [],
-    "noRuntimeProof": "reachable fixture semantics use only direct C and program-local specialization",
+    "noRuntimeProof": {
+      "directDecisions": [
+        "primitive-values",
+        "program-local-specialization-considered"
+      ],
+      "reachability": {
+        "typeInstances": 0,
+        "functions": 1,
+        "blocks": 1,
+        "modules": 1,
+        "runtimeIntents": 0,
+        "instructions": 1,
+        "cleanupActions": 0
+      },
+      "programLocalHelpers": [],
+      "semanticProof": "reachable fixture semantics use only direct C and program-local specialization",
+      "scope": "reachable-whole-program",
+      "status": "eligible",
+      "schemaVersion": 1,
+      "runtimeAbsence": {
+        "sources": [],
+        "features": [],
+        "symbols": [],
+        "libraries": [],
+        "includes": [],
+        "defines": []
+      },
+      "algorithm": "hxc-no-runtime-eligibility-v1"
+    },
     "features": [],
     "artifactDetails": [],
     "status": "analyzed-runtime-free",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "profile-preset:portable",
     "symbols": [],
     "diagnosticMode": "summary",
@@ -24,7 +52,7 @@
     "requestedPolicy": "auto",
     "defines": [],
     "planPurpose": "compiler-program",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "profile-preset:portable"
   },
   "syntheticLink": {
@@ -62,7 +90,7 @@
     ],
     "artifactDetails": [],
     "status": "analyzed-native-seed-features",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "fixture:off",
     "symbols": [
       "hxc_fixture_link"
@@ -78,16 +106,17 @@
         "featureId": "fixture-link",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.link",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 187,
+            "line": 213,
             "column": 2
           },
           "start": {
-            "line": 187,
+            "line": 213,
             "column": 1
           }
         }
@@ -98,11 +127,12 @@
       "HXC_FIXTURE_LINK=1"
     ],
     "planPurpose": "native-seed-fixture",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "fixture:auto"
   },
   "diagnostics": {
     "forbidRequired": {
+      "blockers": [],
       "featureIds": [
         "alloc"
       ],
@@ -110,18 +140,27 @@
       "message": "manual override forbids runtime feature `alloc` required by reachable semantics"
     },
     "invalidId": {
+      "blockers": [],
       "featureIds": [],
       "id": "HXC9000",
       "message": "runtime feature ID must be lowercase kebab-case: `bad_id`"
     },
     "environment": {
+      "blockers": [],
       "featureIds": [
         "alloc"
       ],
       "id": "HXC2000",
       "message": "runtime feature `alloc` is unavailable in environment `wasi`"
     },
+    "missingNoRuntimeProof": {
+      "blockers": [],
+      "featureIds": [],
+      "id": "HXC9000",
+      "message": "an empty runtime request requires a positive compiler-owned no-runtime proof"
+    },
     "cycle": {
+      "blockers": [],
       "featureIds": [
         "cycle-a",
         "cycle-b",
@@ -131,6 +170,7 @@
       "message": "runtime feature dependency cycle: cycle-a -> cycle-b -> cycle-a"
     },
     "unknownDependency": {
+      "blockers": [],
       "featureIds": [
         "known-feature",
         "missing-feature"
@@ -139,6 +179,7 @@
       "message": "runtime feature `known-feature` depends on unavailable `missing-feature`"
     },
     "tamperedPackage": {
+      "blockers": [],
       "featureIds": [
         "alloc"
       ],
@@ -146,6 +187,7 @@
       "message": "runtime package artifact `runtime/hxrt/include/hxrt/string.h` -> `runtime/include/hxrt/allocator.h` is not the registered selection at index 0"
     },
     "minimalPolicy": {
+      "blockers": [],
       "featureIds": [
         "fixture-broad"
       ],
@@ -153,6 +195,7 @@
       "message": "runtime feature `fixture-broad` is outside the minimal allowlist"
     },
     "reservedFeature": {
+      "blockers": [],
       "featureIds": [
         "reflection"
       ],
@@ -160,25 +203,103 @@
       "message": "runtime feature `reflection` is reserved for E4.T08 and is not implemented"
     },
     "compilerNativeSeed": {
+      "blockers": [],
       "featureIds": [
         "fixture-native-seed"
       ],
       "id": "HXC2000",
       "message": "runtime feature `fixture-native-seed` is native-seed evidence and cannot be selected by generated Haxe"
     },
+    "survivingRuntimeIntentProof": {
+      "blockers": [],
+      "featureIds": [],
+      "id": "HXC9000",
+      "message": "no-runtime eligibility proof has invalid reachable-program counts or a surviving runtime intent"
+    },
     "unusedManualRequire": {
+      "blockers": [],
       "featureIds": [
         "string"
       ],
       "id": "HXC2000",
       "message": "manual override cannot force unused runtime feature `string`; no semantic root selected it"
     },
+    "tamperedNoRuntimeProof": {
+      "blockers": [],
+      "featureIds": [],
+      "id": "HXC9000",
+      "message": "an eligible no-runtime proof contains an hxrt feature, include, source, define, library, or symbol"
+    },
     "nonePolicy": {
+      "blockers": [
+        {
+          "featureId": "string",
+          "alternative": "use a direct fixture representation when it preserves semantics",
+          "id": "fixture.none.a",
+          "operationId": "fixture-runtime-operation",
+          "dependencyChains": [
+            [
+              "string",
+              "alloc",
+              "status",
+              "runtime-base"
+            ],
+            [
+              "string",
+              "string-literal",
+              "runtime-base"
+            ]
+          ],
+          "kind": "fixture-semantic-gap",
+          "surface": "fixture.RuntimeFeatureGraph",
+          "source": {
+            "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+            "end": {
+              "line": 226,
+              "column": 2
+            },
+            "start": {
+              "line": 226,
+              "column": 1
+            }
+          }
+        },
+        {
+          "featureId": "alloc",
+          "alternative": "use a direct fixture representation when it preserves semantics",
+          "id": "fixture.none.z",
+          "operationId": "fixture-runtime-operation",
+          "dependencyChains": [
+            [
+              "alloc",
+              "status",
+              "runtime-base"
+            ]
+          ],
+          "kind": "fixture-semantic-gap",
+          "surface": "fixture.RuntimeFeatureGraph",
+          "source": {
+            "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
+            "end": {
+              "line": 226,
+              "column": 2
+            },
+            "start": {
+              "line": 226,
+              "column": 1
+            }
+          }
+        }
+      ],
       "featureIds": [
-        "alloc"
+        "alloc",
+        "runtime-base",
+        "status",
+        "string",
+        "string-literal"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` forbids root feature `alloc`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:226:1-226:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:226:1-226:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -331,7 +452,7 @@
       }
     ],
     "status": "analyzed-runtime-features",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "profile-preset:portable",
     "symbols": [
       "hxc_io_println"
@@ -351,16 +472,17 @@
         "featureId": "io",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.compiler-io",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 158,
+            "line": 184,
             "column": 2
           },
           "start": {
-            "line": 158,
+            "line": 184,
             "column": 1
           }
         }
@@ -369,7 +491,7 @@
     "requestedPolicy": "auto",
     "defines": [],
     "planPurpose": "compiler-program",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "profile-preset:portable"
   },
   "minimalString": {
@@ -601,7 +723,7 @@
       }
     ],
     "status": "analyzed-native-seed-features",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
@@ -657,16 +779,17 @@
         "featureId": "string",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.minimal-string",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 72,
+            "line": 77,
             "column": 2
           },
           "start": {
-            "line": 72,
+            "line": 77,
             "column": 1
           }
         }
@@ -675,7 +798,7 @@
     "requestedPolicy": "minimal",
     "defines": [],
     "planPurpose": "native-seed-fixture",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "fixture:explicit-policy"
   },
   "alloc": {
@@ -801,7 +924,7 @@
       }
     ],
     "status": "analyzed-native-seed-features",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
@@ -832,16 +955,17 @@
         "featureId": "alloc",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.alloc",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 62,
+            "line": 67,
             "column": 2
           },
           "start": {
-            "line": 62,
+            "line": 67,
             "column": 1
           }
         }
@@ -850,7 +974,7 @@
     "requestedPolicy": "auto",
     "defines": [],
     "planPurpose": "native-seed-fixture",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "fixture:explicit-policy"
   },
   "string": {
@@ -1081,7 +1205,7 @@
       }
     ],
     "status": "analyzed-native-seed-features",
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "diagnosticProvenance": "fixture:diagnostics-off",
     "symbols": [
       "hxc_alloc",
@@ -1137,16 +1261,17 @@
         "featureId": "alloc",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.owner-allocation",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 64,
+            "line": 69,
             "column": 2
           },
           "start": {
-            "line": 64,
+            "line": 69,
             "column": 1
           }
         }
@@ -1155,16 +1280,17 @@
         "featureId": "string",
         "alternative": "use a direct fixture representation when it preserves semantics",
         "id": "fixture.string",
+        "operationId": "fixture-runtime-operation",
         "kind": "fixture-semantic-gap",
         "surface": "fixture.RuntimeFeatureGraph",
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 63,
+            "line": 68,
             "column": 2
           },
           "start": {
-            "line": 63,
+            "line": 68,
             "column": 1
           }
         }
@@ -1173,7 +1299,7 @@
     "requestedPolicy": "auto",
     "defines": [],
     "planPurpose": "native-seed-fixture",
-    "algorithm": "hxc-runtime-plan-v1",
+    "algorithm": "hxc-runtime-plan-v2",
     "policyProvenance": "fixture:explicit-policy"
   }
 }

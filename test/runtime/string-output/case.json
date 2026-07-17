@@ -7,7 +7,9 @@
   "requirements": [
     "HXC-PROD-002",
     "HXC-SEM-006",
-    "HXC-EX-001"
+    "HXC-EX-001",
+    "HXC-RT-002",
+    "HXC-RT-003"
   ],
   "sources": [
     "runtime/hxrt/include/hxrt/io.h",

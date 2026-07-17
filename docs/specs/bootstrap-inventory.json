@@ -692,23 +692,28 @@
       "area": "runtime",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A typed deterministic feature graph resolves source-rooted closure and packages only selected compiler-admitted runtime slices.",
-      "scope": "Runtime-free primitive programs retain empty plans, while literal hosted output selects exactly runtime-base/status/string-literal/io; canonical native fixtures independently exercise alloc, full-string, and literal-I/O packages.",
+      "summary": "A typed deterministic feature graph resolves reachable source-rooted closure, proves no-runtime eligibility, and packages only selected compiler-admitted runtime slices.",
+      "scope": "Schema-2 plans give runtime-free primitive/span programs a structured whole-program proof; runtime-none failures retain every sorted blocker and dependency chain; literal hosted output selects exactly runtime-base/status/string-literal/io.",
       "evidence": [
         "docs/adr/0001-direct-c-and-selective-runtime.md",
         "docs/runtime-feature-planning.md",
         "runtime/hxrt/features.json",
+        "src/reflaxe/c/runtime/RuntimeNoRuntimeEligibilityAnalyzer.hx",
+        "src/reflaxe/c/runtime/RuntimeRequirementAnalyzer.hx",
         "src/reflaxe/c/runtime/RuntimeFeaturePlanner.hx",
+        "test/primitive_differential/run.py",
         "test/runtime/runtime-feature-graph/run.py",
+        "test/span_lowering/run.py",
         "test/string_output/expected/runtime-plan.json",
         "test/string_output/run.py"
       ],
       "owners": [
         "E2.T07",
-        "E4.T01"
+        "E4.T01",
+        "E4.T10"
       ],
       "limitations": [
-        "Only the bounded literal-output edge currently selects hxrt; unrelated runtime-requiring Haxe semantics still fail closed.",
+        "Only the bounded literal-output edge currently selects hxrt; unsupported neighboring Haxe semantics still fail during lowering rather than being guessed as runtime blockers.",
         "The catalog and plan formats are internal planning contracts, not a stable public runtime ABI."
       ]
     },

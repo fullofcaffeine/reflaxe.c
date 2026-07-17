@@ -120,12 +120,14 @@ class CLoweredBodyGlobal {
 
 /** One source-rooted hosted-output requirement retained for planning/diagnostics. */
 class CBodyRuntimeRequirement {
+	public final featureId:String;
 	public final operationId:String;
 	public final surface:String;
 	public final source:HxcSourceSpan;
 	public final position:Position;
 
-	public function new(operationId:String, surface:String, source:HxcSourceSpan, position:Position) {
+	public function new(featureId:String, operationId:String, surface:String, source:HxcSourceSpan, position:Position) {
+		this.featureId = featureId;
 		this.operationId = operationId;
 		this.surface = surface;
 		this.source = source;
@@ -389,8 +391,8 @@ class CBodyLowering {
 	}
 
 	static function compareRuntimeRequirements(left:CBodyRuntimeRequirement, right:CBodyRuntimeRequirement):Int {
-		final semantic = compareUtf8('${left.operationId}\x00${left.surface}\x00${left.source.display()}',
-			'${right.operationId}\x00${right.surface}\x00${right.source.display()}');
+		final semantic = compareUtf8('${left.featureId}\x00${left.operationId}\x00${left.surface}\x00${left.source.display()}',
+			'${right.featureId}\x00${right.operationId}\x00${right.surface}\x00${right.source.display()}');
 		return semantic;
 	}
 
@@ -2199,7 +2201,7 @@ private class FunctionBuilder {
 				cleanup: []
 			}
 		}), source, "hosted-output");
-		runtimeRequirements.push(new CBodyRuntimeRequirement(operationId, surface, source, expression.pos));
+		runtimeRequirements.push(new CBodyRuntimeRequirement("io", operationId, surface, source, expression.pos));
 		return null;
 	}
 

@@ -276,17 +276,22 @@ suite executes in-range behavior at O0/O2, executes both negative and upper
 out-of-range fail-stop paths in the six-way configuration matrix, rejects
 general/empty arrays and lookalike intrinsic names without output, validates the
 profile-aware `hxc_build` diagnostic, and inspects runtime-none links for zero
-`hxrt` symbols. See [fixed arrays and span-based iteration](span-lowering.md).
+`hxrt` symbols. Its source also contains an unreachable String-typed function;
+the schema-2 plan proves that merely seeing that declaration adds no runtime
+intent, helper, artifact, or symbol. See
+[fixed arrays and span-based iteration](span-lowering.md).
 
 `test/runtime/runtime-feature-graph` is the focused
-positive/negative/AST/snapshot/runtime suite for E4.T01. It renders the typed
+positive/negative/AST/snapshot/runtime suite for E4.T01/E4.T10. It renders the typed
 catalog and plans twice, reverses definition/reservation/reason input, and
 checks canonical cycle and unknown-dependency failures. Every selected root,
 transitive feature, and dependency edge must retain a source-reason ID. Policy
 fixtures cover `auto|minimal|none`, portable and metal presets, manual
 confirmation/forbid rules, environments, reserved features, and rejection of
-native-only features from generated-Haxe planning. The packager performs zero
-reads for an empty plan and materializes exact alloc-only, full-string, and
+native-only features from generated-Haxe planning. Runtime-none fixtures retain
+all sorted blockers and root-to-leaf dependency chains, while missing,
+runtime-intent-bearing, or tampered positive proofs fail with `HXC9000` before
+an artifact read. The packager performs zero reads for an empty plan and materializes exact alloc-only, full-string, and
 compiler-selected literal-I/O closures; the full focused gate proves those files
 came from two byte-identical Haxe renders. Strict GCC and Clang jobs separately rebuild all closures from the
 validated checked-in catalog and plan, without needing Haxe in the native-only

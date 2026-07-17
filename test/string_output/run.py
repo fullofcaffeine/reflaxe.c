@@ -181,8 +181,8 @@ def text_list(value: object, label: str) -> list[str]:
 
 def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str) -> None:
     if (
-        plan.get("schemaVersion") != 1
-        or plan.get("algorithm") != "hxc-runtime-plan-v1"
+        plan.get("schemaVersion") != 2
+        or plan.get("algorithm") != "hxc-runtime-plan-v2"
         or plan.get("status") != "analyzed-runtime-features"
         or plan.get("planPurpose") != "compiler-program"
         or plan.get("profile") != profile
@@ -198,7 +198,13 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
     reasons = plan.get("rootReasons")
     if not isinstance(reasons, list) or len(reasons) != 4:
         raise StringOutputFailure("literal output must retain four deduplicated root reasons")
-    expected_ids = [f"io.output.{index}" for index in range(4)]
+    expected_ids = [
+        "runtime.io.sys-println-literal.0",
+        "runtime.io.sys-println-literal.1",
+        "runtime.io.sys-println-literal.2",
+        "runtime.io.trace-literal.3",
+    ]
+    expected_operations = ["sys-println-literal"] * 3 + ["trace-literal"]
     actual_ids: list[str] = []
     for index, value in enumerate(reasons):
         if not isinstance(value, dict):
@@ -206,7 +212,11 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
         source = value.get("source")
         if not isinstance(source, dict) or source.get("file") != "Main.hx":
             raise StringOutputFailure("runtime root reason lost its stable logical source")
-        if value.get("featureId") != "io" or value.get("kind") != "hosted-output":
+        if (
+            value.get("featureId") != "io"
+            or value.get("kind") != "hosted-output"
+            or value.get("operationId") != expected_operations[index]
+        ):
             raise StringOutputFailure("runtime root reason lost its typed output provenance")
         identifier = value.get("id")
         if not isinstance(identifier, str):
@@ -392,7 +402,29 @@ def validate_fail_closed(root: Path) -> None:
             raise StringOutputFailure(f"negative literal-output case {name} left plausible generated output")
     none_output = root / "runtime-none"
     none = compile_target(POSITIVE, none_output, runtime="none", diagnostics="off")
-    if none.returncode == 0 or "HXC2000:" not in none.stderr or "forbids root feature `io`" not in none.stderr:
+    blocker_ids = [
+        "runtime.io.sys-println-literal.0",
+        "runtime.io.sys-println-literal.1",
+        "runtime.io.sys-println-literal.2",
+        "runtime.io.trace-literal.3",
+    ]
+    blocker_positions = [none.stderr.find(identifier) for identifier in blocker_ids]
+    expected_sources = ["Main.hx:3:3-3:23", "Main.hx:4:3-4:20", "Main.hx:5:3-5:33", "Main.hx:6:3-6:8"]
+    if (
+        none.returncode == 0
+        or "HXC2000:" not in none.stderr
+        or "found 4 deduplicated runtime blocker(s)" not in none.stderr
+        or any(position < 0 for position in blocker_positions)
+        or blocker_positions != sorted(blocker_positions)
+        or any(source not in none.stderr for source in expected_sources)
+        or none.stderr.count("kind=hosted-output") != 4
+        or none.stderr.count("surface=`Sys.println(String literal)`") != 3
+        or none.stderr.count("surface=`trace(String literal)`") != 1
+        or none.stderr.count(
+            "dependency-chains=[io -> status -> runtime-base; io -> string-literal -> runtime-base]"
+        )
+        != 4
+    ):
         raise StringOutputFailure(f"runtime-none output policy did not fail closed: {none.stderr!r}")
     if plausible_output_exists(none_output):
         raise StringOutputFailure("runtime-none failure left plausible generated output")

@@ -14,11 +14,61 @@
   "environment": "hosted",
   "dependencyEdges": [],
   "manualOverrides": [],
-  "noRuntimeProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls",
+  "noRuntimeProof": {
+    "directDecisions": [
+      "direct-calls",
+      "executable-entry-point",
+      "explicit-evaluation-order",
+      "primitive-static-storage",
+      "primitive-values",
+      "selected-program-local-helpers",
+      "static-functions",
+      "ub-safe-primitive-operations"
+    ],
+    "reachability": {
+      "typeInstances": 0,
+      "functions": 30,
+      "blocks": 38,
+      "modules": 1,
+      "runtimeIntents": 0,
+      "instructions": 527,
+      "cleanupActions": 0
+    },
+    "programLocalHelpers": [
+      "hxc.f64.divide.zero-safe",
+      "hxc.f64.modulo",
+      "hxc.f64.to.i32.saturating",
+      "hxc.i32.add.wrapping",
+      "hxc.i32.bit-and",
+      "hxc.i32.bit-not",
+      "hxc.i32.bit-or",
+      "hxc.i32.bit-xor",
+      "hxc.i32.modulo.zero-safe",
+      "hxc.i32.multiply.wrapping",
+      "hxc.i32.shift-left.masked",
+      "hxc.i32.shift-right.masked",
+      "hxc.i32.subtract.wrapping",
+      "hxc.i32.unsigned-shift-right.masked",
+      "hxc.u32.to.i32.bits"
+    ],
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls",
+    "scope": "reachable-whole-program",
+    "status": "eligible",
+    "schemaVersion": 1,
+    "runtimeAbsence": {
+      "sources": [],
+      "features": [],
+      "symbols": [],
+      "libraries": [],
+      "includes": [],
+      "defines": []
+    },
+    "algorithm": "hxc-no-runtime-eligibility-v1"
+  },
   "features": [],
   "artifactDetails": [],
   "status": "analyzed-runtime-free",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "diagnosticProvenance": "profile-preset:portable",
   "symbols": [],
   "diagnosticMode": "summary",
@@ -29,6 +79,6 @@
   "requestedPolicy": "auto",
   "defines": [],
   "planPurpose": "compiler-program",
-  "algorithm": "hxc-runtime-plan-v1",
+  "algorithm": "hxc-runtime-plan-v2",
   "policyProvenance": "profile-preset:portable"
 }

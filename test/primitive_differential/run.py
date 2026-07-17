@@ -553,21 +553,47 @@ def validate_production(output: Path) -> dict[str, object]:
     if missing:
         raise PrimitiveDifferentialFailure(f"production output omitted {missing!r}")
     runtime_plan = json.loads((output / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    proof = runtime_plan.get("noRuntimeProof") if isinstance(runtime_plan, dict) else None
+    reachability = proof.get("reachability") if isinstance(proof, dict) else None
+    runtime_absence = proof.get("runtimeAbsence") if isinstance(proof, dict) else None
     if (
         not isinstance(runtime_plan, dict)
+        or runtime_plan.get("schemaVersion") != 2
+        or runtime_plan.get("algorithm") != "hxc-runtime-plan-v2"
         or runtime_plan.get("status") != "analyzed-runtime-free"
         or runtime_plan.get("features") != []
-        or not runtime_plan.get("noRuntimeProof")
+        or not isinstance(proof, dict)
+        or proof.get("algorithm") != "hxc-no-runtime-eligibility-v1"
+        or proof.get("status") != "eligible"
+        or proof.get("scope") != "reachable-whole-program"
+        or proof.get("directDecisions") != runtime_plan.get("directDecisions")
+        or not proof.get("programLocalHelpers")
+        or not isinstance(reachability, dict)
+        or reachability.get("runtimeIntents") != 0
+        or runtime_absence
+        != {
+            "features": [],
+            "includes": [],
+            "sources": [],
+            "defines": [],
+            "libraries": [],
+            "symbols": [],
+        }
         or "ub-safe-primitive-operations" not in runtime_plan.get("directDecisions", [])
         or "selected-program-local-helpers" not in runtime_plan.get("directDecisions", [])
     ):
         raise PrimitiveDifferentialFailure("generated corpus lost its zero-runtime proof")
     manifest = json.loads((output / "hxc.manifest.json").read_text(encoding="utf-8"))
-    libraries = manifest.get("build", {}).get("libraries") if isinstance(manifest, dict) else None
+    build = manifest.get("build", {}) if isinstance(manifest, dict) else {}
+    libraries = build.get("libraries") if isinstance(build, dict) else None
     if libraries != [{"name": "m", "ownerModulePaths": ["PrimitiveDifferentialFixture"]}]:
         raise PrimitiveDifferentialFailure("generated corpus lost its exact math link fact")
+    if not isinstance(build, dict) or build.get("runtimeHeaders") != [] or build.get("includeDirectories") != ["include"]:
+        raise PrimitiveDifferentialFailure("generated corpus retained an hxrt build input")
     tree = generated_tree(output)
-    joined = b"\n".join(tree.values())
+    if any(path.startswith("runtime/") for path in tree):
+        raise PrimitiveDifferentialFailure("primitive differential corpus emitted an hxrt file")
+    joined = b"\n".join(contents for path, contents in tree.items() if path.endswith((".c", ".h")))
     if b"hxrt" in joined.lower():
         raise PrimitiveDifferentialFailure("primitive differential corpus selected hxrt")
     for unstable in (str(ROOT).encode(), str(output).encode()):

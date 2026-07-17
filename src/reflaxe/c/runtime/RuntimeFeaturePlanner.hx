@@ -15,6 +15,7 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverride;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverrideAction;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanStatus;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeEvidence;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeOverrideRecord;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
@@ -30,8 +31,8 @@ private typedef MutableDependencyEdge = {
 
 /** Resolves source-rooted requests into one policy-checked exact feature closure. */
 class RuntimeFeaturePlanner {
-	public static inline final PLAN_ALGORITHM = "hxc-runtime-plan-v1";
-	public static inline final PLAN_SCHEMA_VERSION = 1;
+	public static inline final PLAN_ALGORITHM = "hxc-runtime-plan-v2";
+	public static inline final PLAN_SCHEMA_VERSION = 2;
 
 	final registry:RuntimeFeatureRegistry;
 
@@ -43,15 +44,15 @@ class RuntimeFeaturePlanner {
 		validateRequest(request);
 		final reasons = canonicalReasons(request.rootReasons);
 		if (reasons.length == 0) {
-			if (request.noRuntimeProof == null || StringTools.trim(request.noRuntimeProof) == "") {
+			if (request.noRuntimeEvidence == null) {
 				internal("an empty runtime request requires a positive compiler-owned no-runtime proof");
 			}
 		} else {
-			if (request.noRuntimeProof != null) {
+			if (request.noRuntimeEvidence != null) {
 				internal("a runtime-using request cannot also carry a no-runtime proof");
 			}
 			if (request.runtimePolicy == CRuntimePolicy.None) {
-				policyViolation('runtime policy `none` forbids root feature `${reasons[0].featureId}`', [reasons[0].featureId.text()]);
+				throw new RuntimeNoRuntimeEligibilityAnalyzer(registry).policyFailure(reasons);
 			}
 		}
 
@@ -118,6 +119,10 @@ class RuntimeFeaturePlanner {
 		defines.sort(RuntimeFeatureRegistry.compareUtf8);
 		final artifacts = artifactDetails.map(artifact -> artifact.outputPath);
 		final directDecisions = sortedUnique(request.directDecisions);
+		final noRuntimeProof = switch request.noRuntimeEvidence {
+			case null: null;
+			case evidence: new RuntimeNoRuntimeEligibilityAnalyzer(registry).prove(request.purpose, evidence, directDecisions);
+		};
 		return {
 			schemaVersion: PLAN_SCHEMA_VERSION,
 			algorithm: PLAN_ALGORITHM,
@@ -141,7 +146,7 @@ class RuntimeFeaturePlanner {
 			symbols: symbols,
 			libraries: libraries,
 			defines: defines,
-			noRuntimeProof: orderedFeatures.length == 0 ? request.noRuntimeProof : null
+			noRuntimeProof: orderedFeatures.length == 0 ? noRuntimeProof : null
 		};
 	}
 
@@ -240,6 +245,7 @@ class RuntimeFeaturePlanner {
 				internal('runtime reason ID `${reason.id}` is duplicated');
 			}
 			previous = reason.id;
+			validateStableId(reason.operationId, 'runtime reason `${reason.id}` operation');
 			validateText(reason.kind, 'runtime reason `${reason.id}` kind');
 			validateText(reason.surface, 'runtime reason `${reason.id}` typed surface');
 			if (reason.alternative != null) {
@@ -330,6 +336,9 @@ class RuntimeFeaturePlanner {
 		for (decision in request.directDecisions) {
 			validateText(decision, "direct runtime-planning decision");
 		}
+		if (request.noRuntimeEvidence != null) {
+			validateNoRuntimeEvidence(request.noRuntimeEvidence, request.purpose);
+		}
 	}
 
 	function requireDefinition(featureId:String):RuntimeFeatureDefinition {
@@ -344,6 +353,7 @@ class RuntimeFeaturePlanner {
 		return {
 			id: reason.id,
 			featureId: reason.featureId.text(),
+			operationId: reason.operationId,
 			kind: reason.kind,
 			surface: reason.surface,
 			source: {
@@ -420,6 +430,31 @@ class RuntimeFeaturePlanner {
 	static function validateText(value:String, label:String):Void {
 		if (StringTools.trim(value) == "" || value.indexOf("\x00") != -1 || value.indexOf("\r") != -1 || value.indexOf("\n") != -1) {
 			internal('$label must be non-empty single-line text');
+		}
+	}
+
+	static function validateStableId(value:String, label:String):Void {
+		if (!~/^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/.match(value)) {
+			internal('$label must be stable lowercase dotted or kebab text: `$value`');
+		}
+	}
+
+	static function validateNoRuntimeEvidence(evidence:RuntimeNoRuntimeEvidence, purpose:RuntimePlanningPurpose):Void {
+		validateText(evidence.semanticProof, "no-runtime semantic proof");
+		switch [purpose, evidence.scope] {
+			case [
+				RuntimePlanningPurpose.CompilerProgram,
+				reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeScope.ReachableWholeProgram
+			]:
+			case [
+				RuntimePlanningPurpose.NativeSeedFixture,
+				reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeScope.NativeSeedFixture
+			]:
+			case _:
+				internal('no-runtime evidence scope `${evidence.scope}` does not match planning purpose `${purpose}`');
+		}
+		for (helperId in evidence.programLocalHelpers) {
+			validateStableId(helperId, "program-local helper ID");
 		}
 	}
 

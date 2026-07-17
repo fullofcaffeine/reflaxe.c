@@ -6,12 +6,14 @@ direct idiomatic C first, then use a program-local specialization, and request
 the narrowest dependency-closed `hxrt` slice only when neither compiler-owned
 option is feasible. There is no unconditional `core` feature.
 
-This is a bounded M0 capability. The graph, policy checks, reason propagation,
-and exact packager are implemented. Primitive-only generated programs remain
-runtime-free. E2.T07 additionally admits compiler-known String literals passed
-to hosted `Sys.println` or default `trace`; that edge selects only the literal
-carrier and minimal output closure. The allocator and full string-operation
-implementations remain `native-seed-only`. E2.T10 composes exactly that edge in
+This is a bounded M0 capability. The graph, reachability-based requirement
+analysis, policy checks, no-runtime eligibility proof, reason propagation, and
+exact packager are implemented for the admitted generated-program slice.
+Primitive and fixed-array/span programs remain runtime-free. E2.T07
+additionally admits compiler-known String literals passed to hosted
+`Sys.println` or default `trace`; that edge selects only the literal carrier and
+minimal output closure. The allocator and full string-operation implementations
+remain `native-seed-only`. E2.T10 composes exactly that edge in
 `examples/hello`; its plan propagates the one `Main.hx` reason through every
 selected transitive feature and adds no broader slice.
 
@@ -51,9 +53,10 @@ dynamic values, reflection, exceptions, threads, platform services, and other pl
 features. Reservations fail closed and name the task that must implement them;
 they are not empty features and cannot be selected.
 
-The catalog and plan formats are internal schema-1 inspection contracts. Their
-stabilization, compatibility rules, and public versioning remain owned by
-E4.T11.
+The catalog remains an internal schema-1 inspection contract. The runtime plan
+is now internal schema 2 (`hxc-runtime-plan-v2`), with a nested schema-1
+`hxc-no-runtime-eligibility-v1` proof for empty plans. Stabilization,
+compatibility rules, and public versioning remain owned by E4.T11.
 
 ## Source reasons and closure
 
@@ -61,32 +64,45 @@ A semantic analyzer requests a feature with a `RuntimeRequirementReason` that
 contains:
 
 - a stable reason ID and feature ID;
+- the exact reachable runtime operation ID;
 - the semantic reason kind and consumed typed surface;
 - a normalized repository-relative Haxe source span;
 - an optional typed alternative that can avoid the fallback without changing
   semantics.
 
-`RuntimeFeaturePlanner` retains those roots separately from dependency edges.
+`RuntimeRequirementAnalyzer` first walks the complete reachable, validated
+HxcIR. It recognizes explicit runtime calls, runtime implementations on
+operations/allocation/lifetime work, runtime-managed representations, and
+runtime cleanup actions. Every observed intent must match exactly one typed
+source candidate, and every candidate must match reachable IR. Identical source
+roots are deduplicated before stable reason IDs are assigned. A type or import
+that was merely seen in typed input cannot select a helper because it creates no
+reachable HxcIR runtime intent.
+
+`RuntimeFeaturePlanner` retains the reconciled roots separately from dependency edges.
 Every selected root and every transitive feature inherits at least one root
 reason ID, so a dependency can never appear as unexplained runtime work. The
 resolved plan records dependency-first feature order plus exact artifacts,
 symbols, libraries, and defines. Input root order does not affect the result.
 
 An empty request is accepted only with a positive compiler-owned no-runtime
-proof. The admitted primitive compiler path uses this same planner after direct
+proof. The admitted compiler path uses this same planner after direct
 representations, request-local helpers, and static initialization have been
-decided. Its plan therefore contains no `hxrt` include, source, define, library,
-or symbol.
+decided. The structured proof records reachable module/type-instance/function/
+block/instruction/cleanup counts, zero runtime intents, the exact direct
+decisions and program-local helper IDs, and empty feature/include/source/define/
+library/symbol sets. Project emission and packaging validate the proof again
+before accepting or reading an artifact.
 
 Literal output is a nonempty request rooted at each admitted source call. It
 selects `runtime-base`, `status`, `string-literal`, and `io` in dependency order,
 packages one C source, and exposes only `hxc_io_println`. The exact plan records
 the direct UTF-8 literal decision before this hosted side-effect fallback.
 
-Runtime-requirement inference and the complete blocker-producing no-runtime
-eligibility analysis remain later compiler passes. This planner validates and
-resolves their typed inputs; it does not infer requirements from a type name,
-an allocation instruction, `Dynamic`, or an unsupported AST node.
+Unsupported source still fails during lowering rather than being mislabeled as a
+runtime blocker. As later semantic lowerings admit new runtime intent, they must
+add the matching typed candidate; an unexplained intent is `HXC9000`, never a
+silent feature selection or a guessed fallback.
 
 ## Policy and manual constraints
 
@@ -97,6 +113,9 @@ diagnostic mode without changing their recorded provenance:
 - `minimal` additionally rejects a definition outside the versioned narrow
   allowlist;
 - `none` rejects every semantic root and requires the positive empty-plan proof.
+  One deterministic `HXC2000` lists every deduplicated blocker by stable reason
+  ID, operation, kind, consumed surface, normalized source span, all root-to-leaf
+  dependency chains, and a semantics-preserving alternative when one exists.
 
 Manual feature controls are constraints over compiler-inferred semantics, not
 a way to smuggle code into the build. `require` may confirm only a feature
@@ -116,7 +135,7 @@ from becoming a generated-Haxe support claim.
 | Axis | Current effect |
 | --- | --- |
 | Portable/metal | One planner serves both. Portable defaults to `auto + summary`; metal defaults to `minimal + warn`; explicit valid combinations remain available. |
-| Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. |
+| Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. `none` either records the structured whole-program proof or reports every blocker before output/native linking. |
 | Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
 | Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership. |
 | Public ABI | The literal carrier and output symbol are private provisional runtime facts. The internal marker advances to 0.4.0, but E4.T11 still owns runtime ABI/manifest stabilization and E7 owns exported APIs. |
@@ -169,14 +188,16 @@ Run the focused evidence with:
 ```sh
 npm run test:runtime-features
 npm run test:string-output
+npm run test:primitive-differential
+npm run test:span-lowering
 npm run test:hello
 npm run snapshots:check
 npm run test:native
 ```
 
-This evidence proves deterministic planning, selective packaging, the one
-generated-Haxe literal-output selection, and its bounded hello product
-composition. The separate E4.T02/E4.T03 fixtures
+This evidence proves deterministic reachability reconciliation and no-runtime
+eligibility, selective packaging, the one generated-Haxe literal-output
+selection, and its bounded hello product composition. The separate E4.T02/E4.T03 fixtures
 prove their bounded native allocator and string contracts. None of this proves
 broad `String` lowering, general I/O, object graphs, exceptions, reflection,
 broad standard-library support, or a stable runtime ABI.

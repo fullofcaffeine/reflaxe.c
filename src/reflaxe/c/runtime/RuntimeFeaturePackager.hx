@@ -59,13 +59,16 @@ class RuntimeFeaturePackager {
 				'cannot package runtime plan schema `${plan.schemaVersion}` algorithm `${plan.algorithm}`');
 		}
 		if (plan.features.length == 0) {
-			if (plan.status != RuntimeFeaturePlanStatus.RuntimeFree
-				|| plan.noRuntimeProof == null
-				|| StringTools.trim(plan.noRuntimeProof) == ""
-				|| plan.artifactDetails.length != 0
-				|| plan.artifacts.length != 0) {
+			if (plan.status != RuntimeFeaturePlanStatus.RuntimeFree || plan.artifactDetails.length != 0 || plan.artifacts.length != 0) {
 				throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
 					"runtime-free package plan has inconsistent status, proof, or artifact selections");
+			}
+			switch plan.noRuntimeProof {
+				case null:
+					throw new RuntimeFeatureError(CDiagnosticId.InternalCompilerError,
+						"runtime-free package plan has inconsistent status, proof, or artifact selections");
+				case proof:
+					RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, plan.planPurpose, plan.directDecisions);
 			}
 			return [];
 		}

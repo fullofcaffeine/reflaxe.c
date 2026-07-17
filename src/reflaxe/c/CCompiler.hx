@@ -29,6 +29,7 @@ import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.ir.HxcIRValidationError;
 import reflaxe.c.ir.HxcIRDumper;
+import reflaxe.c.ir.HxcIR.HxcIRProgram;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
 import reflaxe.c.plan.CStaticInitializationError;
@@ -37,12 +38,15 @@ import reflaxe.c.runtime.RuntimeFeatureCatalog;
 import reflaxe.c.runtime.RuntimeFeatureError;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeEvidence;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeNoRuntimeScope;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
-import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementReason;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementCandidate;
 import reflaxe.c.runtime.RuntimeFeaturePackager;
 import reflaxe.c.runtime.RuntimeFeaturePackager.PackageRuntimeArtifactSource;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
+import reflaxe.c.runtime.RuntimeRequirementAnalyzer;
 
 private typedef ResolvedRuntimePolicy = {
 	final value:CProjectRuntimePolicy;
@@ -133,7 +137,12 @@ class CCompiler {
 				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName);
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final registry = RuntimeFeatureCatalog.registry();
-			final runtimePlan = primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.runtimeRequirements, registry);
+			final runtimePlan = try {
+				primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements, registry);
+			} catch (error:RuntimeFeatureError) {
+				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
+					context.profile);
+			};
 			context.setRuntimePlan(runtimePlan);
 			emitRuntimeDiagnostics(configuration.runtimeDiagnostics, runtimePlan, lowered.runtimeRequirements, input.expression.pos);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
@@ -177,8 +186,8 @@ class CCompiler {
 	}
 
 	function primitiveRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
-			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, runtimeRequirements:Array<CBodyRuntimeRequirement>,
-			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -204,15 +213,33 @@ class CCompiler {
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";
 		}
-		final reasons:Array<RuntimeRequirementReason> = [];
-		for (index in 0...runtimeRequirements.length) {
-			final requirement = runtimeRequirements[index];
-			reasons.push(new RuntimeRequirementReason('io.output.$index', RuntimeFeatureId.parse("io"), "hosted-output", requirement.surface,
-				requirement.source));
+		final candidates:Array<RuntimeRequirementCandidate> = [];
+		for (requirement in runtimeRequirements) {
+			candidates.push(new RuntimeRequirementCandidate(RuntimeFeatureId.parse(requirement.featureId), requirement.operationId, "hosted-output",
+				requirement.surface, requirement.source));
 		}
+		final analysis = new RuntimeRequirementAnalyzer().analyze(program, candidates);
+		final noRuntimeEvidence = analysis.reasons.length == 0 ? new RuntimeNoRuntimeEvidence(RuntimeNoRuntimeScope.ReachableWholeProgram, proof,
+			analysis.reachability, helperIds) : null;
 		return new RuntimeFeaturePlanner(registry).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, context.profile,
 			configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
-			configuration.runtimeDiagnosticsProvenance, reasons, [], directDecisions, reasons.length == 0 ? proof : null));
+			configuration.runtimeDiagnosticsProvenance, analysis.reasons, [], directDecisions, noRuntimeEvidence));
+	}
+
+	static function runtimeErrorPosition(error:RuntimeFeatureError, requirements:Array<CBodyRuntimeRequirement>, fallback:Position):Position {
+		final source = error.primarySource;
+		if (source != null) {
+			for (requirement in requirements) {
+				if (requirement.source.file == source.file
+					&& requirement.source.startLine == source.startLine
+					&& requirement.source.startColumn == source.startColumn
+					&& requirement.source.endLine == source.endLine
+					&& requirement.source.endColumn == source.endColumn) {
+					return requirement.position;
+				}
+			}
+		}
+		return fallback;
 	}
 
 	static function emitRuntimeDiagnostics(mode:CProjectRuntimeDiagnostics, plan:RuntimeFeaturePlanSnapshot, requirements:Array<CBodyRuntimeRequirement>,

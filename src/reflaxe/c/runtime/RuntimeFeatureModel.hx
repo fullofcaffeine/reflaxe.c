@@ -55,6 +55,15 @@ enum abstract RuntimeFeatureOverrideAction(String) to String {
 	var Forbid = "forbid";
 }
 
+enum abstract RuntimeNoRuntimeScope(String) to String {
+	var ReachableWholeProgram = "reachable-whole-program";
+	var NativeSeedFixture = "native-seed-fixture";
+}
+
+enum abstract RuntimeNoRuntimeStatus(String) to String {
+	var Eligible = "eligible";
+}
+
 class RuntimeFeatureDefine {
 	public final name:String;
 	public final value:String;
@@ -120,22 +129,90 @@ class RuntimeFeatureReservation {
 	}
 }
 
-/** One actionable semantic root; dependencies inherit this reason by ID. */
-class RuntimeRequirementReason {
-	public final id:String;
+/** One analyzer input describing why a reachable runtime intent exists. */
+class RuntimeRequirementCandidate {
 	public final featureId:RuntimeFeatureId;
+	public final operationId:String;
 	public final kind:String;
 	public final surface:String;
 	public final source:HxcSourceSpan;
 	public final alternative:Null<String>;
 
-	public function new(id:String, featureId:RuntimeFeatureId, kind:String, surface:String, source:HxcSourceSpan, ?alternative:String) {
-		this.id = id;
+	public function new(featureId:RuntimeFeatureId, operationId:String, kind:String, surface:String, source:HxcSourceSpan, ?alternative:String) {
 		this.featureId = featureId;
+		this.operationId = operationId;
 		this.kind = kind;
 		this.surface = surface;
 		this.source = source;
 		this.alternative = alternative;
+	}
+}
+
+/** One deduplicated actionable semantic root; dependencies inherit its ID. */
+class RuntimeRequirementReason {
+	public final id:String;
+	public final featureId:RuntimeFeatureId;
+	public final operationId:String;
+	public final kind:String;
+	public final surface:String;
+	public final source:HxcSourceSpan;
+	public final alternative:Null<String>;
+
+	public function new(id:String, featureId:RuntimeFeatureId, operationId:String, kind:String, surface:String, source:HxcSourceSpan, ?alternative:String) {
+		this.id = id;
+		this.featureId = featureId;
+		this.operationId = operationId;
+		this.kind = kind;
+		this.surface = surface;
+		this.source = source;
+		this.alternative = alternative;
+	}
+}
+
+/** Reviewable coverage counts from the complete reachable validated HxcIR. */
+class RuntimeReachabilityEvidence {
+	public final moduleCount:Int;
+	public final typeInstanceCount:Int;
+	public final functionCount:Int;
+	public final blockCount:Int;
+	public final instructionCount:Int;
+	public final cleanupActionCount:Int;
+	public final runtimeIntentCount:Int;
+
+	public function new(moduleCount:Int, typeInstanceCount:Int, functionCount:Int, blockCount:Int, instructionCount:Int, cleanupActionCount:Int,
+			runtimeIntentCount:Int) {
+		this.moduleCount = moduleCount;
+		this.typeInstanceCount = typeInstanceCount;
+		this.functionCount = functionCount;
+		this.blockCount = blockCount;
+		this.instructionCount = instructionCount;
+		this.cleanupActionCount = cleanupActionCount;
+		this.runtimeIntentCount = runtimeIntentCount;
+	}
+}
+
+class RuntimeRequirementAnalysis {
+	public final reasons:Array<RuntimeRequirementReason>;
+	public final reachability:RuntimeReachabilityEvidence;
+
+	public function new(reasons:Array<RuntimeRequirementReason>, reachability:RuntimeReachabilityEvidence) {
+		this.reasons = reasons.copy();
+		this.reachability = reachability;
+	}
+}
+
+/** Compiler-owned evidence admitted only for an empty reachable runtime-root set. */
+class RuntimeNoRuntimeEvidence {
+	public final scope:RuntimeNoRuntimeScope;
+	public final semanticProof:String;
+	public final reachability:RuntimeReachabilityEvidence;
+	public final programLocalHelpers:Array<String>;
+
+	public function new(scope:RuntimeNoRuntimeScope, semanticProof:String, reachability:RuntimeReachabilityEvidence, programLocalHelpers:Array<String>) {
+		this.scope = scope;
+		this.semanticProof = semanticProof;
+		this.reachability = reachability;
+		this.programLocalHelpers = programLocalHelpers.copy();
 	}
 }
 
@@ -163,11 +240,12 @@ class RuntimePlanningRequest {
 	public final rootReasons:Array<RuntimeRequirementReason>;
 	public final manualOverrides:Array<RuntimeFeatureOverride>;
 	public final directDecisions:Array<String>;
-	public final noRuntimeProof:Null<String>;
+	public final noRuntimeEvidence:Null<RuntimeNoRuntimeEvidence>;
 
 	public function new(purpose:RuntimePlanningPurpose, profile:CProfile, environment:CEnvironment, runtimePolicy:CRuntimePolicy,
 			runtimePolicyProvenance:String, runtimeDiagnostics:CRuntimeDiagnostics, runtimeDiagnosticsProvenance:String,
-			rootReasons:Array<RuntimeRequirementReason>, manualOverrides:Array<RuntimeFeatureOverride>, directDecisions:Array<String>, ?noRuntimeProof:String) {
+			rootReasons:Array<RuntimeRequirementReason>, manualOverrides:Array<RuntimeFeatureOverride>, directDecisions:Array<String>,
+			?noRuntimeEvidence:RuntimeNoRuntimeEvidence) {
 		this.purpose = purpose;
 		this.profile = profile;
 		this.environment = environment;
@@ -178,7 +256,7 @@ class RuntimePlanningRequest {
 		this.rootReasons = rootReasons.copy();
 		this.manualOverrides = manualOverrides.copy();
 		this.directDecisions = directDecisions.copy();
-		this.noRuntimeProof = noRuntimeProof;
+		this.noRuntimeEvidence = noRuntimeEvidence;
 	}
 }
 
@@ -196,10 +274,53 @@ typedef RuntimeSourceSpanRecord = {
 typedef RuntimeReasonRecord = {
 	final id:String;
 	final featureId:String;
+	final operationId:String;
 	final kind:String;
 	final surface:String;
 	final source:RuntimeSourceSpanRecord;
 	final alternative:Null<String>;
+}
+
+typedef RuntimeReachabilityRecord = {
+	final modules:Int;
+	final typeInstances:Int;
+	final functions:Int;
+	final blocks:Int;
+	final instructions:Int;
+	final cleanupActions:Int;
+	final runtimeIntents:Int;
+}
+
+typedef RuntimeHxrtAbsenceRecord = {
+	final features:Array<String>;
+	final includes:Array<String>;
+	final sources:Array<String>;
+	final defines:Array<String>;
+	final libraries:Array<String>;
+	final symbols:Array<String>;
+}
+
+typedef RuntimeNoRuntimeProofRecord = {
+	final schemaVersion:Int;
+	final algorithm:String;
+	final status:RuntimeNoRuntimeStatus;
+	final scope:RuntimeNoRuntimeScope;
+	final semanticProof:String;
+	final reachability:RuntimeReachabilityRecord;
+	final directDecisions:Array<String>;
+	final programLocalHelpers:Array<String>;
+	final runtimeAbsence:RuntimeHxrtAbsenceRecord;
+}
+
+typedef RuntimePolicyBlockerRecord = {
+	final id:String;
+	final featureId:String;
+	final operationId:String;
+	final kind:String;
+	final surface:String;
+	final source:RuntimeSourceSpanRecord;
+	final alternative:Null<String>;
+	final dependencyChains:Array<Array<String>>;
 }
 
 typedef RuntimeOverrideRecord = {
@@ -257,7 +378,7 @@ typedef RuntimeFeaturePlanSnapshot = {
 	final symbols:Array<String>;
 	final libraries:Array<String>;
 	final defines:Array<String>;
-	final noRuntimeProof:Null<String>;
+	final noRuntimeProof:Null<RuntimeNoRuntimeProofRecord>;
 }
 
 typedef RuntimeFeatureDefinitionRecord = {

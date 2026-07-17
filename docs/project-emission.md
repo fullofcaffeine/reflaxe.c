@@ -55,14 +55,17 @@ The emitter owns these schema-1 sidecars:
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
-  primitive executable's schema-1 `hxc-runtime-plan-v1`
+  primitive executable's schema-2 `hxc-runtime-plan-v2`
   analyzed record. Primitive-only graphs use `analyzed-runtime-free`; literal
   hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
   `status`, `string-literal`, and `io`. Both are produced by the typed runtime
   feature planner and contain resolved policy/diagnostic provenance, planning
   purpose and environment, direct decisions, root reasons, manual constraints,
   dependency edges, selected feature/artifact/symbol/library/define sets, and a
-  positive empty-runtime proof only for the empty case. The
+  nested `hxc-no-runtime-eligibility-v1` proof only for the empty case. That
+  proof records reachable-program counts, zero explicit HxcIR runtime intents,
+  exact direct decisions and program-local helpers, and empty runtime feature,
+  include, source, define, library, and symbol sets. The
   `selected-program-local-helpers` decision appears only when that compilation
   selected at least one helper;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive

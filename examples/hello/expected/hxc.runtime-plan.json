@@ -4,7 +4,7 @@
       "dependencies": [],
       "id": "runtime-base",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -21,7 +21,7 @@
       ],
       "id": "status",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -38,7 +38,7 @@
       ],
       "id": "string-literal",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -56,7 +56,7 @@
       ],
       "id": "io",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "availability": "compiler-selectable",
       "symbols": [
@@ -87,28 +87,28 @@
     {
       "featureId": "io",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "dependencyId": "status"
     },
     {
       "featureId": "io",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "dependencyId": "string-literal"
     },
     {
       "featureId": "status",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "dependencyId": "runtime-base"
     },
     {
       "featureId": "string-literal",
       "reasonIds": [
-        "io.output.0"
+        "runtime.io.sys-println-literal.0"
       ],
       "dependencyId": "runtime-base"
     }
@@ -154,7 +154,7 @@
     }
   ],
   "status": "analyzed-runtime-features",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "diagnosticProvenance": "direct-define:hxc_runtime_diagnostics",
   "symbols": [
     "hxc_io_println"
@@ -173,7 +173,8 @@
     {
       "featureId": "io",
       "alternative": null,
-      "id": "io.output.0",
+      "id": "runtime.io.sys-println-literal.0",
+      "operationId": "sys-println-literal",
       "kind": "hosted-output",
       "surface": "Sys.println(String literal)",
       "source": {
@@ -192,6 +193,6 @@
   "requestedPolicy": "auto",
   "defines": [],
   "planPurpose": "compiler-program",
-  "algorithm": "hxc-runtime-plan-v1",
+  "algorithm": "hxc-runtime-plan-v2",
   "policyProvenance": "profile-preset:portable"
 }

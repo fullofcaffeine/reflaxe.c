@@ -35,4 +35,9 @@ class SpanFixture {
 		constSum();
 		checkedAt(2);
 	}
+
+	/** A seen but unreachable String signature must not become a runtime root. */
+	static function runtimeTypeOnly(value:String):String {
+		return value;
+	}
 }

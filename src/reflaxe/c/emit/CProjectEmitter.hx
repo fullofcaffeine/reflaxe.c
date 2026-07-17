@@ -18,6 +18,7 @@ import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationPhase;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanSnapshot;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeaturePlanStatus;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningPurpose;
+import reflaxe.c.runtime.RuntimeNoRuntimeEligibilityAnalyzer;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
 
 /** Input status distinguishes structural fixtures, the admitted primitive slice, and unproven broader programs. */
@@ -381,7 +382,7 @@ class CProjectEmitter {
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
-			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v1 analysis");
+			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v2 analysis");
 		}
 		if (runtimePlan.profile != plan.profile
 			|| runtimePlan.environment != plan.environment
@@ -403,9 +404,15 @@ class CProjectEmitter {
 					|| runtimePlan.artifacts.length != 0
 					|| runtimePlan.symbols.length != 0
 					|| runtimePlan.libraries.length != 0
-					|| runtimePlan.defines.length != 0
-					|| !hasRuntimeProof(runtimePlan.noRuntimeProof)) {
+					|| runtimePlan.defines.length != 0) {
 					fail("runtime-free primitive analysis must prove complete hxrt absence");
+				}
+				switch runtimePlan.noRuntimeProof {
+					case null:
+						fail("runtime-free primitive analysis must prove complete hxrt absence");
+					case proof:
+						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
+							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
 				}
 			case RuntimeFeaturePlanStatus.RuntimeFeatures:
 				validateHostedOutputRuntimePlan(runtimePlan);
@@ -494,13 +501,6 @@ class CProjectEmitter {
 			throw new ProjectEmissionError("primitive executable emission requires a runtime feature plan");
 		}
 		return runtimePlan;
-	}
-
-	static function hasRuntimeProof(value:Null<String>):Bool {
-		return switch value {
-			case null: false;
-			case proof: StringTools.trim(proof) != "";
-		};
 	}
 
 	static function validateInitializationSource(source:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSource, label:String):Void {

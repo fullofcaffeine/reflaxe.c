@@ -297,24 +297,64 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         (root / "hxc.initialization-plan.json").read_text(encoding="utf-8")
     )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
+    proof = runtime_plan.get("noRuntimeProof")
+    if not isinstance(proof, dict):
+        raise SpanLoweringFailure(f"{profile}/{build} omitted its structured no-runtime proof")
+    reachability = proof.get("reachability")
+    runtime_absence = proof.get("runtimeAbsence")
+    expected_helpers = ["hxc.i32.add.wrapping", "hxc.u32.to.i32.bits"]
     if (
         initialization_plan.get("schemaVersion") != 1
         or initialization_plan.get("strategy") != "eager-haxe-type-order"
         or initialization_plan.get("runtimeFeatures") != []
+        or runtime_plan.get("schemaVersion") != 2
+        or runtime_plan.get("algorithm") != "hxc-runtime-plan-v2"
         or runtime_plan.get("profile") != profile
         or runtime_plan.get("resolvedPolicy") != "none"
         or runtime_plan.get("status") != "analyzed-runtime-free"
         or runtime_plan.get("features") != []
         or runtime_plan.get("artifacts") != []
-        or not runtime_plan.get("noRuntimeProof")
+        or proof.get("schemaVersion") != 1
+        or proof.get("algorithm") != "hxc-no-runtime-eligibility-v1"
+        or proof.get("status") != "eligible"
+        or proof.get("scope") != "reachable-whole-program"
+        or proof.get("directDecisions") != runtime_plan.get("directDecisions")
+        or proof.get("programLocalHelpers") != expected_helpers
+        or reachability
+        != {
+            "modules": 1,
+            "typeInstances": 0,
+            "functions": 4,
+            "blocks": 12,
+            "instructions": 66,
+            "cleanupActions": 0,
+            "runtimeIntents": 0,
+        }
+        or runtime_absence
+        != {
+            "features": [],
+            "includes": [],
+            "sources": [],
+            "defines": [],
+            "libraries": [],
+            "symbols": [],
+        }
         or manifest.get("configuration", {}).get("profile") != profile
         or manifest.get("configuration", {}).get("runtimePolicy") != "none"
     ):
         raise SpanLoweringFailure(f"{profile}/{build} lost its runtime-free policy proof")
+    manifest_build = manifest.get("build")
+    if (
+        not isinstance(manifest_build, dict)
+        or manifest_build.get("runtimeHeaders") != []
+        or manifest_build.get("sources") != ["src/program.c"]
+        or manifest_build.get("includeDirectories") != ["include"]
+    ):
+        raise SpanLoweringFailure(f"{profile}/{build} build plan retained an hxrt input")
     combined = "\n".join(
         path.read_text(encoding="utf-8")
         for path in root.rglob("*")
-        if path.is_file() and path.suffix in {".c", ".h", ".json"}
+        if path.is_file() and path.suffix in {".c", ".h"}
     )
     if "hxrt" in combined.lower():
         raise SpanLoweringFailure(f"{profile}/{build} selected or mentioned hxrt")
@@ -324,6 +364,8 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
     for forbidden in ("iterator", "hasNext", "Array<", " + index", " + (size_t)"):
         if forbidden in source:
             raise SpanLoweringFailure(f"generated C retained forbidden shape {forbidden!r}")
+    if "runtimeTypeOnly" in source or "runtimeTypeOnly" in header:
+        raise SpanLoweringFailure("an unreachable String-typed declaration entered generated output")
     if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
         or source.count("const int32_t *") != 2

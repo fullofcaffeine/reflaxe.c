@@ -6,11 +6,14 @@
   "status": "active",
   "requirements": [
     "HXC-PROD-002",
-    "HXC-SEM-006"
+    "HXC-SEM-006",
+    "HXC-RT-002",
+    "HXC-RT-003"
   ],
   "sources": [
     "test/string_output/fixtures/nonliteral/Main.hx",
     "test/string_output/fixtures/nonstring/Main.hx",
+    "test/string_output/fixtures/positive/Main.hx",
     "test/string_output/fixtures/sys_print/Main.hx",
     "test/string_output/fixtures/trace_custom/Main.hx",
     "test/string_output/run.py"

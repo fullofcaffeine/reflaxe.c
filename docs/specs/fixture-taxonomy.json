@@ -558,7 +558,7 @@
         "a checked SplitMix64 seed regenerates the same boundary-biased 128-case primitive corpus and Haxe source byte for byte",
         "the common Int, UInt, Float-to-Int, and Boolean result domain matches pinned Haxe Eval exactly while every admitted target refinement is replayed from the closed divergence ledger and only the non-finite positive-infinity Eval Int32 observation receives its named host-dependent normalization",
         "a deterministic mismatch reducer isolates the first failing semantic case and is locked by a stored replay fixture",
-        "checked-in generated strict C11 runs at O0 and O2 and under combined address and undefined-behavior sanitizers in required GCC and Clang lanes without selecting hxrt",
+        "checked-in generated strict C11 carries the structured whole-program no-runtime proof and runs at O0 and O2 and under combined address and undefined-behavior sanitizers in required GCC and Clang lanes without selecting hxrt",
         "the reusable argument-array native harness records normalized compiler, command, input-hash, exit, stdout, and stderr evidence without host paths"
       ]
     },
@@ -580,7 +580,8 @@
         "typed nonempty CArray literals lower to structural C arrays and Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects",
         "compile-time and loop-guarded bounds proofs remain explicit in HxcIR while dynamic indexing emits a signed and size_t fail-stop check in every profile and build mode",
         "span iteration is an element-scaled guarded index loop whose increment is proven free of signed overflow and whose generated C is byte-identical across profile and build mode",
-        "portable and metal runtime-none projects compile and execute as strict C11 under required GCC and Clang lanes with no hxrt artifact, include, library, or symbol"
+        "portable and metal runtime-none projects carry a structured reachable-program proof and compile and execute as strict C11 under required GCC and Clang lanes with no hxrt artifact, include, library, or symbol",
+        "an unreachable String-typed declaration is present in typed input but absent from reachable HxcIR, generated symbols, runtime roots, and output"
       ]
     },
     {
@@ -601,7 +602,8 @@
       "assertions": [
         "the typed registry validates stable IDs, is byte-identical across discovery order, and rejects unknown or cyclic dependencies with canonical HXC9000 evidence",
         "every root and transitive selected feature retains source-reason IDs while manual constraints cannot add unused code or remove required dependencies",
-        "auto, minimal, none, availability, environment, native-only, and reserved-feature policy boundaries emit deterministic HXC2000 evidence",
+        "auto, minimal, none, availability, environment, native-only, and reserved-feature policy boundaries emit deterministic HXC2000 evidence; none retains every sorted blocker, typed source fact, alternative, and root-to-leaf dependency chain",
+        "schema-2 empty plans include the nested whole-program eligibility proof, and missing, runtime-intent-bearing, or tampered proofs fail before runtime artifact reads",
         "alloc-only and full-string native plans plus the compiler-selected literal-I/O plan package, compile, link, and run exact dependency closures while omitted sources and symbols remain absent",
         "the production compiler retains positive empty primitive plans and selects only runtime-base, status, string-literal, and io for hosted literal output"
       ]
@@ -645,7 +647,7 @@
       "assertions": [
         "real typed String literals lower through schema-3 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
-        "portable auto and metal minimal builds emit source-rooted runtime diagnostics, runtime none and freestanding fail closed, and nonliteral or neighboring output surfaces retain HXC1001",
+        "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
         "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",
         "target bytes match the pinned Haxe Eval oracle exactly, and a closed stdout descriptor proves that hosted output failure cannot return success"
       ]

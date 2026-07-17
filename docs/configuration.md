@@ -112,9 +112,13 @@ The current generated-Haxe runtime selection is deliberately narrower than the
 configuration surface: only compiler-known String literals passed to hosted
 `Sys.println` or default `trace` request `io`. Portable defaults report one
 summary; metal defaults warn once per source root; `off` stays silent. `none`
-rejects the source requirement with `HXC2000`, and non-hosted environments fail
-planning before any artifact is written. Primitive-only programs retain their
-positive empty-plan proof.
+rejects all source requirements with one sorted `HXC2000` that retains each
+operation, typed surface, source span, dependency chain, and available
+alternative. The rejection occurs before any artifact or native-link step.
+Non-hosted environments fail planning before any artifact is written.
+Primitive and fixed-array/span programs retain a structured whole-program proof
+with zero runtime intents and empty feature/include/source/define/library/symbol
+sets.
 
 The typed runtime planner also accepts internal manual feature constraints.
 They never override semantic inference: `require` can only confirm a feature

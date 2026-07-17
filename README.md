@@ -80,8 +80,11 @@ owned roadmap slices.
 With no explicit override, portable uses `auto` plus an aggregate runtime
 summary; metal uses the narrow `minimal` allowlist and warns at each root runtime
 requirement. `hxc_runtime=none` turns runtime freedom into a hard whole-program
-proof. Every successful build is planned to emit `hxc.runtime-plan.json`, even
-when the selected feature set is empty.
+proof. The schema-2 runtime plan records reachable-program coverage, exact
+direct and program-local decisions, zero runtime intents, and empty runtime
+effects; an ineligible program receives one sorted `HXC2000` with every source
+root and dependency chain before output. Every successful build emits
+`hxc.runtime-plan.json`, even when the selected feature set is empty.
 
 The first compiler-selected slice is intentionally tiny: a compiler-known valid
 UTF-8 String literal passed to hosted `Sys.println` or default `trace` packages
@@ -279,7 +282,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
-| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves source-rooted closure and packages only selected compiler-admitted runtime slices. |
+| `runtime-feature-planning` | `implemented` | A typed deterministic feature graph resolves reachable source-rooted closure, proves no-runtime eligibility, and packages only selected compiler-admitted runtime slices. |
 | `runtime-hxrt-seed` | `scaffold-only` | Hardened native allocator, UTF-8 scalar string, status, and hosted output slices coexist with other provisional runtime seeds. |
 | `runtime-string-contract` | `implemented` | The bounded native string slice enforces valid UTF-8, scalar indexing, allocation-aware ownership, and explicit CString lifetimes. |
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |

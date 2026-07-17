@@ -179,8 +179,8 @@ def validate_hxcir(hxcir: str) -> None:
 
 def validate_runtime_plan(plan: dict[str, object]) -> None:
     if (
-        plan.get("schemaVersion") != 1
-        or plan.get("algorithm") != "hxc-runtime-plan-v1"
+        plan.get("schemaVersion") != 2
+        or plan.get("algorithm") != "hxc-runtime-plan-v2"
         or plan.get("status") != "analyzed-runtime-features"
         or plan.get("planPurpose") != "compiler-program"
         or plan.get("profile") != "portable"
@@ -206,8 +206,9 @@ def validate_runtime_plan(plan: dict[str, object]) -> None:
     source = reason.get("source")
     start = source.get("start") if isinstance(source, dict) else None
     if (
-        reason.get("id") != "io.output.0"
+        reason.get("id") != "runtime.io.sys-println-literal.0"
         or reason.get("featureId") != "io"
+        or reason.get("operationId") != "sys-println-literal"
         or reason.get("kind") != "hosted-output"
         or reason.get("surface") != "Sys.println(String literal)"
         or not isinstance(source, dict)
@@ -233,7 +234,8 @@ def validate_runtime_plan(plan: dict[str, object]) -> None:
             not isinstance(value, dict)
             or value.get("id") != identifier
             or value.get("dependencies") != dependencies
-            or value.get("reasonIds") != ["io.output.0"]
+            or value.get("reasonIds")
+            != ["runtime.io.sys-println-literal.0"]
             or value.get("root") is not root
         ):
             raise HelloFailure(

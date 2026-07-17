@@ -340,6 +340,9 @@ idiomatic C, a program-local specialized helper, the narrowest dependency-closed
 
 `RuntimeFeatureRegistry` now validates stable definitions, artifact and symbol
 ownership, environment availability, and an acyclic dependency graph.
+`RuntimeRequirementAnalyzer` walks every reachable validated HxcIR runtime
+intent and reconciles it one-to-one with typed operation/surface/source
+candidates; raw typed-input sightings do not become requirements.
 `RuntimeFeaturePlanner` resolves source-rooted requests deterministically while
 preserving root-versus-transitive provenance; every selected feature and edge
 retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the
@@ -347,14 +350,17 @@ selected artifact records into typed `GeneratedFile` values and performs no
 artifact read for an empty plan.
 
 The admitted primitive compiler path uses this planner for its positive empty
-plan, so its `hxc.runtime-plan.json` means no `hxrt` include, source, define,
-library, or symbol exists in the build. E2.T07 adds one exact compiler-selected
+plan. Its schema-2 `hxc.runtime-plan.json` contains a structured reachable-
+whole-program proof with zero runtime intents and no `hxrt` include, source,
+define, library, or symbol in the build. `hxc_runtime=none` instead reports one
+sorted `HXC2000` containing every root operation, typed surface, source span,
+dependency chain, and available alternative before output. E2.T07 adds one exact compiler-selected
 edge: literal-only hosted `Sys.println` and default `trace` request `io`, whose
 closure is `runtime-base + status + string-literal + io`. It packages one C
 source and no allocator, full string operations, objects, collector, dynamic,
-reflection, or exceptions. Broader runtime-requirement inference and the
-complete blocker-producing `hxc_runtime=none` eligibility pass remain later
-work. The checked-in allocator contract has E4.T02 native evidence for checked
+reflection, or exceptions. New semantic lowerings remain responsible for
+supplying typed candidates for any explicit runtime intent and fail internally
+if they do not. The checked-in allocator contract has E4.T02 native evidence for checked
 sizes, over-alignment, failure atomicity, custom freestanding allocation,
 cross-boundary identity, and C/C++ layout agreement. The E4.T03 string contract
 adds valid UTF-8 scalar storage and indexing, checked/maximal-subpart decoding,

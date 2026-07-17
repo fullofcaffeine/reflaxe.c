@@ -7,7 +7,9 @@
   "requirements": [
     "HXC-SEM-005",
     "HXC-SEM-007",
-    "HXC-MAC-001"
+    "HXC-MAC-001",
+    "HXC-RT-003",
+    "HXC-EX-002"
   ],
   "sources": [
     "test/span_lowering/expected/program.h",
