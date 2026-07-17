@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 4
+the structural C AST. Its schema is internal to the compiler: schema version 5
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -15,8 +15,10 @@ identity, ordered initialization, and explicit checked/proven bounds policies.
 E3.T01 consumes aggregate type declarations/instances, named construction,
 projection, and structural field places for the bounded closed-record slice.
 E3.T02 adds ordered tagged cases, checked payload projection, tag matching,
-exhaustive tag-switch edges, and finite recursive enum representation to schema
-version 4 for the bounded direct-value slice.
+exhaustive tag-switch edges, and finite recursive enum representation for the
+bounded direct-value slice. E3.T04 adds concrete class layouts, explicit header
+intent, nullable class-reference checks, and inspectable representation-safe
+upcasts to schema version 5.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -53,6 +55,12 @@ instance, case, and ordered payload values; matching and projection retain the
 case identity; and `IRTTagSwitch` carries case-to-edge mappings rather than a C
 switch fragment. Recursive payload storage is an explicit pointer type, never
 an infinitely recursive by-value instance.
+For Haxe classes, the declaration owns one optional direct base instance,
+source-ordered own storage fields, and explicit absent-or-named-runtime header
+intent. The concrete class instance describes private direct storage, while a
+source-level class value is a nullable pointer to that instance. A safe upcast
+is retained as a representation conversion rather than inferred from C pointer
+spelling.
 `IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
@@ -101,6 +109,16 @@ need to recover intent from target syntax.
   declaration order, with a matching value type; projection names a real field
   and returns its exact type; and a field place resolves only from a compatible
   aggregate base;
+- every class base names a known direct class instance, class storage fields are
+  unique and typed, direct layouts are finite, and a class instance is
+  specialized before emission;
+- class references use matching nullable pointers to concrete class instances;
+  equality/inequality is a static `Bool` identity operation, and representation
+  conversion admits only a proven derived-to-ancestor path with matching
+  nullability;
+- dereferencing a nullable class reference requires an earlier same-block
+  `IRIONullCheck` for that immutable value. Its checked-abort policy records a
+  valid profile and build mode rather than relying on C undefined behavior;
 - tagged construction names a declared case and supplies exactly its ordered
   payload types; matching uses a case from the value's concrete instance;
   payload projection returns the exact named field type and carries the
@@ -170,6 +188,13 @@ reads use value projection. By-value initialization and loads retain the
 instance type. This prevents C syntax from erasing the semantic distinction
 between an addressable place and a copied record value.
 
+For E3.T04, a class declaration retains its base-prefix and source-order own
+fields, while values remain nullable instance pointers. Inherited field places
+resolve through the declaration chain only after an explicit null proof. A
+derived-to-base conversion remains `IRCRepresentation` with static intent, so
+the emitter can select a null-preserving embedded-member address without an
+unchecked cast. See [concrete class instance layouts](class-layout.md).
+
 ## Runtime and profile policy
 
 The IR has no unconditional runtime concept. `IRIStatic` is a direct semantic
@@ -177,8 +202,9 @@ operation, `IRIProgramLocal` names a compilation-local specialized helper, and
 `IRIRuntime` names the exact requested feature. Runtime call dispatch likewise
 records a feature and operation. Merely constructing a type, calling a direct
 function, constructing or copying a closed record, initializing a fixed
-array/span, constructing/matching a bounded enum, checking a tag or bounds, or
-using cleanup selects nothing from `hxrt`.
+array/span, constructing/matching a bounded enum, laying out a concrete class,
+checking a class reference/tag/bounds, performing a safe upcast, or using
+cleanup selects nothing from `hxrt`.
 
 E2.T07 is the first bounded compiler-selected exception: a compiler-known
 literal remains direct static UTF-8 storage, while its observable hosted output
@@ -200,7 +226,8 @@ The body frontend calls
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
 of an unsupported node. A fully admitted primitive, local fixed-array/span,
-closed anonymous-record, or bounded direct-value enum static graph reaches
+closed anonymous-record, bounded direct-value enum, or concrete class-reference
+static graph reaches
 validated HxcIR, structural C, and an owned runtime-free executable project.
 Recursive enum parameters and returns remain rejected until escape/lifetime
 analysis can choose owned storage. The separately admitted literal-output edge
@@ -208,7 +235,8 @@ reaches the exact selective runtime plan above; nonliteral strings and broader
 output APIs still stop without output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md), plus [closed anonymous-record
-lowering](aggregate-lowering.md) and [Haxe enum lowering](enum-lowering.md).
+lowering](aggregate-lowering.md), [Haxe enum lowering](enum-lowering.md), and
+[concrete class instance layouts](class-layout.md).
 
 ## Canonical dump
 
@@ -246,7 +274,9 @@ mismatches, primitive runtime rejection, missing nullable-unwrap failure,
 switch subject/case-family mismatch, void/value return mismatches, return-type
 mismatch, tag construction/projection mismatches, invalid enum representation,
 non-exhaustive and redundant-default tag switches, illegal direct recursive
-layout, a bad UTF-8 byte length, missing hosted-output failure, and `HXC1001`.
+layout, unchecked class dereference, unsafe class representation conversion,
+mismatched class-reference equality, a bad UTF-8 byte length, missing
+hosted-output failure, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
@@ -272,6 +302,12 @@ projection, exhaustive tag switches, and a recursive local value with explicit
 indirect storage. Its C and C++17 consumers verify private tags, size,
 alignment, offsets, construction, and recursive layout under both compiler
 families without claiming general generic monomorphization or public ABI.
+The class-layout suite adds source-backed private concrete structs, embedded
+base prefixes, explicit null checks, inherited field places, identity
+operations, and null-preserving upcasts. Its independent C and C++17 consumers
+verify private size, alignment, offsets, base paths, field access, and reference
+behavior without claiming constructors, allocation, dispatch, object runtime,
+or public ABI.
 The separate string-output suite selects only the four-feature literal/I/O
 closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
 closed-stdout failure, and runs the generated project at both optimization

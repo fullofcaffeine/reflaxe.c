@@ -15,6 +15,8 @@ import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.semantics.CPrimitiveTypeMapper;
+import reflaxe.c.semantics.CPrimitiveTypes;
 
 /** Module anchor for bounded Haxe-enum representation selection. */
 class CBodyEnum {
@@ -277,7 +279,7 @@ class CBodyEnumRegistry {
 		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
 		final arguments = parameters.map(parameter -> {
 			final value = resolveValue(parameter, position, definition.module, sourcePath, fail, '$node.type-argument');
-			if (value.irType == IRTVoid || value.aggregateValue() != null) {
+			if (value.irType == IRTVoid || value.aggregateValue() != null || value.classValue() != null) {
 				return rejected(fail, position, '$node:unsupported-enum-type-argument:${value.cSpelling}');
 			}
 			value;
@@ -334,8 +336,9 @@ class CBodyEnumRegistry {
 			final tagCase = new CPreparedBodyEnumCase(caseName, field.index, caseSource, discriminantRequest, payloadStructRequest, unionMemberRequest);
 			for (index in 0...constructor.arguments.length) {
 				final argument = constructor.arguments[index];
+				rejectDirectReference(argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
 				final valueType = resolveValue(argument.type, field.pos, definition.module, sourcePath, fail, '$node.$caseName.${argument.name}');
-				if (valueType.irType == IRTVoid || valueType.aggregateValue() != null) {
+				if (valueType.irType == IRTVoid || valueType.aggregateValue() != null || valueType.classValue() != null) {
 					return rejected(fail, field.pos, '$node:unsupported-payload:$path.$caseName.${argument.name}:${valueType.cSpelling}');
 				}
 				final request = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName, "payload", argument.name]),
@@ -350,6 +353,16 @@ class CBodyEnumRegistry {
 			recomputeRecursion();
 		}
 		return prepared;
+	}
+
+	function rejectDirectReference(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Void {
+		switch CPrimitiveTypeMapper.map(type, context.profile) {
+			case CTReference(identity, nullable):
+				rejected(fail, position, '$node:reference-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTNativePointer(identity, nullable):
+				rejected(fail, position, '$node:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTPrimitive(_) | CTUnsupported(_):
+		}
 	}
 
 	public function canonicalEnums():Array<CPreparedBodyEnumInstance> {

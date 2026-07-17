@@ -416,6 +416,45 @@ def aggregate_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def class_layout_artifacts() -> list[Artifact]:
+    module = load_module("class_layout", "test/class_layout/run.py")
+    first_payload, report = module.render("snapshot first class-layout render")
+    second_payload, repeated = module.render("snapshot second class-layout render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input class-layout render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "class-layout snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("classes.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("classes.json", "json"),
+        ("functions.json", "json"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, (dict, list)):
+                raise SnapshotFailure(f"class-layout report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"class-layout report omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/class_layout/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 def enum_lowering_artifacts() -> list[Artifact]:
     module = load_module("enum_lowering", "test/enum_lowering/run.py")
     first_payload, report = module.render("snapshot first enum render")
@@ -757,6 +796,7 @@ GENERATORS: dict[str, Generator] = {
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
     "aggregate-lowering": aggregate_lowering_artifacts,
+    "class-layout": class_layout_artifacts,
     "enum-lowering": enum_lowering_artifacts,
     "generic-specialization": generic_specialization_artifacts,
     "evaluation-order": evaluation_order_artifacts,

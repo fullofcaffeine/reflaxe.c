@@ -307,8 +307,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
             raise EnumLoweringFailure(f"{label} leaked a host path or runtime dependency")
-    if not hxcir.startswith("hxcir schema=4\n") or hxcir.count(" representation=tagged ") != 3:
-        raise EnumLoweringFailure("schema-4 tagged-union HxcIR inventory drifted")
+    if not hxcir.startswith("hxcir schema=5\n") or hxcir.count(" representation=tagged ") != 3:
+        raise EnumLoweringFailure("schema-5 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     recursive_section = function_section(hxcir, "recursiveLocal")
     main_section = function_section(hxcir, "main")

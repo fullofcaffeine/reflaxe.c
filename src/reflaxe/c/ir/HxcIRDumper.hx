@@ -39,6 +39,7 @@ class HxcIRDumper {
 			case IRTKPrimitive: "primitive";
 			case IRTKAggregate(_): "aggregate";
 			case IRTKTaggedUnion(_): "tagged-union";
+			case IRTKClass(_): "class";
 			case IRTKReference: "reference";
 			case IRTKFunction: "function";
 			case IRTKExtern: "extern";
@@ -52,6 +53,11 @@ class HxcIRDumper {
 			case IRTKTaggedUnion(cases):
 				for (tag in cases) {
 					line('    case ${quote(tag.name)} value=${tag.tagValue} payload=${tagPayloads(tag.payload)} ${source(tag.source)}');
+				}
+			case IRTKClass(layout):
+				line('    class-layout base=${nullableQuote(layout.baseInstanceId)} header=${classHeader(layout.header)}');
+				for (field in layout.fields) {
+					line('    field ${quote(field.name)} type=${typeRef(field.type)} mutable=${field.mutable} ${source(field.source)}');
 				}
 			case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern:
 		}
@@ -129,9 +135,23 @@ class HxcIRDumper {
 				'initialize-span place=${renderPlace(place)} source=${renderPlace(sourceArray)} transition=${state(from)}->${state(to)}';
 			case IRIOBoundsCheck(collection, indexValueId, policy):
 				'bounds-check collection=${renderPlace(collection)} index=${quote(indexValueId)} policy=${boundsPolicy(policy)}';
+			case IRIONullCheck(valueId, policy): 'null-check value=${quote(valueId)} policy=${nullCheckPolicy(policy)}';
 			case IRIOLifetime(place, from, to, reason):
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
+	}
+
+	function classHeader(value:HxcIRClassHeader):String {
+		return switch value {
+			case IRCHNone: "none";
+			case IRCHRuntime(featureId): 'runtime(${quote(featureId)})';
+		};
+	}
+
+	function nullCheckPolicy(value:HxcIRNullCheckPolicy):String {
+		return switch value {
+			case IRNCPCheckedAbort(profile, buildMode): 'checked-abort(profile=${quote(profile)},build=${quote(buildMode)})';
+		};
 	}
 
 	function renderCall(call:HxcIRCall):String {

@@ -1,4 +1,4 @@
-hxcir schema=4
+hxcir schema=5
 module "AStaticInitDependent" @"AStaticInitDependent.hx":2:2-7:69
   global "global.AStaticInitDependent.first" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.first") @"AStaticInitDependent.hx":2:2-2:62
   global "global.AStaticInitDependent.second" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.second") @"AStaticInitDependent.hx":3:2-3:43

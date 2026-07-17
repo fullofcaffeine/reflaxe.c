@@ -186,6 +186,9 @@ def check_diagnostics(report: dict[str, object]) -> None:
     if "HXC1001" not in serialized or "HXC9000" not in serialized:
         raise HxcIRFailure("negative fixtures lost stable unsupported/internal diagnostic IDs")
     for diagnostic_key in (
+        "uncheckedClassDereference",
+        "unsafeClassUpcast",
+        "mismatchedClassEquality",
         "primitiveRuntimeConversion",
         "nullableUnwrapWithoutFailure",
         "switchCaseTypeMismatch",

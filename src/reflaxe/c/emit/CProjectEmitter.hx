@@ -54,6 +54,7 @@ typedef CProjectEmissionPlan = {
 	final ?primitiveHelperIds:Array<String>;
 	final ?directAggregateCount:Int;
 	final ?directEnumCount:Int;
+	final ?directClassCount:Int;
 	final ?directGenericFunctionCount:Int;
 	final ?directGenericTypeCount:Int;
 	final ?specializationReport:CGenericSpecializationReportSnapshot;
@@ -299,11 +300,13 @@ class CProjectEmitter {
 	function validateDirectExecutablePlan(plan:CProjectEmissionPlan):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
+		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
-		final directValueCount = aggregateCount + enumCount + genericFunctionCount;
+		final directValueCount = aggregateCount + enumCount + classCount + genericFunctionCount;
 		if (aggregateCount < 0
 			|| enumCount < 0
+			|| classCount < 0
 			|| genericFunctionCount < 0
 			|| genericTypeCount < 0
 			|| genericTypeCount > enumCount
@@ -410,6 +413,7 @@ class CProjectEmitter {
 	function validateDirectRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
+		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
@@ -446,7 +450,7 @@ class CProjectEmitter {
 					case proof:
 						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
 							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
-						if (proof.reachability.typeInstances != aggregateCount + enumCount) {
+						if (proof.reachability.typeInstances != aggregateCount + enumCount + classCount) {
 							fail("runtime-free direct executable value-layout count differs from reachable HxcIR instances");
 						}
 				}
@@ -473,6 +477,9 @@ class CProjectEmitter {
 		}
 		if (enumCount > 0) {
 			expectedDirectDecisions.push("bounded-haxe-enum-values");
+		}
+		if (classCount > 0) {
+			expectedDirectDecisions.push("concrete-class-reference-layouts");
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			expectedDirectDecisions.push("closed-generic-specializations");

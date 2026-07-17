@@ -1,4 +1,4 @@
-hxcir schema=4
+hxcir schema=5
 module "BodyFixture" @"test/body_lowering/fixtures/positive/BodyFixture.hx":2:37-43:3
   function "function.BodyFixture.booleanValue" name="BodyFixture.booleanValue" returns=bool entry="entry" @"test/body_lowering/fixtures/positive/BodyFixture.hx":20:38-23:3
     local "local.0" type=bool storage=automatic state=uninitialized @"test/body_lowering/fixtures/positive/BodyFixture.hx":21:3-21:25

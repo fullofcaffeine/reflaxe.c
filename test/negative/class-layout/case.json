@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "concrete-private-class-layout-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-013",
+    "HXC-SEM-014",
+    "HXC-SEM-023"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyClass.hx",
+    "test/class_layout/fixtures/interface/Main.hx",
+    "test/class_layout/fixtures/generic/Main.hx",
+    "test/class_layout/fixtures/allocation/Main.hx",
+    "test/class_layout/fixtures/downcast/Main.hx",
+    "test/class_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../class_layout/run.py"
+    ],
+    "workingDirectory": "test/negative/class-layout",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed future edges passed$"
+    }
+  }
+}

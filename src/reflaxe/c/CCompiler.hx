@@ -140,7 +140,7 @@ class CCompiler {
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
-					lowered.aggregates.length, lowered.enums.length, genericFunctionCount, genericTypeCount, registry);
+					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, genericFunctionCount, genericTypeCount, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -163,6 +163,7 @@ class CCompiler {
 				projectName: input.declarationPath,
 				compilationStatus: lowered.aggregates.length == 0
 				&& lowered.enums.length == 0
+				&& lowered.classes.length == 0
 				&& genericFunctionCount == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
 				profile: context.profile,
 				environment: configuration.environment,
@@ -176,6 +177,7 @@ class CCompiler {
 				primitiveHelperIds: helperIds,
 				directAggregateCount: lowered.aggregates.length,
 				directEnumCount: lowered.enums.length,
+				directClassCount: lowered.classes.length,
 				directGenericFunctionCount: genericFunctionCount,
 				directGenericTypeCount: genericTypeCount,
 				specializationReport: specializationReport,
@@ -204,8 +206,8 @@ class CCompiler {
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, genericFunctionCount:Int, genericTypeCount:Int,
-			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, genericFunctionCount:Int,
+			genericTypeCount:Int, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -223,6 +225,9 @@ class CCompiler {
 		}
 		if (enumCount > 0) {
 			directDecisions.push("bounded-haxe-enum-values");
+		}
+		if (classCount > 0) {
+			directDecisions.push("concrete-class-reference-layouts");
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			directDecisions.push("closed-generic-specializations");
@@ -242,6 +247,9 @@ class CCompiler {
 		}
 		if (enumCount > 0) {
 			proof += ", plus specialized native/tagged Haxe enum values with checked payload projection and finite recursive pointer layouts";
+		}
+		if (classCount > 0) {
+			proof += ", plus nullable concrete class references with base-prefix subobjects, explicit null checks, and private direct field storage";
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			proof += ", with closed generic instances shared by collision-checked semantic keys and bounded code-size planning";

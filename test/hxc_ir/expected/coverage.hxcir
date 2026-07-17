@@ -1,4 +1,4 @@
-hxcir schema=4
+hxcir schema=5
 module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
   type "type.interface" name="coverage.Interface" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":9:1-9:2
   type "type.object" name="coverage.Object" kind=reference @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2

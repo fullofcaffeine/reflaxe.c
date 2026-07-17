@@ -109,6 +109,9 @@ jobs:
       - name: Verify generated aggregate layouts at O0 and O2
         run: python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 
+      - name: Verify generated class layouts at O0 and O2
+        run: python3 test/class_layout/run.py --native-only --toolchain "${{ matrix.toolchain }}"
+
       - name: Verify generated enum layouts at O0 and O2
         run: python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 

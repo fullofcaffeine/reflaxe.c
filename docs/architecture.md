@@ -82,7 +82,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-4 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-5 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -93,6 +93,11 @@ implementations, so the IR never selects an implicit runtime core.
 Validated UTF-8 String constants additionally retain their exact byte length;
 the only admitted String consumer is the explicit hosted literal-output call
 with a native-status abort edge.
+Concrete class declarations retain their private base-prefix layout, own fields,
+and explicit header intent; nullable references require validated null proofs,
+and derived-to-base conversion stays inspectable until the C emitter selects a
+null-preserving embedded-member address. See [concrete class instance
+layouts](class-layout.md).
 
 Primitive representation is owned by the typed
 `src/reflaxe/c/semantics/` layer. It maps real Haxe compiler types to exact

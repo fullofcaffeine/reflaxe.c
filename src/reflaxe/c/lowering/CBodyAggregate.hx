@@ -9,6 +9,9 @@ import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyClass.CBodyClassRegistry;
+import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
+import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRegistry;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
@@ -27,6 +30,7 @@ enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
 	CBVKEnum(value:CPreparedBodyEnumInstance);
+	CBVKClass(value:CPreparedBodyClass);
 }
 
 /** The exact admitted representation of one Haxe body value. */
@@ -47,6 +51,9 @@ class CBodyValueType {
 			case CBVKEnum(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-enum:${value.digest}';
+			case CBVKClass(value):
+				this.irType = IRTPointer(IRTInstance(value.instanceId), true);
+				this.cSpelling = 'haxe-class-reference:${value.digest}';
 		}
 	}
 
@@ -59,10 +66,13 @@ class CBodyValueType {
 	public static function enumeration(value:CPreparedBodyEnumInstance):CBodyValueType
 		return new CBodyValueType(CBVKEnum(value));
 
+	public static function classReference(value:CPreparedBodyClass):CBodyValueType
+		return new CBodyValueType(CBVKClass(value));
+
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_): null;
 		};
 	}
 
@@ -70,14 +80,21 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_): null;
 			case CBVKAggregate(aggregate): aggregate;
-			case CBVKEnum(_): null;
+			case CBVKEnum(_) | CBVKClass(_): null;
 		};
 	}
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKAggregate(_): null;
+			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKClass(_): null;
 			case CBVKEnum(value): value;
+		};
+	}
+
+	public function classValue():Null<CPreparedBodyClass> {
+		return switch kind {
+			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKClass(value): value;
 		};
 	}
 }
@@ -194,18 +211,25 @@ class CBodyAggregateRegistry {
 	final context:CompilationContext;
 	final byShape:Map<String, CPreparedBodyAggregate> = [];
 	final enumRegistry:CBodyEnumRegistry;
+	final classRegistry:CBodyClassRegistry;
 
 	public function new(context:CompilationContext) {
 		this.context = context;
 		this.enumRegistry = new CBodyEnumRegistry(context, valueType);
+		this.classRegistry = new CBodyClassRegistry(context, valueType);
 	}
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
+			case TInst(reference, parameters) if (!reference.get().isExtern):
+				classRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
 			case TEnum(reference, parameters):
 				enumRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
+			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null" && parameters.length == 1):
+				final nullable = valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node.nullable');
+				nullable.classValue() == null ? CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node)) : nullable;
 			case TAnonymous(reference):
 				final shape = anonymousShape(reference, [], position, fail, node);
 				var aggregate = byShape.get(shape);
@@ -224,6 +248,12 @@ class CBodyAggregateRegistry {
 
 	public function finalizeEnums(symbols:CSymbolRegistry):Array<CLoweredBodyEnum>
 		return enumRegistry.finalize(symbols);
+
+	public function canonicalClasses():Array<CPreparedBodyClass>
+		return classRegistry.canonicalClasses();
+
+	public function finalizeClasses(symbols:CSymbolRegistry):Array<CLoweredBodyClass>
+		return classRegistry.finalize(symbols);
 
 	public function canonicalAggregates():Array<CPreparedBodyAggregate> {
 		final values = [for (aggregate in byShape) aggregate];

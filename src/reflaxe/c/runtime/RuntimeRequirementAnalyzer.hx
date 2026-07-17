@@ -42,6 +42,13 @@ class RuntimeRequirementAnalyzer {
 		var instructionCount = 0;
 		var cleanupActionCount = 0;
 		for (module in program.modules) {
+			for (declaration in module.types) {
+				switch declaration.kind {
+					case IRTKClass({header: IRCHRuntime(featureId)}):
+						observations.push(new RuntimeIntentObservation(featureId, "class-object-header", declaration.source));
+					case _:
+				}
+			}
 			typeInstanceCount += module.typeInstances.length;
 			for (instance in module.typeInstances) {
 				switch instance.representation {

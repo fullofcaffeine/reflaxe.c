@@ -25,6 +25,9 @@ import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregateField;
+import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
+import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
+import reflaxe.c.lowering.CBodyClass.CPreparedBodyClassField;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
@@ -156,6 +159,7 @@ class CBodyLoweringResult {
 	public final globals:Array<CLoweredBodyGlobal>;
 	public final aggregates:Array<CLoweredBodyAggregate>;
 	public final enums:Array<CLoweredBodyEnum>;
+	public final classes:Array<CLoweredBodyClass>;
 	public final helpers:Array<CPrimitiveHelperPlan>;
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
@@ -163,13 +167,15 @@ class CBodyLoweringResult {
 	public final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
-			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
-			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>) {
+			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, helpers:Array<CPrimitiveHelperPlan>,
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
 		this.aggregates = aggregates.copy();
 		this.enums = enums.copy();
+		this.classes = classes.copy();
 		this.helpers = helpers.copy();
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
@@ -231,7 +237,8 @@ class CBodyLowering {
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
 		final preparedEnums = aggregateRegistry.canonicalEnums();
-		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums);
+		final preparedClasses = aggregateRegistry.canonicalClasses();
+		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
@@ -240,6 +247,7 @@ class CBodyLowering {
 		final symbolTable = context.symbols.finalizeSymbols();
 		final loweredAggregates = aggregateRegistry.finalize(context.symbols);
 		final loweredEnums = aggregateRegistry.finalizeEnums(context.symbols);
+		final loweredClasses = aggregateRegistry.finalizeClasses(context.symbols);
 		final boundsAbortName = boundsAbortRequest == null ? null : context.symbols.identifierFor(boundsAbortRequest);
 		final helpers = helperSelection.finalize(context.symbols);
 		final helperNames:Map<String, CIdentifier> = [];
@@ -257,7 +265,7 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums);
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final parameterNames:Map<String, CIdentifier> = [];
@@ -301,8 +309,8 @@ class CBodyLowering {
 			}
 		}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, helpers, helperSelection.buildFacts(), symbolTable,
-			boundsAbortName, runtimeRequirements);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, helpers,
+			helperSelection.buildFacts(), symbolTable, boundsAbortName, runtimeRequirements);
 	}
 
 	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
@@ -311,7 +319,8 @@ class CBodyLowering {
 				for (block in fn.blocks) {
 					for (instruction in block.instructions) {
 						switch instruction.kind {
-							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)):
+							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)) |
+								IRIONullCheck(_, IRNCPCheckedAbort(_, _)):
 								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
 									"abort");
 								context.symbols.register(request);
@@ -326,7 +335,7 @@ class CBodyLowering {
 	}
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
-			enums:Array<CPreparedBodyEnumInstance>):HxcIRProgram {
+			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -363,6 +372,15 @@ class CBodyLowering {
 			}
 			moduleEnums.push(value);
 		}
+		final classesByModule:Map<String, Array<CPreparedBodyClass>> = [];
+		for (value in classes) {
+			var moduleClasses = classesByModule.get(value.ownerModule);
+			if (moduleClasses == null) {
+				moduleClasses = [];
+				classesByModule.set(value.ownerModule, moduleClasses);
+			}
+			moduleClasses.push(value);
+		}
 		final moduleIdSet:Map<String, Bool> = [];
 		for (moduleId in byModule.keys()) {
 			moduleIdSet.set(moduleId, true);
@@ -374,6 +392,9 @@ class CBodyLowering {
 			moduleIdSet.set(moduleId, true);
 		}
 		for (moduleId in enumsByModule.keys()) {
+			moduleIdSet.set(moduleId, true);
+		}
+		for (moduleId in classesByModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
 		final moduleIds = [for (moduleId in moduleIdSet.keys()) moduleId];
@@ -392,17 +413,25 @@ class CBodyLowering {
 			final enumEntries = enumsByModule.get(moduleId);
 			final moduleEnums = enumEntries == null ? [] : enumEntries;
 			moduleEnums.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final classEntries = classesByModule.get(moduleId);
+			final moduleClasses = classEntries == null ? [] : classEntries;
+			moduleClasses.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
 			final spans = moduleFunctions.map(entry -> entry.ir.source)
 				.concat(moduleGlobals.map(global -> global.ir.source))
 				.concat(moduleAggregates.map(aggregate -> aggregate.source))
-				.concat(moduleEnums.map(value -> value.source));
+				.concat(moduleEnums.map(value -> value.source))
+				.concat(moduleClasses.map(value -> value.source));
 			if (spans.length == 0) {
 				throw new CBodyEmissionError('body lowering lost module `$moduleId` while building HxcIR');
 			}
 			modules.push({
 				id: moduleId,
-				types: moduleAggregates.map(aggregate -> aggregate.declaration()).concat(moduleEnums.map(value -> value.declaration())),
-				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance()).concat(moduleEnums.map(value -> value.instance())),
+				types: moduleAggregates.map(aggregate -> aggregate.declaration())
+					.concat(moduleEnums.map(value -> value.declaration()))
+					.concat(moduleClasses.map(value -> value.declaration())),
+				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance())
+					.concat(moduleEnums.map(value -> value.instance()))
+					.concat(moduleClasses.map(value -> value.instance())),
 				globals: moduleGlobals.map(global -> global.ir),
 				functions: moduleFunctions.map(entry -> entry.ir),
 				source: enclosingSpan(spans)
@@ -857,6 +886,7 @@ private class FunctionPreparer {
 			case IRTFloat(width): 'f$width';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
+			case IRTPointer(IRTInstance(instanceId), nullable): 'class-reference:${nullable ? "nullable" : "nonnull"}:$instanceId';
 			case _: throw new CBodyEmissionError("function signature contains a non-admitted body type");
 		};
 	}
@@ -1218,7 +1248,7 @@ private class FunctionBuilder {
 			case null:
 				unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
 			case expression:
-				lowerValue(expression, localMapping);
+				coerce(lowerValue(expression, localMapping), localMapping, expression.pos, 'TVar(${variable.name}:initializer)');
 		};
 		locals.push({
 			id: localId,
@@ -1402,7 +1432,7 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTReturn(null, []), source: source};
 			return;
 		}
-		final lowered = lowerValue(value, prepared.returnMapping);
+		final lowered = coerce(lowerValue(value, prepared.returnMapping), prepared.returnMapping, value.pos, "TReturn(value)");
 		currentBlock.terminator = {kind: IRTReturn(lowered.id, []), source: source};
 	}
 
@@ -1415,6 +1445,7 @@ private class FunctionBuilder {
 			case TField(_, FEnum(enumReference, enumField)):
 				lowerEnumConstructor(expression, enumReference, enumField, [], expectedMapping);
 			case TField(receiver, FAnon(fieldReference)): lowerAggregateField(expression, receiver, fieldReference.get().name);
+			case TField(receiver, FInstance(_, _, fieldReference)): lowerClassField(expression, receiver, fieldReference.get().name);
 			case TField(_, FStatic(classReference, fieldReference)):
 				lowerStaticField(expression, classReference, fieldReference);
 			case TParenthesis(inner): lowerValue(inner, expectedMapping);
@@ -1428,7 +1459,7 @@ private class FunctionBuilder {
 							case UIIntrinsicLowered(value): value;
 							case UIIntrinsicNotMatched: coerce(lowerValue(inner), target, expression.pos, "TCast");
 						}
-					case CBVKAggregate(_) | CBVKEnum(_):
+					case CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -1611,6 +1642,27 @@ private class FunctionBuilder {
 			}
 		}
 		return null;
+	}
+
+	function lowerClassField(expression:TypedExpr, receiver:TypedExpr, fieldName:String):LoweredValue {
+		final receiverType = bodyValueType(receiver.t, receiver.pos, 'TField($fieldName:receiver-class-type)');
+		final classValue = receiverType.classValue();
+		if (classValue == null)
+			return unsupported(expression, 'TField($fieldName:receiver-not-concrete-class-reference)');
+		final field = classValue.field(fieldName);
+		if (field == null)
+			return unsupported(expression, 'TField($fieldName:unknown-class-storage-field)');
+		final expressionType = bodyValueType(expression.t, expression.pos, 'TField($fieldName:result-type)');
+		if (typeKey(expressionType.irType) != typeKey(field.type.irType))
+			return unsupported(expression, 'TField($fieldName:typed-result-mismatch)');
+		final receiverValue = coerce(lowerValue(receiver, receiverType), receiverType, receiver.pos, 'TField($fieldName:receiver)');
+		appendInstruction(null, IRIONullCheck(receiverValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "class-field-null-check");
+		return loadPlace({
+			place: IRPField(IRPDereference(receiverValue.id), fieldName),
+			mapping: field.type,
+			mutable: field.mutable
+		}, expression.pos, "class-field-load");
 	}
 
 	function lowerStatementConditional(expression:TypedExpr, condition:TypedExpr, whenTrue:TypedExpr, whenFalse:Null<TypedExpr>):Void {
@@ -2044,6 +2096,14 @@ private class FunctionBuilder {
 	}
 
 	function lowerConstant(expression:TypedExpr, constant:TConstant, expectedMapping:Null<CBodyValueType>):LoweredValue {
+		if (constant == TNull) {
+			final mapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TConst(TNull:type)") : expectedMapping;
+			if (mapping.classValue() == null)
+				return unsupported(expression, "TConst(TNull:requires-concrete-class-reference-context)");
+			final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+			appendInstruction(result, IRIOConstant(IRCNull), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "null-class-reference");
+			return {id: result.id, type: result.type, mapping: mapping};
+		}
 		final inferredMapping = primitiveMapping(expression.t, expression.pos, nodeName(expression));
 		final expectedPrimitive = expectedMapping == null ? null : expectedMapping.primitiveMapping();
 		final mapping = contextualConstantMapping(constant, inferredMapping, expectedPrimitive);
@@ -2144,6 +2204,13 @@ private class FunctionBuilder {
 	}
 
 	function lowerBinary(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr):LoweredValue {
+		if (operation == OpEq || operation == OpNotEq) {
+			final leftMapping = isNullConstantExpression(left) ? null : bodyValueType(left.t, left.pos, "TBinop(class-equality:left-type)");
+			final rightMapping = isNullConstantExpression(right) ? null : bodyValueType(right.t, right.pos, "TBinop(class-equality:right-type)");
+			if (leftMapping != null && leftMapping.classValue() != null || rightMapping != null && rightMapping.classValue() != null) {
+				return lowerClassEquality(expression, operation, left, right, leftMapping, rightMapping);
+			}
+		}
 		final leftValue = lowerValue(left);
 		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(leftValue.mapping, leftValue.id,
 			HaxeSourceSpan.fromPosition(left.pos, input.sourcePath), "binary-left") : null;
@@ -2151,6 +2218,53 @@ private class FunctionBuilder {
 		final stableLeftValue = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: leftValue.mapping, mutable: true},
 			left.pos, "binary-left-load");
 		return lowerBinaryValues(expression, operation, stableLeftValue, rightValue, "binary");
+	}
+
+	function lowerClassEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,
+			rightMapping:Null<CBodyValueType>):LoweredValue {
+		if (leftMapping == null && rightMapping == null)
+			return unsupported(expression, "TBinop(class-reference-equality-without-nominal-type)");
+		final target:CBodyValueType = if (leftMapping == null) {
+			rightMapping;
+		} else if (rightMapping == null) {
+			leftMapping;
+		} else {
+			final leftClass = leftMapping.classValue();
+			final rightClass = rightMapping.classValue();
+			if (leftClass == null || rightClass == null)
+				return unsupported(expression, "TBinop(class-reference-equality-mixed-value-category)");
+			if (leftClass.isDescendantOf(rightClass)) {
+				rightMapping;
+			} else if (rightClass.isDescendantOf(leftClass)) {
+				leftMapping;
+			} else {
+				return unsupported(expression, 'TBinop(unrelated-class-reference-equality:${leftClass.haxePath}->${rightClass.haxePath})');
+			}
+		};
+		if (target.classValue() == null)
+			return unsupported(expression, "TBinop(class-reference-equality-target-not-class)");
+		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(class-reference-equality:left)");
+		final leftValueLocal = expressionCreatesFlow(right) ? createFlowLocal(target, leftValue.id, HaxeSourceSpan.fromPosition(left.pos, input.sourcePath),
+			"class-equality-left") : null;
+		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(class-reference-equality:right)");
+		final stableLeft = leftValueLocal == null ? leftValue : loadPlace({place: IRPLocal(leftValueLocal), mapping: target, mutable: true}, left.pos,
+			"class-equality-left-load");
+		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(class-reference-equality:result-type)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "TBinop(class-reference-equality:result-not-Bool)");
+		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(result,
+			IRIOBinary(operation == OpEq ? "haxe.class-reference.equal" : "haxe.class-reference.not-equal", stableLeft.id, rightValue.id, IRIStatic),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "class-reference-equality");
+		return {id: result.id, type: result.type, mapping: boolMapping};
+	}
+
+	static function isNullConstantExpression(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TConst(TNull): true;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isNullConstantExpression(inner);
+			case _: false;
+		};
 	}
 
 	function tryLowerUIntIntrinsic(expression:TypedExpr, inner:TypedExpr, target:CPrimitiveTypeMapping):UIntIntrinsicResult {
@@ -2444,6 +2558,19 @@ private class FunctionBuilder {
 				{place: IRPLocal(localId), mapping: localType, mutable: true};
 			case TField(_, FAnon(fieldReference)):
 				unsupported(expression, 'TField(${fieldReference.get().name}:anonymous-field-mutation-requires-identity-preserving-alias-analysis)');
+			case TField(receiver, FInstance(_, _, fieldReference)):
+				final fieldName = fieldReference.get().name;
+				final receiverType = bodyValueType(receiver.t, receiver.pos, 'TField($fieldName:receiver-class-place-type)');
+				final classValue = receiverType.classValue();
+				if (classValue == null)
+					return unsupported(expression, 'TField($fieldName:receiver-not-concrete-class-reference)');
+				final field = classValue.field(fieldName);
+				if (field == null)
+					return unsupported(expression, 'TField($fieldName:unknown-class-storage-field)');
+				final receiverValue = coerce(lowerValue(receiver, receiverType), receiverType, receiver.pos, 'TField($fieldName:receiver-place)');
+				appendInstruction(null, IRIONullCheck(receiverValue.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+					HaxeSourceSpan.fromPosition(receiver.pos, input.sourcePath), "class-field-null-check");
+				{place: IRPField(IRPDereference(receiverValue.id), fieldName), mapping: field.type, mutable: field.mutable};
 			case TField(_, FStatic(classReference, fieldReference)):
 				final global = globalRegistry.require(classReference, fieldReference, expression, rejectGlobal);
 				{place: IRPGlobal(global.ir.id), mapping: CBodyValueType.primitive(global.mapping), mutable: global.ir.mutable};
@@ -2828,6 +2955,7 @@ private class FunctionBuilder {
 			case IRTBool: IRCBool(false);
 			case IRTInt(_, _): IRCInt("0");
 			case IRTFloat(64): IRCFloat("0.0");
+			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case _: unsupported(expression, '$owner(result-type-without-direct-default)');
 		};
 	}
@@ -2837,6 +2965,7 @@ private class FunctionBuilder {
 			case IRTBool: IRCBool(false);
 			case IRTInt(_, _): IRCInt("0");
 			case IRTFloat(64): IRCFloat("0.0");
+			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case _: unsupportedAt(position, '$owner(result-type-without-direct-default)');
 		};
 	}
@@ -2844,6 +2973,21 @@ private class FunctionBuilder {
 	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
 		if (typeKey(value.mapping.irType) == typeKey(target.irType)) {
 			return value;
+		}
+		final sourceClass = value.mapping.classValue();
+		final targetClass = target.classValue();
+		if (sourceClass != null || targetClass != null) {
+			if (sourceClass == null || targetClass == null)
+				return unsupportedAt(position, '$node:class-reference-category-mismatch:${value.mapping.cSpelling}->${target.cSpelling}');
+			if (!sourceClass.isDescendantOf(targetClass)) {
+				if (targetClass.isDescendantOf(sourceClass))
+					return unsupportedAt(position, '$node:unsafe-class-downcast-needs-runtime-type-proof:${sourceClass.haxePath}->${targetClass.haxePath}');
+				return unsupportedAt(position, '$node:unrelated-class-reference-conversion:${sourceClass.haxePath}->${targetClass.haxePath}');
+			}
+			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+			appendInstruction(result, IRIOConvert(value.id, IRCRepresentation, target.irType, IRIStatic, null),
+				HaxeSourceSpan.fromPosition(position, input.sourcePath), "class-upcast");
+			return {id: result.id, type: result.type, mapping: target};
 		}
 		final sourcePrimitive = value.mapping.primitiveMapping();
 		final targetPrimitive = target.primitiveMapping();

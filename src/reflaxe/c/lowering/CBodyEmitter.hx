@@ -7,6 +7,7 @@ import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 #end
@@ -38,9 +39,17 @@ class CBodyEmitter {
 	final enumPayloadFieldNames:Map<String, CIdentifier> = [];
 	final enumPayloadFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final enumInstanceOrder:Array<String> = [];
+	final classTags:Map<String, CIdentifier> = [];
+	final classBaseInstances:Map<String, String> = [];
+	final classBaseMembers:Map<String, CIdentifier> = [];
+	final classEmptyAnchors:Map<String, CIdentifier> = [];
+	final classFieldNames:Map<String, CIdentifier> = [];
+	final classFieldTypes:Map<String, HxcIRTypeRef> = [];
+	final classFieldOrder:Map<String, Array<String>> = [];
+	final classInstanceOrder:Array<String> = [];
 
 	#if (macro || reflaxe_runtime)
-	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>) {
+	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>) {
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
@@ -89,6 +98,28 @@ class CBodyEmitter {
 					enumPayloadNames.set(caseKey, payloadNames);
 				}
 				enumCaseOrder.set(instanceId, caseOrder);
+			}
+		}
+		if (classes != null) {
+			for (value in classes) {
+				final instanceId = value.prepared.instanceId;
+				classInstanceOrder.push(instanceId);
+				classTags.set(instanceId, value.cTag);
+				if (value.prepared.base != null) {
+					classBaseInstances.set(instanceId, value.prepared.base.instanceId);
+					if (value.baseMember == null)
+						throw new CBodyEmissionError('class `$instanceId` lost its finalized base-prefix member');
+					classBaseMembers.set(instanceId, value.baseMember);
+				}
+				if (value.emptyAnchor != null)
+					classEmptyAnchors.set(instanceId, value.emptyAnchor);
+				final order:Array<String> = [];
+				for (field in value.fields) {
+					order.push(field.prepared.name);
+					classFieldNames.set(classFieldKey(instanceId, field.prepared.name), field.cName);
+					classFieldTypes.set(classFieldKey(instanceId, field.prepared.name), field.prepared.type.irType);
+				}
+				classFieldOrder.set(instanceId, order);
 			}
 		}
 	}
@@ -169,6 +200,8 @@ class CBodyEmitter {
 							boundsAbortName, lineDirectives);
 					case IRIOBoundsCheck(_, _, IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _)):
 						// The semantic proof remains reviewable in HxcIR; no redundant C check survives.
+					case IRIONullCheck(valueId, IRNCPCheckedAbort(_, _)):
+						emitNullCheck(statements, values, instruction, valueId, boundsAbortName, lineDirectives, fn.id);
 					case IRIOStore(place, valueId):
 						if (instruction.result != null) {
 							fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
@@ -190,6 +223,11 @@ class CBodyEmitter {
 							requireValue(values, leftValueId, fn.id),
 							requireValue(values, rightValueId, fn.id)
 						], helperNames, instruction.id, fn.id);
+						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
+					case IRIOConvert(valueId, IRCRepresentation, targetType, IRIStatic, null):
+						final result = requireResult(instruction, fn.id);
+						final expression = classUpcastExpression(requireValue(values, valueId, fn.id), valueType(fn, valueId), targetType, instruction.id,
+							fn.id);
 						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
 					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 						final result = requireResult(instruction, fn.id);
@@ -280,6 +318,8 @@ class CBodyEmitter {
 						}
 					case IRIOBoundsCheck(_, indexValueId, _):
 						referenced.set(indexValueId, true);
+					case IRIONullCheck(valueId, _):
+						referenced.set(valueId, true);
 					case IRIOUnary(_, valueId, _):
 						referenced.set(valueId, true);
 					case IRIOBinary(_, leftValueId, rightValueId, _):
@@ -645,6 +685,31 @@ class CBodyEmitter {
 		statements.push(SIf(EBinary(LogicalOr, negative, outOfRange), SExpr(ECall(EIdentifier(abortName), [])), null));
 	}
 
+	function emitNullCheck(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, valueId:String,
+			boundsAbortName:Null<CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+		if (instruction.result != null)
+			fail('null check `${instruction.id}` in `$functionId` unexpectedly defines a value');
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SIf(EBinary(Equal, requireValue(values, valueId, functionId), ENull),
+			SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, instruction.id, functionId)), [])), null));
+	}
+
+	function classUpcastExpression(value:CExpr, sourceType:Null<HxcIRTypeRef>, targetType:HxcIRTypeRef, instructionId:String, functionId:String):CExpr {
+		final sourceId = switch sourceType {
+			case IRTPointer(IRTInstance(instanceId), true): instanceId;
+			case _: return fail('class upcast `$instructionId` in `$functionId` lost its nullable source instance');
+		};
+		final targetId = switch targetType {
+			case IRTPointer(IRTInstance(instanceId), true): instanceId;
+			case _: return fail('class upcast `$instructionId` in `$functionId` lost its nullable target instance');
+		};
+		final path = classBasePath(sourceId, targetId, instructionId, functionId);
+		var projected:CExpr = value;
+		for (index in 0...path.length)
+			projected = EMember(projected, path[index], index == 0);
+		return EConditional(EBinary(Equal, value, ENull), ENull, EUnary(AddressOf, projected));
+	}
+
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
 			fn:HxcIRFunction):Void {
 		final functionId = fn.id;
@@ -724,10 +789,14 @@ class CBodyEmitter {
 			case IRPField(base, fieldName):
 				final instanceId = switch placeType(base, fn) {
 					case IRTInstance(id): id;
-					case _: return fail('function `${fn.id}` lost the aggregate type of field place `$fieldName`');
+					case _: return fail('function `${fn.id}` lost the aggregate/class type of field place `$fieldName`');
 				};
-				EMember(placeExpression(base, fn, localNames, globalNames, spanLengthNames, values),
-					requireAggregateFieldName(instanceId, fieldName, "place", fn.id), false);
+				final baseExpression = placeExpression(base, fn, localNames, globalNames, spanLengthNames, values);
+				if (aggregateTags.exists(instanceId)) {
+					EMember(baseExpression, requireAggregateFieldName(instanceId, fieldName, "place", fn.id), false);
+				} else {
+					classFieldExpression(baseExpression, instanceId, fieldName, "place", fn.id);
+				}
 			case IRPIndex(base, indexValueId):
 				if (values == null) {
 					return fail('function `${fn.id}` attempted to emit unresolved collection index `$indexValueId`');
@@ -815,7 +884,9 @@ class CBodyEmitter {
 			case "haxe.u32.bit-or": widenedUInt32Binary(BitOr, left, right);
 			case "haxe.u32.bit-xor": widenedUInt32Binary(BitXor, left, right);
 			case "haxe.bool.equal" | "haxe.i32.equal" | "haxe.u32.equal" | "haxe.f64.equal": EBinary(Equal, left, right);
+			case "haxe.class-reference.equal": EBinary(Equal, left, right);
 			case "haxe.bool.not-equal" | "haxe.i32.not-equal" | "haxe.u32.not-equal" | "haxe.f64.not-equal": EBinary(NotEqual, left, right);
+			case "haxe.class-reference.not-equal": EBinary(NotEqual, left, right);
 			case "haxe.i32.less" | "haxe.u32.less" | "haxe.f64.less": EBinary(Less, left, right);
 			case "haxe.i32.less-equal" | "haxe.u32.less-equal" | "haxe.f64.less-equal": EBinary(LessEqual, left, right);
 			case "haxe.i32.greater" | "haxe.u32.greater" | "haxe.f64.greater": EBinary(Greater, left, right);
@@ -867,9 +938,14 @@ class CBodyEmitter {
 				if (aggregateTag != null) {
 					new CType(TStruct(aggregateTag));
 				} else {
-					switch requireEnumRepresentation(instanceId) {
-						case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
-						case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+					final classTag = classTags.get(instanceId);
+					if (classTag != null) {
+						new CType(TStruct(classTag));
+					} else {
+						switch requireEnumRepresentation(instanceId) {
+							case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
+							case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+						}
 					}
 				}
 			case _:
@@ -877,7 +953,7 @@ class CBodyEmitter {
 		};
 	}
 
-	function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
+	public function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
 		return switch type {
 			case IRTPointer(pointee, _):
 				final nested = typedDeclarator(pointee, DPointer(inner, []));
@@ -923,6 +999,9 @@ class CBodyEmitter {
 						addUnique(headers, "stdlib.h");
 					case IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)):
 						addUnique(headers, "stdlib.h");
+					case IRIONullCheck(_, IRNCPCheckedAbort(_, _)):
+						addUnique(headers, "stddef.h");
+						addUnique(headers, "stdlib.h");
 					case _:
 				}
 			}
@@ -959,6 +1038,52 @@ class CBodyEmitter {
 				});
 			}
 			result.push(DStruct(requireAggregateTag(instanceId), fields, []));
+		}
+		return result;
+	}
+
+	public function classDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in classInstanceOrder)
+			result.push(DForwardStruct(requireClassTag(instanceId), []));
+		for (instanceId in classInstanceOrder) {
+			final fields:Array<CField> = [];
+			final baseInstance = classBaseInstances.get(instanceId);
+			if (baseInstance != null) {
+				fields.push({
+					type: cType(IRTInstance(baseInstance)),
+					declarator: DName(requireClassBaseMember(instanceId)),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
+			final order = requireClassFieldOrder(instanceId);
+			for (fieldName in order) {
+				final type = requireClassFieldType(instanceId, fieldName);
+				final name = requireClassFieldName(instanceId, fieldName);
+				final declaration = typedDeclarator(type, DName(name));
+				fields.push({
+					type: declaration.type,
+					declarator: declaration.declarator,
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
+			final anchor = classEmptyAnchors.get(instanceId);
+			if (anchor != null) {
+				fields.push({
+					type: new CType(TChar(false)),
+					declarator: DName(anchor),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
+			if (fields.length == 0)
+				fail('class instance `$instanceId` would emit an invalid empty strict-C11 struct');
+			result.push(DStruct(requireClassTag(instanceId), fields, []));
 		}
 		return result;
 	}
@@ -1071,6 +1196,64 @@ class CBodyEmitter {
 		return result;
 	}
 
+	public function classLayoutAssertions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in classInstanceOrder) {
+			final tag = requireClassTag(instanceId);
+			final structType = new CType(TStruct(tag));
+			final baseInstance = classBaseInstances.get(instanceId);
+			var previousMember:Null<CIdentifier> = null;
+			var previousType:Null<HxcIRTypeRef> = null;
+			if (baseInstance != null) {
+				final member = requireClassBaseMember(instanceId);
+				final baseType = cType(IRTInstance(baseInstance));
+				result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), member), EInt(CIntegerLiteral.decimal("0"))),
+					'class ${tag.value} base subobject begins at offset zero'));
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(baseType, DName(null))),
+					'class ${tag.value} alignment admits its base subobject'));
+				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)), ESizeOfType(baseType, DName(null))),
+					'class ${tag.value} contains its complete base subobject'));
+				previousMember = member;
+				previousType = IRTInstance(baseInstance);
+			}
+			final order = requireClassFieldOrder(instanceId);
+			for (index in 0...order.length) {
+				final fieldName = order[index];
+				final member = requireClassFieldName(instanceId, fieldName);
+				final fieldType = requireClassFieldType(instanceId, fieldName);
+				final typed = typedDeclarator(fieldType, DName(null));
+				final offset = EOffsetOf(structType, DName(null), member);
+				if (previousMember == null) {
+					result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
+						'class ${tag.value} first storage field begins at offset zero'));
+				} else {
+					final priorType = requireClassPriorType(previousType, tag);
+					final prior = typedDeclarator(priorType, DName(null));
+					result.push(DStaticAssert(EBinary(GreaterEqual, offset,
+						EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(prior.type, prior.declarator))),
+						'class ${tag.value} field $index follows the prior storage without overlap'));
+				}
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(typed.type, typed.declarator)),
+					'class ${tag.value} alignment admits field $index'));
+				previousMember = member;
+				previousType = fieldType;
+			}
+			final anchor = classEmptyAnchors.get(instanceId);
+			if (anchor != null) {
+				result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), anchor), EInt(CIntegerLiteral.decimal("0"))),
+					'class ${tag.value} strict-C empty-storage anchor begins at zero'));
+				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)), EInt(CIntegerLiteral.decimal("1"))),
+					'class ${tag.value} strict-C empty-storage anchor occupies one byte'));
+			} else if (previousMember != null && previousType != null) {
+				final last = typedDeclarator(previousType, DName(null));
+				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
+					EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(last.type, last.declarator))),
+					'class ${tag.value} size contains its final storage member'));
+			}
+		}
+		return result;
+	}
+
 	public function enumLayoutAssertions():Array<CDecl> {
 		final result:Array<CDecl> = [];
 		for (instanceId in enumInstanceOrder) {
@@ -1156,10 +1339,24 @@ class CBodyEmitter {
 							addTypeHeaders(headers, requireEnumPayloadFieldType(instanceId, caseName, payloadName), visited);
 						}
 					}
+				} else if (classTags.exists(instanceId)) {
+					final base = classBaseInstances.get(instanceId);
+					if (base != null)
+						addTypeHeaders(headers, IRTInstance(base), visited);
+					final fields = classFieldOrder.get(instanceId);
+					if (fields == null)
+						throw new CBodyEmissionError('class instance `$instanceId` lost its finalized storage order');
+					for (fieldName in fields) {
+						final fieldType = classFieldTypes.get(classFieldKey(instanceId, fieldName));
+						if (fieldType == null)
+							throw new CBodyEmissionError('class instance `$instanceId` lost field type `$fieldName`');
+						addTypeHeaders(headers, fieldType, visited);
+					}
 				} else {
 					throw new CBodyEmissionError('direct instance `$instanceId` has no finalized C layout');
 				}
 			case IRTPointer(pointee, _):
+				addUnique(headers, "stddef.h");
 				addTypeHeaders(headers, pointee, visited);
 			case IRTFixedArray(element, _, _):
 				addTypeHeaders(headers, element, visited);
@@ -1178,8 +1375,7 @@ class CBodyEmitter {
 			case IRCFloat(text): floatExpression(text);
 			case IRCBool(value): EBool(value);
 			case IRCString(text, byteLength): stringLiteralExpression(text, byteLength);
-			case IRCNull:
-				throw new CBodyEmissionError("null constants are outside the admitted body subset");
+			case IRCNull: ENull;
 		};
 	}
 
@@ -1360,7 +1556,9 @@ class CBodyEmitter {
 				}
 			case IRPField(base, fieldName):
 				switch placeType(base, fn) {
-					case IRTInstance(instanceId): aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+					case IRTInstance(instanceId):
+						final aggregateType = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+						aggregateType == null ? classFieldType(instanceId, fieldName) : aggregateType;
 					case _: null;
 				}
 			case IRPIndex(base, _):
@@ -1422,6 +1620,92 @@ class CBodyEmitter {
 			throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized member order');
 		}
 		return order;
+	}
+
+	function classFieldExpression(base:CExpr, instanceId:String, fieldName:String, instructionId:String, functionId:String):CExpr {
+		var current = instanceId;
+		var expression = base;
+		final seen:Map<String, Bool> = [];
+		while (!seen.exists(current)) {
+			seen.set(current, true);
+			final name = classFieldNames.get(classFieldKey(current, fieldName));
+			if (name != null)
+				return EMember(expression, name, false);
+			final baseInstance = classBaseInstances.get(current);
+			if (baseInstance == null)
+				break;
+			expression = EMember(expression, requireClassBaseMember(current), false);
+			current = baseInstance;
+		}
+		return fail('class use `$instructionId` in `$functionId` has no finalized inherited member `$fieldName` for `$instanceId`');
+	}
+
+	function classFieldType(instanceId:String, fieldName:String):Null<HxcIRTypeRef> {
+		var current:Null<String> = instanceId;
+		final seen:Map<String, Bool> = [];
+		while (current != null && !seen.exists(current)) {
+			seen.set(current, true);
+			final type = classFieldTypes.get(classFieldKey(current, fieldName));
+			if (type != null)
+				return type;
+			current = classBaseInstances.get(current);
+		}
+		return null;
+	}
+
+	function classBasePath(sourceInstanceId:String, targetInstanceId:String, instructionId:String, functionId:String):Array<CIdentifier> {
+		final result:Array<CIdentifier> = [];
+		var current:Null<String> = sourceInstanceId;
+		final seen:Map<String, Bool> = [];
+		while (current != null && current != targetInstanceId && !seen.exists(current)) {
+			seen.set(current, true);
+			result.push(requireClassBaseMember(current));
+			current = classBaseInstances.get(current);
+		}
+		if (current != targetInstanceId || result.length == 0)
+			return fail('class upcast `$instructionId` in `$functionId` has no strict base-prefix path `$sourceInstanceId` -> `$targetInstanceId`');
+		return result;
+	}
+
+	function requireClassTag(instanceId:String):CIdentifier {
+		final tag = classTags.get(instanceId);
+		if (tag == null)
+			throw new CBodyEmissionError('class instance `$instanceId` has no finalized C tag');
+		return tag;
+	}
+
+	function requireClassBaseMember(instanceId:String):CIdentifier {
+		final member = classBaseMembers.get(instanceId);
+		if (member == null)
+			throw new CBodyEmissionError('derived class instance `$instanceId` has no finalized base-prefix member');
+		return member;
+	}
+
+	function requireClassFieldOrder(instanceId:String):Array<String> {
+		final order = classFieldOrder.get(instanceId);
+		if (order == null)
+			throw new CBodyEmissionError('class instance `$instanceId` has no finalized storage-field order');
+		return order;
+	}
+
+	function requireClassFieldName(instanceId:String, fieldName:String):CIdentifier {
+		final name = classFieldNames.get(classFieldKey(instanceId, fieldName));
+		if (name == null)
+			throw new CBodyEmissionError('class instance `$instanceId` has no finalized storage member `$fieldName`');
+		return name;
+	}
+
+	function requireClassFieldType(instanceId:String, fieldName:String):HxcIRTypeRef {
+		final type = classFieldTypes.get(classFieldKey(instanceId, fieldName));
+		if (type == null)
+			throw new CBodyEmissionError('class instance `$instanceId` has no finalized storage type for `$fieldName`');
+		return type;
+	}
+
+	function requireClassPriorType(type:Null<HxcIRTypeRef>, tag:CIdentifier):HxcIRTypeRef {
+		if (type == null)
+			throw new CBodyEmissionError('class ${tag.value} lost the type of its preceding storage member');
+		return type;
 	}
 
 	function requireEnumRepresentation(instanceId:String):CBodyEnumCRepresentation {
@@ -1546,6 +1830,9 @@ class CBodyEmitter {
 	}
 
 	static function aggregateFieldKey(instanceId:String, fieldName:String):String
+		return instanceId + "\x00" + fieldName;
+
+	static function classFieldKey(instanceId:String, fieldName:String):String
 		return instanceId + "\x00" + fieldName;
 
 	static function enumCaseKey(instanceId:String, caseName:String):String

@@ -1,0 +1,8 @@
+-cp test/class_layout/
+-cp test/class_layout/fixtures/positive/
+-lib reflaxe.c
+
+--macro ClassLayoutProbe.install()
+
+-main ClassLayoutFixture
+--interp

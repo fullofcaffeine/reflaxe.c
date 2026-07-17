@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "concrete-private-class-layout-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-013",
+    "HXC-SEM-014",
+    "HXC-SEM-023"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/class_layout/native/behavior_consumer.c",
+    "test/class_layout/native/layout_provider.c",
+    "test/class_layout/native/layout_consumer.cpp",
+    "test/class_layout/expected/program.h",
+    "test/class_layout/expected/program.c",
+    "test/class_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../class_layout/run.py"
+    ],
+    "workingDirectory": "test/runtime/class-layout",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "strict C11 and C\\+\\+17 layout agreement.*runtime-free"
+    },
+    "artifacts": [
+      {
+        "path": "test/class_layout/expected/program.h",
+        "format": "header",
+        "comparison": "layout"
+      },
+      {
+        "path": "test/class_layout/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

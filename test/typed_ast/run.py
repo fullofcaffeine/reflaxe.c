@@ -20,7 +20,7 @@ REPORT_PREFIX = "HXC_TYPED_AST_INVENTORY="
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_EXPECTATIONS = {
     "rich": (
-        "Unsupported typed Haxe node `TVar(box:type):reference-FixtureBox-non-null`",
+        "Unsupported typed Haxe node `TVar(box:type):generic-class-reference-requires-bounded-class-specialization:FixtureBox`",
         "Main.hx:8: characters 3-38",
     ),
     "isolation": (

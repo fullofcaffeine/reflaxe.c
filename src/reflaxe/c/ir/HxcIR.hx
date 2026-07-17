@@ -60,13 +60,32 @@ enum HxcIRBoundsPolicy {
 	IRBPLoopGuarded(guardInstructionId:String, indexLocalId:String, length:Int);
 }
 
+/** Nullable class references are checked before any object storage is dereferenced. */
+enum HxcIRNullCheckPolicy {
+	IRNCPCheckedAbort(profile:String, buildMode:String);
+}
+
 enum HxcIRTypeKind {
 	IRTKPrimitive;
 	IRTKAggregate(fields:Array<HxcIRTypeField>);
 	IRTKTaggedUnion(cases:Array<HxcIRTagCase>);
+	IRTKClass(layout:HxcIRClassLayout);
 	IRTKReference;
 	IRTKFunction;
 	IRTKExtern;
+}
+
+/** Metadata is absent unless a later semantic/runtime pass proves it is needed. */
+enum HxcIRClassHeader {
+	IRCHNone;
+	IRCHRuntime(featureId:String);
+}
+
+/** A concrete class instance owns one optional base prefix plus source-order fields. */
+typedef HxcIRClassLayout = {
+	final baseInstanceId:Null<String>;
+	final fields:Array<HxcIRTypeField>;
+	final header:HxcIRClassHeader;
 }
 
 typedef HxcIRTypeField = {
@@ -284,6 +303,7 @@ enum HxcIRInstructionKind {
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);
+	IRIONullCheck(valueId:String, policy:HxcIRNullCheckPolicy);
 	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
 }
 

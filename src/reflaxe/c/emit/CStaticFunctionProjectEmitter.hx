@@ -75,7 +75,7 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
@@ -107,7 +107,8 @@ class CStaticFunctionProjectEmitter {
 				headers.push(header);
 			}
 		}
-		if ((lowered.aggregates.length > 0 || lowered.enums.length > 0) && headers.indexOf("stddef.h") == -1) {
+		if ((lowered.aggregates.length > 0 || lowered.enums.length > 0 || lowered.classes.length > 0)
+			&& headers.indexOf("stddef.h") == -1) {
 			headers.push("stddef.h");
 		}
 		headers.sort(compareStrings);
@@ -135,12 +136,16 @@ class CStaticFunctionProjectEmitter {
 		for (definition in bodyEmitter.enumDefinitions()) {
 			headerUnit.declarations.push(definition);
 		}
+		for (definition in bodyEmitter.classDefinitions()) {
+			headerUnit.declarations.push(definition);
+		}
 		for (global in lowered.globals) {
+			final declaration = bodyEmitter.typedDeclarator(global.ir.type, DName(global.cName));
 			headerUnit.declarations.push(DVariable({
 				storage: [SExtern],
 				alignments: [],
-				type: bodyEmitter.cType(global.ir.type),
-				declarator: DName(global.cName),
+				type: declaration.type,
+				declarator: declaration.declarator,
 				initializer: null,
 				attributes: []
 			}));
@@ -148,8 +153,9 @@ class CStaticFunctionProjectEmitter {
 		for (fn in lowered.functions) {
 			if (!initializerIds.exists(fn.ir.id)) {
 				final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-				headerUnit.declarations.push(DPrototype([], functionSpecifiers, bodyEmitter.cType(fn.ir.returnType),
-					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)), []));
+				final declaration = bodyEmitter.typedDeclarator(fn.ir.returnType,
+					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
+				headerUnit.declarations.push(DPrototype([], functionSpecifiers, declaration.type, declaration.declarator, []));
 			}
 		}
 
@@ -160,16 +166,20 @@ class CStaticFunctionProjectEmitter {
 		for (assertion in bodyEmitter.enumLayoutAssertions()) {
 			programUnit.declarations.push(assertion);
 		}
+		for (assertion in bodyEmitter.classLayoutAssertions()) {
+			programUnit.declarations.push(assertion);
+		}
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in lowered.helpers) {
 			helperNames.set(helper.helperId, helper.cName);
 		}
 		for (global in lowered.globals) {
+			final declaration = bodyEmitter.typedDeclarator(global.ir.type, DName(global.cName));
 			programUnit.declarations.push(DVariable({
 				storage: [],
 				alignments: [],
-				type: bodyEmitter.cType(global.ir.type),
-				declarator: DName(global.cName),
+				type: declaration.type,
+				declarator: declaration.declarator,
 				initializer: bodyEmitter.globalInitializer(global.ir),
 				attributes: []
 			}));
@@ -183,11 +193,13 @@ class CStaticFunctionProjectEmitter {
 				throw new ProjectEmissionError('static initializer `${fn.ir.id}` unexpectedly participates in a closed call cycle');
 			}
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
+			final signature = bodyEmitter.typedDeclarator(fn.ir.returnType,
+				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
 			final definition:CDecl = DFunction({
 				storage: isInitializer ? [SStatic] : [],
 				functionSpecifiers: functionSpecifiers,
-				returnType: bodyEmitter.cType(fn.ir.returnType),
-				declarator: DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)),
+				returnType: signature.type,
+				declarator: signature.declarator,
 				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
 					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames, lowered.boundsAbortName),
 				attributes: []

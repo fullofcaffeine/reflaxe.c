@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "concrete-private-class-layout-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-005",
+    "HXC-SEM-013",
+    "HXC-SEM-014",
+    "HXC-SEM-023"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyClass.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/class_layout/fixtures/positive/ClassLayoutFixture.hx",
+    "test/class_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../class_layout/run.py"
+    ],
+    "workingDirectory": "test/positive/class-layout",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^class-layout: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/class_layout/expected/classes.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/class_layout/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

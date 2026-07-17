@@ -1,0 +1,222 @@
+hxcir schema=5
+module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-75:3
+  type "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" name="EmptyBase" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
+    class-layout base=none header=none
+  type "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" name="EmptyLeaf" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
+    class-layout base="instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" header=none
+  type "type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" name="MiddleRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
+    class-layout base="instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" header=none
+    field "enabled" type=bool mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":9:2-9:26
+  type "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" name="LeafRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
+    class-layout base="instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" header=none
+    field "score" type=f64 mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":13:2-13:25
+    field "peer" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":14:2-14:29
+  type "type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" name="RootRecord" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
+    class-layout base=none header=none
+    field "rootValue" type=i32 mutable=true @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":5:2-5:27
+  instance "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" declaration="type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
+  instance "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" declaration="type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":2:1-2:37
+  instance "instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" declaration="type.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":8:1-10:2
+  instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":12:1-15:2
+  instance "instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" declaration="type.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634" arguments=[] representation=direct @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":4:1-6:2
+  function "function.ClassLayoutFixture.asEmptyBase" name="ClassLayoutFixture.asEmptyBase" returns=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":52:57-54:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":52:57-54:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":52:57-54:3
+      instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":53:10-53:15
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":53:3-53:15
+    end block "entry"
+  end function "function.ClassLayoutFixture.asEmptyBase"
+  function "function.ClassLayoutFixture.asMiddle" name="ClassLayoutFixture.asMiddle" returns=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":44:58-46:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":44:58-46:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":44:58-46:3
+      instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":45:10-45:15
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":45:3-45:15
+    end block "entry"
+  end function "function.ClassLayoutFixture.asMiddle"
+  function "function.ClassLayoutFixture.asRoot" name="ClassLayoutFixture.asRoot" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":48:54-50:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":48:54-50:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":48:54-50:3
+      instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) convert value="parameter.0" kind=representation target=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) implementation=static failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:10-49:15
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":49:3-49:15
+    end block "entry"
+  end function "function.ClassLayoutFixture.asRoot"
+  function "function.ClassLayoutFixture.different" name="ClassLayoutFixture.different" returns=bool entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":60:68-62:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":60:68-62:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":60:68-62:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":60:68-62:3
+      instruction "instruction.0.class-reference-equality" result="value.0":bool binary operation="haxe.class-reference.not-equal" left="parameter.0" right="parameter.1" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":61:10-61:23
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":61:3-61:23
+    end block "entry"
+  end function "function.ClassLayoutFixture.different"
+  function "function.ClassLayoutFixture.isNull" name="ClassLayoutFixture.isNull" returns=bool entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":64:48-66:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":64:48-66:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":64:48-66:3
+      instruction "instruction.0.null-class-reference" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":65:19-65:23
+      instruction "instruction.1.class-reference-equality" result="value.1":bool binary operation="haxe.class-reference.equal" left="parameter.0" right="value.0" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":65:10-65:23
+      terminator return value="value.1" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":65:3-65:23
+    end block "entry"
+  end function "function.ClassLayoutFixture.isNull"
+  function "function.ClassLayoutFixture.main" name="ClassLayoutFixture.main" returns=void entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":68:30-75:3
+    local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":69:3-69:30
+    local "local.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":70:3-70:38
+    local "local.2" type=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":71:3-71:44
+    local "local.3" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:3-72:34
+    local "local.4" type=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:3-73:52
+    local "local.5" type=bool storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+    local "local.6" type=bool storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+    local "local.7" type=bool storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+    local "local.8" type=bool storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+    local "local.9" type=bool storage=automatic state=uninitialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":68:30-75:3
+      instruction "instruction.0.null-class-reference" result="value.0":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":69:25-69:29
+      instruction "instruction.1.initialize" result=- initialize place=local("local.0") value="value.0" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":69:3-69:30
+      instruction "instruction.2.load" result="value.1":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":70:32-70:36
+      instruction "instruction.3.call" result="value.2":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) call dispatch=direct("function.ClassLayoutFixture.asRoot") arguments=["value.1"] returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":70:25-70:37
+      instruction "instruction.4.initialize" result=- initialize place=local("local.1") value="value.2" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":70:3-70:38
+      instruction "instruction.5.load" result="value.3":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":71:38-71:42
+      instruction "instruction.6.call" result="value.4":pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) call dispatch=direct("function.ClassLayoutFixture.asMiddle") arguments=["value.3"] returns=pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":71:29-71:43
+      instruction "instruction.7.initialize" result=- initialize place=local("local.2") value="value.4" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":71:3-71:44
+      instruction "instruction.8.null-class-reference" result="value.5":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:29-72:33
+      instruction "instruction.9.initialize" result=- initialize place=local("local.3") value="value.5" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":72:3-72:34
+      instruction "instruction.10.load" result="value.6":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) load place=local("local.3") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:41-73:50
+      instruction "instruction.11.call" result="value.7":pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) call dispatch=direct("function.ClassLayoutFixture.asEmptyBase") arguments=["value.6"] returns=pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:29-73:51
+      instruction "instruction.12.initialize" result=- initialize place=local("local.4") value="value.7" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":73:3-73:52
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+    end block "entry"
+    block "block.0.while-condition" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+      instruction "instruction.13.load" result="value.8":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=local("local.1") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:16
+      instruction "instruction.14.null-class-reference" result="value.9":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:20-74:24
+      instruction "instruction.15.class-reference-equality" result="value.10":bool binary operation="haxe.class-reference.equal" left="value.8" right="value.9" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:24
+      instruction "instruction.16.short-circuit-result-initialize" result=- initialize place=local("local.5") value="value.10" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+      terminator branch condition="value.10" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+    end block "block.0.while-condition"
+    block "block.1.while-body" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+    end block "block.1.while-body"
+    block "block.10.short-circuit-join" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+      instruction "instruction.40.short-circuit-load" result="value.27":bool load place=local("local.8") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+      instruction "instruction.41.short-circuit-result-initialize" result=- initialize place=local("local.9") value="value.27" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+      terminator branch condition="value.27" true=edge(target="block.11.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+    end block "block.10.short-circuit-join"
+    block "block.11.short-circuit-rhs" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+      instruction "instruction.42.load" result="value.28":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=local("local.1") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:120-74:124
+      instruction "instruction.43.call" result="value.29":bool call dispatch=direct("function.ClassLayoutFixture.isNull") arguments=["value.28"] returns=bool failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:113-74:125
+      instruction "instruction.44.short-circuit-store" result=- store place=local("local.9") value="value.29" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+      terminator jump edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+    end block "block.11.short-circuit-rhs"
+    block "block.12.short-circuit-join" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+      instruction "instruction.45.short-circuit-load" result="value.30":bool load place=local("local.9") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:125
+      instruction "instruction.46.unary" result="value.31":bool unary operation="haxe.bool.not" value="value.30" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:10-74:126
+      terminator branch condition="value.31" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+    end block "block.12.short-circuit-join"
+    block "block.2.while-exit" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:3-74:130
+      terminator return value=none cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":68:30-75:3
+    end block "block.2.while-exit"
+    block "block.3.short-circuit-rhs" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+      instruction "instruction.17.load" result="value.11":pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) load place=local("local.2") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:28-74:34
+      instruction "instruction.18.null-class-reference" result="value.12":pointer(nullable,instance("instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:38-74:42
+      instruction "instruction.19.class-reference-equality" result="value.13":bool binary operation="haxe.class-reference.equal" left="value.11" right="value.12" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:28-74:42
+      instruction "instruction.20.short-circuit-store" result=- store place=local("local.5") value="value.13" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+    end block "block.3.short-circuit-rhs"
+    block "block.4.short-circuit-join" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+      instruction "instruction.21.short-circuit-load" result="value.14":bool load place=local("local.5") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:42
+      instruction "instruction.22.short-circuit-result-initialize" result=- initialize place=local("local.6") value="value.14" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+      terminator branch condition="value.14" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+    end block "block.4.short-circuit-join"
+    block "block.5.short-circuit-rhs" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+      instruction "instruction.23.load" result="value.15":pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) load place=local("local.4") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:46-74:55
+      instruction "instruction.24.null-class-reference" result="value.16":pointer(nullable,instance("instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:59-74:63
+      instruction "instruction.25.class-reference-equality" result="value.17":bool binary operation="haxe.class-reference.equal" left="value.15" right="value.16" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:46-74:63
+      instruction "instruction.26.short-circuit-store" result=- store place=local("local.6") value="value.17" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+    end block "block.5.short-circuit-rhs"
+    block "block.6.short-circuit-join" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+      instruction "instruction.27.short-circuit-load" result="value.18":bool load place=local("local.6") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:63
+      instruction "instruction.28.short-circuit-result-initialize" result=- initialize place=local("local.7") value="value.18" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+      terminator branch condition="value.18" true=edge(target="block.7.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+    end block "block.6.short-circuit-join"
+    block "block.7.short-circuit-rhs" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+      instruction "instruction.29.load" result="value.19":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=local("local.1") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:72-74:76
+      instruction "instruction.30.null-class-reference" result="value.20":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:78-74:82
+      instruction "instruction.31.call" result="value.21":bool call dispatch=direct("function.ClassLayoutFixture.same") arguments=["value.19","value.20"] returns=bool failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:67-74:83
+      instruction "instruction.32.short-circuit-store" result=- store place=local("local.7") value="value.21" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+      terminator jump edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+    end block "block.7.short-circuit-rhs"
+    block "block.8.short-circuit-join" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+      instruction "instruction.33.short-circuit-load" result="value.22":bool load place=local("local.7") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:83
+      instruction "instruction.34.short-circuit-result-initialize" result=- initialize place=local("local.8") value="value.22" transition=uninitialized->initialized @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+      terminator branch condition="value.22" true=edge(target="block.9.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+    end block "block.8.short-circuit-join"
+    block "block.9.short-circuit-rhs" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+      instruction "instruction.35.load" result="value.23":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=local("local.1") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:98-74:102
+      instruction "instruction.36.null-class-reference" result="value.24":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) constant value=null @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:104-74:108
+      instruction "instruction.37.call" result="value.25":bool call dispatch=direct("function.ClassLayoutFixture.different") arguments=["value.23","value.24"] returns=bool failure=none @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:88-74:109
+      instruction "instruction.38.unary" result="value.26":bool unary operation="haxe.bool.not" value="value.25" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:87-74:109
+      instruction "instruction.39.short-circuit-store" result=- store place=local("local.8") value="value.26" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+      terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":74:12-74:109
+    end block "block.9.short-circuit-rhs"
+  end function "function.ClassLayoutFixture.main"
+  function "function.ClassLayoutFixture.readInherited" name="ClassLayoutFixture.readInherited" returns=i32 entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":22:54-24:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":23:10-23:15
+      instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.0"),"rootValue") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":23:10-23:25
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":23:3-23:25
+    end block "entry"
+  end function "function.ClassLayoutFixture.readInherited"
+  function "function.ClassLayoutFixture.readPeer" name="ClassLayoutFixture.readPeer" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":35:56-37:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:10-36:15
+      instruction "instruction.1.class-field-load" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=field(dereference("parameter.0"),"peer") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:10-36:20
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":36:3-36:20
+    end block "entry"
+  end function "function.ClassLayoutFixture.readPeer"
+  function "function.ClassLayoutFixture.readRoot" name="ClassLayoutFixture.readRoot" returns=i32 entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":18:49-20:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":19:10-19:15
+      instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.0"),"rootValue") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":19:10-19:25
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":19:3-19:25
+    end block "entry"
+  end function "function.ClassLayoutFixture.readRoot"
+  function "function.ClassLayoutFixture.readScore" name="ClassLayoutFixture.readScore" returns=f64 entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":31:52-33:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":32:10-32:15
+      instruction "instruction.1.class-field-load" result="value.0":f64 load place=field(dereference("parameter.0"),"score") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":32:10-32:21
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":32:3-32:21
+    end block "entry"
+  end function "function.ClassLayoutFixture.readScore"
+  function "function.ClassLayoutFixture.same" name="ClassLayoutFixture.same" returns=bool entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":56:63-58:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":56:63-58:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":56:63-58:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":56:63-58:3
+      instruction "instruction.0.class-reference-equality" result="value.0":bool binary operation="haxe.class-reference.equal" left="parameter.0" right="parameter.1" implementation=static @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":57:10-57:23
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":57:3-57:23
+    end block "entry"
+  end function "function.ClassLayoutFixture.same"
+  function "function.ClassLayoutFixture.writeInherited" name="ClassLayoutFixture.writeInherited" returns=i32 entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+    parameter "parameter.1" type=i32 @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":26:65-29:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":27:3-27:8
+      instruction "instruction.1.store" result=- store place=field(dereference("parameter.0"),"rootValue") value="parameter.1" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":27:3-27:25
+      instruction "instruction.2.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":28:10-28:15
+      instruction "instruction.3.class-field-load" result="value.0":i32 load place=field(dereference("parameter.0"),"rootValue") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":28:10-28:25
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":28:3-28:25
+    end block "entry"
+  end function "function.ClassLayoutFixture.writeInherited"
+  function "function.ClassLayoutFixture.writePeer" name="ClassLayoutFixture.writePeer" returns=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) entry="entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    parameter "parameter.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    parameter "parameter.1" type=pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+    block "entry" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":39:74-42:3
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":40:3-40:8
+      instruction "instruction.1.store" result=- store place=field(dereference("parameter.0"),"peer") value="parameter.1" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":40:3-40:20
+      instruction "instruction.2.class-field-null-check" result=- null-check value="parameter.0" policy=checked-abort(profile="portable",build="debug") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":41:10-41:15
+      instruction "instruction.3.class-field-load" result="value.0":pointer(nullable,instance("instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634")) load place=field(dereference("parameter.0"),"peer") @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":41:10-41:20
+      terminator return value="value.0" cleanup=[] @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":41:3-41:20
+    end block "entry"
+  end function "function.ClassLayoutFixture.writePeer"
+end module "ClassLayoutFixture"

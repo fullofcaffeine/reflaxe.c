@@ -45,6 +45,9 @@ class HxcIRGolden {
 				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
 				redundantDefaultTagSwitch: invalidDiagnostics(redundantDefaultTagSwitchProgram()),
 				recursiveDirectLayout: invalidDiagnostics(recursiveDirectLayoutProgram()),
+				uncheckedClassDereference: invalidDiagnostics(uncheckedClassDereferenceProgram()),
+				unsafeClassUpcast: invalidDiagnostics(unsafeClassUpcastProgram()),
+				mismatchedClassEquality: invalidDiagnostics(mismatchedClassEqualityProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
 				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
@@ -772,6 +775,77 @@ class HxcIRGolden {
 			arguments: [],
 			representation: IRRTagged,
 			source: span(file, 1, 2)
+		});
+		return program;
+	}
+
+	static function uncheckedClassDereferenceProgram():HxcIRProgram {
+		final file = "test/negative/UncheckedClassDereference.hx";
+		final program = classProgram(file, [
+			instruction("bad.load", result("value.field", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.object"), "value")), file, 3)
+		], "invalid.UncheckedClassDereference");
+		program.modules[0].functions[0].parameters.push(parameter("value.object", IRTPointer(IRTInstance("instance.class.root"), true), file, 2));
+		return program;
+	}
+
+	static function unsafeClassUpcastProgram():HxcIRProgram {
+		final file = "test/negative/UnsafeClassUpcast.hx";
+		final program = classProgram(file, [
+			instruction("bad.convert", result("value.leaf", IRTPointer(IRTInstance("instance.class.leaf"), true)),
+				IRIOConvert("value.root", IRCRepresentation, IRTPointer(IRTInstance("instance.class.leaf"), true), IRIStatic, null), file, 3)
+		], "invalid.UnsafeClassUpcast");
+		program.modules[0].functions[0].parameters.push(parameter("value.root", IRTPointer(IRTInstance("instance.class.root"), true), file, 2));
+		return program;
+	}
+
+	static function mismatchedClassEqualityProgram():HxcIRProgram {
+		final file = "test/negative/MismatchedClassEquality.hx";
+		final program = classProgram(file, [
+			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.class-reference.equal", "value.root", "value.leaf", IRIStatic), file, 3)
+		], "invalid.MismatchedClassEquality");
+		program.modules[0].functions[0].parameters.push(parameter("value.root", IRTPointer(IRTInstance("instance.class.root"), true), file, 2));
+		program.modules[0].functions[0].parameters.push(parameter("value.leaf", IRTPointer(IRTInstance("instance.class.leaf"), true), file, 2));
+		return program;
+	}
+
+	static function classProgram(file:String, instructions:Array<HxcIRInstruction>, moduleId:String):HxcIRProgram {
+		final program = minimalProgram(moduleId, instructions, terminator(IRTReturn(null, []), file, 5), [], [], file);
+		program.modules[0].types.push({
+			id: "type.class.root",
+			displayName: "invalid.Root",
+			kind: IRTKClass({
+				baseInstanceId: null,
+				fields: [
+					{
+						name: "value",
+						type: IRTInt(32, true),
+						mutable: true,
+						source: span(file, 1)
+					}
+				],
+				header: IRCHNone
+			}),
+			source: span(file, 1)
+		});
+		program.modules[0].types.push({
+			id: "type.class.leaf",
+			displayName: "invalid.Leaf",
+			kind: IRTKClass({baseInstanceId: "instance.class.root", fields: [], header: IRCHNone}),
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.class.root",
+			declarationId: "type.class.root",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.class.leaf",
+			declarationId: "type.class.leaf",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
 		});
 		return program;
 	}

@@ -10,7 +10,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 4;
+	public static inline final SCHEMA_VERSION = 5;
 
 	public function new() {}
 
@@ -162,6 +162,36 @@ private class HxcIRValidationState {
 						}
 					}
 				}
+			case IRTKClass(layout):
+				if (layout.baseInstanceId != null) {
+					validateStableId(layout.baseInstanceId, '$path.baseInstanceId', declaration.source);
+					final base = typeInstances.get(layout.baseInstanceId);
+					final baseDeclaration = base == null ? null : typeDeclarations.get(base.declarationId);
+					if (base == null || base.representation != IRRDirect || baseDeclaration == null) {
+						add(path, 'class base `${layout.baseInstanceId}` is not a known direct type instance', declaration.source);
+					} else {
+						switch baseDeclaration.kind {
+							case IRTKClass(_):
+							case _: add(path, 'class base `${layout.baseInstanceId}` is not a class instance', declaration.source);
+						}
+					}
+				}
+				switch layout.header {
+					case IRCHNone:
+					case IRCHRuntime(featureId): validateStableId(featureId, '$path.header.runtimeFeature', declaration.source);
+				}
+				final names:Map<String, Bool> = [];
+				for (index => field in layout.fields) {
+					final fieldPath = '$path.field:$index:${field.name}';
+					validateStableId(field.name, '$fieldPath.name', field.source);
+					validateSpan(field.source, '$fieldPath.source');
+					validateTypeRef(field.type, '$fieldPath.type', field.source, false);
+					if (names.exists(field.name)) {
+						add(fieldPath, 'duplicate class storage field `${field.name}`', field.source);
+					} else {
+						names.set(field.name, true);
+					}
+				}
 		}
 	}
 
@@ -179,6 +209,15 @@ private class HxcIRValidationState {
 							break;
 						}
 					}
+				case IRTKClass(_) if (instance.representation != IRRDirect):
+					add(path, 'class instance `${instance.id}` requires direct private object storage before reference indirection', instance.source);
+				case _:
+			}
+		}
+		if (declaration != null) {
+			switch declaration.kind {
+				case IRTKClass(_) if (instance.arguments.length != 0):
+					add(path, 'class instance `${instance.id}` must be specialized before layout emission', instance.source);
 				case _:
 			}
 		}
@@ -402,9 +441,11 @@ private class HxcIRValidationState {
 		}
 
 		final boundsProofs:Map<String, Bool> = [];
+		final nullProofs:Map<String, Bool> = [];
 		for (index => instruction in block.instructions) {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
-			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs);
+			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
+				nullProofs);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
 			}
@@ -420,7 +461,8 @@ private class HxcIRValidationState {
 
 	function validateInstruction(instruction:HxcIRInstruction, path:String, block:HxcIRBlock, available:Map<String, HxcIRTypeRef>,
 			locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>,
-			instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>, boundsProofs:Map<String, Bool>):Void {
+			instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>, boundsProofs:Map<String, Bool>,
+			nullProofs:Map<String, Bool>):Void {
 		final resultExpected = instructionProducesValue(instruction.kind);
 		if (resultExpected && instruction.result == null) {
 			add(path, "value-producing instruction has no result", instruction.source);
@@ -437,14 +479,14 @@ private class HxcIRValidationState {
 					add(path, "constant result type does not match its literal family", instruction.source);
 				}
 			case IRIOLoad(place):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final loadedType = knownPlaceType(place, available, locals);
 				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
 					add(path, "load result type does not match its place type", instruction.source);
 				}
 			case IRIOAddress(place):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final addressedType = knownPlaceType(place, available, locals);
 				if (isRootPlace(place) && addressedType != null && isCollectionType(addressedType)) {
@@ -458,7 +500,7 @@ private class HxcIRValidationState {
 					}
 				}
 			case IRIOStore(place, valueId):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
 				final storedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final storePlaceType = knownPlaceType(place, available, locals);
@@ -474,9 +516,25 @@ private class HxcIRValidationState {
 				validateImplementation(implementation, '$path.implementation', instruction.source);
 			case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
 				validateStableId(operationId, '$path.operation', instruction.source);
-				requireValue(leftValueId, '$path.left', instruction.source, available);
-				requireValue(rightValueId, '$path.right', instruction.source, available);
+				final leftType = requireValue(leftValueId, '$path.left', instruction.source, available);
+				final rightType = requireValue(rightValueId, '$path.right', instruction.source, available);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
+				if (operationId == "haxe.class-reference.equal" || operationId == "haxe.class-reference.not-equal") {
+					if (leftType == null
+						|| rightType == null
+						|| typeKey(leftType) != typeKey(rightType)
+						|| !isNullableClassPointer(leftType)) {
+						add(path, "class-reference equality requires matching nullable concrete-class pointer operands", instruction.source);
+					}
+					final binaryResult = instruction.result;
+					final hasBoolResult = switch binaryResult {
+						case null: false;
+						case result: result.type == IRTBool;
+					};
+					if (implementation != IRIStatic || !hasBoolResult) {
+						add(path, "class-reference equality requires a static Bool result", instruction.source);
+					}
+				}
 			case IRIOConvert(valueId, kind, targetType, implementation, failure):
 				final sourceType = requireValue(valueId, '$path.value', instruction.source, available);
 				validateTypeRef(targetType, '$path.targetType', instruction.source, false);
@@ -607,10 +665,10 @@ private class HxcIRValidationState {
 					}
 				}
 			case IRIODeallocate(place, implementation) | IRIORetain(place, implementation) | IRIOTrace(place, implementation):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
 			case IRIOInitialize(place, valueId, from, to):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final initializePlaceType = knownPlaceType(place, available, locals);
 				if (initializedType != null && initializePlaceType != null && typeKey(initializedType) != typeKey(initializePlaceType)) {
@@ -621,7 +679,7 @@ private class HxcIRValidationState {
 					add(path, "initialize instruction must end in initialized state", instruction.source);
 				}
 			case IRIOInitializeFixedArray(place, values, from, to):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final arrayType = knownPlaceType(place, available, locals);
 				switch arrayType {
 					case IRTFixedArray(element, length, _):
@@ -639,8 +697,8 @@ private class HxcIRValidationState {
 				}
 				validateInitializeTransition(from, to, path, instruction.source);
 			case IRIOInitializeSpan(place, sourceArray, from, to):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
-				validatePlace(sourceArray, '$path.sourceArray', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				validatePlace(sourceArray, '$path.sourceArray', instruction.source, available, locals, nullProofs);
 				final spanType = knownPlaceType(place, available, locals);
 				final sourceType = knownPlaceType(sourceArray, available, locals);
 				switch [spanType, sourceType] {
@@ -652,7 +710,7 @@ private class HxcIRValidationState {
 				}
 				validateInitializeTransition(from, to, path, instruction.source);
 			case IRIOBoundsCheck(collection, indexValueId, policy):
-				validatePlace(collection, '$path.collection', instruction.source, available, locals);
+				validatePlace(collection, '$path.collection', instruction.source, available, locals, nullProofs);
 				switch knownPlaceType(collection, available, locals) {
 					case IRTFixedArray(_, _, _) | IRTSpan(_, _):
 					case _:
@@ -674,8 +732,19 @@ private class HxcIRValidationState {
 				if (proofKey != null) {
 					boundsProofs.set(proofKey, true);
 				}
+			case IRIONullCheck(valueId, policy):
+				final checkedType = requireValue(valueId, '$path.value', instruction.source, available);
+				if (checkedType != null) {
+					switch checkedType {
+						case IRTPointer(IRTInstance(instanceId), true) if (isClassInstance(instanceId)):
+							nullProofs.set(valueId, true);
+						case _:
+							add(path, "null check requires a nullable concrete-class reference", instruction.source);
+					}
+				}
+				validateNullCheckPolicy(policy, '$path.policy', instruction.source);
 			case IRIOLifetime(place, from, to, reason):
-				validatePlace(place, '$path.place', instruction.source, available, locals);
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateTransition(from, to, '$path.transition', instruction.source);
 				validateText(reason, '$path.reason', instruction.source);
 		}
@@ -690,7 +759,8 @@ private class HxcIRValidationState {
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIOInitialize(_, _, _, _) |
-				IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) | IRIOLifetime(_, _, _, _):
+				IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) |
+				IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
@@ -954,7 +1024,8 @@ private class HxcIRValidationState {
 		}
 	}
 
-	function validatePlace(place:HxcIRPlace, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>):Void {
+	function validatePlace(place:HxcIRPlace, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>,
+			nullProofs:Map<String, Bool>):Void {
 		switch place {
 			case IRPLocal(localId):
 				if (!locals.exists(localId)) {
@@ -965,24 +1036,31 @@ private class HxcIRValidationState {
 					add(path, 'place refers to unknown global `$globalId`', source);
 				}
 			case IRPDereference(pointerValueId):
-				requireValue(pointerValueId, '$path.pointer', source, available);
+				final pointerType = requireValue(pointerValueId, '$path.pointer', source, available);
+				switch pointerType {
+					case IRTPointer(_, true):
+						if (!nullProofs.exists(pointerValueId)) add(path, 'nullable pointer `$pointerValueId` requires a preceding in-block null check',
+							source);
+					case IRTPointer(_, false):
+					case null:
+					case _:
+						add(path, 'dereference requires a pointer value, found `${typeKey(pointerType)}`', source);
+				}
 			case IRPField(base, fieldName):
-				validatePlace(base, '$path.base', source, available, locals);
+				validatePlace(base, '$path.base', source, available, locals, nullProofs);
 				validateStableId(fieldName, '$path.field', source);
 				final baseType = knownPlaceType(base, available, locals);
 				if (baseType != null) {
 					switch baseType {
 						case IRTInstance(instanceId):
-							final fields = directAggregateFields(instanceId, path, source);
-							if (fields != null && findAggregateField(fields, fieldName) == null) {
-								add(path, 'aggregate place names unknown field `$fieldName`', source);
-							}
+							if (aggregateFieldType(baseType,
+								fieldName) == null) add(path, 'direct aggregate/class instance `$instanceId` has no storage field `$fieldName`', source);
 						case _:
-							add(path, "field place requires a direct aggregate instance base", source);
+							add(path, "field place requires a direct aggregate or class instance base", source);
 					}
 				}
 			case IRPIndex(base, indexValueId):
-				validatePlace(base, '$path.base', source, available, locals);
+				validatePlace(base, '$path.base', source, available, locals, nullProofs);
 				final indexType = requireValue(indexValueId, '$path.index', source, available);
 				if (indexType != null && !isInteger(indexType)) {
 					add(path, "index place requires an integer value", source);
@@ -1125,6 +1203,20 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function validateNullCheckPolicy(policy:HxcIRNullCheckPolicy, path:String, source:HxcSourceSpan):Void {
+		switch policy {
+			case IRNCPCheckedAbort(policyProfile, buildMode):
+				if (policyProfile != "portable" && policyProfile != "metal") {
+					add(path, 'null-check policy has unknown profile `$policyProfile`', source);
+				} else if (policyProfile != profile) {
+					add(path, 'null-check policy profile `$policyProfile` does not match validator profile `$profile`', source);
+				}
+				if (buildMode != "debug" && buildMode != "release" && buildMode != "minsizerel") {
+					add(path, 'null-check policy has unknown build mode `$buildMode`', source);
+				}
+		}
+	}
+
 	function directAggregateFields(instanceId:String, path:String, source:HxcSourceSpan):Null<Array<HxcIRTypeField>> {
 		final instance = typeInstances.get(instanceId);
 		if (instance == null) {
@@ -1162,11 +1254,66 @@ private class HxcIRValidationState {
 						case IRTKAggregate(fields):
 							final field = findAggregateField(fields, fieldName);
 							field == null ? null : field.type;
+						case IRTKClass(layout):
+							final field = findAggregateField(layout.fields, fieldName);
+							if (field != null) {
+								field.type;
+							} else if (layout.baseInstanceId != null) {
+								aggregateFieldType(IRTInstance(layout.baseInstanceId), fieldName);
+							} else {
+								null;
+							}
 						case _: null;
 					}
 				}
 			case _: null;
 		};
+	}
+
+	function isClassInstance(instanceId:String):Bool {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		return declaration != null && switch declaration.kind {
+			case IRTKClass(_): true;
+			case _: false;
+		};
+	}
+
+	function isNullableClassPointer(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTPointer(IRTInstance(instanceId), true): isClassInstance(instanceId);
+			case _: false;
+		};
+	}
+
+	function isSafeClassUpcast(source:HxcIRTypeRef, target:HxcIRTypeRef):Bool {
+		return switch [source, target] {
+			case [
+				IRTPointer(IRTInstance(sourceId), sourceNullable),
+				IRTPointer(IRTInstance(targetId), targetNullable)
+			]: sourceNullable == targetNullable && sourceId != targetId && isClassAncestor(sourceId, targetId);
+			case _:
+				false;
+		};
+	}
+
+	function isClassAncestor(sourceInstanceId:String, targetInstanceId:String):Bool {
+		var current:Null<String> = sourceInstanceId;
+		final seen:Map<String, Bool> = [];
+		while (current != null && !seen.exists(current)) {
+			seen.set(current, true);
+			final instance = typeInstances.get(current);
+			final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+			if (declaration == null)
+				return false;
+			current = switch declaration.kind {
+				case IRTKClass(layout): layout.baseInstanceId;
+				case _: return false;
+			};
+			if (current == targetInstanceId)
+				return true;
+		}
+		return false;
 	}
 
 	static function findAggregateField(fields:Array<HxcIRTypeField>, fieldName:String):Null<HxcIRTypeField> {
@@ -1224,6 +1371,11 @@ private class HxcIRValidationState {
 									collectDirectLayoutDependencies(payload.type, result);
 								}
 							}
+						case IRTKClass(layout):
+							if (layout.baseInstanceId != null && result.indexOf(layout.baseInstanceId) == -1)
+								result.push(layout.baseInstanceId);
+							for (field in layout.fields)
+								collectDirectLayoutDependencies(field.type, result);
 						case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern:
 					}
 				}
@@ -1298,7 +1450,11 @@ private class HxcIRValidationState {
 				if (!isNullablePair(targetType, sourceType)) {
 					add(path, "nullable unwrap target must match the nullable payload type", source);
 				}
-			case IRCPointer | IRCBox | IRCUnbox | IRCRepresentation:
+			case IRCRepresentation:
+				if (!isSafeClassUpcast(sourceType, targetType) || implementation != IRIStatic || failure != null) {
+					add(path, "direct representation conversion requires a null-preserving concrete-class upcast", source);
+				}
+			case IRCPointer | IRCBox | IRCUnbox:
 		}
 	}
 
