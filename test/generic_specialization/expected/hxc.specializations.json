@@ -1,0 +1,586 @@
+{
+  "functionSpecializations": [
+    {
+      "instanceId": "function.specialization.7144fbd75777c746113870e78d4be848e3aff7b96f8b315cba222f1c284cc65e",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 44,
+            "file": "Main.hx",
+            "startColumn": 22,
+            "endLine": 44,
+            "endColumn": 40
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(20:function.Main.choose2:3:i323:f64)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "A",
+          "displayName": "Int"
+        },
+        {
+          "representation": "direct-primitive",
+          "key": "f64",
+          "parameter": "B",
+          "displayName": "Float"
+        }
+      ],
+      "cName": "hxc_method_Main_choose_of_i32_f64",
+      "displayName": "choose<Int, Float>",
+      "codeSize": {
+        "definitionSha256": "e52b861a1c211af4da177f6c2658d30982889ccd4e82b5e45ab7bd048ad2dbe4",
+        "definitionBytes": 234,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.choose",
+      "semanticDigestSha256": "7144fbd75777c746113870e78d4be848e3aff7b96f8b315cba222f1c284cc65e"
+    },
+    {
+      "instanceId": "function.specialization.bb037e38edd8d20445999f7284295e2d8052d82e8b4be7b0e14141054046b2e8",
+      "reasons": [
+        {
+          "callerInstanceId": "function.specialization.c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53",
+          "source": {
+            "startLine": 30,
+            "file": "Main.hx",
+            "startColumn": 10,
+            "endLine": 30,
+            "endColumn": 24
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(21:function.Main.forward1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_method_Main_forward_of_i32",
+      "displayName": "forward<Int>",
+      "codeSize": {
+        "definitionSha256": "939546b5745b1c3eee896d15a068ebcacaaa6f2287984b11088c88be697520ed",
+        "definitionBytes": 251,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.forward",
+      "semanticDigestSha256": "bb037e38edd8d20445999f7284295e2d8052d82e8b4be7b0e14141054046b2e8"
+    },
+    {
+      "instanceId": "function.specialization.c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 48,
+            "file": "Main.hx",
+            "startColumn": 24,
+            "endLine": 48,
+            "endColumn": 62
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(21:function.Main.guarded1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_method_Main_guarded_of_i32",
+      "displayName": "guarded<Int>",
+      "codeSize": {
+        "definitionSha256": "e0017409799620fcd60a6593e3faa96fde4f867bb194b4df82f63d07200ebac7",
+        "definitionBytes": 673,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 2,
+        "irBlocks": 3
+      },
+      "baseFunctionId": "function.Main.guarded",
+      "semanticDigestSha256": "c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53"
+    },
+    {
+      "instanceId": "function.specialization.64f8f3d9b51363e9ae52690e11fc2086cd5d1b751bf3063ff9466bd78d9115e1",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 50,
+            "file": "Main.hx",
+            "startColumn": 34,
+            "endLine": 50,
+            "endColumn": 49
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:26:enum(10:GenericBox1:3:i32))",
+      "arguments": [
+        {
+          "representation": "direct-enum",
+          "key": "enum(10:GenericBox1:3:i32)",
+          "parameter": "T",
+          "displayName": "GenericBox<Int>"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_enumzx2810zx3AGenericBox1zx3A3zx3Ai32zx29",
+      "displayName": "identity<GenericBox<Int>>",
+      "codeSize": {
+        "definitionSha256": "8f6bbba481b8e9b63315f6696b2a134d022fef8a3e8553ea0e413070e9605a10",
+        "definitionBytes": 382,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "64f8f3d9b51363e9ae52690e11fc2086cd5d1b751bf3063ff9466bd78d9115e1"
+    },
+    {
+      "instanceId": "function.specialization.52c9e160df4485406da4318aab6efff84f82f8da21218ee749e3123c4932d623",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 43,
+            "file": "Main.hx",
+            "startColumn": 25,
+            "endLine": 43,
+            "endColumn": 38
+          }
+        },
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 56,
+            "file": "Main.hx",
+            "startColumn": 4,
+            "endLine": 56,
+            "endColumn": 21
+          }
+        },
+        {
+          "callerInstanceId": "function.specialization.7144fbd75777c746113870e78d4be848e3aff7b96f8b315cba222f1c284cc65e",
+          "source": {
+            "startLine": 14,
+            "file": "Main.hx",
+            "startColumn": 3,
+            "endLine": 14,
+            "endColumn": 19
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:3:f64)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "f64",
+          "parameter": "T",
+          "displayName": "Float"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_f64",
+      "displayName": "identity<Float>",
+      "codeSize": {
+        "definitionSha256": "4885e18ec57b24537e6f4aaa2d258e12aaded5da9cd18bbe42b306b5a3138c40",
+        "definitionBytes": 126,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "52c9e160df4485406da4318aab6efff84f82f8da21218ee749e3123c4932d623"
+    },
+    {
+      "instanceId": "function.specialization.1d01de2b1869a1f2d01c9e11d21e993708ebca0e36dab15736ebcf18314b3f62",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 41,
+            "file": "Main.hx",
+            "startColumn": 21,
+            "endLine": 41,
+            "endColumn": 32
+          }
+        },
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 42,
+            "file": "Main.hx",
+            "startColumn": 26,
+            "endLine": 42,
+            "endColumn": 37
+          }
+        },
+        {
+          "callerInstanceId": "function.specialization.bb037e38edd8d20445999f7284295e2d8052d82e8b4be7b0e14141054046b2e8",
+          "source": {
+            "startLine": 19,
+            "file": "Main.hx",
+            "startColumn": 10,
+            "endLine": 19,
+            "endColumn": 25
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_i32",
+      "displayName": "identity<Int>",
+      "codeSize": {
+        "definitionSha256": "4279b18b2db26b5aa81d694dbd8701e847982e0d57c4eadedd2e950943afacee",
+        "definitionBytes": 128,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "1d01de2b1869a1f2d01c9e11d21e993708ebca0e36dab15736ebcf18314b3f62"
+    },
+    {
+      "instanceId": "function.specialization.732dbcf63f1e1d56554124910d99aa93b80f6c9621b150f390e459a46a965b49",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 47,
+            "file": "Main.hx",
+            "startColumn": 21,
+            "endLine": 47,
+            "endColumn": 43
+          }
+        },
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 55,
+            "file": "Main.hx",
+            "startColumn": 4,
+            "endLine": 55,
+            "endColumn": 18
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:3:u32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "u32",
+          "parameter": "T",
+          "displayName": "UInt"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_u32",
+      "displayName": "identity<UInt>",
+      "codeSize": {
+        "definitionSha256": "fd9a523aab777a24e56904e1d6ac639a98315b1d05052e051d85bb35792e8668",
+        "definitionBytes": 130,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "732dbcf63f1e1d56554124910d99aa93b80f6c9621b150f390e459a46a965b49"
+    },
+    {
+      "instanceId": "function.specialization.cd4a37e1c6527ed3122e3e091f291f6597606e7f56e173485247cc7dbee8bc7d",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 45,
+            "file": "Main.hx",
+            "startColumn": 21,
+            "endLine": 45,
+            "endColumn": 35
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:4:bool)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "bool",
+          "parameter": "T",
+          "displayName": "Bool"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_bool",
+      "displayName": "identity<Bool>",
+      "codeSize": {
+        "definitionSha256": "2940b00443b2325c277c61d7ef77bb0ccf443f378a22654e4106d3f29cc1a2eb",
+        "definitionBytes": 123,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "cd4a37e1c6527ed3122e3e091f291f6597606e7f56e173485247cc7dbee8bc7d"
+    },
+    {
+      "instanceId": "function.specialization.accfbbecc2a01ca34b5f05e652325ce101739f4338fba0a5f135ea7d80ed3fa3",
+      "reasons": [
+        {
+          "callerInstanceId": "function.Main.main",
+          "source": {
+            "startLine": 52,
+            "file": "Main.hx",
+            "startColumn": 3,
+            "endLine": 52,
+            "endColumn": 19
+          }
+        }
+      ],
+      "recursive": false,
+      "specializationKey": "generic-function-v1(22:function.Main.identity1:50:enum(10:GenericBox1:26:enum(10:GenericBox1:3:i32)))",
+      "arguments": [
+        {
+          "representation": "direct-enum",
+          "key": "enum(10:GenericBox1:26:enum(10:GenericBox1:3:i32))",
+          "parameter": "T",
+          "displayName": "GenericBox<GenericBox<Int>>"
+        }
+      ],
+      "cName": "hxc_method_Main_identity_of_enumzx2810zx3AGenericBox1zx3A26zx3Aenumzx2810zx3AGenericBox1zx3A3zx3Ai32zx29zx29",
+      "displayName": "identity<GenericBox<GenericBox<Int>>>",
+      "codeSize": {
+        "definitionSha256": "011f54240615ce1738d590bf9dac20fb7325160e2e8e574b1f012c51160b62ee",
+        "definitionBytes": 445,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 0,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.identity",
+      "semanticDigestSha256": "accfbbecc2a01ca34b5f05e652325ce101739f4338fba0a5f135ea7d80ed3fa3"
+    },
+    {
+      "instanceId": "function.specialization.b2856c63292b7ed3ff4f1c78a3a75f74793fdd041524c93a39d4bdf43e7f7744",
+      "reasons": [
+        {
+          "callerInstanceId": "function.specialization.b2856c63292b7ed3ff4f1c78a3a75f74793fdd041524c93a39d4bdf43e7f7744",
+          "source": {
+            "startLine": 23,
+            "file": "Main.hx",
+            "startColumn": 10,
+            "endLine": 23,
+            "endColumn": 26
+          }
+        },
+        {
+          "callerInstanceId": "function.specialization.c26381eaa7608af4f23df396b9ee4cfe9b312ced96722f149549fecf22f33b53",
+          "source": {
+            "startLine": 28,
+            "file": "Main.hx",
+            "startColumn": 11,
+            "endLine": 28,
+            "endColumn": 27
+          }
+        }
+      ],
+      "recursive": true,
+      "specializationKey": "generic-function-v1(23:function.Main.recursive1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_method_Main_recursive_of_i32",
+      "displayName": "recursive<Int>",
+      "codeSize": {
+        "definitionSha256": "cba5e1acc8b613ca0b364a48930c3a144a7c4b2f974a08500dd13b96f9209545",
+        "definitionBytes": 309,
+        "metric": "strict-c11-utf8-function-definition-bytes",
+        "irInstructions": 1,
+        "irBlocks": 1
+      },
+      "baseFunctionId": "function.Main.recursive",
+      "semanticDigestSha256": "b2856c63292b7ed3ff4f1c78a3a75f74793fdd041524c93a39d4bdf43e7f7744"
+    }
+  ],
+  "compactNameDigest": "sha256-with-full-key-collision-check",
+  "limits": {
+    "maxFunctionSpecializations": 64,
+    "maxTypeSpecializations": 64,
+    "maxEstimatedSpecializationCBytes": 524288
+  },
+  "typeSpecializations": [
+    {
+      "instanceId": "instance.enum.05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86",
+      "reasons": [
+        {
+          "startLine": 51,
+          "file": "Main.hx",
+          "startColumn": 3,
+          "endLine": 51,
+          "endColumn": 59
+        },
+        {
+          "startLine": 51,
+          "file": "Main.hx",
+          "startColumn": 46,
+          "endLine": 51,
+          "endColumn": 58
+        },
+        {
+          "startLine": 9,
+          "file": "Main.hx",
+          "startColumn": 41,
+          "endLine": 11,
+          "endColumn": 3
+        }
+      ],
+      "representation": "tagged-union",
+      "recursive": false,
+      "specializationKey": "haxe-enum-v1(10:GenericBox1:26:enum(10:GenericBox1:3:i32))",
+      "arguments": [
+        {
+          "representation": "direct-enum",
+          "key": "enum(10:GenericBox1:3:i32)",
+          "parameter": "T",
+          "displayName": "GenericBox<Int>"
+        }
+      ],
+      "cName": "hxc_type_compiler_haxezx2Denum_05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86_value_zh280de7392de0cd86",
+      "declarationId": "type.enum.05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86",
+      "displayName": "GenericBox<enum(10:GenericBox1:3:i32)>",
+      "codeSize": {
+        "payloadFieldCount": 1,
+        "metric": "typed-enum-layout-structural-units",
+        "structuralUnits": 4,
+        "constructorCount": 2
+      },
+      "semanticDigestSha256": "05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86",
+      "haxePath": "GenericBox"
+    },
+    {
+      "instanceId": "instance.enum.a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
+      "reasons": [
+        {
+          "startLine": 33,
+          "file": "Main.hx",
+          "startColumn": 51,
+          "endLine": 38,
+          "endColumn": 3
+        },
+        {
+          "startLine": 34,
+          "file": "Main.hx",
+          "startColumn": 17,
+          "endLine": 34,
+          "endColumn": 22
+        },
+        {
+          "startLine": 36,
+          "file": "Main.hx",
+          "startColumn": 15,
+          "endLine": 36,
+          "endColumn": 20
+        },
+        {
+          "startLine": 49,
+          "file": "Main.hx",
+          "startColumn": 3,
+          "endLine": 49,
+          "endColumn": 49
+        },
+        {
+          "startLine": 49,
+          "file": "Main.hx",
+          "startColumn": 33,
+          "endLine": 49,
+          "endColumn": 48
+        },
+        {
+          "startLine": 50,
+          "file": "Main.hx",
+          "startColumn": 3,
+          "endLine": 50,
+          "endColumn": 50
+        },
+        {
+          "startLine": 5,
+          "file": "Main.hx",
+          "startColumn": 2,
+          "endLine": 5,
+          "endColumn": 17
+        },
+        {
+          "startLine": 9,
+          "file": "Main.hx",
+          "startColumn": 41,
+          "endLine": 11,
+          "endColumn": 3
+        }
+      ],
+      "representation": "tagged-union",
+      "recursive": false,
+      "specializationKey": "haxe-enum-v1(10:GenericBox1:3:i32)",
+      "arguments": [
+        {
+          "representation": "direct-primitive",
+          "key": "i32",
+          "parameter": "T",
+          "displayName": "Int"
+        }
+      ],
+      "cName": "hxc_type_compiler_haxezx2Denum_a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8_value_of_i32",
+      "declarationId": "type.enum.a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
+      "displayName": "GenericBox<i32>",
+      "codeSize": {
+        "payloadFieldCount": 1,
+        "metric": "typed-enum-layout-structural-units",
+        "structuralUnits": 4,
+        "constructorCount": 2
+      },
+      "semanticDigestSha256": "a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
+      "haxePath": "GenericBox"
+    }
+  ],
+  "keyEncoding": "length-prefixed-utf8-full-semantic-key",
+  "status": "analyzed-closed-specializations",
+  "schemaVersion": 1,
+  "codeSizeAttribution": "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block",
+  "summary": {
+    "recursiveSpecializations": 1,
+    "functionSpecializations": 10,
+    "typeSpecializations": 2,
+    "generatedPayloadArtifacts": 3,
+    "specializedFunctionDefinitionBytes": 2801,
+    "mergedTypeReasons": 11,
+    "generatedPayloadBytes": 26244,
+    "dependencyClosedEnumDefinitionBytes": 10793,
+    "mergedFunctionReasons": 16,
+    "estimatedSpecializationCBytes": 13594
+  },
+  "algorithm": "hxc-generic-specialization-v1"
+}

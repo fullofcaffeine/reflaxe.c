@@ -30,6 +30,7 @@ PRODUCTION_FILES = {
     "hxc.initialization-plan.json",
     "hxc.manifest.json",
     "hxc.runtime-plan.json",
+    "hxc.specializations.json",
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
     "include/hxc/program.h",
@@ -675,8 +676,12 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
         )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
     runtime_plan = json.loads((root / "hxc.runtime-plan.json").read_text(encoding="utf-8"))
+    specializations = json.loads(
+        (root / "hxc.specializations.json").read_text(encoding="utf-8")
+    )
     proof = runtime_plan.get("noRuntimeProof")
     reachability = proof.get("reachability") if isinstance(proof, dict) else None
+    specialization_summary = specializations.get("summary")
     if (
         manifest.get("compilationStatus") != "lowered-direct-value-executable"
         or manifest.get("configuration", {}).get("profile") != profile
@@ -687,7 +692,18 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
         or runtime_plan.get("features") != []
         or runtime_plan.get("artifacts") != []
         or "bounded-haxe-enum-values" not in runtime_plan.get("directDecisions", [])
+        or "closed-generic-specializations"
+        not in runtime_plan.get("directDecisions", [])
         or "closed-anonymous-value-records" in runtime_plan.get("directDecisions", [])
+        or specializations.get("schemaVersion") != 1
+        or specializations.get("algorithm") != "hxc-generic-specialization-v1"
+        or specializations.get("status") != "analyzed-closed-specializations"
+        or specializations.get("functionSpecializations") != []
+        or not isinstance(specializations.get("typeSpecializations"), list)
+        or len(specializations["typeSpecializations"]) != 3
+        or not isinstance(specialization_summary, dict)
+        or specialization_summary.get("functionSpecializations") != 0
+        or specialization_summary.get("typeSpecializations") != 3
         or not isinstance(proof, dict)
         or proof.get("status") != "eligible"
         or proof.get("directDecisions") != runtime_plan.get("directDecisions")

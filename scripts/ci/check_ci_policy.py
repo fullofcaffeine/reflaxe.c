@@ -296,6 +296,31 @@ REQUIRED_GATE_FILES = (
     "test/negative/enum-lowering/case.json",
     "test/snapshot/enum-lowering/case.json",
     "test/runtime/enum-lowering/case.json",
+    "src/reflaxe/c/lowering/CGenericSpecialization.hx",
+    "src/reflaxe/c/lowering/CGenericSpecializationContract.hx",
+    "src/reflaxe/c/lowering/CGenericSpecializationReport.hx",
+    "docs/generic-specialization.md",
+    "docs/specs/generic-specialization-report.schema.json",
+    "test/generic_specialization/fixtures/positive/Main.hx",
+    "test/generic_specialization/fixtures/positive/build.hxml",
+    "test/generic_specialization/fixtures/plain/Main.hx",
+    "test/generic_specialization/fixtures/plain/build.hxml",
+    "test/generic_specialization/fixtures/dynamic/Main.hx",
+    "test/generic_specialization/fixtures/dynamic/build.hxml",
+    "test/generic_specialization/fixtures/open/Main.hx",
+    "test/generic_specialization/fixtures/open/build.hxml",
+    "test/generic_specialization/fixtures/budget/Main.hx",
+    "test/generic_specialization/fixtures/budget/build.hxml",
+    "test/generic_specialization/fixtures/type_budget/Main.hx",
+    "test/generic_specialization/fixtures/type_budget/build.hxml",
+    "test/generic_specialization/fixtures/code_size/Main.hx",
+    "test/generic_specialization/fixtures/code_size/build.hxml",
+    "test/generic_specialization/expected/hxc.specializations.json",
+    "test/generic_specialization/run.py",
+    "test/positive/generic-specialization/case.json",
+    "test/negative/generic-specialization/case.json",
+    "test/snapshot/generic-specialization/case.json",
+    "test/runtime/generic-specialization/case.json",
     "docs/evaluation-order.md",
     "test/evaluation_order/EvaluationOrderProbe.hx",
     "test/evaluation_order/evaluation_order.hxml",
@@ -480,6 +505,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/generic_specialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -596,6 +622,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:aggregate-lowering entry point")
     if scripts.get("test:enum-lowering") != "python3 test/enum_lowering/run.py":
         errors.append("package.json must retain the test:enum-lowering entry point")
+    if (
+        scripts.get("test:generic-specialization")
+        != "python3 test/generic_specialization/run.py"
+    ):
+        errors.append("package.json must retain the test:generic-specialization entry point")
     if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
         errors.append("package.json must retain the test:evaluation-order entry point")
     if scripts.get("test:static-initialization") != "python3 test/static_initialization/run.py":
@@ -674,6 +705,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:aggregate-lowering")
     if "npm run test:enum-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:enum-lowering")
+    if "npm run test:generic-specialization" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append("package.json test:toolchain must execute test:generic-specialization")
     if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:evaluation-order")
     if "npm run test:static-initialization" not in str(scripts.get("test:toolchain", "")):
@@ -781,6 +816,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the closed aggregate-lowering test")
     if "test/enum_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the Haxe enum-lowering test")
+    if "test/generic_specialization/run.py" not in pre_commit:
+        errors.append("pre-commit must run the generic-specialization test")
     if "test/evaluation_order/run.py" not in pre_commit:
         errors.append("pre-commit must run the explicit evaluation-order test")
     if "test/static_initialization/run.py" not in pre_commit:
@@ -1093,6 +1130,34 @@ def validate() -> list[str]:
     if "compiler_identity" not in enum_runner or '"--version"' not in enum_runner:
         errors.append(
             "enum-lowering runner must verify required compiler-family identity"
+        )
+
+    generic_runner = read_text(ROOT / "test/generic_specialization/run.py", errors)
+    for required_generic_contract in (
+        "STRICT_FLAGS",
+        "-std=c11",
+        "-pedantic-errors",
+        "-Werror",
+        'for optimization in ("O0", "O2")',
+        "hxc.specializations.json",
+        "generic-specialization-budget:64",
+        "generic-specialization-code-size-budget",
+        "hashlib.sha256(emitted_definition)",
+        "check_server_isolation",
+        "check_conditional_sidecar_ownership",
+    ):
+        if required_generic_contract not in generic_runner:
+            errors.append(
+                "generic-specialization runner lost bounded semantic/native contract "
+                + required_generic_contract
+            )
+    if "--native-only" not in generic_runner or "--toolchain" not in generic_runner:
+        errors.append(
+            "generic-specialization runner must expose the required native matrix seam"
+        )
+    if "compiler_family" not in generic_runner or '"--version"' not in generic_runner:
+        errors.append(
+            "generic-specialization runner must verify required compiler-family identity"
         )
 
     evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)

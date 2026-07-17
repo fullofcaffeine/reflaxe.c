@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "id": "generic-specialization-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-015",
+    "HXC-MAC-005"
+  ],
+  "sources": [
+    "docs/specs/generic-specialization-report.schema.json",
+    "scripts/test/snapshots.py",
+    "test/generic_specialization/expected/hxc.specializations.json",
+    "test/generic_specialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "generic-specialization"
+    ],
+    "workingDirectory": "test/snapshot/generic-specialization",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/generic_specialization/expected/hxc.specializations.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

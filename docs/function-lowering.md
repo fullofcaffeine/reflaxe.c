@@ -16,11 +16,13 @@ see [deterministic static initialization](static-initialization.md).
 ## Typed function boundary
 
 Every admitted function has a compiler-provided `TFun` contract. Parameters and
-results must currently map to `Void`, `Bool`, `Int`, `UInt`, or `Float` through
-`CPrimitiveSemantics`; parameters become immutable HxcIR values and structural C
-parameters. The compiler never reconstructs a signature from text and never
-uses `Reflect`, `Dynamic`, `Any`, an unchecked cast, or raw C as a missing-type
-escape.
+results must resolve to the already admitted direct primitive or bounded enum
+representations. Non-generic primitive functions map `Void`, `Bool`, `Int`,
+`UInt`, and `Float` through `CPrimitiveSemantics`; closed generic calls first
+apply their normalized type arguments and then enter the same typed boundary.
+Parameters become immutable HxcIR values and structural C parameters. The
+compiler never reconstructs a signature from text and never uses `Reflect`,
+`Dynamic`, `Any`, an unchecked cast, or raw C as a missing-type escape.
 
 Only direct calls to typed static Haxe fields are admitted. The graph collector
 walks real `TypedExpr` nodes with the typed compiler API, is cycle-safe, and
@@ -31,6 +33,23 @@ source-positioned `HXC1001`.
 Default, optional, and rest parameters are not silently approximated. Until
 their complete Haxe semantics are implemented, each has a distinct scoped
 `HXC1001` detail naming the affected parameter, and the build owns no output.
+
+## Closed generic functions
+
+E3.T03 specializes reachable direct static generic functions for closed
+primitive and admitted enum arguments. The graph worklist keys each instance by
+the base function plus a length-prefixed normalized argument sequence, merges
+aliases and repeated call reasons, and registers the instance before scanning
+its body so recursion terminates. Full keys remain authoritative when SHA-256
+supplies compact instance and C-symbol suffixes.
+
+Dynamic, open, reference, class, anonymous-record, function, nullable, and
+native-pointer arguments remain exact source-positioned `HXC1001` boundaries.
+The compiler also rejects a 65th generic function or enum instance and a project
+whose conservative specialization estimate exceeds 524,288 C bytes. Successful
+generic builds emit the schema-1 `hxc.specializations.json` sidecar and remain
+runtime-free. See [deterministic generic
+specialization](generic-specialization.md).
 
 ## Calls, conversions, and C evaluation order
 
@@ -104,6 +123,11 @@ Every successful production build records that proof:
   `main` entry;
 - `hxc.stdlib-report.json` has `analyzed-no-stdlib-use`.
 
+When a closed generic instance is reachable, `hxc.runtime-plan.json` also names
+the direct decision `closed-generic-specializations`, and
+`hxc.specializations.json` records its full key, arguments, reasons, recursion,
+and code-size attribution. That report is omitted for non-generic programs.
+
 This is the hard ordering for future standard-library work as well: direct
 idiomatic C first, then a compiler-generated program-local specialization, and
 only the narrowest dependency-closed optimized `hxrt` feature when compile-time
@@ -116,6 +140,7 @@ Run:
 
 ```sh
 npm run test:function-lowering
+npm run test:generic-specialization
 npm run snapshots:check
 ```
 
@@ -129,8 +154,9 @@ output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-General arithmetic, statement branches, loops, objects, strings, arrays,
-instance/virtual calls, closures, exceptions, allocation, public exports, user arguments, and actual
-standard-library lowering remain outside this slice and fail closed. Native
+Objects, strings, general arrays, generic classes/references, descriptor-driven
+generic bodies, instance/virtual calls, closures, exceptions, allocation,
+public exports, user arguments, and general standard-library lowering remain
+outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation
 emits the owned C project but does not replace the C compiler invocation.

@@ -1,6 +1,7 @@
 package reflaxe.c.emit;
 
 import haxe.Json;
+import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
@@ -11,6 +12,8 @@ import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
 import reflaxe.c.emit.CBuildPlan.CBuildStandard;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportSnapshot;
+import reflaxe.c.lowering.CGenericSpecializationContract;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationStrategy;
@@ -51,6 +54,9 @@ typedef CProjectEmissionPlan = {
 	final ?primitiveHelperIds:Array<String>;
 	final ?directAggregateCount:Int;
 	final ?directEnumCount:Int;
+	final ?directGenericFunctionCount:Int;
+	final ?directGenericTypeCount:Int;
+	final ?specializationReport:CGenericSpecializationReportSnapshot;
 	final ?stdlibModules:Array<String>;
 	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
@@ -164,6 +170,7 @@ class CProjectEmitter {
 		"hxc.initialization-plan.json",
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
+		"hxc.specializations.json",
 		"hxc.stdlib-report.json",
 		"hxc.symbols.json",
 		CBuildAdapterEmitter.CMAKE_PATH,
@@ -189,6 +196,8 @@ class CProjectEmitter {
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanResolved(plan)));
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiResolved(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibResolved(plan)));
+				if (plan.specializationReport != null)
+					files.push(jsonFile("hxc.specializations.json", GeneratedFileKind.SpecializationReport, plan.specializationReport));
 			case LoweredProgram:
 				throw new ProjectEmissionError("unreachable generic lowered-program plan passed validation");
 			case _:
@@ -290,15 +299,21 @@ class CProjectEmitter {
 	function validateDirectExecutablePlan(plan:CProjectEmissionPlan):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
-		final directValueCount = aggregateCount + enumCount;
+		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
+		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
+		final directValueCount = aggregateCount + enumCount + genericFunctionCount;
 		if (aggregateCount < 0
 			|| enumCount < 0
+			|| genericFunctionCount < 0
+			|| genericTypeCount < 0
+			|| genericTypeCount > enumCount
 			|| plan.compilationStatus == DirectValueExecutable
 			&& directValueCount == 0
 			|| plan.compilationStatus == PrimitiveExecutable
 			&& directValueCount != 0) {
-			fail("direct aggregate and enum counts must agree with the bounded executable compilation status");
+			fail("direct value and generic-specialization counts must agree with the bounded executable compilation status");
 		}
+		validateSpecializationReport(plan, genericFunctionCount, genericTypeCount);
 		if (plan.runtimePolicyProvenance == null || plan.runtimeDiagnosticsProvenance == null) {
 			fail("direct executable emission requires resolved runtime-policy provenance");
 		}
@@ -395,6 +410,8 @@ class CProjectEmitter {
 	function validateDirectRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
+		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
+		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
@@ -457,6 +474,9 @@ class CProjectEmitter {
 		if (enumCount > 0) {
 			expectedDirectDecisions.push("bounded-haxe-enum-values");
 		}
+		if (genericFunctionCount + genericTypeCount > 0) {
+			expectedDirectDecisions.push("closed-generic-specializations");
+		}
 		if (helperIds.length > 0) {
 			expectedDirectDecisions.push("selected-program-local-helpers");
 		}
@@ -493,6 +513,161 @@ class CProjectEmitter {
 			}
 		}
 	}
+
+	function validateSpecializationReport(plan:CProjectEmissionPlan, genericFunctionCount:Int, genericTypeCount:Int):Void {
+		final report = plan.specializationReport;
+		if (genericFunctionCount + genericTypeCount == 0) {
+			if (report != null)
+				fail("a specialization report requires at least one reachable generic specialization");
+			return;
+		}
+		if (report == null)
+			return fail("reachable generic specializations require hxc.specializations.json");
+		if (report.schemaVersion != CGenericSpecializationContract.REPORT_SCHEMA_VERSION
+			|| report.algorithm != CGenericSpecializationContract.REPORT_ALGORITHM
+			|| report.status != CGenericSpecializationContract.REPORT_STATUS
+			|| report.keyEncoding != CGenericSpecializationContract.KEY_ENCODING
+			|| report.compactNameDigest != CGenericSpecializationContract.COMPACT_NAME_DIGEST
+			|| report.codeSizeAttribution != CGenericSpecializationContract.CODE_SIZE_ATTRIBUTION
+			|| report.limits.maxFunctionSpecializations != CGenericSpecializationContract.MAX_FUNCTION_SPECIALIZATIONS
+			|| report.limits.maxTypeSpecializations != CGenericSpecializationContract.MAX_TYPE_SPECIALIZATIONS
+			|| report.limits.maxEstimatedSpecializationCBytes != CGenericSpecializationContract.MAX_ESTIMATED_SPECIALIZATION_C_BYTES
+			|| report.summary.functionSpecializations != genericFunctionCount
+			|| report.summary.typeSpecializations != genericTypeCount
+			|| report.functionSpecializations.length != genericFunctionCount
+			|| report.typeSpecializations.length != genericTypeCount) {
+			fail("generic specialization report schema, algorithm, status, or counts differ from the emission plan");
+		}
+		var priorFunctionKey:Null<String> = null;
+		var functionBytes = 0;
+		var functionReasons = 0;
+		var recursiveCount = 0;
+		for (specialization in report.functionSpecializations) {
+			validateLogicalText(specialization.baseFunctionId, "generic function base ID");
+			validateLogicalText(specialization.instanceId, "generic function instance ID");
+			validateLogicalText(specialization.displayName, "generic function display name");
+			validateLogicalText(specialization.cName, "generic function C name");
+			if (specialization.arguments.length == 0
+				|| specialization.reasons.length == 0
+				|| specialization.semanticDigestSha256 != Sha256.encode(specialization.specializationKey)
+				|| specialization.instanceId != 'function.specialization.${specialization.semanticDigestSha256}'
+				|| priorFunctionKey != null
+				&& compareUtf8(priorFunctionKey, specialization.specializationKey) >= 0
+				|| specialization.codeSize.metric != "strict-c11-utf8-function-definition-bytes"
+				|| specialization.codeSize.definitionBytes < 1
+				|| specialization.codeSize.irBlocks < 1
+				|| specialization.codeSize.irInstructions < 0
+				|| !~/^[0-9a-f]{64}$/.match(specialization.codeSize.definitionSha256)) {
+				fail('generic function specialization `${specialization.instanceId}` is malformed or out of canonical order');
+			}
+			priorFunctionKey = specialization.specializationKey;
+			functionBytes += specialization.codeSize.definitionBytes;
+			functionReasons += specialization.reasons.length;
+			if (specialization.recursive)
+				recursiveCount++;
+			final argumentKeys:Array<String> = [];
+			for (argument in specialization.arguments) {
+				validateSpecializationArgument(argument.parameter, argument.key, argument.displayName, argument.representation);
+				argumentKeys.push(argument.key);
+			}
+			if (specialization.specializationKey != CGenericSpecializationContract.functionKey(specialization.baseFunctionId, argumentKeys))
+				fail('generic function specialization `${specialization.instanceId}` does not match its base function and arguments');
+			var priorReasonKey:Null<String> = null;
+			for (reason in specialization.reasons) {
+				validateLogicalText(reason.callerInstanceId, "generic reachability caller ID");
+				validateGenericSource(reason.source, "generic function reachability reason");
+				final reasonKey = reason.callerInstanceId + "\x00" + genericSourceKey(reason.source);
+				if (priorReasonKey != null && compareUtf8(priorReasonKey, reasonKey) >= 0)
+					fail('generic function specialization `${specialization.instanceId}` has duplicate or unordered reasons');
+				priorReasonKey = reasonKey;
+			}
+		}
+		var priorTypeKey:Null<String> = null;
+		var typeReasons = 0;
+		for (specialization in report.typeSpecializations) {
+			validateLogicalText(specialization.haxePath, "generic type Haxe path");
+			validateLogicalText(specialization.displayName, "generic type display name");
+			validateLogicalText(specialization.cName, "generic type C name");
+			if (specialization.arguments.length == 0
+				|| specialization.reasons.length == 0
+				|| specialization.semanticDigestSha256 != Sha256.encode(specialization.specializationKey)
+				|| specialization.instanceId != 'instance.enum.${specialization.semanticDigestSha256}'
+				|| specialization.declarationId != 'type.enum.${specialization.semanticDigestSha256}'
+				|| priorTypeKey != null
+				&& compareUtf8(priorTypeKey, specialization.specializationKey) >= 0
+				|| specialization.representation != "native-enum"
+				&& specialization.representation != "tagged-union"
+				|| specialization.codeSize.metric != "typed-enum-layout-structural-units"
+				|| specialization.codeSize.structuralUnits != 1 + specialization.codeSize.constructorCount + specialization.codeSize.payloadFieldCount
+				|| specialization.codeSize.constructorCount < 1
+				|| specialization.codeSize.payloadFieldCount < 0) {
+				fail('generic type specialization `${specialization.instanceId}` is malformed or out of canonical order');
+			}
+			priorTypeKey = specialization.specializationKey;
+			typeReasons += specialization.reasons.length;
+			if (specialization.recursive)
+				recursiveCount++;
+			final argumentKeys:Array<String> = [];
+			for (argument in specialization.arguments) {
+				validateSpecializationArgument(argument.parameter, argument.key, argument.displayName, argument.representation);
+				argumentKeys.push(argument.key);
+			}
+			if (specialization.specializationKey != CGenericSpecializationContract.enumInstanceKey(specialization.haxePath, argumentKeys))
+				fail('generic type specialization `${specialization.instanceId}` does not match its Haxe path and arguments');
+			var priorReasonKey:Null<String> = null;
+			for (reason in specialization.reasons) {
+				validateGenericSource(reason, "generic type reachability reason");
+				final reasonKey = genericSourceKey(reason);
+				if (priorReasonKey != null && compareUtf8(priorReasonKey, reasonKey) >= 0)
+					fail('generic type specialization `${specialization.instanceId}` has duplicate or unordered reasons');
+				priorReasonKey = reasonKey;
+			}
+		}
+		var payloadArtifacts = 0;
+		var payloadBytes = 0;
+		for (unit in plan.units) {
+			if (GeneratedFile.isPayloadKind(unit.kind)) {
+				payloadArtifacts++;
+				payloadBytes += Bytes.ofString(unit.contents).length;
+			}
+		}
+		if (report.summary.mergedFunctionReasons != functionReasons
+			|| report.summary.mergedTypeReasons != typeReasons
+			|| report.summary.recursiveSpecializations != recursiveCount
+			|| report.summary.specializedFunctionDefinitionBytes != functionBytes
+			|| report.summary.dependencyClosedEnumDefinitionBytes < 0
+			|| report.summary.estimatedSpecializationCBytes != functionBytes + report.summary.dependencyClosedEnumDefinitionBytes
+			|| report.summary.estimatedSpecializationCBytes > report.limits.maxEstimatedSpecializationCBytes
+			|| report.summary.generatedPayloadArtifacts != payloadArtifacts
+			|| report.summary.generatedPayloadBytes != payloadBytes
+			|| report.limits.maxFunctionSpecializations < genericFunctionCount
+			|| report.limits.maxTypeSpecializations < genericTypeCount) {
+			fail("generic specialization report reason, recursion, code-size, or payload totals are inconsistent");
+		}
+	}
+
+	function validateSpecializationArgument(parameter:String, key:String, displayName:String, representation:String):Void {
+		validateLogicalText(parameter, "generic type parameter");
+		validateLogicalText(key, "generic type argument key");
+		validateLogicalText(displayName, "generic type argument display name");
+		if (representation != "direct-primitive" && representation != "direct-enum")
+			fail('generic type argument `$parameter` has unknown representation `$representation`');
+	}
+
+	static function validateGenericSource(source:reflaxe.c.lowering.CGenericSpecializationReport.CGenericSourceSnapshot, label:String):Void {
+		if (!reflaxe.c.ir.HxcSourceSpan.isNormalizedFile(source.file)
+			|| source.startLine < 1
+			|| source.startColumn < 1
+			|| source.endLine < source.startLine
+			|| source.endColumn < 1
+			|| source.endLine == source.startLine
+			&& source.endColumn < source.startColumn) {
+			throw new ProjectEmissionError('$label has malformed source `${source.file}`');
+		}
+	}
+
+	static function genericSourceKey(source:reflaxe.c.lowering.CGenericSpecializationReport.CGenericSourceSnapshot):String
+		return '${source.file}:${source.startLine}:${source.startColumn}-${source.endLine}:${source.endColumn}';
 
 	function validateRuntimePayload(units:Array<GeneratedFile>, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
 		final runtimeUnits:Array<GeneratedFile> = [];

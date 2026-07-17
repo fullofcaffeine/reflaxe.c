@@ -11,10 +11,10 @@ import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
-import reflaxe.c.semantics.CPrimitiveTypeMapper;
-import reflaxe.c.semantics.CPrimitiveTypes;
 
 /** Module anchor for bounded Haxe-enum representation selection. */
 class CBodyEnum {
@@ -80,7 +80,10 @@ class CPreparedBodyEnumInstance {
 	public final ownerModule:String;
 	public final source:HxcSourceSpan;
 	public final representation:CBodyEnumRepresentation;
+	public final typeParameterNames:Array<String>;
+	public final typeArguments:Array<CGenericTypeArgument>;
 	public final arguments:Array<CBodyValueType>;
+	public final reasons:Array<HxcSourceSpan> = [];
 	public final valueTagRequest:CSymbolRequest;
 	public final discriminantTagRequest:CSymbolRequest;
 	public final payloadUnionRequest:Null<CSymbolRequest>;
@@ -91,8 +94,9 @@ class CPreparedBodyEnumInstance {
 	public var scopedLifetime:Bool = false;
 
 	public function new(shapeKey:String, digest:String, haxePath:String, displayName:String, ownerModule:String, source:HxcSourceSpan,
-			representation:CBodyEnumRepresentation, arguments:Array<CBodyValueType>, valueTagRequest:CSymbolRequest, discriminantTagRequest:CSymbolRequest,
-			payloadUnionRequest:Null<CSymbolRequest>, tagMemberRequest:Null<CSymbolRequest>, payloadMemberRequest:Null<CSymbolRequest>) {
+			representation:CBodyEnumRepresentation, typeParameterNames:Array<String>, typeArguments:Array<CGenericTypeArgument>,
+			arguments:Array<CBodyValueType>, valueTagRequest:CSymbolRequest, discriminantTagRequest:CSymbolRequest, payloadUnionRequest:Null<CSymbolRequest>,
+			tagMemberRequest:Null<CSymbolRequest>, payloadMemberRequest:Null<CSymbolRequest>) {
 		this.shapeKey = shapeKey;
 		this.digest = digest;
 		this.declarationId = 'type.enum.$digest';
@@ -102,12 +106,23 @@ class CPreparedBodyEnumInstance {
 		this.ownerModule = ownerModule;
 		this.source = source;
 		this.representation = representation;
+		this.typeParameterNames = typeParameterNames.copy();
+		this.typeArguments = typeArguments.copy();
 		this.arguments = arguments.copy();
 		this.valueTagRequest = valueTagRequest;
 		this.discriminantTagRequest = discriminantTagRequest;
 		this.payloadUnionRequest = payloadUnionRequest;
 		this.tagMemberRequest = tagMemberRequest;
 		this.payloadMemberRequest = payloadMemberRequest;
+	}
+
+	public function addReason(reason:HxcSourceSpan):Void {
+		for (existing in reasons) {
+			if (existing.display() == reason.display())
+				return;
+		}
+		reasons.push(reason);
+		reasons.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.display(), right.display()));
 	}
 
 	public function declaration():HxcIRTypeDeclaration {
@@ -208,11 +223,14 @@ class CLoweredBodyEnum {
 
 /** Request-local concrete-enum discovery, specialization, and recursion planning. */
 class CBodyEnumRegistry {
+	public static inline final MAX_GENERIC_ENUM_SPECIALIZATIONS = CGenericSpecializationContract.MAX_TYPE_SPECIALIZATIONS;
+
 	final context:CompilationContext;
 	final resolveValue:CBodyValueResolver;
 	final byShape:Map<String, CPreparedBodyEnumInstance> = [];
-	final activePaths:Array<String> = [];
+	final shapeKeysByDigest:Map<String, String> = [];
 	var preparationDepth = 0;
+	var genericSpecializationCount = 0;
 
 	public function new(context:CompilationContext, resolveValue:CBodyValueResolver) {
 		this.context = context;
@@ -233,20 +251,28 @@ class CBodyEnumRegistry {
 		if (definition.params.length != parameters.length) {
 			return rejected(fail, position, '$node:enum-argument-count:${enumPath(definition)}:${parameters.length}-for-${definition.params.length}');
 		}
-		final argumentKeys = parameters.map(parameter -> canonicalTypeKey(parameter, [], position, fail, '$node.type-argument'));
-		final shapeKey = 'haxe-enum-v1(${canonicalPart(enumPath(definition))}${canonicalArray(argumentKeys)})';
+		final canonicalizer = new CGenericTypeCanonicalizer(context.profile);
+		final typeArguments = parameters.map(parameter -> canonicalizer.normalize(parameter, position, fail, '$node.type-argument'));
+		final argumentKeys = typeArguments.map(argument -> argument.key);
+		final shapeKey = CGenericSpecializationContract.enumInstanceKey(enumPath(definition), argumentKeys);
+		final reason = HaxeSourceSpan.fromPosition(position, ownerSourcePath);
 		final existing = byShape.get(shapeKey);
 		if (existing != null) {
+			existing.addReason(reason);
 			return existing;
 		}
-		final path = enumPath(definition);
-		if (activePaths.indexOf(path) != -1) {
-			return rejected(fail, position, '$node:non-stationary-recursive-generic:$path');
+		if (definition.params.length > 0 && genericSpecializationCount >= MAX_GENERIC_ENUM_SPECIALIZATIONS) {
+			return rejected(fail, position,
+				'$node:generic-enum-specialization-budget:$MAX_GENERIC_ENUM_SPECIALIZATIONS:expanding-or-excessive:${enumPath(definition)}');
 		}
-
+		final path = enumPath(definition);
 		preparationDepth++;
-		activePaths.push(path);
 		final digest = Sha256.encode(shapeKey);
+		final priorShape = shapeKeysByDigest.get(digest);
+		if (priorShape != null && priorShape != shapeKey) {
+			throw new CBodyEmissionError('generic enum specialization digest collision `$digest` between `$priorShape` and `$shapeKey`');
+		}
+		shapeKeysByDigest.set(digest, shapeKey);
 		final sourcePath = definition.module == ownerModule ? ownerSourcePath : moduleSourcePath(definition.module);
 		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
 		final arguments = parameters.map(parameter -> {
@@ -277,8 +303,12 @@ class CBodyEnumRegistry {
 		if (payloadMemberRequest != null)
 			context.symbols.register(payloadMemberRequest);
 		final prepared = new CPreparedBodyEnumInstance(shapeKey, digest, path, displayName(definition, argumentKeys), definition.module, source,
-			representation, arguments, valueTagRequest, discriminantTagRequest, payloadUnionRequest, tagMemberRequest, payloadMemberRequest);
+			representation, definition.params.map(parameter -> parameter.name), typeArguments, arguments, valueTagRequest, discriminantTagRequest,
+			payloadUnionRequest, tagMemberRequest, payloadMemberRequest);
+		prepared.addReason(reason);
 		byShape.set(shapeKey, prepared);
+		if (definition.params.length > 0)
+			genericSpecializationCount++;
 
 		for (caseName in definition.names) {
 			final field = definition.constructs.get(caseName);
@@ -315,7 +345,6 @@ class CBodyEnumRegistry {
 			}
 			prepared.cases.push(tagCase);
 		}
-		activePaths.pop();
 		preparationDepth--;
 		if (preparationDepth == 0) {
 			recomputeRecursion();
@@ -414,36 +443,6 @@ class CBodyEnumRegistry {
 		result.push(value);
 	}
 
-	function canonicalTypeKey(type:Type, stack:Array<String>, position:Position, fail:(Position, String) -> Void, node:String):String {
-		final resolved = unwrapAliases(type, position, fail, node);
-		return switch resolved {
-			case TEnum(reference, parameters):
-				final definition = reference.get();
-				final path = enumPath(definition);
-				if (stack.indexOf(path) != -1)
-					return rejected(fail, position, '$node:recursive-type-argument:$path');
-				final next = stack.concat([path]);
-				'enum(${canonicalPart(path)}${canonicalArray(parameters.map(parameter -> canonicalTypeKey(parameter, next, position, fail, node)))})';
-			case _:
-				final mapping = admittedPrimitive(resolved, position, fail, node);
-				primitiveTypeKey(mapping.irType);
-		};
-	}
-
-	function admittedPrimitive(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
-		return switch CPrimitiveTypeMapper.map(type, context.profile) {
-			case CTPrimitive(mapping):
-				final admitted = mapping.nullability == CPNonNullable && switch mapping.sourceType {
-					case CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
-					case _: false;
-				};
-				admitted ? mapping : rejected(fail, position, '$node:${mapping.cSpelling}');
-			case CTReference(identity, nullable): rejected(fail, position, '$node:reference-$identity-${nullable ? "nullable" : "non-null"}');
-			case CTNativePointer(identity, nullable): rejected(fail, position, '$node:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
-			case CTUnsupported(reason): rejected(fail, position, '$node:$reason');
-		};
-	}
-
 	static function enumHasPayload(definition:EnumType, parameters:Array<Type>, position:Position, fail:(Position, String) -> Void, node:String):Bool {
 		for (name in definition.names) {
 			final field = definition.constructs.get(name);
@@ -468,42 +467,14 @@ class CBodyEnumRegistry {
 		};
 	}
 
-	static function unwrapAliases(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Type {
-		return switch type {
-			case TMono(reference):
-				final resolved = reference.get();
-				resolved == null ? rejected(fail, position, '$node:unresolved-monomorph') : unwrapAliases(resolved, position, fail, node);
-			case TLazy(resolve): unwrapAliases(resolve(), position, fail, node);
-			case TType(reference, parameters):
-				final definition = reference.get();
-				unwrapAliases(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, fail, node);
-			case _: type;
-		};
-	}
-
 	static function displayName(definition:EnumType, argumentKeys:Array<String>):String
 		return argumentKeys.length == 0 ? enumPath(definition) : enumPath(definition) + "<" + argumentKeys.join(",") + ">";
-
-	static function primitiveTypeKey(type:HxcIRTypeRef):String {
-		return switch type {
-			case IRTBool: "bool";
-			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
-			case IRTFloat(width): 'f$width';
-			case _: throw new CBodyEmissionError("enum specialization contains a non-admitted primitive type");
-		};
-	}
 
 	static function enumPath(definition:EnumType):String
 		return definition.pack.concat([definition.name]).join(".");
 
 	static function moduleSourcePath(modulePath:String):String
 		return modulePath.split(".").join("/") + ".hx";
-
-	static function canonicalArray(values:Array<String>):String
-		return '${values.length}:${values.map(canonicalPart).join("")}';
-
-	static function canonicalPart(value:String):String
-		return '${Bytes.ofString(value).length}:$value';
 
 	static function identifierOrNull(symbols:CSymbolRegistry, request:Null<CSymbolRequest>):Null<CIdentifier>
 		return request == null ? null : symbols.identifierFor(request);

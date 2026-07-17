@@ -36,6 +36,7 @@
         "function-lowering",
         "aggregate-lowering",
         "enum-lowering",
+        "generic-specialization",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -70,6 +71,7 @@
         "function-lowering",
         "aggregate-lowering",
         "enum-lowering",
+        "generic-specialization",
         "static-initialization",
         "span-lowering",
         "runtime-feature-graph",
@@ -119,6 +121,7 @@
         "function-lowering",
         "aggregate-lowering",
         "enum-lowering",
+        "generic-specialization",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -146,6 +149,7 @@
         "function-lowering",
         "aggregate-lowering",
         "enum-lowering",
+        "generic-specialization",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -523,10 +527,32 @@
       "status": "active",
       "assertions": [
         "fieldless concrete enums use private native C enums, while payload enums use readable discriminant enums, per-constructor payload structs, payload unions, and outer value structs",
-        "concrete primitive generic instances specialize deterministically without claiming general generic monomorphization, and recursive local values use explicit finite pointer edges without selecting runtime support",
+        "closed primitive generic instances specialize deterministically under the shared E3.T03 key, reason, budget, and report contract, while recursive local values use explicit finite pointer edges without selecting runtime support",
         "constructor evaluation, checked payload projection, and exhaustive source-ordered tag switches remain first-class validated HxcIR before structural C emission",
         "recursive escape, reference payloads, aggregate payloads, and non-exhaustive source matches fail closed at source positions with no generated artifact",
         "portable, metal, and explicit runtime-none production projects are deterministic and runtime-free, while GCC/Clang O0/O2 C11 and paired C/C++17 consumers prove matching tags, size, alignment, offsets, construction, and recursive layout"
+      ]
+    },
+    {
+      "id": "generic-specialization",
+      "directory": "test/generic_specialization",
+      "runner": [
+        "python3",
+        "test/generic_specialization/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "reachable closed generic static functions and enum values specialize by full length-prefixed semantic keys while SHA-256 is only a collision-checked compact name suffix",
+        "typedef-equivalent Int calls share one instance and merged source reasons, a two-argument key preserves ordered boundaries, distinct Bool, Int, UInt, Float, and finite same-nominal nested enum function instances remain separate, and same-key recursive discovery terminates",
+        "hxc.specializations.json records deterministic reachability, recursion, structural cost, strict-C definition bytes independently rehashed from emitted C, hard budgets, and complete generated payload bytes",
+        "Dynamic, open phantom parameters, non-stationary recursive function and type growth reaching their count budgets, and the code-size threshold fail with exact source-positioned HXC1001 and no generated artifact",
+        "isolated roots, reversed typed-module order, locale changes, repeated cold builds, portable/metal/runtime-none payloads, and a rejected warm-server request do not change generated C; a non-generic same-root replacement removes the stale specialization sidecar; available GCC and Clang compile and run strict C11 at O0 and O2"
       ]
     },
     {
@@ -929,6 +955,15 @@
           "c",
           "header",
           "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "generic-specialization",
+        "expectedRoots": [
+          "test/generic_specialization/expected/hxc.specializations.json"
+        ],
+        "formats": [
           "json"
         ]
       },

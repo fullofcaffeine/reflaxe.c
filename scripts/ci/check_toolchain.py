@@ -228,6 +228,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_function_lowering_script = "python3 test/function_lowering/run.py"
     expected_aggregate_lowering_script = "python3 test/aggregate_lowering/run.py"
     expected_enum_lowering_script = "python3 test/enum_lowering/run.py"
+    expected_generic_specialization_script = "python3 test/generic_specialization/run.py"
     expected_evaluation_order_script = "python3 test/evaluation_order/run.py"
     expected_static_initialization_script = "python3 test/static_initialization/run.py"
     expected_arithmetic_semantics_script = "python3 test/arithmetic_semantics/run.py"
@@ -243,7 +244,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:runtime-features && npm run test:array-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
-        "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:enum-lowering && npm run test:evaluation-order && npm run test:static-initialization && "
+        "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
         "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run snapshots:check"
     )
     if (
@@ -342,6 +343,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:enum-lowering") != expected_enum_lowering_script
     ):
         errors.append("package.json must retain the Haxe enum-lowering gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:generic-specialization")
+        != expected_generic_specialization_script
+    ):
+        errors.append("package.json must retain the generic-specialization gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:evaluation-order") != expected_evaluation_order_script

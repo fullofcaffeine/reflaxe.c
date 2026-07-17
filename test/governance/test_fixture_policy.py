@@ -64,6 +64,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "function-lowering",
                 "aggregate-lowering",
                 "enum-lowering",
+                "generic-specialization",
                 "evaluation-order",
                 "static-initialization",
                 "arithmetic-semantics",

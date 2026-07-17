@@ -1,0 +1,4 @@
+-cp .
+-lib reflaxe.c
+-main Main
+-D reflaxe_c_test_generic_code_size_limit=1

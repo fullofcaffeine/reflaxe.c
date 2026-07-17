@@ -224,12 +224,24 @@ projection retains a profile/build tag check, and exhaustive Haxe matches use
 typed tag-switch edges. Recursive local payload edges use explicit pointers to
 stable automatic backing storage, while recursive parameters and returns fail
 closed pending escape/lifetime analysis. Concrete primitive type arguments are
-specialized deterministically within this enum slice without claiming the
-general E3.T03 monomorphization model. See [Haxe enum
-lowering](enum-lowering.md).
+specialized deterministically and now participate in the shared E3.T03 report.
+See [Haxe enum lowering](enum-lowering.md).
+
+E3.T03 extends the reachable static-function worklist with closed generic
+instances. It infers typed arguments at direct calls, expands aliases, accepts
+only already-proven primitive and enum representations, and shares equivalent
+instances by a length-prefixed full semantic key. SHA-256 is only a compact
+instance suffix; request-local registries retain the full key and reject digest
+collisions. Registering an instance before scanning its body closes recursive
+generic calls, while hard function/type-count and estimated-C-byte budgets stop
+expanding graphs with source-positioned `HXC1001` instead of silently boxing.
+The typed `hxc.specializations.json` sidecar records canonical instances,
+source-rooted reasons, recursion, and code-size attribution. See
+[deterministic generic specialization](generic-specialization.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function, closed-record,
-and bounded enum sets, scans them for program-local primitive helper IDs,
+bounded enum, and closed generic-function sets, scans them for program-local
+primitive helper IDs,
 computes their dependency closure, and
 registers every helper/parameter/standard symbol before sealing the
 per-compilation symbol registry. Function requests use translation-unit

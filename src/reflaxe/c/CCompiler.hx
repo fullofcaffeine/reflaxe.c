@@ -25,6 +25,7 @@ import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyRuntimeRequirement;
 import reflaxe.c.lowering.CBodyLoweringError;
+import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportBuilder;
 import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
 import reflaxe.c.ir.HxcIRValidationError;
@@ -111,7 +112,7 @@ class CCompiler {
 			final entryFunctionId = CBodyLowering.functionId(input.declarationPath, input.fieldName);
 			final staticInitialization = new CStaticInitializationPlanner().plan(program, entryFunctionId);
 			context.setStaticInitialization(staticInitialization.snapshot);
-			final graph = new CStaticFunctionGraphCollector().collect(input, program, staticInitialization.initializerInputs);
+			final graph = new CStaticFunctionGraphCollector(context).collect(input, program, staticInitialization.initializerInputs);
 			final entryRequest = new CSymbolRequest(CSKStaticInitializer, ["compiler", "executable-entry-point", graph.entryFunctionId],
 				CNSOrdinary("translation-unit"), CSVInternal, "main");
 			final initializationRequest:Null<CSymbolRequest> = staticInitialization.executionFunctionIds.length == 0 ? null : new CSymbolRequest(CSKStaticInitializer,
@@ -134,10 +135,12 @@ class CCompiler {
 				Sys.println(STATIC_INITIALIZATION_REPORT_PREFIX + Json.stringify(inspection));
 			}
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
+			final genericFunctionCount = graph.specializations.length;
+			final genericTypeCount = lowered.enums.filter(value -> value.prepared.typeParameterNames.length > 0).length;
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
-					lowered.aggregates.length, lowered.enums.length, registry);
+					lowered.aggregates.length, lowered.enums.length, genericFunctionCount, genericTypeCount, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -146,16 +149,21 @@ class CCompiler {
 			emitRuntimeDiagnostics(configuration.runtimeDiagnostics, runtimePlan, lowered.runtimeRequirements, input.expression.pos);
 			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
 			final runtimeAbiMajor = runtimePlan.features.length == 0 ? null : RuntimeAbiContract.MAJOR;
-			final units = new CStaticFunctionProjectEmitter().emit(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
+			final staticProjectEmitter = new CStaticFunctionProjectEmitter();
+			final staticProject = staticProjectEmitter.plan(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
 				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName, runtimeAbiMajor);
+			final units = staticProjectEmitter.emitPlan(staticProject);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
 			}
+			final specializationReport = new CGenericSpecializationReportBuilder(context).build(graph, lowered, staticProject.functionDefinitions, units,
+				input.expression.pos, input.sourcePath);
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
 				compilationStatus: lowered.aggregates.length == 0
-				&& lowered.enums.length == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
+				&& lowered.enums.length == 0
+				&& genericFunctionCount == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
 				profile: context.profile,
 				environment: configuration.environment,
 				cStandard: configuration.cStandard,
@@ -168,6 +176,9 @@ class CCompiler {
 				primitiveHelperIds: helperIds,
 				directAggregateCount: lowered.aggregates.length,
 				directEnumCount: lowered.enums.length,
+				directGenericFunctionCount: genericFunctionCount,
+				directGenericTypeCount: genericTypeCount,
+				specializationReport: specializationReport,
 				stdlibModules: stdlibModules(lowered.runtimeRequirements),
 				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
 				staticInitialization: staticInitialization.snapshot,
@@ -193,7 +204,7 @@ class CCompiler {
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, genericFunctionCount:Int, genericTypeCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
@@ -213,6 +224,9 @@ class CCompiler {
 		if (enumCount > 0) {
 			directDecisions.push("bounded-haxe-enum-values");
 		}
+		if (genericFunctionCount + genericTypeCount > 0) {
+			directDecisions.push("closed-generic-specializations");
+		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
@@ -228,6 +242,9 @@ class CCompiler {
 		}
 		if (enumCount > 0) {
 			proof += ", plus specialized native/tagged Haxe enum values with checked payload projection and finite recursive pointer layouts";
+		}
+		if (genericFunctionCount + genericTypeCount > 0) {
+			proof += ", with closed generic instances shared by collision-checked semantic keys and bounded code-size planning";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";
@@ -406,7 +423,9 @@ class CCompiler {
 			fieldName: target.fieldName,
 			sourceOrder: target.sourceOrder,
 			fieldType: target.fieldType,
-			expression: target.expression
+			expression: target.expression,
+			typeParameters: [],
+			specialization: null
 		};
 	}
 
@@ -425,7 +444,12 @@ class CCompiler {
 					case null: throw "normalized static main field lost its typed ClassField";
 					case raw: raw.type;
 				},
-				expression: field.expression
+				expression: field.expression,
+				typeParameters: switch field.rawClassField {
+					case null: throw "normalized static main field lost its typed ClassField";
+					case raw: raw.params;
+				},
+				specialization: null
 			};
 		}
 		return null;

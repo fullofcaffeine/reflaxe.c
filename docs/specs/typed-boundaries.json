@@ -101,6 +101,21 @@
       ]
     },
     {
+      "path": "test/generic_specialization/fixtures/dynamic/Main.hx",
+      "line": 7,
+      "column": 22,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.main",
+      "typedModel": "CGenericTypeArgument",
+      "sourceLine": "final dynamicValue:Dynamic = 7;",
+      "justification": "The negative specialization fixture must pass the real Haxe Dynamic semantic type to a generic call so it can prove that Dynamic never becomes a closed specialization key or an implicit boxed fallback.",
+      "validation": "CGenericTypeCanonicalizer rejects the argument before graph lowering, and the generic-specialization suite requires exact source-positioned HXC1001 at the call with no generated artifact, including across a warm compiler-server request.",
+      "testEvidence": [
+        "test/generic_specialization/run.py"
+      ]
+    },
+    {
       "path": "test/hxc_ir/fixtures/IRCoverage.hx",
       "line": 24,
       "column": 42,

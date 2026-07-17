@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "generic-specialization-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-015",
+    "HXC-SEM-016"
+  ],
+  "sources": [
+    "test/generic_specialization/fixtures/positive/Main.hx",
+    "test/generic_specialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../generic_specialization/run.py"
+    ],
+    "workingDirectory": "test/runtime/generic-specialization",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "strict .* C11 O0/O2 passed$"
+    },
+    "artifacts": [
+      {
+        "path": "test/generic_specialization/expected/hxc.specializations.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

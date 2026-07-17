@@ -17,6 +17,10 @@ reachable graph also contains direct closed anonymous-record values. It emits
 dependency-first private structs and layout assertions and retains an analyzed
 empty runtime plan. It is not the generic `lowered-program` status and does not
 claim public exports.
+E3.T02 and E3.T03 use that same direct-value status for bounded private enum
+layouts and closed generic function/type instances. Generic projects add a
+validated specialization sidecar and remain runtime-free; they do not admit the
+broader catch-all `lowered-program` state.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project
@@ -79,7 +83,13 @@ The emitter owns these schema-1 sidecars:
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
   executable's exact `analyzed-no-stdlib-use` or bounded
   `analyzed-selected-stdlib-use` record. The latter currently admits only
-  literal `Sys.println` and default `haxe.Log.trace` capabilities.
+  literal `Sys.println` and default `haxe.Log.trace` capabilities;
+- `hxc.specializations.json`: omitted when no generic instance is reachable;
+  otherwise a schema-1 `hxc-generic-specialization-v1` record containing full
+  collision-checked semantic keys, normalized arguments, source-rooted reasons,
+  recursion, hard limits, and conservative function/enum code-size attribution.
+  The emitter revalidates its counts, order, hashes, sources, reason totals, and
+  complete payload totals before accepting it.
 
 Two optional non-payload adapters are compiler-owned and content-addressed in
 the same manifest: `cmake/CMakeLists.txt` and `meson.build`. They are derived
@@ -223,7 +233,8 @@ units through CMake and Meson. Paths include spaces and apostrophes, and an
 adversarial string definition contains semicolon, CMake generator-expression,
 quote, and backslash characters. The native matrix also compiles every emitted
 header and links/runs the structural project under GCC and Clang. The
-function-lowering, arithmetic, aggregate-lowering, and enum-lowering suites
+function-lowering, arithmetic, aggregate-lowering, enum-lowering, and
+generic-specialization suites
 prove that the narrow direct-value production paths pass through this
 ownership boundary with analyzed empty runtime/ABI/stdlib records, a typed static-initialization plan,
 optional request-local helpers, and the exact math build fact. The structural

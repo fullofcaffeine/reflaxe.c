@@ -17,15 +17,25 @@ typedef CStaticFunctionSourcePlan = {
 	final unit:CTranslationUnit;
 }
 
+/** One exact finalized function definition and the source unit that owns it. */
+typedef CStaticFunctionDefinitionPlan = {
+	final functionId:String;
+	final sourcePath:String;
+	final declaration:CDecl;
+}
+
 class CStaticFunctionDeclarationPlan {
 	public final headerPath:String;
 	public final header:CHeaderUnit;
 	public final sources:Array<CStaticFunctionSourcePlan>;
+	public final functionDefinitions:Array<CStaticFunctionDefinitionPlan>;
 
-	public function new(headerPath:String, header:CHeaderUnit, sources:Array<CStaticFunctionSourcePlan>) {
+	public function new(headerPath:String, header:CHeaderUnit, sources:Array<CStaticFunctionSourcePlan>,
+			functionDefinitions:Array<CStaticFunctionDefinitionPlan>) {
 		this.headerPath = headerPath;
 		this.header = header;
 		this.sources = sources.copy();
+		this.functionDefinitions = functionDefinitions.copy();
 	}
 }
 
@@ -165,6 +175,7 @@ class CStaticFunctionProjectEmitter {
 			}));
 		}
 		final sources:Array<CStaticFunctionSourcePlan> = [];
+		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];
 		var nonReturningOrdinal = 0;
 		for (fn in lowered.functions) {
 			final isInitializer = initializerIds.exists(fn.ir.id);
@@ -182,11 +193,14 @@ class CStaticFunctionProjectEmitter {
 				attributes: []
 			});
 			if (nonReturningFunctionIds.exists(fn.ir.id)) {
+				final sourcePath = nonReturningSourcePath(nonReturningOrdinal++);
 				final unit = sourceUnit();
 				unit.declarations.push(definition);
-				sources.push({path: nonReturningSourcePath(nonReturningOrdinal++), unit: unit});
+				sources.push({path: sourcePath, unit: unit});
+				functionDefinitions.push({functionId: fn.ir.id, sourcePath: sourcePath, declaration: definition});
 			} else {
 				programUnit.declarations.push(definition);
+				functionDefinitions.push({functionId: fn.ir.id, sourcePath: SOURCE_PATH, declaration: definition});
 			}
 		}
 		final entryStatements:Array<CStmt> = [];
@@ -220,12 +234,17 @@ class CStaticFunctionProjectEmitter {
 		}));
 		sources.push({path: SOURCE_PATH, unit: programUnit});
 		sources.sort((left, right) -> compareStrings(left.path, right.path));
-		return new CStaticFunctionDeclarationPlan(HEADER_PATH, new CHeaderUnit(headerGuard, headerUnit), sources);
+		functionDefinitions.sort((left, right) -> compareStrings(left.functionId, right.functionId));
+		return new CStaticFunctionDeclarationPlan(HEADER_PATH, new CHeaderUnit(headerGuard, headerUnit), sources, functionDefinitions);
 	}
 
 	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
 			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier, ?runtimeAbiMajor:Int):Array<GeneratedFile> {
 		final declarationPlan = plan(lowered, entryFunctionId, entryName, headerGuard, initializerFunctionIds, initializationName, runtimeAbiMajor);
+		return emitPlan(declarationPlan);
+	}
+
+	public function emitPlan(declarationPlan:CStaticFunctionDeclarationPlan):Array<GeneratedFile> {
 		final printer = new CASTPrinter();
 		final files = [
 			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader)

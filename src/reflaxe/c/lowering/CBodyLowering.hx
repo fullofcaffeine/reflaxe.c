@@ -29,6 +29,8 @@ import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
+import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperPlan;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperSelection;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -44,6 +46,8 @@ typedef CBodyFunctionInput = {
 	final sourceOrder:Int;
 	final fieldType:Type;
 	final expression:TypedExpr;
+	final ?typeParameters:Array<TypeParameter>;
+	final ?specialization:CGenericFunctionSpecialization;
 }
 
 /** Captured primitive static-field facts; expressions must come from `filterTypes`. */
@@ -433,8 +437,7 @@ class CBodyLowering {
 	}
 
 	static function compareInputs(left:CBodyFunctionInput, right:CBodyFunctionInput):Int {
-		final identity = compareUtf8('${left.modulePath}\x00${left.declarationPath}\x00${left.fieldName}',
-			'${right.modulePath}\x00${right.declarationPath}\x00${right.fieldName}');
+		final identity = compareUtf8(functionInputId(left), functionInputId(right));
 		return identity != 0 ? identity : left.sourceOrder - right.sourceOrder;
 	}
 
@@ -451,6 +454,15 @@ class CBodyLowering {
 
 	public static function functionId(declarationPath:String, fieldName:String):String
 		return 'function.$declarationPath.$fieldName';
+
+	public static function functionInputId(input:CBodyFunctionInput):String
+		return input.specialization == null ? functionId(input.declarationPath, input.fieldName) : input.specialization.instanceId;
+
+	public static function functionInputDisplayName(input:CBodyFunctionInput):String
+		return input.specialization == null ? input.fieldName : input.specialization.displayName;
+
+	public static function applyFunctionType(input:CBodyFunctionInput, type:Type):Type
+		return input.specialization == null ? type : input.specialization.apply(type);
 
 	public static function globalId(declarationPath:String, fieldName:String):String
 		return 'global.$declarationPath.$fieldName';
@@ -561,6 +573,7 @@ private typedef PreparedBodyFunction = {
 	final sourcePath:String;
 	final displayName:String;
 	final fieldName:String;
+	final specialization:Null<CGenericFunctionSpecialization>;
 	final sourceExpression:TypedExpr;
 	final bodyExpression:TypedExpr;
 	final role:PreparedBodyRole;
@@ -727,7 +740,7 @@ private class FunctionPreparer {
 			case TFunction(value): value;
 			case _: unsupported(input.expression.pos, FunctionBuilder.nodeName(input.expression));
 		};
-		final declaredSignature = switch TypeTools.follow(input.fieldType) {
+		final declaredSignature = switch TypeTools.follow(CBodyLowering.applyFunctionType(input, input.fieldType)) {
 			case TFun(arguments, result): {arguments: arguments, result: result};
 			case _: unsupported(input.expression.pos, "TFunction(field-type-not-function)");
 		};
@@ -755,7 +768,7 @@ private class FunctionPreparer {
 			if (declared.opt) {
 				unsupported(input.expression.pos, 'TFunction(optional-argument:${argument.v.name})');
 			}
-			final mapping = admittedValueType(argument.v.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
+			final mapping = admittedValueType(declared.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
@@ -777,8 +790,9 @@ private class FunctionPreparer {
 			unsupported(input.expression.pos, "TFunction(return-type:recursive-enum-requires-escape-analysis)");
 		}
 		final overloadSignature = parameters.length == 0 ? [] : parameters.map(parameter -> valueTypeKey(parameter.ir.type));
+		final specializationArguments = input.specialization == null ? [] : input.specialization.arguments.map(argument -> argument.key);
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
-			CSVInternal, null, overloadSignature);
+			CSVInternal, null, overloadSignature, specializationArguments);
 		context.symbols.register(functionRequest);
 		for (index in 0...parameters.length) {
 			final parameter = parameters[index];
@@ -792,12 +806,13 @@ private class FunctionPreparer {
 			modulePath: input.modulePath,
 			declarationPath: input.declarationPath,
 			sourcePath: input.sourcePath,
-			displayName: input.fieldName,
+			displayName: CBodyLowering.functionInputDisplayName(input),
 			fieldName: input.fieldName,
+			specialization: input.specialization,
 			sourceExpression: input.expression,
 			bodyExpression: functionValue.expr,
 			role: PBRFunction,
-			irId: CBodyLowering.functionId(input.declarationPath, input.fieldName),
+			irId: CBodyLowering.functionInputId(input),
 			parameters: parameters,
 			returnMapping: returnMapping,
 			functionRequest: functionRequest,
@@ -875,6 +890,7 @@ private class InitializerPreparer {
 			sourcePath: input.sourcePath,
 			displayName: input.displayName,
 			fieldName: input.displayName,
+			specialization: null,
 			sourceExpression: input.expression,
 			bodyExpression: input.expression,
 			role: role,
@@ -2184,7 +2200,7 @@ private class FunctionBuilder {
 
 	function extractUIntBitValue(expression:TypedExpr):Null<TypedExpr> {
 		final candidate = unwrapPatternExpression(expression);
-		final mapping = switch CPrimitiveTypeMapper.map(candidate.t, context.profile) {
+		final mapping = switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(candidate.t), context.profile) {
 			case CTPrimitive(value): value;
 			case _: return null;
 		};
@@ -2522,7 +2538,7 @@ private class FunctionBuilder {
 				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
 			return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(target)};
 		}
-		final targetId = directStaticFunctionId(call.callee);
+		final targetId = directStaticFunctionId(call.callee, call.arguments);
 		final target = functionsById.get(targetId);
 		if (target == null) {
 			return unsupported(expression, 'TCall(unavailable-static-target:$targetId)');
@@ -2908,18 +2924,22 @@ private class FunctionBuilder {
 		return false;
 	}
 
-	function directStaticFunctionId(callee:TypedExpr):String {
+	function directStaticFunctionId(callee:TypedExpr, arguments:Array<TypedExpr>):String {
 		return switch callee.expr {
 			case TField(_, FStatic(classReference, fieldReference)):
 				final owner = classReference.get();
-				CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), fieldReference.get().name);
-			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directStaticFunctionId(inner);
+				final field = fieldReference.get();
+				final baseFunctionId = CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name);
+				CGenericCallResolver.resolve(baseFunctionId, field.type, field.params, callee.t, arguments.map(argument -> argument.t), input.specialization,
+					context.profile, callee.pos, unsupportedAt)
+					.instanceId();
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): directStaticFunctionId(inner, arguments);
 			case _: unsupported(callee, 'TCall(callee=${nodeName(callee)}:not-direct-static)');
 		};
 	}
 
 	function primitiveMapping(type:Type, position:Position, node:String):CPrimitiveTypeMapping {
-		return switch CPrimitiveTypeMapper.map(type, context.profile) {
+		return switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(type), context.profile) {
 			case CTPrimitive(mapping):
 				final admitted = mapping.nullability == CPNonNullable && switch mapping.sourceType {
 					case CPHaxeVoid | CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
@@ -2939,7 +2959,10 @@ private class FunctionBuilder {
 	}
 
 	function bodyValueType(type:Type, position:Position, node:String):CBodyValueType
-		return aggregateRegistry.valueType(type, position, input.modulePath, input.sourcePath, rejectAggregateType, node);
+		return aggregateRegistry.valueType(applyCurrentSpecialization(type), position, input.modulePath, input.sourcePath, rejectAggregateType, node);
+
+	function applyCurrentSpecialization(type:Type):Type
+		return input.specialization == null ? type : input.specialization.apply(type);
 
 	function rejectAggregateType(position:Position, node:String):Void
 		unsupportedAt(position, node);
@@ -2957,7 +2980,7 @@ private class FunctionBuilder {
 	}
 
 	function bodyCollectionType(type:Type, position:Position, node:String):Null<BodyCollectionType> {
-		return switch type {
+		return switch applyCurrentSpecialization(type) {
 			case TMono(reference):
 				final resolved = reference.get();
 				resolved == null ? null : bodyCollectionType(resolved, position, node);
@@ -2985,7 +3008,7 @@ private class FunctionBuilder {
 	}
 
 	function collectionElement(type:Type, position:Position, node:String):CPrimitiveTypeMapping {
-		return switch CPrimitiveTypeMapper.map(type, context.profile) {
+		return switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(type), context.profile) {
 			case CTPrimitive(mapping):
 				final admitted = mapping.nullability == CPNonNullable && switch mapping.irType {
 					case IRTBool | IRTInt(_, _) | IRTFloat(64): true;
@@ -3005,7 +3028,7 @@ private class FunctionBuilder {
 	}
 
 	function stableTypeIdentity(type:Type, position:Position, node:String):String {
-		return switch type {
+		return switch applyCurrentSpecialization(type) {
 			case TMono(reference):
 				final resolved = reference.get();
 				resolved == null ? unsupportedAt(position, '$node:unresolved') : stableTypeIdentity(resolved, position, node);

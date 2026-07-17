@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "id": "generic-specialization-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-015",
+    "HXC-SEM-016"
+  ],
+  "sources": [
+    "test/generic_specialization/fixtures/dynamic/Main.hx",
+    "test/generic_specialization/fixtures/open/Main.hx",
+    "test/generic_specialization/fixtures/budget/Main.hx",
+    "test/generic_specialization/fixtures/type_budget/Main.hx",
+    "test/generic_specialization/fixtures/code_size/Main.hx",
+    "test/generic_specialization/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../generic_specialization/run.py"
+    ],
+    "workingDirectory": "test/negative/generic-specialization",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "exact dynamic/open/function-type-count/code-size HXC1001"
+    }
+  }
+}

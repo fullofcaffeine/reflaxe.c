@@ -4,7 +4,8 @@ E3.T02 adds a bounded production path for Haxe algebraic enums. Concrete enum
 values lower from pinned-Haxe `TypedExpr` through schema-4 HxcIR and the HxcIR
 validator before structural strict C11 is selected. The emitted definitions are
 private compiler implementation details in both `portable` and `metal`; this
-work does not establish a public C ABI or general generic monomorphization.
+work does not establish a public C ABI or support broader generic classes and
+references.
 
 ## Representation
 
@@ -27,9 +28,14 @@ initializers, so it does not depend on C initializer evaluation order.
 
 The focused slice accepts payloads composed of admitted primitive values and
 other admitted enum instances. `Option<Int>` and `Option<Bool>` therefore
-receive distinct deterministic concrete layouts and symbols. That enum-local
-specialization proves the two concrete cases only. E3.T03 still owns the
-general monomorphization model, cache, and cross-program generic policy.
+receive distinct deterministic concrete layouts and symbols. E3.T03 now gives
+these closed instances the same normalized argument vocabulary, full-key digest
+collision check, count budget, source-reason ledger, and specialization report
+used by generic static functions. Finite nesting such as
+`Option<Option<Int>>` produces dependency-ordered distinct layouts, while
+non-stationary type growth stops at the hard depth/type budgets. The layout
+remains private and program-local;
+see [deterministic generic specialization](generic-specialization.md).
 
 ## Matching and checked projection
 
@@ -77,6 +83,11 @@ concrete instances in the runtime-free reachability proof and contains no
 minimal, and explicit `hxc_runtime=none` policy resolution do not change the
 generated enum C.
 
+A reachable generic enum also adds `closed-generic-specializations` and is
+listed in `hxc.specializations.json` with its full key, normalized arguments,
+merged source reasons, recursion state, and conservative structural/code-size
+cost. Non-generic enum programs do not emit that sidecar.
+
 The private implementation follows every enum definition with structural
 `_Static_assert` checks for tag values, member offsets, alignment, non-overlap,
 and final extent. Independent C and C++17 consumers also compare construction,
@@ -96,6 +107,7 @@ Run:
 
 ```sh
 npm run test:enum-lowering
+npm run test:generic-specialization
 npm run test:hxc-ir
 npm run test:all-sources
 npm run snapshots:check

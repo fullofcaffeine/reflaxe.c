@@ -1252,6 +1252,13 @@ class CBodyEmitter {
 			statements.push(SExpr(callExpression));
 			return doesNotReturn;
 		}
+		if (doesNotReturn) {
+			// The call cannot produce an observable result. Emitting a temporary would
+			// leave an intentionally unreachable value as a warning-visible C local.
+			requireResult(instruction, functionId);
+			statements.push(SExpr(callExpression));
+			return true;
+		}
 
 		final result = requireResult(instruction, functionId);
 		final temporaryName = temporaryNames.get(result.id);

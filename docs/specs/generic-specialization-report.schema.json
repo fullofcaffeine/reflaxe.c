@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/generic-specialization-report.schema.json",
+  "title": "reflaxe.c bounded generic-specialization report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "algorithm",
+    "status",
+    "keyEncoding",
+    "compactNameDigest",
+    "codeSizeAttribution",
+    "limits",
+    "summary",
+    "functionSpecializations",
+    "typeSpecializations"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "algorithm": { "const": "hxc-generic-specialization-v1" },
+    "status": { "const": "analyzed-closed-specializations" },
+    "keyEncoding": { "const": "length-prefixed-utf8-full-semantic-key" },
+    "compactNameDigest": { "const": "sha256-with-full-key-collision-check" },
+    "codeSizeAttribution": {
+      "const": "function definitions are isolated; enum bytes conservatively include the dependency-closed emitted enum block"
+    },
+    "limits": { "$ref": "#/$defs/limits" },
+    "summary": { "$ref": "#/$defs/summary" },
+    "functionSpecializations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/functionSpecialization" }
+    },
+    "typeSpecializations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/typeSpecialization" }
+    }
+  },
+  "anyOf": [
+    {
+      "properties": {
+        "functionSpecializations": { "minItems": 1 }
+      }
+    },
+    {
+      "properties": {
+        "typeSpecializations": { "minItems": 1 }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "logicalText": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "startLine",
+        "startColumn",
+        "endLine",
+        "endColumn"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!~)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+        },
+        "startLine": { "type": "integer", "minimum": 1 },
+        "startColumn": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 },
+        "endColumn": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "argument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parameter",
+        "key",
+        "displayName",
+        "representation"
+      ],
+      "properties": {
+        "parameter": { "$ref": "#/$defs/logicalText" },
+        "key": { "$ref": "#/$defs/logicalText" },
+        "displayName": { "$ref": "#/$defs/logicalText" },
+        "representation": {
+          "enum": [
+            "direct-primitive",
+            "direct-enum"
+          ]
+        }
+      }
+    },
+    "reachabilityReason": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "callerInstanceId",
+        "source"
+      ],
+      "properties": {
+        "callerInstanceId": { "$ref": "#/$defs/logicalText" },
+        "source": { "$ref": "#/$defs/source" }
+      }
+    },
+    "functionCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "definitionBytes",
+        "definitionSha256",
+        "irBlocks",
+        "irInstructions"
+      ],
+      "properties": {
+        "metric": { "const": "strict-c11-utf8-function-definition-bytes" },
+        "definitionBytes": { "type": "integer", "minimum": 1 },
+        "definitionSha256": { "$ref": "#/$defs/sha256" },
+        "irBlocks": { "type": "integer", "minimum": 1 },
+        "irInstructions": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "functionSpecialization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseFunctionId",
+        "instanceId",
+        "specializationKey",
+        "semanticDigestSha256",
+        "displayName",
+        "cName",
+        "arguments",
+        "reasons",
+        "recursive",
+        "codeSize"
+      ],
+      "properties": {
+        "baseFunctionId": { "$ref": "#/$defs/logicalText" },
+        "instanceId": {
+          "type": "string",
+          "pattern": "^function\\.specialization\\.[0-9a-f]{64}$"
+        },
+        "specializationKey": { "$ref": "#/$defs/logicalText" },
+        "semanticDigestSha256": { "$ref": "#/$defs/sha256" },
+        "displayName": { "$ref": "#/$defs/logicalText" },
+        "cName": { "$ref": "#/$defs/logicalText" },
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/argument" }
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/reachabilityReason" }
+        },
+        "recursive": { "type": "boolean" },
+        "codeSize": { "$ref": "#/$defs/functionCost" }
+      }
+    },
+    "typeCost": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "metric",
+        "structuralUnits",
+        "constructorCount",
+        "payloadFieldCount"
+      ],
+      "properties": {
+        "metric": { "const": "typed-enum-layout-structural-units" },
+        "structuralUnits": { "type": "integer", "minimum": 1 },
+        "constructorCount": { "type": "integer", "minimum": 1 },
+        "payloadFieldCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "typeSpecialization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "haxePath",
+        "declarationId",
+        "instanceId",
+        "specializationKey",
+        "semanticDigestSha256",
+        "displayName",
+        "cName",
+        "representation",
+        "arguments",
+        "reasons",
+        "recursive",
+        "codeSize"
+      ],
+      "properties": {
+        "haxePath": { "$ref": "#/$defs/logicalText" },
+        "declarationId": {
+          "type": "string",
+          "pattern": "^type\\.enum\\.[0-9a-f]{64}$"
+        },
+        "instanceId": {
+          "type": "string",
+          "pattern": "^instance\\.enum\\.[0-9a-f]{64}$"
+        },
+        "specializationKey": { "$ref": "#/$defs/logicalText" },
+        "semanticDigestSha256": { "$ref": "#/$defs/sha256" },
+        "displayName": { "$ref": "#/$defs/logicalText" },
+        "cName": { "$ref": "#/$defs/logicalText" },
+        "representation": {
+          "enum": [
+            "native-enum",
+            "tagged-union"
+          ]
+        },
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/argument" }
+        },
+        "reasons": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/source" }
+        },
+        "recursive": { "type": "boolean" },
+        "codeSize": { "$ref": "#/$defs/typeCost" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxFunctionSpecializations",
+        "maxTypeSpecializations",
+        "maxEstimatedSpecializationCBytes"
+      ],
+      "properties": {
+        "maxFunctionSpecializations": { "const": 64 },
+        "maxTypeSpecializations": { "const": 64 },
+        "maxEstimatedSpecializationCBytes": { "const": 524288 }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "functionSpecializations",
+        "typeSpecializations",
+        "mergedFunctionReasons",
+        "mergedTypeReasons",
+        "recursiveSpecializations",
+        "specializedFunctionDefinitionBytes",
+        "dependencyClosedEnumDefinitionBytes",
+        "estimatedSpecializationCBytes",
+        "generatedPayloadArtifacts",
+        "generatedPayloadBytes"
+      ],
+      "properties": {
+        "functionSpecializations": { "type": "integer", "minimum": 0 },
+        "typeSpecializations": { "type": "integer", "minimum": 0 },
+        "mergedFunctionReasons": { "type": "integer", "minimum": 0 },
+        "mergedTypeReasons": { "type": "integer", "minimum": 0 },
+        "recursiveSpecializations": { "type": "integer", "minimum": 0 },
+        "specializedFunctionDefinitionBytes": { "type": "integer", "minimum": 0 },
+        "dependencyClosedEnumDefinitionBytes": { "type": "integer", "minimum": 0 },
+        "estimatedSpecializationCBytes": { "type": "integer", "minimum": 1 },
+        "generatedPayloadArtifacts": { "type": "integer", "minimum": 1 },
+        "generatedPayloadBytes": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

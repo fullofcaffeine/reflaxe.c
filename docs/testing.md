@@ -22,6 +22,10 @@ independent C/C++17 layout agreement.
 The enum suite adds real fieldless and payload enum lowering, checked exhaustive
 tag operations, bounded concrete primitive specialization, finite recursive
 local layout, and independent C/C++17 layout agreement.
+The generic-specialization suite adds full semantic-key sharing, closed
+primitive/function/enum instances, recursive worklist closure, bounded
+code-size reporting, exact dynamic/open/budget rejection, and runtime-free
+strict-C11 execution.
 The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
@@ -38,8 +42,8 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, enum, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, recursive enum escape/payload, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, recursive enum escape/payload, dynamic/open/excess generic specialization, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
@@ -129,6 +133,7 @@ The registered snapshot selectors are:
 - `function-lowering`
 - `aggregate-lowering`
 - `enum-lowering`
+- `generic-specialization`
 - `evaluation-order`
 - `arithmetic-semantics`
 - `primitive-differential`
@@ -244,6 +249,25 @@ and C++17 consumers verify tags, size, alignment, offsets, construction, and
 recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Production roots are
 deterministic and runtime-free across portable, metal, and explicit
 runtime-none policies. See [Haxe enum lowering](enum-lowering.md).
+
+`test/generic_specialization` is the focused E3.T03
+positive/negative/snapshot/runtime suite. A real typed program shares
+typedef-equivalent `identity<Int>` calls, keeps all four admitted primitive
+families distinct, records a two-argument key, discovers nested and recursive
+generic calls, and records a
+generic enum instance plus its finite same-nominal nested instance. Its schema-1 report proves full-key/digest identity, sorted merged
+source reasons, recursion, isolated function bytes and hashes, conservative
+dependency-closed enum bytes, payload totals, and the 64/64/524,288 hard limits.
+Repeated isolated roots, reversed typed modules, another locale, a warm
+compiler server before and after rejection, and portable/metal/runtime-none
+payloads must be byte-identical; a successful non-generic same-root replacement
+must remove the stale sidecar. Exact
+`HXC1001` fixtures cover `Dynamic`, an unbound phantom parameter,
+non-stationary function and type graphs reaching their count budgets, and
+the code-size threshold without output. The generated
+runtime-free project compiles and runs under strict GCC and Clang at O0/O2. See
+[deterministic generic
+specialization](generic-specialization.md).
 
 `test/evaluation_order` is the focused positive/snapshot/runtime/differential
 suite for E2.T04 and E2.T06. It proves source-backed call arguments,

@@ -458,6 +458,25 @@ def enum_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def generic_specialization_artifacts() -> list[Artifact]:
+    module = load_module(
+        "generic_specialization", "test/generic_specialization/run.py"
+    )
+    first = module.render_snapshot()
+    second = module.render_snapshot()
+    if first != second:
+        raise SnapshotFailure(
+            "two generic-specialization snapshot renders were not identical"
+        )
+    return [
+        Artifact(
+            Path("test/generic_specialization/expected/hxc.specializations.json"),
+            "json",
+            first,
+        )
+    ]
+
+
 def evaluation_order_artifacts() -> list[Artifact]:
     module = load_module("evaluation_order", "test/evaluation_order/run.py")
     first_payload, report = module.render("snapshot first evaluation-order render")
@@ -739,6 +758,7 @@ GENERATORS: dict[str, Generator] = {
     "function-lowering": function_lowering_artifacts,
     "aggregate-lowering": aggregate_lowering_artifacts,
     "enum-lowering": enum_lowering_artifacts,
+    "generic-specialization": generic_specialization_artifacts,
     "evaluation-order": evaluation_order_artifacts,
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,
