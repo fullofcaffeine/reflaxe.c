@@ -16,6 +16,9 @@ and optimized-shape evidence. The primitive-differential suite adds a
 reproducible generated corpus, exact Eval comparison, mismatch reduction,
 ledgered target refinements, and combined ASan/UBSan evidence. The span suite
 adds local fixed-array/view, bounds-policy, and runtime-free iteration evidence.
+The aggregate suite adds real closed-record structural deduplication, ordered
+construction, explicit copy/address semantics, private layout assertions, and
+independent C/C++17 layout agreement.
 The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
@@ -32,8 +35,8 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0 suites and the declared hello example, including primitive body, static-function, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
@@ -121,6 +124,7 @@ The registered snapshot selectors are:
 - `stdlib-ledger`
 - `body-lowering`
 - `function-lowering`
+- `aggregate-lowering`
 - `evaluation-order`
 - `arithmetic-semantics`
 - `primitive-differential`
@@ -210,6 +214,19 @@ checks deterministic portable/metal renders, scoped default/optional/rest
 empty runtime/ABI/stdlib sidecars, and no `hxrt` artifact or symbol. Required CI
 lanes compile and run its checked-in and production-generated strict C under GCC
 and Clang. See [static function lowering](function-lowering.md).
+
+`test/aggregate_lowering` is the focused E3.T01
+positive/negative/snapshot/runtime suite. Two differently ordered aliases must
+deduplicate to one C struct, nested records must emit dependency-first, and
+object-literal effects must remain in source order before canonical named
+construction. HxcIR snapshots distinguish by-value local copies, parameter
+projections, and local field address/dereference. Generated private layout
+assertions compile under strict C11, while an independent C provider and C++17
+consumer compare exact size, alignment, offsets, and copies at O0/O2 under
+GCC/G++ and Clang/Clang++. Production roots are byte-identical and runtime-free;
+identity/equality, mutation, `Void`, `Dynamic`, and metal packed-layout cases fail
+closed without artifacts. See [closed anonymous-record
+lowering](aggregate-lowering.md).
 
 `test/evaluation_order` is the focused positive/snapshot/runtime/differential
 suite for E2.T04 and E2.T06. It proves source-backed call arguments,

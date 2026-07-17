@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "manifestId": "hxc-bootstrap-capabilities-v1",
   "milestone": "M0",
-  "projectStatus": "experimental-scaffold-with-primitive-executable-slice",
+  "projectStatus": "experimental-scaffold-with-bounded-executable-slices",
   "requirements": [
     "HXC-SCAF-001",
     "HXC-SCAF-004",
@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the admitted primitive static-function and local fixed-array/span slice has generated-C evidence.",
+    "generatedC": "Only the separately admitted primitive static-function, local fixed-array/span, closed anonymous-record, and compiler-known literal-output slices have generated-C evidence.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
@@ -39,7 +39,7 @@
         "E2.T10",
         "E3.T10"
       ],
-      "reason": "Only a bounded primitive static-function and local fixed-array/span subset plus compiler-known literal output reaches generated C; hello exercises that exact slice."
+      "reason": "Only bounded primitive static-function, local fixed-array/span, closed anonymous-record, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
     },
     {
       "id": "performance-validated",
@@ -265,6 +265,25 @@
       ]
     },
     {
+      "id": "closed-anonymous-record-lowering",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A bounded closed anonymous-record graph emits deduplicated private value structs and runs as runtime-free strict C11.",
+      "scope": "Primitive and nested closed-record fields retain source-order construction, canonical structural identity, explicit copies, projections, field addresses, and native-checked private layout.",
+      "evidence": [
+        "docs/aggregate-lowering.md",
+        "src/reflaxe/c/lowering/CBodyAggregate.hx",
+        "test/aggregate_lowering/run.py"
+      ],
+      "owners": [
+        "E3.T01"
+      ],
+      "limitations": [
+        "Void fields, record mutation/identity, open or reflective shapes, classes, public ABI structs, and packed metal layouts remain fail-closed."
+      ]
+    },
+    {
       "id": "configuration-policies",
       "area": "configuration",
       "status": "scaffold-only",
@@ -349,7 +368,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks.",
-      "scope": "Focused M0 suites and the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
+      "scope": "Focused M0/E3 suites and the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
       "evidence": [
         "docs/specs/fixture-taxonomy.json",
         "scripts/ci/check_fixture_policy.py",
@@ -369,7 +388,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
-      "scope": "Only the separately listed primitive static-function, local fixed-array/span, and compiler-known literal-output subset is admitted.",
+      "scope": "Only the separately listed primitive static-function, local fixed-array/span, closed anonymous-record, and compiler-known literal-output subsets are admitted.",
       "evidence": [
         "src/reflaxe/c/CCompiler.hx",
         "test/all_sources/run.py",
@@ -466,7 +485,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive and literal-output lowering slices.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, and literal-output lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
@@ -474,7 +493,8 @@
       ],
       "owners": [
         "E1.T05",
-        "E2.T07"
+        "E2.T07",
+        "E3.T01"
       ],
       "limitations": [
         "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
@@ -529,18 +549,20 @@
       "area": "quality",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, checked-in generated hello baseline, and seeded primitive ASan/UBSan corpus registered by the runner.",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate-layout, and hello corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate C/C++ layout agreement, checked-in generated hello baseline, and seeded primitive ASan/UBSan corpus registered by the runners.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
+        "test/aggregate_lowering/run.py",
         "test/primitive_differential/run.py",
         "test/governance/test_runtime_smoke_policy.py"
       ],
       "owners": [
         "E0.T05",
         "E2.T10",
-        "E2.T11"
+        "E2.T11",
+        "E3.T01"
       ],
       "limitations": [
         "Component-native evidence is not a complete supported-platform or release matrix."

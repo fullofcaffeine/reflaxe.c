@@ -464,19 +464,66 @@ private class HxcIRValidationState {
 				}
 			case IRIOConstructAggregate(instanceId, fields):
 				requireInstance(instanceId, path, instruction.source);
+				final expectedFields = directAggregateFields(instanceId, path, instruction.source);
+				if (instruction.result != null) {
+					switch instruction.result.type {
+						case IRTInstance(resultInstanceId) if (resultInstanceId == instanceId):
+						case _:
+							add(path, "aggregate construction result must use the constructed instance type", instruction.source);
+					}
+				}
 				final names:Map<String, Bool> = [];
 				for (index => field in fields) {
 					validateStableId(field.name, '$path.field:$index.name', instruction.source);
-					requireValue(field.valueId, '$path.field:$index.value', instruction.source, available);
+					final valueType = requireValue(field.valueId, '$path.field:$index.value', instruction.source, available);
 					if (names.exists(field.name)) {
 						add(path, 'aggregate construction repeats field `${field.name}`', instruction.source);
 					} else {
 						names.set(field.name, true);
 					}
+					if (expectedFields != null) {
+						final expected = findAggregateField(expectedFields, field.name);
+						if (expected == null) {
+							add(path, 'aggregate construction names unknown field `${field.name}`', instruction.source);
+						} else if (valueType != null && typeKey(valueType) != typeKey(expected.type)) {
+							add(path, 'aggregate field `${field.name}` value type does not match its declaration', instruction.source);
+						}
+					}
+				}
+				if (expectedFields != null) {
+					for (field in expectedFields) {
+						if (!names.exists(field.name)) {
+							add(path, 'aggregate construction omits required field `${field.name}`', instruction.source);
+						}
+					}
+					if (fields.length == expectedFields.length) {
+						for (index in 0...fields.length) {
+							if (fields[index].name != expectedFields[index].name) {
+								add(path, "aggregate construction fields must follow declaration order", instruction.source);
+								break;
+							}
+						}
+					}
 				}
 			case IRIOProject(valueId, fieldName):
-				requireValue(valueId, '$path.value', instruction.source, available);
+				final valueType = requireValue(valueId, '$path.value', instruction.source, available);
 				validateStableId(fieldName, '$path.field', instruction.source);
+				if (valueType != null) {
+					switch valueType {
+						case IRTInstance(instanceId):
+							final fields = directAggregateFields(instanceId, path, instruction.source);
+							if (fields != null) {
+								final field = findAggregateField(fields, fieldName);
+								if (field == null) {
+									add(path, 'aggregate projection names unknown field `$fieldName`', instruction.source);
+								} else if (instruction.result != null && typeKey(instruction.result.type) != typeKey(field.type)) {
+									add(path, 'aggregate projection result type does not match field `$fieldName`', instruction.source);
+								}
+							}
+						case _:
+							add(path, "aggregate projection requires a direct aggregate instance value", instruction.source);
+					}
+				}
 			case IRIOConstructTag(instanceId, tagName, payload):
 				requireInstance(instanceId, path, instruction.source);
 				validateStableId(tagName, '$path.tag', instruction.source);
@@ -827,6 +874,18 @@ private class HxcIRValidationState {
 			case IRPField(base, fieldName):
 				validatePlace(base, '$path.base', source, available, locals);
 				validateStableId(fieldName, '$path.field', source);
+				final baseType = knownPlaceType(base, available, locals);
+				if (baseType != null) {
+					switch baseType {
+						case IRTInstance(instanceId):
+							final fields = directAggregateFields(instanceId, path, source);
+							if (fields != null && findAggregateField(fields, fieldName) == null) {
+								add(path, 'aggregate place names unknown field `$fieldName`', source);
+							}
+						case _:
+							add(path, "field place requires a direct aggregate instance base", source);
+					}
+				}
 			case IRPIndex(base, indexValueId):
 				validatePlace(base, '$path.base', source, available, locals);
 				final indexType = requireValue(indexValueId, '$path.index', source, available);
@@ -849,8 +908,9 @@ private class HxcIRValidationState {
 					case IRTPointer(pointee, _): pointee;
 					case _: null;
 				}
-			case IRPField(_, _):
-				null;
+			case IRPField(base, fieldName):
+				final baseType = knownPlaceType(base, available, locals);
+				baseType == null ? null : aggregateFieldType(baseType, fieldName);
 			case IRPIndex(base, _):
 				switch knownPlaceType(base, available, locals) {
 					case IRTFixedArray(element, _, _) | IRTSpan(element, _): element;
@@ -889,6 +949,59 @@ private class HxcIRValidationState {
 		if (!typeInstances.exists(id)) {
 			add(path, 'operation refers to unknown type instance `$id`', source);
 		}
+	}
+
+	function directAggregateFields(instanceId:String, path:String, source:HxcSourceSpan):Null<Array<HxcIRTypeField>> {
+		final instance = typeInstances.get(instanceId);
+		if (instance == null) {
+			return null;
+		}
+		if (instance.representation != IRRDirect) {
+			add(path, 'aggregate operation requires direct representation for instance `$instanceId`', source);
+			return null;
+		}
+		if (instance.arguments.length != 0) {
+			add(path, 'direct aggregate instance `$instanceId` must be specialized before aggregate operations', source);
+			return null;
+		}
+		final declaration = typeDeclarations.get(instance.declarationId);
+		if (declaration == null) {
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKAggregate(fields): fields;
+			case _:
+				add(path, 'aggregate operation requires an aggregate declaration for instance `$instanceId`', source);
+				null;
+		};
+	}
+
+	function aggregateFieldType(type:HxcIRTypeRef, fieldName:String):Null<HxcIRTypeRef> {
+		return switch type {
+			case IRTInstance(instanceId):
+				final instance = typeInstances.get(instanceId);
+				final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+				if (instance == null || instance.representation != IRRDirect || instance.arguments.length != 0 || declaration == null) {
+					null;
+				} else {
+					switch declaration.kind {
+						case IRTKAggregate(fields):
+							final field = findAggregateField(fields, fieldName);
+							field == null ? null : field.type;
+						case _: null;
+					}
+				}
+			case _: null;
+		};
+	}
+
+	static function findAggregateField(fields:Array<HxcIRTypeField>, fieldName:String):Null<HxcIRTypeField> {
+		for (field in fields) {
+			if (field.name == fieldName) {
+				return field;
+			}
+		}
+		return null;
 	}
 
 	function validateImplementation(implementation:HxcIRImplementation, path:String, source:HxcSourceSpan):Void {

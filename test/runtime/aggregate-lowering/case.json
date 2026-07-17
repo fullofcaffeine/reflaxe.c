@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "closed-anonymous-record-lowering-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-004",
+    "HXC-SEM-009"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/aggregate_lowering/native/layout_consumer.c",
+    "test/aggregate_lowering/native/layout_provider.c",
+    "test/aggregate_lowering/native/layout_consumer.cpp",
+    "test/aggregate_lowering/expected/program.h",
+    "test/aggregate_lowering/expected/program.c",
+    "test/aggregate_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../aggregate_lowering/run.py"
+    ],
+    "workingDirectory": "test/runtime/aggregate-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "strict C11 and C\\+\\+17 layout agreement.*runtime-free"
+    },
+    "artifacts": [
+      {
+        "path": "test/aggregate_lowering/expected/program.h",
+        "format": "header",
+        "comparison": "layout"
+      },
+      {
+        "path": "test/aggregate_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

@@ -34,6 +34,7 @@
         "stdlib-ledger",
         "body-lowering",
         "function-lowering",
+        "aggregate-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -66,6 +67,7 @@
         "stdlib-ledger",
         "body-lowering",
         "function-lowering",
+        "aggregate-lowering",
         "static-initialization",
         "span-lowering",
         "runtime-feature-graph",
@@ -113,6 +115,7 @@
         "stdlib-ledger",
         "body-lowering",
         "function-lowering",
+        "aggregate-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -138,6 +141,7 @@
         "c-ast",
         "body-lowering",
         "function-lowering",
+        "aggregate-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -475,6 +479,28 @@
         "all reachable static functions receive deterministic prototypes before definitions; direct self-tail recursion uses typed temporaries and a loop while mutual cycles compile from deterministic private translation units with -Winfinite-recursion active",
         "default, optional, and rest parameters fail with exact source-positioned HXC1001, while non-hosted executable entry remains scoped HXC1000",
         "portable, metal, and explicit runtime-none production builds emit int main(void), analyzed empty runtime/ABI/stdlib plans, and no hxrt artifact or symbol"
+      ]
+    },
+    {
+      "id": "aggregate-lowering",
+      "directory": "test/aggregate_lowering",
+      "runner": [
+        "python3",
+        "test/aggregate_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "closed anonymous primitive records receive dependency-first named C structs, deterministic UTF-8 field order, and one structural identity across aliases and source order",
+        "object-literal operands retain Haxe source evaluation order before canonical named aggregate construction, while local field reads use explicit address and dereference HxcIR operations",
+        "by-value parameters, returns, local copies, nested records, and C11 layout assertions remain structural and runtime-free in portable, metal, and explicit runtime-none projects",
+        "identity equality, field mutation, Dynamic records, and metal packed typed-C layouts fail closed with exact source-positioned diagnostics and no plausible artifact",
+        "the reusable native harness covers GCC and Clang O0/O2 C11 execution, and paired C/C++17 consumers prove matching private-header size, alignment, offsets, construction, and copy behavior"
       ]
     },
     {
@@ -840,6 +866,22 @@
         "id": "function-lowering",
         "expectedRoots": [
           "test/function_lowering/expected"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "aggregate-lowering",
+        "expectedRoots": [
+          "test/aggregate_lowering/expected/aggregates.hxcir",
+          "test/aggregate_lowering/expected/program.h",
+          "test/aggregate_lowering/expected/program.c",
+          "test/aggregate_lowering/expected/aggregates.json",
+          "test/aggregate_lowering/expected/symbols.json"
         ],
         "formats": [
           "c",

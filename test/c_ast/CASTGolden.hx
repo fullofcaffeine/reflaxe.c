@@ -64,6 +64,8 @@ class CASTGolden {
 		unit.declarations.push(DStaticAssert(EBinary(Greater, ESizeOfType(i32(), DArray(DGroup(DPointer(abstractName(), [])), ABFixed(integer("4")), [])),
 			integer("0")),
 			"abstract pointer-to-array declarator is complete"));
+		unit.declarations.push(DStaticAssert(EBinary(Equal, EOffsetOf(type(TStruct(id("hxc_dispatch"))), abstractName(), id("binary")), integer("0")),
+			"first aggregate member starts at offset zero"));
 
 		unit.declarations.push(DFunction({
 			storage: [SStatic],

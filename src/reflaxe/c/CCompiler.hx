@@ -105,7 +105,7 @@ class CCompiler {
 			final configuration = resolveProjectConfiguration(context.profile);
 			if (configuration.environment != CProjectEnvironment.Hosted) {
 				CDiagnostic.fatal(CDiagnosticId.LoweringNotImplemented,
-					'primitive executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
+					'direct executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
 					input.expression.pos, context.profile);
 			}
 			final entryFunctionId = CBodyLowering.functionId(input.declarationPath, input.fieldName);
@@ -136,7 +136,8 @@ class CCompiler {
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
-				primitiveRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements, registry);
+				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
+					lowered.aggregates.length, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -153,7 +154,7 @@ class CCompiler {
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
-				compilationStatus: CProjectCompilationStatus.PrimitiveExecutable,
+				compilationStatus: lowered.aggregates.length == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
 				profile: context.profile,
 				environment: configuration.environment,
 				cStandard: configuration.cStandard,
@@ -164,6 +165,7 @@ class CCompiler {
 				units: units,
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: helperIds,
+				directAggregateCount: lowered.aggregates.length,
 				stdlibModules: stdlibModules(lowered.runtimeRequirements),
 				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
 				staticInitialization: staticInitialization.snapshot,
@@ -187,9 +189,10 @@ class CCompiler {
 		return [];
 	}
 
-	function primitiveRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
+	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int,
+			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -202,6 +205,9 @@ class CCompiler {
 		if (helperIds.length > 0) {
 			directDecisions.push("selected-program-local-helpers");
 		}
+		if (aggregateCount > 0) {
+			directDecisions.push("closed-anonymous-value-records");
+		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
@@ -211,6 +217,9 @@ class CCompiler {
 		var proof = "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls";
 		if (helperIds.length > 0) {
 			proof = "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
+		}
+		if (aggregateCount > 0) {
+			proof += ", plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";

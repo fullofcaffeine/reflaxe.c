@@ -71,6 +71,21 @@
       ]
     },
     {
+      "path": "test/aggregate_lowering/fixtures/dynamic/Main.hx",
+      "line": 4,
+      "column": 31,
+      "construct": "dynamic-type",
+      "boundaryKind": "negative-test",
+      "symbol": "Main.value",
+      "typedModel": "CBodyValueType",
+      "sourceLine": "static function value(record:Dynamic):Int {",
+      "justification": "The negative aggregate fixture must present the real Haxe Dynamic semantic type to prove it cannot masquerade as a structurally known value record.",
+      "validation": "CBodyLowering rejects the signature before constructing HxcIR and the aggregate suite requires exact source-positioned HXC1001 with no generated artifact.",
+      "testEvidence": [
+        "test/aggregate_lowering/run.py"
+      ]
+    },
+    {
       "path": "test/diagnostics/DiagnosticGolden.hx",
       "line": 45,
       "column": 27,

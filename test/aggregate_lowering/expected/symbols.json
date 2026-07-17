@@ -1,0 +1,1655 @@
+{
+  "schemaVersion": 1,
+  "symbols": [
+    {
+      "overloadSignature": [
+        "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_copy",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_copy",
+      "sourceSymbol": "AggregateFixture.copy(instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_copy_copied_n1",
+      "semanticKey": "5:local|189:ordinary:176:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture4:copy6:copied|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_copy_copied_n1",
+      "sourceSymbol": "AggregateFixture.copy.copied#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_copy_loadzx2Dresult_n0",
+      "semanticKey": "9:temporary|189:ordinary:176:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture4:copy11:load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_copy_loadzx2Dresult_n0",
+      "sourceSymbol": "AggregateFixture.copy.load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_copy_value_n0",
+      "semanticKey": "5:local|189:ordinary:176:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture4:copy5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:copy|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_copy_value_n0",
+      "sourceSymbol": "AggregateFixture.copy.value#0"
+    },
+    {
+      "overloadSignature": [
+        "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_envelope",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:envelope|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_envelope",
+      "sourceSymbol": "AggregateFixture.envelope(instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelope_recordzx2Dresult_n0",
+      "semanticKey": "9:temporary|193:ordinary:180:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:envelope|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture8:envelope13:record-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:envelope|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelope_recordzx2Dresult_n0",
+      "sourceSymbol": "AggregateFixture.envelope.record-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_envelope_value_n0",
+      "semanticKey": "5:local|193:ordinary:180:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:envelope|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture8:envelope5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:envelope|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_envelope_value_n0",
+      "sourceSymbol": "AggregateFixture.envelope.value#0"
+    },
+    {
+      "overloadSignature": [
+        "instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_envelopeSum",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_envelopeSum",
+      "sourceSymbol": "AggregateFixture.envelopeSum(instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Dfalse_n1",
+      "semanticKey": "9:temporary|194:label:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|4:16:AggregateFixture11:envelopeSum11:block-label17:conditional-false|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Dfalse_n1",
+      "sourceSymbol": "AggregateFixture.envelopeSum.block-label.conditional-false#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Djoin_n2",
+      "semanticKey": "9:temporary|194:label:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|4:16:AggregateFixture11:envelopeSum11:block-label16:conditional-join|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Djoin_n2",
+      "sourceSymbol": "AggregateFixture.envelopeSum.block-label.conditional-join#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Dtrue_n0",
+      "semanticKey": "9:temporary|194:label:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|4:16:AggregateFixture11:envelopeSum11:block-label16:conditional-true|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_blockzx2Dlabel_conditionalzx2Dtrue_n0",
+      "sourceSymbol": "AggregateFixture.envelopeSum.block-label.conditional-true#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_conditionalzx2Dloadzx2Dresult_n5",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum23:conditional-load-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_conditionalzx2Dloadzx2Dresult_n5",
+      "sourceSymbol": "AggregateFixture.envelopeSum.conditional-load-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_conditionalzx2Dresult_n1",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum18:conditional-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_conditionalzx2Dresult_n1",
+      "sourceSymbol": "AggregateFixture.envelopeSum.conditional-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n0",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum20:record-field-project|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n0",
+      "sourceSymbol": "AggregateFixture.envelopeSum.record-field-project#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n1",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum20:record-field-project|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n1",
+      "sourceSymbol": "AggregateFixture.envelopeSum.record-field-project#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n2",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum20:record-field-project|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n2",
+      "sourceSymbol": "AggregateFixture.envelopeSum.record-field-project#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n3",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum20:record-field-project|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n3",
+      "sourceSymbol": "AggregateFixture.envelopeSum.record-field-project#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n4",
+      "semanticKey": "9:temporary|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum20:record-field-project|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_envelopeSum_recordzx2Dfieldzx2Dproject_n4",
+      "sourceSymbol": "AggregateFixture.envelopeSum.record-field-project#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_envelopeSum_value_n0",
+      "semanticKey": "5:local|197:ordinary:184:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|3:16:AggregateFixture11:envelopeSum5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture11:envelopeSum|1:96:instance:instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_envelopeSum_value_n0",
+      "sourceSymbol": "AggregateFixture.envelopeSum.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_identity",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:identity|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_identity",
+      "sourceSymbol": "AggregateFixture.identity(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_identity_value_n0",
+      "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:identity|1:3:i32|0:|0:|3:16:AggregateFixture8:identity5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:identity|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_identity_value_n0",
+      "sourceSymbol": "AggregateFixture.identity.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_localSum",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_localSum",
+      "sourceSymbol": "AggregateFixture.localSum(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_localSum_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_localSum_callzx2Dresult_n0",
+      "sourceSymbol": "AggregateFixture.localSum.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_localSum_left_n0",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_localSum_left_n0",
+      "sourceSymbol": "AggregateFixture.localSum.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Daddress_n1",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum20:record-field-address|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Daddress_n1",
+      "sourceSymbol": "AggregateFixture.localSum.record-field-address#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Daddress_n3",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum20:record-field-address|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Daddress_n3",
+      "sourceSymbol": "AggregateFixture.localSum.record-field-address#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Dloadzx2Dresult_n2",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum24:record-field-load-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Dloadzx2Dresult_n2",
+      "sourceSymbol": "AggregateFixture.localSum.record-field-load-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Dloadzx2Dresult_n4",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum24:record-field-load-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_localSum_recordzx2Dfieldzx2Dloadzx2Dresult_n4",
+      "sourceSymbol": "AggregateFixture.localSum.record-field-load-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_localSum_right_n1",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_localSum_right_n1",
+      "sourceSymbol": "AggregateFixture.localSum.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_localSum_value_n2",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:|3:16:AggregateFixture8:localSum5:value|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture8:localSum|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_localSum_value_n2",
+      "sourceSymbol": "AggregateFixture.localSum.value#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_main",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_main",
+      "sourceSymbol": "AggregateFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label18:short-circuit-join|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-join#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label18:short-circuit-join|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-join#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label17:short-circuit-rhs|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-rhs#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label17:short-circuit-rhs|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-rhs#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dbody_n1",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label10:while-body|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dbody_n1",
+      "sourceSymbol": "AggregateFixture.main.block-label.while-body#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dcondition_n0",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label15:while-condition|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dcondition_n0",
+      "sourceSymbol": "AggregateFixture.main.block-label.while-condition#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dexit_n2",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label10:while-exit|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_blockzx2Dlabel_whilezx2Dexit_n2",
+      "sourceSymbol": "AggregateFixture.main.block-label.while-exit#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n0",
+      "sourceSymbol": "AggregateFixture.main.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 10,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n10",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:10",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n10",
+      "sourceSymbol": "AggregateFixture.main.call-result#10"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n2",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n2",
+      "sourceSymbol": "AggregateFixture.main.call-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n4",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n4",
+      "sourceSymbol": "AggregateFixture.main.call-result#4"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 6,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n6",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|1:6",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n6",
+      "sourceSymbol": "AggregateFixture.main.call-result#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n7",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_callzx2Dresult_n7",
+      "sourceSymbol": "AggregateFixture.main.call-result#7"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_main_copied_n1",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main6:copied|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_main_copied_n1",
+      "sourceSymbol": "AggregateFixture.main.copied#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_main_first_n0",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main5:first|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_main_first_n0",
+      "sourceSymbol": "AggregateFixture.main.first#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n1",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n1",
+      "sourceSymbol": "AggregateFixture.main.load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n3",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:load-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n3",
+      "sourceSymbol": "AggregateFixture.main.load-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 5,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n5",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:load-result|0:|0:|1:5",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n5",
+      "sourceSymbol": "AggregateFixture.main.load-result#5"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 9,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n9",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:load-result|0:|0:|1:9",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_loadzx2Dresult_n9",
+      "sourceSymbol": "AggregateFixture.main.load-result#9"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_main_nested_n2",
+      "semanticKey": "5:local|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main6:nested|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_main_nested_n2",
+      "sourceSymbol": "AggregateFixture.main.nested#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main25:short-circuit-load-result|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-load-result#11"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 8,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main25:short-circuit-load-result|0:|0:|1:8",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-load-result#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dresult_n3",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main20:short-circuit-result|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dresult_n3",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-result#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 4,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dresult_n4",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main20:short-circuit-result|0:|0:|1:4",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_main_shortzx2Dcircuitzx2Dresult_n4",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-result#4"
+    },
+    {
+      "overloadSignature": [
+        "i32",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_make",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_make",
+      "sourceSymbol": "AggregateFixture.make(i32, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_make_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:|3:16:AggregateFixture4:make11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_make_callzx2Dresult_n0",
+      "sourceSymbol": "AggregateFixture.make.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_make_callzx2Dresult_n1",
+      "semanticKey": "9:temporary|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:|3:16:AggregateFixture4:make11:call-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_make_callzx2Dresult_n1",
+      "sourceSymbol": "AggregateFixture.make.call-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_make_left_n0",
+      "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:|3:16:AggregateFixture4:make4:left|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_make_left_n0",
+      "sourceSymbol": "AggregateFixture.make.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_make_recordzx2Dresult_n2",
+      "semanticKey": "9:temporary|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:|3:16:AggregateFixture4:make13:record-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_make_recordzx2Dresult_n2",
+      "sourceSymbol": "AggregateFixture.make.record-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_make_right_n1",
+      "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:|3:16:AggregateFixture4:make5:right|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:make|2:3:i323:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_make_right_n1",
+      "sourceSymbol": "AggregateFixture.make.right#1"
+    },
+    {
+      "overloadSignature": [
+        "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_AggregateFixture_sum",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_AggregateFixture_sum",
+      "sourceSymbol": "AggregateFixture.sum(instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_sum_recordzx2Dfieldzx2Dproject_n0",
+      "semanticKey": "9:temporary|188:ordinary:175:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture3:sum20:record-field-project|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_sum_recordzx2Dfieldzx2Dproject_n0",
+      "sourceSymbol": "AggregateFixture.sum.record-field-project#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_AggregateFixture_sum_recordzx2Dfieldzx2Dproject_n1",
+      "semanticKey": "9:temporary|188:ordinary:175:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture3:sum20:record-field-project|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_AggregateFixture_sum_recordzx2Dfieldzx2Dproject_n1",
+      "sourceSymbol": "AggregateFixture.sum.record-field-project#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_AggregateFixture_sum_value_n0",
+      "semanticKey": "5:local|188:ordinary:175:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|3:16:AggregateFixture3:sum5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture3:sum|1:96:instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_AggregateFixture_sum_value_n0",
+      "sourceSymbol": "AggregateFixture.sum.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "INT32_MIN",
+      "cName": "INT32_MIN",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library9:INT32_MIN|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "INT32_MIN",
+      "sourceSymbol": "c-standard-library.INT32_MIN"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "UINT32_C",
+      "cName": "UINT32_C",
+      "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library8:UINT32_C|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "external",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "UINT32_C",
+      "sourceSymbol": "c-standard-library.UINT32_C"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:closed-record64:9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|0:|0:|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
+      "sourceSymbol": "compiler.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_a_n0",
+      "semanticKey": "5:field|93:member:83:type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|4:8:compiler13:closed-record64:9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b713671:a|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_a_n0",
+      "sourceSymbol": "compiler.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367.a#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_zz_n1",
+      "semanticKey": "5:field|93:member:83:type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367|4:8:compiler13:closed-record64:9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b713671:z|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_zz_n1",
+      "sourceSymbol": "compiler.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367.z#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler13:closed-record64:b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|0:|0:|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
+      "sourceSymbol": "compiler.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_enabled_n0",
+      "semanticKey": "5:field|93:member:83:type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|4:8:compiler13:closed-record64:b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde547:enabled|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_enabled_n0",
+      "sourceSymbol": "compiler.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54.enabled#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_point_n1",
+      "semanticKey": "5:field|93:member:83:type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54|4:8:compiler13:closed-record64:b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde545:point|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_point_n1",
+      "sourceSymbol": "compiler.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54.point#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "main",
+      "cName": "main",
+      "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|3:8:compiler22:executable-entry-point30:function.AggregateFixture.main|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "static-initializer",
+      "specializationArguments": [],
+      "baseName": "main",
+      "sourceSymbol": "compiler.executable-entry-point.function.AggregateFixture.main"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.left#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
+      "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.right#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
+      "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
+      "sourceSymbol": "compiler.primitive-helper.hxc.u32.to.i32.bits.value#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.i32.add.wrapping"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
+      "sourceSymbol": "compiler.primitive-helper<hxc.i32.add.wrapping>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "specialization",
+      "specializationArguments": [
+        "hxc.u32.to.i32.bits"
+      ],
+      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
+      "sourceSymbol": "compiler.primitive-helper<hxc.u32.to.i32.bits>"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "explicit",
+      "sourceOrdinal": null,
+      "requestedName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "cName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "semanticKey": "6:module|12:preprocessor|3:8:compiler14:program-header5:guard|0:|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "preprocessor"
+      },
+      "visibility": "internal",
+      "kind": "module",
+      "specializationArguments": [],
+      "baseName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "sourceSymbol": "compiler.program-header.guard"
+    }
+  ],
+  "collisions": [],
+  "algorithm": "hxc-c-symbol-v1"
+}

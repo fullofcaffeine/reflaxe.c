@@ -32,7 +32,7 @@
       "const": "M0"
     },
     "projectStatus": {
-      "const": "experimental-scaffold-with-primitive-executable-slice"
+      "const": "experimental-scaffold-with-bounded-executable-slices"
     },
     "requirements": {
       "type": "array",

@@ -65,7 +65,7 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter();
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
@@ -97,6 +97,9 @@ class CStaticFunctionProjectEmitter {
 				headers.push(header);
 			}
 		}
+		if (lowered.aggregates.length > 0 && headers.indexOf("stddef.h") == -1) {
+			headers.push("stddef.h");
+		}
 		headers.sort(compareStrings);
 		for (header in headers) {
 			headerUnit.includes.push({path: header, kind: System});
@@ -114,6 +117,9 @@ class CStaticFunctionProjectEmitter {
 				'incompatible hxrt ABI major: generated code requires $runtimeAbiMajor'));
 		}
 		for (definition in helperEmitter.definitions(lowered.helpers)) {
+			headerUnit.declarations.push(definition);
+		}
+		for (definition in bodyEmitter.aggregateDefinitions()) {
 			headerUnit.declarations.push(definition);
 		}
 		for (global in lowered.globals) {
@@ -135,6 +141,9 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final programUnit = sourceUnit();
+		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
+			programUnit.declarations.push(assertion);
+		}
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in lowered.helpers) {
 			helperNames.set(helper.helperId, helper.cName);

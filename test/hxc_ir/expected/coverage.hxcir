@@ -20,6 +20,7 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
     parameter "value.nullable-reference" type=nullable(pointer,instance("instance.object")) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     local "local.fixed" type=fixed-array(length=2,witness="coverage.Length2",element=i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.owned" type=pointer(nonnull,instance("instance.object")) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
+    local "local.record" type=instance("instance.record") storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.span" type=span(const,i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     block "entry" @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-39:2
       instruction "c00.one" result="value.one":i32 constant value=int(1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
@@ -47,6 +48,9 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       instruction "c08.intrinsic" result="value.intrinsic":i32 call dispatch=intrinsic("haxe.i32.clamp") arguments=["value.argument"] returns=i32 failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":26:1-26:2
       instruction "c09.unary" result="value.negative":i32 unary operation="haxe.i32.negate" value="value.one" implementation=static @"test/hxc_ir/fixtures/IRCoverage.hx":27:1-27:2
       instruction "c10.record" result="value.record":instance("instance.record") construct-aggregate instance="instance.record" fields=["x"="value.one"] @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
+      instruction "c10.record-initialize" result=- initialize place=local("local.record") value="value.record" transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
+      instruction "c10.field-address" result="value.field-address":pointer(nonnull,i32) address place=field(local("local.record"),"x") @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
+      instruction "c10.field-load" result="value.field-load":i32 load place=dereference("value.field-address") @"test/hxc_ir/fixtures/IRCoverage.hx":28:1-28:2
       instruction "c11.project" result="value.projected":i32 project value="value.record" field="x" @"test/hxc_ir/fixtures/IRCoverage.hx":29:1-29:2
       instruction "c12.tag" result="value.option":instance("instance.option") construct-tag instance="instance.option" tag="Some" payload=["value.one"] @"test/hxc_ir/fixtures/IRCoverage.hx":30:1-30:2
       instruction "c13.match" result="value.is-some":bool match-tag value="value.option" tag="Some" @"test/hxc_ir/fixtures/IRCoverage.hx":31:1-31:2

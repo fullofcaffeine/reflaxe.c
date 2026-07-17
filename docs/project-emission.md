@@ -12,6 +12,11 @@ static-function graph, and E2.T05 extends that same status with UB-safe
 primitive operations and request-local helpers. That path emits its structural
 private header, one or more deterministic sources, and `int main(void)` entry
 with analyzed empty runtime/ABI/stdlib results.
+E3.T01 admits a second bounded status for the same executable boundary when the
+reachable graph also contains direct closed anonymous-record values. It emits
+dependency-first private structs and layout assertions and retains an analyzed
+empty runtime plan. It is not the generic `lowered-program` status and does not
+claim public exports.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project
@@ -46,7 +51,7 @@ Payload kinds have fixed locations:
 
 The emitter owns these schema-1 sidecars:
 
-- `hxc.initialization-plan.json`: the admitted primitive executable's
+- `hxc.initialization-plan.json`: the admitted direct executable's
   dependency-first type order, source-positioned reasons, class/field phases,
   exact initializer execution order, entry ID, cycle policy, and empty runtime
   feature set. Structural fixtures do not fabricate this semantic sidecar;
@@ -55,8 +60,9 @@ The emitter owns these schema-1 sidecars:
 - `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
-  primitive executable's schema-2 `hxc-runtime-plan-v2`
-  analyzed record. Primitive-only graphs use `analyzed-runtime-free`; literal
+  direct executable's schema-2 `hxc-runtime-plan-v2`
+  analyzed record. Primitive and closed-record graphs use
+  `analyzed-runtime-free`; literal
   hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
   `status`, `string-literal`, and `io`. Both are produced by the typed runtime
   feature planner and contain resolved policy/diagnostic provenance, planning
@@ -68,7 +74,7 @@ The emitter owns these schema-1 sidecars:
   include, source, define, library, and symbol sets. The
   `selected-program-local-helpers` decision appears only when that compilation
   selected at least one helper;
-- `hxc.abi.json`: either `placeholder-no-export-analysis` or the primitive
+- `hxc.abi.json`: either `placeholder-no-export-analysis` or the admitted
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
   executable's exact `analyzed-no-stdlib-use` or bounded
@@ -217,10 +223,10 @@ units through CMake and Meson. Paths include spaces and apostrophes, and an
 adversarial string definition contains semicolon, CMake generator-expression,
 quote, and backslash characters. The native matrix also compiles every emitted
 header and links/runs the structural project under GCC and Clang. The
-function-lowering and arithmetic suites prove that the narrow
-primitive production path passes through this ownership boundary with analyzed
-empty runtime/ABI/stdlib records, a typed static-initialization plan, optional
-request-local helpers, and the exact
-math build fact. The structural corpus itself remains emitted-C shape
+function-lowering, arithmetic, and aggregate-lowering suites prove that the
+narrow direct-value production paths pass through this ownership boundary with
+analyzed empty runtime/ABI/stdlib records, a typed static-initialization plan,
+optional request-local helpers, and the exact math build fact. The structural
+corpus itself remains emitted-C shape
 and ownership evidence, not generated-Haxe semantic evidence or a public ABI,
 runtime, standard-library, or generated-output licensing claim.

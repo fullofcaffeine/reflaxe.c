@@ -130,6 +130,7 @@ class CASTPrinter {
 			case ECast(type, declarator, value): '(${printTypeName(type, declarator)})${printExpr(value, 14)}';
 			case ESizeOfType(type, declarator): 'sizeof(${printTypeName(type, declarator)})';
 			case EAlignOfType(type, declarator): '_Alignof(${printTypeName(type, declarator)})';
+			case EOffsetOf(type, declarator, member): 'offsetof(${printTypeName(type, declarator)}, ${identifier(member)})';
 			case ECompoundLiteral(type, declarator, initializer): '(${printTypeName(type, declarator)})${printInitializer(initializer)}';
 			case EGenericSelection(control, associations): printGenericSelection(control, associations);
 			case EParen(value): '(${printExpr(value)})';
@@ -410,7 +411,7 @@ class CASTPrinter {
 
 	function precedence(expr:CExpr):Int {
 		return switch expr {
-			case EIdentifier(_) | EInt(_) | EFloat(_) | EString(_) | EChar(_) | EBool(_) | ENull | EGenericSelection(_, _): 16;
+			case EIdentifier(_) | EInt(_) | EFloat(_) | EString(_) | EChar(_) | EBool(_) | ENull | EGenericSelection(_, _) | EOffsetOf(_, _, _): 16;
 			case ECall(_, _) | EIndex(_, _) | EMember(_, _, _): 15;
 			case EUnary(PostIncrement, _) | EUnary(PostDecrement, _): 15;
 			case EUnary(_, _) | ECast(_, _, _) | ESizeOfType(_, _) | EAlignOfType(_, _): 14;

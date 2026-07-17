@@ -11,6 +11,10 @@ E2.T06 adds statement conditionals, loops, primitive switches, and explicit
 loop jumps without changing the runtime-free compiler-first boundary. E2.T08
 adds nonempty literal-backed `c.CArray` locals, borrowed `Span`/`ConstSpan`
 views, checked indexing, and direct span iteration.
+E3.T01 extends the same typed pipeline with closed anonymous value records,
+including nested records, explicit copies, and typed field addressing and
+projection. Its exact boundary is documented in [closed anonymous-record
+lowering](aggregate-lowering.md).
 This document remains the contract for individual body semantics; [static function
 lowering](function-lowering.md) owns graph, prototype, call, and
 executable-entry behavior, while [evaluation order](evaluation-order.md) owns
@@ -48,6 +52,9 @@ the stable-value and control-flow proof.
 - nonempty primitive array literals assigned directly to `c.CArray<T, N>`,
   local mutable/const span borrows, checked element reads/writes, and `for`
   iteration over those views through explicit guarded HxcIR blocks;
+- closed anonymous records containing admitted primitive or nested closed-record
+  fields, including object literals, local copies, direct parameters/calls/
+  returns, and read-only field access;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
@@ -73,8 +80,9 @@ C body emitter consumes only validated IR.
 
 Default/optional/rest parameters, indirect calls, arbitrary collection/iterator
 lowering, general Haxe arrays, escaping spans, pattern/enum/string/Float
-switches, instance objects/fields, strings, closures, allocation, exceptions,
-and cleanup remain outside this slice. The first
+switches, class instances and their fields, mutable/open/reflective records,
+record identity/equality, strings, closures, allocation, exceptions, and
+cleanup remain outside this slice. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 Source that remains after a terminating return or loop jump receives the same
@@ -137,6 +145,7 @@ npm run test:body-lowering
 npm run test:evaluation-order
 npm run test:arithmetic-semantics
 npm run test:span-lowering
+npm run test:aggregate-lowering
 npm run snapshots:check
 ```
 

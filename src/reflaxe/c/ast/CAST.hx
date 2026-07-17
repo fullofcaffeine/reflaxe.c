@@ -520,6 +520,7 @@ enum CExpr {
 	ECast(type:CType, declarator:CDeclarator, value:CExpr);
 	ESizeOfType(type:CType, declarator:CDeclarator);
 	EAlignOfType(type:CType, declarator:CDeclarator);
+	EOffsetOf(type:CType, declarator:CDeclarator, member:CIdentifier);
 	ECompoundLiteral(type:CType, declarator:CDeclarator, initializer:CInitializer);
 	EGenericSelection(control:CExpr, associations:Array<CGenericAssociation>);
 	EParen(value:CExpr);

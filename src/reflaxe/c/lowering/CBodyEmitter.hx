@@ -5,10 +5,38 @@ import reflaxe.c.ast.CAST;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
+#if (macro || reflaxe_runtime)
+import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+#end
 
-/** Lowers the admitted primitive HxcIR body subset into structural strict C11. */
+/** Lowers the admitted direct-value HxcIR body subset into structural strict C11. */
 class CBodyEmitter {
+	final aggregateTags:Map<String, CIdentifier> = [];
+	final aggregateFieldNames:Map<String, CIdentifier> = [];
+	final aggregateFieldTypes:Map<String, HxcIRTypeRef> = [];
+	final aggregateFieldOrder:Map<String, Array<String>> = [];
+	final aggregateInstanceOrder:Array<String> = [];
+
+	#if (macro || reflaxe_runtime)
+	public function new(?aggregates:Array<CLoweredBodyAggregate>) {
+		if (aggregates != null) {
+			for (aggregate in aggregates) {
+				final instanceId = aggregate.prepared.instanceId;
+				aggregateInstanceOrder.push(instanceId);
+				aggregateTags.set(instanceId, aggregate.cTag);
+				final order:Array<String> = [];
+				for (field in aggregate.fields) {
+					order.push(field.semanticName);
+					aggregateFieldNames.set(aggregateFieldKey(instanceId, field.semanticName), field.cName);
+					aggregateFieldTypes.set(aggregateFieldKey(instanceId, field.semanticName), field.type.irType);
+				}
+				aggregateFieldOrder.set(instanceId, order);
+			}
+		}
+	}
+	#else
 	public function new() {}
+	#end
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
@@ -47,6 +75,13 @@ class CBodyEmitter {
 					case IRIOLoad(place):
 						emitLoad(statements, values, referencedValues, instruction,
 							placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values), temporaryNames, lineDirectives, fn.id);
+					case IRIOAddress(place):
+						emitAddress(statements, values, referencedValues, instruction, place, fn, localNames, globalNames, resolvedSpanLengthNames,
+							temporaryNames, lineDirectives);
+					case IRIOConstructAggregate(instanceId, fields):
+						emitAggregateConstruction(statements, values, referencedValues, instruction, instanceId, fields, temporaryNames, lineDirectives, fn.id);
+					case IRIOProject(valueId, fieldName):
+						emitAggregateProjection(statements, values, referencedValues, instruction, valueId, fieldName, fn, temporaryNames, lineDirectives);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
@@ -122,7 +157,7 @@ class CBodyEmitter {
 								lineDirectives, nonReturningFunctionIds, fn.id);
 						}
 					case _:
-						fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced primitive function subset');
+						fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced direct-value function subset');
 				}
 				if (terminatedByNonReturningCall) {
 					break;
@@ -155,7 +190,18 @@ class CBodyEmitter {
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
-					case IRIOStore(_, valueId) | IRIOInitialize(_, valueId, _, _) | IRIOConvert(valueId, _, _, _, _):
+					case IRIOStore(place, valueId) | IRIOInitialize(place, valueId, _, _):
+						referenced.set(valueId, true);
+						markPlaceValues(place, referenced);
+					case IRIOConvert(valueId, _, _, _, _):
+						referenced.set(valueId, true);
+					case IRIOLoad(place) | IRIOAddress(place):
+						markPlaceValues(place, referenced);
+					case IRIOConstructAggregate(_, fields):
+						for (field in fields) {
+							referenced.set(field.valueId, true);
+						}
+					case IRIOProject(valueId, _):
 						referenced.set(valueId, true);
 					case IRIOInitializeFixedArray(_, valueIds, _, _):
 						for (valueId in valueIds) {
@@ -188,6 +234,19 @@ class CBodyEmitter {
 			}
 		}
 		return referenced;
+	}
+
+	static function markPlaceValues(place:HxcIRPlace, referenced:Map<String, Bool>):Void {
+		switch place {
+			case IRPDereference(pointerValueId):
+				referenced.set(pointerValueId, true);
+			case IRPField(base, _):
+				markPlaceValues(base, referenced);
+			case IRPIndex(base, indexValueId):
+				markPlaceValues(base, referenced);
+				referenced.set(indexValueId, true);
+			case IRPLocal(_) | IRPGlobal(_):
+		}
 	}
 
 	static function referencedLocalIds(fn:HxcIRFunction):Map<String, Bool> {
@@ -258,6 +317,73 @@ class CBodyEmitter {
 		if (!referencedValues.exists(result.id)) {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporaryName))));
 		}
+	}
+
+	function emitAddress(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			spanLengthNames:Map<String, CIdentifier>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		final result = requireResult(instruction, fn.id);
+		final pointee = switch result.type {
+			case IRTPointer(type, false): type;
+			case _: return fail('address `${instruction.id}` in `${fn.id}` lost its validated non-null pointer result');
+		};
+		final expression = EUnary(AddressOf, placeExpression(place, fn, localNames, globalNames, spanLengthNames, values));
+		final temporaryName = temporaryNames.get(result.id);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		if (temporaryName == null) {
+			if (referencedValues.exists(result.id)) {
+				fail('referenced address result `${result.id}` in `${fn.id}` has no finalized C temporary');
+			}
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
+			return;
+		}
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(pointee),
+			declarator: DPointer(DName(temporaryName), []),
+			initializer: IExpr(expression),
+			attributes: []
+		}));
+		values.set(result.id, EIdentifier(temporaryName));
+		if (!referencedValues.exists(result.id)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporaryName))));
+		}
+	}
+
+	function emitAggregateConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			instanceId:String, fields:Array<HxcIRNamedValue>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+		final resolvedOrder = aggregateFieldOrder.get(instanceId);
+		final expectedOrder:Array<String> = resolvedOrder == null ? fail('aggregate construction `${instruction.id}` in `$functionId` has no finalized direct-record layout') : resolvedOrder;
+		if (expectedOrder.length != fields.length) {
+			fail('aggregate construction `${instruction.id}` in `$functionId` has no finalized direct-record layout');
+		}
+		final initializers:Array<CInitializerItem> = [];
+		for (index in 0...fields.length) {
+			final field = fields[index];
+			if (field.name != expectedOrder[index]) {
+				fail('aggregate construction `${instruction.id}` in `$functionId` lost canonical field order');
+			}
+			initializers.push({
+				designators: [
+					DField(requireAggregateFieldName(instanceId, field.name, instruction.id, functionId))
+				],
+				value: IExpr(requireValue(values, field.valueId, functionId))
+			});
+		}
+		final result = requireResult(instruction, functionId);
+		final expression = ECompoundLiteral(cType(result.type), DName(null), IList(initializers));
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId);
+	}
+
+	function emitAggregateProjection(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			valueId:String, fieldName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		final instanceId = switch valueType(fn, valueId) {
+			case IRTInstance(id): id;
+			case _: return fail('aggregate projection `${instruction.id}` in `${fn.id}` lost its validated instance value');
+		};
+		final expression = EMember(requireValue(values, valueId, fn.id), requireAggregateFieldName(instanceId, fieldName, instruction.id, fn.id), false);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
 	}
 
 	function emitInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
@@ -408,32 +534,43 @@ class CBodyEmitter {
 				});
 				statements.push(SSwitch(requireValue(values, valueId, functionId), emittedCases));
 			case _:
-				fail('function `$functionId` has a terminator outside the sequenced primitive subset');
+				fail('function `$functionId` has a terminator outside the sequenced direct-value subset');
 		}
 	}
 
 	static function requirePlainEdge(edge:HxcIRBlockEdge, functionId:String):Void {
 		if (edge.arguments.length != 0 || edge.cleanup.length != 0) {
-			fail('function `$functionId` requires block arguments or cleanup outside the sequenced primitive subset');
+			fail('function `$functionId` requires block arguments or cleanup outside the sequenced direct-value subset');
 		}
 	}
 
-	static function placeExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+	function placeExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			spanLengthNames:Map<String, CIdentifier>, ?values:Map<String, CExpr>):CExpr {
 		return switch place {
 			case IRPLocal(localId): EIdentifier(requireLocalName(localNames, localId, fn.id));
 			case IRPGlobal(globalId): EIdentifier(requireGlobalName(globalNames, globalId, fn.id));
+			case IRPDereference(pointerValueId):
+				if (values == null) {
+					return fail('function `${fn.id}` attempted to emit unresolved pointer value `$pointerValueId`');
+				}
+				EUnary(Dereference, requireValue(values, pointerValueId, fn.id));
+			case IRPField(base, fieldName):
+				final instanceId = switch placeType(base, fn) {
+					case IRTInstance(id): id;
+					case _: return fail('function `${fn.id}` lost the aggregate type of field place `$fieldName`');
+				};
+				EMember(placeExpression(base, fn, localNames, globalNames, spanLengthNames, values),
+					requireAggregateFieldName(instanceId, fieldName, "place", fn.id), false);
 			case IRPIndex(base, indexValueId):
 				if (values == null) {
 					return fail('function `${fn.id}` attempted to emit unresolved collection index `$indexValueId`');
 				}
 				final indexExpression = ECast(new CType(TSizeT), DName(null), requireValue(values, indexValueId, fn.id));
 				EIndex(placeExpression(base, fn, localNames, globalNames, spanLengthNames, values), indexExpression);
-			case _: fail('function `${fn.id}` uses a place outside the admitted local/static/index sequencing subset');
 		};
 	}
 
-	static function collectionLengthExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+	function collectionLengthExpression(place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			spanLengthNames:Map<String, CIdentifier>):CExpr {
 		return switch place {
 			case IRPLocal(localId):
@@ -558,8 +695,9 @@ class CBodyEmitter {
 			case IRTAbiInteger(IRAKSize): new CType(TSizeT);
 			case IRTFloat(64): new CType(TDouble);
 			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
+			case IRTInstance(instanceId): new CType(TStruct(requireAggregateTag(instanceId)));
 			case _:
-				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted primitive C body subset');
+				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted direct-value C body subset');
 		};
 	}
 
@@ -617,7 +755,62 @@ class CBodyEmitter {
 		return result;
 	}
 
-	static function addTypeHeaders(headers:Array<String>, type:HxcIRTypeRef):Void {
+	public function aggregateDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in aggregateInstanceOrder) {
+			final order = requireAggregateFieldOrder(instanceId);
+			final fields:Array<CField> = [];
+			for (fieldName in order) {
+				fields.push({
+					type: requireAggregateFieldType(instanceId, fieldName),
+					declarator: DName(requireAggregateFieldName(instanceId, fieldName, "definition", instanceId)),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
+			result.push(DStruct(requireAggregateTag(instanceId), fields, []));
+		}
+		return result;
+	}
+
+	public function aggregateLayoutAssertions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in aggregateInstanceOrder) {
+			final tag = requireAggregateTag(instanceId);
+			final structType = new CType(TStruct(tag));
+			final order = requireAggregateFieldOrder(instanceId);
+			for (index in 0...order.length) {
+				final fieldName = order[index];
+				final member = requireAggregateFieldName(instanceId, fieldName, "layout", instanceId);
+				final fieldType = requireAggregateFieldType(instanceId, fieldName);
+				final offset = EOffsetOf(structType, DName(null), member);
+				if (index == 0) {
+					result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
+						'closed record ${tag.value} first field begins at offset zero'));
+				} else {
+					final previousName = order[index - 1];
+					final previousMember = requireAggregateFieldName(instanceId, previousName, "layout", instanceId);
+					final previousType = requireAggregateFieldType(instanceId, previousName);
+					result.push(DStaticAssert(EBinary(GreaterEqual, offset,
+						EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(previousType, DName(null)))),
+						'closed record ${tag.value} field $index follows the prior field without overlap'));
+				}
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(fieldType, DName(null))),
+					'closed record ${tag.value} alignment admits field $index'));
+			}
+			final lastIndex = order.length - 1;
+			final lastName = order[lastIndex];
+			final lastMember = requireAggregateFieldName(instanceId, lastName, "layout", instanceId);
+			final lastType = requireAggregateFieldType(instanceId, lastName);
+			result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
+				EBinary(Add, EOffsetOf(structType, DName(null), lastMember), ESizeOfType(lastType, DName(null)))),
+				'closed record ${tag.value} size contains its final field'));
+		}
+		return result;
+	}
+
+	function addTypeHeaders(headers:Array<String>, type:HxcIRTypeRef):Void {
 		switch type {
 			case IRTBool:
 				addUnique(headers, "stdbool.h");
@@ -627,6 +820,20 @@ class CBodyEmitter {
 				addUnique(headers, "stddef.h");
 			case IRTString:
 				addUnique(headers, "hxrt/string_literal.h");
+			case IRTInstance(instanceId):
+				final order = aggregateFieldOrder.get(instanceId);
+				if (order == null) {
+					throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized C layout');
+				}
+				for (fieldName in order) {
+					final fieldType = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+					if (fieldType == null) {
+						throw new CBodyEmissionError('direct aggregate instance `$instanceId` lost field type `$fieldName`');
+					}
+					addTypeHeaders(headers, fieldType);
+				}
+			case IRTPointer(pointee, _):
+				addTypeHeaders(headers, pointee);
 			case IRTFixedArray(element, _, _):
 				addTypeHeaders(headers, element);
 			case IRTSpan(element, _):
@@ -634,7 +841,7 @@ class CBodyEmitter {
 				addUnique(headers, "stddef.h");
 			case IRTVoid | IRTFloat(64):
 			case _:
-				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C body header mapping');
+				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C direct-value header mapping');
 		}
 	}
 
@@ -806,6 +1013,84 @@ class CBodyEmitter {
 		}
 		statements.push(SContinue);
 	}
+
+	function placeType(place:HxcIRPlace, fn:HxcIRFunction):Null<HxcIRTypeRef> {
+		return switch place {
+			case IRPLocal(localId): requireLocal(fn, localId).type;
+			case IRPGlobal(_): null;
+			case IRPDereference(pointerValueId):
+				switch valueType(fn, pointerValueId) {
+					case IRTPointer(pointee, _): pointee;
+					case _: null;
+				}
+			case IRPField(base, fieldName):
+				switch placeType(base, fn) {
+					case IRTInstance(instanceId): aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+					case _: null;
+				}
+			case IRPIndex(base, _):
+				switch placeType(base, fn) {
+					case IRTFixedArray(element, _, _) | IRTSpan(element, _): element;
+					case _: null;
+				}
+		};
+	}
+
+	static function valueType(fn:HxcIRFunction, valueId:String):Null<HxcIRTypeRef> {
+		for (parameter in fn.parameters) {
+			if (parameter.id == valueId) {
+				return parameter.type;
+			}
+		}
+		for (block in fn.blocks) {
+			for (parameter in block.parameters) {
+				if (parameter.id == valueId) {
+					return parameter.type;
+				}
+			}
+			for (instruction in block.instructions) {
+				if (instruction.result != null && instruction.result.id == valueId) {
+					return instruction.result.type;
+				}
+			}
+		}
+		return null;
+	}
+
+	function requireAggregateTag(instanceId:String):CIdentifier {
+		final tag = aggregateTags.get(instanceId);
+		if (tag == null) {
+			throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized C tag');
+		}
+		return tag;
+	}
+
+	function requireAggregateFieldName(instanceId:String, fieldName:String, instructionId:String, functionId:String):CIdentifier {
+		final name = aggregateFieldNames.get(aggregateFieldKey(instanceId, fieldName));
+		if (name == null) {
+			throw new CBodyEmissionError('aggregate use `$instructionId` in `$functionId` has no finalized member `$fieldName` for `$instanceId`');
+		}
+		return name;
+	}
+
+	function requireAggregateFieldType(instanceId:String, fieldName:String):CType {
+		final type = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+		if (type == null) {
+			throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized type for member `$fieldName`');
+		}
+		return cType(type);
+	}
+
+	function requireAggregateFieldOrder(instanceId:String):Array<String> {
+		final order = aggregateFieldOrder.get(instanceId);
+		if (order == null) {
+			throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized member order');
+		}
+		return order;
+	}
+
+	static function aggregateFieldKey(instanceId:String, fieldName:String):String
+		return instanceId + "\x00" + fieldName;
 
 	static function requireResult(instruction:HxcIRInstruction, functionId:String):HxcIRResult {
 		final result = instruction.result;

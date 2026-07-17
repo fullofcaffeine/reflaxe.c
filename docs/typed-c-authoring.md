@@ -29,6 +29,12 @@ operation slice: nonempty literal-backed `CArray<T, N>` plus `Span<T>` and
 fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
 until their owning safety and inspection work is complete.
 
+Profile-aware validation now rejects `@:c.pack(...)` on a
+`@:c.layout(c.Layout.Struct|Union)` declaration in `metal` with `HXC5002`.
+Packing remains unavailable until a target-ABI probe and structural packed C
+declaration can prove it. This does not affect E3.T01's ordinary private closed
+anonymous records, which use strict C11 layout and no typed-C metadata.
+
 ## Declaration planning boundary
 
 `CDeclarationPlanner` consumes the snapshot without consulting filesystem,
@@ -143,6 +149,9 @@ and literals, normalized paths/names, declaration/layout compatibility,
 power-of-two pack/alignment syntax, duplicate explicit symbols, opaque values
 embedded by value, and impossible by-value declaration cycles. It also derives
 typed declaration dependencies, including forward-declarable pointer edges.
+Resolved-profile checks additionally reject the currently unsupported metal
+packing combination before a declaration snapshot can be mistaken for layout
+evidence.
 
 The declaration planner now owns complete-versus-forward dependency structure,
 header/source grouping, include provenance, and the complete-type/public-private

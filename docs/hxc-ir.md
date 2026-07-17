@@ -12,6 +12,8 @@ intent. E2.T06 consumes branch, jump, and switch terminators for the admitted
 primitive statement/value control-flow slice. E2.T07 adds validated immutable
 UTF-8 constants and explicit literal-only hosted output intent. E2.T08 adds fixed-array/span type
 identity, ordered initialization, and explicit checked/proven bounds policies.
+E3.T01 consumes aggregate type declarations/instances, named construction,
+projection, and structural field places for the bounded closed-record slice.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -37,6 +39,10 @@ representation rather than being inferred from the eventual C spelling.
 `IRTFixedArray` retains the element type, literal length, and phantom Haxe
 witness identity. `IRTSpan` retains element type and mutability without
 pretending a borrowed view is an owned aggregate or runtime object.
+`IRTInstance` names a validated concrete HxcIR instance rather than a C tag.
+For closed records, the declaration owns canonical ordered fields and the
+instance records direct representation; C naming and layout remain later
+emission decisions.
 `IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
@@ -81,6 +87,10 @@ need to recover intent from target syntax.
   places resolve to the collection element type; and every admitted collection
   access has a preceding checked-abort, compile-time static, or compiler
   loop-guard proof for the same collection and immutable index;
+- aggregate construction names every declared field exactly once, in canonical
+  declaration order, with a matching value type; projection names a real field
+  and returns its exact type; and a field place resolves only from a compatible
+  aggregate base;
 - return terminators carry no value for `Void`, carry exactly one value for a
   non-`Void` function, and match the declared return type;
 - calls, conversions, allocation, deallocation, retain, and trace operations
@@ -135,14 +145,20 @@ retains per-field semantic work and the exact-once link, while the plan retains
 cross-function/type order and dependency reasons. See [deterministic static
 initialization](static-initialization.md).
 
+For E3.T01, local aggregate-field reads remain explicit field-place,
+address, and dereference instructions, while immutable parameter or temporary
+reads use value projection. By-value initialization and loads retain the
+instance type. This prevents C syntax from erasing the semantic distinction
+between an addressable place and a copied record value.
+
 ## Runtime and profile policy
 
 The IR has no unconditional runtime concept. `IRIStatic` is a direct semantic
 operation, `IRIProgramLocal` names a compilation-local specialized helper, and
 `IRIRuntime` names the exact requested feature. Runtime call dispatch likewise
 records a feature and operation. Merely constructing a type, calling a direct
-function, initializing a fixed array/span, checking bounds, or using cleanup
-selects nothing from `hxrt`.
+function, constructing or copying a closed record, initializing a fixed
+array/span, checking bounds, or using cleanup selects nothing from `hxrt`.
 
 E2.T07 is the first bounded compiler-selected exception: a compiler-known
 literal remains direct static UTF-8 storage, while its observable hosted output
@@ -163,13 +179,14 @@ The body frontend calls
 `HxcIRDiagnostic.unsupportedTypedAstNode(profile, nodeKind, context, span)` and
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
-of an unsupported node. A fully admitted primitive or local fixed-array/span
-static graph reaches validated HxcIR, structural C, and an owned runtime-free
+of an unsupported node. A fully admitted primitive, local fixed-array/span, or
+closed anonymous-record static graph reaches validated HxcIR, structural C, and an owned runtime-free
 executable project. The separately admitted literal-output edge reaches the
 exact selective runtime plan above; nonliteral strings and broader output APIs
 still stop without output. See
 [primitive function-body lowering](body-lowering.md) and [static function
-lowering](function-lowering.md).
+lowering](function-lowering.md), plus [closed anonymous-record
+lowering](aggregate-lowering.md).
 
 ## Canonical dump
 
@@ -221,6 +238,10 @@ iteration, and strict generated-C execution. The arithmetic
 suite adds source-backed operation/helper decisions, `Std.int`, boundary
 execution, and eligible UBSan. All select no runtime files or public C ABI and
 compile/run as strict C11 with available GCC and Clang at `-O0` and `-O2`.
+The aggregate-lowering suite adds source-backed named construction, direct
+record instances, explicit copies and field addresses, dependency-first private
+structs, and exact C/C++17 layout agreement under both required compiler
+families.
 The separate string-output suite selects only the four-feature literal/I/O
 closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
 closed-stdout failure, and runs the generated project at both optimization

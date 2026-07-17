@@ -374,6 +374,48 @@ def function_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def aggregate_lowering_artifacts() -> list[Artifact]:
+    module = load_module("aggregate_lowering", "test/aggregate_lowering/run.py")
+    first_payload, report = module.render("snapshot first aggregate render")
+    second_payload, repeated = module.render("snapshot second aggregate render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input aggregate render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "aggregate-lowering snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("aggregates.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("aggregates.json", "json"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, (dict, list)):
+                raise SnapshotFailure(f"aggregate-lowering report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"aggregate-lowering report omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/aggregate_lowering/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 def evaluation_order_artifacts() -> list[Artifact]:
     module = load_module("evaluation_order", "test/evaluation_order/run.py")
     first_payload, report = module.render("snapshot first evaluation-order render")
@@ -653,6 +695,7 @@ GENERATORS: dict[str, Generator] = {
     "stdlib-ledger": stdlib_ledger_artifacts,
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
+    "aggregate-lowering": aggregate_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,

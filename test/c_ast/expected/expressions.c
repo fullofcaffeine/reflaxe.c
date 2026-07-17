@@ -76,6 +76,7 @@ int main(void)
   (void)NULL;
   (void)_Alignof(int32_t);
   (void)sizeof(int32_t);
+  (void)offsetof(struct hxc_pair, left);
   (void)&scratch;
   (void)*&scratch;
   (void)+scratch;

@@ -25,13 +25,14 @@ CCompiler
   -> consumes TypedProgramInput from CompilationContext
   -> plans deterministic class/static initialization and retains its request-local graph
   -> collects reachable typed functions from entry and initializer bodies plus captured primitive globals
-  -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, and UB-safe primitive operations
+  -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, UB-safe primitive operations, and closed record values
+  -> CBodyAggregateRegistry deduplicates structural shapes and requests dependency-first type/member symbols
   -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
   -> emits a private prototype header, source definitions, an initialization wrapper when needed, and int main(void)
-  -> resolves an empty primitive plan or exact source-rooted literal-output runtime requirements
+  -> resolves an empty direct-value plan or exact source-rooted literal-output runtime requirements
   -> packages selected runtime artifacts as GeneratedFile records
-  -> invokes ProjectEmitter with the analyzed runtime, stdlib, and primitive facts
+  -> invokes ProjectEmitter with the analyzed runtime, stdlib, primitive, and direct-value facts
 
 ProjectEmitter
   -> public/private headers
@@ -201,8 +202,19 @@ prototypes stay out of the shared header, and an empty plan elides the wrapper
 and call. Cross-type cycles fail as `HXC1002`. See [deterministic static
 initialization](static-initialization.md).
 
-`CBodyLowering` prepares the complete admitted HxcIR function set, scans it for
-program-local primitive helper IDs, computes their dependency closure, and
+E3.T01 adds request-local closed-record representation selection.
+Typedef-expanded anonymous shapes are accepted only when every field is a direct
+primitive or a nested admitted record. Canonical UTF-8 field structure
+determines one shared HxcIR instance and finalized C tag across structurally
+equal aliases; source expression evaluation remains ordered separately.
+Construction and projection stay typed HxcIR operations, addressable local
+fields use structural field/address/dereference places, and dependency-first
+private `DStruct` declarations carry structural layout assertions. See [closed
+anonymous-record lowering](aggregate-lowering.md).
+
+`CBodyLowering` prepares the complete admitted HxcIR function and closed-record
+set, scans it for program-local primitive helper IDs, computes their dependency
+closure, and
 registers every helper/parameter/standard symbol before sealing the
 per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
@@ -216,8 +228,10 @@ order. Lazy/conditional expressions remain explicit labels and edges rather
 than C operators. `CPrimitiveHelperEmitter` builds only selected private
 `static inline` helpers through structural CAST; safe unsigned fast paths remain
 direct C, and floating modulo contributes the exact `m` build fact without a
-runtime feature. Fixed arrays remain structural array declarators, while spans
-remain typed pointer-plus-`size_t` views. Bounds proof nodes survive through
+runtime feature. Closed records become dependency-first private struct
+declarations and typed compound literals; fixed arrays remain structural array
+declarators, while spans remain typed pointer-plus-`size_t` views. Bounds proof
+nodes survive through
 validated HxcIR; only exact static constants or typed `size_t` loop guards
 remove a check, and a dynamic index emits a signed/element-count fail-stop
 branch. The typed Haxe

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "closed-anonymous-record-lowering-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-009",
+    "HXC-SEM-023",
+    "HXC-SEM-024"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyAggregate.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/macros/TypedCContractMacro.hx",
+    "test/aggregate_lowering/fixtures/mutation/Main.hx",
+    "test/aggregate_lowering/fixtures/identity_equality/Main.hx",
+    "test/aggregate_lowering/fixtures/dynamic/Main.hx",
+    "test/aggregate_lowering/fixtures/void_field/Main.hx",
+    "test/typed_c/fixtures/metal_packed_struct/Main.hx",
+    "test/aggregate_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../aggregate_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/aggregate-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001",
+      "HXC5002"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed identity/layout edges passed$"
+    }
+  }
+}

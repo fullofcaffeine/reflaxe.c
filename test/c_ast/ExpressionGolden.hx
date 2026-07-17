@@ -402,7 +402,8 @@ class ExpressionGolden {
 			EBool(true),
 			ENull,
 			EAlignOfType(i32(), abstractName()),
-			ESizeOfType(i32(), abstractName())
+			ESizeOfType(i32(), abstractName()),
+			EOffsetOf(type(TStruct(id("hxc_pair"))), abstractName(), id("left"))
 		];
 	}
 

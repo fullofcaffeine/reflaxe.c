@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "closed-anonymous-record-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-004",
+    "HXC-SEM-009"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyAggregate.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/aggregate_lowering/fixtures/positive/AggregateFixture.hx",
+    "test/aggregate_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../aggregate_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/aggregate-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^aggregate-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/aggregate_lowering/expected/aggregates.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/aggregate_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

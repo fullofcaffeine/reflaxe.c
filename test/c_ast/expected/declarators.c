@@ -42,6 +42,8 @@ _Static_assert(_Alignof(struct hxc_dispatch) >= 16, "aligned atomic field raises
 
 _Static_assert(sizeof(int32_t (*)[4]) > 0, "abstract pointer-to-array declarator is complete");
 
+_Static_assert(offsetof(struct hxc_dispatch, binary) == 0, "first aggregate member starts at offset zero");
+
 static inline int32_t *hxc_select(hxc_binary_fn callback, int32_t *left)
 {
   (void)callback;

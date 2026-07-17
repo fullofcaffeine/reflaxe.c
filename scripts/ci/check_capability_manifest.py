@@ -65,6 +65,7 @@ REQUIRED_CAPABILITIES = frozenset(
     (
         "bootstrap-capability-manifest",
         "build-adapter-seeds",
+        "closed-anonymous-record-lowering",
         "general-haxe-lowering",
         "hxc-cli",
         "hxc-doctor",
@@ -584,8 +585,8 @@ def validate(root: Path, manifest: Manifest) -> list[str]:
         errors.append("manifestId must be hxc-bootstrap-capabilities-v1")
     if manifest.milestone != "M0":
         errors.append("bootstrap manifest milestone must remain M0")
-    if manifest.project_status != "experimental-scaffold-with-primitive-executable-slice":
-        errors.append("projectStatus lost the bounded M0 primitive-slice claim")
+    if manifest.project_status != "experimental-scaffold-with-bounded-executable-slices":
+        errors.append("projectStatus lost the bounded M0 executable-slices claim")
     if manifest.requirements != REQUIRED_REQUIREMENTS:
         errors.append(
             "requirements must be exactly HXC-SCAF-001, HXC-SCAF-004, HXC-DOC-007"

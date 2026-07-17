@@ -36,6 +36,9 @@ class HxcIRGolden {
 				constantTypeMismatch: invalidDiagnostics(constantTypeMismatchProgram()),
 				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
 				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
+				aggregateConstructionMismatch: invalidDiagnostics(aggregateConstructionMismatchProgram()),
+				aggregateProjectionMismatch: invalidDiagnostics(aggregateProjectionMismatchProgram()),
+				aggregateFieldPlaceMismatch: invalidDiagnostics(aggregateFieldPlaceMismatchProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
 				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
@@ -401,6 +404,7 @@ class HxcIRGolden {
 			locals: [
 				local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "coverage.Length2"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.span", IRTSpan(IRTInt(32, true), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
+				local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.owned", IRTPointer(IRTInstance("instance.object"), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17)
 			],
 			returnType: IRTVoid,
@@ -470,6 +474,12 @@ class HxcIRGolden {
 									valueId: "value.one"
 								}
 							]),
+							COVERAGE_SOURCE, 28),
+						instruction("c10.record-initialize", null,
+							IRIOInitialize(IRPLocal("local.record"), "value.record", IRISUninitialized, IRISInitialized), COVERAGE_SOURCE, 28),
+						instruction("c10.field-address", result("value.field-address", IRTPointer(IRTInt(32, true), false)),
+							IRIOAddress(IRPField(IRPLocal("local.record"), "x")), COVERAGE_SOURCE, 28),
+						instruction("c10.field-load", result("value.field-load", IRTInt(32, true)), IRIOLoad(IRPDereference("value.field-address")),
 							COVERAGE_SOURCE, 28),
 						instruction("c11.project", result("value.projected", IRTInt(32, true)), IRIOProject("value.record", "x"), COVERAGE_SOURCE, 29),
 						instruction("c12.tag", result("value.option", IRTInstance("instance.option")),
@@ -555,6 +565,82 @@ class HxcIRGolden {
 			instruction("bad.address", result("value.bad", IRTPointer(IRTBool, false)), IRIOAddress(IRPLocal("local.value")), file, 2)
 		],
 			terminator(IRTReturn(null, []), file, 3), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function aggregateConstructionMismatchProgram():HxcIRProgram {
+		final file = "test/negative/AggregateConstructionMismatch.hx";
+		return aggregateProgram(file, [
+			instruction("bad.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.truth", result("value.truth", IRTBool), IRIOConstant(IRCBool(true)), file, 3),
+			instruction("bad.construct", result("value.record", IRTBool), IRIOConstructAggregate("instance.record", [
+				{
+					name: "z",
+					valueId: "value.one"
+				},
+				{name: "x", valueId: "value.truth"}
+			]), file, 4)
+		], [], "invalid.AggregateConstructionMismatch");
+	}
+
+	static function aggregateProjectionMismatchProgram():HxcIRProgram {
+		final file = "test/negative/AggregateProjectionMismatch.hx";
+		return aggregateProgram(file, [
+			instruction("bad.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.truth", result("value.truth", IRTBool), IRIOConstant(IRCBool(true)), file, 3),
+			instruction("bad.construct", result("value.record", IRTInstance("instance.record")), IRIOConstructAggregate("instance.record",
+				[
+					{
+						name: "x",
+						valueId: "value.one"
+					},
+					{name: "y", valueId: "value.truth"}
+				]),
+				file, 4),
+			instruction("bad.project-type", result("value.projected", IRTBool), IRIOProject("value.record", "x"), file, 5),
+			instruction("bad.project-name", result("value.missing", IRTInt(32, true)), IRIOProject("value.record", "z"), file, 6)
+		], [], "invalid.AggregateProjectionMismatch");
+	}
+
+	static function aggregateFieldPlaceMismatchProgram():HxcIRProgram {
+		final file = "test/negative/AggregateFieldPlaceMismatch.hx";
+		return aggregateProgram(file, [
+			instruction("bad.address", result("value.address", IRTPointer(IRTInt(32, true), false)), IRIOAddress(IRPField(IRPLocal("local.record"), "z")),
+				file, 2)
+		], [
+			local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISInitialized, file, 1)
+		], "invalid.AggregateFieldPlaceMismatch");
+	}
+
+	static function aggregateProgram(file:String, instructions:Array<HxcIRInstruction>, locals:Array<HxcIRLocal>,
+			moduleId:String = "invalid.Aggregate"):HxcIRProgram {
+		final program = minimalProgram(moduleId, instructions, terminator(IRTReturn(null, []), file, 8), locals, [], file);
+		program.modules[0].types.push({
+			id: "type.record",
+			displayName: "invalid.Record",
+			kind: IRTKAggregate([
+				{
+					name: "x",
+					type: IRTInt(32, true),
+					mutable: false,
+					source: span(file, 1)
+				},
+				{
+					name: "y",
+					type: IRTBool,
+					mutable: false,
+					source: span(file, 1)
+				}
+			]),
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.record",
+			declarationId: "type.record",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		});
+		return program;
 	}
 
 	static function storeTypeMismatchProgram():HxcIRProgram {

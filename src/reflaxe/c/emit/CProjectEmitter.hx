@@ -25,6 +25,7 @@ import reflaxe.c.runtime.RuntimeFeaturePlanner;
 enum abstract CProjectCompilationStatus(String) to String {
 	var StructuralFixture = "structural-fixture-no-haxe-lowering";
 	var PrimitiveExecutable = "lowered-primitive-executable";
+	var DirectValueExecutable = "lowered-direct-value-executable";
 	var LoweredProgram = "lowered-program";
 }
 
@@ -48,6 +49,7 @@ typedef CProjectEmissionPlan = {
 	final units:Array<GeneratedFile>;
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
+	final ?directAggregateCount:Int;
 	final ?stdlibModules:Array<String>;
 	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
@@ -181,7 +183,7 @@ class CProjectEmitter {
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanPlaceholder(plan)));
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiPlaceholder(plan)));
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibPlaceholder(plan)));
-			case PrimitiveExecutable:
+			case PrimitiveExecutable | DirectValueExecutable:
 				files.push(jsonFile("hxc.initialization-plan.json", GeneratedFileKind.InitializationPlan, requireStaticInitialization(plan)));
 				files.push(jsonFile("hxc.runtime-plan.json", GeneratedFileKind.RuntimePlan, runtimePlanResolved(plan)));
 				files.push(jsonFile("hxc.abi.json", GeneratedFileKind.AbiManifest, abiResolved(plan)));
@@ -236,8 +238,8 @@ class CProjectEmitter {
 		}
 		switch plan.compilationStatus {
 			case StructuralFixture:
-			case PrimitiveExecutable:
-				validatePrimitiveExecutablePlan(plan);
+			case PrimitiveExecutable | DirectValueExecutable:
+				validateDirectExecutablePlan(plan);
 			case LoweredProgram:
 				fail("lowered-program project emission remains unavailable until semantic runtime and ABI analyses replace the honest placeholders");
 			case _:
@@ -284,16 +286,24 @@ class CProjectEmitter {
 		}
 	}
 
-	function validatePrimitiveExecutablePlan(plan:CProjectEmissionPlan):Void {
+	function validateDirectExecutablePlan(plan:CProjectEmissionPlan):Void {
+		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
+		if (aggregateCount < 0
+			|| plan.compilationStatus == DirectValueExecutable
+			&& aggregateCount == 0
+			|| plan.compilationStatus == PrimitiveExecutable
+			&& aggregateCount != 0) {
+			fail("direct aggregate count must agree with the bounded executable compilation status");
+		}
 		if (plan.runtimePolicyProvenance == null || plan.runtimeDiagnosticsProvenance == null) {
-			fail("primitive executable emission requires resolved runtime-policy provenance");
+			fail("direct executable emission requires resolved runtime-policy provenance");
 		}
 		if (plan.environment != CProjectEnvironment.Hosted) {
-			fail('primitive executable emission requires the hosted environment; found `${plan.environment}`');
+			fail('direct executable emission requires the hosted environment; found `${plan.environment}`');
 		}
 		final initialization = requireStaticInitialization(plan);
 		final runtimePlan = requireRuntimePlan(plan);
-		validatePrimitiveRuntimePlan(plan, runtimePlan);
+		validateDirectRuntimePlan(plan, runtimePlan);
 		if (initialization.schemaVersion != 1
 			|| initialization.strategy != CStaticInitializationStrategy.EagerHaxeTypeOrder
 			|| initialization.entryFunctionId == ""
@@ -303,7 +313,7 @@ class CProjectEmitter {
 				CStaticInitializationPhase.Entry
 			].join(",")
 			|| initialization.runtimeFeatures.length != 0) {
-			fail("primitive executable emission requires a valid schema-1 static-initialization plan with no independent initializer runtime roots");
+			fail("direct executable emission requires a valid schema-1 static-initialization plan with no independent initializer runtime roots");
 		}
 		if (initialization.executionOrder.length != initialization.initializers.length) {
 			fail("static-initialization execution order must address every initializer exactly once");
@@ -343,7 +353,7 @@ class CProjectEmitter {
 		}
 		for (fact in plan.buildFacts) {
 			if (fact.kind != "link" || fact.name != "m" || fact.value != null || fact.valueKind != null || fact.ownerModulePaths.length == 0) {
-				fail('primitive executable emission only admits the compiler-selected C math link fact; found `${fact.kind}` `${fact.name}`');
+				fail('direct executable emission only admits the compiler-selected C math link fact; found `${fact.kind}` `${fact.name}`');
 			}
 		}
 		var sources = 0;
@@ -356,13 +366,13 @@ class CProjectEmitter {
 					privateHeaders++;
 				case RuntimeHeader | RuntimeSource:
 				case PublicHeader:
-					fail('primitive executable emission cannot package `${Std.string(unit.kind)}` `${unit.relativePath}`', [unit.relativePath]);
+					fail('direct executable emission cannot package `${Std.string(unit.kind)}` `${unit.relativePath}`', [unit.relativePath]);
 				case _:
-					fail('primitive executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
+					fail('direct executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
 			}
 		}
 		if (sources < 1 || privateHeaders != 1) {
-			fail('primitive executable emission requires at least one source and exactly one private prototype header; found $sources source(s) and $privateHeaders header(s)');
+			fail('direct executable emission requires at least one source and exactly one private prototype header; found $sources source(s) and $privateHeaders header(s)');
 		}
 		var entryPoints = 0;
 		for (symbol in plan.symbolTable.symbols) {
@@ -370,19 +380,20 @@ class CProjectEmitter {
 				entryPoints++;
 			}
 			if (StringTools.startsWith(symbol.cName, "hxrt_")) {
-				fail('primitive executable symbol table contains runtime symbol `${symbol.cName}`');
+				fail('direct executable symbol table contains runtime symbol `${symbol.cName}`');
 			}
 		}
 		if (entryPoints != 1) {
-			fail('primitive executable symbol table requires exactly one compiler-owned exact `main`; found $entryPoints');
+			fail('direct executable symbol table requires exactly one compiler-owned exact `main`; found $entryPoints');
 		}
 	}
 
-	function validatePrimitiveRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+	function validateDirectRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
-			fail("primitive executable emission requires a compiler-program hxc-runtime-plan-v2 analysis");
+			fail("direct executable emission requires a compiler-program hxc-runtime-plan-v2 analysis");
 		}
 		if (runtimePlan.profile != plan.profile
 			|| runtimePlan.environment != plan.environment
@@ -391,7 +402,7 @@ class CProjectEmitter {
 			|| runtimePlan.diagnosticMode != plan.runtimeDiagnostics
 			|| runtimePlan.policyProvenance != plan.runtimePolicyProvenance
 			|| runtimePlan.diagnosticProvenance != plan.runtimeDiagnosticsProvenance) {
-			fail("primitive executable runtime analysis differs from resolved project configuration");
+			fail("direct executable runtime analysis differs from resolved project configuration");
 		}
 		switch runtimePlan.status {
 			case RuntimeFeaturePlanStatus.RuntimeFree:
@@ -405,21 +416,24 @@ class CProjectEmitter {
 					|| runtimePlan.symbols.length != 0
 					|| runtimePlan.libraries.length != 0
 					|| runtimePlan.defines.length != 0) {
-					fail("runtime-free primitive analysis must prove complete hxrt absence");
+					fail("runtime-free direct analysis must prove complete hxrt absence");
 				}
 				switch runtimePlan.noRuntimeProof {
 					case null:
-						fail("runtime-free primitive analysis must prove complete hxrt absence");
+						fail("runtime-free direct analysis must prove complete hxrt absence");
 					case proof:
 						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
 							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
+						if (proof.reachability.typeInstances != aggregateCount) {
+							fail("runtime-free direct executable aggregate count differs from reachable HxcIR instances");
+						}
 				}
 			case RuntimeFeaturePlanStatus.RuntimeFeatures:
 				validateHostedOutputRuntimePlan(runtimePlan);
 			case RuntimeFeaturePlanStatus.NativeSeedFeatures:
 				fail("generated Haxe cannot use a native-seed runtime plan");
 			case _:
-				fail('primitive executable runtime analysis has unknown status `${Std.string(runtimePlan.status)}`');
+				fail('direct executable runtime analysis has unknown status `${Std.string(runtimePlan.status)}`');
 		}
 		validateRuntimePayload(plan.units, runtimePlan);
 		final helperIds = plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds;
@@ -432,6 +446,9 @@ class CProjectEmitter {
 			"explicit-evaluation-order",
 			"executable-entry-point"
 		];
+		if (aggregateCount > 0) {
+			expectedDirectDecisions.push("closed-anonymous-value-records");
+		}
 		if (helperIds.length > 0) {
 			expectedDirectDecisions.push("selected-program-local-helpers");
 		}
@@ -444,7 +461,7 @@ class CProjectEmitter {
 		}
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
-			fail("primitive executable runtime analysis differs from compiler-owned direct and program-local decisions");
+			fail("direct executable runtime analysis differs from compiler-owned direct and program-local decisions");
 		}
 	}
 
@@ -490,7 +507,7 @@ class CProjectEmitter {
 	static function requireStaticInitialization(plan:CProjectEmissionPlan):CStaticInitializationSnapshot {
 		final initialization = plan.staticInitialization;
 		if (initialization == null) {
-			throw new ProjectEmissionError("primitive executable emission requires a static-initialization plan");
+			throw new ProjectEmissionError("direct executable emission requires a static-initialization plan");
 		}
 		return initialization;
 	}
@@ -498,7 +515,7 @@ class CProjectEmitter {
 	static function requireRuntimePlan(plan:CProjectEmissionPlan):RuntimeFeaturePlanSnapshot {
 		final runtimePlan = plan.runtimePlan;
 		if (runtimePlan == null) {
-			throw new ProjectEmissionError("primitive executable emission requires a runtime feature plan");
+			throw new ProjectEmissionError("direct executable emission requires a runtime feature plan");
 		}
 		return runtimePlan;
 	}

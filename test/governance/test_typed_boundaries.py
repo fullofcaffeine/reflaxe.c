@@ -43,12 +43,16 @@ class TypedBoundaryTests(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, target)
 
+        manifest = json.loads((ROOT / MANIFEST).read_text(encoding="utf-8"))
+        evidence = {
+            Path(path)
+            for allowance in manifest["allowlist"]
+            for path in allowance["testEvidence"]
+        }
         for relative in (
             MANIFEST,
             SCHEMA,
-            Path("test/project_emitter/run.py"),
-            Path("test/diagnostics/run.py"),
-            Path("test/hxc_ir/run.py"),
+            *sorted(evidence, key=lambda path: path.as_posix()),
         ):
             target = destination / relative
             target.parent.mkdir(parents=True, exist_ok=True)

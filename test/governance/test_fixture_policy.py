@@ -62,6 +62,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "stdlib-ledger",
                 "body-lowering",
                 "function-lowering",
+                "aggregate-lowering",
                 "evaluation-order",
                 "static-initialization",
                 "arithmetic-semantics",

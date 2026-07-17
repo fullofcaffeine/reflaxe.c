@@ -209,6 +209,7 @@ REQUIRED_GATE_FILES = (
     "test/negative/stdlib-ledger/case.json",
     "test/snapshot/stdlib-ledger/case.json",
     "src/reflaxe/c/lowering/CBodyEmissionError.hx",
+    "src/reflaxe/c/lowering/CBodyAggregate.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyLoweringError.hx",
@@ -250,6 +251,28 @@ REQUIRED_GATE_FILES = (
     "test/negative/function-lowering/case.json",
     "test/snapshot/function-lowering/case.json",
     "test/runtime/function-lowering/case.json",
+    "docs/aggregate-lowering.md",
+    "test/aggregate_lowering/AggregateLoweringProbe.hx",
+    "test/aggregate_lowering/aggregate_lowering.hxml",
+    "test/aggregate_lowering/fixtures/positive/AggregateFixture.hx",
+    "test/aggregate_lowering/fixtures/mutation/Main.hx",
+    "test/aggregate_lowering/fixtures/identity_equality/Main.hx",
+    "test/aggregate_lowering/fixtures/dynamic/Main.hx",
+    "test/aggregate_lowering/fixtures/void_field/Main.hx",
+    "test/aggregate_lowering/native/layout_consumer.c",
+    "test/aggregate_lowering/native/layout_consumer.cpp",
+    "test/aggregate_lowering/native/layout_provider.c",
+    "test/aggregate_lowering/expected/aggregates.hxcir",
+    "test/aggregate_lowering/expected/aggregates.json",
+    "test/aggregate_lowering/expected/program.h",
+    "test/aggregate_lowering/expected/program.c",
+    "test/aggregate_lowering/expected/symbols.json",
+    "test/aggregate_lowering/run.py",
+    "test/positive/aggregate-lowering/case.json",
+    "test/negative/aggregate-lowering/case.json",
+    "test/snapshot/aggregate-lowering/case.json",
+    "test/runtime/aggregate-lowering/case.json",
+    "test/typed_c/fixtures/metal_packed_struct/Main.hx",
     "docs/evaluation-order.md",
     "test/evaluation_order/EvaluationOrderProbe.hx",
     "test/evaluation_order/evaluation_order.hxml",
@@ -432,6 +455,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/primitive_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -544,6 +568,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:body-lowering entry point")
     if scripts.get("test:function-lowering") != "python3 test/function_lowering/run.py":
         errors.append("package.json must retain the test:function-lowering entry point")
+    if scripts.get("test:aggregate-lowering") != "python3 test/aggregate_lowering/run.py":
+        errors.append("package.json must retain the test:aggregate-lowering entry point")
     if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
         errors.append("package.json must retain the test:evaluation-order entry point")
     if scripts.get("test:static-initialization") != "python3 test/static_initialization/run.py":
@@ -618,6 +644,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:body-lowering")
     if "npm run test:function-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:function-lowering")
+    if "npm run test:aggregate-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:aggregate-lowering")
     if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:evaluation-order")
     if "npm run test:static-initialization" not in str(scripts.get("test:toolchain", "")):
@@ -721,6 +749,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed body-lowering test")
     if "test/function_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed function-lowering test")
+    if "test/aggregate_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the closed aggregate-lowering test")
     if "test/evaluation_order/run.py" not in pre_commit:
         errors.append("pre-commit must run the explicit evaluation-order test")
     if "test/static_initialization/run.py" not in pre_commit:
@@ -979,6 +1009,32 @@ def validate() -> list[str]:
     if "command identity" not in function_runner or '"--version"' not in function_runner:
         errors.append(
             "function-lowering runner must verify required compiler-family identity"
+        )
+
+    aggregate_runner = read_text(ROOT / "test/aggregate_lowering/run.py", errors)
+    for required_aggregate_contract in (
+        "C11_STRICT_FLAGS",
+        "-std=c++17",
+        "-pedantic",
+        "-Werror",
+        "-O0",
+        "-O2",
+        "run_c_fixture_corpus",
+        "layout_consumer.cpp",
+        "_Static_assert(",
+    ):
+        if required_aggregate_contract not in aggregate_runner:
+            errors.append(
+                "aggregate-lowering runner lost strict native/layout contract "
+                + required_aggregate_contract
+            )
+    if "--native-only" not in aggregate_runner or "--toolchain" not in aggregate_runner:
+        errors.append(
+            "aggregate-lowering runner must expose the required native matrix seam"
+        )
+    if "compiler_identity" not in aggregate_runner or '"--version"' not in aggregate_runner:
+        errors.append(
+            "aggregate-lowering runner must verify required compiler-family identity"
         )
 
     evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)

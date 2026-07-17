@@ -29,7 +29,11 @@ def development_tool(name: str) -> str:
 
 
 def compile_fixture(
-    directory: str, main: str = "Main", report: bool = False, connect: str | None = None
+    directory: str,
+    main: str = "Main",
+    report: bool = False,
+    connect: str | None = None,
+    profile: str = "portable",
 ) -> subprocess.CompletedProcess[str]:
     command = [development_tool("haxe")]
     if connect is not None:
@@ -46,6 +50,7 @@ def compile_fixture(
     )
     if report:
         command.extend(["-D", "reflaxe_c_contract_report"])
+    command.extend(["-D", f"reflaxe_c_profile={profile}"])
     command.extend(
         ["-main", main, "--custom-target", "c=typed-c-contract-probe"]
     )
@@ -142,6 +147,22 @@ def check_negative_fixtures() -> None:
             raise TypedCProbeFailure(f"negative fixture {directory} did not report a Haxe source position\n{combined}")
         if "[profile=portable]" not in combined or "Remediation:" not in combined:
             raise TypedCProbeFailure(f"negative fixture {directory} lost its profile or remediation field\n{combined}")
+
+    metal_packed = compile_fixture("metal_packed_struct", profile="metal")
+    combined = metal_packed.stdout + metal_packed.stderr
+    if (
+        metal_packed.returncode == 0
+        or INVALID_TYPED_C_DIAGNOSTIC_ID not in combined
+        or "metal packed layouts are unavailable" not in combined
+    ):
+        raise TypedCProbeFailure(
+            "metal packed-struct fixture missed its stable capability diagnostic\n"
+            f"stdout:\n{metal_packed.stdout}\nstderr:\n{metal_packed.stderr}"
+        )
+    if source_position.search(combined) is None:
+        raise TypedCProbeFailure("metal packed-struct fixture did not report a Haxe source position")
+    if "[profile=metal]" not in combined or "Remediation:" not in combined:
+        raise TypedCProbeFailure("metal packed-struct fixture lost its metal profile or remediation field")
 
 
 def available_port() -> int:

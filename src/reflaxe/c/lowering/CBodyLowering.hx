@@ -19,6 +19,12 @@ import reflaxe.c.ir.HxcUtf8;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
+import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
+import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregate;
+import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregateField;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperPlan;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperSelection;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -140,18 +146,20 @@ class CBodyLoweringResult {
 	public final program:HxcIRProgram;
 	public final functions:Array<CLoweredBodyFunction>;
 	public final globals:Array<CLoweredBodyGlobal>;
+	public final aggregates:Array<CLoweredBodyAggregate>;
 	public final helpers:Array<CPrimitiveHelperPlan>;
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
 	public final boundsAbortName:Null<CIdentifier>;
 	public final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 
-	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>, helpers:Array<CPrimitiveHelperPlan>,
-			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>) {
+	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
+			aggregates:Array<CLoweredBodyAggregate>, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot,
+			boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
+		this.aggregates = aggregates.copy();
 		this.helpers = helpers.copy();
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
@@ -175,10 +183,11 @@ class CBodyLowering {
 		}
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
+		final aggregateRegistry = new CBodyAggregateRegistry(context);
 		final prepared:Array<PreparedBodyFunction> = [];
 		final preparedById:Map<String, PreparedBodyFunction> = [];
 		for (input in inputs) {
-			final fn = new FunctionPreparer(context, input).prepare();
+			final fn = new FunctionPreparer(context, input, aggregateRegistry).prepare();
 			if (preparedById.exists(fn.irId)) {
 				throw new CBodyEmissionError('body lowering received duplicate semantic function `${fn.irId}`');
 			}
@@ -207,16 +216,18 @@ class CBodyLowering {
 		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
 		final built:Array<BuiltBodyFunction> = [];
 		for (fn in prepared) {
-			built.push(new FunctionBuilder(context, fn, preparedById, globalRegistry).build());
+			built.push(new FunctionBuilder(context, fn, preparedById, globalRegistry, aggregateRegistry).build());
 		}
 		final preparedGlobals = globalRegistry.canonicalGlobals();
-		final program = buildProgram(built, preparedGlobals);
+		final preparedAggregates = aggregateRegistry.canonicalAggregates();
+		final program = buildProgram(built, preparedGlobals, preparedAggregates);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
 		helperSelection.register(context.symbols);
 		final boundsAbortRequest = registerBoundsAbort(program);
 		final symbolTable = context.symbols.finalizeSymbols();
+		final loweredAggregates = aggregateRegistry.finalize(context.symbols);
 		final boundsAbortName = boundsAbortRequest == null ? null : context.symbols.identifierFor(boundsAbortRequest);
 		final helpers = helperSelection.finalize(context.symbols);
 		final helperNames:Map<String, CIdentifier> = [];
@@ -234,7 +245,7 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
-		final emitter = new CBodyEmitter();
+		final emitter = new CBodyEmitter(loweredAggregates);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final parameterNames:Map<String, CIdentifier> = [];
@@ -278,8 +289,8 @@ class CBodyLowering {
 			}
 		}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, helpers, helperSelection.buildFacts(), symbolTable, boundsAbortName,
-			runtimeRequirements);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, helpers, helperSelection.buildFacts(), symbolTable,
+			boundsAbortName, runtimeRequirements);
 	}
 
 	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
@@ -302,7 +313,7 @@ class CBodyLowering {
 		return null;
 	}
 
-	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>):HxcIRProgram {
+	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -321,11 +332,23 @@ class CBodyLowering {
 			}
 			moduleGlobals.push(global);
 		}
+		final aggregatesByModule:Map<String, Array<CPreparedBodyAggregate>> = [];
+		for (aggregate in aggregates) {
+			var moduleAggregates = aggregatesByModule.get(aggregate.ownerModule);
+			if (moduleAggregates == null) {
+				moduleAggregates = [];
+				aggregatesByModule.set(aggregate.ownerModule, moduleAggregates);
+			}
+			moduleAggregates.push(aggregate);
+		}
 		final moduleIdSet:Map<String, Bool> = [];
 		for (moduleId in byModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
 		for (moduleId in globalsByModule.keys()) {
+			moduleIdSet.set(moduleId, true);
+		}
+		for (moduleId in aggregatesByModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
 		final moduleIds = [for (moduleId in moduleIdSet.keys()) moduleId];
@@ -338,14 +361,19 @@ class CBodyLowering {
 			final globalEntries = globalsByModule.get(moduleId);
 			final moduleGlobals = globalEntries == null ? [] : globalEntries;
 			moduleGlobals.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
-			final spans = moduleFunctions.map(entry -> entry.ir.source).concat(moduleGlobals.map(global -> global.ir.source));
+			final aggregateEntries = aggregatesByModule.get(moduleId);
+			final moduleAggregates = aggregateEntries == null ? [] : aggregateEntries;
+			moduleAggregates.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final spans = moduleFunctions.map(entry -> entry.ir.source)
+				.concat(moduleGlobals.map(global -> global.ir.source))
+				.concat(moduleAggregates.map(aggregate -> aggregate.source));
 			if (spans.length == 0) {
 				throw new CBodyEmissionError('body lowering lost module `$moduleId` while building HxcIR');
 			}
 			modules.push({
 				id: moduleId,
-				types: [],
-				typeInstances: [],
+				types: moduleAggregates.map(aggregate -> aggregate.declaration()),
+				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance()),
 				globals: moduleGlobals.map(global -> global.ir),
 				functions: moduleFunctions.map(entry -> entry.ir),
 				source: enclosingSpan(spans)
@@ -455,12 +483,12 @@ private typedef SpanLoopPattern = {
 private typedef LoweredValue = {
 	final id:String;
 	final type:HxcIRTypeRef;
-	final mapping:CPrimitiveTypeMapping;
+	final mapping:CBodyValueType;
 }
 
 private typedef LoweredPlace = {
 	final place:HxcIRPlace;
-	final mapping:CPrimitiveTypeMapping;
+	final mapping:CBodyValueType;
 	final mutable:Bool;
 }
 
@@ -494,7 +522,7 @@ private typedef TypedSwitchArm = {
 private typedef PreparedParameter = {
 	final compilerId:Int;
 	final ir:HxcIRParameter;
-	final mapping:CPrimitiveTypeMapping;
+	final mapping:CBodyValueType;
 }
 
 private typedef PreparedBodyFunction = {
@@ -508,7 +536,7 @@ private typedef PreparedBodyFunction = {
 	final role:PreparedBodyRole;
 	final irId:String;
 	final parameters:Array<PreparedParameter>;
-	final returnMapping:CPrimitiveTypeMapping;
+	final returnMapping:CBodyValueType;
 	final functionRequest:CSymbolRequest;
 	final parameterRequests:Map<String, CSymbolRequest>;
 }
@@ -654,11 +682,13 @@ private class BodyGlobalRegistry {
 private class FunctionPreparer {
 	final context:CompilationContext;
 	final input:CBodyFunctionInput;
+	final aggregateRegistry:CBodyAggregateRegistry;
 	final functionContext:String;
 
-	public function new(context:CompilationContext, input:CBodyFunctionInput) {
+	public function new(context:CompilationContext, input:CBodyFunctionInput, aggregateRegistry:CBodyAggregateRegistry) {
 		this.context = context;
 		this.input = input;
+		this.aggregateRegistry = aggregateRegistry;
 		this.functionContext = 'function ${input.declarationPath}.${input.fieldName} signature';
 	}
 
@@ -695,7 +725,7 @@ private class FunctionPreparer {
 			if (declared.opt) {
 				unsupported(input.expression.pos, 'TFunction(optional-argument:${argument.v.name})');
 			}
-			final mapping = admittedPrimitive(argument.v.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
+			final mapping = admittedValueType(argument.v.t, input.expression.pos, 'TFunction(argument:${argument.v.name})');
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
@@ -707,8 +737,8 @@ private class FunctionPreparer {
 				mapping: mapping
 			});
 		}
-		final returnMapping = admittedPrimitive(declaredSignature.result, input.expression.pos, "TFunction(return-type)");
-		final overloadSignature = parameters.length == 0 ? [] : parameters.map(parameter -> primitiveTypeKey(parameter.ir.type));
+		final returnMapping = admittedValueType(declaredSignature.result, input.expression.pos, "TFunction(return-type)");
+		final overloadSignature = parameters.length == 0 ? [] : parameters.map(parameter -> valueTypeKey(parameter.ir.type));
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
 			CSVInternal, null, overloadSignature);
 		context.symbols.register(functionRequest);
@@ -737,25 +767,11 @@ private class FunctionPreparer {
 		};
 	}
 
-	function admittedPrimitive(type:Type, position:Position, node:String):CPrimitiveTypeMapping {
-		return switch CPrimitiveTypeMapper.map(type, context.profile) {
-			case CTPrimitive(mapping):
-				final admitted = mapping.nullability == CPNonNullable && switch mapping.sourceType {
-					case CPHaxeVoid | CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
-					case _: false;
-				};
-				if (!admitted) {
-					unsupported(position, '$node:${mapping.cSpelling}');
-				}
-				mapping;
-			case CTReference(identity, nullable):
-				unsupported(position, '$node:reference-$identity-${nullable ? "nullable" : "non-null"}');
-			case CTNativePointer(identity, nullable):
-				unsupported(position, '$node:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
-			case CTUnsupported(reason):
-				unsupported(position, '$node:$reason');
-		};
-	}
+	function admittedValueType(type:Type, position:Position, node:String):CBodyValueType
+		return aggregateRegistry.valueType(type, position, input.modulePath, input.sourcePath, reject, node);
+
+	function reject(position:Position, node:String):Void
+		unsupported(position, node);
 
 	function unsupported<T>(position:Position, node:String):T {
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
@@ -781,13 +797,14 @@ private class FunctionPreparer {
 		};
 	}
 
-	static function primitiveTypeKey(type:HxcIRTypeRef):String {
+	static function valueTypeKey(type:HxcIRTypeRef):String {
 		return switch type {
 			case IRTBool: "bool";
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTFloat(width): 'f$width';
 			case IRTVoid: "void";
-			case _: throw new CBodyEmissionError("function signature contains a non-primitive admitted type");
+			case IRTInstance(instanceId): 'instance:$instanceId';
+			case _: throw new CBodyEmissionError("function signature contains a non-admitted body type");
 		};
 	}
 }
@@ -803,7 +820,7 @@ private class InitializerPreparer {
 
 	public function prepare():PreparedBodyFunction {
 		final returnMapping = switch CPrimitiveTypeMapper.map(Context.getType("Void"), context.profile) {
-			case CTPrimitive(mapping) if (mapping.sourceType == CPHaxeVoid && mapping.nullability == CPNonNullable): mapping;
+			case CTPrimitive(mapping) if (mapping.sourceType == CPHaxeVoid && mapping.nullability == CPNonNullable): CBodyValueType.primitive(mapping);
 			case _: throw new CBodyEmissionError('static initializer `${input.id}` could not resolve the target Void representation');
 		};
 		final role = switch input.kind {
@@ -838,9 +855,11 @@ private class FunctionBuilder {
 	final input:PreparedBodyFunction;
 	final functionsById:Map<String, PreparedBodyFunction>;
 	final globalRegistry:BodyGlobalRegistry;
+	final aggregateRegistry:CBodyAggregateRegistry;
 	final functionContext:String;
 	final parameterValuesByCompilerId:Map<Int, LoweredValue> = [];
 	final localIdsByCompilerId:Map<Int, String> = [];
+	final localTypesByCompilerId:Map<Int, CBodyValueType> = [];
 	final collectionBindingsByCompilerId:Map<Int, BodyCollectionBinding> = [];
 	final localRequests:Map<String, CSymbolRequest> = [];
 	final spanLengthRequests:Map<String, CSymbolRequest> = [];
@@ -859,12 +878,13 @@ private class FunctionBuilder {
 	var currentBlock:MutableBodyBlock;
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
-			globalRegistry:BodyGlobalRegistry) {
+			globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry) {
 		this.context = context;
 		this.prepared = prepared;
 		this.input = prepared;
 		this.functionsById = functionsById;
 		this.globalRegistry = globalRegistry;
+		this.aggregateRegistry = aggregateRegistry;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.localOrdinal = prepared.parameters.length;
 		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
@@ -880,7 +900,8 @@ private class FunctionBuilder {
 				lowerStatement(bodyExpression);
 			case PBRStaticFieldInitializer(globalId):
 				final global = globalRegistry.requireId(globalId, bodyExpression, unsupportedAt);
-				final value = coerce(lowerValue(bodyExpression, global.mapping), global.mapping, bodyExpression.pos, "static-field-initializer");
+				final globalType = CBodyValueType.primitive(global.mapping);
+				final value = coerce(lowerValue(bodyExpression, globalType), globalType, bodyExpression.pos, "static-field-initializer");
 				appendInstruction(null, IRIOInitialize(IRPGlobal(global.ir.id), value.id, IRISUninitialized, IRISInitialized),
 					HaxeSourceSpan.fromPosition(bodyExpression.pos, input.sourcePath), "initialize-global");
 		}
@@ -1039,9 +1060,10 @@ private class FunctionBuilder {
 	function lowerSpanLoop(pattern:SpanLoopPattern):Void {
 		final source = HaxeSourceSpan.fromPosition(pattern.sourceExpression.pos, input.sourcePath);
 		final indexMapping = compilerSpanIndexMapping(pattern.sourceExpression.pos);
+		final indexType = CBodyValueType.primitive(indexMapping);
 		final zero:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
 		appendInstruction(zero, IRIOConstant(IRCInt("0")), source, "span-loop-zero");
-		final indexLocalId = createFlowLocal(indexMapping, zero.id, source, "span-loop-index");
+		final indexLocalId = createFlowLocal(indexType, zero.id, source, "span-loop-index");
 
 		final conditionBlock = createGeneratedBlock("span-loop-condition", source);
 		final bodyBlock = createGeneratedBlock("span-loop-body", source);
@@ -1050,7 +1072,7 @@ private class FunctionBuilder {
 		currentBlock.terminator = {kind: IRTJump(edge(conditionBlock.id)), source: source};
 
 		currentBlock = conditionBlock;
-		final conditionIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
+		final conditionIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexType, mutable: true}, pattern.sourceExpression.pos,
 			"span-loop-condition-index");
 		final length:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
 		appendInstruction(length, IRIOConstant(IRCInt(Std.string(pattern.span.length))), source, "span-loop-length");
@@ -1062,14 +1084,13 @@ private class FunctionBuilder {
 		final control = loopControl(exitBlock.id, incrementBlock.id);
 		loopControlStack.push(control);
 		currentBlock = bodyBlock;
-		final bodyIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
-			"span-loop-body-index");
+		final bodyIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexType, mutable: true}, pattern.sourceExpression.pos, "span-loop-body-index");
 		appendInstruction(null,
 			IRIOBoundsCheck(IRPLocal(pattern.span.localId), bodyIndex.id, IRBPLoopGuarded(guardInstruction.id, indexLocalId, pattern.span.length)), source,
 			"span-loop-bounds");
 		final element = loadPlace({
 			place: IRPIndex(IRPLocal(pattern.span.localId), bodyIndex.id),
-			mapping: pattern.span.element,
+			mapping: CBodyValueType.primitive(pattern.span.element),
 			mutable: switch pattern.span.kind {
 				case BCKSpan(mutable): mutable;
 				case BCKFixedArray(_): false;
@@ -1089,7 +1110,7 @@ private class FunctionBuilder {
 				bodyEnd.terminator = {kind: IRTJump(edge(incrementBlock.id)), source: source};
 			}
 			currentBlock = incrementBlock;
-			final currentIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexMapping, mutable: true}, pattern.sourceExpression.pos,
+			final currentIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexType, mutable: true}, pattern.sourceExpression.pos,
 				"span-loop-increment-index");
 			final one:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
 			appendInstruction(one, IRIOConstant(IRCInt("1")), source, "span-loop-one");
@@ -1123,7 +1144,7 @@ private class FunctionBuilder {
 			lowerCollectionVariable(variable, initializer, position, ordinal, localId, collectionType);
 			return;
 		}
-		final localMapping = primitiveMapping(variable.t, position, 'TVar(${variable.name}:type)');
+		final localMapping = bodyValueType(variable.t, position, 'TVar(${variable.name}:type)');
 		if (localMapping.irType == IRTVoid) {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
@@ -1156,6 +1177,7 @@ private class FunctionBuilder {
 		localRequests.set(localId, request);
 		appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		localIdsByCompilerId.set(variable.id, localId);
+		localTypesByCompilerId.set(variable.id, localMapping);
 	}
 
 	function lowerCollectionVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, ordinal:Int, localId:String,
@@ -1173,8 +1195,8 @@ private class FunctionBuilder {
 				}
 				final values:Array<String> = [];
 				for (element in elements) {
-					values.push(coerce(lowerValue(element, collectionType.element), collectionType.element, element.pos,
-						'TArrayDecl(element:${values.length})').id);
+					final elementType = CBodyValueType.primitive(collectionType.element);
+					values.push(coerce(lowerValue(element, elementType), elementType, element.pos, 'TArrayDecl(element:${values.length})').id);
 				}
 				locals.push({
 					id: localId,
@@ -1328,23 +1350,28 @@ private class FunctionBuilder {
 		currentBlock.terminator = {kind: IRTReturn(lowered.id, []), source: source};
 	}
 
-	function lowerValue(expression:TypedExpr, ?expectedMapping:CPrimitiveTypeMapping):LoweredValue {
+	function lowerValue(expression:TypedExpr, ?expectedMapping:CBodyValueType):LoweredValue {
 		return switch expression.expr {
 			case TConst(constant): lowerConstant(expression, constant, expectedMapping);
 			case TLocal(variable): lowerLocal(expression, variable);
 			case TArray(_, _): loadPlace(lowerPlace(expression), expression.pos, "collection-index-load");
+			case TObjectDecl(fields): lowerAggregateLiteral(expression, fields, expectedMapping);
+			case TField(receiver, FAnon(fieldReference)): lowerAggregateField(expression, receiver, fieldReference.get().name);
 			case TField(_, FStatic(classReference, fieldReference)):
 				lowerStaticField(expression, classReference, fieldReference);
 			case TParenthesis(inner): lowerValue(inner, expectedMapping);
 			case TMeta(_, inner): lowerValue(inner, expectedMapping);
 			case TBlock(expressions): lowerValueBlock(expression, expressions, expectedMapping);
 			case TCast(inner, _):
-				final target = primitiveMapping(expression.t, expression.pos, "TCast(target-type)");
-				switch tryLowerUIntIntrinsic(expression, inner, target) {
-					case UIIntrinsicLowered(value): value;
-					case UIIntrinsicNotMatched:
-						final source = lowerValue(inner);
-						coerce(source, target, expression.pos, "TCast");
+				final target = bodyValueType(expression.t, expression.pos, "TCast(target-type)");
+				switch target.kind {
+					case CBVKPrimitive(primitive):
+						switch tryLowerUIntIntrinsic(expression, inner, primitive) {
+							case UIIntrinsicLowered(value): value;
+							case UIIntrinsicNotMatched: coerce(lowerValue(inner), target, expression.pos, "TCast");
+						}
+					case CBVKAggregate(_):
+						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(_, _):
 				final result = lowerCall(expression, true);
@@ -1365,6 +1392,89 @@ private class FunctionBuilder {
 				lowerValueSwitch(expression, subject, cases, defaultExpression, expectedMapping);
 			case _: unsupported(expression, nodeName(expression));
 		};
+	}
+
+	function lowerAggregateLiteral(expression:TypedExpr, fields:Array<{name:String, expr:TypedExpr}>, expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final mapping = bodyValueType(expression.t, expression.pos, "TObjectDecl(type)");
+		final aggregate = mapping.aggregateValue();
+		if (aggregate == null) {
+			return unsupported(expression, "TObjectDecl(non-aggregate-type)");
+		}
+		final valuesByName:Map<String, String> = [];
+		for (field in fields) {
+			if (valuesByName.exists(field.name)) {
+				return unsupported(field.expr, 'TObjectDecl(duplicate-field:${field.name})');
+			}
+			final expectedField = preparedAggregateField(aggregate, field.name);
+			if (expectedField == null) {
+				return unsupported(field.expr, 'TObjectDecl(unknown-field:${field.name})');
+			}
+			final value = coerce(lowerValue(field.expr, expectedField.type), expectedField.type, field.expr.pos, 'TObjectDecl(field:${field.name})');
+			valuesByName.set(field.name, value.id);
+		}
+		final namedValues:Array<HxcIRNamedValue> = [];
+		for (field in aggregate.fields) {
+			final valueId = valuesByName.get(field.name);
+			if (valueId == null) {
+				return unsupported(expression, 'TObjectDecl(missing-field:${field.name})');
+			}
+			namedValues.push({name: field.name, valueId: valueId});
+		}
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOConstructAggregate(aggregate.instanceId, namedValues), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+			"construct-record");
+		registerValueTemporary(result.id, "record-result");
+		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
+		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "TObjectDecl(contextual-type)");
+	}
+
+	function lowerAggregateField(expression:TypedExpr, receiver:TypedExpr, fieldName:String):LoweredValue {
+		final receiverType = bodyValueType(receiver.t, receiver.pos, 'TField($fieldName:receiver-type)');
+		final aggregate = receiverType.aggregateValue();
+		if (aggregate == null) {
+			return unsupported(expression, 'TField($fieldName:receiver-not-closed-record)');
+		}
+		final field = preparedAggregateField(aggregate, fieldName);
+		if (field == null) {
+			return unsupported(expression, 'TField($fieldName:unknown-record-field)');
+		}
+		final expressionType = bodyValueType(expression.t, expression.pos, 'TField($fieldName:result-type)');
+		if (typeKey(expressionType.irType) != typeKey(field.type.irType)) {
+			return unsupported(expression, 'TField($fieldName:typed-result-mismatch)');
+		}
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final addressableBase = aggregateReadPlace(receiver);
+		if (addressableBase != null) {
+			final pointer:HxcIRResult = {id: nextValueId(), type: IRTPointer(field.type.irType, false)};
+			appendInstruction(pointer, IRIOAddress(IRPField(addressableBase, fieldName)), source, "record-field-address");
+			registerValueTemporary(pointer.id, "record-field-address");
+			return loadPlace({place: IRPDereference(pointer.id), mapping: field.type, mutable: false}, expression.pos, "record-field-load");
+		}
+		final receiverValue = coerce(lowerValue(receiver, receiverType), receiverType, receiver.pos, 'TField($fieldName:receiver)');
+		final result:HxcIRResult = {id: nextValueId(), type: field.type.irType};
+		appendInstruction(result, IRIOProject(receiverValue.id, fieldName), source, "record-field-project");
+		registerValueTemporary(result.id, "record-field-project");
+		return {id: result.id, type: result.type, mapping: field.type};
+	}
+
+	function aggregateReadPlace(expression:TypedExpr):Null<HxcIRPlace> {
+		return switch expression.expr {
+			case TLocal(variable): final localId = localIdsByCompilerId.get(variable.id); final localType = localTypesByCompilerId.get(variable.id); localId != null && localType != null && localType.aggregateValue() != null ? IRPLocal(localId) : null;
+			case TField(base, FAnon(fieldReference)):
+				final basePlace = aggregateReadPlace(base);
+				basePlace == null ? null : IRPField(basePlace, fieldReference.get().name);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): aggregateReadPlace(inner);
+			case _: null;
+		};
+	}
+
+	static function preparedAggregateField(aggregate:CPreparedBodyAggregate, name:String):Null<CPreparedBodyAggregateField> {
+		for (field in aggregate.fields) {
+			if (field.name == name) {
+				return field;
+			}
+		}
+		return null;
 	}
 
 	function lowerStatementConditional(expression:TypedExpr, condition:TypedExpr, whenTrue:TypedExpr, whenFalse:Null<TypedExpr>):Void {
@@ -1527,7 +1637,7 @@ private class FunctionBuilder {
 				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
 			}
 		}
-		final irCases = switchCases(cases, caseBlocks, subjectValue.mapping);
+		final irCases = switchCases(cases, caseBlocks, requirePrimitive(subjectValue.mapping, expression.pos, "TSwitch(subject)"));
 		final defaultTarget = defaultBlock != null ? defaultBlock.id : requireBlock(exitBlock, "switch without default").id;
 		dispatchBlock.terminator = {kind: IRTSwitch(subjectValue.id, irCases, edge(defaultTarget)), source: source};
 		if (exitBlock != null) {
@@ -1542,12 +1652,13 @@ private class FunctionBuilder {
 	}
 
 	function lowerValueSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
-			expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
+			expectedMapping:Null<CBodyValueType>):LoweredValue {
 		if (defaultExpression == null) {
 			return unsupported(expression, "TSwitch(value-without-default)");
 		}
 		final subjectValue = lowerSwitchSubject(subject);
-		final resultMapping = expectedMapping == null ? primitiveMapping(expression.t, expression.pos, "TSwitch(result-type)") : expectedMapping;
+		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(result-type)") : expectedMapping;
+		requirePrimitive(resultMapping, expression.pos, "TSwitch(result-type)");
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression, "TSwitch(Void-as-value)");
 		}
@@ -1577,7 +1688,8 @@ private class FunctionBuilder {
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 
 		dispatchBlock.terminator = {
-			kind: IRTSwitch(subjectValue.id, switchCases(cases, caseBlocks, subjectValue.mapping), edge(defaultBlock.id)),
+			kind: IRTSwitch(subjectValue.id, switchCases(cases, caseBlocks, requirePrimitive(subjectValue.mapping, expression.pos, "TSwitch(subject)")),
+				edge(defaultBlock.id)),
 			source: source
 		};
 		currentBlock = joinBlock;
@@ -1591,7 +1703,8 @@ private class FunctionBuilder {
 			case _:
 				unsupported(expression, 'TSwitch(non-integral-subject:${mapping.cSpelling})');
 		}
-		return coerce(lowerValue(expression, mapping), mapping, expression.pos, "TSwitch(subject)");
+		final bodyType = CBodyValueType.primitive(mapping);
+		return coerce(lowerValue(expression, bodyType), bodyType, expression.pos, "TSwitch(subject)");
 	}
 
 	function switchCases(cases:Array<TypedSwitchArm>, blocks:Array<MutableBodyBlock>, mapping:CPrimitiveTypeMapping):Array<HxcIRSwitchCase> {
@@ -1625,7 +1738,8 @@ private class FunctionBuilder {
 		if (boolMapping.irType != IRTBool) {
 			unsupported(expression, '$owner(non-Bool-condition)');
 		}
-		return coerce(lowerValue(expression, boolMapping), boolMapping, expression.pos, '$owner(condition)');
+		final boolType = CBodyValueType.primitive(boolMapping);
+		return coerce(lowerValue(expression, boolType), boolType, expression.pos, '$owner(condition)');
 	}
 
 	static function loopControl(breakTargetBlockId:String, continueTargetBlockId:String):LoopControlTargets
@@ -1636,7 +1750,7 @@ private class FunctionBuilder {
 			usedContinue: false
 		};
 
-	function lowerValueBlock(expression:TypedExpr, expressions:Array<TypedExpr>, expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
+	function lowerValueBlock(expression:TypedExpr, expressions:Array<TypedExpr>, expectedMapping:Null<CBodyValueType>):LoweredValue {
 		if (expressions.length == 0) {
 			return unsupported(expression, "TBlock(empty-as-value)");
 		}
@@ -1647,9 +1761,10 @@ private class FunctionBuilder {
 		return lowerValue(expressions[lastIndex], expectedMapping);
 	}
 
-	function lowerConstant(expression:TypedExpr, constant:TConstant, expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
+	function lowerConstant(expression:TypedExpr, constant:TConstant, expectedMapping:Null<CBodyValueType>):LoweredValue {
 		final inferredMapping = primitiveMapping(expression.t, expression.pos, nodeName(expression));
-		final mapping = contextualConstantMapping(constant, inferredMapping, expectedMapping);
+		final expectedPrimitive = expectedMapping == null ? null : expectedMapping.primitiveMapping();
+		final mapping = contextualConstantMapping(constant, inferredMapping, expectedPrimitive);
 		final type = mapping.irType;
 		final value:HxcIRConstant = switch constant {
 			case TInt(value):
@@ -1672,7 +1787,7 @@ private class FunctionBuilder {
 		};
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOConstant(value), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "constant");
-		return {id: result.id, type: result.type, mapping: mapping};
+		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(mapping)};
 	}
 
 	static function contextualConstantMapping(constant:TConstant, inferred:CPrimitiveTypeMapping, expected:Null<CPrimitiveTypeMapping>):CPrimitiveTypeMapping {
@@ -1702,7 +1817,10 @@ private class FunctionBuilder {
 		if (localId == null) {
 			return unsupported(expression, 'TLocal(${variable.name}:outside-admitted-body)');
 		}
-		final mapping = primitiveMapping(expression.t, expression.pos, 'TLocal(${variable.name}:type)');
+		final mapping = localTypesByCompilerId.get(variable.id);
+		if (mapping == null) {
+			return unsupported(expression, 'TLocal(${variable.name}:missing-admitted-type)');
+		}
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOLoad(IRPLocal(localId)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "load");
 		registerValueTemporary(result.id, "load-result");
@@ -1711,7 +1829,8 @@ private class FunctionBuilder {
 
 	function lowerStaticField(expression:TypedExpr, classReference:Ref<ClassType>, fieldReference:Ref<ClassField>):LoweredValue {
 		final global = globalRegistry.require(classReference, fieldReference, expression, rejectGlobal);
-		return loadPlace({place: IRPGlobal(global.ir.id), mapping: global.mapping, mutable: global.ir.mutable}, expression.pos, "global-load");
+		return loadPlace({place: IRPGlobal(global.ir.id), mapping: CBodyValueType.primitive(global.mapping), mutable: global.ir.mutable}, expression.pos,
+			"global-load");
 	}
 
 	function lowerAssignment(expression:TypedExpr, left:TypedExpr, right:TypedExpr):LoweredValue {
@@ -1794,7 +1913,7 @@ private class FunctionBuilder {
 			target:CPrimitiveTypeMapping):LoweredValue {
 		final leftValue = lowerValue(leftExpression);
 		final rightValue = lowerValue(rightExpression);
-		return lowerBinaryValues(expression, operation, leftValue, rightValue, "uint-intrinsic", target);
+		return lowerBinaryValues(expression, operation, leftValue, rightValue, "uint-intrinsic", CBodyValueType.primitive(target));
 	}
 
 	function extractUIntBitValue(expression:TypedExpr):Null<TypedExpr> {
@@ -1897,10 +2016,13 @@ private class FunctionBuilder {
 	}
 
 	function lowerBinaryValues(expression:TypedExpr, operation:Binop, leftValue:LoweredValue, rightValue:LoweredValue, role:String,
-			?expectedResult:CPrimitiveTypeMapping):LoweredValue {
+			?expectedResult:CBodyValueType):LoweredValue {
 		final semanticOperation = primitiveBinaryOperator(operation, expression);
-		final resultMapping = expectedResult == null ? primitiveMapping(expression.t, expression.pos, 'TBinop($operation:result-type)') : expectedResult;
-		final decision = switch CPrimitiveSemantics.binaryOperation(semanticOperation, leftValue.mapping, rightValue.mapping, resultMapping) {
+		final resultType = expectedResult == null ? bodyValueType(expression.t, expression.pos, 'TBinop($operation:result-type)') : expectedResult;
+		final leftPrimitive = requirePrimitive(leftValue.mapping, expression.pos, 'TBinop($operation:left-type)');
+		final rightPrimitive = requirePrimitive(rightValue.mapping, expression.pos, 'TBinop($operation:right-type)');
+		final resultMapping = requirePrimitive(resultType, expression.pos, 'TBinop($operation:result-type)');
+		final decision = switch CPrimitiveSemantics.binaryOperation(semanticOperation, leftPrimitive, rightPrimitive, resultMapping) {
 			case CPBOperationAllowed(value): value;
 			case CPBOperationRejected(reason): return unsupported(expression, 'TBinop($operation:$reason)');
 		};
@@ -1909,12 +2031,12 @@ private class FunctionBuilder {
 			case IRIRuntime(featureId):
 				return unsupported(expression, 'TBinop($operation:primitive-operation-must-not-use-runtime:$featureId)');
 		}
-		final left = coerce(leftValue, decision.leftOperand, expression.pos, 'TBinop($operation:left)');
-		final right = coerce(rightValue, decision.rightOperand, expression.pos, 'TBinop($operation:right)');
+		final left = coerce(leftValue, CBodyValueType.primitive(decision.leftOperand), expression.pos, 'TBinop($operation:left)');
+		final right = coerce(rightValue, CBodyValueType.primitive(decision.rightOperand), expression.pos, 'TBinop($operation:right)');
 		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
 		appendInstruction(result, IRIOBinary(decision.operationId, left.id, right.id, decision.implementation),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role);
-		return {id: result.id, type: result.type, mapping: decision.result};
+		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(decision.result)};
 	}
 
 	function lowerUnary(expression:TypedExpr, operation:Unop, operandExpression:TypedExpr):LoweredValue {
@@ -1926,7 +2048,8 @@ private class FunctionBuilder {
 		};
 		final operandValue = lowerValue(operandExpression);
 		final resultMapping = primitiveMapping(expression.t, expression.pos, 'TUnop($operation:result-type)');
-		final decision = switch CPrimitiveSemantics.unaryOperation(semanticOperation, operandValue.mapping, resultMapping) {
+		final operandMapping = requirePrimitive(operandValue.mapping, expression.pos, 'TUnop($operation:operand-type)');
+		final decision = switch CPrimitiveSemantics.unaryOperation(semanticOperation, operandMapping, resultMapping) {
 			case CPUOperationAllowed(value): value;
 			case CPUOperationRejected(reason): return unsupported(expression, 'TUnop($operation:$reason)');
 		};
@@ -1935,11 +2058,11 @@ private class FunctionBuilder {
 			case IRIRuntime(featureId):
 				return unsupported(expression, 'TUnop($operation:primitive-operation-must-not-use-runtime:$featureId)');
 		}
-		final operand = coerce(operandValue, decision.operand, expression.pos, 'TUnop($operation:operand)');
+		final operand = coerce(operandValue, CBodyValueType.primitive(decision.operand), expression.pos, 'TUnop($operation:operand)');
 		final result:HxcIRResult = {id: nextValueId(), type: decision.result.irType};
 		appendInstruction(result, IRIOUnary(decision.operationId, operand.id, decision.implementation),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "unary");
-		return {id: result.id, type: result.type, mapping: decision.result};
+		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(decision.result)};
 	}
 
 	function lowerUpdate(expression:TypedExpr, targetExpression:TypedExpr, postFix:Bool, increment:Bool):LoweredValue {
@@ -1967,9 +2090,10 @@ private class FunctionBuilder {
 		if (boolMapping.irType != IRTBool) {
 			unsupported(expression, "TBinop(short-circuit:non-Bool-result)");
 		}
-		final leftValue = coerce(lowerValue(left), boolMapping, left.pos, "TBinop(short-circuit:left)");
+		final boolType = CBodyValueType.primitive(boolMapping);
+		final leftValue = coerce(lowerValue(left), boolType, left.pos, "TBinop(short-circuit:left)");
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final resultLocalId = createFlowLocal(boolMapping, leftValue.id, source, "short-circuit-result");
+		final resultLocalId = createFlowLocal(boolType, leftValue.id, source, "short-circuit-result");
 		final rhsBlock = createGeneratedBlock("short-circuit-rhs", source);
 		final joinBlock = createGeneratedBlock("short-circuit-join", source);
 		currentBlock.terminator = {
@@ -1977,21 +2101,22 @@ private class FunctionBuilder {
 			source: source
 		};
 		currentBlock = rhsBlock;
-		final rightValue = coerce(lowerValue(right), boolMapping, right.pos, "TBinop(short-circuit:right)");
+		final rightValue = coerce(lowerValue(right), boolType, right.pos, "TBinop(short-circuit:right)");
 		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), rightValue.id), source, "short-circuit-store");
 		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		currentBlock = joinBlock;
-		return loadPlace({place: IRPLocal(resultLocalId), mapping: boolMapping, mutable: true}, expression.pos, "short-circuit-load");
+		return loadPlace({place: IRPLocal(resultLocalId), mapping: boolType, mutable: true}, expression.pos, "short-circuit-load");
 	}
 
 	function lowerConditional(expression:TypedExpr, condition:TypedExpr, whenTrue:TypedExpr, whenFalse:Null<TypedExpr>,
-			expectedMapping:Null<CPrimitiveTypeMapping>):LoweredValue {
+			expectedMapping:Null<CBodyValueType>):LoweredValue {
 		final falseExpression = whenFalse;
 		if (falseExpression == null) {
 			return unsupported(expression, "TIf(without-else-as-value)");
 		}
 		final conditionValue = lowerBooleanCondition(condition, "TIf");
-		final resultMapping = expectedMapping == null ? primitiveMapping(expression.t, expression.pos, "TIf(result-type)") : expectedMapping;
+		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TIf(result-type)") : expectedMapping;
+		requirePrimitive(resultMapping, expression.pos, "TIf(result-type)");
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression,
 				'TIf(Void-as-value:${expectedMapping == null ? "typed-expression" : "contextual"}:function-return=${prepared.returnMapping.cSpelling})');
@@ -2030,10 +2155,16 @@ private class FunctionBuilder {
 				if (localId == null) {
 					unsupported(expression, 'TLocal(${variable.name}:outside-admitted-body)');
 				}
-				{place: IRPLocal(localId), mapping: primitiveMapping(variable.t, expression.pos, 'TLocal(${variable.name}:place-type)'), mutable: true};
+				final localType = localTypesByCompilerId.get(variable.id);
+				if (localType == null) {
+					return unsupported(expression, 'TLocal(${variable.name}:missing-place-type)');
+				}
+				{place: IRPLocal(localId), mapping: localType, mutable: true};
+			case TField(_, FAnon(fieldReference)):
+				unsupported(expression, 'TField(${fieldReference.get().name}:anonymous-field-mutation-requires-identity-preserving-alias-analysis)');
 			case TField(_, FStatic(classReference, fieldReference)):
 				final global = globalRegistry.require(classReference, fieldReference, expression, rejectGlobal);
-				{place: IRPGlobal(global.ir.id), mapping: global.mapping, mutable: global.ir.mutable};
+				{place: IRPGlobal(global.ir.id), mapping: CBodyValueType.primitive(global.mapping), mutable: global.ir.mutable};
 			case TParenthesis(inner) | TMeta(_, inner): lowerPlace(inner);
 			case _: unsupported(expression, 'place(${nodeName(expression)})');
 		};
@@ -2047,14 +2178,15 @@ private class FunctionBuilder {
 			case _:
 				unsupported(index, "TArray(index-must-be-Int)");
 		}
-		final indexValue = coerce(lowerValue(index, indexMapping), indexMapping, index.pos, "TArray(index)");
+		final indexType = CBodyValueType.primitive(indexMapping);
+		final indexValue = coerce(lowerValue(index, indexType), indexType, index.pos, "TArray(index)");
 		appendInstruction(null, IRIOBoundsCheck(IRPLocal(binding.localId), indexValue.id, boundsPolicy(binding, index)),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "collection-bounds");
 		final mutable = switch binding.kind {
 			case BCKFixedArray(_): true;
 			case BCKSpan(value): value;
 		};
-		return {place: IRPIndex(IRPLocal(binding.localId), indexValue.id), mapping: binding.element, mutable: mutable};
+		return {place: IRPIndex(IRPLocal(binding.localId), indexValue.id), mapping: CBodyValueType.primitive(binding.element), mutable: mutable};
 	}
 
 	function requireCollectionBinding(expression:TypedExpr):BodyCollectionBinding {
@@ -2105,7 +2237,8 @@ private class FunctionBuilder {
 			}
 			final source = lowerValue(call.arguments[0]);
 			final target = primitiveMapping(expression.t, expression.pos, "TCall(Std.int:result-type)");
-			final decision = switch CPrimitiveSemantics.conversion(source.mapping, target, CPUStdInt) {
+			final sourceMapping = requirePrimitive(source.mapping, expression.pos, "TCall(Std.int:argument-type)");
+			final decision = switch CPrimitiveSemantics.conversion(sourceMapping, target, CPUStdInt) {
 				case CPConversionAllowed(value): value;
 				case CPConversionElided: return unsupported(expression, "TCall(Std.int:unexpected-elided-conversion)");
 				case CPConversionRejected(reason): return unsupported(expression, 'TCall(Std.int:$reason)');
@@ -2121,7 +2254,7 @@ private class FunctionBuilder {
 			final result:HxcIRResult = {id: nextValueId(), type: target.irType};
 			appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, decision.implementation, null),
 				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
-			return {id: result.id, type: result.type, mapping: target};
+			return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(target)};
 		}
 		final targetId = directStaticFunctionId(call.callee);
 		final target = functionsById.get(targetId);
@@ -2310,7 +2443,7 @@ private class FunctionBuilder {
 		temporaryRequests.set(valueId, request);
 	}
 
-	function createFlowLocal(mapping:CPrimitiveTypeMapping, initialValueId:String, source:HxcSourceSpan, role:String):String {
+	function createFlowLocal(mapping:CBodyValueType, initialValueId:String, source:HxcSourceSpan, role:String):String {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		locals.push({
@@ -2409,8 +2542,16 @@ private class FunctionBuilder {
 		};
 	}
 
-	function coerce(value:LoweredValue, target:CPrimitiveTypeMapping, position:Position, node:String):LoweredValue {
-		return switch CPrimitiveSemantics.conversion(value.mapping, target, CPUImplicit) {
+	function coerce(value:LoweredValue, target:CBodyValueType, position:Position, node:String):LoweredValue {
+		if (typeKey(value.mapping.irType) == typeKey(target.irType)) {
+			return value;
+		}
+		final sourcePrimitive = value.mapping.primitiveMapping();
+		final targetPrimitive = target.primitiveMapping();
+		if (sourcePrimitive == null || targetPrimitive == null) {
+			return unsupportedAt(position, '$node:incompatible-closed-record-shapes:${value.mapping.cSpelling}->${target.cSpelling}');
+		}
+		return switch CPrimitiveSemantics.conversion(sourcePrimitive, targetPrimitive, CPUImplicit) {
 			case CPConversionElided:
 				value;
 			case CPConversionAllowed(decision):
@@ -2430,6 +2571,11 @@ private class FunctionBuilder {
 			case CPConversionRejected(reason):
 				unsupportedAt(position, '$node:unsupported-implicit-conversion:$reason');
 		};
+	}
+
+	function requirePrimitive(type:CBodyValueType, position:Position, node:String):CPrimitiveTypeMapping {
+		final mapping = type.primitiveMapping();
+		return mapping == null ? unsupportedAt(position, '$node:closed-record-not-admitted-in-primitive-operation') : mapping;
 	}
 
 	function primitiveBinaryOperator(operation:Binop, expression:TypedExpr):CPrimitiveBinaryOperator {
@@ -2508,6 +2654,12 @@ private class FunctionBuilder {
 				unsupportedAt(position, '$node:$reason');
 		};
 	}
+
+	function bodyValueType(type:Type, position:Position, node:String):CBodyValueType
+		return aggregateRegistry.valueType(type, position, input.modulePath, input.sourcePath, rejectAggregateType, node);
+
+	function rejectAggregateType(position:Position, node:String):Void
+		unsupportedAt(position, node);
 
 	function compilerSpanIndexMapping(position:Position):CPrimitiveTypeMapping {
 		return switch CPrimitiveTypeMapper.map(Context.getType("c.Size"), context.profile) {

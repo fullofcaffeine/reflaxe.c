@@ -12,6 +12,8 @@ import haxe.macro.Type.ClassType;
 import haxe.macro.Type.MetaAccess;
 import reflaxe.c.CDiagnostic;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CProfile;
+import reflaxe.c.ProfileResolver;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractField;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
@@ -148,6 +150,7 @@ class TypedCContractMacro {
 	}
 
 	public static function collect(moduleTypes:Array<ModuleType>):TypedCContractSnapshot {
+		final profile = ProfileResolver.resolve();
 		final shells:Array<DeclarationShell> = [];
 		for (moduleType in moduleTypes) {
 			final shell = shellFor(moduleType);
@@ -172,7 +175,7 @@ class TypedCContractMacro {
 		final explicitSymbols:Map<String, SymbolOrigin> = [];
 		for (shell in shells) {
 			validateKnownMetadata(shell.meta, TYPE_METADATA, 'declaration `${shell.path}`');
-			final draft = collectDeclaration(shell, layouts, buildFacts, explicitSymbols);
+			final draft = collectDeclaration(shell, profile, layouts, buildFacts, explicitSymbols);
 			drafts.push(draft);
 			declarations.push(draft.declaration);
 		}
@@ -194,7 +197,7 @@ class TypedCContractMacro {
 		};
 	}
 
-	static function collectDeclaration(shell:DeclarationShell, layouts:Map<String, String>, buildFacts:Array<TypedCBuildFact>,
+	static function collectDeclaration(shell:DeclarationShell, profile:CProfile, layouts:Map<String, String>, buildFacts:Array<TypedCBuildFact>,
 			explicitSymbols:Map<String, SymbolOrigin>):DeclarationDraft {
 		final layout = layouts.get(shell.path);
 		final cNameEntry = single(shell.meta, "c.name", shell.path);
@@ -220,6 +223,10 @@ class TypedCContractMacro {
 		final align = readOptionalPowerOfTwo(shell.meta, "c.align", 4096, shell.path);
 		if (pack != null && layout != "struct" && layout != "union") {
 			error("c.pack is valid only on c.Layout.Struct or c.Layout.Union declarations", single(shell.meta, "c.pack", shell.path).pos);
+		}
+		if (profile == CProfile.Metal && pack != null) {
+			error("metal packed layouts are unavailable until target-ABI packing probes and structural packed-declaration emission are implemented",
+				single(shell.meta, "c.pack", shell.path).pos);
 		}
 		validateLayoutOwner(shell, layout);
 

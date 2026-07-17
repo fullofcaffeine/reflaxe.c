@@ -1,0 +1,8 @@
+-cp test/aggregate_lowering/
+-cp test/aggregate_lowering/fixtures/positive/
+-lib reflaxe.c
+
+--macro AggregateLoweringProbe.install()
+
+-main AggregateFixture
+--interp
