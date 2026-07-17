@@ -19,6 +19,9 @@ adds local fixed-array/view, bounds-policy, and runtime-free iteration evidence.
 The aggregate suite adds real closed-record structural deduplication, ordered
 construction, explicit copy/address semantics, private layout assertions, and
 independent C/C++17 layout agreement.
+The enum suite adds real fieldless and payload enum lowering, checked exhaustive
+tag operations, bounded concrete primitive specialization, finite recursive
+local layout, and independent C/C++17 layout agreement.
 The runtime-feature suite
 adds deterministic graph/policy, selective provisional native-seed packaging,
 and the exact compiler-selected literal-output closure. The string-runtime suite
@@ -35,8 +38,8 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, enum, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, recursive enum escape/payload, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
@@ -125,6 +128,7 @@ The registered snapshot selectors are:
 - `body-lowering`
 - `function-lowering`
 - `aggregate-lowering`
+- `enum-lowering`
 - `evaluation-order`
 - `arithmetic-semantics`
 - `primitive-differential`
@@ -227,6 +231,19 @@ GCC/G++ and Clang/Clang++. Production roots are byte-identical and runtime-free;
 identity/equality, mutation, `Void`, `Dynamic`, and metal packed-layout cases fail
 closed without artifacts. See [closed anonymous-record
 lowering](aggregate-lowering.md).
+
+`test/enum_lowering` is the focused E3.T02
+positive/negative/snapshot/runtime suite. It distinguishes native fieldless
+enums from payload tagged unions, emits two concrete primitive generic
+instances, preserves constructor operand order, and records checked projection
+plus exhaustive tag-switch edges in schema-4 HxcIR. A recursive local uses an
+explicit finite pointer edge, while recursive signatures, reference/aggregate
+payloads, and non-exhaustive source patterns fail closed without artifacts.
+Generated private layout assertions compile under strict C11; independent C
+and C++17 consumers verify tags, size, alignment, offsets, construction, and
+recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Production roots are
+deterministic and runtime-free across portable, metal, and explicit
+runtime-none policies. See [Haxe enum lowering](enum-lowering.md).
 
 `test/evaluation_order` is the focused positive/snapshot/runtime/differential
 suite for E2.T04 and E2.T06. It proves source-backed call arguments,
@@ -359,7 +376,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-3 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-4 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

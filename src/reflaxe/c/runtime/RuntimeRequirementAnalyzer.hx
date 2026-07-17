@@ -2,6 +2,7 @@ package reflaxe.c.runtime;
 
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReachabilityEvidence;
@@ -31,8 +32,8 @@ class RuntimeRequirementAnalyzer {
 	public function new() {}
 
 	public function analyze(program:HxcIRProgram, input:Array<RuntimeRequirementCandidate>):RuntimeRequirementAnalysis {
-		if (program.schemaVersion != 3) {
-			internal('runtime requirement analysis needs validated schema-3 HxcIR; found `${program.schemaVersion}`');
+		if (program.schemaVersion != HxcIRValidator.SCHEMA_VERSION) {
+			internal('runtime requirement analysis needs validated schema-${HxcIRValidator.SCHEMA_VERSION} HxcIR; found `${program.schemaVersion}`');
 		}
 		final observations:Array<RuntimeIntentObservation> = [];
 		var typeInstanceCount = 0;

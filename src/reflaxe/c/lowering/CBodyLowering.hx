@@ -25,6 +25,10 @@ import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregate;
 import reflaxe.c.lowering.CBodyAggregate.CPreparedBodyAggregateField;
+import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
+import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
+import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperPlan;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter.CPrimitiveHelperSelection;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -147,6 +151,7 @@ class CBodyLoweringResult {
 	public final functions:Array<CLoweredBodyFunction>;
 	public final globals:Array<CLoweredBodyGlobal>;
 	public final aggregates:Array<CLoweredBodyAggregate>;
+	public final enums:Array<CLoweredBodyEnum>;
 	public final helpers:Array<CPrimitiveHelperPlan>;
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
@@ -154,12 +159,13 @@ class CBodyLoweringResult {
 	public final runtimeRequirements:Array<CBodyRuntimeRequirement>;
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
-			aggregates:Array<CLoweredBodyAggregate>, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot,
-			boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>) {
+			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
+			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
 		this.aggregates = aggregates.copy();
+		this.enums = enums.copy();
 		this.helpers = helpers.copy();
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
@@ -220,7 +226,8 @@ class CBodyLowering {
 		}
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
-		final program = buildProgram(built, preparedGlobals, preparedAggregates);
+		final preparedEnums = aggregateRegistry.canonicalEnums();
+		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
@@ -228,6 +235,7 @@ class CBodyLowering {
 		final boundsAbortRequest = registerBoundsAbort(program);
 		final symbolTable = context.symbols.finalizeSymbols();
 		final loweredAggregates = aggregateRegistry.finalize(context.symbols);
+		final loweredEnums = aggregateRegistry.finalizeEnums(context.symbols);
 		final boundsAbortName = boundsAbortRequest == null ? null : context.symbols.identifierFor(boundsAbortRequest);
 		final helpers = helperSelection.finalize(context.symbols);
 		final helperNames:Map<String, CIdentifier> = [];
@@ -245,7 +253,7 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
-		final emitter = new CBodyEmitter(loweredAggregates);
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final parameterNames:Map<String, CIdentifier> = [];
@@ -289,7 +297,7 @@ class CBodyLowering {
 			}
 		}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, helpers, helperSelection.buildFacts(), symbolTable,
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, helpers, helperSelection.buildFacts(), symbolTable,
 			boundsAbortName, runtimeRequirements);
 	}
 
@@ -299,7 +307,7 @@ class CBodyLowering {
 				for (block in fn.blocks) {
 					for (instruction in block.instructions) {
 						switch instruction.kind {
-							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
+							case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)) | IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)):
 								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
 									"abort");
 								context.symbols.register(request);
@@ -313,7 +321,8 @@ class CBodyLowering {
 		return null;
 	}
 
-	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>):HxcIRProgram {
+	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
+			enums:Array<CPreparedBodyEnumInstance>):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -341,6 +350,15 @@ class CBodyLowering {
 			}
 			moduleAggregates.push(aggregate);
 		}
+		final enumsByModule:Map<String, Array<CPreparedBodyEnumInstance>> = [];
+		for (value in enums) {
+			var moduleEnums = enumsByModule.get(value.ownerModule);
+			if (moduleEnums == null) {
+				moduleEnums = [];
+				enumsByModule.set(value.ownerModule, moduleEnums);
+			}
+			moduleEnums.push(value);
+		}
 		final moduleIdSet:Map<String, Bool> = [];
 		for (moduleId in byModule.keys()) {
 			moduleIdSet.set(moduleId, true);
@@ -349,6 +367,9 @@ class CBodyLowering {
 			moduleIdSet.set(moduleId, true);
 		}
 		for (moduleId in aggregatesByModule.keys()) {
+			moduleIdSet.set(moduleId, true);
+		}
+		for (moduleId in enumsByModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
 		final moduleIds = [for (moduleId in moduleIdSet.keys()) moduleId];
@@ -364,22 +385,26 @@ class CBodyLowering {
 			final aggregateEntries = aggregatesByModule.get(moduleId);
 			final moduleAggregates = aggregateEntries == null ? [] : aggregateEntries;
 			moduleAggregates.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final enumEntries = enumsByModule.get(moduleId);
+			final moduleEnums = enumEntries == null ? [] : enumEntries;
+			moduleEnums.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
 			final spans = moduleFunctions.map(entry -> entry.ir.source)
 				.concat(moduleGlobals.map(global -> global.ir.source))
-				.concat(moduleAggregates.map(aggregate -> aggregate.source));
+				.concat(moduleAggregates.map(aggregate -> aggregate.source))
+				.concat(moduleEnums.map(value -> value.source));
 			if (spans.length == 0) {
 				throw new CBodyEmissionError('body lowering lost module `$moduleId` while building HxcIR');
 			}
 			modules.push({
 				id: moduleId,
-				types: moduleAggregates.map(aggregate -> aggregate.declaration()),
-				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance()),
+				types: moduleAggregates.map(aggregate -> aggregate.declaration()).concat(moduleEnums.map(value -> value.declaration())),
+				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance()).concat(moduleEnums.map(value -> value.instance())),
 				globals: moduleGlobals.map(global -> global.ir),
 				functions: moduleFunctions.map(entry -> entry.ir),
 				source: enclosingSpan(spans)
 			});
 		}
-		return {schemaVersion: 3, modules: modules};
+		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, modules: modules};
 	}
 
 	static function enclosingSpan(spans:Array<HxcSourceSpan>):HxcSourceSpan {
@@ -517,6 +542,11 @@ private typedef LoopControlTargets = {
 private typedef TypedSwitchArm = {
 	final values:Array<TypedExpr>;
 	final expr:TypedExpr;
+}
+
+private typedef EnumConstructorAccess = {
+	final reference:Ref<EnumType>;
+	final field:EnumField;
 }
 
 private typedef PreparedParameter = {
@@ -729,6 +759,10 @@ private class FunctionPreparer {
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
+			final enumArgument = mapping.enumValue();
+			if (enumArgument != null && enumArgument.scopedLifetime) {
+				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:recursive-enum-requires-escape-analysis)');
+			}
 			final parameterId = 'parameter.$index';
 			final source = HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath);
 			parameters.push({
@@ -738,6 +772,10 @@ private class FunctionPreparer {
 			});
 		}
 		final returnMapping = admittedValueType(declaredSignature.result, input.expression.pos, "TFunction(return-type)");
+		final returnEnum = returnMapping.enumValue();
+		if (returnEnum != null && returnEnum.scopedLifetime) {
+			unsupported(input.expression.pos, "TFunction(return-type:recursive-enum-requires-escape-analysis)");
+		}
 		final overloadSignature = parameters.length == 0 ? [] : parameters.map(parameter -> valueTypeKey(parameter.ir.type));
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
 			CSVInternal, null, overloadSignature);
@@ -954,6 +992,8 @@ private class FunctionBuilder {
 			case TMeta(_, inner):
 				lowerStatement(inner);
 			case TConst(_) | TLocal(_) | TArray(_, _) | TField(_, _) | TCast(_, _) | TBinop(_, _, _) | TUnop(_, _, _):
+				lowerValue(expression);
+			case TCall(_, _) if (isEnumConstructorExpression(expression)):
 				lowerValue(expression);
 			case TCall(_, _):
 				lowerCall(expression, false);
@@ -1356,6 +1396,8 @@ private class FunctionBuilder {
 			case TLocal(variable): lowerLocal(expression, variable);
 			case TArray(_, _): loadPlace(lowerPlace(expression), expression.pos, "collection-index-load");
 			case TObjectDecl(fields): lowerAggregateLiteral(expression, fields, expectedMapping);
+			case TField(_, FEnum(enumReference, enumField)):
+				lowerEnumConstructor(expression, enumReference, enumField, [], expectedMapping);
 			case TField(receiver, FAnon(fieldReference)): lowerAggregateField(expression, receiver, fieldReference.get().name);
 			case TField(_, FStatic(classReference, fieldReference)):
 				lowerStaticField(expression, classReference, fieldReference);
@@ -1370,9 +1412,14 @@ private class FunctionBuilder {
 							case UIIntrinsicLowered(value): value;
 							case UIIntrinsicNotMatched: coerce(lowerValue(inner), target, expression.pos, "TCast");
 						}
-					case CBVKAggregate(_):
+					case CBVKAggregate(_) | CBVKEnum(_):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
+			case TCall(callee, arguments) if (enumConstructor(callee) != null):
+				final constructor = enumConstructor(callee);
+				if (constructor == null)
+					return unsupported(expression, "TCall(enum-constructor-lost)");
+				lowerEnumConstructor(expression, constructor.reference, constructor.field, arguments, expectedMapping);
 			case TCall(_, _):
 				final result = lowerCall(expression, true);
 				if (result == null) {
@@ -1390,8 +1437,81 @@ private class FunctionBuilder {
 			case TIf(condition, whenTrue, whenFalse): lowerConditional(expression, condition, whenTrue, whenFalse, expectedMapping);
 			case TSwitch(subject, cases, defaultExpression):
 				lowerValueSwitch(expression, subject, cases, defaultExpression, expectedMapping);
+			case TEnumParameter(receiver, enumField, payloadIndex):
+				lowerEnumParameter(expression, receiver, enumField, payloadIndex);
 			case _: unsupported(expression, nodeName(expression));
 		};
+	}
+
+	function lowerEnumConstructor(expression:TypedExpr, enumReference:Ref<EnumType>, enumField:EnumField, arguments:Array<TypedExpr>,
+			expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final mapping = bodyValueType(expression.t, expression.pos, 'enum-constructor:${enumField.name}:type');
+		final value = mapping.enumValue();
+		if (value == null) {
+			return unsupported(expression, 'enum-constructor:${enumField.name}:non-enum-result');
+		}
+		final owner = enumReference.get();
+		if (owner.pack.concat([owner.name]).join(".") != value.haxePath) {
+			return unsupported(expression, 'enum-constructor:${enumField.name}:owner-type-mismatch');
+		}
+		final tagCase = value.tagCase(enumField.name);
+		if (tagCase == null) {
+			return unsupported(expression, 'enum-constructor:${enumField.name}:unknown-case');
+		}
+		if (arguments.length != tagCase.payload.length) {
+			return unsupported(expression, 'enum-constructor:${enumField.name}:argument-count=${arguments.length},expected=${tagCase.payload.length}');
+		}
+		final payloadIds:Array<String> = [];
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		for (index in 0...arguments.length) {
+			final payload = tagCase.payload[index];
+			final argument = arguments[index];
+			final lowered = coerce(lowerValue(argument, payload.valueType), payload.valueType, argument.pos,
+				'enum-constructor:${enumField.name}:payload:$index');
+			if (payload.indirect) {
+				final stableLocalId = createFlowLocal(payload.valueType, lowered.id, HaxeSourceSpan.fromPosition(argument.pos, input.sourcePath),
+					'enum-recursive-payload-$index');
+				final pointer:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
+				appendInstruction(pointer, IRIOAddress(IRPLocal(stableLocalId)), HaxeSourceSpan.fromPosition(argument.pos, input.sourcePath),
+					"enum-recursive-payload-address");
+				registerValueTemporary(pointer.id, "enum-recursive-payload-address");
+				payloadIds.push(pointer.id);
+			} else {
+				payloadIds.push(lowered.id);
+			}
+		}
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOConstructTag(value.instanceId, tagCase.name, payloadIds), source, "construct-enum");
+		registerValueTemporary(result.id, "enum-result");
+		final lowered:LoweredValue = {id: result.id, type: result.type, mapping: mapping};
+		return expectedMapping == null ? lowered : coerce(lowered, expectedMapping, expression.pos, "enum-constructor:contextual-type");
+	}
+
+	function lowerEnumParameter(expression:TypedExpr, receiver:TypedExpr, enumField:EnumField, payloadIndex:Int):LoweredValue {
+		final receiverMapping = bodyValueType(receiver.t, receiver.pos, 'TEnumParameter(${enumField.name}:receiver-type)');
+		final value = receiverMapping.enumValue();
+		if (value == null) {
+			return unsupported(expression, 'TEnumParameter(${enumField.name}:receiver-not-enum)');
+		}
+		final tagCase = value.tagCase(enumField.name);
+		if (tagCase == null || payloadIndex < 0 || payloadIndex >= tagCase.payload.length) {
+			return unsupported(expression, 'TEnumParameter(${enumField.name}:payload-index=$payloadIndex)');
+		}
+		final payload = tagCase.payload[payloadIndex];
+		final expressionMapping = bodyValueType(expression.t, expression.pos, 'TEnumParameter(${enumField.name}:result-type)');
+		if (typeKey(expressionMapping.irType) != typeKey(payload.valueType.irType)) {
+			return unsupported(expression, 'TEnumParameter(${enumField.name}:typed-result-mismatch)');
+		}
+		final receiverValue = coerce(lowerValue(receiver, receiverMapping), receiverMapping, receiver.pos, 'TEnumParameter(${enumField.name}:receiver)');
+		final result:HxcIRResult = {id: nextValueId(), type: payload.storageType()};
+		appendInstruction(result,
+			IRIOProjectTag(receiverValue.id, tagCase.name, payloadIndex, IRTCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "enum-payload-project");
+		registerValueTemporary(result.id, "enum-payload-project");
+		if (payload.indirect) {
+			return loadPlace({place: IRPDereference(result.id), mapping: payload.valueType, mutable: false}, expression.pos, "enum-recursive-payload-load");
+		}
+		return {id: result.id, type: result.type, mapping: payload.valueType};
 	}
 
 	function lowerAggregateLiteral(expression:TypedExpr, fields:Array<{name:String, expr:TypedExpr}>, expectedMapping:Null<CBodyValueType>):LoweredValue {
@@ -1605,6 +1725,11 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>):Void {
+		final enumSubject = enumIndexSubject(subject);
+		if (enumSubject != null) {
+			lowerStatementEnumSwitch(expression, enumSubject, cases, defaultExpression);
+			return;
+		}
 		final subjectValue = lowerSwitchSubject(subject);
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final dispatchBlock = currentBlock;
@@ -1651,8 +1776,60 @@ private class FunctionBuilder {
 		}
 	}
 
+	function lowerStatementEnumSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>):Void {
+		final subjectValue = lowerEnumSwitchSubject(subject);
+		final enumValue = subjectValue.mapping.enumValue();
+		if (enumValue == null)
+			return unsupported(subject, "TSwitch(enum-subject-lost)");
+		if (defaultExpression == null && enumSwitchCoveredCaseCount(cases, enumValue) != enumValue.cases.length) {
+			return unsupported(expression, "TSwitch(non-exhaustive-enum-statement-without-default)");
+		}
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length)
+			caseBlocks.push(createGeneratedBlock('enum-switch-case-$index', source));
+		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("enum-switch-default", source);
+		final openEnds:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			lowerStatement(cases[index].expr);
+			if (currentBlock.terminator == null)
+				openEnds.push(currentBlock);
+		}
+		if (defaultExpression != null && defaultBlock != null) {
+			currentBlock = defaultBlock;
+			lowerStatement(defaultExpression);
+			if (currentBlock.terminator == null)
+				openEnds.push(currentBlock);
+		}
+		final needsExit = openEnds.length > 0;
+		final exitBlock = needsExit ? createGeneratedBlock("enum-switch-exit", source) : null;
+		if (exitBlock != null) {
+			for (end in openEnds)
+				end.terminator = {kind: IRTJump(edge(exitBlock.id)), source: source};
+		}
+		dispatchBlock.terminator = {
+			kind: IRTTagSwitch(subjectValue.id, enumSwitchCases(cases, caseBlocks, enumValue), defaultBlock == null ? null : edge(defaultBlock.id)),
+			source: source
+		};
+		if (exitBlock != null) {
+			currentBlock = exitBlock;
+		} else if (defaultBlock != null) {
+			currentBlock = defaultBlock;
+		} else if (caseBlocks.length > 0) {
+			currentBlock = caseBlocks[caseBlocks.length - 1];
+		} else {
+			throw new CBodyEmissionError('enum switch in `${prepared.irId}` has no continuation block');
+		}
+	}
+
 	function lowerValueSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
 			expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final enumSubject = enumIndexSubject(subject);
+		if (enumSubject != null) {
+			return lowerValueEnumSwitch(expression, enumSubject, cases, defaultExpression, expectedMapping);
+		}
 		if (defaultExpression == null) {
 			return unsupported(expression, "TSwitch(value-without-default)");
 		}
@@ -1694,6 +1871,95 @@ private class FunctionBuilder {
 		};
 		currentBlock = joinBlock;
 		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "switch-result-load");
+	}
+
+	function lowerValueEnumSwitch(expression:TypedExpr, subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>,
+			expectedMapping:Null<CBodyValueType>):LoweredValue {
+		final subjectValue = lowerEnumSwitchSubject(subject);
+		final enumValue = subjectValue.mapping.enumValue();
+		if (enumValue == null)
+			return unsupported(subject, "TSwitch(enum-subject-lost)");
+		if (defaultExpression == null && enumSwitchCoveredCaseCount(cases, enumValue) != enumValue.cases.length) {
+			return unsupported(expression, "TSwitch(non-exhaustive-enum-value-without-default)");
+		}
+		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(enum-result-type)") : expectedMapping;
+		requirePrimitive(resultMapping, expression.pos, "TSwitch(enum-result-type)");
+		if (resultMapping.irType == IRTVoid)
+			return unsupported(expression, "TSwitch(enum-Void-as-value)");
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch(enum)")), source,
+			"enum-switch-default-result");
+		final resultLocalId = createFlowLocal(resultMapping, initialResult.id, source, "enum-switch-result");
+		final dispatchBlock = currentBlock;
+		final caseBlocks:Array<MutableBodyBlock> = [];
+		for (index in 0...cases.length)
+			caseBlocks.push(createGeneratedBlock('enum-switch-value-case-$index', source));
+		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("enum-switch-value-default", source);
+		final joinBlock = createGeneratedBlock("enum-switch-value-join", source);
+		for (index in 0...cases.length) {
+			currentBlock = caseBlocks[index];
+			final value = coerce(lowerValue(cases[index].expr, resultMapping), resultMapping, cases[index].expr.pos, "TSwitch(enum-case-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), value.id), source, "enum-switch-case-store");
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		}
+		if (defaultExpression != null && defaultBlock != null) {
+			currentBlock = defaultBlock;
+			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(enum-default-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "enum-switch-default-store");
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		}
+		dispatchBlock.terminator = {
+			kind: IRTTagSwitch(subjectValue.id, enumSwitchCases(cases, caseBlocks, enumValue), defaultBlock == null ? null : edge(defaultBlock.id)),
+			source: source
+		};
+		currentBlock = joinBlock;
+		return loadPlace({place: IRPLocal(resultLocalId), mapping: resultMapping, mutable: true}, expression.pos, "enum-switch-result-load");
+	}
+
+	function lowerEnumSwitchSubject(expression:TypedExpr):LoweredValue {
+		final mapping = bodyValueType(expression.t, expression.pos, "TSwitch(enum-subject-type)");
+		if (mapping.enumValue() == null)
+			unsupported(expression, "TSwitch(enum-subject-not-enum)");
+		return coerce(lowerValue(expression, mapping), mapping, expression.pos, "TSwitch(enum-subject)");
+	}
+
+	function enumSwitchCases(cases:Array<TypedSwitchArm>, blocks:Array<MutableBodyBlock>, value:CPreparedBodyEnumInstance):Array<HxcIRTagSwitchCase> {
+		final result:Array<HxcIRTagSwitchCase> = [];
+		for (index in 0...cases.length) {
+			for (caseValue in cases[index].values) {
+				result.push({tagName: enumSwitchCase(caseValue, value).name, edge: edge(blocks[index].id)});
+			}
+		}
+		return result;
+	}
+
+	function enumSwitchCoveredCaseCount(cases:Array<TypedSwitchArm>, value:CPreparedBodyEnumInstance):Int {
+		final names:Map<String, Bool> = [];
+		for (item in cases)
+			for (caseValue in item.values)
+				names.set(enumSwitchCase(caseValue, value).name, true);
+		return [for (_ in names.keys()) 1].length;
+	}
+
+	function enumSwitchCase(expression:TypedExpr, value:CPreparedBodyEnumInstance):CPreparedBodyEnumCase {
+		final index = switch expression.expr {
+			case TConst(TInt(tagValue)): tagValue;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): return enumSwitchCase(inner, value);
+			case _: return unsupported(expression, 'TSwitch(enum-case=${nodeName(expression)}:requires-compiler-tag-index)');
+		};
+		for (tagCase in value.cases)
+			if (tagCase.tagValue == index)
+				return tagCase;
+		return unsupported(expression, 'TSwitch(enum-case-index=$index:outside-${value.haxePath})');
+	}
+
+	static function enumIndexSubject(expression:TypedExpr):Null<TypedExpr> {
+		return switch expression.expr {
+			case TEnumIndex(value): value;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): enumIndexSubject(inner);
+			case _: null;
+		};
 	}
 
 	function lowerSwitchSubject(expression:TypedExpr):LoweredValue {
@@ -2395,6 +2661,23 @@ private class FunctionBuilder {
 
 	static function isSysPrintln(callee:TypedExpr):Bool
 		return isStaticMethod(callee, "", "Sys", "println");
+
+	static function isEnumConstructorExpression(expression:TypedExpr):Bool {
+		return switch expression.expr {
+			case TField(_, FEnum(_, _)): true;
+			case TCall(callee, _): enumConstructor(callee) != null;
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isEnumConstructorExpression(inner);
+			case _: false;
+		};
+	}
+
+	static function enumConstructor(callee:TypedExpr):Null<EnumConstructorAccess> {
+		return switch callee.expr {
+			case TField(_, FEnum(reference, field)): {reference: reference, field: field};
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): enumConstructor(inner);
+			case _: null;
+		};
+	}
 
 	static function isHaxeLogTrace(callee:TypedExpr):Bool
 		return isStaticMethod(callee, "haxe", "Log", "trace");

@@ -9,6 +9,9 @@ import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyEnum.CBodyEnumRegistry;
+import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -23,6 +26,7 @@ class CBodyAggregate {
 enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
+	CBVKEnum(value:CPreparedBodyEnumInstance);
 }
 
 /** The exact admitted representation of one Haxe body value. */
@@ -40,6 +44,9 @@ class CBodyValueType {
 			case CBVKAggregate(aggregate):
 				this.irType = IRTInstance(aggregate.instanceId);
 				this.cSpelling = 'closed-record:${aggregate.digest}';
+			case CBVKEnum(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'haxe-enum:${value.digest}';
 		}
 	}
 
@@ -49,10 +56,13 @@ class CBodyValueType {
 	public static function aggregate(value:CPreparedBodyAggregate):CBodyValueType
 		return new CBodyValueType(CBVKAggregate(value));
 
+	public static function enumeration(value:CPreparedBodyEnumInstance):CBodyValueType
+		return new CBodyValueType(CBVKEnum(value));
+
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKAggregate(_): null;
+			case CBVKAggregate(_) | CBVKEnum(_): null;
 		};
 	}
 
@@ -60,6 +70,14 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_): null;
 			case CBVKAggregate(aggregate): aggregate;
+			case CBVKEnum(_): null;
+		};
+	}
+
+	public function enumValue():Null<CPreparedBodyEnumInstance> {
+		return switch kind {
+			case CBVKPrimitive(_) | CBVKAggregate(_): null;
+			case CBVKEnum(value): value;
 		};
 	}
 }
@@ -175,15 +193,19 @@ class CLoweredBodyAggregate {
 class CBodyAggregateRegistry {
 	final context:CompilationContext;
 	final byShape:Map<String, CPreparedBodyAggregate> = [];
+	final enumRegistry:CBodyEnumRegistry;
 
 	public function new(context:CompilationContext) {
 		this.context = context;
+		this.enumRegistry = new CBodyEnumRegistry(context, valueType);
 	}
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
+			case TEnum(reference, parameters):
+				enumRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
 			case TAnonymous(reference):
 				final shape = anonymousShape(reference, [], position, fail, node);
 				var aggregate = byShape.get(shape);
@@ -196,6 +218,12 @@ class CBodyAggregateRegistry {
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
 		};
 	}
+
+	public function canonicalEnums():Array<CPreparedBodyEnumInstance>
+		return enumRegistry.canonicalEnums();
+
+	public function finalizeEnums(symbols:CSymbolRegistry):Array<CLoweredBodyEnum>
+		return enumRegistry.finalize(symbols);
 
 	public function canonicalAggregates():Array<CPreparedBodyAggregate> {
 		final values = [for (aggregate in byShape) aggregate];

@@ -1,0 +1,164 @@
+[
+  {
+    "instanceId": "instance.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef",
+    "displayName": "Option<bool>",
+    "digest": "13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "None",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_None_of_bool_n0",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1",
+        "semanticName": "Some",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zh39e28353232fc7bd",
+            "indirect": false,
+            "type": "bool"
+          }
+        ],
+        "payloadStructTag": "hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zhc2b8e9073c59ca75"
+      }
+    ],
+    "valueTag": "hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool",
+    "tagMember": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool_n0",
+    "payloadMember": "hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool_n1",
+    "discriminantTag": "hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool"
+  },
+  {
+    "instanceId": "instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb",
+    "displayName": "Option<i32>",
+    "digest": "34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "None",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_None_of_i32_n0",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1",
+        "semanticName": "Some",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh3e3567d8e3d34bf7",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh6fa8fca385dc759a"
+      }
+    ],
+    "valueTag": "hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32",
+    "tagMember": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0",
+    "payloadMember": "hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1",
+    "discriminantTag": "hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32"
+  },
+  {
+    "instanceId": "instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73",
+    "representation": "tagged-union",
+    "recursive": true,
+    "declarationId": "type.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73",
+    "displayName": "Chain<i32>",
+    "digest": "39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73",
+    "scopedLifetime": true,
+    "payloadUnionTag": "hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0",
+        "semanticName": "End",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8d53a0ffeb8cc84e",
+            "indirect": false,
+            "type": "i32"
+          }
+        ],
+        "payloadStructTag": "hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8fd2dc36ecaa9436"
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1",
+        "semanticName": "Link",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh4779a74364eba1c8",
+            "indirect": false,
+            "type": "i32"
+          },
+          {
+            "semanticName": "next",
+            "cName": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhd8ec5da0e26339d3",
+            "indirect": true,
+            "type": "pointer:nonnull<instance:instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73>"
+          }
+        ],
+        "payloadStructTag": "hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8"
+      }
+    ],
+    "valueTag": "hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32",
+    "tagMember": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0",
+    "payloadMember": "hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1",
+    "discriminantTag": "hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32"
+  },
+  {
+    "instanceId": "instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6",
+    "representation": "native-enum",
+    "recursive": false,
+    "declarationId": "type.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6",
+    "displayName": "Mode",
+    "digest": "84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6",
+    "scopedLifetime": false,
+    "payloadUnionTag": null,
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "Off",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_Off_n0",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": null,
+        "semanticName": "On",
+        "discriminant": "hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_On_n1",
+        "payload": [],
+        "payloadStructTag": null
+      }
+    ],
+    "valueTag": "hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value",
+    "tagMember": null,
+    "payloadMember": null,
+    "discriminantTag": "hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value"
+  }
+]

@@ -416,6 +416,48 @@ def aggregate_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def enum_lowering_artifacts() -> list[Artifact]:
+    module = load_module("enum_lowering", "test/enum_lowering/run.py")
+    first_payload, report = module.render("snapshot first enum render")
+    second_payload, repeated = module.render("snapshot second enum render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input enum render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "enum-lowering snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("enums.hxcir", "hxcir"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("enums.json", "json"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, (dict, list)):
+                raise SnapshotFailure(f"enum-lowering report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"enum-lowering report omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/enum_lowering/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 def evaluation_order_artifacts() -> list[Artifact]:
     module = load_module("evaluation_order", "test/evaluation_order/run.py")
     first_payload, report = module.render("snapshot first evaluation-order render")
@@ -696,6 +738,7 @@ GENERATORS: dict[str, Generator] = {
     "body-lowering": body_lowering_artifacts,
     "function-lowering": function_lowering_artifacts,
     "aggregate-lowering": aggregate_lowering_artifacts,
+    "enum-lowering": enum_lowering_artifacts,
     "evaluation-order": evaluation_order_artifacts,
     "static-initialization": static_initialization_artifacts,
     "arithmetic-semantics": arithmetic_semantics_artifacts,

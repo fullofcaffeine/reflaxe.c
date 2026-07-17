@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "haxe-enum-lowering-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-010",
+    "HXC-SEM-016",
+    "HXC-SEM-024"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyEnum.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "test/enum_lowering/fixtures/recursive_escape/Main.hx",
+    "test/enum_lowering/fixtures/recursive_return/Main.hx",
+    "test/enum_lowering/fixtures/reference_payload/Main.hx",
+    "test/enum_lowering/fixtures/aggregate_payload/Main.hx",
+    "test/enum_lowering/fixtures/nonexhaustive/Main.hx",
+    "test/enum_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../enum_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/enum-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed edges passed$"
+    }
+  }
+}

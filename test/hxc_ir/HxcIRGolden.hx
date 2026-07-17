@@ -39,6 +39,12 @@ class HxcIRGolden {
 				aggregateConstructionMismatch: invalidDiagnostics(aggregateConstructionMismatchProgram()),
 				aggregateProjectionMismatch: invalidDiagnostics(aggregateProjectionMismatchProgram()),
 				aggregateFieldPlaceMismatch: invalidDiagnostics(aggregateFieldPlaceMismatchProgram()),
+				tagConstructionMismatch: invalidDiagnostics(tagConstructionMismatchProgram()),
+				tagProjectionMismatch: invalidDiagnostics(tagProjectionMismatchProgram()),
+				directPayloadRepresentation: invalidDiagnostics(directPayloadRepresentationProgram()),
+				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
+				redundantDefaultTagSwitch: invalidDiagnostics(redundantDefaultTagSwitchProgram()),
+				recursiveDirectLayout: invalidDiagnostics(recursiveDirectLayoutProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
 				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
@@ -88,8 +94,18 @@ class HxcIRGolden {
 			id: "type.error",
 			displayName: "app.Error",
 			kind: IRTKTaggedUnion([
-				{name: "Message", payload: [IRTDynamic], source: span(MAIN_SOURCE, 6)},
-				{name: "Unavailable", payload: [], source: span(MAIN_SOURCE, 7)}
+				{
+					name: "Message",
+					tagValue: 0,
+					payload: [{name: "text", type: IRTDynamic, source: span(MAIN_SOURCE, 6)}],
+					source: span(MAIN_SOURCE, 6)
+				},
+				{
+					name: "Unavailable",
+					tagValue: 1,
+					payload: [],
+					source: span(MAIN_SOURCE, 7)
+				}
 			]),
 			source: span(MAIN_SOURCE, 5, 8)
 		};
@@ -151,7 +167,7 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: 3, modules: modules};
+		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, modules: modules};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -278,8 +294,18 @@ class HxcIRGolden {
 			id: "type.option",
 			displayName: "coverage.Option",
 			kind: IRTKTaggedUnion([
-				{name: "Some", payload: [IRTInt(32, true)], source: span(COVERAGE_SOURCE, 5)},
-				{name: "None", payload: [], source: span(COVERAGE_SOURCE, 6)}
+				{
+					name: "Some",
+					tagValue: 0,
+					payload: [{name: "value", type: IRTInt(32, true), source: span(COVERAGE_SOURCE, 5)}],
+					source: span(COVERAGE_SOURCE, 5)
+				},
+				{
+					name: "None",
+					tagValue: 1,
+					payload: [],
+					source: span(COVERAGE_SOURCE, 6)
+				}
 			]),
 			source: span(COVERAGE_SOURCE, 4, 7)
 		};
@@ -326,14 +352,19 @@ class HxcIRGolden {
 			}
 		];
 		return {
-			schemaVersion: 3,
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
 			modules: [
 				{
 					id: "coverage.IR",
 					types: [recordType, optionType, objectType, interfaceType],
 					typeInstances: instances,
 					globals: [],
-					functions: [coverageTarget(), coverageThrowFunction(), coverageFunction()],
+					functions: [
+						coverageTarget(),
+						coverageThrowFunction(),
+						coverageFunction(),
+						coverageTagSwitchFunction()
+					],
 					source: span(COVERAGE_SOURCE, 1, 80)
 				}
 			]
@@ -485,6 +516,8 @@ class HxcIRGolden {
 						instruction("c12.tag", result("value.option", IRTInstance("instance.option")),
 							IRIOConstructTag("instance.option", "Some", ["value.one"]), COVERAGE_SOURCE, 30),
 						instruction("c13.match", result("value.is-some", IRTBool), IRIOMatchTag("value.option", "Some"), COVERAGE_SOURCE, 31),
+						instruction("c13.project-tag", result("value.some-payload", IRTInt(32, true)),
+							IRIOProjectTag("value.option", "Some", 0, IRTCPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 31),
 						instruction("c14.allocate", result("value.allocation", IRTPointer(IRTInstance("instance.object"), false)),
 							IRIOAllocate(IRTInstance("instance.object"), IRAOwned, IRIProgramLocal("helper.allocate-object"), allocationFailure),
 							COVERAGE_SOURCE, 32),
@@ -528,6 +561,47 @@ class HxcIRGolden {
 			],
 			cleanupRegions: [],
 			source: span(COVERAGE_SOURCE, 15, 39)
+		};
+	}
+
+	static function coverageTagSwitchFunction():HxcIRFunction {
+		final someEdge:HxcIRBlockEdge = {targetBlockId: "some", arguments: [], cleanup: []};
+		final noneEdge:HxcIRBlockEdge = {targetBlockId: "none", arguments: [], cleanup: []};
+		return {
+			id: "fn.coverage.tag-switch",
+			displayName: "coverage.IR.tagSwitch",
+			parameters: [
+				parameter("value.option-switch", IRTInstance("instance.option"), COVERAGE_SOURCE, 42)
+			],
+			locals: [],
+			returnType: IRTVoid,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTTagSwitch("value.option-switch", [{tagName: "Some", edge: someEdge}, {tagName: "None", edge: noneEdge}], null),
+						COVERAGE_SOURCE, 43),
+					source: span(COVERAGE_SOURCE, 43)
+				},
+				{
+					id: "some",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 44),
+					source: span(COVERAGE_SOURCE, 44)
+				},
+				{
+					id: "none",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 45),
+					source: span(COVERAGE_SOURCE, 45)
+				}
+			],
+			cleanupRegions: [],
+			source: span(COVERAGE_SOURCE, 42, 45)
 		};
 	}
 
@@ -609,6 +683,128 @@ class HxcIRGolden {
 		], [
 			local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISInitialized, file, 1)
 		], "invalid.AggregateFieldPlaceMismatch");
+	}
+
+	static function tagConstructionMismatchProgram():HxcIRProgram {
+		final file = "test/negative/TagConstructionMismatch.hx";
+		return taggedUnionProgram(file, [
+			instruction("bad.truth", result("value.truth", IRTBool), IRIOConstant(IRCBool(true)), file, 2),
+			instruction("bad.construct", result("value.option", IRTBool), IRIOConstructTag("instance.option", "Some", ["value.truth"]), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), "invalid.TagConstructionMismatch");
+	}
+
+	static function tagProjectionMismatchProgram():HxcIRProgram {
+		final file = "test/negative/TagProjectionMismatch.hx";
+		return taggedUnionProgram(file, [
+			instruction("bad.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
+			instruction("bad.construct", result("value.option", IRTInstance("instance.option")), IRIOConstructTag("instance.option", "Some", ["value.one"]),
+				file, 3),
+			instruction("bad.project", result("value.payload", IRTBool), IRIOProjectTag("value.option", "Some", 0, IRTCPCheckedAbort("portable", "debug")),
+				file, 4)
+		], terminator(IRTReturn(null, []), file, 5), "invalid.TagProjectionMismatch");
+	}
+
+	static function nonExhaustiveTagSwitchProgram():HxcIRProgram {
+		final file = "test/negative/NonExhaustiveTagSwitch.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return taggedUnionProgram(file, [
+			instruction("bad.construct", result("value.option", IRTInstance("instance.option")), IRIOConstructTag("instance.option", "None", []), file, 2)
+		], terminator(IRTTagSwitch("value.option", [
+			{
+				tagName: "Some",
+				edge: loopEdge
+			}
+			], null), file, 3), "invalid.NonExhaustiveTagSwitch");
+	}
+
+	static function directPayloadRepresentationProgram():HxcIRProgram {
+		final file = "test/negative/DirectPayloadRepresentation.hx";
+		final program = taggedUnionProgram(file, [], terminator(IRTReturn(null, []), file, 3), "invalid.DirectPayloadRepresentation");
+		program.modules[0].typeInstances[0] = {
+			id: "instance.option",
+			declarationId: "type.option",
+			arguments: [],
+			representation: IRRDirect,
+			source: span(file, 1)
+		};
+		return program;
+	}
+
+	static function redundantDefaultTagSwitchProgram():HxcIRProgram {
+		final file = "test/negative/RedundantDefaultTagSwitch.hx";
+		final loopEdge:HxcIRBlockEdge = {targetBlockId: "entry", arguments: [], cleanup: []};
+		return taggedUnionProgram(file, [
+			instruction("bad.construct", result("value.option", IRTInstance("instance.option")), IRIOConstructTag("instance.option", "None", []), file, 2)
+		], terminator(IRTTagSwitch("value.option", [
+			{
+				tagName: "Some",
+				edge: loopEdge
+			},
+			{tagName: "None", edge: loopEdge}
+			], loopEdge), file, 3), "invalid.RedundantDefaultTagSwitch");
+	}
+
+	static function recursiveDirectLayoutProgram():HxcIRProgram {
+		final file = "test/negative/RecursiveDirectLayout.hx";
+		final program = minimalProgram("invalid.RecursiveDirectLayout", [], terminator(IRTReturn(null, []), file, 4), [], [], file);
+		program.modules[0].types.push({
+			id: "type.recursive",
+			displayName: "invalid.Recursive",
+			kind: IRTKTaggedUnion([
+				{
+					name: "Loop",
+					tagValue: 0,
+					payload: [{name: "next", type: IRTInstance("instance.recursive"), source: span(file, 1)}],
+					source: span(file, 1)
+				},
+				{
+					name: "Stop",
+					tagValue: 1,
+					payload: [],
+					source: span(file, 2)
+				}
+			]),
+			source: span(file, 1, 2)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.recursive",
+			declarationId: "type.recursive",
+			arguments: [],
+			representation: IRRTagged,
+			source: span(file, 1, 2)
+		});
+		return program;
+	}
+
+	static function taggedUnionProgram(file:String, instructions:Array<HxcIRInstruction>, terminatorValue:HxcIRTerminator, moduleId:String):HxcIRProgram {
+		final program = minimalProgram(moduleId, instructions, terminatorValue, [], [], file);
+		program.modules[0].types.push({
+			id: "type.option",
+			displayName: "invalid.Option",
+			kind: IRTKTaggedUnion([
+				{
+					name: "Some",
+					tagValue: 0,
+					payload: [{name: "value", type: IRTInt(32, true), source: span(file, 1)}],
+					source: span(file, 1)
+				},
+				{
+					name: "None",
+					tagValue: 1,
+					payload: [],
+					source: span(file, 1)
+				}
+			]),
+			source: span(file, 1)
+		});
+		program.modules[0].typeInstances.push({
+			id: "instance.option",
+			declarationId: "type.option",
+			arguments: [],
+			representation: IRRTagged,
+			source: span(file, 1)
+		});
+		return program;
 	}
 
 	static function aggregateProgram(file:String, instructions:Array<HxcIRInstruction>, locals:Array<HxcIRLocal>,
@@ -827,7 +1023,7 @@ class HxcIRGolden {
 			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
 		return {
-			schemaVersion: 3,
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
 			modules: [
 				{
 					id: moduleId,

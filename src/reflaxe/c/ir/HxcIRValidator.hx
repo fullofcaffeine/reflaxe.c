@@ -10,6 +10,8 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
+	public static inline final SCHEMA_VERSION = 4;
+
 	public function new() {}
 
 	public function validate(program:HxcIRProgram, profile:String):Array<HxcIRDiagnostic>
@@ -38,11 +40,12 @@ private class HxcIRValidationState {
 	}
 
 	public function validate():Array<HxcIRDiagnostic> {
-		if (program.schemaVersion != 3) {
-			add("program", 'schema version ${program.schemaVersion} is unsupported; expected 3', programSource());
+		if (program.schemaVersion != HxcIRValidator.SCHEMA_VERSION) {
+			add("program", 'schema version ${program.schemaVersion} is unsupported; expected ${HxcIRValidator.SCHEMA_VERSION}', programSource());
 		}
 		indexProgram();
 		validateProgramContents();
+		validateFiniteDirectLayouts();
 		diagnostics.sort(compareDiagnostics);
 		return diagnostics;
 	}
@@ -128,6 +131,7 @@ private class HxcIRValidationState {
 				}
 			case IRTKTaggedUnion(cases):
 				final names:Map<String, Bool> = [];
+				final values:Map<Int, Bool> = [];
 				for (index => tag in cases) {
 					final tagPath = '$path.case:$index:${tag.name}';
 					validateStableId(tag.name, '$tagPath.name', tag.source);
@@ -137,8 +141,25 @@ private class HxcIRValidationState {
 					} else {
 						names.set(tag.name, true);
 					}
-					for (payloadIndex => payloadType in tag.payload) {
-						validateTypeRef(payloadType, '$tagPath.payload:$payloadIndex', tag.source, false);
+					if (tag.tagValue < 0 || values.exists(tag.tagValue)) {
+						add(tagPath, 'tagged-union case `${tag.name}` has invalid or duplicate discriminant `${tag.tagValue}`', tag.source);
+					} else {
+						values.set(tag.tagValue, true);
+					}
+					if (tag.tagValue != index) {
+						add(tagPath, 'tagged-union case `${tag.name}` must retain source discriminant $index, found ${tag.tagValue}', tag.source);
+					}
+					final payloadNames:Map<String, Bool> = [];
+					for (payloadIndex => payload in tag.payload) {
+						final payloadPath = '$tagPath.payload:$payloadIndex:${payload.name}';
+						validateStableId(payload.name, '$payloadPath.name', payload.source);
+						validateSpan(payload.source, '$payloadPath.source');
+						validateTypeRef(payload.type, '$payloadPath.type', payload.source, false);
+						if (payloadNames.exists(payload.name)) {
+							add(payloadPath, 'duplicate payload name `${payload.name}` in tagged-union case `${tag.name}`', payload.source);
+						} else {
+							payloadNames.set(payload.name, true);
+						}
 					}
 				}
 		}
@@ -146,8 +167,20 @@ private class HxcIRValidationState {
 
 	function validateTypeInstance(instance:HxcIRTypeInstance, path:String):Void {
 		validateSpan(instance.source, '$path.source');
-		if (!typeDeclarations.exists(instance.declarationId)) {
+		final declaration = typeDeclarations.get(instance.declarationId);
+		if (declaration == null) {
 			add(path, 'type instance `${instance.id}` refers to unknown declaration `${instance.declarationId}`', instance.source);
+		} else {
+			switch declaration.kind {
+				case IRTKTaggedUnion(cases) if (instance.representation == IRRDirect):
+					for (tagCase in cases) {
+						if (tagCase.payload.length > 0) {
+							add(path, 'direct native-enum instance `${instance.id}` cannot contain payload case `${tagCase.name}`', instance.source);
+							break;
+						}
+					}
+				case _:
+			}
 		}
 		for (index => argument in instance.arguments) {
 			validateTypeRef(argument, '$path.argument:$index', instance.source, false);
@@ -525,17 +558,45 @@ private class HxcIRValidationState {
 					}
 				}
 			case IRIOConstructTag(instanceId, tagName, payload):
-				requireInstance(instanceId, path, instruction.source);
-				validateStableId(tagName, '$path.tag', instruction.source);
+				final tagCase = requireTagCase(instanceId, tagName, path, instruction.source);
+				if (instruction.result != null) {
+					switch instruction.result.type {
+						case IRTInstance(resultInstanceId) if (resultInstanceId == instanceId):
+						case _:
+							add(path, "tag construction result must use the constructed instance type", instruction.source);
+					}
+				}
+				if (tagCase != null && payload.length != tagCase.payload.length) {
+					add(path, 'tag construction provides ${payload.length} payload value(s) for ${tagCase.payload.length} field(s)', instruction.source);
+				}
 				for (index => valueId in payload) {
-					requireValue(valueId, '$path.payload:$index', instruction.source, available);
+					final payloadType = requireValue(valueId, '$path.payload:$index', instruction.source, available);
+					if (payloadType != null
+						&& tagCase != null
+						&& index < tagCase.payload.length
+						&& typeKey(payloadType) != typeKey(tagCase.payload[index].type)) {
+						add(path, 'tag payload value $index does not match `${tagCase.payload[index].name}`', instruction.source);
+					}
 				}
 			case IRIOMatchTag(valueId, tagName):
-				requireValue(valueId, '$path.value', instruction.source, available);
-				validateStableId(tagName, '$path.tag', instruction.source);
+				final valueType = requireValue(valueId, '$path.value', instruction.source, available);
+				if (valueType != null) {
+					requireTagCaseForType(valueType, tagName, path, instruction.source);
+				}
 				if (instruction.result != null && typeKey(instruction.result.type) != "bool") {
 					add(path, "tag match result must have Bool type", instruction.source);
 				}
+			case IRIOProjectTag(valueId, tagName, payloadIndex, check):
+				final valueType = requireValue(valueId, '$path.value', instruction.source, available);
+				final tagCase = valueType == null ? null : requireTagCaseForType(valueType, tagName, path, instruction.source);
+				if (payloadIndex < 0 || tagCase != null && payloadIndex >= tagCase.payload.length) {
+					add(path, 'tag payload index $payloadIndex is outside case `$tagName`', instruction.source);
+				} else if (tagCase != null
+					&& instruction.result != null
+					&& typeKey(instruction.result.type) != typeKey(tagCase.payload[payloadIndex].type)) {
+					add(path, 'tag payload projection result does not match `${tagCase.payload[payloadIndex].name}`', instruction.source);
+				}
+				validateTagCheck(check, '$path.check', instruction.source);
 			case IRIOAllocate(type, _, implementation, failure):
 				validateTypeRef(type, '$path.type', instruction.source, false);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
@@ -623,7 +684,8 @@ private class HxcIRValidationState {
 	function instructionProducesValue(kind:HxcIRInstructionKind):Bool {
 		return switch kind {
 			case IRIOConstant(_) | IRIOLoad(_) | IRIOAddress(_) | IRIOUnary(_, _, _) | IRIOBinary(_, _, _, _) | IRIOConvert(_, _, _, _, _) |
-				IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOAllocate(_, _, _, _):
+				IRIOConstructAggregate(_, _) | IRIOProject(_, _) | IRIOConstructTag(_, _, _) | IRIOMatchTag(_, _) | IRIOProjectTag(_, _, _, _) |
+				IRIOAllocate(_, _, _, _):
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
@@ -750,6 +812,39 @@ private class HxcIRValidationState {
 					validateBlockEdge(item.edge, '$path.case:$index.edge', source, available, blocks, regions);
 				}
 				validateBlockEdge(defaultEdge, '$path.default', source, available, blocks, regions);
+			case IRTTagSwitch(valueId, cases, defaultEdge):
+				final switchType = requireValue(valueId, '$path.value', source, available);
+				final expectedCases = switchType == null ? null : taggedUnionCasesForType(switchType, path, source);
+				final names:Map<String, Bool> = [];
+				for (index => item in cases) {
+					validateStableId(item.tagName, '$path.case:$index.tag', source);
+					if (names.exists(item.tagName)) {
+						add(path, 'tag switch repeats case `${item.tagName}`', source);
+					} else {
+						names.set(item.tagName, true);
+					}
+					if (expectedCases != null && findTagCase(expectedCases, item.tagName) == null) {
+						add(path, 'tag switch names unknown case `${item.tagName}`', source);
+					}
+					validateBlockEdge(item.edge, '$path.case:$index.edge', source, available, blocks, regions);
+				}
+				var exhaustive = expectedCases != null;
+				if (expectedCases != null) {
+					for (tagCase in expectedCases) {
+						if (!names.exists(tagCase.name)) {
+							exhaustive = false;
+							if (defaultEdge == null) {
+								add(path, 'tag switch without a default omits `${tagCase.name}`', source);
+							}
+						}
+					}
+				}
+				if (defaultEdge != null) {
+					if (exhaustive) {
+						add(path, "exhaustive tag switch must not carry a default edge", source);
+					}
+					validateBlockEdge(defaultEdge, '$path.default', source, available, blocks, regions);
+				}
 			case IRTReturn(valueId, cleanup):
 				if (fn.returnType == IRTVoid) {
 					if (valueId != null) {
@@ -951,6 +1046,85 @@ private class HxcIRValidationState {
 		}
 	}
 
+	function requireTagCase(instanceId:String, tagName:String, path:String, source:HxcSourceSpan):Null<HxcIRTagCase> {
+		validateStableId(tagName, '$path.tag', source);
+		final cases = taggedUnionCases(instanceId, path, source);
+		if (cases == null) {
+			return null;
+		}
+		final tagCase = findTagCase(cases, tagName);
+		if (tagCase == null) {
+			add(path, 'tag operation names unknown case `$tagName` for instance `$instanceId`', source);
+		}
+		return tagCase;
+	}
+
+	function requireTagCaseForType(type:HxcIRTypeRef, tagName:String, path:String, source:HxcSourceSpan):Null<HxcIRTagCase> {
+		return switch type {
+			case IRTInstance(instanceId): requireTagCase(instanceId, tagName, path, source);
+			case _:
+				add(path, "tag operation requires a tagged-union instance value", source);
+				null;
+		};
+	}
+
+	function taggedUnionCasesForType(type:HxcIRTypeRef, path:String, source:HxcSourceSpan):Null<Array<HxcIRTagCase>> {
+		return switch type {
+			case IRTInstance(instanceId): taggedUnionCases(instanceId, path, source);
+			case _:
+				add(path, "tag switch requires a tagged-union instance value", source);
+				null;
+		};
+	}
+
+	function taggedUnionCases(instanceId:String, path:String, source:HxcSourceSpan):Null<Array<HxcIRTagCase>> {
+		final instance = typeInstances.get(instanceId);
+		if (instance == null) {
+			add(path, 'tag operation refers to unknown instance `$instanceId`', source);
+			return null;
+		}
+		switch instance.representation {
+			case IRRDirect | IRRTagged:
+			case IRROpaqueHandle | IRRManaged(_):
+				add(path, 'tag operation requires direct or tagged representation for instance `$instanceId`', source);
+				return null;
+		}
+		final declaration = typeDeclarations.get(instance.declarationId);
+		if (declaration == null) {
+			return null;
+		}
+		return switch declaration.kind {
+			case IRTKTaggedUnion(cases):
+				cases;
+			case _:
+				add(path, 'tag operation requires a tagged-union declaration for instance `$instanceId`', source);
+				null;
+		};
+	}
+
+	static function findTagCase(cases:Array<HxcIRTagCase>, tagName:String):Null<HxcIRTagCase> {
+		for (tagCase in cases) {
+			if (tagCase.name == tagName) {
+				return tagCase;
+			}
+		}
+		return null;
+	}
+
+	function validateTagCheck(check:HxcIRTagCheckPolicy, path:String, source:HxcSourceSpan):Void {
+		switch check {
+			case IRTCPCheckedAbort(policyProfile, buildMode):
+				if (policyProfile != "portable" && policyProfile != "metal") {
+					add(path, 'tag-check policy has unknown profile `$policyProfile`', source);
+				} else if (policyProfile != profile) {
+					add(path, 'tag-check policy profile `$policyProfile` does not match validator profile `$profile`', source);
+				}
+				if (buildMode != "debug" && buildMode != "release" && buildMode != "minsizerel") {
+					add(path, 'tag-check policy has unknown build mode `$buildMode`', source);
+				}
+		}
+	}
+
 	function directAggregateFields(instanceId:String, path:String, source:HxcSourceSpan):Null<Array<HxcIRTypeField>> {
 		final instance = typeInstances.get(instanceId);
 		if (instance == null) {
@@ -1002,6 +1176,74 @@ private class HxcIRValidationState {
 			}
 		}
 		return null;
+	}
+
+	function validateFiniteDirectLayouts():Void {
+		final state:Map<String, Int> = [];
+		for (instance in sortedMapValues(typeInstances, item -> item.id)) {
+			validateFiniteDirectLayout(instance, state, []);
+		}
+	}
+
+	function validateFiniteDirectLayout(instance:HxcIRTypeInstance, state:Map<String, Int>, stack:Array<String>):Void {
+		final existing = state.get(instance.id);
+		if (existing == 2) {
+			return;
+		}
+		if (existing == 1) {
+			final cycle = stack.concat([instance.id]);
+			add('type-layout:${instance.id}',
+				'direct by-value type layout is recursive: ${cycle.join(" -> ")}; insert an explicit pointer or managed boundary', instance.source);
+			return;
+		}
+		state.set(instance.id, 1);
+		final nextStack = stack.concat([instance.id]);
+		for (dependencyId in directLayoutDependencies(instance)) {
+			final dependency = typeInstances.get(dependencyId);
+			if (dependency != null) {
+				validateFiniteDirectLayout(dependency, state, nextStack);
+			}
+		}
+		state.set(instance.id, 2);
+	}
+
+	function directLayoutDependencies(instance:HxcIRTypeInstance):Array<String> {
+		final result:Array<String> = [];
+		switch instance.representation {
+			case IRRDirect | IRRTagged:
+				final declaration = typeDeclarations.get(instance.declarationId);
+				if (declaration != null) {
+					switch declaration.kind {
+						case IRTKAggregate(fields):
+							for (field in fields) {
+								collectDirectLayoutDependencies(field.type, result);
+							}
+						case IRTKTaggedUnion(cases):
+							for (tagCase in cases) {
+								for (payload in tagCase.payload) {
+									collectDirectLayoutDependencies(payload.type, result);
+								}
+							}
+						case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern:
+					}
+				}
+			case IRROpaqueHandle | IRRManaged(_):
+		}
+		result.sort(compareUtf8);
+		return result;
+	}
+
+	function collectDirectLayoutDependencies(type:HxcIRTypeRef, result:Array<String>):Void {
+		switch type {
+			case IRTInstance(instanceId):
+				if (result.indexOf(instanceId) == -1) {
+					result.push(instanceId);
+				}
+			case IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
+				collectDirectLayoutDependencies(inner, result);
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, IRNPointer) |
+				IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
+		}
 	}
 
 	function validateImplementation(implementation:HxcIRImplementation, path:String, source:HxcSourceSpan):Void {
@@ -1502,6 +1744,12 @@ private class HxcIRValidationState {
 
 	static function sorted<T>(values:Array<T>, key:T->String):Array<T> {
 		final copy = values.copy();
+		copy.sort((left, right) -> compareUtf8(key(left), key(right)));
+		return copy;
+	}
+
+	static function sortedMapValues<T>(values:Map<String, T>, key:T->String):Array<T> {
+		final copy = [for (value in values) value];
 		copy.sort((left, right) -> compareUtf8(key(left), key(right)));
 		return copy;
 	}

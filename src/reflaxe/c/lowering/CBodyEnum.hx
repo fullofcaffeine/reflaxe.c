@@ -1,0 +1,532 @@
+package reflaxe.c.lowering;
+
+#if (macro || reflaxe_runtime)
+import haxe.crypto.Sha256;
+import haxe.io.Bytes;
+import haxe.macro.Expr.Position;
+import haxe.macro.Type;
+import haxe.macro.TypeTools;
+import reflaxe.c.CompilationContext;
+import reflaxe.c.ast.CAST.CIdentifier;
+import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
+import reflaxe.c.naming.CSymbolRegistry;
+import reflaxe.c.naming.CSymbolRequest;
+import reflaxe.c.semantics.CPrimitiveTypeMapper;
+import reflaxe.c.semantics.CPrimitiveTypes;
+
+/** Module anchor for bounded Haxe-enum representation selection. */
+class CBodyEnum {
+	private function new() {}
+}
+
+enum CBodyEnumRepresentation {
+	CBERNativeEnum;
+	CBERTaggedUnion;
+}
+
+typedef CBodyValueResolver = (type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+	node:String) -> CBodyValueType;
+
+/** One specialized constructor payload before recursive storage is selected. */
+class CPreparedBodyEnumPayload {
+	public final name:String;
+	public final valueType:CBodyValueType;
+	public final source:HxcSourceSpan;
+	public final request:CSymbolRequest;
+	public var indirect:Bool = false;
+
+	public function new(name:String, valueType:CBodyValueType, source:HxcSourceSpan, request:CSymbolRequest) {
+		this.name = name;
+		this.valueType = valueType;
+		this.source = source;
+		this.request = request;
+	}
+
+	public function storageType():HxcIRTypeRef
+		return indirect ? IRTPointer(valueType.irType, false) : valueType.irType;
+}
+
+/** One constructor in source discriminant order. */
+class CPreparedBodyEnumCase {
+	public final name:String;
+	public final tagValue:Int;
+	public final source:HxcSourceSpan;
+	public final discriminantRequest:CSymbolRequest;
+	public final payloadStructRequest:Null<CSymbolRequest>;
+	public final unionMemberRequest:Null<CSymbolRequest>;
+	public final payload:Array<CPreparedBodyEnumPayload> = [];
+
+	public function new(name:String, tagValue:Int, source:HxcSourceSpan, discriminantRequest:CSymbolRequest, payloadStructRequest:Null<CSymbolRequest>,
+			unionMemberRequest:Null<CSymbolRequest>) {
+		this.name = name;
+		this.tagValue = tagValue;
+		this.source = source;
+		this.discriminantRequest = discriminantRequest;
+		this.payloadStructRequest = payloadStructRequest;
+		this.unionMemberRequest = unionMemberRequest;
+	}
+}
+
+/** One concrete generic enum instance, specialized before C layout. */
+class CPreparedBodyEnumInstance {
+	public final shapeKey:String;
+	public final digest:String;
+	public final declarationId:String;
+	public final instanceId:String;
+	public final haxePath:String;
+	public final displayName:String;
+	public final ownerModule:String;
+	public final source:HxcSourceSpan;
+	public final representation:CBodyEnumRepresentation;
+	public final arguments:Array<CBodyValueType>;
+	public final valueTagRequest:CSymbolRequest;
+	public final discriminantTagRequest:CSymbolRequest;
+	public final payloadUnionRequest:Null<CSymbolRequest>;
+	public final tagMemberRequest:Null<CSymbolRequest>;
+	public final payloadMemberRequest:Null<CSymbolRequest>;
+	public final cases:Array<CPreparedBodyEnumCase> = [];
+	public var recursive:Bool = false;
+	public var scopedLifetime:Bool = false;
+
+	public function new(shapeKey:String, digest:String, haxePath:String, displayName:String, ownerModule:String, source:HxcSourceSpan,
+			representation:CBodyEnumRepresentation, arguments:Array<CBodyValueType>, valueTagRequest:CSymbolRequest, discriminantTagRequest:CSymbolRequest,
+			payloadUnionRequest:Null<CSymbolRequest>, tagMemberRequest:Null<CSymbolRequest>, payloadMemberRequest:Null<CSymbolRequest>) {
+		this.shapeKey = shapeKey;
+		this.digest = digest;
+		this.declarationId = 'type.enum.$digest';
+		this.instanceId = 'instance.enum.$digest';
+		this.haxePath = haxePath;
+		this.displayName = displayName;
+		this.ownerModule = ownerModule;
+		this.source = source;
+		this.representation = representation;
+		this.arguments = arguments.copy();
+		this.valueTagRequest = valueTagRequest;
+		this.discriminantTagRequest = discriminantTagRequest;
+		this.payloadUnionRequest = payloadUnionRequest;
+		this.tagMemberRequest = tagMemberRequest;
+		this.payloadMemberRequest = payloadMemberRequest;
+	}
+
+	public function declaration():HxcIRTypeDeclaration {
+		return {
+			id: declarationId,
+			displayName: displayName,
+			kind: IRTKTaggedUnion(cases.map(tagCase -> {
+				name: tagCase.name,
+				tagValue: tagCase.tagValue,
+				payload: tagCase.payload.map(payload -> {
+					name: payload.name,
+					type: payload.storageType(),
+					source: payload.source
+				}),
+				source: tagCase.source
+			})),
+			source: source
+		};
+	}
+
+	public function instance():HxcIRTypeInstance {
+		return {
+			id: instanceId,
+			declarationId: declarationId,
+			arguments: arguments.map(argument -> argument.irType),
+			representation: representation == CBERNativeEnum ? IRRDirect : IRRTagged,
+			source: source
+		};
+	}
+
+	public function tagCase(name:String):Null<CPreparedBodyEnumCase> {
+		for (tagCase in cases) {
+			if (tagCase.name == name) {
+				return tagCase;
+			}
+		}
+		return null;
+	}
+}
+
+class CLoweredBodyEnumPayload {
+	public final prepared:CPreparedBodyEnumPayload;
+	public final cName:CIdentifier;
+
+	public function new(prepared:CPreparedBodyEnumPayload, cName:CIdentifier) {
+		this.prepared = prepared;
+		this.cName = cName;
+	}
+}
+
+class CLoweredBodyEnumCase {
+	public final prepared:CPreparedBodyEnumCase;
+	public final discriminant:CIdentifier;
+	public final payloadStructTag:Null<CIdentifier>;
+	public final unionMember:Null<CIdentifier>;
+	public final payload:Array<CLoweredBodyEnumPayload>;
+
+	public function new(prepared:CPreparedBodyEnumCase, discriminant:CIdentifier, payloadStructTag:Null<CIdentifier>, unionMember:Null<CIdentifier>,
+			payload:Array<CLoweredBodyEnumPayload>) {
+		this.prepared = prepared;
+		this.discriminant = discriminant;
+		this.payloadStructTag = payloadStructTag;
+		this.unionMember = unionMember;
+		this.payload = payload.copy();
+	}
+}
+
+/** Finalized private C names for one concrete Haxe enum instance. */
+class CLoweredBodyEnum {
+	public final prepared:CPreparedBodyEnumInstance;
+	public final valueTag:CIdentifier;
+	public final discriminantTag:CIdentifier;
+	public final payloadUnionTag:Null<CIdentifier>;
+	public final tagMember:Null<CIdentifier>;
+	public final payloadMember:Null<CIdentifier>;
+	public final cases:Array<CLoweredBodyEnumCase>;
+
+	public function new(prepared:CPreparedBodyEnumInstance, valueTag:CIdentifier, discriminantTag:CIdentifier, payloadUnionTag:Null<CIdentifier>,
+			tagMember:Null<CIdentifier>, payloadMember:Null<CIdentifier>, cases:Array<CLoweredBodyEnumCase>) {
+		this.prepared = prepared;
+		this.valueTag = valueTag;
+		this.discriminantTag = discriminantTag;
+		this.payloadUnionTag = payloadUnionTag;
+		this.tagMember = tagMember;
+		this.payloadMember = payloadMember;
+		this.cases = cases.copy();
+	}
+
+	public function tagCase(name:String):Null<CLoweredBodyEnumCase> {
+		for (tagCase in cases) {
+			if (tagCase.prepared.name == name) {
+				return tagCase;
+			}
+		}
+		return null;
+	}
+}
+
+/** Request-local concrete-enum discovery, specialization, and recursion planning. */
+class CBodyEnumRegistry {
+	final context:CompilationContext;
+	final resolveValue:CBodyValueResolver;
+	final byShape:Map<String, CPreparedBodyEnumInstance> = [];
+	final activePaths:Array<String> = [];
+	var preparationDepth = 0;
+
+	public function new(context:CompilationContext, resolveValue:CBodyValueResolver) {
+		this.context = context;
+		this.resolveValue = resolveValue;
+	}
+
+	public function valueType(reference:Ref<EnumType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
+			fail:(Position, String) -> Void, node:String):CBodyValueType {
+		return CBodyValueType.enumeration(require(reference, parameters, position, ownerModule, ownerSourcePath, fail, node));
+	}
+
+	public function require(reference:Ref<EnumType>, parameters:Array<Type>, position:Position, ownerModule:String, ownerSourcePath:String,
+			fail:(Position, String) -> Void, node:String):CPreparedBodyEnumInstance {
+		final definition = reference.get();
+		if (definition.isExtern) {
+			return rejected(fail, position, '$node:extern-enum:${enumPath(definition)}');
+		}
+		if (definition.params.length != parameters.length) {
+			return rejected(fail, position, '$node:enum-argument-count:${enumPath(definition)}:${parameters.length}-for-${definition.params.length}');
+		}
+		final argumentKeys = parameters.map(parameter -> canonicalTypeKey(parameter, [], position, fail, '$node.type-argument'));
+		final shapeKey = 'haxe-enum-v1(${canonicalPart(enumPath(definition))}${canonicalArray(argumentKeys)})';
+		final existing = byShape.get(shapeKey);
+		if (existing != null) {
+			return existing;
+		}
+		final path = enumPath(definition);
+		if (activePaths.indexOf(path) != -1) {
+			return rejected(fail, position, '$node:non-stationary-recursive-generic:$path');
+		}
+
+		preparationDepth++;
+		activePaths.push(path);
+		final digest = Sha256.encode(shapeKey);
+		final sourcePath = definition.module == ownerModule ? ownerSourcePath : moduleSourcePath(definition.module);
+		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
+		final arguments = parameters.map(parameter -> {
+			final value = resolveValue(parameter, position, definition.module, sourcePath, fail, '$node.type-argument');
+			if (value.irType == IRTVoid || value.aggregateValue() != null) {
+				return rejected(fail, position, '$node:unsupported-enum-type-argument:${value.cSpelling}');
+			}
+			value;
+		});
+		final hasPayload = enumHasPayload(definition, parameters, position, fail, node);
+		final representation = hasPayload ? CBERTaggedUnion : CBERNativeEnum;
+		final symbolRoot = ["compiler", "haxe-enum", digest];
+		final valueTagRequest = new CSymbolRequest(CSKType, symbolRoot.concat(["value"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+		final discriminantTagRequest = representation == CBERNativeEnum ? valueTagRequest : new CSymbolRequest(CSKType, symbolRoot.concat(["tag"]),
+			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+		final payloadUnionRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKType, symbolRoot.concat(["payload"]),
+			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+		final tagMemberRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["tag"]),
+			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 0);
+		final payloadMemberRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["payload"]),
+			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 1);
+		context.symbols.register(valueTagRequest);
+		context.symbols.register(discriminantTagRequest);
+		if (payloadUnionRequest != null)
+			context.symbols.register(payloadUnionRequest);
+		if (tagMemberRequest != null)
+			context.symbols.register(tagMemberRequest);
+		if (payloadMemberRequest != null)
+			context.symbols.register(payloadMemberRequest);
+		final prepared = new CPreparedBodyEnumInstance(shapeKey, digest, path, displayName(definition, argumentKeys), definition.module, source,
+			representation, arguments, valueTagRequest, discriminantTagRequest, payloadUnionRequest, tagMemberRequest, payloadMemberRequest);
+		byShape.set(shapeKey, prepared);
+
+		for (caseName in definition.names) {
+			final field = definition.constructs.get(caseName);
+			if (field == null) {
+				return rejected(fail, position, '$node:enum-constructor-missing:$path.$caseName');
+			}
+			if (field.params.length != 0) {
+				return rejected(fail, field.pos, '$node:constructor-generic-parameters:$path.$caseName');
+			}
+			final constructor = constructorSignature(definition, parameters, field, fail, node);
+			final caseSource = HaxeSourceSpan.fromPosition(field.pos, sourcePath);
+			final discriminantRequest = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName]), CNSOrdinary("translation-unit"), CSVInternal,
+				null, [], argumentKeys, field.index);
+			final payloadStructRequest = constructor.arguments.length == 0 ? null : new CSymbolRequest(CSKType,
+				symbolRoot.concat(["case", caseName, "payload"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys, field.index);
+			final unionMemberRequest = constructor.arguments.length == 0 ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName]),
+				CNSMember('union.enum.$digest'), CSVInternal, null, [], argumentKeys, field.index);
+			context.symbols.register(discriminantRequest);
+			if (payloadStructRequest != null)
+				context.symbols.register(payloadStructRequest);
+			if (unionMemberRequest != null)
+				context.symbols.register(unionMemberRequest);
+			final tagCase = new CPreparedBodyEnumCase(caseName, field.index, caseSource, discriminantRequest, payloadStructRequest, unionMemberRequest);
+			for (index in 0...constructor.arguments.length) {
+				final argument = constructor.arguments[index];
+				final valueType = resolveValue(argument.type, field.pos, definition.module, sourcePath, fail, '$node.$caseName.${argument.name}');
+				if (valueType.irType == IRTVoid || valueType.aggregateValue() != null) {
+					return rejected(fail, field.pos, '$node:unsupported-payload:$path.$caseName.${argument.name}:${valueType.cSpelling}');
+				}
+				final request = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName, "payload", argument.name]),
+					CNSMember('case.enum.$digest.$caseName'), CSVInternal, null, [], argumentKeys, index);
+				context.symbols.register(request);
+				tagCase.payload.push(new CPreparedBodyEnumPayload(argument.name, valueType, caseSource, request));
+			}
+			prepared.cases.push(tagCase);
+		}
+		activePaths.pop();
+		preparationDepth--;
+		if (preparationDepth == 0) {
+			recomputeRecursion();
+		}
+		return prepared;
+	}
+
+	public function canonicalEnums():Array<CPreparedBodyEnumInstance> {
+		recomputeRecursion();
+		final values = [for (value in byShape) value];
+		values.sort((left, right) -> compareUtf8(left.digest, right.digest));
+		final result:Array<CPreparedBodyEnumInstance> = [];
+		final emitted:Map<String, Bool> = [];
+		for (value in values)
+			appendDependencies(value, result, emitted);
+		return result;
+	}
+
+	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyEnum> {
+		return canonicalEnums().map(prepared -> new CLoweredBodyEnum(prepared, symbols.identifierFor(prepared.valueTagRequest),
+			symbols.identifierFor(prepared.discriminantTagRequest), identifierOrNull(symbols, prepared.payloadUnionRequest),
+			identifierOrNull(symbols, prepared.tagMemberRequest), identifierOrNull(symbols, prepared.payloadMemberRequest),
+			prepared.cases.map(tagCase -> new CLoweredBodyEnumCase(tagCase, symbols.identifierFor(tagCase.discriminantRequest),
+				identifierOrNull(symbols, tagCase.payloadStructRequest), identifierOrNull(symbols, tagCase.unionMemberRequest),
+				tagCase.payload.map(payload -> new CLoweredBodyEnumPayload(payload, symbols.identifierFor(payload.request)))))));
+	}
+
+	function recomputeRecursion():Void {
+		for (value in byShape) {
+			value.recursive = hasRecursiveEdge(value);
+			for (tagCase in value.cases) {
+				for (payload in tagCase.payload) {
+					payload.indirect = switch payload.valueType.enumValue() {
+						case null: false;
+						case dependency: dependency == value || reaches(dependency, value, []);
+					};
+				}
+			}
+		}
+		for (value in byShape)
+			value.scopedLifetime = requiresScopedLifetime(value, []);
+	}
+
+	function requiresScopedLifetime(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {
+		if (visited.exists(value.instanceId))
+			return false;
+		visited.set(value.instanceId, true);
+		for (tagCase in value.cases) {
+			for (payload in tagCase.payload) {
+				if (payload.indirect)
+					return true;
+				final dependency = payload.valueType.enumValue();
+				if (dependency != null && requiresScopedLifetime(dependency, visited))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	function hasRecursiveEdge(value:CPreparedBodyEnumInstance):Bool {
+		for (tagCase in value.cases) {
+			for (payload in tagCase.payload) {
+				final dependency = payload.valueType.enumValue();
+				if (dependency != null && (dependency == value || reaches(dependency, value, [])))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	function reaches(current:CPreparedBodyEnumInstance, target:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {
+		if (visited.exists(current.instanceId))
+			return false;
+		visited.set(current.instanceId, true);
+		for (tagCase in current.cases) {
+			for (payload in tagCase.payload) {
+				final dependency = payload.valueType.enumValue();
+				if (dependency != null && (dependency == target || reaches(dependency, target, visited)))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	function appendDependencies(value:CPreparedBodyEnumInstance, result:Array<CPreparedBodyEnumInstance>, emitted:Map<String, Bool>):Void {
+		if (emitted.exists(value.instanceId))
+			return;
+		for (tagCase in value.cases) {
+			for (payload in tagCase.payload) {
+				final dependency = payload.valueType.enumValue();
+				if (dependency != null && !payload.indirect)
+					appendDependencies(dependency, result, emitted);
+			}
+		}
+		emitted.set(value.instanceId, true);
+		result.push(value);
+	}
+
+	function canonicalTypeKey(type:Type, stack:Array<String>, position:Position, fail:(Position, String) -> Void, node:String):String {
+		final resolved = unwrapAliases(type, position, fail, node);
+		return switch resolved {
+			case TEnum(reference, parameters):
+				final definition = reference.get();
+				final path = enumPath(definition);
+				if (stack.indexOf(path) != -1)
+					return rejected(fail, position, '$node:recursive-type-argument:$path');
+				final next = stack.concat([path]);
+				'enum(${canonicalPart(path)}${canonicalArray(parameters.map(parameter -> canonicalTypeKey(parameter, next, position, fail, node)))})';
+			case _:
+				final mapping = admittedPrimitive(resolved, position, fail, node);
+				primitiveTypeKey(mapping.irType);
+		};
+	}
+
+	function admittedPrimitive(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
+		return switch CPrimitiveTypeMapper.map(type, context.profile) {
+			case CTPrimitive(mapping):
+				final admitted = mapping.nullability == CPNonNullable && switch mapping.sourceType {
+					case CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
+					case _: false;
+				};
+				admitted ? mapping : rejected(fail, position, '$node:${mapping.cSpelling}');
+			case CTReference(identity, nullable): rejected(fail, position, '$node:reference-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTNativePointer(identity, nullable): rejected(fail, position, '$node:native-pointer-$identity-${nullable ? "nullable" : "non-null"}');
+			case CTUnsupported(reason): rejected(fail, position, '$node:$reason');
+		};
+	}
+
+	static function enumHasPayload(definition:EnumType, parameters:Array<Type>, position:Position, fail:(Position, String) -> Void, node:String):Bool {
+		for (name in definition.names) {
+			final field = definition.constructs.get(name);
+			if (field == null)
+				return rejected(fail, position, '$node:enum-constructor-missing:${enumPath(definition)}.$name');
+			if (constructorSignature(definition, parameters, field, fail, node).arguments.length > 0)
+				return true;
+		}
+		return false;
+	}
+
+	static function constructorSignature(definition:EnumType, parameters:Array<Type>, field:EnumField, fail:(Position, String) -> Void,
+			node:String):{arguments:Array<{name:String, type:Type}>, result:Type} {
+		final applied = TypeTools.applyTypeParameters(field.type, definition.params, parameters);
+		return switch applied {
+			case TFun(arguments, result): {
+					arguments: arguments.map(argument -> {name: argument.name, type: argument.t}),
+					result: result
+				};
+			case TEnum(_, _): {arguments: [], result: applied};
+			case _: rejected(fail, field.pos, '$node:invalid-enum-constructor-type:${enumPath(definition)}.${field.name}');
+		};
+	}
+
+	static function unwrapAliases(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Type {
+		return switch type {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? rejected(fail, position, '$node:unresolved-monomorph') : unwrapAliases(resolved, position, fail, node);
+			case TLazy(resolve): unwrapAliases(resolve(), position, fail, node);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				unwrapAliases(TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, fail, node);
+			case _: type;
+		};
+	}
+
+	static function displayName(definition:EnumType, argumentKeys:Array<String>):String
+		return argumentKeys.length == 0 ? enumPath(definition) : enumPath(definition) + "<" + argumentKeys.join(",") + ">";
+
+	static function primitiveTypeKey(type:HxcIRTypeRef):String {
+		return switch type {
+			case IRTBool: "bool";
+			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
+			case IRTFloat(width): 'f$width';
+			case _: throw new CBodyEmissionError("enum specialization contains a non-admitted primitive type");
+		};
+	}
+
+	static function enumPath(definition:EnumType):String
+		return definition.pack.concat([definition.name]).join(".");
+
+	static function moduleSourcePath(modulePath:String):String
+		return modulePath.split(".").join("/") + ".hx";
+
+	static function canonicalArray(values:Array<String>):String
+		return '${values.length}:${values.map(canonicalPart).join("")}';
+
+	static function canonicalPart(value:String):String
+		return '${Bytes.ofString(value).length}:$value';
+
+	static function identifierOrNull(symbols:CSymbolRegistry, request:Null<CSymbolRequest>):Null<CIdentifier>
+		return request == null ? null : symbols.identifierFor(request);
+
+	static function compareUtf8(left:String, right:String):Int {
+		final leftBytes = Bytes.ofString(left);
+		final rightBytes = Bytes.ofString(right);
+		final limit = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
+		for (index in 0...limit) {
+			final difference = leftBytes.get(index) - rightBytes.get(index);
+			if (difference != 0)
+				return difference;
+		}
+		return leftBytes.length - rightBytes.length;
+	}
+
+	static function rejected<T>(fail:(Position, String) -> Void, position:Position, node:String):T {
+		fail(position, node);
+		throw new CBodyEmissionError("enum rejection callback returned unexpectedly");
+	}
+}
+#else
+class CBodyEnum {
+	public function new() {}
+}
+#end

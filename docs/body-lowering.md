@@ -15,6 +15,9 @@ E3.T01 extends the same typed pipeline with closed anonymous value records,
 including nested records, explicit copies, and typed field addressing and
 projection. Its exact boundary is documented in [closed anonymous-record
 lowering](aggregate-lowering.md).
+E3.T02 adds bounded algebraic enum values, checked payload projection, and
+exhaustive tag control flow. Its representation and lifetime boundary is
+documented in [Haxe enum lowering](enum-lowering.md).
 This document remains the contract for individual body semantics; [static function
 lowering](function-lowering.md) owns graph, prototype, call, and
 executable-entry behavior, while [evaluation order](evaluation-order.md) owns
@@ -55,6 +58,10 @@ the stable-value and control-flow proof.
 - closed anonymous records containing admitted primitive or nested closed-record
   fields, including object literals, local copies, direct parameters/calls/
   returns, and read-only field access;
+- fieldless Haxe enums, payload enums whose fields are admitted primitive or
+  enum values, distinct concrete primitive generic instances, exhaustive
+  source `switch` patterns, and recursive enum values whose indirect backing
+  storage remains within the constructing function;
 - nested primitive blocks and parentheses; and
 - explicit value/void returns or an implicit final void return.
 
@@ -79,10 +86,11 @@ values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
 Default/optional/rest parameters, indirect calls, arbitrary collection/iterator
-lowering, general Haxe arrays, escaping spans, pattern/enum/string/Float
-switches, class instances and their fields, mutable/open/reflective records,
-record identity/equality, strings, closures, allocation, exceptions, and
-cleanup remain outside this slice. The first
+lowering, general Haxe arrays, escaping spans, string/Float switches, guarded
+patterns outside the admitted enum form, recursive enum parameters/returns,
+reference or aggregate enum payloads, class instances and their fields,
+mutable/open/reflective records, record or enum identity/equality, strings,
+closures, allocation, exceptions, and cleanup remain outside this slice. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 Source that remains after a terminating return or loop jump receives the same
@@ -112,6 +120,13 @@ admitted indexes retain an explicit negative/upper-bound fail-stop check. See
 [fixed arrays and span-based iteration](span-lowering.md) for the complete
 profile/build matrix and overflow/lifetime proof.
 
+Fieldless enums use structural C enum definitions. Payload enums use a
+structural discriminant enum, per-constructor payload structs, a payload union,
+and an outer value struct. Payload reads compare the tag before accessing the
+union member and call the registered C `abort` symbol on mismatch. Exhaustive
+HxcIR tag switches become structural C switches, and recursive local values use
+typed pointer declarators to function-local backing storage.
+
 Every local/global load first becomes a typed stable-value temporary; an unused
 read then becomes an explicit `(void)temporary` statement so source order is
 retained without native warnings. The emitted body slice selects no runtime
@@ -125,7 +140,7 @@ representation and operation semantics.
 `CCompiler` locates the real typed static `main`, including the Haxe case where
 the normalized module array omits its class but retains the typed entry-point
 call. It then collects the reachable direct-static graph before lowering any
-body. A wholly admitted primitive graph now emits an owned private header,
+body. A wholly admitted direct-value graph now emits an owned private header,
 source, `int main(void)` wrapper, and analyzed runtime/ABI/stdlib sidecars.
 
 Production remains fail-closed outside that exact slice. An unsupported body,
@@ -146,6 +161,7 @@ npm run test:evaluation-order
 npm run test:arithmetic-semantics
 npm run test:span-lowering
 npm run test:aggregate-lowering
+npm run test:enum-lowering
 npm run snapshots:check
 ```
 
@@ -157,7 +173,9 @@ compile/run mapped and unmapped C with
 available GCC and Clang at `-O0` and `-O2` under
 `-std=c11 -Wall -Wextra -Werror -Wconversion -Wsign-conversion` and
 `-pedantic-errors`. Required CI lanes pin each compiler family and verify its
-command identity before compiling the checked-in generated snapshots.
+command identity before compiling the checked-in generated snapshots. The enum
+suite additionally pairs each required C compiler with its C++17 companion to
+verify private tagged-union and recursive layout.
 
 This slice has no public C ABI, broad standard-library support, allocation, or
 `hxrt` dependency. The one admitted `Std.int` intrinsic is compiler lowering,

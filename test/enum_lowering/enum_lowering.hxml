@@ -1,0 +1,8 @@
+-cp test/enum_lowering/
+-cp test/enum_lowering/fixtures/positive/
+-lib reflaxe.c
+
+--macro EnumLoweringProbe.install()
+
+-main EnumFixture
+--interp

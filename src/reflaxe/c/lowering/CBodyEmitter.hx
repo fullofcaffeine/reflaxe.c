@@ -7,7 +7,14 @@ import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
+import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 #end
+
+private enum CBodyEnumCRepresentation {
+	CBECNative;
+	CBECTagged;
+}
 
 /** Lowers the admitted direct-value HxcIR body subset into structural strict C11. */
 class CBodyEmitter {
@@ -16,9 +23,24 @@ class CBodyEmitter {
 	final aggregateFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final aggregateFieldOrder:Map<String, Array<String>> = [];
 	final aggregateInstanceOrder:Array<String> = [];
+	final enumRepresentations:Map<String, CBodyEnumCRepresentation> = [];
+	final enumValueTags:Map<String, CIdentifier> = [];
+	final enumDiscriminantTags:Map<String, CIdentifier> = [];
+	final enumPayloadUnionTags:Map<String, CIdentifier> = [];
+	final enumTagMembers:Map<String, CIdentifier> = [];
+	final enumPayloadMembers:Map<String, CIdentifier> = [];
+	final enumCaseOrder:Map<String, Array<String>> = [];
+	final enumCaseValues:Map<String, Int> = [];
+	final enumCaseDiscriminants:Map<String, CIdentifier> = [];
+	final enumCasePayloadStructTags:Map<String, CIdentifier> = [];
+	final enumCaseUnionMembers:Map<String, CIdentifier> = [];
+	final enumPayloadNames:Map<String, Array<String>> = [];
+	final enumPayloadFieldNames:Map<String, CIdentifier> = [];
+	final enumPayloadFieldTypes:Map<String, HxcIRTypeRef> = [];
+	final enumInstanceOrder:Array<String> = [];
 
 	#if (macro || reflaxe_runtime)
-	public function new(?aggregates:Array<CLoweredBodyAggregate>) {
+	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>) {
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
@@ -31,6 +53,42 @@ class CBodyEmitter {
 					aggregateFieldTypes.set(aggregateFieldKey(instanceId, field.semanticName), field.type.irType);
 				}
 				aggregateFieldOrder.set(instanceId, order);
+			}
+		}
+		if (enums != null) {
+			for (value in enums) {
+				final instanceId = value.prepared.instanceId;
+				enumInstanceOrder.push(instanceId);
+				enumRepresentations.set(instanceId, value.prepared.representation == CBERNativeEnum ? CBECNative : CBECTagged);
+				enumValueTags.set(instanceId, value.valueTag);
+				enumDiscriminantTags.set(instanceId, value.discriminantTag);
+				if (value.payloadUnionTag != null)
+					enumPayloadUnionTags.set(instanceId, value.payloadUnionTag);
+				if (value.tagMember != null)
+					enumTagMembers.set(instanceId, value.tagMember);
+				if (value.payloadMember != null)
+					enumPayloadMembers.set(instanceId, value.payloadMember);
+				final caseOrder:Array<String> = [];
+				for (tagCase in value.cases) {
+					final caseName = tagCase.prepared.name;
+					final caseKey = enumCaseKey(instanceId, caseName);
+					caseOrder.push(caseName);
+					enumCaseValues.set(caseKey, tagCase.prepared.tagValue);
+					enumCaseDiscriminants.set(caseKey, tagCase.discriminant);
+					if (tagCase.payloadStructTag != null)
+						enumCasePayloadStructTags.set(caseKey, tagCase.payloadStructTag);
+					if (tagCase.unionMember != null)
+						enumCaseUnionMembers.set(caseKey, tagCase.unionMember);
+					final payloadNames:Array<String> = [];
+					for (payload in tagCase.payload) {
+						payloadNames.push(payload.prepared.name);
+						final payloadKey = enumPayloadKey(instanceId, caseName, payload.prepared.name);
+						enumPayloadFieldNames.set(payloadKey, payload.cName);
+						enumPayloadFieldTypes.set(payloadKey, payload.prepared.storageType());
+					}
+					enumPayloadNames.set(caseKey, payloadNames);
+				}
+				enumCaseOrder.set(instanceId, caseOrder);
 			}
 		}
 	}
@@ -82,6 +140,14 @@ class CBodyEmitter {
 						emitAggregateConstruction(statements, values, referencedValues, instruction, instanceId, fields, temporaryNames, lineDirectives, fn.id);
 					case IRIOProject(valueId, fieldName):
 						emitAggregateProjection(statements, values, referencedValues, instruction, valueId, fieldName, fn, temporaryNames, lineDirectives);
+					case IRIOConstructTag(instanceId, tagName, payload):
+						emitEnumConstruction(statements, values, referencedValues, instruction, instanceId, tagName, payload, temporaryNames, lineDirectives,
+							fn.id);
+					case IRIOMatchTag(valueId, tagName):
+						emitEnumMatch(statements, values, referencedValues, instruction, valueId, tagName, fn, temporaryNames, lineDirectives);
+					case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
+						emitEnumProjection(statements, values, referencedValues, instruction, valueId, tagName, payloadIndex, fn, temporaryNames,
+							boundsAbortName, lineDirectives);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
@@ -174,7 +240,7 @@ class CBodyEmitter {
 				continue;
 			}
 			addLineDirective(statements, terminator.source, lineDirectives);
-			emitTerminator(statements, values, terminator, labelNames, fn.id);
+			emitTerminator(statements, values, terminator, labelNames, fn);
 		}
 		if (terminatedByTailLoop) {
 			if (fn.blocks.length != 1) {
@@ -203,6 +269,11 @@ class CBodyEmitter {
 						}
 					case IRIOProject(valueId, _):
 						referenced.set(valueId, true);
+					case IRIOConstructTag(_, _, payload):
+						for (valueId in payload)
+							referenced.set(valueId, true);
+					case IRIOMatchTag(valueId, _) | IRIOProjectTag(valueId, _, _, _):
+						referenced.set(valueId, true);
 					case IRIOInitializeFixedArray(_, valueIds, _, _):
 						for (valueId in valueIds) {
 							referenced.set(valueId, true);
@@ -228,6 +299,8 @@ class CBodyEmitter {
 					case IRTBranch(conditionValueId, _, _):
 						referenced.set(conditionValueId, true);
 					case IRTSwitch(valueId, _, _):
+						referenced.set(valueId, true);
+					case IRTTagSwitch(valueId, _, _):
 						referenced.set(valueId, true);
 					case _:
 				}
@@ -305,11 +378,12 @@ class CBodyEmitter {
 			statements.push(SExpr(ECast(new CType(TVoid), DName(null), sourceExpression)));
 			return;
 		}
+		final declaration = typedDeclarator(result.type, DName(temporaryName));
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],
-			type: cType(result.type),
-			declarator: DName(temporaryName),
+			type: declaration.type,
+			declarator: declaration.declarator,
 			initializer: IExpr(sourceExpression),
 			attributes: []
 		}));
@@ -386,6 +460,77 @@ class CBodyEmitter {
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
 	}
 
+	function emitEnumConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			instanceId:String, tagName:String, payload:Array<String>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+		final discriminant = EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName));
+		final representation = requireEnumRepresentation(instanceId);
+		final expression:CExpr = switch representation {
+			case CBECNative:
+				if (payload.length != 0)
+					fail('native enum construction `${instruction.id}` in `$functionId` unexpectedly carries payload');
+				discriminant;
+			case CBECTagged:
+				final initializers:Array<CInitializerItem> = [
+					{
+						designators: [DField(requireEnumTagMember(instanceId))],
+						value: IExpr(discriminant)
+					}
+				];
+				final payloadNames = requireEnumPayloadNames(instanceId, tagName);
+				if (payloadNames.length != payload.length) {
+					fail('tagged enum construction `${instruction.id}` in `$functionId` lost its validated payload layout');
+				}
+				for (index in 0...payload.length) {
+					initializers.push({
+						designators: [
+							DField(requireEnumPayloadMember(instanceId)),
+							DField(requireEnumCaseUnionMember(instanceId, tagName)),
+							DField(requireEnumPayloadFieldName(instanceId, tagName, payloadNames[index]))
+						],
+						value: IExpr(requireValue(values, payload[index], functionId))
+					});
+				}
+				ECompoundLiteral(cType(IRTInstance(instanceId)), DName(null), IList(initializers));
+		};
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId);
+	}
+
+	function emitEnumMatch(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			valueId:String, tagName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		final instanceId = requireEnumInstanceId(valueType(fn, valueId), instruction.id, fn.id);
+		final expression = EBinary(Equal, enumTagExpression(requireValue(values, valueId, fn.id), instanceId),
+			EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName)));
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
+	}
+
+	function emitEnumProjection(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			valueId:String, tagName:String, payloadIndex:Int, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, boundsAbortName:Null<CIdentifier>,
+			lineDirectives:Bool):Void {
+		final instanceId = requireEnumInstanceId(valueType(fn, valueId), instruction.id, fn.id);
+		if (requireEnumRepresentation(instanceId) != CBECTagged) {
+			fail('payload projection `${instruction.id}` in `${fn.id}` requires a tagged enum');
+		}
+		final value = requireValue(values, valueId, fn.id);
+		final discriminant = EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SIf(EBinary(NotEqual, enumTagExpression(value, instanceId), discriminant),
+			SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, instruction.id, fn.id)), [])), null));
+		final payloadNames = requireEnumPayloadNames(instanceId, tagName);
+		if (payloadIndex < 0 || payloadIndex >= payloadNames.length) {
+			fail('payload projection `${instruction.id}` in `${fn.id}` has invalid field index `$payloadIndex`');
+		}
+		final expression = EMember(EMember(EMember(value, requireEnumPayloadMember(instanceId), false), requireEnumCaseUnionMember(instanceId, tagName), false),
+			requireEnumPayloadFieldName(instanceId, tagName, payloadNames[payloadIndex]), false);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
+	}
+
+	function enumTagExpression(value:CExpr, instanceId:String):CExpr {
+		return switch requireEnumRepresentation(instanceId) {
+			case CBECNative: value;
+			case CBECTagged: EMember(value, requireEnumTagMember(instanceId), false);
+		};
+	}
+
 	function emitInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
 			instruction:HxcIRInstruction, localId:String, valueId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
 		if (instruction.result != null) {
@@ -395,12 +540,13 @@ class CBodyEmitter {
 			fail('local `$localId` in `${fn.id}` is initialized more than once');
 		}
 		final local = requireLocal(fn, localId);
+		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
 		addLineDirective(statements, instruction.source, lineDirectives);
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],
-			type: cType(local.type),
-			declarator: DName(requireLocalName(localNames, localId, fn.id)),
+			type: declaration.type,
+			declarator: declaration.declarator,
 			initializer: IExpr(requireValue(values, valueId, fn.id)),
 			attributes: []
 		}));
@@ -500,7 +646,8 @@ class CBodyEmitter {
 	}
 
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
-			functionId:String):Void {
+			fn:HxcIRFunction):Void {
+		final functionId = fn.id;
 		switch terminator.kind {
 			case IRTReturn(valueId, cleanup):
 				if (cleanup.length != 0) {
@@ -533,6 +680,26 @@ class CBodyEmitter {
 					body: [SGoto(requireLabelName(labelNames, defaultEdge.targetBlockId, functionId))]
 				});
 				statements.push(SSwitch(requireValue(values, valueId, functionId), emittedCases));
+			case IRTTagSwitch(valueId, cases, defaultEdge):
+				final instanceId = requireEnumInstanceId(valueType(fn, valueId), "terminator", functionId);
+				final emittedCases:Array<CCase> = [];
+				for (item in cases) {
+					requirePlainEdge(item.edge, functionId);
+					emittedCases.push({
+						values: [EIdentifier(requireEnumCaseDiscriminant(instanceId, item.tagName))],
+						isDefault: false,
+						body: [SGoto(requireLabelName(labelNames, item.edge.targetBlockId, functionId))]
+					});
+				}
+				if (defaultEdge != null) {
+					requirePlainEdge(defaultEdge, functionId);
+					emittedCases.push({
+						values: [],
+						isDefault: true,
+						body: [SGoto(requireLabelName(labelNames, defaultEdge.targetBlockId, functionId))]
+					});
+				}
+				statements.push(SSwitch(enumTagExpression(requireValue(values, valueId, functionId), instanceId), emittedCases));
 			case _:
 				fail('function `$functionId` has a terminator outside the sequenced direct-value subset');
 		}
@@ -695,9 +862,28 @@ class CBodyEmitter {
 			case IRTAbiInteger(IRAKSize): new CType(TSizeT);
 			case IRTFloat(64): new CType(TDouble);
 			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
-			case IRTInstance(instanceId): new CType(TStruct(requireAggregateTag(instanceId)));
+			case IRTInstance(instanceId):
+				final aggregateTag = aggregateTags.get(instanceId);
+				if (aggregateTag != null) {
+					new CType(TStruct(aggregateTag));
+				} else {
+					switch requireEnumRepresentation(instanceId) {
+						case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
+						case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+					}
+				}
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` is outside the admitted direct-value C body subset');
+		};
+	}
+
+	function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
+		return switch type {
+			case IRTPointer(pointee, _):
+				final nested = typedDeclarator(pointee, DPointer(inner, []));
+				{type: nested.type, declarator: nested.declarator};
+			case _:
+				{type: cType(type), declarator: inner};
 		};
 	}
 
@@ -735,6 +921,8 @@ class CBodyEmitter {
 					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
 						addUnique(headers, "stddef.h");
 						addUnique(headers, "stdlib.h");
+					case IRIOProjectTag(_, _, _, IRTCPCheckedAbort(_, _)):
+						addUnique(headers, "stdlib.h");
 					case _:
 				}
 			}
@@ -746,9 +934,10 @@ class CBodyEmitter {
 	public function parameters(fn:HxcIRFunction, names:Map<String, CIdentifier>):Array<CParam> {
 		final result:Array<CParam> = [];
 		for (parameter in fn.parameters) {
+			final declaration = typedDeclarator(parameter.type, DName(requireParameterName(names, parameter.id, fn.id)));
 			result.push({
-				type: cType(parameter.type),
-				declarator: DName(requireParameterName(names, parameter.id, fn.id)),
+				type: declaration.type,
+				declarator: declaration.declarator,
 				attributes: []
 			});
 		}
@@ -770,6 +959,78 @@ class CBodyEmitter {
 				});
 			}
 			result.push(DStruct(requireAggregateTag(instanceId), fields, []));
+		}
+		return result;
+	}
+
+	public function enumDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in enumInstanceOrder) {
+			if (requireEnumRepresentation(instanceId) == CBECTagged) {
+				result.push(DForwardStruct(requireEnumValueTag(instanceId), []));
+			}
+		}
+		for (instanceId in enumInstanceOrder) {
+			final enumerators = requireEnumCaseOrder(instanceId).map(caseName -> {
+				name: requireEnumCaseDiscriminant(instanceId, caseName),
+				value: EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName)))),
+				attributes: []
+			});
+			switch requireEnumRepresentation(instanceId) {
+				case CBECNative:
+					result.push(DEnum(requireEnumValueTag(instanceId), enumerators, []));
+				case CBECTagged:
+					result.push(DEnum(requireEnumDiscriminantTag(instanceId), enumerators, []));
+					for (caseName in requireEnumCaseOrder(instanceId)) {
+						final payloadNames = requireEnumPayloadNames(instanceId, caseName);
+						if (payloadNames.length == 0)
+							continue;
+						final fields:Array<CField> = [];
+						for (payloadName in payloadNames) {
+							final declaration = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, payloadName),
+								DName(requireEnumPayloadFieldName(instanceId, caseName, payloadName)));
+							fields.push({
+								type: declaration.type,
+								declarator: declaration.declarator,
+								bitWidth: null,
+								alignments: [],
+								attributes: []
+							});
+						}
+						result.push(DStruct(requireEnumCasePayloadStructTag(instanceId, caseName), fields, []));
+					}
+					final unionFields:Array<CField> = [];
+					for (caseName in requireEnumCaseOrder(instanceId)) {
+						if (requireEnumPayloadNames(instanceId, caseName).length == 0)
+							continue;
+						unionFields.push({
+							type: new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName))),
+							declarator: DName(requireEnumCaseUnionMember(instanceId, caseName)),
+							bitWidth: null,
+							alignments: [],
+							attributes: []
+						});
+					}
+					if (unionFields.length == 0)
+						fail('tagged enum `$instanceId` has no payload union member');
+					result.push(DUnion(requireEnumPayloadUnionTag(instanceId), unionFields, []));
+					result.push(DStruct(requireEnumValueTag(instanceId), [
+						{
+							type: new CType(TEnum(requireEnumDiscriminantTag(instanceId))),
+							declarator: DName(requireEnumTagMember(instanceId)),
+							bitWidth: null,
+							alignments: [],
+							attributes: []
+						},
+						{
+							type: new CType(TUnion(requireEnumPayloadUnionTag(instanceId))),
+							declarator: DName(requireEnumPayloadMember(instanceId)),
+							bitWidth: null,
+							alignments: [],
+							attributes: []
+						}
+					], []));
+			}
 		}
 		return result;
 	}
@@ -810,7 +1071,63 @@ class CBodyEmitter {
 		return result;
 	}
 
-	function addTypeHeaders(headers:Array<String>, type:HxcIRTypeRef):Void {
+	public function enumLayoutAssertions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in enumInstanceOrder) {
+			for (caseName in requireEnumCaseOrder(instanceId)) {
+				result.push(DStaticAssert(EBinary(Equal, EIdentifier(requireEnumCaseDiscriminant(instanceId, caseName)),
+					EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName))))),
+					'enum ${requireEnumValueTag(instanceId).value} case $caseName retains its Haxe discriminant'));
+			}
+			if (requireEnumRepresentation(instanceId) == CBECNative)
+				continue;
+			final structType = new CType(TStruct(requireEnumValueTag(instanceId)));
+			final tagType = new CType(TEnum(requireEnumDiscriminantTag(instanceId)));
+			final unionType = new CType(TUnion(requireEnumPayloadUnionTag(instanceId)));
+			final tagMember = requireEnumTagMember(instanceId);
+			final payloadMember = requireEnumPayloadMember(instanceId);
+			result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), tagMember), EInt(CIntegerLiteral.decimal("0"))),
+				'tagged enum ${requireEnumValueTag(instanceId).value} begins with its discriminant'));
+			result.push(DStaticAssert(EBinary(GreaterEqual, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(tagType, DName(null))),
+				'tagged enum ${requireEnumValueTag(instanceId).value} payload follows its discriminant'));
+			result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
+				EBinary(Add, EOffsetOf(structType, DName(null), payloadMember), ESizeOfType(unionType, DName(null)))),
+				'tagged enum ${requireEnumValueTag(instanceId).value} contains its payload union'));
+			for (caseName in requireEnumCaseOrder(instanceId)) {
+				final payloadNames = requireEnumPayloadNames(instanceId, caseName);
+				if (payloadNames.length == 0)
+					continue;
+				final caseStructType = new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName)));
+				final unionMember = requireEnumCaseUnionMember(instanceId, caseName);
+				result.push(DStaticAssert(EBinary(Equal, EOffsetOf(unionType, DName(null), unionMember), EInt(CIntegerLiteral.decimal("0"))),
+					'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName begins at union offset zero'));
+				for (index in 0...payloadNames.length) {
+					final payloadName = payloadNames[index];
+					final fieldName = requireEnumPayloadFieldName(instanceId, caseName, payloadName);
+					final fieldType = requireEnumPayloadFieldType(instanceId, caseName, payloadName);
+					final typed = typedDeclarator(fieldType, DName(null));
+					final offset = EOffsetOf(caseStructType, DName(null), fieldName);
+					if (index == 0) {
+						result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
+							'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName first payload begins at zero'));
+					} else {
+						final previousName = payloadNames[index - 1];
+						final previousField = requireEnumPayloadFieldName(instanceId, caseName, previousName);
+						final previousType = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, previousName), DName(null));
+						result.push(DStaticAssert(EBinary(GreaterEqual, offset,
+							EBinary(Add, EOffsetOf(caseStructType, DName(null), previousField), ESizeOfType(previousType.type, previousType.declarator))),
+							'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName payload $index follows its predecessor'));
+					}
+					result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(caseStructType, DName(null)), EAlignOfType(typed.type, typed.declarator)),
+						'tagged enum ${requireEnumValueTag(instanceId).value} case $caseName admits payload $index alignment'));
+				}
+			}
+		}
+		return result;
+	}
+
+	function addTypeHeaders(headers:Array<String>, type:HxcIRTypeRef, ?visitedInstances:Map<String, Bool>):Void {
+		final visited:Map<String, Bool> = visitedInstances == null ? [] : visitedInstances;
 		switch type {
 			case IRTBool:
 				addUnique(headers, "stdbool.h");
@@ -821,23 +1138,33 @@ class CBodyEmitter {
 			case IRTString:
 				addUnique(headers, "hxrt/string_literal.h");
 			case IRTInstance(instanceId):
+				if (visited.exists(instanceId))
+					return;
+				visited.set(instanceId, true);
 				final order = aggregateFieldOrder.get(instanceId);
-				if (order == null) {
-					throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized C layout');
-				}
-				for (fieldName in order) {
-					final fieldType = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
-					if (fieldType == null) {
-						throw new CBodyEmissionError('direct aggregate instance `$instanceId` lost field type `$fieldName`');
+				if (order != null) {
+					for (fieldName in order) {
+						final fieldType = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
+						if (fieldType == null) {
+							throw new CBodyEmissionError('direct aggregate instance `$instanceId` lost field type `$fieldName`');
+						}
+						addTypeHeaders(headers, fieldType, visited);
 					}
-					addTypeHeaders(headers, fieldType);
+				} else if (enumRepresentations.exists(instanceId)) {
+					for (caseName in requireEnumCaseOrder(instanceId)) {
+						for (payloadName in requireEnumPayloadNames(instanceId, caseName)) {
+							addTypeHeaders(headers, requireEnumPayloadFieldType(instanceId, caseName, payloadName), visited);
+						}
+					}
+				} else {
+					throw new CBodyEmissionError('direct instance `$instanceId` has no finalized C layout');
 				}
 			case IRTPointer(pointee, _):
-				addTypeHeaders(headers, pointee);
+				addTypeHeaders(headers, pointee, visited);
 			case IRTFixedArray(element, _, _):
-				addTypeHeaders(headers, element);
+				addTypeHeaders(headers, element, visited);
 			case IRTSpan(element, _):
-				addTypeHeaders(headers, element);
+				addTypeHeaders(headers, element, visited);
 				addUnique(headers, "stddef.h");
 			case IRTVoid | IRTFloat(64):
 			case _:
@@ -935,11 +1262,12 @@ class CBodyEmitter {
 			statements.push(SExpr(callExpression));
 			return doesNotReturn;
 		}
+		final declaration = typedDeclarator(result.type, DName(temporaryName));
 		statements.push(SDecl({
 			storage: [],
 			alignments: [],
-			type: cType(result.type),
-			declarator: DName(temporaryName),
+			type: declaration.type,
+			declarator: declaration.declarator,
 			initializer: IExpr(callExpression),
 			attributes: []
 		}));
@@ -1089,8 +1417,135 @@ class CBodyEmitter {
 		return order;
 	}
 
+	function requireEnumRepresentation(instanceId:String):CBodyEnumCRepresentation {
+		final representation = enumRepresentations.get(instanceId);
+		if (representation == null) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no finalized C representation');
+		}
+		return representation;
+	}
+
+	function requireEnumValueTag(instanceId:String):CIdentifier {
+		final tag = enumValueTags.get(instanceId);
+		if (tag == null) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no finalized C value tag');
+		}
+		return tag;
+	}
+
+	function requireEnumDiscriminantTag(instanceId:String):CIdentifier {
+		final tag = enumDiscriminantTags.get(instanceId);
+		if (tag == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized discriminant tag');
+		}
+		return tag;
+	}
+
+	function requireEnumPayloadUnionTag(instanceId:String):CIdentifier {
+		final tag = enumPayloadUnionTags.get(instanceId);
+		if (tag == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized payload-union tag');
+		}
+		return tag;
+	}
+
+	function requireEnumTagMember(instanceId:String):CIdentifier {
+		final name = enumTagMembers.get(instanceId);
+		if (name == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized discriminant member');
+		}
+		return name;
+	}
+
+	function requireEnumPayloadMember(instanceId:String):CIdentifier {
+		final name = enumPayloadMembers.get(instanceId);
+		if (name == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized payload member');
+		}
+		return name;
+	}
+
+	function requireEnumCaseOrder(instanceId:String):Array<String> {
+		final order = enumCaseOrder.get(instanceId);
+		if (order == null) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no finalized constructor order');
+		}
+		return order;
+	}
+
+	function requireEnumCaseValue(instanceId:String, caseName:String):Int {
+		final key = enumCaseKey(instanceId, caseName);
+		if (!enumCaseValues.exists(key)) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no discriminant for constructor `$caseName`');
+		}
+		final value = enumCaseValues.get(key);
+		return value == null ? fail('direct enum instance `$instanceId` lost discriminant `$caseName`') : value;
+	}
+
+	function requireEnumCaseDiscriminant(instanceId:String, caseName:String):CIdentifier {
+		final name = enumCaseDiscriminants.get(enumCaseKey(instanceId, caseName));
+		if (name == null) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no finalized discriminant for constructor `$caseName`');
+		}
+		return name;
+	}
+
+	function requireEnumCasePayloadStructTag(instanceId:String, caseName:String):CIdentifier {
+		final tag = enumCasePayloadStructTags.get(enumCaseKey(instanceId, caseName));
+		if (tag == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no payload struct for constructor `$caseName`');
+		}
+		return tag;
+	}
+
+	function requireEnumCaseUnionMember(instanceId:String, caseName:String):CIdentifier {
+		final name = enumCaseUnionMembers.get(enumCaseKey(instanceId, caseName));
+		if (name == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no payload-union member for constructor `$caseName`');
+		}
+		return name;
+	}
+
+	function requireEnumPayloadNames(instanceId:String, caseName:String):Array<String> {
+		final names = enumPayloadNames.get(enumCaseKey(instanceId, caseName));
+		if (names == null) {
+			throw new CBodyEmissionError('direct enum instance `$instanceId` has no payload layout for constructor `$caseName`');
+		}
+		return names;
+	}
+
+	function requireEnumPayloadFieldName(instanceId:String, caseName:String, payloadName:String):CIdentifier {
+		final name = enumPayloadFieldNames.get(enumPayloadKey(instanceId, caseName, payloadName));
+		if (name == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized `$caseName.$payloadName` payload member');
+		}
+		return name;
+	}
+
+	function requireEnumPayloadFieldType(instanceId:String, caseName:String, payloadName:String):HxcIRTypeRef {
+		final type = enumPayloadFieldTypes.get(enumPayloadKey(instanceId, caseName, payloadName));
+		if (type == null) {
+			throw new CBodyEmissionError('tagged enum instance `$instanceId` has no finalized type for `$caseName.$payloadName`');
+		}
+		return type;
+	}
+
+	function requireEnumInstanceId(type:Null<HxcIRTypeRef>, instructionId:String, functionId:String):String {
+		return switch type {
+			case IRTInstance(instanceId) if (enumRepresentations.exists(instanceId)): instanceId;
+			case _:
+				throw new CBodyEmissionError('enum use `$instructionId` in `$functionId` lost its finalized enum instance type');
+		};
+	}
+
 	static function aggregateFieldKey(instanceId:String, fieldName:String):String
 		return instanceId + "\x00" + fieldName;
+
+	static function enumCaseKey(instanceId:String, caseName:String):String
+		return instanceId + "\x00" + caseName;
+
+	static function enumPayloadKey(instanceId:String, caseName:String, payloadName:String):String
+		return enumCaseKey(instanceId, caseName) + "\x00" + payloadName;
 
 	static function requireResult(instruction:HxcIRInstruction, functionId:String):HxcIRResult {
 		final result = instruction.result;

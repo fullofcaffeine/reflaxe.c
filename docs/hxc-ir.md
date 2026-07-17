@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 3
+the structural C AST. Its schema is internal to the compiler: schema version 4
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -14,6 +14,9 @@ UTF-8 constants and explicit literal-only hosted output intent. E2.T08 adds fixe
 identity, ordered initialization, and explicit checked/proven bounds policies.
 E3.T01 consumes aggregate type declarations/instances, named construction,
 projection, and structural field places for the bounded closed-record slice.
+E3.T02 adds ordered tagged cases, checked payload projection, tag matching,
+exhaustive tag-switch edges, and finite recursive enum representation to schema
+version 4 for the bounded direct-value slice.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -43,6 +46,13 @@ pretending a borrowed view is an owned aggregate or runtime object.
 For closed records, the declaration owns canonical ordered fields and the
 instance records direct representation; C naming and layout remain later
 emission decisions.
+For Haxe enums, the declaration owns source-ordered cases, explicit integer
+discriminants, and named source-ordered payload fields. A concrete instance
+records either direct or tagged representation intent. Construction names the
+instance, case, and ordered payload values; matching and projection retain the
+case identity; and `IRTTagSwitch` carries case-to-edge mappings rather than a C
+switch fragment. Recursive payload storage is an explicit pointer type, never
+an infinitely recursive by-value instance.
 `IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
@@ -91,6 +101,15 @@ need to recover intent from target syntax.
   declaration order, with a matching value type; projection names a real field
   and returns its exact type; and a field place resolves only from a compatible
   aggregate base;
+- tagged construction names a declared case and supplies exactly its ordered
+  payload types; matching uses a case from the value's concrete instance;
+  payload projection returns the exact named field type and carries the
+  resolved profile/build checked-abort policy;
+- tag-switch cases are unique and compatible with the subject instance. An
+  exhaustive switch names every constructor exactly once and has no default
+  edge; every case edge still validates block arguments and cleanup;
+- direct by-value instance dependencies are acyclic. Recursive enum edges must
+  be represented indirectly so every emitted C object has finite size;
 - return terminators carry no value for `Void`, carry exactly one value for a
   non-`Void` function, and match the declared return type;
 - calls, conversions, allocation, deallocation, retain, and trace operations
@@ -158,7 +177,8 @@ operation, `IRIProgramLocal` names a compilation-local specialized helper, and
 `IRIRuntime` names the exact requested feature. Runtime call dispatch likewise
 records a feature and operation. Merely constructing a type, calling a direct
 function, constructing or copying a closed record, initializing a fixed
-array/span, checking bounds, or using cleanup selects nothing from `hxrt`.
+array/span, constructing/matching a bounded enum, checking a tag or bounds, or
+using cleanup selects nothing from `hxrt`.
 
 E2.T07 is the first bounded compiler-selected exception: a compiler-known
 literal remains direct static UTF-8 storage, while its observable hosted output
@@ -179,14 +199,16 @@ The body frontend calls
 `HxcIRDiagnostic.unsupportedTypedAstNode(profile, nodeKind, context, span)` and
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
-of an unsupported node. A fully admitted primitive, local fixed-array/span, or
-closed anonymous-record static graph reaches validated HxcIR, structural C, and an owned runtime-free
-executable project. The separately admitted literal-output edge reaches the
-exact selective runtime plan above; nonliteral strings and broader output APIs
-still stop without output. See
+of an unsupported node. A fully admitted primitive, local fixed-array/span,
+closed anonymous-record, or bounded direct-value enum static graph reaches
+validated HxcIR, structural C, and an owned runtime-free executable project.
+Recursive enum parameters and returns remain rejected until escape/lifetime
+analysis can choose owned storage. The separately admitted literal-output edge
+reaches the exact selective runtime plan above; nonliteral strings and broader
+output APIs still stop without output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md), plus [closed anonymous-record
-lowering](aggregate-lowering.md).
+lowering](aggregate-lowering.md) and [Haxe enum lowering](enum-lowering.md).
 
 ## Canonical dump
 
@@ -222,7 +244,9 @@ forms. Its named runtime requests are explicit non-primitive coverage.
 cleanup order, path redaction, constant/load/address/store/initializer type
 mismatches, primitive runtime rejection, missing nullable-unwrap failure,
 switch subject/case-family mismatch, void/value return mismatches, return-type
-mismatch, a bad UTF-8 byte length, missing hosted-output failure, and `HXC1001`.
+mismatch, tag construction/projection mismatches, invalid enum representation,
+non-exhaustive and redundant-default tag switches, illegal direct recursive
+layout, a bad UTF-8 byte length, missing hosted-output failure, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
@@ -242,6 +266,12 @@ The aggregate-lowering suite adds source-backed named construction, direct
 record instances, explicit copies and field addresses, dependency-first private
 structs, and exact C/C++17 layout agreement under both required compiler
 families.
+The enum-lowering suite adds source-backed native fieldless enums and payload
+tagged unions, two concrete primitive generic specializations, checked payload
+projection, exhaustive tag switches, and a recursive local value with explicit
+indirect storage. Its C and C++17 consumers verify private tags, size,
+alignment, offsets, construction, and recursive layout under both compiler
+families without claiming general generic monomorphization or public ABI.
 The separate string-output suite selects only the four-feature literal/I/O
 closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
 closed-stdout failure, and runs the generated project at both optimization

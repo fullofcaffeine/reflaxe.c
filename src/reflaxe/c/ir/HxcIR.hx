@@ -76,9 +76,16 @@ typedef HxcIRTypeField = {
 	final source:HxcSourceSpan;
 }
 
+typedef HxcIRTagPayload = {
+	final name:String;
+	final type:HxcIRTypeRef;
+	final source:HxcSourceSpan;
+}
+
 typedef HxcIRTagCase = {
 	final name:String;
-	final payload:Array<HxcIRTypeRef>;
+	final tagValue:Int;
+	final payload:Array<HxcIRTagPayload>;
 	final source:HxcSourceSpan;
 }
 
@@ -173,6 +180,11 @@ enum HxcIRImplementation {
 	IRIRuntime(featureId:String);
 }
 
+/** A payload projection remains checked before C syntax is selected. */
+enum HxcIRTagCheckPolicy {
+	IRTCPCheckedAbort(profile:String, buildMode:String);
+}
+
 enum HxcIRConversionKind {
 	IRCNumericExact;
 	IRCNumericWrapping;
@@ -263,6 +275,7 @@ enum HxcIRInstructionKind {
 	IRIOProject(valueId:String, fieldName:String);
 	IRIOConstructTag(instanceId:String, tagName:String, payload:Array<String>);
 	IRIOMatchTag(valueId:String, tagName:String);
+	IRIOProjectTag(valueId:String, tagName:String, payloadIndex:Int, check:HxcIRTagCheckPolicy);
 	IRIOAllocate(type:HxcIRTypeRef, intent:HxcIRAllocationIntent, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
 	IRIODeallocate(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIORetain(place:HxcIRPlace, implementation:HxcIRImplementation);
@@ -319,10 +332,16 @@ typedef HxcIRSwitchCase = {
 	final edge:HxcIRBlockEdge;
 }
 
+typedef HxcIRTagSwitchCase = {
+	final tagName:String;
+	final edge:HxcIRBlockEdge;
+}
+
 enum HxcIRTerminatorKind {
 	IRTJump(edge:HxcIRBlockEdge);
 	IRTBranch(conditionValueId:String, whenTrue:HxcIRBlockEdge, whenFalse:HxcIRBlockEdge);
 	IRTSwitch(valueId:String, cases:Array<HxcIRSwitchCase>, defaultEdge:HxcIRBlockEdge);
+	IRTTagSwitch(valueId:String, cases:Array<HxcIRTagSwitchCase>, defaultEdge:Null<HxcIRBlockEdge>);
 	IRTReturn(valueId:Null<String>, cleanup:Array<HxcIRCleanupStep>);
 	IRTThrow(valueId:String, edge:HxcIRFailureEdge);
 	IRTUnreachable;

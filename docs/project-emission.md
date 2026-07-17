@@ -61,7 +61,7 @@ The emitter owns these schema-1 sidecars:
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   direct executable's schema-2 `hxc-runtime-plan-v2`
-  analyzed record. Primitive and closed-record graphs use
+  analyzed record. Primitive, closed-record, and bounded enum graphs use
   `analyzed-runtime-free`; literal
   hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
   `status`, `string-literal`, and `io`. Both are produced by the typed runtime
@@ -223,9 +223,9 @@ units through CMake and Meson. Paths include spaces and apostrophes, and an
 adversarial string definition contains semicolon, CMake generator-expression,
 quote, and backslash characters. The native matrix also compiles every emitted
 header and links/runs the structural project under GCC and Clang. The
-function-lowering, arithmetic, and aggregate-lowering suites prove that the
-narrow direct-value production paths pass through this ownership boundary with
-analyzed empty runtime/ABI/stdlib records, a typed static-initialization plan,
+function-lowering, arithmetic, aggregate-lowering, and enum-lowering suites
+prove that the narrow direct-value production paths pass through this
+ownership boundary with analyzed empty runtime/ABI/stdlib records, a typed static-initialization plan,
 optional request-local helpers, and the exact math build fact. The structural
 corpus itself remains emitted-C shape
 and ownership evidence, not generated-Haxe semantic evidence or a public ABI,

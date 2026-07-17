@@ -137,7 +137,7 @@ class CCompiler {
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
-					lowered.aggregates.length, registry);
+					lowered.aggregates.length, lowered.enums.length, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -154,7 +154,8 @@ class CCompiler {
 			return new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
-				compilationStatus: lowered.aggregates.length == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
+				compilationStatus: lowered.aggregates.length == 0
+				&& lowered.enums.length == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
 				profile: context.profile,
 				environment: configuration.environment,
 				cStandard: configuration.cStandard,
@@ -166,6 +167,7 @@ class CCompiler {
 				buildFacts: lowered.buildFacts,
 				primitiveHelperIds: helperIds,
 				directAggregateCount: lowered.aggregates.length,
+				directEnumCount: lowered.enums.length,
 				stdlibModules: stdlibModules(lowered.runtimeRequirements),
 				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
 				staticInitialization: staticInitialization.snapshot,
@@ -191,7 +193,7 @@ class CCompiler {
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
@@ -208,6 +210,9 @@ class CCompiler {
 		if (aggregateCount > 0) {
 			directDecisions.push("closed-anonymous-value-records");
 		}
+		if (enumCount > 0) {
+			directDecisions.push("bounded-haxe-enum-values");
+		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
@@ -220,6 +225,9 @@ class CCompiler {
 		}
 		if (aggregateCount > 0) {
 			proof += ", plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent";
+		}
+		if (enumCount > 0) {
+			proof += ", plus specialized native/tagged Haxe enum values with checked payload projection and finite recursive pointer layouts";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";

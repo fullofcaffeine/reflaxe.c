@@ -247,7 +247,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 27 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 28 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -272,10 +272,10 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
-| `hxc-ir` | `implemented` | Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent. |
+| `hxc-ir` | `implemented` | Schema-4 HxcIR structurally records values, tagged cases, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent. |
 | `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes. |
-| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate-layout, and hello corpus. |
+| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/enum-layout, and hello corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11. |
@@ -290,6 +290,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `standard-library` | `unsupported` | General Haxe standard-library parity is not implemented. |
 | `standard-library-ledger` | `implemented` | The exact pinned Haxe public standard-library surface has a deterministic ownership and parity ledger. |
 | `symbol-registry` | `implemented` | Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented. |
+| `tagged-enum-lowering` | `implemented` | A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11. |
 | `target-activation` | `implemented` | The pinned Haxe 5 CustomTarget(c) carrier configures scalar Unicode facts and exactly-once target registration. |
 | `target-c-api` | `scaffold-only` | Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check. |
 | `threading-and-atomics` | `unsupported` | No Haxe threading, synchronization, TLS, or atomic capability is advertised or implemented. |

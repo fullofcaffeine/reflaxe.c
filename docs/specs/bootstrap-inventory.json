@@ -39,7 +39,7 @@
         "E2.T10",
         "E3.T10"
       ],
-      "reason": "Only bounded primitive static-function, local fixed-array/span, closed anonymous-record, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
+      "reason": "Only bounded primitive static-function, local fixed-array/span, closed anonymous-record, direct-value enum, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
     },
     {
       "id": "performance-validated",
@@ -388,7 +388,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
-      "scope": "Only the separately listed primitive static-function, local fixed-array/span, closed anonymous-record, and compiler-known literal-output subsets are admitted.",
+      "scope": "Only the separately listed primitive static-function, local fixed-array/span, closed anonymous-record, bounded direct-value enum, and compiler-known literal-output subsets are admitted.",
       "evidence": [
         "src/reflaxe/c/CCompiler.hx",
         "test/all_sources/run.py",
@@ -484,8 +484,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-3 HxcIR structurally records values, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, and literal-output lowering slices.",
+      "summary": "Schema-4 HxcIR structurally records values, tagged cases, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, bounded enum, and literal-output lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
@@ -494,7 +494,8 @@
       "owners": [
         "E1.T05",
         "E2.T07",
-        "E3.T01"
+        "E3.T01",
+        "E3.T02"
       ],
       "limitations": [
         "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
@@ -549,12 +550,13 @@
       "area": "quality",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate-layout, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate C/C++ layout agreement, checked-in generated hello baseline, and seeded primitive ASan/UBSan corpus registered by the runners.",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/enum-layout, and hello corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate and enum C/C++ layout agreement, checked-in generated hello baseline, and seeded primitive ASan/UBSan corpus registered by the runners.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
         "test/aggregate_lowering/run.py",
+        "test/enum_lowering/run.py",
         "test/primitive_differential/run.py",
         "test/governance/test_runtime_smoke_policy.py"
       ],
@@ -562,7 +564,8 @@
         "E0.T05",
         "E2.T10",
         "E2.T11",
-        "E3.T01"
+        "E3.T01",
+        "E3.T02"
       ],
       "limitations": [
         "Component-native evidence is not a complete supported-platform or release matrix."
@@ -896,6 +899,25 @@
       ],
       "limitations": [
         "Stable export ABI names remain unratified and broader typed-AST symbol collection is incomplete."
+      ]
+    },
+    {
+      "id": "tagged-enum-lowering",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
+      "scope": "Fieldless enums, primitive payloads, two concrete primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-4 HxcIR.",
+      "evidence": [
+        "docs/enum-lowering.md",
+        "src/reflaxe/c/lowering/CBodyEnum.hx",
+        "test/enum_lowering/run.py"
+      ],
+      "owners": [
+        "E3.T02"
+      ],
+      "limitations": [
+        "General monomorphization, reference/aggregate payloads, identity/equality, escaping recursive values, reflection, and public ABI enums remain fail-closed."
       ]
     },
     {

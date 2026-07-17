@@ -1,4 +1,4 @@
-hxcir schema=3
+hxcir schema=4
 module "Main" @"Main.hx":2:30-4:3
   function "function.Main.main" name="Main.main" returns=void entry="entry" @"Main.hx":2:30-4:3
     block "entry" @"Main.hx":3:3-3:32

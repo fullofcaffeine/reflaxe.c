@@ -50,6 +50,7 @@ typedef CProjectEmissionPlan = {
 	final buildFacts:Array<TypedCBuildFact>;
 	final ?primitiveHelperIds:Array<String>;
 	final ?directAggregateCount:Int;
+	final ?directEnumCount:Int;
 	final ?stdlibModules:Array<String>;
 	final ?stdlibCapabilities:Array<String>;
 	final ?staticInitialization:CStaticInitializationSnapshot;
@@ -288,12 +289,15 @@ class CProjectEmitter {
 
 	function validateDirectExecutablePlan(plan:CProjectEmissionPlan):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
+		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
+		final directValueCount = aggregateCount + enumCount;
 		if (aggregateCount < 0
+			|| enumCount < 0
 			|| plan.compilationStatus == DirectValueExecutable
-			&& aggregateCount == 0
+			&& directValueCount == 0
 			|| plan.compilationStatus == PrimitiveExecutable
-			&& aggregateCount != 0) {
-			fail("direct aggregate count must agree with the bounded executable compilation status");
+			&& directValueCount != 0) {
+			fail("direct aggregate and enum counts must agree with the bounded executable compilation status");
 		}
 		if (plan.runtimePolicyProvenance == null || plan.runtimeDiagnosticsProvenance == null) {
 			fail("direct executable emission requires resolved runtime-policy provenance");
@@ -390,6 +394,7 @@ class CProjectEmitter {
 
 	function validateDirectRuntimePlan(plan:CProjectEmissionPlan, runtimePlan:RuntimeFeaturePlanSnapshot):Void {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
+		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
@@ -424,8 +429,8 @@ class CProjectEmitter {
 					case proof:
 						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
 							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
-						if (proof.reachability.typeInstances != aggregateCount) {
-							fail("runtime-free direct executable aggregate count differs from reachable HxcIR instances");
+						if (proof.reachability.typeInstances != aggregateCount + enumCount) {
+							fail("runtime-free direct executable value-layout count differs from reachable HxcIR instances");
 						}
 				}
 			case RuntimeFeaturePlanStatus.RuntimeFeatures:
@@ -448,6 +453,9 @@ class CProjectEmitter {
 		];
 		if (aggregateCount > 0) {
 			expectedDirectDecisions.push("closed-anonymous-value-records");
+		}
+		if (enumCount > 0) {
+			expectedDirectDecisions.push("bounded-haxe-enum-values");
 		}
 		if (helperIds.length > 0) {
 			expectedDirectDecisions.push("selected-program-local-helpers");

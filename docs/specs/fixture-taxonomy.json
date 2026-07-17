@@ -35,6 +35,7 @@
         "body-lowering",
         "function-lowering",
         "aggregate-lowering",
+        "enum-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -68,6 +69,7 @@
         "body-lowering",
         "function-lowering",
         "aggregate-lowering",
+        "enum-lowering",
         "static-initialization",
         "span-lowering",
         "runtime-feature-graph",
@@ -116,6 +118,7 @@
         "body-lowering",
         "function-lowering",
         "aggregate-lowering",
+        "enum-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -142,6 +145,7 @@
         "body-lowering",
         "function-lowering",
         "aggregate-lowering",
+        "enum-lowering",
         "evaluation-order",
         "static-initialization",
         "arithmetic-semantics",
@@ -504,6 +508,28 @@
       ]
     },
     {
+      "id": "enum-lowering",
+      "directory": "test/enum_lowering",
+      "runner": [
+        "python3",
+        "test/enum_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "fieldless concrete enums use private native C enums, while payload enums use readable discriminant enums, per-constructor payload structs, payload unions, and outer value structs",
+        "concrete primitive generic instances specialize deterministically without claiming general generic monomorphization, and recursive local values use explicit finite pointer edges without selecting runtime support",
+        "constructor evaluation, checked payload projection, and exhaustive source-ordered tag switches remain first-class validated HxcIR before structural C emission",
+        "recursive escape, reference payloads, aggregate payloads, and non-exhaustive source matches fail closed at source positions with no generated artifact",
+        "portable, metal, and explicit runtime-none production projects are deterministic and runtime-free, while GCC/Clang O0/O2 C11 and paired C/C++17 consumers prove matching tags, size, alignment, offsets, construction, and recursive layout"
+      ]
+    },
+    {
       "id": "evaluation-order",
       "directory": "test/evaluation_order",
       "runner": [
@@ -695,7 +721,7 @@
       ],
       "status": "active",
       "assertions": [
-        "real typed String literals lower through schema-3 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "real typed String literals lower through schema-4 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
         "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
         "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",
@@ -882,6 +908,22 @@
           "test/aggregate_lowering/expected/program.c",
           "test/aggregate_lowering/expected/aggregates.json",
           "test/aggregate_lowering/expected/symbols.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "enum-lowering",
+        "expectedRoots": [
+          "test/enum_lowering/expected/enums.hxcir",
+          "test/enum_lowering/expected/program.h",
+          "test/enum_lowering/expected/program.c",
+          "test/enum_lowering/expected/enums.json",
+          "test/enum_lowering/expected/symbols.json"
         ],
         "formats": [
           "c",

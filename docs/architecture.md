@@ -25,8 +25,9 @@ CCompiler
   -> consumes TypedProgramInput from CompilationContext
   -> plans deterministic class/static initialization and retains its request-local graph
   -> collects reachable typed functions from entry and initializer bodies plus captured primitive globals
-  -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, UB-safe primitive operations, and closed record values
+  -> CBodyLowering maps admitted signatures, ordered expressions, calls, bodies, UB-safe primitive operations, records, and bounded enum values
   -> CBodyAggregateRegistry deduplicates structural shapes and requests dependency-first type/member symbols
+  -> CBodyEnumRegistry specializes concrete enum instances and selects finite direct/indirect storage
   -> selects the deterministic request-local helper closure before symbol finalization
   -> validates HxcIR before CBodyEmitter constructs structural C
   -> emits a private prototype header, source definitions, an initialization wrapper when needed, and int main(void)
@@ -81,7 +82,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-3 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-4 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -157,7 +158,10 @@ primitive runtime fallback, or checked/nullable unwraps without a failure
 edge. It also checks constant/result and return types plus load, initialization,
 store, and address types whenever the place type is structurally resolvable.
 Unicode-scalar String constants, exact UTF-8 byte lengths, and the narrow
-hosted-output signature/failure policy are validated too. The E2.T02 slice uses
+hosted-output signature/failure policy are validated too. Schema 4 additionally
+validates ordered tag declarations, construction, matching, checked payload
+projection, exhaustive tag-switch edges, and finite direct instance layout.
+The E2.T02 slice uses
 local places. Unsupported typed nodes use exact
 source-positioned `HXC1001`; they never become an opaque value. E2.T02 lowers
 primitive constants, initialized locals/reads, nested cleanup-free blocks, and
@@ -212,9 +216,21 @@ fields use structural field/address/dereference places, and dependency-first
 private `DStruct` declarations carry structural layout assertions. See [closed
 anonymous-record lowering](aggregate-lowering.md).
 
-`CBodyLowering` prepares the complete admitted HxcIR function and closed-record
-set, scans it for program-local primitive helper IDs, computes their dependency
-closure, and
+E3.T02 adds request-local concrete enum representation. Fieldless declarations
+may use native C enums; payload declarations become discriminant enums,
+constructor payload structs, a payload union, and an outer value struct.
+Constructor operands remain ordered before named HxcIR construction, payload
+projection retains a profile/build tag check, and exhaustive Haxe matches use
+typed tag-switch edges. Recursive local payload edges use explicit pointers to
+stable automatic backing storage, while recursive parameters and returns fail
+closed pending escape/lifetime analysis. Concrete primitive type arguments are
+specialized deterministically within this enum slice without claiming the
+general E3.T03 monomorphization model. See [Haxe enum
+lowering](enum-lowering.md).
+
+`CBodyLowering` prepares the complete admitted HxcIR function, closed-record,
+and bounded enum sets, scans them for program-local primitive helper IDs,
+computes their dependency closure, and
 registers every helper/parameter/standard symbol before sealing the
 per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
@@ -229,7 +245,10 @@ than C operators. `CPrimitiveHelperEmitter` builds only selected private
 `static inline` helpers through structural CAST; safe unsigned fast paths remain
 direct C, and floating modulo contributes the exact `m` build fact without a
 runtime feature. Closed records become dependency-first private struct
-declarations and typed compound literals; fixed arrays remain structural array
+declarations and typed compound literals. Bounded enums become private native
+enums or tagged-union declarations with structural tag/layout assertions;
+checked payload reads emit a tag comparison before union access, and tag
+switches remain structural statements. Fixed arrays remain structural array
 declarators, while spans remain typed pointer-plus-`size_t` views. Bounds proof
 nodes survive through
 validated HxcIR; only exact static constants or typed `size_t` loop guards

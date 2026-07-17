@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "id": "haxe-enum-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-010",
+    "HXC-SEM-016",
+    "HXC-SEM-024",
+    "HXC-MAC-002"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyEnum.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/enum_lowering/fixtures/positive/EnumFixture.hx",
+    "test/enum_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../enum_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/enum-lowering",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^enum-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/enum_lowering/expected/enums.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/enum_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

@@ -65,7 +65,7 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
@@ -97,7 +97,7 @@ class CStaticFunctionProjectEmitter {
 				headers.push(header);
 			}
 		}
-		if (lowered.aggregates.length > 0 && headers.indexOf("stddef.h") == -1) {
+		if ((lowered.aggregates.length > 0 || lowered.enums.length > 0) && headers.indexOf("stddef.h") == -1) {
 			headers.push("stddef.h");
 		}
 		headers.sort(compareStrings);
@@ -122,6 +122,9 @@ class CStaticFunctionProjectEmitter {
 		for (definition in bodyEmitter.aggregateDefinitions()) {
 			headerUnit.declarations.push(definition);
 		}
+		for (definition in bodyEmitter.enumDefinitions()) {
+			headerUnit.declarations.push(definition);
+		}
 		for (global in lowered.globals) {
 			headerUnit.declarations.push(DVariable({
 				storage: [SExtern],
@@ -142,6 +145,9 @@ class CStaticFunctionProjectEmitter {
 
 		final programUnit = sourceUnit();
 		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
+			programUnit.declarations.push(assertion);
+		}
+		for (assertion in bodyEmitter.enumLayoutAssertions()) {
 			programUnit.declarations.push(assertion);
 		}
 		final helperNames:Map<String, CIdentifier> = [];

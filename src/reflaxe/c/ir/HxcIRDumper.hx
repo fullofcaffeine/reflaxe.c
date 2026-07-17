@@ -51,7 +51,7 @@ class HxcIRDumper {
 				}
 			case IRTKTaggedUnion(cases):
 				for (tag in cases) {
-					line('    case ${quote(tag.name)} payload=${types(tag.payload)} ${source(tag.source)}');
+					line('    case ${quote(tag.name)} value=${tag.tagValue} payload=${tagPayloads(tag.payload)} ${source(tag.source)}');
 				}
 			case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern:
 		}
@@ -114,6 +114,8 @@ class HxcIRDumper {
 			case IRIOConstructTag(instanceId, tagName, payload):
 				'construct-tag instance=${quote(instanceId)} tag=${quote(tagName)} payload=${strings(payload)}';
 			case IRIOMatchTag(valueId, tagName): 'match-tag value=${quote(valueId)} tag=${quote(tagName)}';
+			case IRIOProjectTag(valueId, tagName, payloadIndex, check):
+				'project-tag value=${quote(valueId)} tag=${quote(tagName)} payload-index=$payloadIndex check=${tagCheck(check)}';
 			case IRIOAllocate(type, intent, selected, failure):
 				'allocate type=${typeRef(type)} intent=${allocation(intent)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
 			case IRIODeallocate(place, selected): 'deallocate place=${renderPlace(place)} implementation=${implementation(selected)}';
@@ -157,6 +159,8 @@ class HxcIRDumper {
 				'branch condition=${quote(conditionValueId)} true=${blockEdge(whenTrue)} false=${blockEdge(whenFalse)}';
 			case IRTSwitch(valueId, cases, defaultEdge):
 				'switch value=${quote(valueId)} cases=[${cases.map(item -> constant(item.value) + "=>" + blockEdge(item.edge)).join(",")}] default=${blockEdge(defaultEdge)}';
+			case IRTTagSwitch(valueId, cases, defaultEdge):
+				'tag-switch value=${quote(valueId)} cases=[${cases.map(item -> quote(item.tagName) + "=>" + blockEdge(item.edge)).join(",")}] default=${defaultEdge == null ? "none" : blockEdge(defaultEdge)}';
 			case IRTReturn(valueId, cleanup): 'return value=${nullableQuote(valueId)} cleanup=${cleanupPath(cleanup)}';
 			case IRTThrow(valueId, edge): 'throw value=${quote(valueId)} edge=${failureEdge(edge)}';
 			case IRTUnreachable: "unreachable";
@@ -223,6 +227,12 @@ class HxcIRDumper {
 			case IRBPStaticProof(length, index): 'static-proof(length=$length,index=$index)';
 			case IRBPLoopGuarded(guardInstructionId, indexLocalId, length):
 				'loop-guarded(guard=${quote(guardInstructionId)},index-local=${quote(indexLocalId)},length=$length)';
+		}
+	}
+
+	function tagCheck(value:HxcIRTagCheckPolicy):String {
+		return switch value {
+			case IRTCPCheckedAbort(profile, buildMode): 'checked-abort(profile=${quote(profile)},build=${quote(buildMode)})';
 		}
 	}
 
@@ -341,6 +351,9 @@ class HxcIRDumper {
 
 	function types(values:Array<HxcIRTypeRef>):String
 		return '[${values.map(typeRef).join(",")}]';
+
+	function tagPayloads(values:Array<HxcIRTagPayload>):String
+		return '[${values.map(value -> quote(value.name) + ":" + typeRef(value.type)).join(",")}]';
 
 	function strings(values:Array<String>):String
 		return '[${values.map(quote).join(",")}]';

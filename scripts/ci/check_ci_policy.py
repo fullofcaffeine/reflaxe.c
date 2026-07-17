@@ -273,6 +273,29 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/aggregate-lowering/case.json",
     "test/runtime/aggregate-lowering/case.json",
     "test/typed_c/fixtures/metal_packed_struct/Main.hx",
+    "src/reflaxe/c/lowering/CBodyEnum.hx",
+    "docs/enum-lowering.md",
+    "test/enum_lowering/EnumLoweringProbe.hx",
+    "test/enum_lowering/enum_lowering.hxml",
+    "test/enum_lowering/fixtures/positive/EnumFixture.hx",
+    "test/enum_lowering/fixtures/recursive_escape/Main.hx",
+    "test/enum_lowering/fixtures/recursive_return/Main.hx",
+    "test/enum_lowering/fixtures/reference_payload/Main.hx",
+    "test/enum_lowering/fixtures/aggregate_payload/Main.hx",
+    "test/enum_lowering/fixtures/nonexhaustive/Main.hx",
+    "test/enum_lowering/native/layout_consumer.c",
+    "test/enum_lowering/native/layout_consumer.cpp",
+    "test/enum_lowering/native/layout_provider.c",
+    "test/enum_lowering/expected/enums.hxcir",
+    "test/enum_lowering/expected/enums.json",
+    "test/enum_lowering/expected/program.h",
+    "test/enum_lowering/expected/program.c",
+    "test/enum_lowering/expected/symbols.json",
+    "test/enum_lowering/run.py",
+    "test/positive/enum-lowering/case.json",
+    "test/negative/enum-lowering/case.json",
+    "test/snapshot/enum-lowering/case.json",
+    "test/runtime/enum-lowering/case.json",
     "docs/evaluation-order.md",
     "test/evaluation_order/EvaluationOrderProbe.hx",
     "test/evaluation_order/evaluation_order.hxml",
@@ -456,6 +479,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/body_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -570,6 +594,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:function-lowering entry point")
     if scripts.get("test:aggregate-lowering") != "python3 test/aggregate_lowering/run.py":
         errors.append("package.json must retain the test:aggregate-lowering entry point")
+    if scripts.get("test:enum-lowering") != "python3 test/enum_lowering/run.py":
+        errors.append("package.json must retain the test:enum-lowering entry point")
     if scripts.get("test:evaluation-order") != "python3 test/evaluation_order/run.py":
         errors.append("package.json must retain the test:evaluation-order entry point")
     if scripts.get("test:static-initialization") != "python3 test/static_initialization/run.py":
@@ -646,6 +672,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:function-lowering")
     if "npm run test:aggregate-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:aggregate-lowering")
+    if "npm run test:enum-lowering" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:enum-lowering")
     if "npm run test:evaluation-order" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:evaluation-order")
     if "npm run test:static-initialization" not in str(scripts.get("test:toolchain", "")):
@@ -751,6 +779,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed function-lowering test")
     if "test/aggregate_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the closed aggregate-lowering test")
+    if "test/enum_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the Haxe enum-lowering test")
     if "test/evaluation_order/run.py" not in pre_commit:
         errors.append("pre-commit must run the explicit evaluation-order test")
     if "test/static_initialization/run.py" not in pre_commit:
@@ -1035,6 +1065,34 @@ def validate() -> list[str]:
     if "compiler_identity" not in aggregate_runner or '"--version"' not in aggregate_runner:
         errors.append(
             "aggregate-lowering runner must verify required compiler-family identity"
+        )
+
+    enum_runner = read_text(ROOT / "test/enum_lowering/run.py", errors)
+    for required_enum_contract in (
+        "C11_STRICT_FLAGS",
+        "-std=c++17",
+        "-pedantic",
+        "-Werror",
+        "-O0",
+        "-O2",
+        "run_c_fixture_corpus",
+        "layout_consumer.cpp",
+        "_Static_assert(",
+        "checked-abort",
+        "recursive-enum-requires-escape-analysis",
+    ):
+        if required_enum_contract not in enum_runner:
+            errors.append(
+                "enum-lowering runner lost strict semantic/native contract "
+                + required_enum_contract
+            )
+    if "--native-only" not in enum_runner or "--toolchain" not in enum_runner:
+        errors.append(
+            "enum-lowering runner must expose the required native matrix seam"
+        )
+    if "compiler_identity" not in enum_runner or '"--version"' not in enum_runner:
+        errors.append(
+            "enum-lowering runner must verify required compiler-family identity"
         )
 
     evaluation_runner = read_text(ROOT / "test/evaluation_order/run.py", errors)
