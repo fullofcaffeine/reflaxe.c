@@ -12,6 +12,11 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from run import (
+    CLANG_CL_RUNTIME_FLAG,
+    clang_cl_compile_arguments,
+    clang_cl_link_arguments,
+)
 from scripts.raylib.provision import (
     ProvisionFailure,
     assert_report_redacted,
@@ -96,6 +101,28 @@ def synthetic_source_lock(root: Path) -> dict[str, object]:
 
 
 class RaylibProvisioningTests(unittest.TestCase):
+    def test_clang_cl_consumer_matches_locked_dynamic_runtime(self) -> None:
+        root = Path("/synthetic")
+        compile_arguments, object_file = clang_cl_compile_arguments(
+            "clang-cl",
+            root / "generated",
+            root / "raylib/include",
+            root / "native",
+        )
+        self.assertEqual(CLANG_CL_RUNTIME_FLAG, "/MD")
+        self.assertEqual(compile_arguments.count(CLANG_CL_RUNTIME_FLAG), 1)
+        self.assertEqual(object_file, root / "native/program.obj")
+
+        link_arguments = clang_cl_link_arguments(
+            "clang-cl",
+            object_file,
+            root / "raylib.lib",
+            ("raylib", "user32"),
+            root / "native/raylib-smoke.exe",
+        )
+        self.assertEqual(link_arguments.count(CLANG_CL_RUNTIME_FLAG), 1)
+        self.assertIn("user32.lib", link_arguments)
+
     def test_failed_command_reports_redacted_stdout_and_stderr_tails(self) -> None:
         with tempfile.TemporaryDirectory(prefix="hxc-raylib-command-") as raw_root:
             root = Path(raw_root)
@@ -162,6 +189,18 @@ class RaylibProvisioningTests(unittest.TestCase):
         self.assertIsInstance(libraries, list)
         libraries.reverse()
         cases.append(("link", link, "libraries are invalid"))
+
+        runtime = copy.deepcopy(load_lock())
+        runtime_platforms = runtime["platforms"]
+        self.assertIsInstance(runtime_platforms, dict)
+        windows = runtime_platforms["windows"]
+        self.assertIsInstance(windows, dict)
+        windows_desktop = windows["desktop"]
+        self.assertIsInstance(windows_desktop, dict)
+        runtime_definitions = windows_desktop["cmakeDefinitions"]
+        self.assertIsInstance(runtime_definitions, list)
+        runtime_definitions[0] = "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded"
+        cases.append(("windows-runtime", runtime, "link/configuration facts drifted"))
 
         report = copy.deepcopy(load_lock())
         report_policy = report["report"]

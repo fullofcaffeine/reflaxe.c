@@ -108,14 +108,21 @@ EXPECTED_LINK_FACTS = {
         "macos",
         "desktop",
     ): (("raylib",), ("OpenGL", "Cocoa", "IOKit", "CoreFoundation"), ()),
-    ("windows", "memory-software"): (("raylib", "winmm"), (), ()),
+    (
+        "windows",
+        "memory-software",
+    ): (
+        ("raylib", "winmm"),
+        (),
+        ("CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL",),
+    ),
     (
         "windows",
         "desktop",
     ): (
         ("raylib", "opengl32", "gdi32", "winmm", "shell32", "user32"),
         (),
-        (),
+        ("CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL",),
     ),
 }
 EXPECTED_REPORT_PLACEHOLDERS = (

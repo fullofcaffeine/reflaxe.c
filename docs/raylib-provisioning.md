@@ -101,7 +101,11 @@ headless system request fails instead of changing authority.
 
 Both configurations are release static libraries with examples, audio, and
 external GLFW disabled. The desktop Linux build explicitly selects X11 and
-disables Wayland.
+disables Wayland. Windows source builds explicitly select CMake's
+`MultiThreadedDLL` MSVC runtime, and the `clang-cl` integration consumer uses
+the matching `/MD` compile and link policy. This keeps Raylib and generated C
+on one CRT model without presenting toolchain runtime libraries as Raylib link
+facts.
 
 The neutral generated build plan uses logical facts rather than shell text:
 

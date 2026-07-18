@@ -172,7 +172,10 @@
           "raylib",
           "winmm"
         ],
-        "frameworks": []
+        "frameworks": [],
+        "cmakeDefinitions": [
+          "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL"
+        ]
       },
       "desktop": {
         "libraries": [
@@ -183,7 +186,10 @@
           "shell32",
           "user32"
         ],
-        "frameworks": []
+        "frameworks": [],
+        "cmakeDefinitions": [
+          "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL"
+        ]
       }
     }
   },

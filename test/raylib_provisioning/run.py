@@ -74,6 +74,7 @@ STRICT_CLANG_CL_FLAGS = (
     "/clang:-Wcast-align",
     "/clang:-Wcast-qual",
 )
+CLANG_CL_RUNTIME_FLAG = "/MD"
 EXPECTED_HEADLESS_STDOUT = "INFO: RLSW: Software renderer initialized successfully\n"
 VARIANTS = (
     ("linux-memory", "linux", "memory-software", False),
@@ -441,6 +442,7 @@ def clang_cl_compile_arguments(
         "/nologo",
         "/TC",
         "/std:c11",
+        CLANG_CL_RUNTIME_FLAG,
         *STRICT_CLANG_CL_FLAGS,
         f"/I{generated_root / 'include'}",
         f"/I{SUPPORT_INCLUDE}",
@@ -478,7 +480,13 @@ def clang_cl_link_arguments(
     libraries: Sequence[str],
     executable: Path,
 ) -> list[str]:
-    arguments = [compiler, "/nologo", str(object_file), str(library_file)]
+    arguments = [
+        compiler,
+        "/nologo",
+        CLANG_CL_RUNTIME_FLAG,
+        str(object_file),
+        str(library_file),
+    ]
     for library in libraries:
         if library != "raylib":
             arguments.append(f"{library}.lib")
