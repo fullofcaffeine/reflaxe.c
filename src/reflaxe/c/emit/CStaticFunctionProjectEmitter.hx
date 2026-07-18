@@ -176,7 +176,7 @@ class CStaticFunctionProjectEmitter {
 			if (!initializerIds.exists(fn.ir.id)) {
 				final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
 				final declaration = bodyEmitter.functionDeclarator(fn.ir,
-					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
+					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames, fn.spanLengthNames), false)));
 				headerUnit.declarations.push(DPrototype([], functionSpecifiers, declaration.type, declaration.declarator, []));
 			}
 		}
@@ -225,7 +225,7 @@ class CStaticFunctionProjectEmitter {
 			}
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
 			final signature = bodyEmitter.functionDeclarator(fn.ir,
-				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
+				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames, fn.spanLengthNames), false)));
 			final definition:CDecl = DFunction({
 				storage: isInitializer ? [SStatic] : [],
 				functionSpecifiers: functionSpecifiers,

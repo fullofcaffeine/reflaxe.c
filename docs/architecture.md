@@ -70,6 +70,26 @@ normalized into the compiler-artifact comparison.
 
 ## IR boundary
 
+The pinned Haxe compiler's `TypedExpr` is already the shared high-level IR. It
+owns typed Haxe meaning and remains the preferred input for discovery,
+source-shape recognition, declaration capture, reachability, and any analysis
+that does not need a lower semantic contract. Portable source sharing happens
+at the Haxe/library/specification level; it does not depend on HxcIR.
+
+HxcIR is the narrower target-owned layer for decisions that must become
+explicit and independently valid before strict C syntax is selected. `CAST` is
+the later target-syntax layer. This gives the pipeline three compiler forms:
+
+```text
+TypedExpr  -- admitted Haxe meaning -->  HxcIR  -- validated decisions -->  CAST
+```
+
+This is an engineering boundary, not a rule that every `TypedExpr` case needs a
+matching HxcIR node. A new IR form is justified only when it preserves an
+ordering, control-flow, place, lifetime, failure, representation, or runtime
+invariant that would otherwise be implicit or reconstructed by the C emitter.
+A node that merely renames Haxe syntax belongs at the typed-AST boundary.
+
 `HxcIR` exists to normalize semantics that C syntax cannot safely express directly:
 
 - evaluation sequence;
@@ -81,6 +101,19 @@ normalized into the compiler-artifact comparison.
 - dispatch classification.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
+
+Sibling targets demonstrate that this extra semantic layer is not a universal
+Reflaxe requirement. Go, Rust, Ruby, Elixir, and OCaml use typed target ASTs and
+target-specific passes; Elixir additionally uses a focused loop IR and Ruby a
+focused Rails route IR at demonstrated semantic/domain gaps. C has stronger
+pressure for a separate layer because strict C11 combines weaker operand-order
+guarantees and undefined primitive behavior with no built-in ownership,
+cleanup, exception, object, string, or collection semantics. A future shared
+Reflaxe semantic package remains possible, but only after at least two backends
+prove the same behavior-tested operation; HxcIR itself is not that package. The
+complete rationale, direct-lowering alternative, sibling comparison, extraction
+criteria, and implementation-language analysis are in [the HxcIR semantic
+contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
 The schema-9 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic

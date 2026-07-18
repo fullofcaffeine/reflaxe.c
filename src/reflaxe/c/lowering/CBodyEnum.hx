@@ -279,6 +279,8 @@ class CBodyEnumRegistry {
 		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
 		final arguments = parameters.map(parameter -> {
 			final value = resolveValue(parameter, position, definition.module, sourcePath, fail, '$node.type-argument');
+			if (value.spanElement() != null)
+				return rejected(fail, position, '$node.type-argument:borrowed-span-escape');
 			if (value.irType == IRTVoid || value.aggregateValue() != null || value.classValue() != null) {
 				return rejected(fail, position, '$node:unsupported-enum-type-argument:${value.cSpelling}');
 			}
@@ -338,6 +340,8 @@ class CBodyEnumRegistry {
 				final argument = constructor.arguments[index];
 				rejectDirectReference(argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
 				final valueType = resolveValue(argument.type, field.pos, definition.module, sourcePath, fail, '$node.$caseName.${argument.name}');
+				if (valueType.spanElement() != null)
+					return rejected(fail, field.pos, '$node.$caseName.${argument.name}:borrowed-span-payload-escape');
 				if (valueType.irType == IRTVoid || valueType.aggregateValue() != null || valueType.classValue() != null) {
 					return rejected(fail, field.pos, '$node:unsupported-payload:$path.$caseName.${argument.name}:${valueType.cSpelling}');
 				}

@@ -147,10 +147,15 @@ def function_names(symbols: dict[str, object]) -> dict[str, str]:
     if set(names) != {
         "checkedAt",
         "constSum",
+        "forwardRead",
+        "forwardReplace",
         "linearIndex",
         "main",
         "mutableSum",
         "mutatedGridCell",
+        "parameterRoundTrip",
+        "readAt",
+        "replaceAt",
         "zeroedGridCell",
     }:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
@@ -160,7 +165,8 @@ def function_names(symbols: dict[str, object]) -> dict[str, str]:
 def validate(report: dict[str, object], *, profile: str, build: str) -> None:
     if (
         report.get("schemaVersion") != 2
-        or report.get("status") != "typed-zero-fixed-arrays-and-spans-runtime-free"
+        or report.get("status")
+        != "typed-zero-fixed-arrays-and-span-parameters-runtime-free"
         or report.get("profile") != profile
         or report.get("buildMode") != build
         or report.get("runtimeFeatures") != []
@@ -175,15 +181,17 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
             raise SpanLoweringFailure(f"HxcIR retained iterator machinery {forbidden!r}")
     expected_counts = {
         "type=fixed-array(length=4,witness=\"Length4\",element=i32)": 3,
+        "type=fixed-array(length=4,witness=\"Length4\",element=u8)": 1,
         "type=fixed-array(length=16384,witness=\"GridVolume\",element=u8)": 2,
         " result=- initialize-fixed-array place=": 3,
-        "zero-initialize-fixed-array": 2,
-        "initialize-span": 6,
-        "bounds-check": 11,
+        "zero-initialize-fixed-array": 3,
+        "initialize-span": 8,
+        "span-parameter-borrow": 4,
+        "bounds-check": 14,
         "static-proof": 3,
         "loop-guarded": 3,
         'index-local="local.3",length=4': 2,
-        "checked-abort": 5,
+        "checked-abort": 8,
         'operation="hxc.size.add-one.span-index-proven"': 3,
     }
     for marker, expected in expected_counts.items():
@@ -193,7 +201,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
                 f"HxcIR marker {marker!r} appeared {actual} times, expected {expected}"
             )
     policy = f'policy=checked-abort(profile="{profile}",build="{build}")'
-    if hxcir.count(policy) != 5:
+    if hxcir.count(policy) != 8:
         raise SpanLoweringFailure(f"bounds policy lost {profile}/{build} provenance")
     for marker in (
         "terminator branch",
@@ -206,16 +214,21 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
             raise SpanLoweringFailure(f"direct span loop lost {marker!r}")
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 7:
+    if not isinstance(functions, list) or len(functions) != 12:
         raise SpanLoweringFailure("span function inventory drifted")
     fields = [item.get("field") for item in functions if isinstance(item, dict)]
     if fields != [
         "checkedAt",
         "constSum",
+        "forwardRead",
+        "forwardReplace",
         "linearIndex",
         "main",
         "mutableSum",
         "mutatedGridCell",
+        "parameterRoundTrip",
+        "readAt",
+        "replaceAt",
         "zeroedGridCell",
     ]:
         raise SpanLoweringFailure(f"span function order drifted: {fields!r}")
@@ -226,7 +239,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
         for name in item.get("spanLengthNames", [])
         if isinstance(name, str)
     ]
-    if len(length_names) != 6 or len(set(length_names)) != 6:
+    if len(length_names) != 16 or len(set(length_names)) != 16:
         raise SpanLoweringFailure("span length identifiers are not unique and complete")
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
@@ -346,9 +359,9 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "modules": 1,
             "typeInstances": 0,
-            "functions": 7,
-            "blocks": 19,
-            "instructions": 119,
+            "functions": 12,
+            "blocks": 24,
+            "instructions": 142,
             "cleanupActions": 0,
             "runtimeIntents": 0,
         }
@@ -403,12 +416,12 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 2
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 2
-        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count(" = sizeof(") != 6
+        or source.count("const uint8_t *") != 7
+        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 4
+        or source.count(" = sizeof(") != 8
         or source.count("bounds") != 0
-        or source.count("abort();") != 5
-        or source.count("[(size_t)") != 11
+        or source.count("abort();") != 8
+        or source.count("[(size_t)") != 14
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
     if (
@@ -417,8 +430,16 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count(" + 1;") != 3
     ):
         raise SpanLoweringFailure("span iteration stopped being a direct guarded index loop")
-    if source.count(" < 0 || (size_t)") != 5 or source.count(" >= ") != 5:
+    if source.count(" < 0 || (size_t)") != 8 or source.count(" >= ") != 8:
         raise SpanLoweringFailure("dynamic span access lost its signed/size_t bounds check")
+    parameter_signatures = re.findall(
+        r"(?m)^uint8_t [^(]+\((?:const )?uint8_t \*[^,]+, size_t [^,]+,",
+        source,
+    )
+    if len(parameter_signatures) != 4 or "struct" in "\n".join(parameter_signatures):
+        raise SpanLoweringFailure(
+            "span parameters stopped lowering directly to pointer-plus-size_t signatures"
+        )
     return {"header": header, "source": source}
 
 
@@ -541,6 +562,7 @@ int main(void)
   if ({names["linearIndex"]}(INT32_C(31), INT32_C(15), INT32_C(31)) != INT32_C(16383)) return 4;
   if ({names["zeroedGridCell"]}() != UINT8_C(0)) return 5;
   if ({names["mutatedGridCell"]}(UINT8_C(201)) != UINT8_C(201)) return 6;
+  if ({names["parameterRoundTrip"]}(UINT8_C(201)) != UINT8_C(201)) return 7;
   return 0;
 }}
 '''
@@ -741,6 +763,9 @@ def check_production(selected: str | None = None) -> dict[str, object]:
         for build in BUILD_MODES:
             check_abort_fixture("UpperBoundsFixture", toolchain, profile=profile, build=build)
             check_abort_fixture("NegativeBoundsFixture", toolchain, profile=profile, build=build)
+    check_abort_fixture(
+        "ParameterUpperBoundsFixture", toolchain, profile="portable", build="debug"
+    )
     return canonical
 
 
@@ -861,6 +886,12 @@ def main(arguments: Iterable[str] = ()) -> int:
                 profile=profile,
                 expected_anchor="EscapingSpanFixture.hx:6: lines 6-9",
             )
+            compile_failure_fixture(
+                "RecursiveSpanParameterFixture",
+                "TCall(recursive-borrowed-span-target-not-admitted:",
+                profile=profile,
+                expected_anchor="RecursiveSpanParameterFixture.hx:6: characters 10-25",
+            )
         for profile in PROFILES:
             check_configuration_failure(profile=profile)
         production = check_production(args.toolchain)
@@ -875,8 +906,8 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise SpanLoweringFailure("canonical span symbols are missing")
         check_native_artifacts(production, symbols, args.toolchain)
         print(
-            "span-lowering: OK: literal/zero fixed arrays, exact-width spans, "
-            "bounds/storage matrix, strict C11, and zero-hxrt links passed"
+            "span-lowering: OK: literal/zero fixed arrays, exact-width spans and "
+            "span parameters, bounds/storage matrix, strict C11, and zero-hxrt links passed"
         )
         return 0
     except (OSError, subprocess.TimeoutExpired, SpanLoweringFailure, json.JSONDecodeError) as error:

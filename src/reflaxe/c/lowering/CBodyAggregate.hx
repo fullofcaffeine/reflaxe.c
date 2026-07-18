@@ -35,6 +35,7 @@ class CBodyAggregate {
 /** A closed body value category; aggregate values never enter primitive semantics. */
 enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
+	CBVKSpan(element:CPrimitiveTypeMapping, mutable:Bool);
 	CBVKCString;
 	CBVKImport(value:CPreparedImportType);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
@@ -54,6 +55,9 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping):
 				this.irType = mapping.irType;
 				this.cSpelling = mapping.cSpelling;
+			case CBVKSpan(element, mutable):
+				this.irType = IRTSpan(element.irType, mutable);
+				this.cSpelling = '${mutable ? "mutable" : "const"}-span:${element.cSpelling}';
 			case CBVKCString:
 				this.irType = IRTCString;
 				this.cSpelling = "const-char-pointer:borrowed-literal";
@@ -75,6 +79,9 @@ class CBodyValueType {
 	public static function primitive(mapping:CPrimitiveTypeMapping):CBodyValueType
 		return new CBodyValueType(CBVKPrimitive(mapping));
 
+	public static function span(element:CPrimitiveTypeMapping, mutable:Bool):CBodyValueType
+		return new CBodyValueType(CBVKSpan(element, mutable));
+
 	public static function cString():CBodyValueType
 		return new CBodyValueType(CBVKCString);
 
@@ -93,7 +100,21 @@ class CBodyValueType {
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
+			case CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
+		};
+	}
+
+	public function spanElement():Null<CPrimitiveTypeMapping> {
+		return switch kind {
+			case CBVKSpan(element, _): element;
+			case _: null;
+		};
+	}
+
+	public function spanMutable():Null<Bool> {
+		return switch kind {
+			case CBVKSpan(_, mutable): mutable;
+			case _: null;
 		};
 	}
 
@@ -116,7 +137,7 @@ class CBodyValueType {
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_): null;
+			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -124,14 +145,14 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
+			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
 			case CBVKClass(value, _): value;
 		};
 	}
@@ -139,7 +160,7 @@ class CBodyValueType {
 	public function classNullable():Null<Bool> {
 		return switch kind {
 			case CBVKClass(_, nullable): nullable;
-			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
 		};
 	}
 }
@@ -273,6 +294,10 @@ class CBodyAggregateRegistry {
 			return imported;
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
+			case TAbstract(reference, parameters) if (isSpan(reference.get(), parameters)):
+				final span = reference.get();
+				final element = admittedSpanElement(parameters[0], position, fail, node);
+				CBodyValueType.span(element, span.name == "Span");
 			case TInst(reference, parameters) if (!reference.get().isExtern):
 				classRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
 			case TEnum(reference, parameters):
@@ -290,6 +315,17 @@ class CBodyAggregateRegistry {
 				CBodyValueType.aggregate(aggregate);
 			case _:
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
+		};
+	}
+
+	static function isSpan(value:AbstractType, parameters:Array<Type>):Bool
+		return parameters.length == 1 && value.pack.join(".") == "c" && (value.name == "Span" || value.name == "ConstSpan");
+
+	function admittedSpanElement(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
+		final mapping = admittedPrimitive(type, position, fail, '$node.element');
+		return switch mapping.irType {
+			case IRTBool | IRTInt(_, _) | IRTFloat(64): mapping;
+			case _: rejected(fail, position, '$node:span-element:${mapping.cSpelling}');
 		};
 	}
 
@@ -359,6 +395,9 @@ class CBodyAggregateRegistry {
 		for (index in 0...fields.length) {
 			final field = fields[index];
 			final fieldType = valueType(field.type, field.pos, ownerModule, sourcePath, fail, '$node.field:${field.name}');
+			if (fieldType.spanElement() != null) {
+				return rejected(fail, field.pos, '$node.field:${field.name}:borrowed-span-field-escape');
+			}
 			if (fieldType.irType == IRTVoid) {
 				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-type');
 			}

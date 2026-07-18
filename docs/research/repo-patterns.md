@@ -69,6 +69,56 @@ independent content checksum and a temporary installed-package probe. The
 vendored framework is compiler-only; it has no relationship to target runtime
 feature selection.
 
+### Typed frontend, target AST, and semantic IR layering
+
+The inspected targets all begin from Haxe's typed compiler tree. `TypedExpr` is
+therefore already the family-level high-level intermediate representation; none
+of the sibling architectures supports a claim that Haxe source must first be
+copied into a universal Reflaxe IR.
+
+The current sibling checkouts use these broad shapes:
+
+| Target | Observed pipeline | Boundary observation |
+| --- | --- | --- |
+| Go | `TypedExpr -> typed Go AST -> Go AST passes/import analysis -> printer` | The documented Go IR primarily owns structural target syntax and deliberately leaves portable/native admission to semantic policy. |
+| Rust | `TypedExpr -> RustFile/RustExpr -> representation analyses and Rust AST transforms -> printer` | Rust's target AST can directly express more ownership, enum, result, and reference structure than C. |
+| Ruby | `TypedExpr -> RubyFile/RubyExpr -> printer` | The fail-closed typed-expression switch and focused block/keyword analyzers are strong; the target AST remains small, so ordinary control and access forms still cross `RubyRawExpr`/`RubyRawStatement` boundaries inside a very large compiler. A richer Ruby AST and focused semantic plans are a clearer next step than a general CFG. |
+| Elixir | `TypedExpr -> ElixirAST -> ordered pass registry -> printer` | A focused `LoopIR` is introduced only for loop analysis/emission strategy, and function-result invariants are checked between passes. Large builder/transformer stages and early `ERaw`/printed-AST boundaries remain candidates for focused plans and richer nodes. |
+| OCaml | `TypedExpr -> OcamlExpr -> OCaml printer` | `OcamlExpr` is a structural target AST. The separate `hxhx` path has compiler-owned typed program models, while its current `GenIrProgram` is explicitly an alias rather than a normalized cross-backend IR. |
+
+The reusable family principle is not “every target needs HxcIR.” It is:
+
+1. retain Haxe typing and source meaning at the `TypedExpr` boundary;
+2. introduce target-owned structural AST nodes wherever later passes must
+   inspect target syntax;
+3. add a smaller semantic plan or sub-IR only when a demonstrated Haxe-to-target
+   gap needs an invariant before syntax is chosen; and
+4. fail explicitly instead of hiding an unsupported path in raw target text.
+
+C has stronger pressure for a separate semantic lowering layer because strict
+C11 combines weaker operand-order guarantees and undefined primitive behavior
+with no built-in ownership, cleanup, exception, object, string, or collection
+model. HxcIR is the current C-target response to that gap, not a proposal to
+retrofit sibling compilers.
+
+A future shared Reflaxe semantic layer remains plausible, but the strongest
+sibling precedent is evidence-first extraction. At least two backends should
+first demonstrate the same semantic transformation and differential behavior;
+the shared model must describe observable Haxe meaning rather than target
+syntax or runtime symbols; and every backend must remain free to choose its own
+representation. The `hxhx` `GenIrProgram` documentation already states a
+compatible rule: its alias should become a normalized IR only after two or more
+backends prove the repeated transformation.
+
+Implementation language is orthogonal to this layering. The `haxe.ocaml`
+Reflaxe compiler is Haxe code that emits OCaml, and its use of `OcamlExpr` shows
+that Haxe enums and pattern matching are sufficient for a typed target AST. A
+hypothetical compiler implemented in OCaml could express lower plans with OCaml
+variants or transformed typed trees, but the Haxe-to-target semantic gap—not
+the host language—determines whether those plans are needed. See
+[the HxcIR rationale](../hxc-ir.md#why-a-second-ir-when-haxe-already-has-one)
+for the normative C-project boundary and admission guardrails.
+
 ### Reflaxe target metadata
 
 Target manifests use:

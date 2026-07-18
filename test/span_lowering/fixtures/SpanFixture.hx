@@ -35,6 +35,31 @@ class SpanFixture {
 		return view[index];
 	}
 
+	static function readAt(values:ConstSpan<UInt8>, index:Int):UInt8 {
+		return values[index];
+	}
+
+	static function replaceAt(values:Span<UInt8>, index:Int, replacement:UInt8):UInt8 {
+		values[index] = replacement;
+		return values[index];
+	}
+
+	static function forwardRead(values:ConstSpan<UInt8>, index:Int):UInt8 {
+		return readAt(values, index);
+	}
+
+	static function forwardReplace(values:Span<UInt8>, index:Int, replacement:UInt8):UInt8 {
+		return replaceAt(values, index, replacement);
+	}
+
+	static function parameterRoundTrip(replacement:UInt8):UInt8 {
+		var values:CArray<UInt8, Length4> = CArray.zero(4);
+		var mutable:Span<UInt8> = values.span();
+		forwardReplace(mutable, 2, replacement);
+		var readOnly:ConstSpan<UInt8> = values.constSpan();
+		return forwardRead(readOnly, 2);
+	}
+
 	static function linearIndex(x:Int, y:Int, z:Int):Int {
 		return x + GRID_WIDTH * (y + GRID_HEIGHT * z);
 	}
@@ -64,6 +89,7 @@ class SpanFixture {
 		mutableSum();
 		constSum();
 		checkedAt(2);
+		parameterRoundTrip(zeroedGridCell());
 		zeroedGridCell();
 		mutatedGridCell(zeroedGridCell());
 	}

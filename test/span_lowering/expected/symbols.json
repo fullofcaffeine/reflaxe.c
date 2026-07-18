@@ -470,6 +470,302 @@
     },
     {
       "overloadSignature": [
+        "span:const<u8>",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_SpanFixture_forwardRead",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_SpanFixture_forwardRead",
+      "sourceSymbol": "SpanFixture.forwardRead(span:const<u8>, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_forwardRead_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture11:forwardRead11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_forwardRead_callzx2Dresult_n0",
+      "sourceSymbol": "SpanFixture.forwardRead.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardRead_index_n1",
+      "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture11:forwardRead5:index|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardRead_index_n1",
+      "sourceSymbol": "SpanFixture.forwardRead.index#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardRead_values_n0",
+      "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture11:forwardRead6:values|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardRead_values_n0",
+      "sourceSymbol": "SpanFixture.forwardRead.values#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardRead_values_borrow_n2",
+      "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|4:11:SpanFixture11:forwardRead6:values6:borrow|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardRead_values_borrow_n2",
+      "sourceSymbol": "SpanFixture.forwardRead.values.borrow#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_forwardRead_values_borrow_length_n2",
+      "semanticKey": "9:temporary|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|5:11:SpanFixture11:forwardRead6:values6:borrow6:length|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_forwardRead_values_borrow_length_n2",
+      "sourceSymbol": "SpanFixture.forwardRead.values.borrow.length#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardRead_values_length_n0",
+      "semanticKey": "5:local|115:ordinary:102:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:|4:11:SpanFixture11:forwardRead6:values6:length|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture11:forwardRead|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardRead_values_length_n0",
+      "sourceSymbol": "SpanFixture.forwardRead.values.length#0"
+    },
+    {
+      "overloadSignature": [
+        "span:mutable<u8>",
+        "i32",
+        "u8"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_SpanFixture_forwardReplace",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_SpanFixture_forwardReplace",
+      "sourceSymbol": "SpanFixture.forwardReplace(span:mutable<u8>, i32, u8)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_forwardReplace_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture14:forwardReplace11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_forwardReplace_callzx2Dresult_n0",
+      "sourceSymbol": "SpanFixture.forwardReplace.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardReplace_index_n1",
+      "semanticKey": "5:local|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture14:forwardReplace5:index|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardReplace_index_n1",
+      "sourceSymbol": "SpanFixture.forwardReplace.index#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardReplace_replacement_n2",
+      "semanticKey": "5:local|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture14:forwardReplace11:replacement|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardReplace_replacement_n2",
+      "sourceSymbol": "SpanFixture.forwardReplace.replacement#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardReplace_values_n0",
+      "semanticKey": "5:local|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture14:forwardReplace6:values|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardReplace_values_n0",
+      "sourceSymbol": "SpanFixture.forwardReplace.values#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardReplace_values_borrow_n3",
+      "semanticKey": "5:local|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|4:11:SpanFixture14:forwardReplace6:values6:borrow|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardReplace_values_borrow_n3",
+      "sourceSymbol": "SpanFixture.forwardReplace.values.borrow#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_forwardReplace_values_borrow_length_n3",
+      "semanticKey": "9:temporary|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|5:11:SpanFixture14:forwardReplace6:values6:borrow6:length|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_forwardReplace_values_borrow_length_n3",
+      "sourceSymbol": "SpanFixture.forwardReplace.values.borrow.length#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_forwardReplace_values_length_n0",
+      "semanticKey": "5:local|124:ordinary:111:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:|4:11:SpanFixture14:forwardReplace6:values6:length|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture14:forwardReplace|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_forwardReplace_values_length_n0",
+      "sourceSymbol": "SpanFixture.forwardReplace.values.length#0"
+    },
+    {
+      "overloadSignature": [
         "i32",
         "i32",
         "i32"
@@ -587,6 +883,27 @@
       "specializationArguments": [],
       "baseName": "hxc_temp_SpanFixture_main_callzx2Dresult_n0",
       "sourceSymbol": "SpanFixture.main.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_main_callzx2Dresult_n1",
+      "semanticKey": "9:temporary|84:ordinary:72:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture4:main|0:|0:|0:|3:11:SpanFixture4:main11:call-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_main_callzx2Dresult_n1",
+      "sourceSymbol": "SpanFixture.main.call-result#1"
     },
     {
       "overloadSignature": [],
@@ -1424,6 +1741,458 @@
       "specializationArguments": [],
       "baseName": "hxc_local_SpanFixture_mutatedGridCell_values_n1",
       "sourceSymbol": "SpanFixture.mutatedGridCell.values#1"
+    },
+    {
+      "overloadSignature": [
+        "u8"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_SpanFixture_parameterRoundTrip",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_SpanFixture_parameterRoundTrip",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip(u8)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_parameterRoundTrip_callzx2Dresult_n0",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture18:parameterRoundTrip11:call-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_parameterRoundTrip_callzx2Dresult_n0",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.call-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_parameterRoundTrip_mutable_n2",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture18:parameterRoundTrip7:mutable|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_parameterRoundTrip_mutable_n2",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.mutable#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_parameterRoundTrip_mutable_length_n2",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|4:11:SpanFixture18:parameterRoundTrip7:mutable6:length|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_parameterRoundTrip_mutable_length_n2",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.mutable.length#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_parameterRoundTrip_readOnly_n3",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture18:parameterRoundTrip8:readOnly|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_parameterRoundTrip_readOnly_n3",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.readOnly#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_parameterRoundTrip_readOnly_length_n3",
+      "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|4:11:SpanFixture18:parameterRoundTrip8:readOnly6:length|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_parameterRoundTrip_readOnly_length_n3",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.readOnly.length#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_parameterRoundTrip_replacement_n0",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture18:parameterRoundTrip11:replacement|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_parameterRoundTrip_replacement_n0",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.replacement#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_parameterRoundTrip_values_n1",
+      "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture18:parameterRoundTrip6:values|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture18:parameterRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_parameterRoundTrip_values_n1",
+      "sourceSymbol": "SpanFixture.parameterRoundTrip.values#1"
+    },
+    {
+      "overloadSignature": [
+        "span:const<u8>",
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_SpanFixture_readAt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_SpanFixture_readAt",
+      "sourceSymbol": "SpanFixture.readAt(span:const<u8>, i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_readAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0",
+      "semanticKey": "9:temporary|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture6:readAt28:collection-index-load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_readAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0",
+      "sourceSymbol": "SpanFixture.readAt.collection-index-load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_readAt_index_n1",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture6:readAt5:index|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_readAt_index_n1",
+      "sourceSymbol": "SpanFixture.readAt.index#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_readAt_values_n0",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|3:11:SpanFixture6:readAt6:values|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_readAt_values_n0",
+      "sourceSymbol": "SpanFixture.readAt.values#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_readAt_values_borrow_n2",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|4:11:SpanFixture6:readAt6:values6:borrow|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_readAt_values_borrow_n2",
+      "sourceSymbol": "SpanFixture.readAt.values.borrow#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_readAt_values_borrow_length_n2",
+      "semanticKey": "9:temporary|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|5:11:SpanFixture6:readAt6:values6:borrow6:length|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_readAt_values_borrow_length_n2",
+      "sourceSymbol": "SpanFixture.readAt.values.borrow.length#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_readAt_values_length_n0",
+      "semanticKey": "5:local|108:ordinary:96:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:|4:11:SpanFixture6:readAt6:values6:length|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture6:readAt|2:14:span:const<u8>3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_readAt_values_length_n0",
+      "sourceSymbol": "SpanFixture.readAt.values.length#0"
+    },
+    {
+      "overloadSignature": [
+        "span:mutable<u8>",
+        "i32",
+        "u8"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "requestedName": null,
+      "cName": "hxc_method_SpanFixture_replaceAt",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_method_SpanFixture_replaceAt",
+      "sourceSymbol": "SpanFixture.replaceAt(span:mutable<u8>, i32, u8)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_replaceAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0",
+      "semanticKey": "9:temporary|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture9:replaceAt28:collection-index-load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_replaceAt_collectionzx2Dindexzx2Dloadzx2Dresult_n0",
+      "sourceSymbol": "SpanFixture.replaceAt.collection-index-load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_replaceAt_index_n1",
+      "semanticKey": "5:local|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture9:replaceAt5:index|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_replaceAt_index_n1",
+      "sourceSymbol": "SpanFixture.replaceAt.index#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_replaceAt_replacement_n2",
+      "semanticKey": "5:local|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture9:replaceAt11:replacement|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_replaceAt_replacement_n2",
+      "sourceSymbol": "SpanFixture.replaceAt.replacement#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_replaceAt_values_n0",
+      "semanticKey": "5:local|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|3:11:SpanFixture9:replaceAt6:values|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_replaceAt_values_n0",
+      "sourceSymbol": "SpanFixture.replaceAt.values#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_replaceAt_values_borrow_n3",
+      "semanticKey": "5:local|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|4:11:SpanFixture9:replaceAt6:values6:borrow|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_replaceAt_values_borrow_n3",
+      "sourceSymbol": "SpanFixture.replaceAt.values.borrow#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "requestedName": null,
+      "cName": "hxc_temp_SpanFixture_replaceAt_values_borrow_length_n3",
+      "semanticKey": "9:temporary|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|5:11:SpanFixture9:replaceAt6:values6:borrow6:length|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_temp_SpanFixture_replaceAt_values_borrow_length_n3",
+      "sourceSymbol": "SpanFixture.replaceAt.values.borrow.length#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "requestedName": null,
+      "cName": "hxc_local_SpanFixture_replaceAt_values_length_n0",
+      "semanticKey": "5:local|118:ordinary:105:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:|4:11:SpanFixture9:replaceAt6:values6:length|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture9:replaceAt|3:16:span:mutable<u8>3:i322:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_local_SpanFixture_replaceAt_values_length_n0",
+      "sourceSymbol": "SpanFixture.replaceAt.values.length#0"
     },
     {
       "overloadSignature": [],

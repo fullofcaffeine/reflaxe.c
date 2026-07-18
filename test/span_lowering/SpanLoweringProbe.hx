@@ -45,10 +45,15 @@ class SpanLoweringProbe {
 		final selected = [
 			"checkedAt",
 			"constSum",
+			"forwardRead",
+			"forwardReplace",
 			"linearIndex",
 			"main",
 			"mutableSum",
 			"mutatedGridCell",
+			"parameterRoundTrip",
+			"readAt",
+			"replaceAt",
 			"zeroedGridCell"
 		];
 		final inputs:Array<CBodyFunctionInput> = [];
@@ -100,7 +105,7 @@ class SpanLoweringProbe {
 		functions.sort((left, right) -> compareStrings(left.field, right.field));
 		final record:SpanLoweringProbeRecord = {
 			schemaVersion: 2,
-			status: "typed-zero-fixed-arrays-and-spans-runtime-free",
+			status: "typed-zero-fixed-arrays-and-span-parameters-runtime-free",
 			profile: Std.string(profile),
 			buildMode: Std.string(buildMode),
 			hxcir: new HxcIRDumper().dump(result.program),

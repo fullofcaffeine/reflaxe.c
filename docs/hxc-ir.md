@@ -39,6 +39,197 @@ initialization and lifetime transitions, call dispatch, conversion and
 primitive-operation strategy, allocation intent, failure successors, and
 cleanup execution before a C expression or statement is selected.
 
+## Why a second IR when Haxe already has one?
+
+Haxe's typed AST is already an intermediate representation. After parsing and
+typing, the pinned Haxe compiler gives the target a `TypedExpr` tree containing
+resolved types, declarations, compiler desugaring, and source positions. Haxe
+itself also provides algebraic enums and pattern matching, so HxcIR does not
+exist because the implementation language lacks suitable compiler-building
+features.
+
+The compiler therefore has four distinct layers rather than one undifferentiated
+"AST":
+
+| Layer | Owns | Deliberately does not own |
+| --- | --- | --- |
+| Haxe source and libraries | Portable application algorithms and source-level abstractions | A particular target representation |
+| Haxe `TypedExpr` | Shared typed Haxe meaning and the complete frontend result | C-specific sequencing, representation, lifetime, or runtime decisions |
+| HxcIR | The admitted program's normalized semantic operations and the proofs required before C is selected | Haxe surface syntax and C punctuation |
+| structural `CAST` | Valid C11 declarations, expressions, statements, association, and printing | Recovery or reinterpretation of Haxe semantics |
+
+Cross-target behavior does not require HxcIR. Portable behavior can and should
+live in ordinary Haxe, in target-neutral libraries, in the Haxe language
+contract, and in differential tests. A C, Go, Rust, JavaScript, or Elixir
+backend may use a different representation while preserving the same observable
+Haxe result. HxcIR is a target-owned contract for the Haxe-to-C gap; it is not a
+universal Reflaxe IR and is not currently consumed by another backend.
+
+### The credible simpler design
+
+A bounded compiler could lower `TypedExpr` directly to `CAST`. It could insert
+C temporaries while recursively visiting expressions, keep representation and
+runtime decisions in side tables, and validate the resulting C with native
+compilers. For a deliberately C-shaped Haxe subset, that architecture can be
+smaller and entirely reasonable. Individual features such as a fixed array or
+a span parameter do not, by themselves, justify a second whole-program IR.
+
+That alternative becomes less simple when the same source node participates in
+several dependent semantic decisions. For example, a call whose arguments have
+effects must become an ordered sequence before it becomes a C call expression:
+
+```text
+Haxe:       consume(next(), next())
+
+HxcIR:     first  = call next
+           second = call next
+           result = call consume(first, second)
+```
+
+The eventual C call syntax alone cannot carry that sequencing proof. The same
+problem recurs for a value crossing blocks, an lvalue versus a copied value, a
+checked conversion, a borrow with a forwarded length, a cleanup on several
+exits, a throwing call with normal and failure successors, or an operation that
+must choose between direct C, a program-local helper, and `hxrt`.
+
+Those facts could all be attached to `TypedExpr` through independent maps and
+plans. Once the compiler has an instruction-order plan, a control-flow plan, a
+place model, a cleanup graph, a bounds-proof table, a representation plan, and
+a runtime-intent table, however, it has created an implicit intermediate
+representation. HxcIR makes that boundary typed, deterministic, dumpable, and
+validatable in one place before target syntax exists. It also prevents raw
+Haxe compiler objects from becoming a serialized or cross-request compiler
+contract, which is important while the production carrier uses a pinned Haxe
+5 preview API.
+
+### Guardrails against overengineering
+
+HxcIR must remain smaller and more semantic than `TypedExpr`. It is not a second
+copy of every Haxe node and it is not the mandatory home for every compiler
+fact. The operative rules are:
+
+- use `TypedExpr` directly for frontend discovery, source-shape recognition,
+  declaration capture, reachability, and other analyses that need no lower
+  semantic form;
+- add or extend HxcIR only when a concrete invariant must survive independently
+  of Haxe source shape and be validated before C selection;
+- require each new IR operation to state the ordering, control-flow, place,
+  lifetime, failure, representation, or runtime fact that would otherwise be
+  implicit;
+- normalize multiple Haxe spellings to one semantic operation rather than
+  mirroring each spelling;
+- keep C grammar, declarator association, precedence, and token safety in
+  `CAST`; and
+- do not add speculative nodes solely for a possible future backend.
+
+If a proposed HxcIR node merely renames a `TypedExpr` case and adds no invariant
+or independently testable decision, the default is to keep the analysis at the
+typed-AST boundary. Conversely, if removing an HxcIR operation would recreate
+several loosely synchronized side tables or force the C emitter to infer Haxe
+meaning, the explicit semantic form is earning its cost.
+
+## Sibling Reflaxe architectures
+
+The sibling repositories use the same Haxe typed frontend but choose different
+target-owned layers. The current local checkouts show these broad pipelines:
+
+- `haxe.go` lowers `TypedExpr` into a typed Go AST, applies Go AST transforms
+  and structural import analysis, then prints and formats Go. Its documented
+  typed Go IR primarily models target syntax; it explicitly leaves Haxe
+  portability and native-boundary admission to earlier policy.
+- `haxe.rust` lowers into structural `RustFile` and `RustExpr` values, applies
+  representation analyses and Rust AST transforms, and then prints Rust. Rust
+  itself structurally expresses many ownership, enum, result, and reference
+  decisions that C cannot express, so the target AST and analysis plans can
+  carry more of the bridge.
+- `haxe.ruby` lowers into a typed `RubyFile`/`RubyExpr` model and then a Ruby
+  printer. It also has focused block and keyword-semantics analyzers plus a
+  separate Rails route IR. Its fail-closed typed-expression contract is a strong
+  boundary, but the small target AST does not yet cover several ordinary Ruby
+  forms; the large compiler consequently renders some structural fragments
+  back into `RubyRawExpr` or `RubyRawStatement`. The appropriate direction is
+  a richer Ruby AST and focused block/call/control plans, not a C-shaped CFG.
+- `haxe.elixir.codex` uses `TypedExpr -> ElixirAST -> ordered transforms ->
+  printer`. It introduces the narrower `LoopIR` only where several Haxe loop
+  forms need shared analysis before choosing an idiomatic Elixir emission
+  strategy, and validates function-result invariants between named passes. That
+  is useful precedent for adding a semantic sub-IR only at a demonstrated gap.
+  Its remaining pressure is concentrated in large builder/transformer stages
+  and places where printed or raw Elixir becomes an early semantic boundary;
+  focused mutation, managed-reference, failure, framework-intent, and runtime
+  plans can strengthen that seam without replacing `ElixirAST`.
+- `haxe.ocaml`'s `reflaxe.ocaml` path uses `TypedExpr -> OcamlExpr -> OCaml
+  printer`. `OcamlExpr` is a structural target AST, not a separate general
+  semantic IR. Its `hxhx` compiler has its own typed program and expression
+  models; the currently named `GenIrProgram` is explicitly an alias for the
+  macro-expanded typed program, not yet a normalized target-neutral IR.
+
+These architectures do not prove that one target is missing HxcIR. Go, Rust,
+Ruby, Elixir, OCaml, and C expose different semantic gaps. A managed target with
+bounds checks, exceptions, strings, and garbage collection can often make a
+decision directly in its target AST. Strict C11 has weaker expression-order
+guarantees, undefined and implementation-defined primitive behavior, and no
+built-in ownership, cleanup, exception, object, string, or collection model.
+That combination creates stronger pressure for a distinct validated semantic
+layer.
+
+The OCaml target also illustrates an important middle ground. Its structural
+`OcamlExpr` layer is appropriate for idiomatic target code; replacing it with a
+C-like whole-program CFG would not automatically improve the compiler. As its
+single large builder accumulates representation, coercion, loop, exception,
+null, and runtime-selection decisions, the appropriate next step is narrower
+typed plans and clearer pass boundaries where evidence demands them—not an
+automatic clone of HxcIR.
+
+## Possible future shared Reflaxe semantic layer
+
+A shared semantic layer across Reflaxe compilers may eventually be useful, but
+extracting HxcIR today would couple other targets to C's current needs. Shared
+code should be admitted only after at least two backends independently require
+the same semantic operation and executable tests show that the observable Haxe
+contract is genuinely identical.
+
+A candidate extraction must satisfy all of these conditions:
+
+1. Two or more target implementations currently duplicate the same semantic
+   decision; a hypothetical future backend is not sufficient evidence.
+2. The shared node describes Haxe behavior, not target syntax, runtime symbols,
+   ABI spellings, or one backend's optimization strategy.
+3. Each backend remains free to select its own representation and target AST.
+4. Differential fixtures define the shared observable behavior, including
+   failure and evaluation order where applicable.
+5. The model has a closed typed schema, deterministic traversal, normalized
+   source positions, validation, and explicit unsupported behavior.
+6. Adoption can be incremental; a backend need not translate its entire typed
+   program merely to consume one shared semantic family.
+
+Plausible future candidates include ordered effect sequences, normalized
+failure/result edges, source-span normalization, or shared runtime-requirement
+reason categories. C-specific place rules, `size_t` representation, `CAST`
+nodes, `hxrt` feature IDs, and C ABI policy are not shared candidates in their
+current form. Until the admission conditions are met, common semantics belong
+in Haxe libraries, specifications, conformance fixtures, and small reusable
+analyses rather than a universal IR package.
+
+## The implementation language is a separate decision
+
+Reimplementing this compiler in OCaml would make algebraic data models,
+immutable transformations, and exhaustive matching pleasant, but it would not
+remove the semantic distance between Haxe and C. An OCaml implementation close
+to the upstream Haxe compiler might reuse its native typed-tree structures more
+directly and could represent some lower decisions as transformed typed trees
+plus typed plans. If those transformed trees make evaluation sequence,
+control-flow edges, places, cleanup, lifetime, and failure explicit, they are
+still serving the role of a lower IR even if no file is named `HxcIR`.
+
+The converse also holds: Haxe's enums, pattern matching, generics, and macro
+integration are sufficient to implement the current typed model. Host-language
+ergonomics may change the amount of boilerplate, but they do not determine
+whether a compiler phase needs an explicit contract. The current architecture
+therefore does not imply an OCaml rewrite, and the `haxe.ocaml` repository name
+must not be mistaken for a compiler implemented in OCaml: its Reflaxe compiler
+is Haxe code that emits OCaml.
+
 ## Structural model
 
 A program contains modules. Modules own semantic type declarations, concrete

@@ -787,9 +787,13 @@ class CBodyDispatchPreparer {
 				final mapping = valueType(argument.t, input.owner, input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:argument:$index');
 				if (mapping.irType == IRTVoid)
 					unsupportedAt(input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:Void-argument:$index');
+				if (mapping.spanElement() != null)
+					unsupportedAt(input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:borrowed-span-argument:$index');
 				parameterTypes.push(mapping);
 			}
 			final returnType = valueType(signature.result, input.owner, input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:return');
+			if (returnType.spanElement() != null)
+				unsupportedAt(input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:borrowed-span-return');
 			var layoutSlots = layoutInputs.get(input.layoutId);
 			if (layoutSlots == null) {
 				layoutSlots = [];

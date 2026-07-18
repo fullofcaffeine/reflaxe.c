@@ -644,13 +644,14 @@ private typedef BodyCollectionBinding = {
 	final localId:String;
 	final kind:BodyCollectionKind;
 	final element:CPrimitiveTypeMapping;
-	final length:Int;
+	final length:Null<Int>;
 }
 
 private typedef SpanLoopPattern = {
 	final iteratorCompilerId:Int;
 	final loopVariable:TVar;
 	final span:BodyCollectionBinding;
+	final length:Int;
 	final body:Array<TypedExpr>;
 	final sourceExpression:TypedExpr;
 }
@@ -929,6 +930,14 @@ private class FunctionPreparer {
 			if (mapping.irType == IRTVoid) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
+			if (mapping.spanElement() != null) {
+				if (input.instanceOwner != null) {
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-requires-static-function)');
+				}
+				if (input.specialization != null) {
+					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-generic-specialization-not-admitted)');
+				}
+			}
 			final enumArgument = mapping.enumValue();
 			if (enumArgument != null && enumArgument.scopedLifetime) {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:recursive-enum-requires-escape-analysis)');
@@ -1055,6 +1064,7 @@ private class FunctionPreparer {
 			case IRTBool: "bool";
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTFloat(width): 'f$width';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${valueTypeKey(element)}>';
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(IRTInstance(instanceId), nullable): 'class-reference:${nullable ? "nullable" : "nonnull"}:$instanceId';
@@ -1109,6 +1119,8 @@ private class ConstructorPreparer {
 			final mapping = admittedValueType(declared.t, input.expression.pos, 'TFunction(constructor-argument:${argument.v.name})');
 			if (mapping.irType == IRTVoid)
 				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:Void)');
+			if (mapping.spanElement() != null)
+				unsupported(input.expression.pos, 'TFunction(constructor-argument:${argument.v.name}:borrowed-span-constructor-not-admitted)');
 			arguments.push({
 				compilerId: argument.v.id,
 				ir: {
@@ -1307,6 +1319,46 @@ private class FunctionBuilder {
 			} else {
 				parameterValuesByCompilerId.set(parameter.compilerId, value);
 			}
+			switch parameter.mapping.kind {
+				case CBVKSpan(element, mutable):
+					final parameterRequest = prepared.parameterRequests.get(parameter.ir.id);
+					if (parameterRequest == null)
+						throw new CBodyEmissionError('span parameter `${parameter.ir.id}` in `${prepared.irId}` has no symbol request');
+					final parameterLengthRequest = new CSymbolRequest(CSKLocal, parameterRequest.qualifiedName.concat(["length"]), parameterRequest.namespace,
+						CSVInternal, null, [], [], parameterRequest.sourceOrdinal);
+					context.symbols.register(parameterLengthRequest);
+					spanLengthRequests.set(parameter.ir.id, parameterLengthRequest);
+
+					// HxcIR keeps the borrow as one semantic value. A local span place gives
+					// indexing and bounds checks the same representation used by local CArray
+					// borrows; only the final C signature expands it to pointer + length.
+					final ordinal = localOrdinal++;
+					final localId = 'local.$ordinal';
+					final localRequest = new CSymbolRequest(CSKLocal, parameterRequest.qualifiedName.concat(["borrow"]), parameterRequest.namespace,
+						CSVInternal, null, [], [], ordinal);
+					context.symbols.register(localRequest);
+					localRequests.set(localId, localRequest);
+					final localLengthRequest = new CSymbolRequest(CSKTemporary, parameterRequest.qualifiedName.concat(["borrow", "length"]),
+						parameterRequest.namespace, CSVInternal, null, [], [], ordinal);
+					context.symbols.register(localLengthRequest);
+					spanLengthRequests.set(localId, localLengthRequest);
+					locals.push({
+						id: localId,
+						type: parameter.ir.type,
+						storage: IRLSAutomatic,
+						initialState: IRISUninitialized,
+						source: parameter.ir.source
+					});
+					appendInstruction(null, IRIOInitialize(IRPLocal(localId), parameter.ir.id, IRISUninitialized, IRISInitialized), parameter.ir.source,
+						"span-parameter-borrow");
+					collectionBindingsByCompilerId.set(parameter.compilerId, {
+						localId: localId,
+						kind: BCKSpan(mutable),
+						element: element,
+						length: null
+					});
+				case _:
+			}
 		}
 	}
 
@@ -1465,6 +1517,10 @@ private class FunctionBuilder {
 			case BCKFixedArray(_):
 				return null;
 		}
+		final spanLength = span.length;
+		if (spanLength == null) {
+			return unsupported(loopExpression, "TFor(span-parameter-dynamic-length-loop-not-admitted)");
+		}
 		final loop = switch loopExpression.expr {
 			case TWhile(condition, body, true): {condition: condition, body: body};
 			case _: return null;
@@ -1491,6 +1547,7 @@ private class FunctionBuilder {
 			iteratorCompilerId: iterator.variable.id,
 			loopVariable: loopVariable,
 			span: span,
+			length: spanLength,
 			body: expressions.slice(1),
 			sourceExpression: loopExpression
 		};
@@ -1514,7 +1571,7 @@ private class FunctionBuilder {
 		final conditionIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexType, mutable: true}, pattern.sourceExpression.pos,
 			"span-loop-condition-index");
 		final length:HxcIRResult = {id: nextValueId(), type: indexMapping.irType};
-		appendInstruction(length, IRIOConstant(IRCInt(Std.string(pattern.span.length))), source, "span-loop-length");
+		appendInstruction(length, IRIOConstant(IRCInt(Std.string(pattern.length))), source, "span-loop-length");
 		final condition:HxcIRResult = {id: nextValueId(), type: IRTBool};
 		final guardInstruction = appendInstruction(condition, IRIOBinary("hxc.size.less.span-index", conditionIndex.id, length.id, IRIStatic), source,
 			"span-loop-condition");
@@ -1525,7 +1582,7 @@ private class FunctionBuilder {
 		currentBlock = bodyBlock;
 		final bodyIndex = loadPlace({place: IRPLocal(indexLocalId), mapping: indexType, mutable: true}, pattern.sourceExpression.pos, "span-loop-body-index");
 		appendInstruction(null,
-			IRIOBoundsCheck(IRPLocal(pattern.span.localId), bodyIndex.id, IRBPLoopGuarded(guardInstruction.id, indexLocalId, pattern.span.length)), source,
+			IRIOBoundsCheck(IRPLocal(pattern.span.localId), bodyIndex.id, IRBPLoopGuarded(guardInstruction.id, indexLocalId, pattern.length)), source,
 			"span-loop-bounds");
 		final element = loadPlace({
 			place: IRPIndex(IRPLocal(pattern.span.localId), bodyIndex.id),
@@ -2185,7 +2242,7 @@ private class FunctionBuilder {
 							case UIIntrinsicLowered(value): value;
 							case UIIntrinsicNotMatched: coerce(lowerValue(inner), target, expression.pos, "TCast");
 						}
-					case CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _):
+					case CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -2937,6 +2994,19 @@ private class FunctionBuilder {
 		if (parameter != null) {
 			return parameter;
 		}
+		final collection = collectionBindingsByCompilerId.get(variable.id);
+		if (collection != null) {
+			switch collection.kind {
+				case BCKSpan(mutable):
+					final mapping = CBodyValueType.span(collection.element, mutable);
+					final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+					appendInstruction(result, IRIOLoad(IRPLocal(collection.localId)), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+						"load-span-borrow");
+					return {id: result.id, type: result.type, mapping: mapping};
+				case BCKFixedArray(_):
+					return unsupported(expression, 'TLocal(${variable.name}:fixed-array-value-escape)');
+			}
+		}
 		final localId = localIdsByCompilerId.get(variable.id);
 		if (localId == null) {
 			return unsupported(expression, 'TLocal(${variable.name}:outside-admitted-body)');
@@ -3409,11 +3479,12 @@ private class FunctionBuilder {
 
 	function boundsPolicy(binding:BodyCollectionBinding, index:TypedExpr):HxcIRBoundsPolicy {
 		final value = constantInt(index);
-		if (value != null) {
-			if (value < 0 || value >= binding.length) {
-				unsupported(index, 'TArray(index-statically-out-of-bounds:length=${binding.length},index=$value)');
+		final knownLength = binding.length;
+		if (value != null && knownLength != null) {
+			if (value < 0 || value >= knownLength) {
+				unsupported(index, 'TArray(index-statically-out-of-bounds:length=$knownLength,index=$value)');
 			}
-			return IRBPStaticProof(binding.length, value);
+			return IRBPStaticProof(knownLength, value);
 		}
 		return IRBPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode));
 	}
@@ -3484,6 +3555,13 @@ private class FunctionBuilder {
 		final target = functionsById.get(targetId);
 		if (target == null) {
 			return unsupported(expression, 'TCall(unavailable-static-target:$targetId)');
+		}
+		if (targetId == prepared.irId) {
+			for (parameter in target.parameters) {
+				if (parameter.mapping.spanElement() != null) {
+					return unsupported(expression, 'TCall(recursive-borrowed-span-target-not-admitted:$targetId)');
+				}
+			}
 		}
 		if (call.arguments.length != target.parameters.length) {
 			return unsupported(expression, 'TCall(argument-count=${call.arguments.length},expected=${target.parameters.length},target=$targetId)');

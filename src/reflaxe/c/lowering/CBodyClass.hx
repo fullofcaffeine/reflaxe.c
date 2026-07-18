@@ -236,6 +236,8 @@ class CBodyClassRegistry {
 			if (prepared.base != null && prepared.base.field(field.name) != null)
 				return rejected(fail, field.pos, '$node:inherited-storage-field-shadowing:${field.name}');
 			final fieldType = resolveValue(field.type, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
+			if (fieldType.spanElement() != null)
+				return rejected(fail, field.pos, '$node.field:${field.name}:borrowed-span-field-escape');
 			if (fieldType.irType == IRTVoid)
 				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-field');
 			final mutable = switch field.kind {
