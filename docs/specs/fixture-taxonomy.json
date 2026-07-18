@@ -83,6 +83,7 @@
         "enum-lowering",
         "generic-specialization",
         "static-initialization",
+        "arithmetic-semantics",
         "span-lowering",
         "runtime-feature-graph",
         "string-output"
@@ -743,6 +744,7 @@
       ],
       "types": [
         "positive",
+        "negative",
         "snapshot",
         "runtime",
         "differential"
@@ -750,6 +752,8 @@
       "status": "active",
       "assertions": [
         "typed Int, UInt, and Float arithmetic selects direct C or request-local program helpers without selecting hxrt",
+        "typed c.IntConvert exact and modulo operations retain their distinct HxcIR meaning and emit structural direct C for literal and dynamic values",
+        "non-contained exact conversions, signed-target modulo conversions, and helper-requiring conversions fail with exact source-positioned HXC1001 and no artifact",
         "overflow, division, modulo, shifts, and bit operations preserve the documented boundary semantics without C undefined behavior",
         "portable, metal, and runtime-none production builds compile and run as strict C11 under the required GCC and Clang lanes, with UBSan enabled where supported",
         "selected helpers are static inline and disappear from optimized output while safe UInt operations remain inspectable as direct C"

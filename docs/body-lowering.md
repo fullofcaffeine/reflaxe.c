@@ -12,6 +12,9 @@ loop jumps without changing the runtime-free compiler-first boundary. E2.T08
 and its bounded storage extension add nonempty literal-backed and compile-time-
 sized zero-initialized `c.CArray` locals, borrowed `Span`/`ConstSpan` views,
 checked indexing, and direct exact-width span iteration.
+The bounded exact-width extension also admits typed `c.IntConvert.exact` and
+`c.IntConvert.modulo` operations when their declared meaning needs only defined
+direct C.
 E3.T01 extends the same typed pipeline with closed anonymous value records,
 including nested records, explicit copies, and typed field addressing and
 projection. Its exact boundary is documented in [closed anonymous-record
@@ -28,7 +31,9 @@ the stable-value and control-flow proof.
 
 `CBodyLowering` accepts typed functions containing:
 
-- `Void`, `Bool`, `Int`, `UInt`, and `Float` return/local/value types;
+- `Void`, `Bool`, `Int`, `UInt`, and `Float` return/local/value types, plus
+  exact-width `c.Int8/16/32/64` and `c.UInt8/16/32/64` carriers at admitted
+  signatures, fixed storage, span, and conversion boundaries;
 - compiler-typed `TInt`, `TFloat`, and `TBool` constants plus numeric negation,
   bitwise complement, and Boolean negation;
 - initialized automatic locals and local reads;
@@ -53,6 +58,10 @@ the stable-value and control-flow proof.
   decrement through explicit load/operation/store;
 - `Std.int(Float)` through the defined saturating/truncating primitive
   conversion;
+- `c.IntConvert.exact` between admitted integer carriers when the source range
+  is a subset of the inferred target range, and `c.IntConvert.modulo` when the
+  inferred target is unsigned; HxcIR retains exact-versus-modulo meaning and
+  the C emitter uses a structural cast;
 - nonempty primitive array literals assigned directly to `c.CArray<T, N>` or
   `CArray.zero` with a positive compiler-known product within the exact element-
   size and 65,536-byte per-array storage policy, local mutable/const span
@@ -93,7 +102,12 @@ lowering, general Haxe arrays, escaping spans, string/Float switches, guarded
 patterns outside the admitted enum form, recursive enum parameters/returns,
 reference or aggregate enum payloads, mutable/open/reflective records, record
 or enum identity/equality, strings, closures, general allocation, exceptions,
-and cleanup remain outside this primitive slice. Concrete class
+cleanup, ABI-width integer conversions, checked conversions, and signed-target
+integer conversions that require reconstruction helpers remain outside this
+primitive slice. `exact` also rejects a non-contained source range, while
+`modulo` rejects a signed target. Those rejected operations produce
+source-positioned `HXC1001` without an artifact; `c.IntConvert` never silently
+selects `hxrt`. Concrete class
 references/fields and bounded nonescaping constructors are separately admitted
 by E3.T04/E3.T05. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering

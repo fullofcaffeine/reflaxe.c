@@ -5,4 +5,4 @@
 --macro ArithmeticSemanticsProbe.install()
 
 -main ArithmeticFixture
---interp
+--no-output

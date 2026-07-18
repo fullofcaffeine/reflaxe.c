@@ -1,5 +1,5 @@
 hxcir schema=9
-module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-145:3
+module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-178:3
   function "function.ArithmeticFixture.fadd" name="ArithmeticFixture.fadd" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
@@ -62,6 +62,27 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     end block "entry"
   end function "function.ArithmeticFixture.fsub"
+  function "function.ArithmeticFixture.i32ToU8" name="ArithmeticFixture.i32ToU8" returns=u8 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
+    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
+      instruction "instruction.0.integer-conversion-modulo" result="value.0":u8 convert value="parameter.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:10-85:36
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
+    end block "entry"
+  end function "function.ArithmeticFixture.i32ToU8"
+  function "function.ArithmeticFixture.i64ToU16" name="ArithmeticFixture.i64ToU16" returns=u16 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
+    parameter "parameter.0" type=i64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
+      instruction "instruction.0.integer-conversion-modulo" result="value.0":u16 convert value="parameter.0" kind=numeric-wrapping target=u16 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:10-91:36
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
+    end block "entry"
+  end function "function.ArithmeticFixture.i64ToU16"
+  function "function.ArithmeticFixture.i8ToI32" name="ArithmeticFixture.i8ToI32" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
+    parameter "parameter.0" type=i8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
+      instruction "instruction.0.integer-conversion-exact" result="value.0":i32 convert value="parameter.0" kind=numeric-exact target=i32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:10-103:35
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
+    end block "entry"
+  end function "function.ArithmeticFixture.i8ToI32"
   function "function.ArithmeticFixture.iadd" name="ArithmeticFixture.iadd" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
@@ -174,93 +195,146 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     end block "entry"
   end function "function.ArithmeticFixture.ixor"
-  function "function.ArithmeticFixture.main" name="ArithmeticFixture.main" returns=void failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
-    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
-      instruction "instruction.0.constant" result="value.0":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":117:8-117:9
-      instruction "instruction.1.constant" result="value.1":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":117:11-117:12
-      instruction "instruction.2.call" result="value.2":i32 call dispatch=direct("function.ArithmeticFixture.iadd") arguments=["value.0","value.1"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":117:3-117:13
-      instruction "instruction.3.constant" result="value.3":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":118:8-118:9
-      instruction "instruction.4.constant" result="value.4":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":118:11-118:12
-      instruction "instruction.5.call" result="value.5":i32 call dispatch=direct("function.ArithmeticFixture.isub") arguments=["value.3","value.4"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":118:3-118:13
-      instruction "instruction.6.constant" result="value.6":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":119:8-119:9
-      instruction "instruction.7.constant" result="value.7":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":119:11-119:12
-      instruction "instruction.8.call" result="value.8":i32 call dispatch=direct("function.ArithmeticFixture.imul") arguments=["value.6","value.7"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":119:3-119:13
-      instruction "instruction.9.constant" result="value.9":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":120:8-120:9
-      instruction "instruction.10.call" result="value.10":i32 call dispatch=direct("function.ArithmeticFixture.ineg") arguments=["value.9"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":120:3-120:10
-      instruction "instruction.11.constant" result="value.11":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":121:8-121:9
-      instruction "instruction.12.constant" result="value.12":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":121:11-121:12
-      instruction "instruction.13.call" result="value.13":f64 call dispatch=direct("function.ArithmeticFixture.idiv") arguments=["value.11","value.12"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":121:3-121:13
-      instruction "instruction.14.constant" result="value.14":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":122:8-122:9
-      instruction "instruction.15.constant" result="value.15":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":122:11-122:12
-      instruction "instruction.16.call" result="value.16":i32 call dispatch=direct("function.ArithmeticFixture.imod") arguments=["value.14","value.15"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":122:3-122:13
-      instruction "instruction.17.constant" result="value.17":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":123:8-123:9
-      instruction "instruction.18.constant" result="value.18":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":123:11-123:13
-      instruction "instruction.19.call" result="value.19":i32 call dispatch=direct("function.ArithmeticFixture.ishl") arguments=["value.17","value.18"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":123:3-123:14
-      instruction "instruction.20.constant" result="value.20":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":124:8-124:10
-      instruction "instruction.21.constant" result="value.21":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":124:12-124:14
-      instruction "instruction.22.call" result="value.22":i32 call dispatch=direct("function.ArithmeticFixture.ishr") arguments=["value.20","value.21"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":124:3-124:15
-      instruction "instruction.23.constant" result="value.23":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":125:9-125:11
-      instruction "instruction.24.constant" result="value.24":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":125:13-125:15
-      instruction "instruction.25.call" result="value.25":i32 call dispatch=direct("function.ArithmeticFixture.iushr") arguments=["value.23","value.24"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":125:3-125:16
-      instruction "instruction.26.constant" result="value.26":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":126:8-126:9
-      instruction "instruction.27.constant" result="value.27":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":126:11-126:12
-      instruction "instruction.28.call" result="value.28":i32 call dispatch=direct("function.ArithmeticFixture.iand") arguments=["value.26","value.27"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":126:3-126:13
-      instruction "instruction.29.constant" result="value.29":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":127:7-127:8
-      instruction "instruction.30.constant" result="value.30":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":127:10-127:11
-      instruction "instruction.31.call" result="value.31":i32 call dispatch=direct("function.ArithmeticFixture.ior") arguments=["value.29","value.30"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":127:3-127:12
-      instruction "instruction.32.constant" result="value.32":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":128:8-128:9
-      instruction "instruction.33.constant" result="value.33":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":128:11-128:12
-      instruction "instruction.34.call" result="value.34":i32 call dispatch=direct("function.ArithmeticFixture.ixor") arguments=["value.32","value.33"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":128:3-128:13
-      instruction "instruction.35.constant" result="value.35":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":129:8-129:9
-      instruction "instruction.36.call" result="value.36":i32 call dispatch=direct("function.ArithmeticFixture.inot") arguments=["value.35"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":129:3-129:10
-      instruction "instruction.37.constant" result="value.37":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":130:9-130:10
-      instruction "instruction.38.constant" result="value.38":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":130:12-130:13
-      instruction "instruction.39.call" result="value.39":bool call dispatch=direct("function.ArithmeticFixture.iless") arguments=["value.37","value.38"] returns=bool failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":130:3-130:14
-      instruction "instruction.40.constant" result="value.40":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":131:8-131:11
-      instruction "instruction.41.constant" result="value.41":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":131:13-131:16
-      instruction "instruction.42.call" result="value.42":f64 call dispatch=direct("function.ArithmeticFixture.fadd") arguments=["value.40","value.41"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":131:3-131:17
-      instruction "instruction.43.constant" result="value.43":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":132:8-132:11
-      instruction "instruction.44.constant" result="value.44":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":132:13-132:16
-      instruction "instruction.45.call" result="value.45":f64 call dispatch=direct("function.ArithmeticFixture.fsub") arguments=["value.43","value.44"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":132:3-132:17
-      instruction "instruction.46.constant" result="value.46":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":133:8-133:11
-      instruction "instruction.47.constant" result="value.47":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":133:13-133:16
-      instruction "instruction.48.call" result="value.48":f64 call dispatch=direct("function.ArithmeticFixture.fmul") arguments=["value.46","value.47"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":133:3-133:17
-      instruction "instruction.49.constant" result="value.49":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":134:8-134:11
-      instruction "instruction.50.call" result="value.50":f64 call dispatch=direct("function.ArithmeticFixture.fneg") arguments=["value.49"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":134:3-134:12
-      instruction "instruction.51.constant" result="value.51":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":135:8-135:11
-      instruction "instruction.52.constant" result="value.52":f64 constant value=float(0.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":135:13-135:16
-      instruction "instruction.53.call" result="value.53":f64 call dispatch=direct("function.ArithmeticFixture.fdiv") arguments=["value.51","value.52"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":135:3-135:17
-      instruction "instruction.54.constant" result="value.54":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":136:8-136:11
-      instruction "instruction.55.constant" result="value.55":f64 constant value=float(0.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":136:13-136:16
-      instruction "instruction.56.call" result="value.56":f64 call dispatch=direct("function.ArithmeticFixture.fmod") arguments=["value.54","value.55"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":136:3-136:17
-      instruction "instruction.57.constant" result="value.57":f64 constant value=float(3.75) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":137:8-137:12
-      instruction "instruction.58.call" result="value.58":i32 call dispatch=direct("function.ArithmeticFixture.fint") arguments=["value.57"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":137:3-137:13
-      instruction "instruction.59.constant" result="value.59":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":138:10-138:13
-      instruction "instruction.60.constant" result="value.60":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":138:15-138:18
-      instruction "instruction.61.call" result="value.61":bool call dispatch=direct("function.ArithmeticFixture.fequal") arguments=["value.59","value.60"] returns=bool failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":138:3-138:19
-      instruction "instruction.62.constant" result="value.62":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":139:8-139:9
-      instruction "instruction.63.convert" result="value.63":u32 convert value="value.62" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":139:8-139:9
-      instruction "instruction.64.constant" result="value.64":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":139:11-139:12
-      instruction "instruction.65.convert" result="value.65":u32 convert value="value.64" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":139:11-139:12
-      instruction "instruction.66.call" result="value.66":u32 call dispatch=direct("function.ArithmeticFixture.uadd") arguments=["value.63","value.65"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":139:3-139:13
-      instruction "instruction.67.constant" result="value.67":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":140:8-140:9
-      instruction "instruction.68.convert" result="value.68":u32 convert value="value.67" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":140:8-140:9
-      instruction "instruction.69.constant" result="value.69":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":140:11-140:12
-      instruction "instruction.70.convert" result="value.70":u32 convert value="value.69" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":140:11-140:12
-      instruction "instruction.71.call" result="value.71":u32 call dispatch=direct("function.ArithmeticFixture.umod") arguments=["value.68","value.70"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":140:3-140:13
-      instruction "instruction.72.constant" result="value.72":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":141:8-141:9
-      instruction "instruction.73.convert" result="value.73":u32 convert value="value.72" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":141:8-141:9
-      instruction "instruction.74.constant" result="value.74":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":141:11-141:13
-      instruction "instruction.75.call" result="value.75":u32 call dispatch=direct("function.ArithmeticFixture.ushl") arguments=["value.73","value.74"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":141:3-141:14
-      instruction "instruction.76.constant" result="value.76":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":142:8-142:9
-      instruction "instruction.77.convert" result="value.77":u32 convert value="value.76" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":142:8-142:9
-      instruction "instruction.78.constant" result="value.78":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":142:11-142:13
-      instruction "instruction.79.call" result="value.79":u32 call dispatch=direct("function.ArithmeticFixture.ushr") arguments=["value.77","value.78"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":142:3-142:14
-      instruction "instruction.80.constant" result="value.80":i32 constant value=int(3) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":143:10-143:11
-      instruction "instruction.81.call" result="value.81":i32 call dispatch=direct("function.ArithmeticFixture.update") arguments=["value.80"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":143:3-143:12
-      terminator return value=none cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
+  function "function.ArithmeticFixture.literalToU8" name="ArithmeticFixture.literalToU8" returns=u8 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:34
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:34
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(300) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:30-82:33
+      instruction "instruction.1.integer-conversion-modulo" result="value.1":u8 convert value="value.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:10-82:34
+      terminator return value="value.1" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:34
+    end block "entry"
+  end function "function.ArithmeticFixture.literalToU8"
+  function "function.ArithmeticFixture.main" name="ArithmeticFixture.main" returns=void failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":115:30-178:3
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":115:30-178:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":143:8-143:9
+      instruction "instruction.1.constant" result="value.1":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":143:11-143:12
+      instruction "instruction.2.call" result="value.2":i32 call dispatch=direct("function.ArithmeticFixture.iadd") arguments=["value.0","value.1"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":143:3-143:13
+      instruction "instruction.3.constant" result="value.3":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":144:8-144:9
+      instruction "instruction.4.constant" result="value.4":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":144:11-144:12
+      instruction "instruction.5.call" result="value.5":i32 call dispatch=direct("function.ArithmeticFixture.isub") arguments=["value.3","value.4"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":144:3-144:13
+      instruction "instruction.6.constant" result="value.6":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":145:8-145:9
+      instruction "instruction.7.constant" result="value.7":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":145:11-145:12
+      instruction "instruction.8.call" result="value.8":i32 call dispatch=direct("function.ArithmeticFixture.imul") arguments=["value.6","value.7"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":145:3-145:13
+      instruction "instruction.9.constant" result="value.9":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":146:8-146:9
+      instruction "instruction.10.call" result="value.10":i32 call dispatch=direct("function.ArithmeticFixture.ineg") arguments=["value.9"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":146:3-146:10
+      instruction "instruction.11.constant" result="value.11":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":147:8-147:9
+      instruction "instruction.12.constant" result="value.12":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":147:11-147:12
+      instruction "instruction.13.call" result="value.13":f64 call dispatch=direct("function.ArithmeticFixture.idiv") arguments=["value.11","value.12"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":147:3-147:13
+      instruction "instruction.14.constant" result="value.14":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":148:8-148:9
+      instruction "instruction.15.constant" result="value.15":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":148:11-148:12
+      instruction "instruction.16.call" result="value.16":i32 call dispatch=direct("function.ArithmeticFixture.imod") arguments=["value.14","value.15"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":148:3-148:13
+      instruction "instruction.17.constant" result="value.17":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":149:8-149:9
+      instruction "instruction.18.constant" result="value.18":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":149:11-149:13
+      instruction "instruction.19.call" result="value.19":i32 call dispatch=direct("function.ArithmeticFixture.ishl") arguments=["value.17","value.18"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":149:3-149:14
+      instruction "instruction.20.constant" result="value.20":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":150:8-150:10
+      instruction "instruction.21.constant" result="value.21":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":150:12-150:14
+      instruction "instruction.22.call" result="value.22":i32 call dispatch=direct("function.ArithmeticFixture.ishr") arguments=["value.20","value.21"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":150:3-150:15
+      instruction "instruction.23.constant" result="value.23":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":151:9-151:11
+      instruction "instruction.24.constant" result="value.24":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":151:13-151:15
+      instruction "instruction.25.call" result="value.25":i32 call dispatch=direct("function.ArithmeticFixture.iushr") arguments=["value.23","value.24"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":151:3-151:16
+      instruction "instruction.26.constant" result="value.26":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":152:8-152:9
+      instruction "instruction.27.constant" result="value.27":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":152:11-152:12
+      instruction "instruction.28.call" result="value.28":i32 call dispatch=direct("function.ArithmeticFixture.iand") arguments=["value.26","value.27"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":152:3-152:13
+      instruction "instruction.29.constant" result="value.29":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":153:7-153:8
+      instruction "instruction.30.constant" result="value.30":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":153:10-153:11
+      instruction "instruction.31.call" result="value.31":i32 call dispatch=direct("function.ArithmeticFixture.ior") arguments=["value.29","value.30"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":153:3-153:12
+      instruction "instruction.32.constant" result="value.32":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":154:8-154:9
+      instruction "instruction.33.constant" result="value.33":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":154:11-154:12
+      instruction "instruction.34.call" result="value.34":i32 call dispatch=direct("function.ArithmeticFixture.ixor") arguments=["value.32","value.33"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":154:3-154:13
+      instruction "instruction.35.constant" result="value.35":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":155:8-155:9
+      instruction "instruction.36.call" result="value.36":i32 call dispatch=direct("function.ArithmeticFixture.inot") arguments=["value.35"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":155:3-155:10
+      instruction "instruction.37.constant" result="value.37":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":156:9-156:10
+      instruction "instruction.38.constant" result="value.38":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":156:12-156:13
+      instruction "instruction.39.call" result="value.39":bool call dispatch=direct("function.ArithmeticFixture.iless") arguments=["value.37","value.38"] returns=bool failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":156:3-156:14
+      instruction "instruction.40.constant" result="value.40":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":157:8-157:11
+      instruction "instruction.41.constant" result="value.41":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":157:13-157:16
+      instruction "instruction.42.call" result="value.42":f64 call dispatch=direct("function.ArithmeticFixture.fadd") arguments=["value.40","value.41"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":157:3-157:17
+      instruction "instruction.43.constant" result="value.43":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":158:8-158:11
+      instruction "instruction.44.constant" result="value.44":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":158:13-158:16
+      instruction "instruction.45.call" result="value.45":f64 call dispatch=direct("function.ArithmeticFixture.fsub") arguments=["value.43","value.44"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":158:3-158:17
+      instruction "instruction.46.constant" result="value.46":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":159:8-159:11
+      instruction "instruction.47.constant" result="value.47":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":159:13-159:16
+      instruction "instruction.48.call" result="value.48":f64 call dispatch=direct("function.ArithmeticFixture.fmul") arguments=["value.46","value.47"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":159:3-159:17
+      instruction "instruction.49.constant" result="value.49":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":160:8-160:11
+      instruction "instruction.50.call" result="value.50":f64 call dispatch=direct("function.ArithmeticFixture.fneg") arguments=["value.49"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":160:3-160:12
+      instruction "instruction.51.constant" result="value.51":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":161:8-161:11
+      instruction "instruction.52.constant" result="value.52":f64 constant value=float(0.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":161:13-161:16
+      instruction "instruction.53.call" result="value.53":f64 call dispatch=direct("function.ArithmeticFixture.fdiv") arguments=["value.51","value.52"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":161:3-161:17
+      instruction "instruction.54.constant" result="value.54":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":162:8-162:11
+      instruction "instruction.55.constant" result="value.55":f64 constant value=float(0.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":162:13-162:16
+      instruction "instruction.56.call" result="value.56":f64 call dispatch=direct("function.ArithmeticFixture.fmod") arguments=["value.54","value.55"] returns=f64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":162:3-162:17
+      instruction "instruction.57.constant" result="value.57":f64 constant value=float(3.75) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":163:8-163:12
+      instruction "instruction.58.call" result="value.58":i32 call dispatch=direct("function.ArithmeticFixture.fint") arguments=["value.57"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":163:3-163:13
+      instruction "instruction.59.constant" result="value.59":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:10-164:13
+      instruction "instruction.60.constant" result="value.60":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:15-164:18
+      instruction "instruction.61.call" result="value.61":bool call dispatch=direct("function.ArithmeticFixture.fequal") arguments=["value.59","value.60"] returns=bool failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:3-164:19
+      instruction "instruction.62.constant" result="value.62":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:8-165:9
+      instruction "instruction.63.convert" result="value.63":u32 convert value="value.62" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:8-165:9
+      instruction "instruction.64.constant" result="value.64":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:11-165:12
+      instruction "instruction.65.convert" result="value.65":u32 convert value="value.64" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:11-165:12
+      instruction "instruction.66.call" result="value.66":u32 call dispatch=direct("function.ArithmeticFixture.uadd") arguments=["value.63","value.65"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:3-165:13
+      instruction "instruction.67.constant" result="value.67":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:8-166:9
+      instruction "instruction.68.convert" result="value.68":u32 convert value="value.67" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:8-166:9
+      instruction "instruction.69.constant" result="value.69":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:11-166:12
+      instruction "instruction.70.convert" result="value.70":u32 convert value="value.69" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:11-166:12
+      instruction "instruction.71.call" result="value.71":u32 call dispatch=direct("function.ArithmeticFixture.umod") arguments=["value.68","value.70"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:3-166:13
+      instruction "instruction.72.constant" result="value.72":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:8-167:9
+      instruction "instruction.73.convert" result="value.73":u32 convert value="value.72" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:8-167:9
+      instruction "instruction.74.constant" result="value.74":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:11-167:13
+      instruction "instruction.75.call" result="value.75":u32 call dispatch=direct("function.ArithmeticFixture.ushl") arguments=["value.73","value.74"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:3-167:14
+      instruction "instruction.76.constant" result="value.76":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:8-168:9
+      instruction "instruction.77.convert" result="value.77":u32 convert value="value.76" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:8-168:9
+      instruction "instruction.78.constant" result="value.78":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:11-168:13
+      instruction "instruction.79.call" result="value.79":u32 call dispatch=direct("function.ArithmeticFixture.ushr") arguments=["value.77","value.78"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:3-168:14
+      instruction "instruction.80.call" result="value.80":u8 call dispatch=direct("function.ArithmeticFixture.literalToU8") arguments=[] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":169:3-169:16
+      instruction "instruction.81.constant" result="value.81":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:11-170:13
+      instruction "instruction.82.call" result="value.82":u8 call dispatch=direct("function.ArithmeticFixture.i32ToU8") arguments=["value.81"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:3-170:14
+      instruction "instruction.83.constant" result="value.83":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:31-171:34
+      instruction "instruction.84.integer-conversion-modulo" result="value.84":u8 convert value="value.83" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:11-171:35
+      instruction "instruction.85.call" result="value.85":i32 call dispatch=direct("function.ArithmeticFixture.u8ToI32") arguments=["value.84"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:3-171:36
+      instruction "instruction.86.constant" result="value.86":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:31-172:33
+      instruction "instruction.87.integer-conversion-exact" result="value.87":i64 convert value="value.86" kind=numeric-exact target=i64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:12-172:34
+      instruction "instruction.88.call" result="value.88":u16 call dispatch=direct("function.ArithmeticFixture.i64ToU16") arguments=["value.87"] returns=u16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:3-172:35
+      instruction "instruction.89.constant" result="value.89":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:32-173:34
+      instruction "instruction.90.integer-conversion-modulo" result="value.90":u32 convert value="value.89" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:12-173:35
+      instruction "instruction.91.call" result="value.91":u64 call dispatch=direct("function.ArithmeticFixture.u32ToU64") arguments=["value.90"] returns=u64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:3-173:36
+      instruction "instruction.92.constant" result="value.92":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:31-174:33
+      instruction "instruction.93.integer-conversion-modulo" result="value.93":u32 convert value="value.92" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:11-174:34
+      instruction "instruction.94.call" result="value.94":u8 call dispatch=direct("function.ArithmeticFixture.u32ToU8") arguments=["value.93"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:3-174:35
+      instruction "instruction.95.constant" result="value.95":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:31-175:34
+      instruction "instruction.96.integer-conversion-modulo" result="value.96":u8 convert value="value.95" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:11-175:35
+      instruction "instruction.97.call" result="value.97":i16 call dispatch=direct("function.ArithmeticFixture.u8ToI16") arguments=["value.96"] returns=i16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:3-175:36
+      instruction "instruction.98.constant" result="value.98":i32 constant value=int(3) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:10-176:11
+      instruction "instruction.99.call" result="value.99":i32 call dispatch=direct("function.ArithmeticFixture.update") arguments=["value.98"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:3-176:12
+      terminator return value=none cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":115:30-178:3
     end block "entry"
   end function "function.ArithmeticFixture.main"
+  function "function.ArithmeticFixture.u32ToU64" name="ArithmeticFixture.u32ToU64" returns=u64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
+    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
+      instruction "instruction.0.integer-conversion-exact" result="value.0":u64 convert value="parameter.0" kind=numeric-exact target=u64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:10-94:35
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
+    end block "entry"
+  end function "function.ArithmeticFixture.u32ToU64"
+  function "function.ArithmeticFixture.u32ToU8" name="ArithmeticFixture.u32ToU8" returns=u8 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
+    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
+      instruction "instruction.0.integer-conversion-modulo" result="value.0":u8 convert value="parameter.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:10-97:36
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
+    end block "entry"
+  end function "function.ArithmeticFixture.u32ToU8"
+  function "function.ArithmeticFixture.u8ToI16" name="ArithmeticFixture.u8ToI16" returns=i16 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
+    parameter "parameter.0" type=u8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
+      instruction "instruction.0.integer-conversion-exact" result="value.0":i16 convert value="parameter.0" kind=numeric-exact target=i16 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:10-100:35
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
+    end block "entry"
+  end function "function.ArithmeticFixture.u8ToI16"
+  function "function.ArithmeticFixture.u8ToI32" name="ArithmeticFixture.u8ToI32" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
+    parameter "parameter.0" type=u8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
+      instruction "instruction.0.integer-conversion-exact" result="value.0":i32 convert value="parameter.0" kind=numeric-exact target=i32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:10-88:35
+      terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
+    end block "entry"
+  end function "function.ArithmeticFixture.u8ToI32"
   function "function.ArithmeticFixture.uadd" name="ArithmeticFixture.uadd" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     parameter "parameter.1" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
@@ -277,33 +351,33 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     end block "entry"
   end function "function.ArithmeticFixture.umod"
-  function "function.ArithmeticFixture.update" name="ArithmeticFixture.update" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
-    local "local.1" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":81:3-81:23
-    local "local.2" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:23
-    local "local.3" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:3-83:25
-    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
-      instruction "instruction.0.initialize" result=- initialize place=local("local.1") value="parameter.0" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":81:3-81:23
-      instruction "instruction.1.increment-load" result="value.0":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:13-82:20
-      instruction "instruction.2.increment-one" result="value.1":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:13-82:22
-      instruction "instruction.3.increment" result="value.2":i32 binary operation="haxe.i32.add" left="value.0" right="value.1" implementation=program-local("hxc.i32.add.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:13-82:22
-      instruction "instruction.4.increment-store" result=- store place=local("local.1") value="value.2" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:13-82:22
-      instruction "instruction.5.initialize" result=- initialize place=local("local.2") value="value.0" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:23
-      instruction "instruction.6.decrement-load" result="value.3":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:17-83:24
-      instruction "instruction.7.decrement-one" result="value.4":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:15-83:24
-      instruction "instruction.8.decrement" result="value.5":i32 binary operation="haxe.i32.subtract" left="value.3" right="value.4" implementation=program-local("hxc.i32.subtract.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:15-83:24
-      instruction "instruction.9.decrement-store" result=- store place=local("local.1") value="value.5" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:15-83:24
-      instruction "instruction.10.initialize" result=- initialize place=local("local.3") value="value.5" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":83:3-83:25
-      instruction "instruction.11.compound-load" result="value.6":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":84:3-84:10
-      instruction "instruction.12.load" result="value.7":i32 load place=local("local.2") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":84:14-84:17
-      instruction "instruction.13.compound" result="value.8":i32 binary operation="haxe.i32.add" left="value.6" right="value.7" implementation=program-local("hxc.i32.add.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":84:3-84:17
-      instruction "instruction.14.compound-store" result=- store place=local("local.1") value="value.8" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":84:3-84:17
-      instruction "instruction.15.compound-load" result="value.9":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:10
-      instruction "instruction.16.load" result="value.10":i32 load place=local("local.3") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:14-85:19
-      instruction "instruction.17.compound" result="value.11":i32 binary operation="haxe.i32.multiply" left="value.9" right="value.10" implementation=program-local("hxc.i32.multiply.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:19
-      instruction "instruction.18.compound-store" result=- store place=local("local.1") value="value.11" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:19
-      instruction "instruction.19.load" result="value.12":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":86:10-86:17
-      terminator return value="value.12" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":86:3-86:17
+  function "function.ArithmeticFixture.update" name="ArithmeticFixture.update" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
+    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
+    local "local.1" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":107:3-107:23
+    local "local.2" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:3-108:23
+    local "local.3" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:3-109:25
+    block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
+      instruction "instruction.0.initialize" result=- initialize place=local("local.1") value="parameter.0" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":107:3-107:23
+      instruction "instruction.1.increment-load" result="value.0":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:13-108:20
+      instruction "instruction.2.increment-one" result="value.1":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:13-108:22
+      instruction "instruction.3.increment" result="value.2":i32 binary operation="haxe.i32.add" left="value.0" right="value.1" implementation=program-local("hxc.i32.add.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:13-108:22
+      instruction "instruction.4.increment-store" result=- store place=local("local.1") value="value.2" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:13-108:22
+      instruction "instruction.5.initialize" result=- initialize place=local("local.2") value="value.0" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:3-108:23
+      instruction "instruction.6.decrement-load" result="value.3":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:17-109:24
+      instruction "instruction.7.decrement-one" result="value.4":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:15-109:24
+      instruction "instruction.8.decrement" result="value.5":i32 binary operation="haxe.i32.subtract" left="value.3" right="value.4" implementation=program-local("hxc.i32.subtract.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:15-109:24
+      instruction "instruction.9.decrement-store" result=- store place=local("local.1") value="value.5" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:15-109:24
+      instruction "instruction.10.initialize" result=- initialize place=local("local.3") value="value.5" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:3-109:25
+      instruction "instruction.11.compound-load" result="value.6":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":110:3-110:10
+      instruction "instruction.12.load" result="value.7":i32 load place=local("local.2") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":110:14-110:17
+      instruction "instruction.13.compound" result="value.8":i32 binary operation="haxe.i32.add" left="value.6" right="value.7" implementation=program-local("hxc.i32.add.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":110:3-110:17
+      instruction "instruction.14.compound-store" result=- store place=local("local.1") value="value.8" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":110:3-110:17
+      instruction "instruction.15.compound-load" result="value.9":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":111:3-111:10
+      instruction "instruction.16.load" result="value.10":i32 load place=local("local.3") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":111:14-111:19
+      instruction "instruction.17.compound" result="value.11":i32 binary operation="haxe.i32.multiply" left="value.9" right="value.10" implementation=program-local("hxc.i32.multiply.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":111:3-111:19
+      instruction "instruction.18.compound-store" result=- store place=local("local.1") value="value.11" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":111:3-111:19
+      instruction "instruction.19.load" result="value.12":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":112:10-112:17
+      terminator return value="value.12" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":112:3-112:17
     end block "entry"
   end function "function.ArithmeticFixture.update"
   function "function.ArithmeticFixture.ushl" name="ArithmeticFixture.ushl" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23

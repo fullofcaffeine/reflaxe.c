@@ -43,6 +43,15 @@ out-of-range unsigned-to-signed cast. Checked narrowing carries a failure edge.
 For `Std.int`, finite in-range values truncate toward zero; NaN maps to zero and
 infinities or finite overflow saturate to the applicable 32-bit endpoint.
 
+The bounded executable body path exposes the direct subset through the typed
+`c.IntConvert.exact` and `c.IntConvert.modulo` operations. Cross-carrier `Int ->
+c.UInt8` uses `modulo` for literal and runtime values, while `c.UInt8 -> Int`
+uses `exact`. The inferred result type supplies the target carrier. `exact`
+requires source-range containment; `modulo` requires an unsigned target and
+uses modulo 2^N. A signed-target conversion that names a reconstruction helper,
+a checked/failing conversion, or any target-ABI-width conversion remains
+fail-closed rather than becoming an unchecked C cast.
+
 `Int` addition, subtraction, multiplication, and negation use explicitly
 unsigned 64-bit intermediates, retain the low 32 bits, and then reconstruct the
 signed result. This remains correct even when C would promote `uint32_t` to a
@@ -79,12 +88,14 @@ compiles the independent native semantic probe as strict C11 with GCC and
 Clang at `-O0` and `-O2`. That probe demonstrates accepted algorithms and
 platform facts; it is not generated C.
 
-The arithmetic suite supplies the generated-Haxe proof: typed operations and
-`Std.int` flow through HxcIR, selected static-inline helpers, strict C11,
-portable/metal/runtime-none production projects, an Eval oracle, boundary
-execution, UBSan where supported, and optimized-shape inspection. Unsupported
-signatures or body nodes still report exact `HXC1001` without output. E2.T11
-owns broader generated-program differential and sanitizer proof. See
+The arithmetic suite supplies the generated-Haxe proof: typed operations,
+`Std.int`, and direct `c.IntConvert` exact/modulo operations flow through HxcIR,
+selected static-inline helpers, strict C11, portable/metal/runtime-none
+production projects, an Eval oracle, boundary execution, UBSan where supported,
+and optimized-shape inspection. Invalid or helper-requiring signed-target
+conversions and other unsupported signatures or body nodes report exact
+`HXC1001` without output.
+E2.T11 owns broader generated-program differential and sanitizer proof. See
 [primitive function-body lowering](body-lowering.md), [static function
 lowering](function-lowering.md), and [explicit evaluation
 order](evaluation-order.md).

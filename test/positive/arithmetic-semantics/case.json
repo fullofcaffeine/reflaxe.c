@@ -18,8 +18,13 @@
     "src/reflaxe/c/lowering/CPrimitiveHelperEmitter.hx",
     "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
     "src/reflaxe/c/semantics/CPrimitiveTypes.hx",
+    "std/c/IntConvert.hx",
     "test/arithmetic_semantics/ArithmeticSemanticsProbe.hx",
     "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/fixtures/ExactModuloRequiredFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedNarrowingConversionFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedModuloTargetFixture.hx",
+    "test/arithmetic_semantics/fixtures/UnsignedToSignedConversionFixture.hx",
     "test/arithmetic_semantics/run.py"
   ],
   "runner": {

@@ -181,6 +181,8 @@ def validate_contract(contract: dict[str, object]) -> None:
         "haxe-int-to-float": ("exact", False),
         "haxe-uint-to-int-bits": ("low-32-bits-as-twos-complement", False),
         "haxe-std-int": ("truncate-toward-zero-with-defined-saturation", False),
+        "haxe-int-to-exact-u8": ("modulo-2^8", False),
+        "exact-u8-to-haxe-int": ("exact", False),
         "exact-signed-narrow-wrapping": ("low-8-bits-as-twos-complement", False),
         "exact-checked-narrow": ("range-check-then-exact", True),
         "nullable-scalar-inject": ("construct-present-nullable", False),
@@ -190,6 +192,11 @@ def validate_contract(contract: dict[str, object]) -> None:
         record = conversions.get(identifier)
         if record is None or record.get("meaning") != meaning or record.get("failureEdgeRequired") is not failure_required:
             raise PrimitiveSemanticsFailure(f"conversion contract drifted: {identifier}")
+    for identifier in ("haxe-int-to-exact-u8", "exact-u8-to-haxe-int"):
+        if conversions[identifier].get("implementation") != "direct-c":
+            raise PrimitiveSemanticsFailure(
+                f"direct cross-carrier conversion selected a helper: {identifier}"
+            )
     std_int_inputs = conversions["haxe-std-int"].get("exceptionalInputs")
     if std_int_inputs != [
         "NaN->0",

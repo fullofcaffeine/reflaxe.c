@@ -47,7 +47,7 @@
     },
     "conversions": {
       "type": "array",
-      "minItems": 13,
+      "minItems": 15,
       "items": { "$ref": "#/$defs/conversion" }
     },
     "operations": {

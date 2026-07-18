@@ -78,6 +78,36 @@
     },
     {
       "use": "explicit-wrapping",
+      "targetType": "c.UInt8",
+      "meaning": "modulo-2^8",
+      "id": "haxe-int-to-exact-u8",
+      "exceptionalInputs": [
+        "negative-or-oversized->modulo-2^8"
+      ],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-wrapping",
+      "implementation": "direct-c",
+      "sourceType": "Int"
+    },
+    {
+      "use": "explicit-wrapping",
+      "targetType": "Int",
+      "meaning": "exact",
+      "id": "exact-u8-to-haxe-int",
+      "exceptionalInputs": [],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-exact",
+      "implementation": "direct-c",
+      "sourceType": "c.UInt8"
+    },
+    {
+      "use": "explicit-wrapping",
       "targetType": "c.Int32",
       "meaning": "exact",
       "id": "exact-signed-widen",

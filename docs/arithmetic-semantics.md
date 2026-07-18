@@ -1,4 +1,4 @@
-# UB-safe primitive arithmetic
+# UB-safe primitive arithmetic and typed integer conversions
 
 Primitive arithmetic is a compiler semantic decision, not a request for a
 general runtime. [ADR 0008](adr/0008-primitive-representations-and-conversions.md)
@@ -34,6 +34,42 @@ Floating modulo calls `fmod` and records the exact `m` link fact in the compiler
 manifest with the requesting module as provenance. A build-library fact is not
 a runtime feature. Fast-math remains forbidden because it can erase the NaN,
 infinity, and signed-zero behavior on which this contract depends.
+
+## Bounded typed integer conversions
+
+The `c.IntConvert` contract makes conversion intent explicit without using
+Haxe's unchecked `cast` assertion:
+
+```haxe
+final channel:c.UInt8 = c.IntConvert.modulo(value);
+final index:Int = c.IntConvert.exact(channel);
+```
+
+The result context infers the target carrier. `exact` requires the entire
+source range to fit in that target. `modulo` requires an unsigned target and
+retains the low N bits, including for negative inputs. Both operations are
+admitted between Haxe `Int`/`UInt` and the exact-width
+`c.Int8/16/32/64`/`c.UInt8/16/32/64` carriers only when the existing primitive
+decision is non-failing direct C. The frontend records `numeric-exact` or
+`numeric-wrapping` in HxcIR before the emitter constructs a typed structural C
+cast. Neither operation selects a helper or `hxrt` feature.
+
+The rule applies to runtime values as well as literals. For example,
+`Int -> c.UInt8`, `c.Int64 -> c.UInt16`, and `c.UInt32 -> c.UInt8` retain the
+low target-width bits, while `c.UInt8 -> Int`, `c.UInt8 -> c.Int16`, and
+`c.UInt32 -> c.UInt64` are exact. The native matrix exercises negative and
+oversized dynamic values rather than relying on constant-folded range proofs.
+
+Conversions that require signed reconstruction are deliberately not admitted
+through this API. `c.IntConvert.exact` also rejects any conversion that would
+discard values, while `c.IntConvert.modulo` rejects a signed target. `Int ->
+c.Int8` and `c.UInt32 -> Int`, for example, fail with source-positioned
+`HXC1001` and leave no output because their primitive decisions name
+program-local helpers. Target-ABI integers, checked conversions, and conversions
+with failure edges remain outside this slice. The pre-existing Haxe `UInt ->
+Int` reconstruction used by the pinned `UInt` abstract remains a separately
+admitted compatibility path; it is not evidence that an exact-width
+unsigned-to-signed conversion is direct.
 
 ## Compiler-owned helpers
 
@@ -83,11 +119,14 @@ npm run snapshots:check
 ```
 
 The arithmetic suite renders repeated, reversed-input, portable, and metal
-projects; checks HxcIR, helper, header, source, symbol, and build-fact
-snapshots; compares the defined common subset with the pinned Eval oracle; and
-builds production `auto`, `minimal`, and `none` configurations. Required CI
-lanes compile and execute both GCC and Clang output at `-O0` and `-O2`, then run
-eligible output under undefined-behavior and floating-divide-by-zero sanitizers.
+projects; checks HxcIR, direct-conversion, helper, header, source, symbol, and
+build-fact snapshots; compares the defined common subset with the pinned Eval
+oracle; and builds production `auto`, `minimal`, and `none` configurations. It
+also checks exact HXC1001 ranges and no-artifact behavior for invalid or
+helper-requiring conversions. Required CI lanes compile and execute both GCC
+and Clang output at `-O0` and `-O2`, then run eligible output under
+undefined-behavior and
+floating-divide-by-zero sanitizers.
 
 This proves the currently admitted primitive operations and conversions. It
 does not claim general statement control flow, arrays, objects, strings,

@@ -40,6 +40,21 @@ double hxc_method_ArithmeticFixture_fsub(double hxc_local_ArithmeticFixture_fsub
   return hxc_local_ArithmeticFixture_fsub_left_n0 - hxc_local_ArithmeticFixture_fsub_right_n1;
 }
 
+uint8_t hxc_method_ArithmeticFixture_i32ToU8(int32_t hxc_local_ArithmeticFixture_i32ToU8_value_n0)
+{
+  return (uint8_t)hxc_local_ArithmeticFixture_i32ToU8_value_n0;
+}
+
+uint16_t hxc_method_ArithmeticFixture_i64ToU16(int64_t hxc_local_ArithmeticFixture_i64ToU16_value_n0)
+{
+  return (uint16_t)hxc_local_ArithmeticFixture_i64ToU16_value_n0;
+}
+
+int32_t hxc_method_ArithmeticFixture_i8ToI32(int8_t hxc_local_ArithmeticFixture_i8ToI32_value_n0)
+{
+  return (int32_t)hxc_local_ArithmeticFixture_i8ToI32_value_n0;
+}
+
 int32_t hxc_method_ArithmeticFixture_iadd(int32_t hxc_local_ArithmeticFixture_iadd_left_n0, int32_t hxc_local_ArithmeticFixture_iadd_right_n1)
 {
   return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_local_ArithmeticFixture_iadd_left_n0, hxc_local_ArithmeticFixture_iadd_right_n1);
@@ -110,6 +125,11 @@ int32_t hxc_method_ArithmeticFixture_ixor(int32_t hxc_local_ArithmeticFixture_ix
   return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_local_ArithmeticFixture_ixor_left_n0, hxc_local_ArithmeticFixture_ixor_right_n1);
 }
 
+uint8_t hxc_method_ArithmeticFixture_literalToU8(void)
+{
+  return (uint8_t)300;
+}
+
 void hxc_method_ArithmeticFixture_main(void)
 {
   hxc_method_ArithmeticFixture_iadd(1, 2);
@@ -138,8 +158,35 @@ void hxc_method_ArithmeticFixture_main(void)
   hxc_method_ArithmeticFixture_umod((uint32_t)1, (uint32_t)2);
   hxc_method_ArithmeticFixture_ushl((uint32_t)1, -1);
   hxc_method_ArithmeticFixture_ushr((uint32_t)1, -1);
+  hxc_method_ArithmeticFixture_literalToU8();
+  hxc_method_ArithmeticFixture_i32ToU8(-1);
+  hxc_method_ArithmeticFixture_u8ToI32((uint8_t)255);
+  hxc_method_ArithmeticFixture_i64ToU16((int64_t)-1);
+  hxc_method_ArithmeticFixture_u32ToU64((uint32_t)-1);
+  hxc_method_ArithmeticFixture_u32ToU8((uint32_t)-1);
+  hxc_method_ArithmeticFixture_u8ToI16((uint8_t)255);
   hxc_method_ArithmeticFixture_update(3);
   return;
+}
+
+uint64_t hxc_method_ArithmeticFixture_u32ToU64(uint32_t hxc_local_ArithmeticFixture_u32ToU64_value_n0)
+{
+  return (uint64_t)hxc_local_ArithmeticFixture_u32ToU64_value_n0;
+}
+
+uint8_t hxc_method_ArithmeticFixture_u32ToU8(uint32_t hxc_local_ArithmeticFixture_u32ToU8_value_n0)
+{
+  return (uint8_t)hxc_local_ArithmeticFixture_u32ToU8_value_n0;
+}
+
+int16_t hxc_method_ArithmeticFixture_u8ToI16(uint8_t hxc_local_ArithmeticFixture_u8ToI16_value_n0)
+{
+  return (int16_t)hxc_local_ArithmeticFixture_u8ToI16_value_n0;
+}
+
+int32_t hxc_method_ArithmeticFixture_u8ToI32(uint8_t hxc_local_ArithmeticFixture_u8ToI32_value_n0)
+{
+  return (int32_t)hxc_local_ArithmeticFixture_u8ToI32_value_n0;
 }
 
 uint32_t hxc_method_ArithmeticFixture_uadd(uint32_t hxc_local_ArithmeticFixture_uadd_left_n0, uint32_t hxc_local_ArithmeticFixture_uadd_right_n1)

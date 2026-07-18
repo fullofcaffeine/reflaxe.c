@@ -336,6 +336,9 @@ class CPrimitiveContract {
 					"positive-overflow->2147483647",
 					"negative-overflow->-2147483648"
 				]),
+			conversionRecord("haxe-int-to-exact-u8", CPHaxeInt, CPNonNullable, CPCExactInteger(8, false), CPNonNullable, CPUWrapping,
+				["negative-or-oversized->modulo-2^8"]),
+			conversionRecord("exact-u8-to-haxe-int", CPCExactInteger(8, false), CPNonNullable, CPHaxeInt, CPNonNullable, CPUWrapping, []),
 			conversionRecord("exact-signed-widen", CPCExactInteger(8, true), CPNonNullable, CPCExactInteger(32, true), CPNonNullable, CPUWrapping, []),
 			conversionRecord("exact-unsigned-to-signed-widen", CPCExactInteger(8, false), CPNonNullable, CPCExactInteger(16, true), CPNonNullable,
 				CPUWrapping, []),

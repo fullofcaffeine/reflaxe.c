@@ -77,6 +77,32 @@ class ArithmeticFixture {
 	static function ushr(left:UInt, right:Int):UInt
 		return left >> right;
 
+	#if !arithmetic_semantics_oracle
+	static function literalToU8():c.UInt8
+		return c.IntConvert.modulo(300);
+
+	static function i32ToU8(value:Int):c.UInt8
+		return c.IntConvert.modulo(value);
+
+	static function u8ToI32(value:c.UInt8):Int
+		return c.IntConvert.exact(value);
+
+	static function i64ToU16(value:c.Int64):c.UInt16
+		return c.IntConvert.modulo(value);
+
+	static function u32ToU64(value:c.UInt32):c.UInt64
+		return c.IntConvert.exact(value);
+
+	static function u32ToU8(value:c.UInt32):c.UInt8
+		return c.IntConvert.modulo(value);
+
+	static function u8ToI16(value:c.UInt8):c.Int16
+		return c.IntConvert.exact(value);
+
+	static function i8ToI32(value:c.Int8):Int
+		return c.IntConvert.exact(value);
+	#end
+
 	static function update(value:Int):Int {
 		var current = value;
 		var old = current++;
@@ -140,6 +166,13 @@ class ArithmeticFixture {
 		umod(1, 2);
 		ushl(1, -1);
 		ushr(1, -1);
+		literalToU8();
+		i32ToU8(-1);
+		u8ToI32(c.IntConvert.modulo(255));
+		i64ToU16(c.IntConvert.exact(-1));
+		u32ToU64(c.IntConvert.modulo(-1));
+		u32ToU8(c.IntConvert.modulo(-1));
+		u8ToI16(c.IntConvert.modulo(255));
 		update(3);
 		#end
 	}

@@ -84,6 +84,16 @@ conversions. Lowering follows these rules:
 - a checked narrowing conversion performs an explicit range check and carries
   a typed HxcIR failure edge before the exact conversion.
 
+Within the bounded executable body slice, the typed `c.IntConvert` contract
+selects these existing operations without relying on Haxe's unchecked `cast`
+assertion. `exact` requires source-range containment. `modulo` requires an
+unsigned inferred target and selects the defined modulo rule. Lowering admits
+either only when the decision is non-failing and `IRIStatic`. A decision that
+requires signed reconstruction through a program-local helper, or any failure
+edge, remains a source-positioned `HXC1001` with no artifact. This admission
+does not turn every modeled conversion row into an executable source operation,
+and it does not cover target-ABI integers.
+
 Target-ABI integers are not narrowed, widened, or range-compared from a guessed
 host width. Such a conversion remains rejected until the resolved native ABI
 facts make the decision sound.
@@ -197,14 +207,17 @@ machine contract twice, and exercises representation and conversion algorithms
 in independent strict C11 at `-O0` and `-O2`.
 
 The arithmetic suite is separate generated-Haxe evidence. It lowers real
-`Int`/`UInt`/`Float` operators and `Std.int` through HxcIR, checks the selected
-helper closure and exact `m` build fact, compares defined behavior with Eval,
-and executes boundary inputs under strict GCC and Clang at `-O0`, `-O2`, and
-UBSan where supported. It verifies that optimized assembly retains no
-out-of-line specialization symbol and that safe unsigned paths remain direct
-C. Portable, metal, and explicit `hxc_runtime=none` projects remain runtime-
-free. E2.T11 still owns broader generated-program differential and sanitizer
-coverage beyond this primitive slice.
+`Int`/`UInt`/`Float` operators, `Std.int`, and the bounded typed integer-conversion
+matrix through HxcIR; checks the selected helper closure and exact `m` build
+fact; compares defined behavior with Eval; and executes boundary inputs under
+strict GCC and Clang at `-O0`, `-O2`, and UBSan where supported. It verifies
+that optimized assembly retains no out-of-line specialization symbol, that safe
+unsigned paths and admitted conversions remain direct C, and that invalid or
+helper-requiring exact-width conversions fail at their source ranges without
+output. Portable, metal, and explicit `hxc_runtime=none` projects remain
+runtime-free. E2.T11 still owns
+broader generated-program differential and sanitizer coverage beyond this
+primitive slice.
 
 ## Consequences
 

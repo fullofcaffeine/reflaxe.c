@@ -734,9 +734,10 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A bounded primitive static-function, deterministic initialization, and literal or bounded zero-initialized local fixed-array/span graph emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, and exact-width spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
+      "summary": "A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, and literal or bounded zero-initialized local fixed-array/span storage emits and runs runtime-free strict C11.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, range-preserving `c.IntConvert.exact` and unsigned-target `c.IntConvert.modulo` operations, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, and exact-width spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
       "evidence": [
+        "std/c/IntConvert.hx",
         "test/arithmetic_semantics/run.py",
         "test/function_lowering/run.py",
         "test/primitive_differential/run.py",
@@ -753,6 +754,7 @@
         "E2.T11"
       ],
       "limitations": [
+        "Invalid, helper-requiring signed-target, checked, failing, and target-ABI integer conversions remain outside the executable slice.",
         "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."
       ]
     },

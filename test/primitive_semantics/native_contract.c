@@ -108,6 +108,9 @@ int main(void) {
   HXC_CHECK(hxc_test_u32_to_i32_bits(UINT32_C(0xFFFFFFFF)) == INT32_C(-1));
   HXC_CHECK(hxc_test_u32_to_i32_bits(UINT32_C(0x80000000)) == INT32_MIN);
   HXC_CHECK((uint32_t)INT32_C(-1) == UINT32_MAX);
+  HXC_CHECK((uint8_t)-INT32_C(1) == UINT8_MAX);
+  HXC_CHECK((uint8_t)INT32_C(256) == (uint8_t)0);
+  HXC_CHECK((int32_t)UINT8_MAX == INT32_C(255));
   HXC_CHECK(hxc_test_i32_to_i8_wrapping(INT32_C(130)) == INT8_C(-126));
   HXC_CHECK(hxc_test_i32_to_i8_wrapping(INT32_C(-129)) == INT8_C(127));
 

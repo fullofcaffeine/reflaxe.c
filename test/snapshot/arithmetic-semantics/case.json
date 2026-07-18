@@ -11,11 +11,17 @@
   ],
   "sources": [
     "scripts/test/snapshots.py",
+    "std/c/IntConvert.hx",
     "test/arithmetic_semantics/expected/arithmetic.hxcir",
     "test/arithmetic_semantics/expected/contract.json",
     "test/arithmetic_semantics/expected/program.c",
     "test/arithmetic_semantics/expected/program.h",
     "test/arithmetic_semantics/expected/symbols.json",
+    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/fixtures/ExactModuloRequiredFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedNarrowingConversionFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedModuloTargetFixture.hx",
+    "test/arithmetic_semantics/fixtures/UnsignedToSignedConversionFixture.hx",
     "test/arithmetic_semantics/run.py"
   ],
   "runner": {

@@ -178,8 +178,30 @@ def function_c_name(symbols: dict[str, object], field: str) -> str:
     return matches[0]
 
 
+def optional_function_c_name(symbols: dict[str, object], field: str) -> str | None:
+    prefix = f"ArithmeticFixture.{field}"
+    matches = [
+        item.get("cName")
+        for item in symbol_entries(symbols)
+        if item.get("kind") == "method"
+        and isinstance(item.get("sourceSymbol"), str)
+        and (
+            item["sourceSymbol"] == prefix
+            or item["sourceSymbol"].startswith(prefix + "(")
+        )
+    ]
+    if not matches:
+        return None
+    if len(matches) != 1 or not isinstance(matches[0], str):
+        raise ArithmeticSemanticsFailure(f"cannot resolve unique C name for {prefix}")
+    return matches[0]
+
+
 def function_body(source: str, name: str) -> str:
-    match = re.search(rf"(?:bool|double|int32_t|uint32_t|void) {re.escape(name)}\([^\n]*\)\n\{{", source)
+    match = re.search(
+        rf"(?:bool|double|(?:u?int(?:8|16|32|64)_t)|void) {re.escape(name)}\([^\n]*\)\n\{{",
+        source,
+    )
     if match is None:
         raise ArithmeticSemanticsFailure(f"generated definition for {name} is missing")
     start = match.start()
@@ -245,6 +267,32 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         hxcir,
     ) is None:
         raise ArithmeticSemanticsFailure("HxcIR lost the UB-safe Std.int conversion")
+    required_conversion_ir = (
+        ("literalToU8", "numeric-wrapping", "u8"),
+        ("i32ToU8", "numeric-wrapping", "u8"),
+        ("i64ToU16", "numeric-wrapping", "u16"),
+        ("u32ToU64", "numeric-exact", "u64"),
+        ("u32ToU8", "numeric-wrapping", "u8"),
+        ("u8ToI16", "numeric-exact", "i16"),
+        ("u8ToI32", "numeric-exact", "i32"),
+        ("i8ToI32", "numeric-exact", "i32"),
+    )
+    for field, kind, target in required_conversion_ir:
+        operation = (
+            "integer-conversion-exact"
+            if kind == "numeric-exact"
+            else "integer-conversion-modulo"
+        )
+        marker = (
+            rf'function "function\.ArithmeticFixture\.{field}"[\s\S]+?'
+            rf'{operation}[^\n]+kind={kind} target={target} '
+            rf'implementation=static failure=none[\s\S]+?'
+            rf'end function "function\.ArithmeticFixture\.{field}"'
+        )
+        if re.search(marker, hxcir) is None:
+            raise ArithmeticSemanticsFailure(
+                f"HxcIR lost the direct typed integer conversion in {field}"
+            )
 
     if header.count("static inline ") != len(EXPECTED_HELPERS):
         raise ArithmeticSemanticsFailure("selected helper definitions are not one static-inline closure")
@@ -276,6 +324,22 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise ArithmeticSemanticsFailure("UInt left shift lost its direct masked fast path")
     if " >> " not in ushr or "(uint64_t)" not in ushr or "(uint32_t)31" not in ushr or "primitive" in ushr:
         raise ArithmeticSemanticsFailure("UInt right shift lost its direct masked fast path")
+    required_conversion_c = (
+        ("literalToU8", "(uint8_t)"),
+        ("i32ToU8", "(uint8_t)"),
+        ("i64ToU16", "(uint16_t)"),
+        ("u32ToU64", "(uint64_t)"),
+        ("u32ToU8", "(uint8_t)"),
+        ("u8ToI16", "(int16_t)"),
+        ("u8ToI32", "(int32_t)"),
+        ("i8ToI32", "(int32_t)"),
+    )
+    for field, cast_spelling in required_conversion_c:
+        body = function_body(source, function_c_name(symbols, field))
+        if cast_spelling not in body or "hxc_primitive" in body:
+            raise ArithmeticSemanticsFailure(
+                f"{field} stopped lowering to one structural direct C cast"
+            )
 
 
 def snapshot_values(report: dict[str, object]) -> dict[str, object]:
@@ -408,9 +472,16 @@ def harness_source(symbols: dict[str, object]) -> str:
             "iadd", "isub", "imul", "ineg", "idiv", "imod", "ishl", "ishr",
             "iushr", "iand", "ior", "ixor", "inot", "iless", "fadd", "fsub",
             "fmul", "fneg", "fdiv", "fmod", "fint", "fequal", "uadd", "umod", "ushl",
-            "ushr", "update",
+            "ushr", "literalToU8", "i32ToU8", "u8ToI32", "i64ToU16",
+            "u32ToU64", "u32ToU8", "u8ToI16", "update",
         )
     }
+    i8_to_i32 = optional_function_c_name(symbols, "i8ToI32")
+    i8_to_i32_check = (
+        f'  if ({i8_to_i32}((int8_t)INT8_MIN) != -INT32_C(128)) return 54;\n'
+        if i8_to_i32 is not None
+        else ""
+    )
     return f'''#include "hxc/program.h"
 
 #include <math.h>
@@ -461,7 +532,17 @@ int main(void)
   if ({names["ushl"]}(UINT32_C(1), -INT32_C(1)) != UINT32_C(2147483648)) return 41;
   if ({names["ushr"]}(UINT32_C(2147483648), -INT32_C(1)) != UINT32_C(1)) return 42;
   if ({names["update"]}(INT32_C(3)) != INT32_C(18)) return 43;
-  return 0;
+  if ({names["literalToU8"]}() != (uint8_t)44) return 44;
+  if ({names["i32ToU8"]}(-INT32_C(1)) != UINT8_MAX) return 45;
+  if ({names["i32ToU8"]}(INT32_C(256)) != (uint8_t)0) return 46;
+  if ({names["u8ToI32"]}(UINT8_MAX) != INT32_C(255)) return 47;
+  if ({names["i64ToU16"]}(-INT64_C(1)) != UINT16_MAX) return 48;
+  if ({names["i64ToU16"]}(INT64_C(65536)) != (uint16_t)0) return 49;
+  if ({names["u32ToU64"]}(UINT32_MAX) != UINT64_C(4294967295)) return 50;
+  if ({names["u8ToI16"]}(UINT8_MAX) != (int16_t)255) return 51;
+  if ({names["u32ToU8"]}(UINT32_MAX) != UINT8_MAX) return 52;
+  if ({names["u32ToU8"]}(UINT32_C(256)) != (uint8_t)0) return 53;
+{i8_to_i32_check}  return 0;
 }}
 '''
 
@@ -614,7 +695,11 @@ def check_native_report(
 
 
 def custom_target(
-    output: Path, *, profile: str = "portable", runtime: str | None = None
+    output: Path,
+    *,
+    main_class: str = "ArithmeticFixture",
+    profile: str = "portable",
+    runtime: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
@@ -623,7 +708,7 @@ def custom_target(
         "-lib",
         "reflaxe.c",
         "-main",
-        "ArithmeticFixture",
+        main_class,
     ]
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
@@ -649,6 +734,63 @@ def generated_tree(root: Path) -> dict[str, bytes]:
         for path in sorted(root.rglob("*"))
         if path.is_file() and path.name != "_GeneratedFiles.json"
     }
+
+
+def assert_no_output(root: Path, label: str) -> None:
+    files = [path for path in root.rglob("*") if path.is_file()]
+    if files:
+        raise ArithmeticSemanticsFailure(
+            f"{label} emitted files despite its diagnostic: "
+            + ", ".join(path.relative_to(root).as_posix() for path in files)
+        )
+
+
+def check_integer_conversion_boundaries() -> None:
+    cases = (
+        (
+            "ExactModuloRequiredFixture",
+            "TCall(c.IntConvert.exact:source-range-not-contained-by-target)",
+            "10-35",
+        ),
+        (
+            "SignedNarrowingConversionFixture",
+            "TCall(c.IntConvert.exact:requires-program-local-helper:"
+            "hxc.integer.to.i8.wrapping",
+            "10-35",
+        ),
+        (
+            "UnsignedToSignedConversionFixture",
+            "TCall(c.IntConvert.exact:requires-program-local-helper:"
+            "hxc.integer.to.i32.wrapping",
+            "10-35",
+        ),
+        (
+            "SignedModuloTargetFixture",
+            "TCall(c.IntConvert.modulo:requires-unsigned-target)",
+            "10-36",
+        ),
+    )
+    with tempfile.TemporaryDirectory(prefix="hxc-integer-conversion-boundary-") as temporary:
+        root = Path(temporary)
+        for profile in ("portable", "metal"):
+            for main_class, expected_fragment, expected_range in cases:
+                output = root / f"{profile}-{main_class}"
+                result = custom_target(
+                    output, main_class=main_class, profile=profile
+                )
+                combined = result.stdout + result.stderr
+                if (
+                    result.returncode != 1
+                    or "HXC1001" not in combined
+                    or expected_fragment not in combined
+                    or f"{main_class}.hx:3: characters {expected_range}" not in combined
+                    or f"[profile={profile}]" not in combined
+                ):
+                    raise ArithmeticSemanticsFailure(
+                        f"{profile} {main_class} lost its exact integer-conversion boundary\n"
+                        f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                    )
+                assert_no_output(output, f"{profile} {main_class} HXC1001")
 
 
 def check_production(selected: str | None = None) -> None:
@@ -757,6 +899,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise ArithmeticSemanticsFailure("portable and metal arithmetic reports diverged")
         check_snapshots(first)
         check_native_report(first, args.toolchain)
+        check_integer_conversion_boundaries()
         check_production(args.toolchain)
     except (
         ArithmeticSemanticsFailure,

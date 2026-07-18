@@ -10,8 +10,13 @@
     "HXC-QA-004"
   ],
   "sources": [
+    "std/c/IntConvert.hx",
     "test/arithmetic_semantics/expected/program.c",
     "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
+    "test/arithmetic_semantics/fixtures/ExactModuloRequiredFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedNarrowingConversionFixture.hx",
+    "test/arithmetic_semantics/fixtures/SignedModuloTargetFixture.hx",
+    "test/arithmetic_semantics/fixtures/UnsignedToSignedConversionFixture.hx",
     "test/arithmetic_semantics/oracle.hxml",
     "test/arithmetic_semantics/run.py"
   ],

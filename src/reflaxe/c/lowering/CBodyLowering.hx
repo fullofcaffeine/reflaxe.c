@@ -672,6 +672,11 @@ private enum UIntIntrinsicResult {
 	UIIntrinsicNotMatched;
 }
 
+private enum IntegerConversionMode {
+	ICExact;
+	ICModulo;
+}
+
 private typedef MutableBodyBlock = {
 	final id:String;
 	final source:HxcSourceSpan;
@@ -3440,6 +3445,10 @@ private class FunctionBuilder {
 		if (isHaxeLogTrace(call.callee)) {
 			return lowerLiteralOutput(expression, call.arguments, "trace-literal", "trace(String literal)", true);
 		}
+		final integerConversion = integerConversionMode(call.callee);
+		if (integerConversion != null) {
+			return lowerIntegerConversion(expression, call.arguments, integerConversion);
+		}
 		if (isStdInt(call.callee)) {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
@@ -3519,6 +3528,55 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function lowerIntegerConversion(expression:TypedExpr, arguments:Array<TypedExpr>, mode:IntegerConversionMode):LoweredValue {
+		final surface = switch mode {
+			case ICExact: "c.IntConvert.exact";
+			case ICModulo: "c.IntConvert.modulo";
+		};
+		if (arguments.length != 1) {
+			return unsupported(expression, 'TCall($surface:argument-count=${arguments.length})');
+		}
+		final source = lowerValue(arguments[0]);
+		final target = bodyValueType(expression.t, expression.pos, 'TCall($surface:result-type)');
+		final sourcePrimitive = source.mapping.primitiveMapping();
+		final targetPrimitive = target.primitiveMapping();
+		if (sourcePrimitive == null || targetPrimitive == null) {
+			return unsupported(expression, 'TCall($surface:requires-primitive-integer-carriers)');
+		}
+		switch [sourcePrimitive.irType, targetPrimitive.irType] {
+			case [IRTInt(_, _), IRTInt(_, _)]:
+			case _:
+				return unsupported(expression, 'TCall($surface:requires-exact-width-integer-carriers)');
+		}
+		if (mode == ICModulo && targetPrimitive.signedness != CPSignUnsigned) {
+			return unsupported(expression, 'TCall($surface:requires-unsigned-target)');
+		}
+		return switch CPrimitiveSemantics.conversion(sourcePrimitive, targetPrimitive, CPUWrapping) {
+			case CPConversionElided:
+				{id: source.id, type: target.irType, mapping: target};
+			case CPConversionAllowed(decision):
+				if (decision.failureRequired) {
+					unsupported(expression, 'TCall($surface:requires-failure-edge)');
+				}
+				switch decision.implementation {
+					case IRIStatic:
+					case IRIProgramLocal(helperId):
+						unsupported(expression, 'TCall($surface:requires-program-local-helper:$helperId)');
+					case IRIRuntime(featureId):
+						unsupported(expression, 'TCall($surface:must-not-use-runtime:$featureId)');
+				}
+				if (mode == ICExact && decision.irKind != IRCNumericExact) {
+					unsupported(expression, 'TCall($surface:source-range-not-contained-by-target)');
+				}
+				final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null),
+					HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), mode == ICExact ? "integer-conversion-exact" : "integer-conversion-modulo");
+				{id: result.id, type: result.type, mapping: target};
+			case CPConversionRejected(reason):
+				unsupported(expression, 'TCall($surface:unsupported:$reason)');
+		};
 	}
 
 	function lowerImportCall(expression:TypedExpr, argumentExpressions:Array<TypedExpr>, target:CPreparedImportFunction,
@@ -3785,6 +3843,13 @@ private class FunctionBuilder {
 
 	static function isHaxeLogTrace(callee:TypedExpr):Bool
 		return isStaticMethod(callee, "haxe", "Log", "trace");
+
+	static function integerConversionMode(callee:TypedExpr):Null<IntegerConversionMode> {
+		if (isStaticMethod(callee, "c", "IntConvert", "exact")) {
+			return ICExact;
+		}
+		return isStaticMethod(callee, "c", "IntConvert", "modulo") ? ICModulo : null;
+	}
 
 	static function isStaticMethod(callee:TypedExpr, ownerPackage:String, ownerName:String, fieldName:String):Bool {
 		return switch callee.expr {

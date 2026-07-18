@@ -23,13 +23,15 @@ The M0 contract plus M1 declaration-planning slice do five things:
 
 The declaration-contract report itself does **not** lower types, emit C, prove
 an ABI layout, expose raw C, or make `c.Unsafe` operational; its explicit status
-remains `contract-seed-no-lowering`. Production lowering now consumes two
+remains `contract-seed-no-lowering`. Production lowering now consumes three
 separate bounded surfaces. E2.T08 and its bounded storage extension admit
 nonempty literal-backed `CArray<T, N>` plus positive compile-time-sized
 `CArray.zero` automatic storage and local `Span<T>`/`ConstSpan<T>` borrowing,
-indexing, and iteration. The first
-E6 vertical slice admits reached hand-authored extern C declarations with exact
-names and headers for scalars, typedefs, fieldless enums/constants, by-value
+indexing, and iteration. The exact-width storage extension also admits the
+direct, non-failing subset of `c.IntConvert.exact` and
+`c.IntConvert.modulo`. The first E6 vertical slice admits reached hand-authored
+extern C declarations with exact names and headers for scalars, typedefs,
+fieldless enums/constants, by-value
 structs, and literal borrowed `CString` arguments. Other `c.*` operations remain
 fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
 until their owning safety and inspection work is complete.
@@ -70,6 +72,31 @@ corpus from this plan. Its headers are compiled independently and together by
 the native matrix. That is executable planning evidence, not the production
 E1.T07 output writer, export ABI, or proof of arbitrary Haxe declaration
 lowering. Planning selects no `hxrt` feature.
+
+## Exact-width integer conversion boundary
+
+Exact-width carriers intentionally do not inherit Haxe `Int` arithmetic or
+implicit lossy conversions. Application code states its intended value rule
+through a typed compiler contract:
+
+```haxe
+final red:c.UInt8 = c.IntConvert.modulo(sourceRed);
+final redForMath:Int = c.IntConvert.exact(red);
+```
+
+The assignment, return, or argument context infers the target type. `exact`
+requires every source value to be representable by that target. `modulo`
+requires an unsigned target and retains the low target-width bits. Lowering
+accepts only non-failing direct-C decisions between Haxe `Int`/`UInt` and the
+exact-width `c.Int*`/`c.UInt*` family. It records the conversion in HxcIR and
+emits a structural C cast without allocation, a helper, or `hxrt`.
+
+An invalid mode, a signed reconstruction helper, a checked/failing conversion,
+or a target-ABI integer reports source-positioned `HXC1001` and leaves no
+artifact. Haxe `cast` is not an alternative conversion API: it is an unchecked
+type assertion and remains forbidden in repository-owned Haxe. See
+[UB-safe primitive arithmetic and typed integer conversions](arithmetic-semantics.md)
+for the executable matrix and exact boundary.
 
 ## Direct import boundary
 
@@ -125,6 +152,7 @@ escape hatch.
 | --- | --- | --- |
 | Functions, modules, enums, constants | Ordinary typed Haxe declarations | Haxe already models them and supplies IDE/type-checker support. |
 | Exact integer widths and `size_t`-class types | `c.Int8` through `c.UInt64`, `c.Size`, `c.PtrDiff`, `c.IntPtr`, `c.UIntPtr` | They must not inherit Haxe `Int` semantics or an assumed host width. |
+| Integer value conversion | `c.IntConvert.exact(value)`, `c.IntConvert.modulo(value)` | Conversion intent stays distinct from an unchecked type assertion; the inferred target is admitted only when the compiler proves the named direct semantics. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
 | Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects; broader forms remain reserved. |
 | Ownership and allocation | `c.Owned<T>`, `Borrowed<T>`, `Allocator`, `Arena`, `Result<T, E>` | Ownership and failure cannot disappear behind a convenient call. |

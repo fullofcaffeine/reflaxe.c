@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "primitive-arithmetic-semantics-native",
+  "id": "typed-integer-conversion-lowering-negative",
   "role": "fixture",
-  "type": "runtime",
+  "type": "negative",
   "status": "active",
   "requirements": [
     "HXC-SEM-002",
@@ -10,11 +10,9 @@
     "HXC-QA-004"
   ],
   "sources": [
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
     "std/c/IntConvert.hx",
-    "test/arithmetic_semantics/expected/program.c",
-    "test/arithmetic_semantics/expected/program.h",
-    "test/arithmetic_semantics/expected/symbols.json",
-    "test/arithmetic_semantics/fixtures/ArithmeticFixture.hx",
     "test/arithmetic_semantics/fixtures/ExactModuloRequiredFixture.hx",
     "test/arithmetic_semantics/fixtures/SignedNarrowingConversionFixture.hx",
     "test/arithmetic_semantics/fixtures/SignedModuloTargetFixture.hx",
@@ -26,22 +24,18 @@
       "python3",
       "../../arithmetic_semantics/run.py"
     ],
-    "workingDirectory": "test/runtime/arithmetic-semantics",
+    "workingDirectory": "test/negative/arithmetic-semantics",
     "timeoutSeconds": 240,
     "network": false
   },
   "expected": {
     "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
     "stdout": {
       "mode": "regex",
-      "value": "runtime-free helpers, and optimized fast paths passed$"
-    },
-    "artifacts": [
-      {
-        "path": "test/arithmetic_semantics/expected/program.c",
-        "format": "c",
-        "comparison": "exact"
-      }
-    ]
+      "value": "arithmetic-semantics: OK:"
+    }
   }
 }
