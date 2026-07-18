@@ -565,7 +565,7 @@ REQUIRED_GATE_FILES = (
 REQUIRED_WORKFLOW_SNIPPETS = (
     "  secret-scan:\n",
     "  haxe-format:\n",
-    "  pinned-toolchain:\n",
+    "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
     "  native-smoke:\n",
     "  build-adapters:\n",
     "  license-and-provenance:\n",
