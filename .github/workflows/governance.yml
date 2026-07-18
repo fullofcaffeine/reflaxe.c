@@ -115,6 +115,9 @@ jobs:
       - name: Verify generated constructors and cleanup at O0 and O2
         run: python3 test/constructor_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 
+      - name: Verify generated virtual dispatch at O0 and O2
+        run: python3 test/virtual_dispatch/run.py --native-only --toolchain "${{ matrix.toolchain }}"
+
       - name: Verify generated enum layouts at O0 and O2
         run: python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 

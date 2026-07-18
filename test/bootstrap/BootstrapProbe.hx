@@ -37,14 +37,8 @@ class BootstrapProbe {
 
 	static function main():Void {
 		#if target.sys
-		Sys.println([
-			"bootstrap=" + bootstrap,
-			"init=" + initialized,
-			"c=" + publicTarget,
-			"reflaxe_c=" + implementation,
-			"unicode=" + unicode,
-			"utf16=" + utf16
-		].join(" "));
+		Sys.println("bootstrap=" + bootstrap + " init=" + initialized + " c=" + publicTarget + " reflaxe_c=" + implementation + " unicode=" + unicode
+			+ " utf16=" + utf16);
 		#end
 	}
 }

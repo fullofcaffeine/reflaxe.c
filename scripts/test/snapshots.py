@@ -493,6 +493,29 @@ def constructor_lowering_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def virtual_dispatch_artifacts() -> list[Artifact]:
+    module = load_module("virtual_dispatch", "test/virtual_dispatch/run.py")
+    values = module.render_snapshot()
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("dispatch.hxcir", "hxcir"),
+        ("hxc.dispatch.json", "json"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"virtual-dispatch report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"virtual-dispatch report omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/virtual_dispatch/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 def enum_lowering_artifacts() -> list[Artifact]:
     module = load_module("enum_lowering", "test/enum_lowering/run.py")
     first_payload, report = module.render("snapshot first enum render")
@@ -836,6 +859,7 @@ GENERATORS: dict[str, Generator] = {
     "aggregate-lowering": aggregate_lowering_artifacts,
     "class-layout": class_layout_artifacts,
     "constructor-lowering": constructor_lowering_artifacts,
+    "virtual-dispatch": virtual_dispatch_artifacts,
     "enum-lowering": enum_lowering_artifacts,
     "generic-specialization": generic_specialization_artifacts,
     "evaluation-order": evaluation_order_artifacts,

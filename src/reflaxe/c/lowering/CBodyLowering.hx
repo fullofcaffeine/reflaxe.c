@@ -30,6 +30,11 @@ import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClassField;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
 import reflaxe.c.lowering.CBodyConstructor.CLoweredBodyConstructor;
+import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
+import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
+import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchPreparer;
+import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
+import reflaxe.c.lowering.CBodyDispatch.CPreparedBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
@@ -53,6 +58,7 @@ typedef CBodyFunctionInput = {
 	final expression:TypedExpr;
 	final ?typeParameters:Array<TypeParameter>;
 	final ?specialization:CGenericFunctionSpecialization;
+	final ?instanceOwner:Ref<ClassType>;
 }
 
 /** Captured primitive static-field facts; expressions must come from `filterTypes`. */
@@ -163,6 +169,7 @@ class CBodyLoweringResult {
 	public final enums:Array<CLoweredBodyEnum>;
 	public final classes:Array<CLoweredBodyClass>;
 	public final constructors:Array<CLoweredBodyConstructor>;
+	public final dispatch:CLoweredBodyDispatch;
 	public final helpers:Array<CPrimitiveHelperPlan>;
 	public final buildFacts:Array<TypedCBuildFact>;
 	public final symbolTable:CSymbolTableSnapshot;
@@ -171,8 +178,9 @@ class CBodyLoweringResult {
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>,
-			constructors:Array<CLoweredBodyConstructor>, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
-			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>) {
+			constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, helpers:Array<CPrimitiveHelperPlan>,
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -180,6 +188,7 @@ class CBodyLoweringResult {
 		this.enums = enums.copy();
 		this.classes = classes.copy();
 		this.constructors = constructors.copy();
+		this.dispatch = dispatch;
 		this.helpers = helpers.copy();
 		this.buildFacts = buildFacts.copy();
 		this.symbolTable = symbolTable;
@@ -197,7 +206,7 @@ class CBodyLowering {
 	}
 
 	public function lower(inputFunctions:Array<CBodyFunctionInput>, ?inputGlobals:Array<CBodyGlobalInput>, ?inputInitializers:Array<CBodyInitializerInput>,
-			?inputConstructors:Array<CBodyConstructorInput>):CBodyLoweringResult {
+			?inputConstructors:Array<CBodyConstructorInput>, ?inputDispatch:CBodyDispatchGraph):CBodyLoweringResult {
 		if (inputFunctions.length == 0) {
 			throw new CBodyEmissionError("body lowering requires at least one typed function input");
 		}
@@ -214,6 +223,8 @@ class CBodyLowering {
 			prepared.push(fn);
 			preparedById.set(fn.irId, fn);
 		}
+		final preparedDispatch:CPreparedBodyDispatch = new CBodyDispatchPreparer(context, inputDispatch == null ? CBodyDispatchGraph.empty() : inputDispatch,
+			aggregateRegistry).prepare();
 		final constructorInputs = inputConstructors == null ? [] : inputConstructors.copy();
 		constructorInputs.sort((left, right) -> compareUtf8(left.id, right.id));
 		final constructorSignaturesById:Map<String, PreparedConstructorSignature> = [];
@@ -255,13 +266,14 @@ class CBodyLowering {
 		final globalRegistry = new BodyGlobalRegistry(context, inputGlobals == null ? [] : inputGlobals, deferredInitializersByGlobal);
 		final built:Array<BuiltBodyFunction> = [];
 		for (fn in prepared) {
-			built.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry).build());
+			built.push(new FunctionBuilder(context, fn, preparedById, constructorSignaturesById, globalRegistry, aggregateRegistry, preparedDispatch).build());
 		}
+		aggregateRegistry.completeClassLayouts();
 		final preparedGlobals = globalRegistry.canonicalGlobals();
 		final preparedAggregates = aggregateRegistry.canonicalAggregates();
 		final preparedEnums = aggregateRegistry.canonicalEnums();
 		final preparedClasses = aggregateRegistry.canonicalClasses();
-		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses);
+		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedDispatch);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
@@ -271,6 +283,7 @@ class CBodyLowering {
 		final loweredAggregates = aggregateRegistry.finalize(context.symbols);
 		final loweredEnums = aggregateRegistry.finalizeEnums(context.symbols);
 		final loweredClasses = aggregateRegistry.finalizeClasses(context.symbols);
+		final loweredDispatch = preparedDispatch.finalize(context.symbols);
 		final loweredConstructors:Array<CLoweredBodyConstructor> = [];
 		for (input in constructorInputs) {
 			final signature = constructorSignaturesById.get(input.id);
@@ -298,7 +311,7 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses);
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredDispatch);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final parameterNames:Map<String, CIdentifier> = [];
@@ -342,8 +355,8 @@ class CBodyLowering {
 			}
 		}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredConstructors, helpers,
-			helperSelection.buildFacts(), symbolTable, boundsAbortName, runtimeRequirements);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredConstructors,
+			loweredDispatch, helpers, helperSelection.buildFacts(), symbolTable, boundsAbortName, runtimeRequirements);
 	}
 
 	function registerBoundsAbort(program:HxcIRProgram):Null<CSymbolRequest> {
@@ -383,7 +396,7 @@ class CBodyLowering {
 	}
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
-			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>):HxcIRProgram {
+			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, dispatch:CPreparedBodyDispatch):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
 			var moduleFunctions = byModule.get(fn.prepared.modulePath);
@@ -485,7 +498,7 @@ class CBodyLowering {
 				source: enclosingSpan(spans)
 			});
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, modules: modules};
+		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: dispatch.ir(), modules: modules};
 	}
 
 	static function enclosingSpan(spans:Array<HxcSourceSpan>):HxcSourceSpan {
@@ -532,8 +545,12 @@ class CBodyLowering {
 	public static function functionId(declarationPath:String, fieldName:String):String
 		return 'function.$declarationPath.$fieldName';
 
+	public static function methodId(declarationPath:String, fieldName:String):String
+		return 'method.$declarationPath.$fieldName';
+
 	public static function functionInputId(input:CBodyFunctionInput):String
-		return input.specialization == null ? functionId(input.declarationPath, input.fieldName) : input.specialization.instanceId;
+		return input.instanceOwner != null ? methodId(input.declarationPath,
+			input.fieldName) : input.specialization == null ? functionId(input.declarationPath, input.fieldName) : input.specialization.instanceId;
 
 	public static function functionInputDisplayName(input:CBodyFunctionInput):String
 		return input.specialization == null ? input.fieldName : input.specialization.displayName;
@@ -887,16 +904,41 @@ private class FunctionPreparer {
 		if (returnEnum != null && returnEnum.scopedLifetime) {
 			unsupported(input.expression.pos, "TFunction(return-type:recursive-enum-requires-escape-analysis)");
 		}
-		final overloadSignature = parameters.length == 0 ? [] : parameters.map(parameter -> valueTypeKey(parameter.ir.type));
+		final instanceOwner = input.instanceOwner;
+		var selfParameter:Null<PreparedParameter> = null;
+		if (instanceOwner != null) {
+			if (instanceOwner.get().params.length != 0)
+				unsupported(input.expression.pos, 'TFunction(instance-owner-generic:${input.declarationPath})');
+			final selfType = admittedValueType(TInst(instanceOwner, []), input.expression.pos, "TFunction(instance-self-type)");
+			final selfClass = selfType.classValue();
+			if (selfClass == null)
+				unsupported(input.expression.pos, "TFunction(instance-self-not-concrete-class)");
+			final selfMapping = CBodyValueType.classReference(selfClass, true);
+			selfParameter = {
+				compilerId: -1,
+				ir: {id: "parameter.self", type: selfMapping.irType, source: HaxeSourceSpan.fromPosition(input.expression.pos, input.sourcePath)},
+				mapping: selfMapping
+			};
+		}
+		final signatureParameters = parameters.copy();
+		if (selfParameter != null)
+			signatureParameters.unshift(selfParameter);
+		final overloadSignature = signatureParameters.length == 0 ? [] : signatureParameters.map(parameter -> valueTypeKey(parameter.ir.type));
 		final specializationArguments = input.specialization == null ? [] : input.specialization.arguments.map(argument -> argument.key);
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
 			CSVInternal, null, overloadSignature, specializationArguments);
 		context.symbols.register(functionRequest);
+		if (selfParameter != null) {
+			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, "self"]),
+				CNSOrdinary(functionRequest.stableKey()), CSVInternal, null, [], [], 0);
+			context.symbols.register(request);
+			parameterRequests.set(selfParameter.ir.id, request);
+		}
 		for (index in 0...parameters.length) {
 			final parameter = parameters[index];
 			final argument = functionValue.args[index];
 			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, argument.v.name]),
-				CNSOrdinary(functionRequest.stableKey()), CSVInternal, null, [], [], index);
+				CNSOrdinary(functionRequest.stableKey()), CSVInternal, null, [], [], index + (selfParameter == null ? 0 : 1));
 			context.symbols.register(request);
 			parameterRequests.set(parameter.ir.id, request);
 		}
@@ -911,7 +953,7 @@ private class FunctionPreparer {
 			bodyExpression: functionValue.expr,
 			role: PBRFunction,
 			irId: CBodyLowering.functionInputId(input),
-			parameters: parameters,
+			parameters: signatureParameters,
 			returnMapping: returnMapping,
 			functionRequest: functionRequest,
 			parameterRequests: parameterRequests
@@ -1158,6 +1200,7 @@ private class FunctionBuilder {
 	final constructorSignaturesById:Map<String, PreparedConstructorSignature>;
 	final globalRegistry:BodyGlobalRegistry;
 	final aggregateRegistry:CBodyAggregateRegistry;
+	final dispatch:CPreparedBodyDispatch;
 	final functionContext:String;
 	final parameterValuesByCompilerId:Map<Int, LoweredValue> = [];
 	final localIdsByCompilerId:Map<Int, String> = [];
@@ -1184,7 +1227,8 @@ private class FunctionBuilder {
 	var currentBlock:MutableBodyBlock;
 
 	public function new(context:CompilationContext, prepared:PreparedBodyFunction, functionsById:Map<String, PreparedBodyFunction>,
-			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry) {
+			constructorSignaturesById:Map<String, PreparedConstructorSignature>, globalRegistry:BodyGlobalRegistry, aggregateRegistry:CBodyAggregateRegistry,
+			dispatch:CPreparedBodyDispatch) {
 		this.context = context;
 		this.prepared = prepared;
 		this.input = prepared;
@@ -1192,6 +1236,7 @@ private class FunctionBuilder {
 		this.constructorSignaturesById = constructorSignaturesById;
 		this.globalRegistry = globalRegistry;
 		this.aggregateRegistry = aggregateRegistry;
+		this.dispatch = dispatch;
 		this.functionContext = 'function ${input.declarationPath}.${input.displayName} body';
 		this.localOrdinal = prepared.parameters.length;
 		this.currentBlock = createEntryBlock(HaxeSourceSpan.fromPosition(prepared.bodyExpression.pos, input.sourcePath));
@@ -1583,6 +1628,10 @@ private class FunctionBuilder {
 		appendInstruction(null,
 			IRIODefaultInitialize(IRPLocal(backingLocalId), IRISUninitialized, signature.input.elided ? IRISInitialized : IRISInitializing), source,
 			"class-default-initialize");
+		final virtualTable = dispatch.tableForInstance(signature.classValue.instanceId);
+		if (virtualTable != null) {
+			appendInstruction(null, IRIOBindVirtualTable(IRPLocal(backingLocalId), virtualTable.input.id), source, "class-bind-virtual-table");
+		}
 
 		final address:HxcIRResult = {id: nextValueId(), type: signature.selfMapping.irType};
 		appendInstruction(address, IRIOAddress(IRPLocal(backingLocalId)), source, "class-object-address");
@@ -3207,6 +3256,9 @@ private class FunctionBuilder {
 				HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "std-int");
 			return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(target)};
 		}
+		final instanceAccess = CBodyDispatchCatalog.instanceAccess(call.callee);
+		if (instanceAccess != null)
+			return lowerInstanceCall(expression, instanceAccess, call.arguments, materializeResult);
 		final targetId = directStaticFunctionId(call.callee, call.arguments);
 		final target = functionsById.get(targetId);
 		if (target == null) {
@@ -3255,6 +3307,98 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function lowerInstanceCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, argumentExpressions:Array<TypedExpr>,
+			materializeResult:Bool):Null<LoweredValue> {
+		final declaration = CBodyDispatchCatalog.declaringClass(access.owner, access.field);
+		final field = access.field.get();
+		final targetId = CBodyDispatchCatalog.methodIdForAccess(access.owner, access.field);
+		final ownerMapping = bodyValueType(TInst(declaration, []), access.receiver.pos, 'TCall(instance:$targetId:receiver-type)');
+		if (ownerMapping.classValue() == null)
+			return unsupported(expression, 'TCall(instance:$targetId:receiver-not-concrete-class)');
+		var receiver = if (CBodyDispatchCatalog.isSuperReceiver(access.receiver)) {
+			final self = selfValue;
+			self == null ? unsupported(access.receiver, 'TCall(super-method:outside-instance-method:$targetId)') : self;
+		} else {
+			lowerValue(access.receiver);
+		};
+		receiver = coerce(receiver, ownerMapping, access.receiver.pos, 'TCall(instance:$targetId:receiver)');
+
+		final directReason = CBodyDispatchCatalog.directReason(access.receiver, declaration, field);
+		final explicitMappings:Array<CBodyValueType> = [];
+		var returnMapping:CBodyValueType;
+		var dispatchKind:HxcIRCallDispatch;
+		var directTarget:Null<PreparedBodyFunction> = null;
+		if (directReason != null) {
+			directTarget = functionsById.get(targetId);
+			if (directTarget == null)
+				return unsupported(expression, 'TCall(unavailable-instance-target:$targetId)');
+			if (directTarget.parameters.length == 0)
+				throw new CBodyEmissionError('instance target `$targetId` lost its self parameter');
+			for (index in 1...directTarget.parameters.length)
+				explicitMappings.push(directTarget.parameters[index].mapping);
+			returnMapping = directTarget.returnMapping;
+			dispatchKind = IRCDDirect(targetId);
+		} else {
+			final slot = dispatch.slotForMethodId(targetId);
+			if (slot == null)
+				return unsupported(expression, 'TCall(unavailable-virtual-slot:$targetId)');
+			final slotReceiver = CBodyValueType.classReference(slot.owner, true);
+			receiver = coerce(receiver, slotReceiver, access.receiver.pos, 'TCall(instance:$targetId:virtual-receiver)');
+			for (mapping in slot.parameters)
+				explicitMappings.push(mapping);
+			returnMapping = slot.returnType;
+			dispatchKind = IRCDVirtual(slot.input.id, receiver.id);
+		}
+		if (isNullableClassReference(receiver.type)) {
+			appendInstruction(null, IRIONullCheck(receiver.id, IRNCPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode))),
+				HaxeSourceSpan.fromPosition(access.receiver.pos, input.sourcePath), "instance-call-null-check");
+		}
+		if (argumentExpressions.length != explicitMappings.length) {
+			return unsupported(expression, 'TCall(instance-argument-count=${argumentExpressions.length},expected=${explicitMappings.length},target=$targetId)');
+		}
+		final explicitArguments:Array<String> = [];
+		for (index in 0...argumentExpressions.length) {
+			final argument = argumentExpressions[index];
+			if (referencesStackConstructedValue(argument))
+				return unsupported(argument, 'TNew(stack-reference-escape:instance-call-argument:$index,target=$targetId)');
+			final value = coerce(lowerValue(argument, explicitMappings[index]), explicitMappings[index], argument.pos,
+				'TCall(instance-argument:$index,target=$targetId)');
+			explicitArguments.push(value.id);
+		}
+		final callArguments = directReason == null ? explicitArguments : [receiver.id].concat(explicitArguments);
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		if (returnMapping.irType == IRTVoid) {
+			final callInstruction = instruction(null, IRIOCall({
+				dispatch: dispatchKind,
+				arguments: callArguments,
+				returnType: IRTVoid,
+				failure: null
+			}), source, "instance-call");
+			currentBlock.instructions.push(callInstruction);
+			if (directReason != null)
+				registerTailArguments(targetId, callInstruction.id, callArguments.length);
+			return null;
+		}
+		final result:HxcIRResult = {id: nextValueId(), type: returnMapping.irType};
+		final callInstruction = instruction(result, IRIOCall({
+			dispatch: dispatchKind,
+			arguments: callArguments,
+			returnType: returnMapping.irType,
+			failure: null
+		}), source, "instance-call");
+		currentBlock.instructions.push(callInstruction);
+		if (directReason != null)
+			registerTailArguments(targetId, callInstruction.id, callArguments.length);
+		if (materializeResult) {
+			final ordinal = temporaryOrdinal++;
+			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "instance-call-result"]),
+				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+			context.symbols.register(request);
+			temporaryRequests.set(result.id, request);
+		}
+		return {id: result.id, type: result.type, mapping: returnMapping};
 	}
 
 	function lowerLiteralOutput(expression:TypedExpr, arguments:Array<TypedExpr>, operationId:String, surface:String, traceFormatting:Bool):Null<LoweredValue> {

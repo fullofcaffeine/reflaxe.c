@@ -2,7 +2,7 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven inside one generated C function. The
-compiler lowers the real pinned-Haxe `TypedExpr` through schema-6 HxcIR and
+compiler lowers the real pinned-Haxe `TypedExpr` through schema-7 HxcIR and
 structural C AST nodes. It does not allocate, select `hxrt`, use C++ constructor
 syntax, or establish a public C ABI.
 
@@ -61,9 +61,13 @@ evaluated before elision, so optimization never removes observable effects.
 The report retains the constructor with `elided: true` and `cName: null`; this
 makes absence reviewable instead of relying on a text search alone.
 
+E3.T06 builds on this same storage path: when a constructed class needs a
+reachable virtual table, construction binds the table before user constructor
+code. See [closed-world virtual dispatch](virtual-dispatch.md).
+
 ## Failure and cleanup
 
-Schema-6 HxcIR gives every function an explicit failure convention. Ordinary
+Schema-7 HxcIR gives every function an explicit failure convention. Ordinary
 functions are `infallible`. A reachable constructor containing `throw`, or
 depending on a constructor that can throw, uses `status(exception)`. Its Haxe
 semantic return remains `Void`; structural C emission uses `bool`, returns
@@ -98,7 +102,8 @@ The compiler reports exact `HXC1001` diagnostics and emits no project for:
 - extern or `@:c.layout` native construction, because imported construction
   and destruction policy is not inferred from a Haxe declaration;
 - generic class construction without a closed class specialization; and
-- broader exceptions, instance dispatch, allocation, ownership, or public ABI.
+- broader exceptions, interface/dynamic/generic dispatch, allocation,
+  ownership, or public ABI.
 
 Haxe itself rejects attempts to instantiate an interface before the custom
 target receives typed input. That language-level rejection is not relabeled as
@@ -114,6 +119,7 @@ Run:
 
 ```sh
 npm run test:constructor-lowering
+npm run test:virtual-dispatch
 npm run test:class-layout
 npm run test:hxc-ir
 npm run test:all-sources

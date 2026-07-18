@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "id": "virtual-dispatch-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-013",
+    "HXC-SEM-014"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyDispatch.hx",
+    "src/reflaxe/c/lowering/CDispatchReport.hx",
+    "test/virtual_dispatch/fixtures/positive/BaseWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/MiddleWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/LeafWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/FinalWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/Main.hx",
+    "test/virtual_dispatch/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../virtual_dispatch/run.py"
+    ],
+    "workingDirectory": "test/positive/virtual-dispatch",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^virtual-dispatch: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/virtual_dispatch/expected/dispatch.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/hxc.dispatch.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

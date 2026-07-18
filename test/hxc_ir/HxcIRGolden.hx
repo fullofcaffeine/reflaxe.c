@@ -42,6 +42,10 @@ class HxcIRGolden {
 				tagConstructionMismatch: invalidDiagnostics(tagConstructionMismatchProgram()),
 				tagProjectionMismatch: invalidDiagnostics(tagProjectionMismatchProgram()),
 				directPayloadRepresentation: invalidDiagnostics(directPayloadRepresentationProgram()),
+				orphanVirtualSlot: invalidDiagnostics(orphanVirtualSlotProgram()),
+				unknownVirtualImplementation: invalidDiagnostics(unknownVirtualImplementationProgram()),
+				mismatchedVirtualTableBind: invalidDiagnostics(mismatchedVirtualTableBindProgram()),
+				uncheckedVirtualCall: invalidDiagnostics(uncheckedVirtualCallProgram()),
 				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
 				redundantDefaultTagSwitch: invalidDiagnostics(redundantDefaultTagSwitchProgram()),
 				recursiveDirectLayout: invalidDiagnostics(recursiveDirectLayoutProgram()),
@@ -174,7 +178,7 @@ class HxcIRGolden {
 			mainModule.functions[0].blocks.reverse();
 			modules.reverse();
 		}
-		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, modules: modules};
+		return {schemaVersion: HxcIRValidator.SCHEMA_VERSION, dispatch: emptyDispatch(), modules: modules};
 	}
 
 	static function sideEffectFunction():HxcIRFunction {
@@ -321,7 +325,7 @@ class HxcIRGolden {
 		final objectType:HxcIRTypeDeclaration = {
 			id: "type.object",
 			displayName: "coverage.Object",
-			kind: IRTKReference,
+			kind: IRTKClass({baseInstanceId: null, fields: [], header: IRCHVirtual("vtable.layout.coverage.Object")}),
 			source: span(COVERAGE_SOURCE, 8)
 		};
 		final interfaceType:HxcIRTypeDeclaration = {
@@ -375,6 +379,34 @@ class HxcIRGolden {
 		];
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: {
+				layouts: [
+					{
+						id: "vtable.layout.coverage.Object",
+						rootInstanceId: "instance.object",
+						slotIds: ["slot.render"],
+						source: span(COVERAGE_SOURCE, 8)
+					}
+				],
+				slots: [
+					{
+						id: "slot.render",
+						ownerInstanceId: "instance.object",
+						parameterTypes: [IRTInt(32, true)],
+						returnType: IRTInt(32, true),
+						source: span(COVERAGE_SOURCE, 8)
+					}
+				],
+				tables: [
+					{
+						id: "vtable.coverage.Object",
+						layoutId: "vtable.layout.coverage.Object",
+						classInstanceId: "instance.object",
+						entries: [{slotId: "slot.render", implementationFunctionId: "fn.coverage.render"}],
+						source: span(COVERAGE_SOURCE, 8)
+					}
+				]
+			},
 			modules: [
 				{
 					id: "coverage.IR",
@@ -383,6 +415,7 @@ class HxcIRGolden {
 					globals: [],
 					functions: [
 						coverageTarget(),
+						coverageVirtualTarget(),
 						coverageThrowFunction(),
 						coverageFunction(),
 						coverageTagSwitchFunction()
@@ -395,6 +428,32 @@ class HxcIRGolden {
 
 	static function coverageTarget():HxcIRFunction {
 		return voidFunction("fn.coverage.target", "coverage.IR.target", COVERAGE_SOURCE, 12);
+	}
+
+	static function coverageVirtualTarget():HxcIRFunction {
+		return {
+			id: "fn.coverage.render",
+			displayName: "coverage.Object.render",
+			parameters: [
+				parameter("parameter.self", IRTPointer(IRTInstance("instance.object"), true), COVERAGE_SOURCE, 12),
+				parameter("parameter.value", IRTInt(32, true), COVERAGE_SOURCE, 12)
+			],
+			locals: [],
+			returnType: IRTInt(32, true),
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn("parameter.value", []), COVERAGE_SOURCE, 12),
+					source: span(COVERAGE_SOURCE, 12)
+				}
+			],
+			cleanupRegions: [],
+			source: span(COVERAGE_SOURCE, 12)
+		};
 	}
 
 	static function coverageThrowFunction():HxcIRFunction {
@@ -448,7 +507,7 @@ class HxcIRGolden {
 			id: "fn.coverage",
 			displayName: "coverage.IR.coverage",
 			parameters: [
-				parameter("value.receiver", IRTInstance("instance.object"), COVERAGE_SOURCE, 16),
+				parameter("value.receiver", IRTPointer(IRTInstance("instance.object"), true), COVERAGE_SOURCE, 16),
 				parameter("value.callable", IRTFunction([IRTInt(32, true)], IRTInt(32, true)), COVERAGE_SOURCE, 16),
 				parameter("value.argument", IRTInt(32, true), COVERAGE_SOURCE, 16),
 				parameter("value.float-input", IRTFloat(64), COVERAGE_SOURCE, 16),
@@ -460,6 +519,7 @@ class HxcIRGolden {
 				local("local.span", IRTSpan(IRTInt(32, true), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.constructed", IRTInstance("instance.constructed"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
+				local("local.virtual-object", IRTInstance("instance.object"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.owned", IRTPointer(IRTInstance("instance.object"), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17)
 			],
 			returnType: IRTVoid,
@@ -491,6 +551,10 @@ class HxcIRGolden {
 							COVERAGE_SOURCE, 18),
 						instruction("c00.default-initialize", null, IRIODefaultInitialize(IRPLocal("local.constructed"), IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 18),
+						instruction("c00.virtual-initialize", null,
+							IRIODefaultInitialize(IRPLocal("local.virtual-object"), IRISUninitialized, IRISInitialized), COVERAGE_SOURCE, 18),
+						instruction("c00.virtual-bind", null, IRIOBindVirtualTable(IRPLocal("local.virtual-object"), "vtable.coverage.Object"),
+							COVERAGE_SOURCE, 18),
 						instruction("c00.bounds-checked", null,
 							IRIOBoundsCheck(IRPLocal("local.span"), "value.argument", IRBPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 18),
 						instruction("c01.convert", result("value.float", IRTFloat(64)),
@@ -511,6 +575,7 @@ class HxcIRGolden {
 							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
 						instruction("c02.direct", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid)), COVERAGE_SOURCE, 20),
 						instruction("c02.result-edge", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid, resultFailure)), COVERAGE_SOURCE, 20),
+						instruction("c02.receiver-check", null, IRIONullCheck("value.receiver", IRNCPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 20),
 						instruction("c03.virtual", result("value.virtual", IRTInt(32, true)),
 							IRIOCall(call(IRCDVirtual("slot.render", "value.receiver"), ["value.argument"], IRTInt(32, true))), COVERAGE_SOURCE, 21),
 						instruction("c04.interface", result("value.interface", IRTInt(32, true)),
@@ -756,6 +821,60 @@ class HxcIRGolden {
 			source: span(file, 1)
 		};
 		return program;
+	}
+
+	static function orphanVirtualSlotProgram():HxcIRProgram {
+		final program = coverageProgram();
+		program.dispatch.slots.push({
+			id: "slot.zz-orphan",
+			ownerInstanceId: "instance.object",
+			parameterTypes: [],
+			returnType: IRTVoid,
+			source: span("test/negative/OrphanVirtualSlot.hx", 1)
+		});
+		return program;
+	}
+
+	static function unknownVirtualImplementationProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final table = program.dispatch.tables[0];
+		final entry = table.entries[0];
+		table.entries[0] = {slotId: entry.slotId, implementationFunctionId: "fn.missing"};
+		return program;
+	}
+
+	static function mismatchedVirtualTableBindProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id == "c00.virtual-bind") {
+				instructions[index] = instruction("c00.virtual-bind", null, IRIOBindVirtualTable(IRPLocal("local.record"), "vtable.coverage.Object"),
+					"test/negative/MismatchedVirtualTableBind.hx", 1);
+				return program;
+			}
+		}
+		throw "coverage virtual-table bind instruction is missing";
+	}
+
+	static function uncheckedVirtualCallProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id == "c02.receiver-check") {
+				instructions.splice(index, 1);
+				return program;
+			}
+		}
+		throw "coverage virtual receiver check instruction is missing";
+	}
+
+	static function coverageEntryInstructions(program:HxcIRProgram):Array<HxcIRInstruction> {
+		for (fn in program.modules[0].functions) {
+			if (fn.id == "fn.coverage") {
+				return fn.blocks[0].instructions;
+			}
+		}
+		throw "coverage function is missing";
 	}
 
 	static function redundantDefaultTagSwitchProgram():HxcIRProgram {
@@ -1164,6 +1283,7 @@ class HxcIRGolden {
 		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
 			modules: [
 				{
 					id: moduleId,
@@ -1197,6 +1317,9 @@ class HxcIRGolden {
 			]
 		};
 	}
+
+	static function emptyDispatch():HxcIRDispatchPlan
+		return {layouts: [], slots: [], tables: []};
 
 	static function invalidDiagnostics(program:HxcIRProgram):Array<String> {
 		final diagnostics = new HxcIRValidator().validate(program, PROFILE);

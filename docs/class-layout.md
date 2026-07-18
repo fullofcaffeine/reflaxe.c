@@ -1,7 +1,7 @@
 # Concrete class instance layouts
 
 E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-6 HxcIR to private
+classes. Reachable class declarations lower through schema-7 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
 storage. The slice is available in both `portable` and `metal`, selects no
 `hxrt` feature, and does not establish a public C ABI.
@@ -33,11 +33,14 @@ otherwise empty root class receives one compiler-owned `unsigned char` anchor
 because strict C11 has no empty-struct production. An empty derived class needs
 no anchor: its embedded base already provides complete storage.
 
-The admitted portable and metal paths record `header=none`. They do not add a
-descriptor, vtable, collector word, reflection record, or other unconditional
-object header. HxcIR can name a specific runtime feature if a later semantic
-pass proves that metadata is required; merely declaring or referencing a class
-does not make that request. The separate typed `@:c.layout(Struct|Opaque)`
+The base layout path records `header=none`. E3.T06 may instead select one named
+program-local virtual-table layout on the root of a hierarchy with a reachable
+polymorphic call; derived classes inherit that pointer through their embedded
+base and unrelated/final-only hierarchies remain header-free. No descriptor,
+collector word, reflection record, or other unconditional object header is
+added. HxcIR can name a specific runtime feature if a later semantic pass
+proves that metadata is required; merely declaring or referencing a class does
+not make that request. The separate typed `@:c.layout(Struct|Opaque)`
 contracts remain the metal value/opaque route and do not turn an ordinary Haxe
 class into exported ABI.
 
@@ -83,12 +86,13 @@ not a public export. Production evidence requires the ABI report to retain
 tag, member name, size, alignment, offset, or reference spelling in this slice
 is stable across compiler versions.
 
-Instance methods remain unsupported; virtual dispatch is E3.T06, interfaces
-are E3.T07, and the object descriptor/header plus tracing policy belongs to
-E4.T05. Constructors are admitted only through E3.T05's bounded nonescaping
-stack model. Generic class specialization, reflection, dynamic casts/type
-tests, general allocation, escaping ownership, and public class ABI remain
-fail-closed.
+Ordinary reachable instance methods and minimal closed-world virtual dispatch
+are admitted by E3.T06; see [closed-world virtual
+dispatch](virtual-dispatch.md). Interfaces remain E3.T07, and the object
+descriptor plus tracing policy belongs to E4.T05. Constructors are admitted
+only through E3.T05's bounded nonescaping stack model. Generic class
+specialization, dynamic methods, reflection, dynamic casts/type tests, general
+allocation, escaping ownership, and public class ABI remain fail-closed.
 
 ## Evidence
 
@@ -96,6 +100,7 @@ Run:
 
 ```sh
 npm run test:class-layout
+npm run test:virtual-dispatch
 npm run test:hxc-ir
 npm run test:typed-boundaries
 npm run test:all-sources
@@ -110,3 +115,5 @@ C++17 layout companion under identity-verified GCC/G++ and Clang/Clang++ at
 both optimization levels. Negative fixtures cover interfaces, generic classes,
 and downcasts without broadening those later-owned capabilities. Constructor
 and escaping-allocation boundaries live in the dedicated E3.T05 suite.
+The E3.T06 suite separately proves that a reachable hierarchy header is
+root-only and that a final direct-call class keeps the header-free layout.

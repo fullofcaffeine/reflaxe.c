@@ -262,6 +262,12 @@ class CBodyAggregateRegistry {
 	public function finalizeClasses(symbols:CSymbolRegistry):Array<CLoweredBodyClass>
 		return classRegistry.finalize(symbols);
 
+	public function requireVirtualHeader(root:CPreparedBodyClass, layoutId:String):Void
+		classRegistry.requireVirtualHeader(root, layoutId);
+
+	public function completeClassLayouts():Void
+		classRegistry.completeLayouts();
+
 	public function canonicalAggregates():Array<CPreparedBodyAggregate> {
 		final values = [for (aggregate in byShape) aggregate];
 		values.sort((left, right) -> compareUtf8(left.digest, right.digest));

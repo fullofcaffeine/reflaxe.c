@@ -1,0 +1,307 @@
+#include "hxc/program.h"
+
+_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker, hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_BaseWorker virtual-table pointer begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker) >= _Alignof(const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout *), "class hxc_type_compiler_haxezx2Dclass_BaseWorker alignment admits its virtual-table pointer");
+
+_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker, hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker, hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0) + sizeof(const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout *), "class hxc_type_compiler_haxezx2Dclass_BaseWorker field 0 follows the prior storage without overlap");
+
+_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker) >= _Alignof(int32_t), "class hxc_type_compiler_haxezx2Dclass_BaseWorker alignment admits field 0");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker, hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0) + sizeof(int32_t), "class hxc_type_compiler_haxezx2Dclass_BaseWorker size contains its final storage member");
+
+_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker, hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_MiddleWorker base subobject begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker), "class hxc_type_compiler_haxezx2Dclass_MiddleWorker alignment admits its base subobject");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker) >= sizeof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker), "class hxc_type_compiler_haxezx2Dclass_MiddleWorker contains its complete base subobject");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker, hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) + sizeof(struct hxc_type_compiler_haxezx2Dclass_BaseWorker), "class hxc_type_compiler_haxezx2Dclass_MiddleWorker size contains its final storage member");
+
+_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafWorker, hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_LeafWorker base subobject begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_LeafWorker) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker), "class hxc_type_compiler_haxezx2Dclass_LeafWorker alignment admits its base subobject");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_LeafWorker) >= sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker), "class hxc_type_compiler_haxezx2Dclass_LeafWorker contains its complete base subobject");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_LeafWorker) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafWorker, hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0) + sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker), "class hxc_type_compiler_haxezx2Dclass_LeafWorker size contains its final storage member");
+
+_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_FinalWorker, hxc_field_compiler_haxezx2Dclass_FinalWorker_field_seed_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_FinalWorker first storage field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_FinalWorker) >= _Alignof(int32_t), "class hxc_type_compiler_haxezx2Dclass_FinalWorker alignment admits field 0");
+
+_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_FinalWorker) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_FinalWorker, hxc_field_compiler_haxezx2Dclass_FinalWorker_field_seed_n0) + sizeof(int32_t), "class hxc_type_compiler_haxezx2Dclass_FinalWorker size contains its final storage member");
+
+static int32_t hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_receiver_n0, int32_t hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_argumentzx2D0_n1);
+
+static int32_t hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue_receiver_n0, int32_t hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Eva_zh77dabcf05b99055d);
+
+static const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker = { .hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0 = hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue };
+
+static const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout hxc_vtable_compiler_virtualzx2Ddispatch_MiddleWorker = { .hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0 = hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue };
+
+static int32_t hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_receiver_n0, int32_t hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_argumentzx2D0_n1)
+{
+  return hxc_method_LeafWorker_value((struct hxc_type_compiler_haxezx2Dclass_LeafWorker *)hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_receiver_n0, hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue_argumentzx2D0_n1);
+}
+
+static int32_t hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue_receiver_n0, int32_t hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Eva_zh77dabcf05b99055d)
+{
+  return hxc_method_MiddleWorker_value((struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *)hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue_receiver_n0, hxc_local_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Eva_zh77dabcf05b99055d);
+}
+
+void hxc_method_compiler_constructor_BaseWorker_n0(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_new_self_n0, int32_t hxc_local_BaseWorker_new_seed_n1)
+{
+  (*hxc_local_BaseWorker_new_self_n0).hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0 = hxc_local_BaseWorker_new_seed_n1;
+  return;
+}
+
+void hxc_method_compiler_constructor_FinalWorker_n0(struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_local_FinalWorker_new_self_n0, int32_t hxc_local_FinalWorker_new_seed_n1)
+{
+  (*hxc_local_FinalWorker_new_self_n0).hxc_field_compiler_haxezx2Dclass_FinalWorker_field_seed_n0 = hxc_local_FinalWorker_new_seed_n1;
+  return;
+}
+
+void hxc_method_compiler_constructor_LeafWorker_n0(struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_LeafWorker_new_self_n0, int32_t hxc_local_LeafWorker_new_seed_n1)
+{
+  hxc_method_compiler_constructor_MiddleWorker_n0(&hxc_local_LeafWorker_new_self_n0->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0, hxc_local_LeafWorker_new_seed_n1);
+  return;
+}
+
+void hxc_method_compiler_constructor_MiddleWorker_n0(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *hxc_local_MiddleWorker_new_self_n0, int32_t hxc_local_MiddleWorker_new_seed_n1)
+{
+  hxc_method_compiler_constructor_BaseWorker_n0(&hxc_local_MiddleWorker_new_self_n0->hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0, hxc_local_MiddleWorker_new_seed_n1);
+  return;
+}
+
+void hxc_method_Main_main(void)
+{
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker hxc_temp_Main_main_leaf_objectzx2Dstorage_n1 = { 0 };
+  hxc_temp_Main_main_leaf_objectzx2Dstorage_n1.hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0.hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0 = &hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker;
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n0 = &hxc_temp_Main_main_leaf_objectzx2Dstorage_n1;
+  hxc_method_compiler_constructor_LeafWorker_n0(hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n0, 5);
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_Main_main_leaf_n0 = &hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n0->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0;
+  struct hxc_type_compiler_haxezx2Dclass_MiddleWorker hxc_temp_Main_main_middle_objectzx2Dstorage_n3 = { 0 };
+  hxc_temp_Main_main_middle_objectzx2Dstorage_n3.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0.hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0 = &hxc_vtable_compiler_virtualzx2Ddispatch_MiddleWorker;
+  struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n1 = &hxc_temp_Main_main_middle_objectzx2Dstorage_n3;
+  hxc_method_compiler_constructor_MiddleWorker_n0(hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n1, 2);
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_Main_main_middle_n2 = &hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n1->hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0;
+  struct hxc_type_compiler_haxezx2Dclass_FinalWorker hxc_temp_Main_main_exact_objectzx2Dstorage_n5 = { 0 };
+  struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n2 = &hxc_temp_Main_main_exact_objectzx2Dstorage_n5;
+  hxc_method_compiler_constructor_FinalWorker_n0(hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n2, 7);
+  struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_local_Main_main_exact_n4 = hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n2;
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker hxc_temp_Main_main_derived_objectzx2Dstorage_n7 = { 0 };
+  hxc_temp_Main_main_derived_objectzx2Dstorage_n7.hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0.hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0 = &hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker;
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3 = &hxc_temp_Main_main_derived_objectzx2Dstorage_n7;
+  hxc_method_compiler_constructor_LeafWorker_n0(hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3, 1);
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_Main_main_derived_n6 = hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3;
+  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
+hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n4 = hxc_local_Main_main_leaf_n0;
+  if (hxc_temp_Main_main_loadzx2Dresult_n4 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 = hxc_temp_Main_main_loadzx2Dresult_n4->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n4, 1);
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116;
+  if (hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
+  }
+hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1:
+    ;
+  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
+hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2:
+    ;
+  return;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n6 = hxc_local_Main_main_middle_n2;
+  if (hxc_temp_Main_main_loadzx2Dresult_n6 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 = hxc_temp_Main_main_loadzx2Dresult_n6->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n6, 3);
+  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 == 15;
+  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4:
+    ;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8;
+  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6;
+  }
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n9 = hxc_local_Main_main_leaf_n0;
+  if (hxc_temp_Main_main_loadzx2Dresult_n9 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 = hxc_method_BaseWorker_finalValue(hxc_temp_Main_main_loadzx2Dresult_n9, 2);
+  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 == 8;
+  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6:
+    ;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11;
+  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8;
+  }
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n12 = hxc_local_Main_main_leaf_n0;
+  if (hxc_temp_Main_main_loadzx2Dresult_n12 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 = hxc_method_BaseWorker_pinnedValue(hxc_temp_Main_main_loadzx2Dresult_n12, 3);
+  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 == 10;
+  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8:
+    ;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14;
+  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10;
+  }
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_temp_Main_main_loadzx2Dresult_n15 = hxc_local_Main_main_exact_n4;
+  if (hxc_temp_Main_main_loadzx2Dresult_n15 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 = hxc_method_FinalWorker_value(hxc_temp_Main_main_loadzx2Dresult_n15, 3);
+  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 == 10;
+  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10:
+    ;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17;
+  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12;
+  }
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11:
+    ;
+  struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_loadzx2Dresult_n18 = hxc_local_Main_main_derived_n6;
+  if ((hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 = (hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0)->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0, 2);
+  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 == 113;
+  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12;
+hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12:
+    ;
+  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12;
+  if (!hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20)
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1;
+  }
+  else
+  {
+    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2;
+  }
+}
+
+int32_t hxc_method_BaseWorker_finalValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_finalValue_self_n0, int32_t hxc_local_BaseWorker_finalValue_delta_n1)
+{
+  if (hxc_local_BaseWorker_finalValue_self_n0 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_BaseWorker_finalValue_instancezx2Dcallzx2Dresult_n0 = hxc_method_BaseWorker_privateValue(hxc_local_BaseWorker_finalValue_self_n0, hxc_local_BaseWorker_finalValue_delta_n1);
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_BaseWorker_finalValue_instancezx2Dcallzx2Dresult_n0, 1);
+}
+
+int32_t hxc_method_BaseWorker_pinnedValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_pinnedValue_self_n0, int32_t hxc_local_BaseWorker_pinnedValue_delta_n1)
+{
+  if (hxc_local_BaseWorker_pinnedValue_self_n0 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_BaseWorker_pinnedValue_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_BaseWorker_pinnedValue_self_n0).hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0;
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_BaseWorker_pinnedValue_classzx2Dfieldzx2Dloadzx2Dresult_n0, hxc_local_BaseWorker_pinnedValue_delta_n1), 2);
+}
+
+int32_t hxc_method_BaseWorker_privateValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_privateValue_self_n0, int32_t hxc_local_BaseWorker_privateValue_delta_n1)
+{
+  if (hxc_local_BaseWorker_privateValue_self_n0 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_BaseWorker_privateValue_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_BaseWorker_privateValue_self_n0).hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0;
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_BaseWorker_privateValue_classzx2Dfieldzx2Dloadzx2Dresult_n0, hxc_local_BaseWorker_privateValue_delta_n1);
+}
+
+int32_t hxc_method_BaseWorker_value(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_value_self_n0, int32_t hxc_local_BaseWorker_value_delta_n1)
+{
+  if (hxc_local_BaseWorker_value_self_n0 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_BaseWorker_value_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_BaseWorker_value_self_n0).hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0;
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_BaseWorker_value_classzx2Dfieldzx2Dloadzx2Dresult_n0, hxc_local_BaseWorker_value_delta_n1);
+}
+
+int32_t hxc_method_FinalWorker_value(struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_local_FinalWorker_value_self_n0, int32_t hxc_local_FinalWorker_value_delta_n1)
+{
+  if (hxc_local_FinalWorker_value_self_n0 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_FinalWorker_value_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_FinalWorker_value_self_n0).hxc_field_compiler_haxezx2Dclass_FinalWorker_field_seed_n0;
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_FinalWorker_value_classzx2Dfieldzx2Dloadzx2Dresult_n0, hxc_local_FinalWorker_value_delta_n1);
+}
+
+int32_t hxc_method_LeafWorker_value(struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_LeafWorker_value_self_n0, int32_t hxc_local_LeafWorker_value_delta_n1)
+{
+  if ((hxc_local_LeafWorker_value_self_n0 == NULL ? NULL : &hxc_local_LeafWorker_value_self_n0->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0) == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_LeafWorker_value_instancezx2Dcallzx2Dresult_n0 = hxc_method_MiddleWorker_value(hxc_local_LeafWorker_value_self_n0 == NULL ? NULL : &hxc_local_LeafWorker_value_self_n0->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0, hxc_local_LeafWorker_value_delta_n1);
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_LeafWorker_value_instancezx2Dcallzx2Dresult_n0, 100);
+}
+
+int32_t hxc_method_MiddleWorker_value(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *hxc_local_MiddleWorker_value_self_n0, int32_t hxc_local_MiddleWorker_value_delta_n1)
+{
+  if ((hxc_local_MiddleWorker_value_self_n0 == NULL ? NULL : &hxc_local_MiddleWorker_value_self_n0->hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_temp_MiddleWorker_value_instancezx2Dcallzx2Dresult_n0 = hxc_method_BaseWorker_value(hxc_local_MiddleWorker_value_self_n0 == NULL ? NULL : &hxc_local_MiddleWorker_value_self_n0->hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0, hxc_local_MiddleWorker_value_delta_n1);
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_MiddleWorker_value_instancezx2Dcallzx2Dresult_n0, 10);
+}
+
+int main(void)
+{
+  hxc_method_Main_main();
+  return 0;
+}

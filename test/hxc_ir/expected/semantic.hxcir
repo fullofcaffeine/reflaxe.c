@@ -1,4 +1,4 @@
-hxcir schema=6
+hxcir schema=7
 module "app.SideEffectSupport" @"test/hxc_ir/fixtures/SideEffectSupport.hx":1:1-10:2
   function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
     block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2

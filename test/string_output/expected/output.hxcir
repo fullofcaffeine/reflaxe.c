@@ -1,4 +1,4 @@
-hxcir schema=6
+hxcir schema=7
 module "Main" @"Main.hx":2:30-7:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-7:3
     block "entry" @"Main.hx":2:30-7:3

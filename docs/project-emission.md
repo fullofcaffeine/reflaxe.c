@@ -21,6 +21,10 @@ E3.T02 and E3.T03 use that same direct-value status for bounded private enum
 layouts and closed generic function/type instances. Generic projects add a
 validated specialization sidecar and remain runtime-free; they do not admit the
 broader catch-all `lowered-program` state.
+E3.T04-E3.T06 use the same status for private concrete class layouts, bounded
+nonescaping construction, ordinary instance methods, and reachable closed-world
+virtual dispatch. Dispatch projects conditionally add a validated explanation
+sidecar and remain runtime-free with no public exports.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project
@@ -77,7 +81,9 @@ The emitter owns these schema-1 sidecars:
   exact direct decisions and program-local helpers, and empty runtime feature,
   include, source, define, library, and symbol sets. The
   `selected-program-local-helpers` decision appears only when that compilation
-  selected at least one helper;
+  selected at least one helper. A reachable virtual-dispatch graph additionally
+  records `reachable-program-local-virtual-dispatch`; this is a direct compiler
+  decision, not an `hxrt` feature;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the admitted
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
@@ -90,6 +96,13 @@ The emitter owns these schema-1 sidecars:
   recursion, hard limits, and conservative function/enum code-size attribution.
   The emitter revalidates its counts, order, hashes, sources, reason totals, and
   complete payload totals before accepting it.
+- `hxc.dispatch.json`: omitted when no instance call is reachable; otherwise a
+  schema-1 `hxc-closed-world-virtual-dispatch-v1` report recording each
+  source-positioned direct/virtual choice, minimal hierarchy layouts and slots,
+  selected concrete tables, representation-checked implementations, finalized
+  adapter names, and exact counts. Its closed schema is
+  `docs/specs/dispatch-report.schema.json`, and its runtime feature set must be
+  empty. See [closed-world virtual dispatch](virtual-dispatch.md).
 
 Two optional non-payload adapters are compiler-owned and content-addressed in
 the same manifest: `cmake/CMakeLists.txt` and `meson.build`. They are derived

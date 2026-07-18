@@ -25,6 +25,8 @@ import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyRuntimeRequirement;
 import reflaxe.c.lowering.CBodyLoweringError;
+import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
+import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportBuilder;
 import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
@@ -91,12 +93,21 @@ private typedef ConstructorLoweringInspection = {
 	final hxcir:String;
 }
 
+private typedef VirtualDispatchInspection = {
+	final schemaVersion:Int;
+	final profile:String;
+	final dispatch:CDispatchReportSnapshot;
+	final hxcir:String;
+}
+
 /** Whole-program adapter into the primitive static-function executable slice. */
 class CCompiler {
 	public static inline final STATIC_INITIALIZATION_REPORT_DEFINE = "reflaxe_c_static_initialization_report";
 	public static inline final STATIC_INITIALIZATION_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION=";
 	public static inline final CONSTRUCTOR_LOWERING_REPORT_DEFINE = "reflaxe_c_constructor_lowering_report";
 	public static inline final CONSTRUCTOR_LOWERING_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING=";
+	public static inline final VIRTUAL_DISPATCH_REPORT_DEFINE = "reflaxe_c_virtual_dispatch_report";
+	public static inline final VIRTUAL_DISPATCH_REPORT_PREFIX = "HXC_VIRTUAL_DISPATCH=";
 
 	final context:CompilationContext;
 
@@ -143,7 +154,9 @@ class CCompiler {
 				context.symbols.register(initializationRequest);
 			}
 			context.symbols.register(headerGuardRequest);
-			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors);
+			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
+				graph.dispatch);
+			final dispatchReport = new CDispatchReportBuilder().build(graph.dispatch, lowered.dispatch);
 			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
 				final inspection:StaticInitializationInspection = {
 					schemaVersion: 1,
@@ -168,14 +181,25 @@ class CCompiler {
 				};
 				Sys.println(CONSTRUCTOR_LOWERING_REPORT_PREFIX + Json.stringify(inspection));
 			}
+			if (Context.defined(VIRTUAL_DISPATCH_REPORT_DEFINE) && dispatchReport != null) {
+				final inspection:VirtualDispatchInspection = {
+					schemaVersion: 1,
+					profile: Std.string(context.profile),
+					dispatch: dispatchReport,
+					hxcir: new HxcIRDumper().dump(lowered.program)
+				};
+				Sys.println(VIRTUAL_DISPATCH_REPORT_PREFIX + Json.stringify(inspection));
+			}
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
+			final directInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.directCalls;
+			final indirectInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.indirectCalls;
 			final genericFunctionCount = graph.specializations.length;
 			final genericTypeCount = lowered.enums.filter(value -> value.prepared.typeParameterNames.length > 0).length;
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
 					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, lowered.constructors.length, genericFunctionCount,
-					genericTypeCount, registry);
+					genericTypeCount, indirectInstanceCallCount, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -216,6 +240,9 @@ class CCompiler {
 				directConstructorCount: lowered.constructors.length,
 				directGenericFunctionCount: genericFunctionCount,
 				directGenericTypeCount: genericTypeCount,
+				directInstanceCallCount: directInstanceCallCount,
+				indirectInstanceCallCount: indirectInstanceCallCount,
+				dispatchReport: dispatchReport,
 				specializationReport: specializationReport,
 				stdlibModules: stdlibModules(lowered.runtimeRequirements),
 				stdlibCapabilities: stdlibCapabilities(lowered.runtimeRequirements),
@@ -243,7 +270,8 @@ class CCompiler {
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
-			genericFunctionCount:Int, genericTypeCount:Int, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+			genericFunctionCount:Int, genericTypeCount:Int, indirectInstanceCallCount:Int,
+			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -271,6 +299,9 @@ class CCompiler {
 		if (genericFunctionCount + genericTypeCount > 0) {
 			directDecisions.push("closed-generic-specializations");
 		}
+		if (indirectInstanceCallCount > 0) {
+			directDecisions.push("reachable-program-local-virtual-dispatch");
+		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
@@ -295,6 +326,9 @@ class CCompiler {
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			proof += ", with closed generic instances shared by collision-checked semantic keys and bounded code-size planning";
+		}
+		if (indirectInstanceCallCount > 0) {
+			proof += ", with root-only program-local vtable pointers, reachable slots, concrete tables, and representation-checked override adapters selecting no runtime feature";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";

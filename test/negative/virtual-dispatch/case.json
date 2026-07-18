@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "virtual-dispatch-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-013",
+    "HXC-SEM-014"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyDispatch.hx",
+    "test/virtual_dispatch/fixtures/covariant_return/Main.hx",
+    "test/virtual_dispatch/fixtures/contravariant_argument/Main.hx",
+    "test/virtual_dispatch/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../virtual_dispatch/run.py"
+    ],
+    "workingDirectory": "test/negative/virtual-dispatch",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed variance passed$"
+    }
+  }
+}

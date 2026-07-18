@@ -8,6 +8,7 @@ import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
+import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 #end
@@ -15,6 +16,45 @@ import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 private enum CBodyEnumCRepresentation {
 	CBECNative;
 	CBECTagged;
+}
+
+private typedef CBodyEmitterVirtualSlot = {
+	final id:String;
+	final ownerInstanceId:String;
+	final parameterTypes:Array<HxcIRTypeRef>;
+	final returnType:HxcIRTypeRef;
+	final cMember:CIdentifier;
+}
+
+private typedef CBodyEmitterVirtualLayout = {
+	final id:String;
+	final rootInstanceId:String;
+	final cTag:CIdentifier;
+	final slots:Array<CBodyEmitterVirtualSlot>;
+}
+
+private typedef CBodyEmitterVirtualThunk = {
+	final id:String;
+	final slot:CBodyEmitterVirtualSlot;
+	final implementationFunctionId:String;
+	final implementationOwnerInstanceId:String;
+	final cName:CIdentifier;
+	final receiverName:CIdentifier;
+	final argumentNames:Array<CIdentifier>;
+}
+
+private typedef CBodyEmitterVirtualTableEntry = {
+	final slot:CBodyEmitterVirtualSlot;
+	final implementationFunctionId:Null<String>;
+	final thunk:Null<CBodyEmitterVirtualThunk>;
+}
+
+private typedef CBodyEmitterVirtualTable = {
+	final id:String;
+	final classInstanceId:String;
+	final layout:CBodyEmitterVirtualLayout;
+	final cName:CIdentifier;
+	final entries:Array<CBodyEmitterVirtualTableEntry>;
 }
 
 /** Lowers the admitted direct-value HxcIR body subset into structural strict C11. */
@@ -47,9 +87,16 @@ class CBodyEmitter {
 	final classFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final classFieldOrder:Map<String, Array<String>> = [];
 	final classInstanceOrder:Array<String> = [];
+	final classDispatchLayoutIds:Map<String, String> = [];
+	final classDispatchHeaders:Map<String, CIdentifier> = [];
+	final virtualLayouts:Map<String, CBodyEmitterVirtualLayout> = [];
+	final virtualSlots:Map<String, CBodyEmitterVirtualSlot> = [];
+	final virtualTables:Map<String, CBodyEmitterVirtualTable> = [];
+	final virtualThunks:Array<CBodyEmitterVirtualThunk> = [];
 
 	#if (macro || reflaxe_runtime)
-	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>) {
+	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
+			?dispatch:CLoweredBodyDispatch) {
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
@@ -113,6 +160,12 @@ class CBodyEmitter {
 				}
 				if (value.emptyAnchor != null)
 					classEmptyAnchors.set(instanceId, value.emptyAnchor);
+				if (value.prepared.dispatchLayoutId != null) {
+					if (value.dispatchHeader == null)
+						throw new CBodyEmissionError('class `$instanceId` lost its finalized virtual-table header member');
+					classDispatchLayoutIds.set(instanceId, value.prepared.dispatchLayoutId);
+					classDispatchHeaders.set(instanceId, value.dispatchHeader);
+				}
 				final order:Array<String> = [];
 				for (field in value.fields) {
 					order.push(field.prepared.name);
@@ -120,6 +173,60 @@ class CBodyEmitter {
 					classFieldTypes.set(classFieldKey(instanceId, field.prepared.name), field.prepared.type.irType);
 				}
 				classFieldOrder.set(instanceId, order);
+			}
+		}
+		if (dispatch != null) {
+			for (slot in dispatch.slots) {
+				virtualSlots.set(slot.prepared.input.id, {
+					id: slot.prepared.input.id,
+					ownerInstanceId: slot.prepared.owner.instanceId,
+					parameterTypes: slot.prepared.parameters.map(value -> value.irType),
+					returnType: slot.prepared.returnType.irType,
+					cMember: slot.cMember
+				});
+			}
+			for (layout in dispatch.layouts) {
+				final slots:Array<CBodyEmitterVirtualSlot> = [];
+				for (slot in layout.slots)
+					slots.push(requireVirtualSlot(slot.prepared.input.id));
+				virtualLayouts.set(layout.prepared.id, {
+					id: layout.prepared.id,
+					rootInstanceId: layout.prepared.root.instanceId,
+					cTag: layout.cTag,
+					slots: slots
+				});
+			}
+			final thunksById:Map<String, CBodyEmitterVirtualThunk> = [];
+			for (thunk in dispatch.thunks) {
+				final value:CBodyEmitterVirtualThunk = {
+					id: thunk.prepared.id,
+					slot: requireVirtualSlot(thunk.prepared.slot.input.id),
+					implementationFunctionId: thunk.prepared.implementationFunctionId,
+					implementationOwnerInstanceId: thunk.prepared.implementationOwner.instanceId,
+					cName: thunk.cName,
+					receiverName: thunk.receiverName,
+					argumentNames: thunk.argumentNames.copy()
+				};
+				thunksById.set(value.id, value);
+				virtualThunks.push(value);
+			}
+			for (table in dispatch.tables) {
+				final entries:Array<CBodyEmitterVirtualTableEntry> = [];
+				for (entry in table.entries) {
+					entries.push({
+						slot: requireVirtualSlot(entry.slot.prepared.input.id),
+						implementationFunctionId: entry.implementationFunctionId,
+						thunk: entry.thunk == null ? null : thunksById.get(entry.thunk.prepared.id)
+					});
+				}
+				final layout = requireVirtualLayout(table.layout.prepared.id);
+				virtualTables.set(table.prepared.input.id, {
+					id: table.prepared.input.id,
+					classInstanceId: table.prepared.classValue.instanceId,
+					layout: layout,
+					cName: table.cName,
+					entries: entries
+				});
 			}
 		}
 	}
@@ -182,6 +289,8 @@ class CBodyEmitter {
 							boundsAbortName, lineDirectives);
 					case IRIODefaultInitialize(IRPLocal(localId), from, to):
 						emitDefaultInitialize(statements, declared, referencedLocals, instruction, localId, from, to, fn, localNames, lineDirectives);
+					case IRIOBindVirtualTable(IRPLocal(localId), tableId):
+						emitBindVirtualTable(statements, instruction, localId, tableId, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
@@ -338,6 +447,10 @@ class CBodyEmitter {
 						for (argument in call.arguments) {
 							referenced.set(argument, true);
 						}
+						switch call.dispatch {
+							case IRCDVirtual(_, receiverValueId) | IRCDInterface(_, _, receiverValueId): referenced.set(receiverValueId, true);
+							case _:
+						}
 					case _:
 				}
 			}
@@ -379,7 +492,7 @@ class CBodyEmitter {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
 					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBoundsCheck(place, _, _) | IRIODefaultInitialize(place, _, _) |
-						IRIOLifetime(place, _, _, _):
+						IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
 						markReferencedLocals(place, referenced);
 					case IRIOInitializeSpan(place, sourceArray, _, _):
 						markReferencedLocals(place, referenced);
@@ -613,6 +726,27 @@ class CBodyEmitter {
 		}
 	}
 
+	function emitBindVirtualTable(statements:Array<CStmt>, instruction:HxcIRInstruction, localId:String, tableId:String, fn:HxcIRFunction,
+			localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null)
+			fail('virtual-table bind `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+		final table = requireVirtualTable(tableId);
+		final local = requireLocal(fn, localId);
+		final instanceId = switch local.type {
+			case IRTInstance(value): value;
+			case _: return fail('virtual-table bind `${instruction.id}` in `${fn.id}` does not target concrete object storage');
+		};
+		if (instanceId != table.classInstanceId)
+			fail('virtual-table bind `${instruction.id}` in `${fn.id}` selected table `$tableId` for the wrong concrete class');
+		final path = classBasePath(instanceId, table.layout.rootInstanceId, instruction.id, fn.id, true);
+		var rootObject:CExpr = EIdentifier(requireLocalName(localNames, localId, fn.id));
+		for (member in path)
+			rootObject = EMember(rootObject, member, false);
+		final header = EMember(rootObject, requireClassDispatchHeader(table.layout.rootInstanceId), false);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SExpr(EBinary(Assign, header, EUnary(AddressOf, EIdentifier(table.cName)))));
+	}
+
 	function enumTagExpression(value:CExpr, instanceId:String):CExpr {
 		return switch requireEnumRepresentation(instanceId) {
 			case CBECNative: value;
@@ -754,7 +888,7 @@ class CBodyEmitter {
 		};
 		if (source.nullable != target.nullable)
 			return fail('class upcast `$instructionId` in `$functionId` changed pointer nullability');
-		final path = classBasePath(source.instanceId, target.instanceId, instructionId, functionId);
+		final path = classBasePath(source.instanceId, target.instanceId, instructionId, functionId, false);
 		var projected:CExpr = value;
 		for (index in 0...path.length)
 			projected = EMember(projected, path[index], index == 0);
@@ -1186,12 +1320,142 @@ class CBodyEmitter {
 		return result;
 	}
 
+	public function virtualTableForwardDeclarations():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final ids = [for (id in virtualLayouts.keys()) id];
+		ids.sort(compareUtf8);
+		for (id in ids)
+			result.push(DForwardStruct(requireVirtualLayout(id).cTag, []));
+		return result;
+	}
+
+	public function virtualTableDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final ids = [for (id in virtualLayouts.keys()) id];
+		ids.sort(compareUtf8);
+		for (id in ids) {
+			final layout = requireVirtualLayout(id);
+			final fields:Array<CField> = [];
+			for (slot in layout.slots) {
+				final parameters:Array<CParam> = [];
+				final receiver = typedDeclarator(IRTPointer(IRTInstance(slot.ownerInstanceId), true), DName(null));
+				parameters.push({type: receiver.type, declarator: receiver.declarator, attributes: []});
+				for (parameterType in slot.parameterTypes) {
+					final parameter = typedDeclarator(parameterType, DName(null));
+					parameters.push({type: parameter.type, declarator: parameter.declarator, attributes: []});
+				}
+				final declaration = typedDeclarator(slot.returnType, DFunction(DGroup(DPointer(DName(slot.cMember), [])), FPPrototype(parameters, false)));
+				fields.push({
+					type: declaration.type,
+					declarator: declaration.declarator,
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
+			if (fields.length == 0)
+				fail('virtual layout `${layout.id}` has no reachable slots');
+			result.push(DStruct(layout.cTag, fields, []));
+		}
+		return result;
+	}
+
+	public function virtualThunkPrototypes():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (thunk in virtualThunks) {
+			final declaration = virtualThunkDeclarator(thunk, DFunction(DName(thunk.cName), FPPrototype(virtualThunkParameters(thunk), false)));
+			result.push(DPrototype([SStatic], [], declaration.type, declaration.declarator, []));
+		}
+		return result;
+	}
+
+	public function virtualTableObjects(functionNames:Map<String, CIdentifier>):Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final ids = [for (id in virtualTables.keys()) id];
+		ids.sort(compareUtf8);
+		for (id in ids) {
+			final table = requireVirtualTable(id);
+			final initializers:Array<CInitializerItem> = [];
+			for (entry in table.entries) {
+				final implementation:CExpr = if (entry.implementationFunctionId == null) {
+					EInt(CIntegerLiteral.decimal("0"));
+				} else if (entry.thunk != null) {
+					EIdentifier(entry.thunk.cName);
+				} else {
+					EIdentifier(requireFunctionName(functionNames, entry.implementationFunctionId, 'virtual table `$id`'));
+				};
+				initializers.push({designators: [DField(entry.slot.cMember)], value: IExpr(implementation)});
+			}
+			result.push(DVariable({
+				storage: [SStatic],
+				alignments: [],
+				type: new CType(TStruct(table.layout.cTag), [QConst]),
+				declarator: DName(table.cName),
+				initializer: IList(initializers),
+				attributes: []
+			}));
+		}
+		return result;
+	}
+
+	public function virtualThunkDefinitions(functionNames:Map<String, CIdentifier>):Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (thunk in virtualThunks) {
+			final declaration = virtualThunkDeclarator(thunk, DFunction(DName(thunk.cName), FPPrototype(virtualThunkParameters(thunk), false)));
+			final implementationReceiver = typedDeclarator(IRTPointer(IRTInstance(thunk.implementationOwnerInstanceId), true), DName(null));
+			final arguments:Array<CExpr> = [
+				ECast(implementationReceiver.type, implementationReceiver.declarator, EIdentifier(thunk.receiverName))
+			];
+			for (name in thunk.argumentNames)
+				arguments.push(EIdentifier(name));
+			final call = ECall(EIdentifier(requireFunctionName(functionNames, thunk.implementationFunctionId, thunk.id)), arguments);
+			final statements:Array<CStmt> = switch thunk.slot.returnType {
+				case IRTVoid: [SExpr(call), SReturn(null)];
+				case _: [SReturn(call)];
+			};
+			result.push(DFunction({
+				storage: [SStatic],
+				functionSpecifiers: [],
+				returnType: declaration.type,
+				declarator: declaration.declarator,
+				body: SBlock(statements),
+				attributes: []
+			}));
+		}
+		return result;
+	}
+
+	function virtualThunkParameters(thunk:CBodyEmitterVirtualThunk):Array<CParam> {
+		final result:Array<CParam> = [];
+		final receiver = typedDeclarator(IRTPointer(IRTInstance(thunk.slot.ownerInstanceId), true), DName(thunk.receiverName));
+		result.push({type: receiver.type, declarator: receiver.declarator, attributes: []});
+		for (index in 0...thunk.slot.parameterTypes.length) {
+			final parameter = typedDeclarator(thunk.slot.parameterTypes[index], DName(thunk.argumentNames[index]));
+			result.push({type: parameter.type, declarator: parameter.declarator, attributes: []});
+		}
+		return result;
+	}
+
+	function virtualThunkDeclarator(thunk:CBodyEmitterVirtualThunk, inner:CDeclarator):CTypedDeclarator
+		return typedDeclarator(thunk.slot.returnType, inner);
+
 	public function classDefinitions():Array<CDecl> {
 		final result:Array<CDecl> = [];
 		for (instanceId in classInstanceOrder)
 			result.push(DForwardStruct(requireClassTag(instanceId), []));
 		for (instanceId in classInstanceOrder) {
 			final fields:Array<CField> = [];
+			final dispatchLayoutId = classDispatchLayoutIds.get(instanceId);
+			if (dispatchLayoutId != null) {
+				final layout = requireVirtualLayout(dispatchLayoutId);
+				fields.push({
+					type: new CType(TStruct(layout.cTag), [QConst]),
+					declarator: DPointer(DName(requireClassDispatchHeader(instanceId)), []),
+					bitWidth: null,
+					alignments: [],
+					attributes: []
+				});
+			}
 			final baseInstance = classBaseInstances.get(instanceId);
 			if (baseInstance != null) {
 				fields.push({
@@ -1347,7 +1611,23 @@ class CBodyEmitter {
 			final structType = new CType(TStruct(tag));
 			final baseInstance = classBaseInstances.get(instanceId);
 			var previousMember:Null<CIdentifier> = null;
-			var previousType:Null<HxcIRTypeRef> = null;
+			var previousDeclaration:Null<CTypedDeclarator> = null;
+			final dispatchLayoutId = classDispatchLayoutIds.get(instanceId);
+			if (dispatchLayoutId != null) {
+				final header = requireClassDispatchHeader(instanceId);
+				final layout = requireVirtualLayout(dispatchLayoutId);
+				final headerDeclaration:CTypedDeclarator = {
+					type: new CType(TStruct(layout.cTag), [QConst]),
+					declarator: DPointer(DName(null), [])
+				};
+				result.push(DStaticAssert(EBinary(Equal, EOffsetOf(structType, DName(null), header), EInt(CIntegerLiteral.decimal("0"))),
+					'class ${tag.value} virtual-table pointer begins at offset zero'));
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)),
+					EAlignOfType(headerDeclaration.type, headerDeclaration.declarator)),
+					'class ${tag.value} alignment admits its virtual-table pointer'));
+				previousMember = header;
+				previousDeclaration = headerDeclaration;
+			}
 			if (baseInstance != null) {
 				final member = requireClassBaseMember(instanceId);
 				final baseType = cType(IRTInstance(baseInstance));
@@ -1358,7 +1638,7 @@ class CBodyEmitter {
 				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)), ESizeOfType(baseType, DName(null))),
 					'class ${tag.value} contains its complete base subobject'));
 				previousMember = member;
-				previousType = IRTInstance(baseInstance);
+				previousDeclaration = {type: baseType, declarator: DName(null)};
 			}
 			final order = requireClassFieldOrder(instanceId);
 			for (index in 0...order.length) {
@@ -1371,8 +1651,7 @@ class CBodyEmitter {
 					result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
 						'class ${tag.value} first storage field begins at offset zero'));
 				} else {
-					final priorType = requireClassPriorType(previousType, tag);
-					final prior = typedDeclarator(priorType, DName(null));
+					final prior = requireClassPriorDeclaration(previousDeclaration, tag);
 					result.push(DStaticAssert(EBinary(GreaterEqual, offset,
 						EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(prior.type, prior.declarator))),
 						'class ${tag.value} field $index follows the prior storage without overlap'));
@@ -1380,7 +1659,7 @@ class CBodyEmitter {
 				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(typed.type, typed.declarator)),
 					'class ${tag.value} alignment admits field $index'));
 				previousMember = member;
-				previousType = fieldType;
+				previousDeclaration = typed;
 			}
 			final anchor = classEmptyAnchors.get(instanceId);
 			if (anchor != null) {
@@ -1388,8 +1667,8 @@ class CBodyEmitter {
 					'class ${tag.value} strict-C empty-storage anchor begins at zero'));
 				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)), EInt(CIntegerLiteral.decimal("1"))),
 					'class ${tag.value} strict-C empty-storage anchor occupies one byte'));
-			} else if (previousMember != null && previousType != null) {
-				final last = typedDeclarator(previousType, DName(null));
+			} else if (previousMember != null && previousDeclaration != null) {
+				final last = previousDeclaration;
 				result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
 					EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(last.type, last.declarator))),
 					'class ${tag.value} size contains its final storage member'));
@@ -1574,17 +1853,19 @@ class CBodyEmitter {
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
 			nonReturningFunctionIds:Null<Map<String, Bool>>, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Bool {
 		final functionId = fn.id;
-		final targetId = switch call.dispatch {
-			case IRCDDirect(value): value;
+		var doesNotReturn = false;
+		final callExpression:CExpr = switch call.dispatch {
+			case IRCDDirect(targetId):
+				doesNotReturn = nonReturningFunctionIds != null && nonReturningFunctionIds.exists(targetId);
+				final targetName = requireFunctionName(functionNames, targetId, functionId);
+				ECall(EIdentifier(targetName), call.arguments.map(argument -> requireValue(values, argument, functionId)));
+			case IRCDVirtual(slotId, receiverValueId):
+				virtualCallExpression(slotId, receiverValueId, call.arguments, values, fn, instruction.id);
 			case dispatch if (isHostedOutputDispatch(dispatch)):
 				emitHostedPrintln(statements, values, instruction, call, lineDirectives, functionId);
 				return false;
 			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
-		final doesNotReturn = nonReturningFunctionIds != null && nonReturningFunctionIds.exists(targetId);
-		final targetName = requireFunctionName(functionNames, targetId, functionId);
-		final arguments = call.arguments.map(argument -> requireValue(values, argument, functionId));
-		final callExpression:CExpr = ECall(EIdentifier(targetName), arguments);
 		addLineDirective(statements, instruction.source, lineDirectives);
 		if (call.failure != null) {
 			final failure = call.failure;
@@ -1632,6 +1913,37 @@ class CBodyEmitter {
 		}));
 		values.set(result.id, EIdentifier(temporaryName));
 		return doesNotReturn;
+	}
+
+	function virtualCallExpression(slotId:String, receiverValueId:String, argumentValueIds:Array<String>, values:Map<String, CExpr>, fn:HxcIRFunction,
+			instructionId:String):CExpr {
+		final slot = requireVirtualSlot(slotId);
+		final layout = requireLayoutForSlot(slot);
+		final receiverType = valueType(fn, receiverValueId);
+		final receiverInstanceId = switch receiverType {
+			case IRTPointer(IRTInstance(instanceId), _): instanceId;
+			case _: return fail('virtual call `$instructionId` in `${fn.id}` lost its class receiver type');
+		};
+		final rawReceiver = requireValue(values, receiverValueId, fn.id);
+		final slotReceiver:CExpr = if (receiverInstanceId == slot.ownerInstanceId) {
+			rawReceiver;
+		} else {
+			final nullable = switch receiverType {
+				case IRTPointer(_, value): value;
+				case _: false;
+			};
+			classUpcastExpression(rawReceiver, receiverType, IRTPointer(IRTInstance(slot.ownerInstanceId), nullable), instructionId, fn.id);
+		};
+		final rootPath = classBasePath(slot.ownerInstanceId, layout.rootInstanceId, instructionId, fn.id, true);
+		var rootObject:CExpr = slotReceiver;
+		for (index in 0...rootPath.length)
+			rootObject = EMember(rootObject, rootPath[index], index == 0);
+		final header = EMember(rootObject, requireClassDispatchHeader(layout.rootInstanceId), rootPath.length == 0);
+		final functionPointer = EMember(header, slot.cMember, true);
+		final arguments:Array<CExpr> = [slotReceiver];
+		for (argumentValueId in argumentValueIds)
+			arguments.push(requireValue(values, argumentValueId, fn.id));
+		return ECall(functionPointer, arguments);
 	}
 
 	static function isHostedOutputDispatch(dispatch:HxcIRCallDispatch):Bool {
@@ -1809,7 +2121,8 @@ class CBodyEmitter {
 		return null;
 	}
 
-	function classBasePath(sourceInstanceId:String, targetInstanceId:String, instructionId:String, functionId:String):Array<CIdentifier> {
+	function classBasePath(sourceInstanceId:String, targetInstanceId:String, instructionId:String, functionId:String,
+			allowSameInstance:Bool):Array<CIdentifier> {
 		final result:Array<CIdentifier> = [];
 		var current:Null<String> = sourceInstanceId;
 		final seen:Map<String, Bool> = [];
@@ -1818,9 +2131,19 @@ class CBodyEmitter {
 			result.push(requireClassBaseMember(current));
 			current = classBaseInstances.get(current);
 		}
-		if (current != targetInstanceId || result.length == 0)
+		if (current != targetInstanceId || !allowSameInstance && result.length == 0)
 			return fail('class upcast `$instructionId` in `$functionId` has no strict base-prefix path `$sourceInstanceId` -> `$targetInstanceId`');
 		return result;
+	}
+
+	function requireLayoutForSlot(slot:CBodyEmitterVirtualSlot):CBodyEmitterVirtualLayout {
+		for (layout in virtualLayouts) {
+			for (candidate in layout.slots) {
+				if (candidate.id == slot.id)
+					return layout;
+			}
+		}
+		throw new CBodyEmissionError('virtual slot `${slot.id}` has no finalized table layout');
 	}
 
 	function requireClassTag(instanceId:String):CIdentifier {
@@ -1858,10 +2181,38 @@ class CBodyEmitter {
 		return type;
 	}
 
-	function requireClassPriorType(type:Null<HxcIRTypeRef>, tag:CIdentifier):HxcIRTypeRef {
-		if (type == null)
-			throw new CBodyEmissionError('class ${tag.value} lost the type of its preceding storage member');
-		return type;
+	function requireClassDispatchHeader(instanceId:String):CIdentifier {
+		final value = classDispatchHeaders.get(instanceId);
+		if (value == null)
+			throw new CBodyEmissionError('class instance `$instanceId` has no finalized virtual-table pointer member');
+		return value;
+	}
+
+	function requireVirtualLayout(id:String):CBodyEmitterVirtualLayout {
+		final value = virtualLayouts.get(id);
+		if (value == null)
+			throw new CBodyEmissionError('virtual dispatch has no finalized layout `$id`');
+		return value;
+	}
+
+	function requireVirtualSlot(id:String):CBodyEmitterVirtualSlot {
+		final value = virtualSlots.get(id);
+		if (value == null)
+			throw new CBodyEmissionError('virtual dispatch has no finalized slot `$id`');
+		return value;
+	}
+
+	function requireVirtualTable(id:String):CBodyEmitterVirtualTable {
+		final value = virtualTables.get(id);
+		if (value == null)
+			throw new CBodyEmissionError('virtual dispatch has no finalized table `$id`');
+		return value;
+	}
+
+	function requireClassPriorDeclaration(value:Null<CTypedDeclarator>, tag:CIdentifier):CTypedDeclarator {
+		if (value == null)
+			throw new CBodyEmissionError('class ${tag.value} lost the declaration of its preceding storage member');
+		return value;
 	}
 
 	function requireEnumRepresentation(instanceId:String):CBodyEnumCRepresentation {

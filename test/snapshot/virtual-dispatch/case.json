@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "id": "virtual-dispatch-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-013",
+    "HXC-SEM-014"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/virtual_dispatch/expected/dispatch.hxcir",
+    "test/virtual_dispatch/expected/hxc.dispatch.json",
+    "test/virtual_dispatch/expected/program.h",
+    "test/virtual_dispatch/expected/program.c",
+    "test/virtual_dispatch/expected/symbols.json",
+    "test/virtual_dispatch/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "virtual-dispatch"
+    ],
+    "workingDirectory": "test/snapshot/virtual-dispatch",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/virtual_dispatch/expected/dispatch.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/hxc.dispatch.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

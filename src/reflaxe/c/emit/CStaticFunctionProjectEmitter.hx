@@ -75,7 +75,7 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.dispatch);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
@@ -136,7 +136,13 @@ class CStaticFunctionProjectEmitter {
 		for (definition in bodyEmitter.enumDefinitions()) {
 			headerUnit.declarations.push(definition);
 		}
+		for (declaration in bodyEmitter.virtualTableForwardDeclarations()) {
+			headerUnit.declarations.push(declaration);
+		}
 		for (definition in bodyEmitter.classDefinitions()) {
+			headerUnit.declarations.push(definition);
+		}
+		for (definition in bodyEmitter.virtualTableDefinitions()) {
 			headerUnit.declarations.push(definition);
 		}
 		for (global in lowered.globals) {
@@ -169,6 +175,9 @@ class CStaticFunctionProjectEmitter {
 		for (assertion in bodyEmitter.classLayoutAssertions()) {
 			programUnit.declarations.push(assertion);
 		}
+		for (prototype in bodyEmitter.virtualThunkPrototypes()) {
+			programUnit.declarations.push(prototype);
+		}
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in lowered.helpers) {
 			helperNames.set(helper.helperId, helper.cName);
@@ -183,6 +192,12 @@ class CStaticFunctionProjectEmitter {
 				initializer: bodyEmitter.globalInitializer(global.ir),
 				attributes: []
 			}));
+		}
+		for (table in bodyEmitter.virtualTableObjects(functionNames)) {
+			programUnit.declarations.push(table);
+		}
+		for (thunk in bodyEmitter.virtualThunkDefinitions(functionNames)) {
+			programUnit.declarations.push(thunk);
 		}
 		final sources:Array<CStaticFunctionSourcePlan> = [];
 		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];

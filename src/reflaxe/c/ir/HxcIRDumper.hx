@@ -11,10 +11,29 @@ class HxcIRDumper {
 
 	public function dump(program:HxcIRProgram):String {
 		output = ['hxcir schema=${program.schemaVersion}'];
+		if (program.dispatch.layouts.length > 0 || program.dispatch.slots.length > 0 || program.dispatch.tables.length > 0)
+			dumpDispatch(program.dispatch);
 		for (module in sorted(program.modules, item -> item.id)) {
 			dumpModule(module);
 		}
 		return output.join("\n") + "\n";
+	}
+
+	function dumpDispatch(plan:HxcIRDispatchPlan):Void {
+		line("dispatch");
+		for (layout in sorted(plan.layouts, item -> item.id)) {
+			line('  layout ${quote(layout.id)} root=${quote(layout.rootInstanceId)} slots=${strings(layout.slotIds)} ${source(layout.source)}');
+		}
+		for (slot in sorted(plan.slots, item -> item.id)) {
+			line('  slot ${quote(slot.id)} owner=${quote(slot.ownerInstanceId)} parameters=${types(slot.parameterTypes)} returns=${typeRef(slot.returnType)} ${source(slot.source)}');
+		}
+		for (table in sorted(plan.tables, item -> item.id)) {
+			line('  table ${quote(table.id)} layout=${quote(table.layoutId)} class=${quote(table.classInstanceId)} ${source(table.source)}');
+			for (entry in table.entries) {
+				line('    entry slot=${quote(entry.slotId)} implementation=${nullableQuote(entry.implementationFunctionId)}');
+			}
+		}
+		line("end dispatch");
 	}
 
 	function dumpModule(module:HxcIRModule):Void {
@@ -135,6 +154,7 @@ class HxcIRDumper {
 				'initialize-fixed-array place=${renderPlace(place)} values=${strings(values)} transition=${state(from)}->${state(to)}';
 			case IRIOInitializeSpan(place, sourceArray, from, to):
 				'initialize-span place=${renderPlace(place)} source=${renderPlace(sourceArray)} transition=${state(from)}->${state(to)}';
+			case IRIOBindVirtualTable(place, tableId): 'bind-virtual-table place=${renderPlace(place)} table=${quote(tableId)}';
 			case IRIOBoundsCheck(collection, indexValueId, policy):
 				'bounds-check collection=${renderPlace(collection)} index=${quote(indexValueId)} policy=${boundsPolicy(policy)}';
 			case IRIONullCheck(valueId, policy): 'null-check value=${quote(valueId)} policy=${nullCheckPolicy(policy)}';
@@ -153,6 +173,7 @@ class HxcIRDumper {
 	function classHeader(value:HxcIRClassHeader):String {
 		return switch value {
 			case IRCHNone: "none";
+			case IRCHVirtual(layoutId): 'virtual(${quote(layoutId)})';
 			case IRCHRuntime(featureId): 'runtime(${quote(featureId)})';
 		};
 	}

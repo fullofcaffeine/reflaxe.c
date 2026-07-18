@@ -7,11 +7,14 @@ import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
 import reflaxe.c.CRuntimeDiagnostics;
 import reflaxe.c.CRuntimePolicy;
+import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanSnapshot;
 import reflaxe.c.emit.CBuildPlan.CBuildStandard;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
+import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
+import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationContract;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
@@ -58,6 +61,9 @@ typedef CProjectEmissionPlan = {
 	final ?directConstructorCount:Int;
 	final ?directGenericFunctionCount:Int;
 	final ?directGenericTypeCount:Int;
+	final ?directInstanceCallCount:Int;
+	final ?indirectInstanceCallCount:Int;
+	final ?dispatchReport:CDispatchReportSnapshot;
 	final ?specializationReport:CGenericSpecializationReportSnapshot;
 	final ?stdlibModules:Array<String>;
 	final ?stdlibCapabilities:Array<String>;
@@ -169,6 +175,7 @@ class CProjectEmitter {
 
 	static final SIDECAR_PATHS = [
 		"hxc.abi.json",
+		"hxc.dispatch.json",
 		"hxc.initialization-plan.json",
 		"hxc.manifest.json",
 		"hxc.runtime-plan.json",
@@ -200,6 +207,8 @@ class CProjectEmitter {
 				files.push(jsonFile("hxc.stdlib-report.json", GeneratedFileKind.StdlibReport, stdlibResolved(plan)));
 				if (plan.specializationReport != null)
 					files.push(jsonFile("hxc.specializations.json", GeneratedFileKind.SpecializationReport, plan.specializationReport));
+				if (plan.dispatchReport != null)
+					files.push(jsonFile("hxc.dispatch.json", GeneratedFileKind.DispatchReport, plan.dispatchReport));
 			case LoweredProgram:
 				throw new ProjectEmissionError("unreachable generic lowered-program plan passed validation");
 			case _:
@@ -322,6 +331,7 @@ class CProjectEmitter {
 			fail("direct value and generic-specialization counts must agree with the bounded executable compilation status");
 		}
 		validateSpecializationReport(plan, genericFunctionCount, genericTypeCount);
+		validateDispatchReport(plan);
 		if (plan.runtimePolicyProvenance == null || plan.runtimeDiagnosticsProvenance == null) {
 			fail("direct executable emission requires resolved runtime-policy provenance");
 		}
@@ -422,6 +432,7 @@ class CProjectEmitter {
 		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
+		final indirectInstanceCallCount = plan.indirectInstanceCallCount == null ? 0 : plan.indirectInstanceCallCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
 			|| runtimePlan.planPurpose != RuntimePlanningPurpose.CompilerProgram) {
@@ -492,6 +503,9 @@ class CProjectEmitter {
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			expectedDirectDecisions.push("closed-generic-specializations");
+		}
+		if (indirectInstanceCallCount > 0) {
+			expectedDirectDecisions.push("reachable-program-local-virtual-dispatch");
 		}
 		if (helperIds.length > 0) {
 			expectedDirectDecisions.push("selected-program-local-helpers");
@@ -659,6 +673,179 @@ class CProjectEmitter {
 			|| report.limits.maxFunctionSpecializations < genericFunctionCount
 			|| report.limits.maxTypeSpecializations < genericTypeCount) {
 			fail("generic specialization report reason, recursion, code-size, or payload totals are inconsistent");
+		}
+	}
+
+	function validateDispatchReport(plan:CProjectEmissionPlan):Void {
+		final directCount = plan.directInstanceCallCount == null ? 0 : plan.directInstanceCallCount;
+		final indirectCount = plan.indirectInstanceCallCount == null ? 0 : plan.indirectInstanceCallCount;
+		if (directCount < 0 || indirectCount < 0)
+			fail("instance-dispatch counts cannot be negative");
+		final report = plan.dispatchReport;
+		if (directCount + indirectCount == 0) {
+			if (report != null)
+				fail("hxc.dispatch.json requires at least one reachable instance call");
+			return;
+		}
+		if (report == null)
+			return fail("reachable instance calls require hxc.dispatch.json");
+		if (report.schemaVersion != CDispatchReportBuilder.SCHEMA_VERSION
+			|| report.algorithm != CDispatchReportBuilder.ALGORITHM
+			|| report.status != CDispatchReportBuilder.STATUS
+			|| report.tablePolicy != CDispatchReportBuilder.TABLE_POLICY
+			|| report.adapterPolicy != CDispatchReportBuilder.ADAPTER_POLICY
+			|| report.runtimeFeatures.length != 0
+			|| report.summary.instanceCalls != directCount + indirectCount
+			|| report.summary.directCalls != directCount
+			|| report.summary.indirectCalls != indirectCount
+			|| report.summary.layouts != report.layouts.length
+			|| report.summary.slots != report.slots.length
+			|| report.summary.tables != report.tables.length
+			|| report.summary.adapters < 0
+			|| report.calls.length != directCount + indirectCount) {
+			fail("dispatch report schema, policy, counts, or runtime boundary differ from the emission plan");
+		}
+		final slotIds:Map<String, Bool> = [];
+		var previousSlotId:Null<String> = null;
+		for (slot in report.slots) {
+			validateLogicalText(slot.id, "virtual slot ID");
+			validateLogicalText(slot.ownerInstanceId, "virtual slot owner instance ID");
+			validateCIdentifier(slot.cMember, "virtual slot C member");
+			validateLogicalText(slot.returnRepresentation, "virtual slot return representation");
+			switch previousSlotId {
+				case null:
+				case previous if (compareUtf8(previous, slot.id) >= 0):
+					fail('dispatch report has duplicate or unordered virtual slot `${slot.id}`');
+				case _:
+			}
+			if (slotIds.exists(slot.id))
+				fail('dispatch report has duplicate or unordered virtual slot `${slot.id}`');
+			for (parameter in slot.parameterRepresentations)
+				validateLogicalText(parameter, "virtual slot parameter representation");
+			slotIds.set(slot.id, true);
+			previousSlotId = slot.id;
+		}
+		final layoutSlots:Map<String, Array<String>> = [];
+		var previousLayoutId:Null<String> = null;
+		for (layout in report.layouts) {
+			validateLogicalText(layout.id, "virtual layout ID");
+			validateLogicalText(layout.rootInstanceId, "virtual layout root instance ID");
+			validateCIdentifier(layout.cTag, "virtual layout C tag");
+			switch previousLayoutId {
+				case null:
+				case previous if (compareUtf8(previous, layout.id) >= 0):
+					fail('dispatch report has empty, duplicate, or unordered virtual layout `${layout.id}`');
+				case _:
+			}
+			if (layoutSlots.exists(layout.id) || layout.slotIds.length == 0)
+				fail('dispatch report has empty, duplicate, or unordered virtual layout `${layout.id}`');
+			var previousMember:Null<String> = null;
+			for (slotId in layout.slotIds) {
+				if (!slotIds.exists(slotId))
+					fail('virtual layout `${layout.id}` has an unknown, duplicate, or unordered slot `$slotId`');
+				switch previousMember {
+					case null:
+					case previous if (compareUtf8(previous, slotId) >= 0):
+						fail('virtual layout `${layout.id}` has an unknown, duplicate, or unordered slot `$slotId`');
+					case _:
+				}
+				previousMember = slotId;
+			}
+			layoutSlots.set(layout.id, layout.slotIds);
+			previousLayoutId = layout.id;
+		}
+		final adapterNames:Map<String, Bool> = [];
+		var previousTableId:Null<String> = null;
+		for (table in report.tables) {
+			validateLogicalText(table.id, "virtual table ID");
+			validateLogicalText(table.layoutId, "virtual table layout ID");
+			validateLogicalText(table.classInstanceId, "virtual table class instance ID");
+			validateCIdentifier(table.cName, "virtual table C name");
+			final expectedSlots = requireDispatchLayoutSlots(layoutSlots, table.layoutId, table.id);
+			switch previousTableId {
+				case null:
+				case previous if (compareUtf8(previous, table.id) >= 0):
+					fail('dispatch report has malformed or unordered virtual table `${table.id}`');
+				case _:
+			}
+			if (table.entries.length != expectedSlots.length)
+				fail('dispatch report has malformed or unordered virtual table `${table.id}`');
+			for (index in 0...table.entries.length) {
+				final entry = table.entries[index];
+				if (entry.slotId != expectedSlots[index])
+					fail('virtual table `${table.id}` entry $index differs from its layout slot order');
+				if (entry.implementationFunctionId != null)
+					validateLogicalText(entry.implementationFunctionId, "virtual table implementation function ID");
+				if (entry.adapterCName != null) {
+					if (entry.implementationFunctionId == null)
+						fail('virtual table `${table.id}` has an adapter without an implementation');
+					validateCIdentifier(entry.adapterCName, "virtual table adapter C name");
+					adapterNames.set(entry.adapterCName, true);
+				}
+			}
+			previousTableId = table.id;
+		}
+		var adapterCount = 0;
+		for (_ in adapterNames)
+			adapterCount++;
+		if (adapterCount != report.summary.adapters)
+			fail("dispatch adapter records differ from their summary count");
+		var observedDirect = 0;
+		var observedIndirect = 0;
+		for (index in 0...report.calls.length) {
+			final call = report.calls[index];
+			if (call.id != 'dispatch.call.$index')
+				fail('dispatch call record $index lost its stable ordinal ID');
+			validateLogicalText(call.callerFunctionId, "dispatch caller function ID");
+			validateLogicalText(call.methodFunctionId, "dispatch method function ID");
+			validateLogicalText(call.receiverStaticClass, "dispatch receiver class");
+			validateLogicalText(call.reason, "dispatch reason");
+			validateDispatchSource(call.source, call.id);
+			switch call.dispatch {
+				case "direct":
+					observedDirect++;
+					if (call.slotId != null)
+						fail('direct dispatch call `${call.id}` lost its target-only choice');
+					switch call.targetFunctionId {
+						case null: fail('direct dispatch call `${call.id}` lost its target-only choice');
+						case target: validateLogicalText(target, "direct dispatch target function ID");
+					}
+				case "virtual":
+					observedIndirect++;
+					if (call.targetFunctionId != null)
+						fail('virtual dispatch call `${call.id}` lost its reachable slot-only choice');
+					switch call.slotId {
+						case null: fail('virtual dispatch call `${call.id}` lost its reachable slot-only choice');
+						case slotId if (!slotIds.exists(slotId)):
+							fail('virtual dispatch call `${call.id}` refers to unknown reachable slot `$slotId`');
+						case _:
+					}
+				case invalid:
+					fail('dispatch call `${call.id}` has unknown choice `$invalid`');
+			}
+		}
+		if (observedDirect != directCount || observedIndirect != indirectCount)
+			fail("dispatch call records differ from their direct and indirect summary counts");
+		if (indirectCount > 0 && (report.layouts.length == 0 || report.slots.length == 0 || report.tables.length == 0))
+			fail("indirect dispatch requires a non-empty reachable layout, slot, and table plan");
+	}
+
+	static function requireDispatchLayoutSlots(values:Map<String, Array<String>>, layoutId:String, tableId:String):Array<String> {
+		final value = values.get(layoutId);
+		if (value == null)
+			throw new ProjectEmissionError('virtual table `$tableId` refers to unknown layout `$layoutId`');
+		return value;
+	}
+
+	static function validateDispatchSource(source:reflaxe.c.lowering.CDispatchReport.CDispatchSourceSnapshot, label:String):Void {
+		if (!reflaxe.c.ir.HxcSourceSpan.isNormalizedFile(source.file)
+			|| source.startLine < 1
+			|| source.startColumn < 1
+			|| source.endLine < source.startLine
+			|| source.endColumn < 1
+			|| source.endLine == source.startLine
+			&& source.endColumn < source.startColumn) {
+			throw new ProjectEmissionError('dispatch call `$label` has malformed source `${source.file}`');
 		}
 	}
 
@@ -857,6 +1044,14 @@ class CProjectEmitter {
 			if (code == null || code < 0x20 || code == 0x7F) {
 				fail('$label contains a forbidden control character');
 			}
+		}
+	}
+
+	function validateCIdentifier(value:String, label:String):Void {
+		try {
+			new CIdentifier(value);
+		} catch (_:String) {
+			fail('$label must be one finalized lexical C11 identifier');
 		}
 	}
 

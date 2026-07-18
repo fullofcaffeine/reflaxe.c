@@ -13,6 +13,11 @@ import reflaxe.c.ast.CASTPrinter;
 /** Exercises target-context implementations while the HXML includes every owned module. */
 class AllSourcesProbe {
 	static function main():Void {
+		#if c
+		// Keep the production branch focused on its stable first unsupported
+		// boundary now that reachable instance methods are followed transitively.
+		ProfileResolver.resolve();
+		#else
 		CompilerBootstrap.Start();
 		CompilerInit.Start();
 		c.Init.init();
@@ -38,5 +43,6 @@ class AllSourcesProbe {
 		}
 
 		Sys.println("all-sources: OK");
+		#end
 	}
 }

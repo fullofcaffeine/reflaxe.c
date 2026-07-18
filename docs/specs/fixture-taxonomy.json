@@ -37,6 +37,7 @@
         "aggregate-lowering",
         "class-layout",
         "constructor-lowering",
+        "virtual-dispatch",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -74,6 +75,7 @@
         "aggregate-lowering",
         "class-layout",
         "constructor-lowering",
+        "virtual-dispatch",
         "enum-lowering",
         "generic-specialization",
         "static-initialization",
@@ -126,6 +128,7 @@
         "aggregate-lowering",
         "class-layout",
         "constructor-lowering",
+        "virtual-dispatch",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -156,6 +159,7 @@
         "aggregate-lowering",
         "class-layout",
         "constructor-lowering",
+        "virtual-dispatch",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -565,6 +569,29 @@
       ]
     },
     {
+      "id": "virtual-dispatch",
+      "directory": "test/virtual_dispatch",
+      "runner": [
+        "python3",
+        "test/virtual_dispatch/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary overridable calls through a base reference use one deterministic hierarchy slot, while final methods, final receiver classes, private methods, super calls, and @:nonVirtual methods remain direct with an explicit reason",
+        "only constructed dynamic classes receive tables, only reachable virtual methods receive slots, the root alone owns the table pointer, and typed self adapters preserve exact implementation receiver types",
+        "schema-7 HxcIR retains root header intent, table binding, direct and indirect call choices, exact receiver values, and representation-identical override signatures before structural strict C emission",
+        "covariant return and contravariant argument overrides admitted by pinned Haxe fail closed at their source positions when their C representations differ, with HXC1001 and no generated artifact",
+        "schema-1 hxc.dispatch.json explains every reachable instance call and is byte-identical across repeated roots, reversed modules, locale changes, portable/metal profiles, and runtime-none policy where configuration fields do not apply",
+        "the dispatch slice selects no hxrt feature, exports no public ABI, and passes identity-verified GCC and Clang O0/O2 C11 execution plus strict C++17 private-header consumption"
+      ]
+    },
+    {
       "id": "enum-lowering",
       "directory": "test/enum_lowering",
       "runner": [
@@ -800,7 +827,7 @@
       ],
       "status": "active",
       "assertions": [
-        "real typed String literals lower through schema-6 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "real typed String literals lower through schema-7 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
         "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
         "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",
@@ -1020,6 +1047,22 @@
           "test/constructor_lowering/expected/program.c",
           "test/constructor_lowering/expected/constructors.json",
           "test/constructor_lowering/expected/symbols.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "virtual-dispatch",
+        "expectedRoots": [
+          "test/virtual_dispatch/expected/dispatch.hxcir",
+          "test/virtual_dispatch/expected/hxc.dispatch.json",
+          "test/virtual_dispatch/expected/program.h",
+          "test/virtual_dispatch/expected/program.c",
+          "test/virtual_dispatch/expected/symbols.json"
         ],
         "formats": [
           "c",

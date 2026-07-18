@@ -10,7 +10,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 6;
+	public static inline final SCHEMA_VERSION = 7;
 
 	public function new() {}
 
@@ -33,6 +33,9 @@ private class HxcIRValidationState {
 	final typeInstances:Map<String, HxcIRTypeInstance> = [];
 	final globals:Map<String, HxcIRGlobal> = [];
 	final functions:Map<String, HxcIRFunction> = [];
+	final virtualLayouts:Map<String, HxcIRVirtualTableLayout> = [];
+	final virtualSlots:Map<String, HxcIRVirtualSlot> = [];
+	final virtualTables:Map<String, HxcIRVirtualTable> = [];
 
 	public function new(program:HxcIRProgram, profile:String) {
 		this.program = program;
@@ -45,6 +48,7 @@ private class HxcIRValidationState {
 		}
 		indexProgram();
 		validateProgramContents();
+		validateDispatchPlan();
 		validateFiniteDirectLayouts();
 		diagnostics.sort(compareDiagnostics);
 		return diagnostics;
@@ -82,6 +86,15 @@ private class HxcIRValidationState {
 				indexUnique(functions, fn.id, fn, '$path.function:${fn.id}', fn.source, "function");
 			}
 		}
+		for (layout in sorted(program.dispatch.layouts, item -> item.id)) {
+			indexUnique(virtualLayouts, layout.id, layout, 'dispatch.layout:${layout.id}', layout.source, "virtual-table layout");
+		}
+		for (slot in sorted(program.dispatch.slots, item -> item.id)) {
+			indexUnique(virtualSlots, slot.id, slot, 'dispatch.slot:${slot.id}', slot.source, "virtual slot");
+		}
+		for (table in sorted(program.dispatch.tables, item -> item.id)) {
+			indexUnique(virtualTables, table.id, table, 'dispatch.table:${table.id}', table.source, "virtual table");
+		}
 	}
 
 	function indexUnique<T>(index:Map<String, T>, id:String, value:T, path:String, source:HxcSourceSpan, label:String):Void {
@@ -108,6 +121,209 @@ private class HxcIRValidationState {
 			for (fn in sorted(module.functions, item -> item.id)) {
 				validateFunction(fn, '$path.function:${fn.id}');
 			}
+		}
+	}
+
+	function validateDispatchPlan():Void {
+		validateOrderedIds(program.dispatch.layouts.map(value -> value.id), "dispatch.layouts", programSource());
+		validateOrderedIds(program.dispatch.slots.map(value -> value.id), "dispatch.slots", programSource());
+		validateOrderedIds(program.dispatch.tables.map(value -> value.id), "dispatch.tables", programSource());
+		final headersByLayout:Map<String, String> = [];
+		final layoutsBySlot:Map<String, String> = [];
+		for (declaration in typeDeclarations) {
+			switch declaration.kind {
+				case IRTKClass({header: IRCHVirtual(layoutId)}):
+					final instance = instanceForDeclaration(declaration.id);
+					if (instance != null) {
+						if (headersByLayout.exists(layoutId)) {
+							add('dispatch.layout:$layoutId', 'virtual layout `$layoutId` is installed on more than one class root', declaration.source);
+						} else {
+							headersByLayout.set(layoutId, instance.id);
+						}
+					}
+				case _:
+			}
+		}
+		for (layout in program.dispatch.layouts) {
+			final path = 'dispatch.layout:${layout.id}';
+			validateSpan(layout.source, '$path.source');
+			final root = requireDirectClassInstance(layout.rootInstanceId, '$path.rootInstanceId', layout.source);
+			if (headersByLayout.get(layout.id) != layout.rootInstanceId) {
+				add(path, 'virtual layout `${layout.id}` is not selected by root `${layout.rootInstanceId}`', layout.source);
+			}
+			validateOrderedIds(layout.slotIds, '$path.slotIds', layout.source);
+			for (slotId in layout.slotIds) {
+				final priorLayout = layoutsBySlot.get(slotId);
+				if (priorLayout != null) {
+					add(path, 'virtual slot `$slotId` belongs to both `$priorLayout` and `${layout.id}`', layout.source);
+				} else {
+					layoutsBySlot.set(slotId, layout.id);
+				}
+				final slot = virtualSlots.get(slotId);
+				if (slot == null) {
+					add(path, 'virtual layout `${layout.id}` refers to unknown slot `$slotId`', layout.source);
+				} else if (root != null && !isClassDescendant(slot.ownerInstanceId, root.id)) {
+					add(path, 'virtual slot `$slotId` owner `${slot.ownerInstanceId}` is outside root `${root.id}`', slot.source);
+				}
+			}
+		}
+		for (layoutId => instanceId in headersByLayout) {
+			if (!virtualLayouts.exists(layoutId)) {
+				final instance = typeInstances.get(instanceId);
+				add('dispatch.layout:$layoutId', 'class root `$instanceId` selects unknown virtual layout `$layoutId`',
+					instance == null ? programSource() : instance.source);
+			}
+		}
+		for (slot in program.dispatch.slots) {
+			final path = 'dispatch.slot:${slot.id}';
+			validateSpan(slot.source, '$path.source');
+			if (!layoutsBySlot.exists(slot.id)) {
+				add(path, 'virtual slot `${slot.id}` does not belong to a table layout', slot.source);
+			}
+			requireDirectClassInstance(slot.ownerInstanceId, '$path.ownerInstanceId', slot.source);
+			for (index => parameter in slot.parameterTypes) {
+				validateTypeRef(parameter, '$path.parameter:$index', slot.source, false);
+				if (parameter == IRTVoid)
+					add(path, 'virtual slot `${slot.id}` parameter $index is Void', slot.source);
+			}
+			validateTypeRef(slot.returnType, '$path.returnType', slot.source, true);
+		}
+		for (table in program.dispatch.tables) {
+			final path = 'dispatch.table:${table.id}';
+			validateSpan(table.source, '$path.source');
+			final layout = virtualLayouts.get(table.layoutId);
+			final tableClass = requireDirectClassInstance(table.classInstanceId, '$path.classInstanceId', table.source);
+			if (layout == null) {
+				add(path, 'virtual table `${table.id}` refers to unknown layout `${table.layoutId}`', table.source);
+				continue;
+			}
+			if (tableClass != null && !isClassDescendant(tableClass.id, layout.rootInstanceId)) {
+				add(path, 'virtual table class `${table.classInstanceId}` is outside layout root `${layout.rootInstanceId}`', table.source);
+			}
+			if (table.entries.length != layout.slotIds.length) {
+				add(path, 'virtual table `${table.id}` has ${table.entries.length} entries for ${layout.slotIds.length} layout slots', table.source);
+			}
+			for (index => entry in table.entries) {
+				final entryPath = '$path.entry:$index:${entry.slotId}';
+				if (index >= layout.slotIds.length || entry.slotId != layout.slotIds[index]) {
+					add(entryPath, 'virtual table entry order does not match layout `${layout.id}`', table.source);
+				}
+				final slot = virtualSlots.get(entry.slotId);
+				if (slot == null)
+					continue;
+				final applicable = tableClass != null && isClassDescendant(tableClass.id, slot.ownerInstanceId);
+				if (entry.implementationFunctionId == null) {
+					if (applicable)
+						add(entryPath, 'applicable virtual slot `${slot.id}` has no implementation', table.source);
+					continue;
+				}
+				if (!applicable) {
+					add(entryPath, 'inapplicable virtual slot `${slot.id}` unexpectedly has an implementation', table.source);
+					continue;
+				}
+				final implementation = functions.get(entry.implementationFunctionId);
+				if (implementation == null) {
+					add(entryPath, 'virtual table refers to unknown implementation `${entry.implementationFunctionId}`', table.source);
+					continue;
+				}
+				validateVirtualImplementation(slot, table, implementation, entryPath);
+			}
+		}
+	}
+
+	function validateVirtualImplementation(slot:HxcIRVirtualSlot, table:HxcIRVirtualTable, implementation:HxcIRFunction, path:String):Void {
+		if (implementation.parameters.length != slot.parameterTypes.length + 1) {
+			add(path,
+				'virtual implementation `${implementation.id}` has ${implementation.parameters.length} parameters for slot `${slot.id}` expected ${slot.parameterTypes.length + 1}',
+				implementation.source);
+			return;
+		}
+		final implementationOwner = switch implementation.parameters[0].type {
+			case IRTPointer(IRTInstance(instanceId), true): instanceId;
+			case other:
+				add(path, 'virtual implementation `${implementation.id}` has invalid receiver `${typeKey(other)}`', implementation.source);
+				return;
+		};
+		if (!isClassDescendant(implementationOwner, slot.ownerInstanceId)) {
+			add(path, 'virtual implementation receiver `$implementationOwner` does not descend from slot owner `${slot.ownerInstanceId}`',
+				implementation.source);
+		}
+		if (!isClassDescendant(table.classInstanceId, implementationOwner)) {
+			add(path, 'virtual table class `${table.classInstanceId}` does not descend from implementation receiver `$implementationOwner`',
+				implementation.source);
+		}
+		for (index in 0...slot.parameterTypes.length) {
+			if (typeKey(implementation.parameters[index + 1].type) != typeKey(slot.parameterTypes[index])) {
+				add(path, 'virtual implementation `${implementation.id}` parameter $index does not preserve slot `${slot.id}` representation',
+					implementation.source);
+			}
+		}
+		if (typeKey(implementation.returnType) != typeKey(slot.returnType)) {
+			add(path, 'virtual implementation `${implementation.id}` return type does not preserve slot `${slot.id}` representation', implementation.source);
+		}
+		switch implementation.failureConvention {
+			case IRFCInfallible:
+			case IRFCStatus(_):
+				add(path, 'virtual implementation `${implementation.id}` must be infallible in the admitted dispatch slice', implementation.source);
+		}
+	}
+
+	function requireDirectClassInstance(instanceId:String, path:String, source:HxcSourceSpan):Null<HxcIRTypeInstance> {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		if (instance == null || instance.representation != IRRDirect || declaration == null) {
+			add(path, 'dispatch refers to unknown direct class instance `$instanceId`', source);
+			return null;
+		}
+		switch declaration.kind {
+			case IRTKClass(_):
+				return instance;
+			case _:
+				add(path, 'dispatch instance `$instanceId` is not a class', source);
+				return null;
+		}
+	}
+
+	function instanceForDeclaration(declarationId:String):Null<HxcIRTypeInstance> {
+		for (instance in typeInstances) {
+			if (instance.declarationId == declarationId)
+				return instance;
+		}
+		return null;
+	}
+
+	function isClassDescendant(candidateInstanceId:String, ancestorInstanceId:String):Bool {
+		var current:Null<String> = candidateInstanceId;
+		final seen:Map<String, Bool> = [];
+		while (current != null && !seen.exists(current)) {
+			if (current == ancestorInstanceId)
+				return true;
+			seen.set(current, true);
+			final instance = typeInstances.get(current);
+			final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+			current = if (declaration == null) {
+				null;
+			} else {
+				switch declaration.kind {
+					case IRTKClass(layout): layout.baseInstanceId;
+					case _: null;
+				}
+			};
+		}
+		return false;
+	}
+
+	function validateOrderedIds(ids:Array<String>, path:String, source:HxcSourceSpan):Void {
+		final seen:Map<String, Bool> = [];
+		var previous:Null<String> = null;
+		for (index => id in ids) {
+			validateStableId(id, '$path:$index', source);
+			if (seen.exists(id))
+				add(path, 'ordered ID list repeats `$id`', source);
+			seen.set(id, true);
+			if (previous != null && compareUtf8(previous, id) >= 0)
+				add(path, 'ID list is not strictly UTF-8 ordered at `$id`', source);
+			previous = id;
 		}
 	}
 
@@ -178,6 +394,7 @@ private class HxcIRValidationState {
 				}
 				switch layout.header {
 					case IRCHNone:
+					case IRCHVirtual(layoutId): validateStableId(layoutId, '$path.header.virtualLayout', declaration.source);
 					case IRCHRuntime(featureId): validateStableId(featureId, '$path.header.runtimeFeature', declaration.source);
 				}
 				final names:Map<String, Bool> = [];
@@ -556,7 +773,7 @@ private class HxcIRValidationState {
 					add(path, "conversion result type does not match its target type", instruction.source);
 				}
 			case IRIOCall(call):
-				validateCall(call, path, instruction.source, available, blocks, regions);
+				validateCall(call, path, instruction.source, available, blocks, regions, nullProofs);
 				if (instruction.result != null && typeKey(instruction.result.type) != typeKey(call.returnType)) {
 					add(path, "call result type does not match the call return type", instruction.source);
 				}
@@ -728,6 +945,18 @@ private class HxcIRValidationState {
 						add(path, "span initialization requires a span place and fixed-array source", instruction.source);
 				}
 				validateInitializeTransition(from, to, path, instruction.source);
+			case IRIOBindVirtualTable(place, tableId):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				validateStableId(tableId, '$path.tableId', instruction.source);
+				final table = virtualTables.get(tableId);
+				if (table == null) {
+					add(path, 'virtual-table bind refers to unknown table `$tableId`', instruction.source);
+				} else {
+					final placeType = knownPlaceType(place, available, locals);
+					if (placeType == null || typeKey(placeType) != typeKey(IRTInstance(table.classInstanceId))) {
+						add(path, 'virtual-table bind `$tableId` does not match its concrete object place', instruction.source);
+					}
+				}
 			case IRIOBoundsCheck(collection, indexValueId, policy):
 				validatePlace(collection, '$path.collection', instruction.source, available, locals, nullProofs);
 				switch knownPlaceType(collection, available, locals) {
@@ -778,14 +1007,14 @@ private class HxcIRValidationState {
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIODefaultInitialize(_, _, _) |
-				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) |
-				IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) |
+				IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
 
 	function validateCall(call:HxcIRCall, path:String, source:HxcSourceSpan, available:Map<String, HxcIRTypeRef>, blocks:Map<String, HxcIRBlock>,
-			regions:Map<String, HxcIRCleanupRegion>):Void {
+			regions:Map<String, HxcIRCleanupRegion>, nullProofs:Map<String, Bool>):Void {
 		validateTypeRef(call.returnType, '$path.returnType', source, true);
 		final argumentTypes:Array<Null<HxcIRTypeRef>> = [];
 		for (index => argument in call.arguments) {
@@ -807,10 +1036,32 @@ private class HxcIRValidationState {
 								add(path, 'status-returning direct call `$functionId` failure kind does not match its target convention', source);
 							}
 					}
+					if (StringTools.startsWith(functionId, "method.")
+						&& call.arguments.length > 0
+						&& !nullProofs.exists(call.arguments[0])) {
+						add(path, 'direct instance call `$functionId` requires a preceding in-block receiver null check', source);
+					}
 				}
 			case IRCDVirtual(slotId, receiverValueId):
 				validateStableId(slotId, '$path.virtualSlot', source);
-				requireValue(receiverValueId, '$path.receiver', source, available);
+				final receiverType = requireValue(receiverValueId, '$path.receiver', source, available);
+				final slot = virtualSlots.get(slotId);
+				if (slot == null) {
+					add(path, 'virtual call refers to unknown slot `$slotId`', source);
+				} else {
+					final expectedReceiver = IRTPointer(IRTInstance(slot.ownerInstanceId), true);
+					if (receiverType != null && typeKey(receiverType) != typeKey(expectedReceiver)) {
+						add(path, 'virtual call receiver does not match slot `$slotId` owner `${slot.ownerInstanceId}`', source);
+					}
+					final parameters:Array<HxcIRParameter> = [];
+					for (index => parameterType in slot.parameterTypes)
+						parameters.push({id: 'virtual.argument.$index', type: parameterType, source: slot.source});
+					validateKnownCallSignature(call, argumentTypes, parameters, slot.returnType, path, source);
+				}
+				if (!nullProofs.exists(receiverValueId))
+					add(path, 'virtual call receiver `$receiverValueId` requires a preceding in-block null check', source);
+				if (call.failure != null)
+					add(path, "virtual calls are infallible in the admitted dispatch slice", source);
 			case IRCDInterface(interfaceTypeId, slotId, receiverValueId):
 				requireInstance(interfaceTypeId, path, source);
 				validateStableId(slotId, '$path.interfaceSlot', source);

@@ -28,7 +28,7 @@ LOWERING_DETAIL = (
     "Unsupported typed Haxe node "
     "`TCall(Sys.println(String literal):requires-String-literal)`"
 )
-LOWERING_SOURCE = "BootstrapProbe.hx:40: lines 40-47"
+LOWERING_SOURCE = "BootstrapProbe.hx:40: lines 40-41"
 DIAGNOSTIC_PROFILE = re.compile(r"\[profile=(?:portable|metal|unresolved)\]")
 
 

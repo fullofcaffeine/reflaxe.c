@@ -51,6 +51,8 @@ class CPreparedBodyClass {
 	public final fields:Array<CPreparedBodyClassField> = [];
 	public var base:Null<CPreparedBodyClass> = null;
 	public var baseMemberRequest:Null<CSymbolRequest> = null;
+	public var dispatchLayoutId:Null<String> = null;
+	public var dispatchHeaderRequest:Null<CSymbolRequest> = null;
 	public var emptyAnchorRequest:Null<CSymbolRequest> = null;
 
 	public function new(semanticKey:String, digest:String, haxePath:String, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
@@ -76,7 +78,7 @@ class CPreparedBodyClass {
 					mutable: field.mutable,
 					source: field.source
 				}),
-				header: IRCHNone
+				header: dispatchLayoutId == null ? IRCHNone : IRCHVirtual(dispatchLayoutId)
 			}),
 			source: source
 		};
@@ -134,14 +136,16 @@ class CLoweredBodyClass {
 	public final prepared:CPreparedBodyClass;
 	public final cTag:CIdentifier;
 	public final baseMember:Null<CIdentifier>;
+	public final dispatchHeader:Null<CIdentifier>;
 	public final emptyAnchor:Null<CIdentifier>;
 	public final fields:Array<CLoweredBodyClassField>;
 
-	public function new(prepared:CPreparedBodyClass, cTag:CIdentifier, baseMember:Null<CIdentifier>, emptyAnchor:Null<CIdentifier>,
-			fields:Array<CLoweredBodyClassField>) {
+	public function new(prepared:CPreparedBodyClass, cTag:CIdentifier, baseMember:Null<CIdentifier>, dispatchHeader:Null<CIdentifier>,
+			emptyAnchor:Null<CIdentifier>, fields:Array<CLoweredBodyClassField>) {
 		this.prepared = prepared;
 		this.cTag = cTag;
 		this.baseMember = baseMember;
+		this.dispatchHeader = dispatchHeader;
 		this.emptyAnchor = emptyAnchor;
 		this.fields = fields.copy();
 	}
@@ -243,13 +247,37 @@ class CBodyClassRegistry {
 			context.symbols.register(request);
 			prepared.fields.push(new CPreparedBodyClassField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
 		}
-		if (prepared.base == null && prepared.fields.length == 0) {
-			prepared.emptyAnchorRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "empty-anchor"], CNSMember(prepared.declarationId),
-				CSVInternal, null, [], [], 0);
-			context.symbols.register(prepared.emptyAnchorRequest);
-		}
 		preparing.remove(path);
 		return prepared;
+	}
+
+	/** Select one program-local vtable pointer on the hierarchy root only. */
+	public function requireVirtualHeader(root:CPreparedBodyClass, layoutId:String):Void {
+		if (root.base != null)
+			throw new CBodyEmissionError('virtual layout `$layoutId` selected non-root class `${root.haxePath}`');
+		if (root.dispatchLayoutId != null && root.dispatchLayoutId != layoutId) {
+			throw new CBodyEmissionError('class `${root.haxePath}` received conflicting virtual layouts `${root.dispatchLayoutId}` and `$layoutId`');
+		}
+		root.dispatchLayoutId = layoutId;
+		if (root.dispatchHeaderRequest == null) {
+			root.dispatchHeaderRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", root.haxePath, "virtual-table"],
+				CNSMember(root.declarationId), CSVInternal, null, [], [], 0);
+			context.symbols.register(root.dispatchHeaderRequest);
+		}
+	}
+
+	/** Register strict-C empty anchors only after selective headers are known. */
+	public function completeLayouts():Void {
+		for (prepared in canonicalClasses()) {
+			if (prepared.base == null
+				&& prepared.fields.length == 0
+				&& prepared.dispatchHeaderRequest == null
+				&& prepared.emptyAnchorRequest == null) {
+				prepared.emptyAnchorRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", prepared.haxePath, "empty-anchor"],
+					CNSMember(prepared.declarationId), CSVInternal, null, [], [], 0);
+				context.symbols.register(prepared.emptyAnchorRequest);
+			}
+		}
 	}
 
 	public function canonicalClasses():Array<CPreparedBodyClass> {
@@ -264,7 +292,8 @@ class CBodyClassRegistry {
 
 	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyClass> {
 		return canonicalClasses().map(prepared -> new CLoweredBodyClass(prepared, symbols.identifierFor(prepared.typeRequest),
-			identifierOrNull(symbols, prepared.baseMemberRequest), identifierOrNull(symbols, prepared.emptyAnchorRequest),
+			identifierOrNull(symbols, prepared.baseMemberRequest), identifierOrNull(symbols, prepared.dispatchHeaderRequest),
+			identifierOrNull(symbols, prepared.emptyAnchorRequest),
 			prepared.fields.map(field -> new CLoweredBodyClassField(field, symbols.identifierFor(field.request)))));
 	}
 

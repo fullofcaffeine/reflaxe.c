@@ -321,6 +321,31 @@ REQUIRED_GATE_FILES = (
     "test/negative/constructor-lowering/case.json",
     "test/snapshot/constructor-lowering/case.json",
     "test/runtime/constructor-lowering/case.json",
+    "src/reflaxe/c/lowering/CBodyDispatch.hx",
+    "src/reflaxe/c/lowering/CDispatchReport.hx",
+    "docs/virtual-dispatch.md",
+    "docs/specs/dispatch-report.schema.json",
+    "test/virtual_dispatch/fixtures/positive/BaseWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/MiddleWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/LeafWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/FinalWorker.hx",
+    "test/virtual_dispatch/fixtures/positive/Main.hx",
+    "test/virtual_dispatch/fixtures/positive/build.hxml",
+    "test/virtual_dispatch/fixtures/contravariant_argument/Main.hx",
+    "test/virtual_dispatch/fixtures/contravariant_argument/build.hxml",
+    "test/virtual_dispatch/fixtures/covariant_return/Main.hx",
+    "test/virtual_dispatch/fixtures/covariant_return/build.hxml",
+    "test/virtual_dispatch/native/dispatch_header_cpp.cpp",
+    "test/virtual_dispatch/expected/dispatch.hxcir",
+    "test/virtual_dispatch/expected/hxc.dispatch.json",
+    "test/virtual_dispatch/expected/program.h",
+    "test/virtual_dispatch/expected/program.c",
+    "test/virtual_dispatch/expected/symbols.json",
+    "test/virtual_dispatch/run.py",
+    "test/positive/virtual-dispatch/case.json",
+    "test/negative/virtual-dispatch/case.json",
+    "test/snapshot/virtual-dispatch/case.json",
+    "test/runtime/virtual-dispatch/case.json",
     "src/reflaxe/c/lowering/CBodyEnum.hx",
     "docs/enum-lowering.md",
     "test/enum_lowering/EnumLoweringProbe.hx",
@@ -554,6 +579,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/class_layout/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/constructor_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/virtual_dispatch/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/generic_specialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -677,6 +703,8 @@ def validate() -> list[str]:
         != "python3 test/constructor_lowering/run.py"
     ):
         errors.append("package.json must retain the test:constructor-lowering entry point")
+    if scripts.get("test:virtual-dispatch") != "python3 test/virtual_dispatch/run.py":
+        errors.append("package.json must retain the test:virtual-dispatch entry point")
     if scripts.get("test:enum-lowering") != "python3 test/enum_lowering/run.py":
         errors.append("package.json must retain the test:enum-lowering entry point")
     if (
@@ -766,6 +794,8 @@ def validate() -> list[str]:
         scripts.get("test:toolchain", "")
     ):
         errors.append("package.json test:toolchain must execute test:constructor-lowering")
+    if "npm run test:virtual-dispatch" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:virtual-dispatch")
     if "npm run test:enum-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:enum-lowering")
     if "npm run test:generic-specialization" not in str(
@@ -881,6 +911,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the concrete class-layout test")
     if "test/constructor_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the bounded constructor-lowering test")
+    if "test/virtual_dispatch/run.py" not in pre_commit:
+        errors.append("pre-commit must run the closed-world virtual-dispatch test")
     if "test/enum_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the Haxe enum-lowering test")
     if "test/generic_specialization/run.py" not in pre_commit:
@@ -1223,6 +1255,39 @@ def validate() -> list[str]:
     if "resolve_toolchains" not in constructor_runner:
         errors.append(
             "constructor-lowering runner must verify required compiler-family identity"
+        )
+
+    virtual_dispatch_runner = read_text(ROOT / "test/virtual_dispatch/run.py", errors)
+    for required_virtual_dispatch_contract in (
+        "C11_STRICT_FLAGS",
+        "-std=c++17",
+        "-pedantic",
+        "-Werror",
+        'for optimization in ("-O0", "-O2")',
+        "run_c_fixture_corpus",
+        "dispatch_header_cpp.cpp",
+        "hxc.dispatch.json",
+        "dispatch-report",
+        "reflaxe_c_virtual_dispatch_report",
+        "virtual-override-representation-mismatch",
+        "one-root-layout-reachable-virtual-slots-only",
+        "warm server after rejected override requests",
+    ):
+        if required_virtual_dispatch_contract not in virtual_dispatch_runner:
+            errors.append(
+                "virtual-dispatch runner lost strict semantic/native contract "
+                + required_virtual_dispatch_contract
+            )
+    if (
+        "--native-only" not in virtual_dispatch_runner
+        or "--toolchain" not in virtual_dispatch_runner
+    ):
+        errors.append(
+            "virtual-dispatch runner must expose the required native matrix seam"
+        )
+    if "resolve_toolchains" not in virtual_dispatch_runner:
+        errors.append(
+            "virtual-dispatch runner must verify required compiler-family identity"
         )
 
     enum_runner = read_text(ROOT / "test/enum_lowering/run.py", errors)

@@ -14,6 +14,12 @@
   "directPayloadRepresentation": [
     "HXC9000 error [profile=portable] test/negative/DirectPayloadRepresentation.hx:1:1-1:2 [module:invalid.DirectPayloadRepresentation.instance:instance.option] Invalid HxcIR: direct native-enum instance `instance.option` cannot contain payload case `Some` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "uncheckedVirtualCall": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:20:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "unknownVirtualImplementation": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:8:1-8:2 [dispatch.table:vtable.coverage.Object.entry:0:slot.render] Invalid HxcIR: virtual table refers to unknown implementation `fn.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "nonExhaustiveTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/NonExhaustiveTagSwitch.hx:3:1-3:2 [module:invalid.NonExhaustiveTagSwitch.function:invalid.NonExhaustiveTagSwitch.main.block:entry.terminator] Invalid HxcIR: tag switch without a default omits `None` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -22,6 +28,9 @@
   ],
   "constantTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/ConstantTypeMismatch.hx:2:1-2:2 [module:invalid.ConstantTypeMismatch.function:invalid.ConstantTypeMismatch.main.block:entry.instruction:0:bad.constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mismatchedVirtualTableBind": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedVirtualTableBind.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:9:c00.virtual-bind] Invalid HxcIR: virtual-table bind `vtable.coverage.Object` does not match its concrete object place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "switchCaseTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/SwitchCaseTypeMismatch.hx:3:1-3:2 [module:invalid.SwitchCaseTypeMismatch.function:invalid.SwitchCaseTypeMismatch.main.block:entry.terminator] Invalid HxcIR: switch case 0 literal family does not match its subject type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -72,6 +81,9 @@
   ],
   "tagProjectionMismatch": [
     "HXC9000 error [profile=portable] test/negative/TagProjectionMismatch.hx:4:1-4:2 [module:invalid.TagProjectionMismatch.function:invalid.TagProjectionMismatch.main.block:entry.instruction:2:bad.project] Invalid HxcIR: tag payload projection result does not match `value` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "orphanVirtualSlot": [
+    "HXC9000 error [profile=portable] test/negative/OrphanVirtualSlot.hx:1:1-1:2 [dispatch.slot:slot.zz-orphan] Invalid HxcIR: virtual slot `slot.zz-orphan` does not belong to a table layout Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "deferredInitializerMissingWrite": [
     "HXC9000 error [profile=portable] test/negative/DeferredInitializerMissingWrite.hx:1:1-1:2 [module:invalid.DeferredInitializerMissingWrite.global:global.value] Invalid HxcIR: global `global.value` initializer `invalid.DeferredInitializerMissingWrite.main` must initialize it exactly once; found 0 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

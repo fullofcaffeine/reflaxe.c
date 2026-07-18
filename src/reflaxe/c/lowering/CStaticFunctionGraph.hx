@@ -11,6 +11,8 @@ import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
+import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
+import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
@@ -25,14 +27,16 @@ class CStaticFunctionGraph {
 	public final globals:Array<CBodyGlobalInput>;
 	public final constructors:Array<CBodyConstructorInput>;
 	public final specializations:Array<CGenericFunctionSpecialization>;
+	public final dispatch:CBodyDispatchGraph;
 
 	public function new(entryFunctionId:String, functions:Array<CBodyFunctionInput>, globals:Array<CBodyGlobalInput>,
-			constructors:Array<CBodyConstructorInput>, specializations:Array<CGenericFunctionSpecialization>) {
+			constructors:Array<CBodyConstructorInput>, specializations:Array<CGenericFunctionSpecialization>, dispatch:CBodyDispatchGraph) {
 		this.entryFunctionId = entryFunctionId;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
 		this.constructors = constructors.copy();
 		this.specializations = specializations.copy();
+		this.dispatch = dispatch;
 	}
 }
 
@@ -48,12 +52,14 @@ class CStaticFunctionGraphCollector {
 	final context:CompilationContext;
 	final specializationsByKey:Map<String, CGenericFunctionSpecialization> = [];
 	final specializationKeysByDigest:Map<String, String> = [];
+	var dispatchCatalog:Null<CBodyDispatchCatalog> = null;
 
 	public function new(context:CompilationContext) {
 		this.context = context;
 	}
 
 	public function collect(entry:CBodyFunctionInput, program:TypedProgramInput, ?initializers:Array<CBodyInitializerInput>):CStaticFunctionGraph {
+		dispatchCatalog = new CBodyDispatchCatalog(context, program);
 		final available = staticFunctionInputs(program);
 		final availableConstructors = constructorInputs(program);
 		final byId:Map<String, CBodyFunctionInput> = [];
@@ -106,7 +112,8 @@ class CStaticFunctionGraphCollector {
 		final specializations = [for (specialization in specializationsByKey) specialization];
 		specializations.sort((left, right) -> CGenericTypeCanonicalizer.compareUtf8(left.key, right.key));
 		final constructors = finalizeConstructors(constructorsById, constructorDependencies);
-		return new CStaticFunctionGraph(CBodyLowering.functionInputId(entry), functions, staticGlobalInputs(program), constructors, specializations);
+		return new CStaticFunctionGraph(CBodyLowering.functionInputId(entry), functions, staticGlobalInputs(program), constructors, specializations,
+			requireDispatchCatalog().finish());
 	}
 
 	function collectExpression(expression:TypedExpr, caller:CBodyFunctionInput, currentConstructor:Null<CBodyConstructorInput>,
@@ -122,6 +129,8 @@ class CStaticFunctionGraphCollector {
 				if (currentConstructor != null && target != null) {
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
+				for (method in requireDispatchCatalog().markConstructed(classReference))
+					add(method, byId, pending);
 			case TCall(callee, _) if (currentConstructor != null && isSuperCall(callee)):
 				final baseId = currentConstructor.baseConstructorId;
 				if (baseId == null) {
@@ -132,6 +141,10 @@ class CStaticFunctionGraphCollector {
 					addConstructor(target, constructorsById, pendingConstructors);
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
+			case TCall(callee, _) if (CBodyDispatchCatalog.instanceAccess(callee) != null):
+				final callerId = currentConstructor == null ? CBodyLowering.functionInputId(caller) : currentConstructor.id;
+				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath))
+					add(method, byId, pending);
 			case TCall(callee, arguments) if (!isCompilerIntrinsicCall(callee)):
 				final baseTargetId = directStaticFunctionId(callee);
 				final target = baseTargetId == null ? null : available.get(baseTargetId);
@@ -154,6 +167,13 @@ class CStaticFunctionGraphCollector {
 		TypedExprTools.iter(expression,
 			child -> collectExpression(child, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
 				pendingConstructors, constructorDependencies));
+	}
+
+	function requireDispatchCatalog():CBodyDispatchCatalog {
+		final value = dispatchCatalog;
+		if (value == null)
+			throw new CBodyEmissionError("reachable graph lost its request-local dispatch catalog");
+		return value;
 	}
 
 	function drainPending(available:Map<String, CBodyFunctionInput>, availableConstructors:Map<String, CBodyConstructorInput>,

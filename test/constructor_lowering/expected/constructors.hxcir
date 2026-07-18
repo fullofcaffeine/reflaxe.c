@@ -1,4 +1,4 @@
-hxcir schema=6
+hxcir schema=7
 module "Main" @"Main.hx":2:2-71:3
   type "type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3" name="BaseRecord" kind=class @"Main.hx":10:1-18:2
     class-layout base=none header=none

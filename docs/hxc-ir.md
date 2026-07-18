@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 6
+the structural C AST. Its schema is internal to the compiler: schema version 7
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -20,7 +20,10 @@ bounded direct-value slice. E3.T04 adds concrete class layouts, explicit header
 intent, nullable class-reference checks, and inspectable representation-safe
 upcasts. E3.T05 adds default object initialization plus explicit infallible or
 typed-status function failure conventions for bounded constructor propagation
-and cleanup, advancing the schema to version 6.
+and cleanup, advancing the schema to version 6. E3.T06 adds a reachable
+whole-program virtual-dispatch plan, named hierarchy layouts and slots,
+root-header intent, table binding, and receiver-bearing virtual calls,
+advancing the schema to version 7.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -59,11 +62,11 @@ case identity; and `IRTTagSwitch` carries case-to-edge mappings rather than a C
 switch fragment. Recursive payload storage is an explicit pointer type, never
 an infinitely recursive by-value instance.
 For Haxe classes, the declaration owns one optional direct base instance,
-source-ordered own storage fields, and explicit absent-or-named-runtime header
-intent. The concrete class instance describes private direct storage, while a
-source-level class value is a nullable pointer to that instance. A safe upcast
-is retained as a representation conversion rather than inferred from C pointer
-spelling.
+source-ordered own storage fields, and explicit absent, named virtual-layout,
+or named-runtime header intent. The concrete class instance describes private
+direct storage, while a source-level class value is a nullable pointer to that
+instance. A safe upcast is retained as a representation conversion rather than
+inferred from C pointer spelling.
 `IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
@@ -72,7 +75,8 @@ termination or character count.
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
 cannot be confused with runtime fallback, and later devirtualization does not
-need to recover intent from target syntax.
+need to recover intent from target syntax. A virtual call names its validated
+slot and receiver separately from the explicit source arguments.
 
 ## Required invariants
 
@@ -115,6 +119,17 @@ need to recover intent from target syntax.
 - every class base names a known direct class instance, class storage fields are
   unique and typed, direct layouts are finite, and a class instance is
   specialized before emission;
+- virtual layouts, slots, and tables have unique stable IDs and strict UTF-8
+  order; one root selects each layout; every slot belongs to exactly one layout;
+  every table class descends from that root; and every table entry follows the
+  layout's exact slot order;
+- each applicable virtual entry names a reachable infallible implementation
+  whose explicit arguments and result preserve the slot representation. Its
+  typed receiver descends from the slot owner and owns the table class;
+- a virtual call names a known slot, uses the separately named receiver as its
+  first semantic argument, has a preceding null proof when required, and
+  preserves the slot argument/result types. A table bind targets direct storage
+  of that table's exact concrete class;
 - class references use matching nullable pointers to concrete class instances;
   equality/inequality is a static `Bool` identity operation, and representation
   conversion admits only a proven derived-to-ancestor path with matching
@@ -213,6 +228,14 @@ Failure edges carry the already-ordered partial and initialized cleanup steps;
 the emitter never reconstructs them from C lexical scope. See [bounded
 constructor lowering](constructor-lowering.md).
 
+For E3.T06, the whole-program dispatch plan contains only reachable hierarchy
+slots and tables for constructed concrete dynamic classes. The hierarchy root
+selects the one virtual-layout header, construction binds a named table before
+user constructor code, and each indirect call retains its receiver and slot.
+Override implementations must preserve the slot's target representation;
+typed receiver adapters are explicit program-local C emission facts rather
+than runtime intent. See [closed-world virtual dispatch](virtual-dispatch.md).
+
 ## Runtime and profile policy
 
 The IR has no unconditional runtime concept. `IRIStatic` is a direct semantic
@@ -222,7 +245,8 @@ records a feature and operation. Merely constructing a type, calling a direct
 function, constructing or copying a closed record, initializing a fixed
 array/span, constructing/matching a bounded enum, laying out or stack-
 constructing a concrete class, checking a class reference/tag/bounds,
-performing a safe upcast, or using cleanup selects nothing from `hxrt`.
+performing a safe upcast, binding or calling a program-local virtual table, or
+using cleanup selects nothing from `hxrt`.
 
 E2.T07 is the first bounded compiler-selected exception: a compiler-known
 literal remains direct static UTF-8 storage, while its observable hosted output
@@ -245,7 +269,8 @@ stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
 of an unsupported node. A fully admitted primitive, local fixed-array/span,
 closed anonymous-record, bounded direct-value enum, concrete class-reference,
-or bounded nonescaping constructor static graph reaches
+bounded nonescaping constructor, or reachable closed-world class-dispatch
+static graph reaches
 validated HxcIR, structural C, and an owned runtime-free executable project.
 Recursive enum parameters and returns remain rejected until escape/lifetime
 analysis can choose owned storage. The separately admitted literal-output edge
@@ -255,7 +280,8 @@ output APIs still stop without output. See
 lowering](function-lowering.md), plus [closed anonymous-record
 lowering](aggregate-lowering.md), [Haxe enum lowering](enum-lowering.md), and
 [concrete class instance layouts](class-layout.md), and [bounded constructor
-lowering](constructor-lowering.md).
+lowering](constructor-lowering.md), and [closed-world virtual
+dispatch](virtual-dispatch.md).
 
 ## Canonical dump
 

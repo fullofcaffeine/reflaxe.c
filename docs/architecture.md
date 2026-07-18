@@ -82,7 +82,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-6 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-7 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -103,6 +103,11 @@ function failure conventions, ordinary private C constructor calls, and
 validated partial/initialized cleanup edges. They remain limited to proven
 nonescaping entry-block locals and select no runtime; see [bounded constructor
 lowering](constructor-lowering.md).
+Closed-world class dispatch adds a request-local reachable call catalog,
+hierarchy-root table layouts, representation-checked slots, typed receiver
+adapters, and explicit table binding. Direct calls stay direct, unused
+hierarchies retain no table header, and the plan selects no runtime; see
+[closed-world virtual dispatch](virtual-dispatch.md).
 
 Primitive representation is owned by the typed
 `src/reflaxe/c/semantics/` layer. It maps real Haxe compiler types to exact
@@ -248,6 +253,15 @@ expanding graphs with source-positioned `HXC1001` instead of silently boxing.
 The typed `hxc.specializations.json` sidecar records canonical instances,
 source-rooted reasons, recursion, and code-size attribution. See
 [deterministic generic specialization](generic-specialization.md).
+
+E3.T06 extends that worklist with reachable ordinary instance methods and
+constructed concrete dynamic classes. Final/private/metadata/`super` calls
+remain direct; ordinary overridable calls select UTF-8-ordered hierarchy slots
+and only the tables they can reach. HxcIR validates the whole plan before the C
+emitter writes root-only table pointers, typed adapters, or indirect calls.
+The conditional `hxc.dispatch.json` sidecar explains every choice and carries
+no runtime or public-ABI claim. See [closed-world virtual
+dispatch](virtual-dispatch.md).
 
 `CBodyLowering` prepares the complete admitted HxcIR function, closed-record,
 bounded enum, and closed generic-function sets, scans them for program-local

@@ -1,0 +1,221 @@
+{
+  "slots": [
+    {
+      "cMember": "hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0",
+      "id": "slot.BaseWorker.value",
+      "ownerInstanceId": "instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4",
+      "returnRepresentation": "i32",
+      "parameterRepresentations": [
+        "i32"
+      ]
+    }
+  ],
+  "status": "analyzed-reachable-instance-dispatch",
+  "schemaVersion": 1,
+  "tables": [
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue",
+          "implementationFunctionId": "method.LeafWorker.value",
+          "slotId": "slot.BaseWorker.value"
+        }
+      ],
+      "layoutId": "vtable.layout.BaseWorker",
+      "classInstanceId": "instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a",
+      "cName": "hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker",
+      "id": "vtable.LeafWorker"
+    },
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue",
+          "implementationFunctionId": "method.MiddleWorker.value",
+          "slotId": "slot.BaseWorker.value"
+        }
+      ],
+      "layoutId": "vtable.layout.BaseWorker",
+      "classInstanceId": "instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216",
+      "cName": "hxc_vtable_compiler_virtualzx2Ddispatch_MiddleWorker",
+      "id": "vtable.MiddleWorker"
+    }
+  ],
+  "adapterPolicy": "representation-identical-overrides-with-typed-self-thunks",
+  "runtimeFeatures": [],
+  "tablePolicy": "one-root-layout-reachable-virtual-slots-only",
+  "calls": [
+    {
+      "methodFunctionId": "method.BaseWorker.privateValue",
+      "callerFunctionId": "method.BaseWorker.finalValue",
+      "id": "dispatch.call.0",
+      "reason": "private-method",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": null,
+      "targetFunctionId": "method.BaseWorker.privateValue",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 13,
+        "file": "BaseWorker.hx",
+        "startColumn": 10,
+        "endLine": 13,
+        "endColumn": 29
+      }
+    },
+    {
+      "methodFunctionId": "method.MiddleWorker.value",
+      "callerFunctionId": "method.LeafWorker.value",
+      "id": "dispatch.call.1",
+      "reason": "super-call",
+      "receiverStaticClass": "MiddleWorker",
+      "slotId": null,
+      "targetFunctionId": "method.MiddleWorker.value",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 7,
+        "file": "LeafWorker.hx",
+        "startColumn": 10,
+        "endLine": 7,
+        "endColumn": 28
+      }
+    },
+    {
+      "methodFunctionId": "method.BaseWorker.value",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.2",
+      "reason": "ordinary-overridable-instance-method",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": "slot.BaseWorker.value",
+      "targetFunctionId": null,
+      "dispatch": "virtual",
+      "source": {
+        "startLine": 7,
+        "file": "Main.hx",
+        "startColumn": 12,
+        "endLine": 7,
+        "endColumn": 25
+      }
+    },
+    {
+      "methodFunctionId": "method.BaseWorker.value",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.3",
+      "reason": "ordinary-overridable-instance-method",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": "slot.BaseWorker.value",
+      "targetFunctionId": null,
+      "dispatch": "virtual",
+      "source": {
+        "startLine": 7,
+        "file": "Main.hx",
+        "startColumn": 36,
+        "endLine": 7,
+        "endColumn": 51
+      }
+    },
+    {
+      "methodFunctionId": "method.BaseWorker.finalValue",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.4",
+      "reason": "final-method",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": null,
+      "targetFunctionId": "method.BaseWorker.finalValue",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 7,
+        "file": "Main.hx",
+        "startColumn": 61,
+        "endLine": 7,
+        "endColumn": 79
+      }
+    },
+    {
+      "methodFunctionId": "method.BaseWorker.pinnedValue",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.5",
+      "reason": "non-virtual-metadata",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": null,
+      "targetFunctionId": "method.BaseWorker.pinnedValue",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 7,
+        "file": "Main.hx",
+        "startColumn": 88,
+        "endLine": 7,
+        "endColumn": 107
+      }
+    },
+    {
+      "methodFunctionId": "method.FinalWorker.value",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.6",
+      "reason": "final-receiver-class",
+      "receiverStaticClass": "FinalWorker",
+      "slotId": null,
+      "targetFunctionId": "method.FinalWorker.value",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 7,
+        "file": "Main.hx",
+        "startColumn": 117,
+        "endLine": 7,
+        "endColumn": 131
+      }
+    },
+    {
+      "methodFunctionId": "method.LeafWorker.value",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.7",
+      "reason": "ordinary-overridable-instance-method",
+      "receiverStaticClass": "LeafWorker",
+      "slotId": "slot.BaseWorker.value",
+      "targetFunctionId": null,
+      "dispatch": "virtual",
+      "source": {
+        "startLine": 8,
+        "file": "Main.hx",
+        "startColumn": 7,
+        "endLine": 8,
+        "endColumn": 23
+      }
+    },
+    {
+      "methodFunctionId": "method.BaseWorker.value",
+      "callerFunctionId": "method.MiddleWorker.value",
+      "id": "dispatch.call.8",
+      "reason": "super-call",
+      "receiverStaticClass": "BaseWorker",
+      "slotId": null,
+      "targetFunctionId": "method.BaseWorker.value",
+      "dispatch": "direct",
+      "source": {
+        "startLine": 7,
+        "file": "MiddleWorker.hx",
+        "startColumn": 10,
+        "endLine": 7,
+        "endColumn": 28
+      }
+    }
+  ],
+  "layouts": [
+    {
+      "cTag": "hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout",
+      "id": "vtable.layout.BaseWorker",
+      "slotIds": [
+        "slot.BaseWorker.value"
+      ],
+      "rootInstanceId": "instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4"
+    }
+  ],
+  "summary": {
+    "indirectCalls": 3,
+    "slots": 1,
+    "instanceCalls": 9,
+    "tables": 2,
+    "directCalls": 6,
+    "adapters": 2,
+    "layouts": 1
+  },
+  "algorithm": "hxc-closed-world-virtual-dispatch-v1"
+}

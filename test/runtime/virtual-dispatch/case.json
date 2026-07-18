@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "virtual-dispatch-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-013",
+    "HXC-SEM-014"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/virtual_dispatch/native/dispatch_header_cpp.cpp",
+    "test/virtual_dispatch/expected/program.h",
+    "test/virtual_dispatch/expected/program.c",
+    "test/virtual_dispatch/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../virtual_dispatch/run.py"
+    ],
+    "workingDirectory": "test/runtime/virtual-dispatch",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "runtime-free strict C11/C\\+\\+17 consumers"
+    },
+    "artifacts": [
+      {
+        "path": "test/virtual_dispatch/expected/program.h",
+        "format": "header",
+        "comparison": "layout"
+      },
+      {
+        "path": "test/virtual_dispatch/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

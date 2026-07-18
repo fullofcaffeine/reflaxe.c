@@ -65,6 +65,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "aggregate-lowering",
                 "class-layout",
                 "constructor-lowering",
+                "virtual-dispatch",
                 "enum-lowering",
                 "generic-specialization",
                 "evaluation-order",

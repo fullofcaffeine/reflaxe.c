@@ -3,7 +3,47 @@ package reflaxe.c.ir;
 /** A complete target-owned semantic program, before any C syntax is chosen. */
 typedef HxcIRProgram = {
 	final schemaVersion:Int;
+	final dispatch:HxcIRDispatchPlan;
 	final modules:Array<HxcIRModule>;
+}
+
+/** Reachability-selected virtual-dispatch facts; empty arrays mean no object header. */
+typedef HxcIRDispatchPlan = {
+	final layouts:Array<HxcIRVirtualTableLayout>;
+	final slots:Array<HxcIRVirtualSlot>;
+	final tables:Array<HxcIRVirtualTable>;
+}
+
+/** One hierarchy-wide table shape with UTF-8-ordered reachable slots. */
+typedef HxcIRVirtualTableLayout = {
+	final id:String;
+	final rootInstanceId:String;
+	final slotIds:Array<String>;
+	final source:HxcSourceSpan;
+}
+
+/** One source method signature normalized for indirect C calls. */
+typedef HxcIRVirtualSlot = {
+	final id:String;
+	final ownerInstanceId:String;
+	final parameterTypes:Array<HxcIRTypeRef>;
+	final returnType:HxcIRTypeRef;
+	final source:HxcSourceSpan;
+}
+
+/** A null implementation is valid only when the table class cannot receive that slot. */
+typedef HxcIRVirtualTableEntry = {
+	final slotId:String;
+	final implementationFunctionId:Null<String>;
+}
+
+/** One selected table for one reachable concrete dynamic class. */
+typedef HxcIRVirtualTable = {
+	final id:String;
+	final layoutId:String;
+	final classInstanceId:String;
+	final entries:Array<HxcIRVirtualTableEntry>;
+	final source:HxcSourceSpan;
 }
 
 typedef HxcIRModule = {
@@ -78,6 +118,7 @@ enum HxcIRTypeKind {
 /** Metadata is absent unless a later semantic/runtime pass proves it is needed. */
 enum HxcIRClassHeader {
 	IRCHNone;
+	IRCHVirtual(layoutId:String);
 	IRCHRuntime(featureId:String);
 }
 
@@ -309,6 +350,7 @@ enum HxcIRInstructionKind {
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOBindVirtualTable(place:HxcIRPlace, tableId:String);
 	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);
 	IRIONullCheck(valueId:String, policy:HxcIRNullCheckPolicy);
 	IRIOLifetime(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState, reason:String);
