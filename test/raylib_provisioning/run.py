@@ -96,7 +96,8 @@ class RenderedProject:
 
 
 def development_tool(name: str) -> str:
-    local = ROOT / "node_modules/.bin" / name
+    local_name = f"{name}.cmd" if os.name == "nt" else name
+    local = ROOT / "node_modules/.bin" / local_name
     return str(local) if local.is_file() else name
 
 
