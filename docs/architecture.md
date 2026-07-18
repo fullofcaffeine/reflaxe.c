@@ -459,8 +459,9 @@ retains at least one root reason ID. `RuntimeFeaturePackager` turns exactly the
 selected artifact records into typed `GeneratedFile` values and performs no
 artifact read for an empty plan.
 
-The schema-2 feature catalog also owns internal runtime ABI 0.5.0 and exact
-source/build provenance. Every artifact has a reviewed SHA-256, packaging
+The schema-3 feature catalog also owns each feature's semantic contract,
+selection roots, rejected direct/local alternatives, executable evidence,
+internal runtime ABI 0.5.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty
@@ -493,7 +494,9 @@ features. The full allocator, string-operation, and array features remain
 the runtime foundation, status definitions, literal carrier, and minimal hosted
 output are compiler-selectable. See [allocator ownership](allocator-abi.md),
 [string runtime](string-runtime.md), [array runtime](array-runtime.md), and
-[runtime feature planning](runtime-feature-planning.md).
+[runtime feature planning](runtime-feature-planning.md). The normative
+[hxrt architecture and source guide](hxrt.md) explains plan inspection,
+runtime minimization, file-level contracts, and source classifications.
 
 Portable defaults to `auto + summary`; metal defaults to `minimal + warn`.
 These are presets over independent axes, not separate compiler pipelines. See

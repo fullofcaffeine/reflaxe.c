@@ -16,6 +16,7 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureAvailability;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureArtifact;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefine;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefinition;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDocumentation;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverride;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureOverrideAction;
@@ -27,6 +28,8 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePlanningRequest;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePolicyBlockerRecord;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeReachabilityEvidence;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeRequirementReason;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureSelectionRoot;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureSelectionRootKind;
 import reflaxe.c.runtime.RuntimeFeaturePackager;
 import reflaxe.c.runtime.RuntimeFeaturePackager.RuntimeArtifactSource;
 import reflaxe.c.runtime.RuntimeFeaturePlanner;
@@ -195,7 +198,7 @@ class RuntimeFeatureGraphGolden {
 
 	static function compilerNativeSeedFailure():RuntimeFailureRecord {
 		final feature = new RuntimeFeatureDefinition(RuntimeFeatureId.parse("fixture-native-seed"), "Synthetic native-only feature.", NativeSeedOnly, true,
-			[CEnvironment.Hosted], [], [], [], [], []);
+			[CEnvironment.Hosted], [], [], [], [], [], fixtureDocumentation());
 		final planner = new RuntimeFeaturePlanner(new RuntimeFeatureRegistry([feature], []));
 		return expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, CProfile.Portable, CEnvironment.Hosted,
 			CRuntimePolicy.Auto, "fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.compiler-native-seed", "fixture-native-seed")], [],
@@ -215,7 +218,7 @@ class RuntimeFeatureGraphGolden {
 	static function syntheticLinkPlan():RuntimeFeaturePlanSnapshot {
 		final feature = new RuntimeFeatureDefinition(RuntimeFeatureId.parse("fixture-link"), "Synthetic link and define selection proof.",
 			RuntimeFeatureAvailability.NativeSeedOnly, true, [CEnvironment.Hosted], [], [], ["hxc_fixture_link"], ["m"],
-			[new RuntimeFeatureDefine("HXC_FIXTURE_LINK", "1")]);
+			[new RuntimeFeatureDefine("HXC_FIXTURE_LINK", "1")], fixtureDocumentation());
 		return new RuntimeFeaturePlanner(new RuntimeFeatureRegistry([feature],
 			[])).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Portable, CEnvironment.Hosted, CRuntimePolicy.Auto,
 				"fixture:auto", CRuntimeDiagnostics.Off, "fixture:off", [reason("fixture.link", "fixture-link")], [], ["direct-c-considered"]));
@@ -223,7 +226,7 @@ class RuntimeFeatureGraphGolden {
 
 	static function minimalPolicyFailure():RuntimeFailureRecord {
 		final feature = new RuntimeFeatureDefinition(RuntimeFeatureId.parse("fixture-broad"), "Synthetic broad feature.", NativeSeedOnly, false,
-			[CEnvironment.Hosted], [], [], [], [], []);
+			[CEnvironment.Hosted], [], [], [], [], [], fixtureDocumentation());
 		final planner = new RuntimeFeaturePlanner(new RuntimeFeatureRegistry([feature], []));
 		return expectFailure(() -> planner.plan(new RuntimePlanningRequest(RuntimePlanningPurpose.NativeSeedFixture, CProfile.Metal, CEnvironment.Hosted,
 			CRuntimePolicy.Minimal, "profile-preset:metal", CRuntimeDiagnostics.Warn, "profile-preset:metal", [reason("fixture.broad", "fixture-broad")], [],
@@ -266,8 +269,16 @@ class RuntimeFeatureGraphGolden {
 
 	static function syntheticFeature(id:String, dependencies:Array<String>):RuntimeFeatureDefinition {
 		return new RuntimeFeatureDefinition(RuntimeFeatureId.parse(id), 'Synthetic `$id` graph fixture.', NativeSeedOnly, true, [CEnvironment.Hosted],
-			dependencies.map(RuntimeFeatureId.parse), [], [], [], []);
+			dependencies.map(RuntimeFeatureId.parse), [], [], [], [], fixtureDocumentation());
 	}
+
+	static function fixtureDocumentation():RuntimeFeatureDocumentation
+		return new RuntimeFeatureDocumentation("Synthetic feature used only to test graph validation.", [
+			new RuntimeFeatureSelectionRoot("native-seed-fixture", RuntimeFeatureSelectionRootKind.NativeSeedFixture,
+				"Selected only by this synthetic native fixture.")
+		],
+			"The fixture records that direct C was considered.", "The fixture records that local specialization was considered.",
+			"A synthetic feature is required to exercise the graph branch.", "docs/hxrt.md", ["test/runtime/runtime-feature-graph/run.py"]);
 
 	static function expectFailure(operation:() -> Void):RuntimeFailureRecord {
 		try {

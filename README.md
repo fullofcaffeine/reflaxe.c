@@ -416,6 +416,7 @@ fail-closed.
 - [Architecture](docs/architecture.md)
 - [Configuration contract](docs/configuration.md)
 - [Runtime feature planning and selective packaging](docs/runtime-feature-planning.md)
+- [hxrt architecture, inspection, and source guide](docs/hxrt.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
 - [Primitive function-body lowering](docs/body-lowering.md)

@@ -1,3 +1,11 @@
+/*
+ * Fixture-only all-seed native smoke executable.
+ *
+ * It includes the non-selective hxc_runtime.h umbrella to exercise bounded ABI,
+ * status, allocator, array, string, and Int32 helper contracts together. It is
+ * separately authored native input, never generated Haxe output, and cannot
+ * promote native-seed-only features to compiler-selectable support.
+ */
 #include "hxc_runtime.h"
 
 #include <stdio.h>

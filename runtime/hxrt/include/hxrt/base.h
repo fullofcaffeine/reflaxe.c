@@ -1,7 +1,14 @@
+/*
+ * hxrt feature: runtime-base (compiler-selectable, dependency-only).
+ *
+ * Every selected slice includes this header for C11 types, internal ABI version
+ * macros, symbol visibility, and C/C++ alignment spelling. It is never a root:
+ * runtime-free output omits it, while the planner adds it transitively. It has
+ * no allocation, lifetime, failure, or thread state. The ABI is internal and
+ * generated runtime-using C checks only same-major compatibility.
+ */
 #ifndef HXRT_BASE_H_INCLUDED
 #define HXRT_BASE_H_INCLUDED
-
-/* Provisional internal runtime foundation; this is not a stable public ABI. */
 
 #include <limits.h>
 #include <stdbool.h>

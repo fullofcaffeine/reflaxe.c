@@ -1,3 +1,14 @@
+/*
+ * hxrt feature: alloc (native-seed-only).
+ *
+ * Native allocator, array, and string evidence call this API for checked sizes,
+ * aligned storage, allocator identity, failure-atomic resize, and move-only
+ * owners. Generated Haxe cannot select it yet: known bounded storage must remain
+ * direct C or a program-local specialization. Caller allocator contexts must
+ * outlive every owned block. Failures use hxc_status and preserve output owners;
+ * there is no hidden global or thread state. All layouts are internal ABI and
+ * forbidden in application exports.
+ */
 #ifndef HXRT_ALLOCATOR_H_INCLUDED
 #define HXRT_ALLOCATOR_H_INCLUDED
 

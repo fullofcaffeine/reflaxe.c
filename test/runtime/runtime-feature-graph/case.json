@@ -15,6 +15,7 @@
   ],
   "sources": [
     "docs/specs/runtime-features.schema.json",
+    "docs/hxrt.md",
     "runtime/hxrt/features.json",
     "runtime/hxrt/include/hxrt/abi.h",
     "runtime/hxrt/include/hxrt/allocator.h",
@@ -22,6 +23,7 @@
     "runtime/hxrt/include/hxrt/base.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/status.h",
+    "runtime/hxrt/include/hxrt/status_name.h",
     "runtime/hxrt/include/hxrt/string.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
     "runtime/hxrt/src/abi.c",

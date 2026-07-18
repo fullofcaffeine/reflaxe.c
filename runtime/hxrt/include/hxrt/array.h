@@ -1,3 +1,14 @@
+/*
+ * hxrt feature: array (native-seed-only).
+ *
+ * The array differential/native package harness calls this API for runtime-sized
+ * contiguous unboxed storage. It depends on alloc; generated Haxe arrays cannot
+ * select it yet, while fixed arrays and nonescaping spans remain runtime-free.
+ * hxc_array owns its allocation and is move-only by convention. Mutations can
+ * invalidate borrowed element pointers, failures preserve the prior live array,
+ * and callback context must outlive the owner. The slice has no global/thread
+ * state and its layouts are internal ABI, never application-export types.
+ */
 #ifndef HXRT_ARRAY_H_INCLUDED
 #define HXRT_ARRAY_H_INCLUDED
 

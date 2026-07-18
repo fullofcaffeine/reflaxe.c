@@ -55,10 +55,13 @@ values, reflection, exceptions, threads, platform services, and other planned
 features. Reservations fail closed and name the task that must implement them;
 they are not empty features and cannot be selected.
 
-The catalog is the machine-diffable internal schema-2
-`hxc-runtime-feature-graph-v2` contract. It records internal ABI version 0.5.0,
-same-major generated-code compatibility, the exact application-export exclusion
-for runtime-owned types, every artifact digest, one digest over the sorted source
+The catalog is the machine-diffable internal schema-3
+`hxc-runtime-feature-graph-v3` contract. In addition to graph and packaging
+facts, every feature records its selection roots, semantic contract, rejected
+direct/program-local alternatives, shared-runtime rationale, documentation, and
+executable evidence. It records internal ABI version 0.5.0, same-major
+generated-code compatibility, the exact application-export exclusion for
+runtime-owned types, every artifact digest, one digest over the sorted source
 set, and the strict C11/C++17 header build baselines. The runtime plan remains
 internal schema 2 (`hxc-runtime-plan-v2`), with a nested schema-1
 `hxc-no-runtime-eligibility-v1` proof for empty plans.
@@ -167,7 +170,7 @@ output ownership; the packager never writes or deletes output itself.
 For a nonempty plan, each read must also match its registered SHA-256 before the
 first corresponding `GeneratedFile` is admitted. `hxc.manifest.json` then hashes
 the packaged artifact and records the exact neutral source/include/build plan,
-linking release output back to the schema-2 catalog without copying unselected
+linking release output back to the schema-3 catalog without copying unselected
 runtime metadata into the project.
 
 The canonical fixture proves an `alloc` native request packages only
@@ -234,3 +237,7 @@ string, and array contracts. None of this proves broad `String`/`Array`
 lowering, general I/O, object
 graphs, exceptions, reflection, broad standard-library support, a generated
 public application ABI, or a supported release.
+
+For the contributor decision framework, complete source classification, and a
+user-oriented walkthrough of `hxc.runtime-plan.json` and `hxc_runtime=none`, see
+the normative [hxrt architecture and source guide](hxrt.md).

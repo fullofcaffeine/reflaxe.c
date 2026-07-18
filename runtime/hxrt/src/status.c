@@ -1,3 +1,10 @@
+/*
+ * Implementation of native-seed-only feature `status-name`.
+ *
+ * Native smoke diagnostics call this total lookup. Generated Haxe does not
+ * select it. Returned strings have static lifetime; there is no allocation,
+ * failure, mutable state, thread state, or platform dependency.
+ */
 #include "hxrt/status_name.h"
 
 const char *hxc_status_name(hxc_status status) {
@@ -27,6 +34,7 @@ const char *hxc_status_name(hxc_status status) {
     case HXC_STATUS_INTERNAL_ERROR:
       return "HXC_STATUS_INTERNAL_ERROR";
     default:
+      /* Preserve total diagnostics when an unknown future/foreign value arrives. */
       return "HXC_STATUS_UNKNOWN";
   }
 }

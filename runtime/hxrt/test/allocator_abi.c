@@ -1,3 +1,10 @@
+/*
+ * Fixture-only C layout probe for the provisional allocator ABI.
+ *
+ * The C++17 consumer compares these sizeof/alignof/offsetof facts with its own
+ * view of the same headers. This file is independent native test input: it is
+ * never generated, feature-packaged, or evidence of a stable application ABI.
+ */
 #include "hxrt/allocator.h"
 
 #include <stddef.h>

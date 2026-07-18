@@ -1,3 +1,11 @@
+/*
+ * Fixture-only custom-allocator contract probe.
+ *
+ * The native harness uses this bounded arena to test freestanding operation,
+ * alignment, overflow, callback identity, injected failure, and publication
+ * atomicity without relying on libc allocation. It is not runtime source and is
+ * never emitted or linked merely because generated Haxe mentions allocation.
+ */
 #include "hxrt/allocator.h"
 
 typedef struct hxc_test_arena {

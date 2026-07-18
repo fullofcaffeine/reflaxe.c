@@ -1,3 +1,13 @@
+/*
+ * Implementation of native-seed-only feature `array`.
+ *
+ * Array differential and selective-package native fixtures call this runtime-
+ * sized unboxed owner; generated Haxe cannot select it yet. The slice depends
+ * on alloc, stores allocator and element-callback lifetimes in the owner, and
+ * invalidates element borrows on mutation. Fallible operations preserve the
+ * previous live value, cleanup runs in reverse element order, and no hidden
+ * global/thread state or application-public layout is introduced.
+ */
 #include "hxrt/array.h"
 
 static bool hxc_array_is_power_of_two(size_t value) {
@@ -74,6 +84,7 @@ static void hxc_array_move_bytes_right(
 ) {
   unsigned char *output = (unsigned char *)destination;
   const unsigned char *input = (const unsigned char *)source;
+  /* Copy backwards so overlapping insertion shifts behave like memmove. */
   size_t index = size;
   while (index != 0u) {
     index--;
@@ -109,6 +120,7 @@ static bool hxc_array_find_source(
   size_t *out_index
 ) {
   size_t index;
+  /* Record a slot identity before reserve can relocate the backing storage. */
   for (index = 0u; index < array->length; index++) {
     if (hxc_array_slot_const(array, index) == element) {
       *out_index = index;
@@ -206,6 +218,7 @@ hxc_status hxc_array_reserve(
   if (capacity > maximum_capacity) {
     capacity = maximum_capacity;
   }
+  /* Double deterministically, then jump exactly to the request near overflow. */
   while (capacity < minimum_capacity) {
     if (capacity > maximum_capacity / 2u) {
       capacity = minimum_capacity;
@@ -262,6 +275,7 @@ hxc_status hxc_array_resize(
     return status;
   }
   if (source_is_slot) {
+    /* Reserve may move storage, so reconstruct the borrowed source by index. */
     default_element = hxc_array_slot_const(array, source_index);
   }
   constructed = array->length;
@@ -272,6 +286,7 @@ hxc_status hxc_array_resize(
       default_element
     );
     if (status != HXC_STATUS_OK) {
+      /* Destroy only newly constructed elements; the old logical array survives. */
       while (constructed > array->length) {
         constructed--;
         hxc_array_destroy(array, hxc_array_slot(array, constructed));
@@ -335,6 +350,7 @@ hxc_status hxc_array_push_copy(
     return status;
   }
   if (source_is_slot) {
+    /* Account for both reserve relocation and the insertion shift. */
     element = hxc_array_slot_const(array, source_index);
   }
   status = hxc_array_construct(
@@ -392,6 +408,7 @@ hxc_status hxc_array_insert_copy(
     element
   );
   if (status != HXC_STATUS_OK) {
+    /* Restore the byte-relocated live range before reporting copy failure. */
     hxc_array_copy_bytes(
       hxc_array_slot(array, index),
       hxc_array_slot_const(array, index + 1u),
@@ -440,6 +457,7 @@ hxc_status hxc_array_remove_at(hxc_array *array, size_t index) {
   }
   hxc_array_destroy(array, hxc_array_slot(array, index));
   shifted_size = (array->length - index - 1u) * array->elements.size;
+  /* Live elements are relocatable bytes; the duplicate tail becomes non-live. */
   hxc_array_copy_bytes(
     hxc_array_slot(array, index),
     hxc_array_slot_const(array, index + 1u),
@@ -476,6 +494,7 @@ hxc_status hxc_array_dispose(hxc_array *array) {
   if (!hxc_array_is_valid(array)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
+  /* Reverse destruction mirrors stack-like construction and cleanup ordering. */
   index = array->length;
   while (index != 0u) {
     index--;

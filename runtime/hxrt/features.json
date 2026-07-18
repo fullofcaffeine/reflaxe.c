@@ -82,6 +82,25 @@
   "noUnconditionalCore": true,
   "features": [
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Requested only by allocator, array, and string native seed fixtures; generated Haxe cannot select it yet.",
+            "id": "native-seed-fixture",
+            "kind": "native-seed-fixture"
+          }
+        ],
+        "runtimeRationale": "Unknown runtime sizes and caller-supplied allocator identity need one shared ownership and failure contract, but compiler lowering for that case is still unsupported.",
+        "evidence": [
+          "runtime/hxrt/test/allocator_abi.c",
+          "runtime/hxrt/test/allocator_contract.c",
+          "scripts/ci/runtime_smoke.py"
+        ],
+        "directAlternative": "Stack storage, fixed arrays, nonescaping spans, and bounded values remain direct C and never request allocation.",
+        "contract": "Implements checked size arithmetic, explicit allocator identity, aligned allocation, failure-atomic resize, and move-only allocation owners.",
+        "programLocalAlternative": "A program-local allocator is preferred when whole-program escape and size facts permit a narrower specialized owner."
+      },
       "dependencies": [
         "status"
       ],
@@ -104,13 +123,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "798393dd7eb85916cd48a7652ef970b6ca4417f29f21f6f751dbefdd006185d7",
+          "sourceSha256": "5f01b19f66588f5c778ea5035aaaba0e2d5a48ff027c5810e32d20bb601d696a",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/allocator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
         },
         {
-          "sourceSha256": "0a2d502da004f22db6e3412f3aebe6958230342d8e8f7b7e791f64f3be2bbcf5",
+          "sourceSha256": "1f93b7f5724bf77b05204e20d96f9179582e070210bad2ec9dd7b89794e8a77c",
           "kind": "runtime-source",
           "outputPath": "runtime/src/allocator.c",
           "sourcePath": "runtime/hxrt/src/allocator.c"
@@ -126,6 +145,24 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Requested only by the array differential and selective-package native fixtures; generated Haxe cannot select it yet.",
+            "id": "native-seed-fixture",
+            "kind": "native-seed-fixture"
+          }
+        ],
+        "runtimeRationale": "Runtime-dependent capacity plus reusable allocator and element-lifecycle boundaries justify this shared seed only after future array lowering proves the need.",
+        "evidence": [
+          "test/differential/array-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Compiler-known fixed arrays and nonescaping spans use direct C storage and bounds checks.",
+        "contract": "Implements a move-only resizable unboxed buffer with deterministic checked growth, borrow invalidation, and optional typed element lifecycle callbacks.",
+        "programLocalAlternative": "Closed element types and bounded capacities should use a program-local specialized helper when that is smaller and equally correct."
+      },
       "dependencies": [
         "alloc"
       ],
@@ -148,13 +185,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "8304bc07cd59342e2bb9da83d7f275d03df76514f4e982fe8afd6c0a9fe50cce",
+          "sourceSha256": "65ec3d1a86705030e42890de9af2b4b96a30062f0f0a8d127280fec693a02c7d",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "06d81e843dbe5748ab45c32bae5e2514d67a18df27129c562fcaddfa2973beeb",
+          "sourceSha256": "85e958919867732af6371afb49983fe607335981f7cbaa893fdf6ca5b806c825",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -170,6 +207,30 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Reachable Sys.println with a compiler-owned String literal.",
+            "id": "sys-println-literal",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "Reachable default trace with compiler-owned literal text and source prefix.",
+            "id": "trace-literal",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "One narrow hosted service centralizes exact-length output, embedded-NUL handling, flushing, and status mapping without pulling in general strings or allocation.",
+        "evidence": [
+          "examples/hello/run.py",
+          "test/runtime/runtime-feature-graph/run.py",
+          "test/string_output/run.py"
+        ],
+        "directAlternative": "The literal representation stays direct C, but ISO C has no expression that performs the required hosted write and flush side effect.",
+        "contract": "Writes one valid length-delimited Haxe String value plus a newline to hosted stdout and reports write or flush failure explicitly.",
+        "programLocalAlternative": "Inlining fwrite/fputc/fflush at each call site would duplicate platform and failure policy rather than specialize semantics."
+      },
       "dependencies": [
         "status",
         "string-literal"
@@ -181,13 +242,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "a80144f8bed89a7c9646b3cab2836417769f3c1eae213554c5c3268e96b2d5ca",
+          "sourceSha256": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/io.h",
           "sourcePath": "runtime/hxrt/include/hxrt/io.h"
         },
         {
-          "sourceSha256": "66647082818392b58030adfa85e434525c2034d91234debe3dcb1a975c789866",
+          "sourceSha256": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c",
           "kind": "runtime-source",
           "outputPath": "runtime/src/io.c",
           "sourcePath": "runtime/hxrt/src/io.c"
@@ -202,6 +263,25 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Requested only by the independent native runtime ABI smoke fixture.",
+            "id": "native-seed-fixture",
+            "kind": "native-seed-fixture"
+          }
+        ],
+        "runtimeRationale": "The linked runtime must answer for its own build, but this evidence helper is not a generated-program semantic dependency.",
+        "evidence": [
+          "runtime/hxrt/test/public_header_cpp.cpp",
+          "runtime/hxrt/test/runtime_smoke.c",
+          "scripts/ci/runtime_smoke.py"
+        ],
+        "directAlternative": "Generated C checks HXC_RUNTIME_ABI_MAJOR directly with a structural _Static_assert and needs no query call.",
+        "contract": "Returns the packed internal hxrt version for independent native compatibility probes; generated Haxe cannot select this query.",
+        "programLocalAlternative": "A program-local query would report the compiler's assumption rather than the linked runtime's version."
+      },
       "dependencies": [
         "runtime-base"
       ],
@@ -212,13 +292,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "3f68191447abf3968d89d4b142a46cc08bc9a2caf288d7c0f3dbfc4698eee598",
+          "sourceSha256": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/abi.h",
           "sourcePath": "runtime/hxrt/include/hxrt/abi.h"
         },
         {
-          "sourceSha256": "84d79962524123be2840436c6e6c1756d79027be438fc6cee2350d26aea7957c",
+          "sourceSha256": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32",
           "kind": "runtime-source",
           "outputPath": "runtime/src/abi.c",
           "sourcePath": "runtime/hxrt/src/abi.c"
@@ -234,13 +314,31 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Selected only when another registered feature needs the shared types or ABI macros.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          }
+        ],
+        "runtimeRationale": "A single header is the smallest dependency that keeps independently packaged runtime slices ABI-consistent.",
+        "evidence": [
+          "test/runtime/runtime-feature-graph/run.py",
+          "test/string_output/run.py"
+        ],
+        "directAlternative": "Runtime-free generated C includes the standard headers and direct C types it actually needs, so this feature is omitted.",
+        "contract": "Defines the narrow C11/C++ foundation and internal ABI macros shared by every packaged hxrt slice; it owns no allocation, failure, or thread state.",
+        "programLocalAlternative": "A program-local copy would duplicate the internal ABI and visibility contract in every selected slice."
+      },
       "dependencies": [],
       "id": "runtime-base",
       "availability": "compiler-selectable",
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "39f4c67e61b692c5b1f67972bd7f2445774015fc43638d01be9798d26134ec38",
+          "sourceSha256": "5727cd5798673e27f2215e7a3e1e2a1f92245510855903075caa71764181456d",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -256,6 +354,24 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Selected transitively by a slice whose C boundary can fail, currently hosted io or native seeds.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          }
+        ],
+        "runtimeRationale": "The header is the smallest shared failure vocabulary for separately compiled runtime sources.",
+        "evidence": [
+          "test/runtime/runtime-feature-graph/run.py",
+          "test/string_output/run.py"
+        ],
+        "directAlternative": "Direct generated C uses ordinary control flow when the complete operation and failure semantics can stay local.",
+        "contract": "Defines the closed non-throwing status vocabulary returned by current runtime operations; it allocates nothing and stores no error state.",
+        "programLocalAlternative": "Duplicating numeric status values in each program-local helper would make independently packaged feature boundaries disagree."
+      },
       "dependencies": [
         "runtime-base"
       ],
@@ -264,7 +380,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "51311f4276de1652b86b2b68d92f2aa35a578063c089bd2ca2a0f92353110aa7",
+          "sourceSha256": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/status.h",
           "sourcePath": "runtime/hxrt/include/hxrt/status.h"
@@ -280,6 +396,24 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Requested only by independent native seed diagnostics and smoke fixtures.",
+            "id": "native-seed-fixture",
+            "kind": "native-seed-fixture"
+          }
+        ],
+        "runtimeRationale": "The helper is shared native evidence, not a fallback selected for generated Haxe.",
+        "evidence": [
+          "runtime/hxrt/test/runtime_smoke.c",
+          "scripts/ci/runtime_smoke.py"
+        ],
+        "directAlternative": "Generated code branches on typed status values directly and does not need a name lookup.",
+        "contract": "Maps every known hxc_status value to a stable diagnostic name without allocating or retaining state.",
+        "programLocalAlternative": "A fixture could duplicate the switch, but that would stop testing the runtime's own status vocabulary."
+      },
       "dependencies": [
         "status"
       ],
@@ -290,13 +424,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "601316d4420a87aedcf34459b39ad7e4cc44563b28047560013e011210f5f723",
+          "sourceSha256": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/status_name.h",
           "sourcePath": "runtime/hxrt/include/hxrt/status_name.h"
         },
         {
-          "sourceSha256": "cb5869a6a6a172560da82488b56a38c2cd8bec916661c1622c5e3aec70f3432b",
+          "sourceSha256": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8",
           "kind": "runtime-source",
           "outputPath": "runtime/src/status.c",
           "sourcePath": "runtime/hxrt/src/status.c"
@@ -312,6 +446,24 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Requested only by the string differential and selective-package native fixtures; generated Haxe cannot select it yet.",
+            "id": "native-seed-fixture",
+            "kind": "native-seed-fixture"
+          }
+        ],
+        "runtimeRationale": "Arbitrary runtime bytes, scalar indexing, ownership transfer, builders, and CString lifetimes need shared validated machinery when future lowering admits them.",
+        "evidence": [
+          "test/differential/string-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Known literals, constant concatenation, and statically decidable string facts should remain direct compiler-owned C data.",
+        "contract": "Implements runtime-value-dependent scalar UTF-8 validation/indexing, owned strings, builders, slicing, hashing, and explicit borrowed or owned CString conversion.",
+        "programLocalAlternative": "Closed call sites should receive specialized local operations when their representation, lifetime, and operation set are statically bounded."
+      },
       "dependencies": [
         "alloc",
         "string-literal"
@@ -344,13 +496,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "4c1ccca0ff064a778594491b4e5d9946d592e51cd11876c8b2ef97cdb888e770",
+          "sourceSha256": "16860609c4cdb6e8e81f3b02f212edb40be3da01f053743cc087b897df16ba63",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string.h"
         },
         {
-          "sourceSha256": "355bb142d05e2a520b687bbb834bf084aa5f73e203fe17931dd780d5f71e31dd",
+          "sourceSha256": "abe937db71f7333d4a915d7b7e222384ceeba8815783e8fafffb1aeaeadfd5d4",
           "kind": "runtime-source",
           "outputPath": "runtime/src/string.c",
           "sourcePath": "runtime/hxrt/src/string.c"
@@ -366,6 +518,24 @@
       ]
     },
     {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "Selected transitively when a runtime operation consumes the compiler's direct literal representation.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          }
+        ],
+        "runtimeRationale": "The header only shares the three-field call-boundary layout needed by selected consumers such as io.",
+        "evidence": [
+          "test/runtime/runtime-feature-graph/run.py",
+          "test/string_output/run.py"
+        ],
+        "directAlternative": "The literal bytes and length are emitted directly in generated C; no runtime source or constructor is used.",
+        "contract": "Defines the allocation-free private hxc_string view used for compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
+        "programLocalAlternative": "The carrier itself is already the program-specific representation; cloning its ABI would make runtime consumers incompatible."
+      },
       "dependencies": [
         "runtime-base"
       ],
@@ -374,7 +544,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "1f24f1358fcfef03193d79f181b0499a295a53544a021bcf1063f2a36c12f1a4",
+          "sourceSha256": "0c9c2b70aa847b7e8a6f2a3fcca18e11bdafd03340a4955527446b3a47388e36",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/string_literal.h",
           "sourcePath": "runtime/hxrt/include/hxrt/string_literal.h"
@@ -391,14 +561,14 @@
     }
   ],
   "status": "selective-compiler-packaging",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "compilerSelectableFeatures": [
     "io",
     "runtime-base",
     "status",
     "string-literal"
   ],
-  "algorithm": "hxc-runtime-feature-graph-v2",
+  "algorithm": "hxc-runtime-feature-graph-v3",
   "runtimeAbi": {
     "generatedCodeCheck": "c11-static-assert",
     "stability": "internal-versioned",
@@ -426,7 +596,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "af49ad943c13bd35bbedbf5c50cdefb21f4784beccb0794d4c0a5ab8cb139add",
+      "sourceSetSha256": "332b6023df3f621f84fdc5447ed81dd398e12c93dc8649f5a66be019407c10b6",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

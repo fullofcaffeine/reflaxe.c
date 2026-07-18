@@ -1,3 +1,13 @@
+/*
+ * hxrt feature: io (compiler-selectable, hosted-only).
+ *
+ * Generated sys-println-literal and trace-literal HxcIR roots call
+ * hxc_io_println; native package evidence calls the same boundary. It borrows
+ * the input only for the call, allocates nothing, and returns explicit write or
+ * flush failure through hxc_status. It uses hosted stdout and therefore has the
+ * host C stream's concurrency behavior, but owns no additional global/thread
+ * state. The hxc_string parameter is private internal ABI.
+ */
 #ifndef HXRT_IO_H_INCLUDED
 #define HXRT_IO_H_INCLUDED
 

@@ -1,3 +1,12 @@
+/*
+ * hxrt feature: string-literal (compiler-selectable, dependency-only).
+ *
+ * Generated C constructs valid UTF-8 literals directly with this allocation-free
+ * private view; a selected consumer such as io adds the header transitively.
+ * The carrier borrows compiler-owned static bytes, never allocates or fails, and
+ * has no mutable/thread state. It is an internal call layout, not a public String
+ * ABI and not evidence for the native-seed full string feature.
+ */
 #ifndef HXRT_STRING_LITERAL_H_INCLUDED
 #define HXRT_STRING_LITERAL_H_INCLUDED
 

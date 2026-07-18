@@ -1,3 +1,12 @@
+/*
+ * hxrt feature: status (compiler-selectable, dependency-only).
+ *
+ * Fallible runtime C boundaries share this closed value vocabulary. The hosted
+ * io slice and native allocator/string/array seeds include it transitively; no
+ * source operation selects status by itself. It stores no last error, allocates
+ * nothing, has no lifetime or thread effects, and is internal ABI rather than
+ * an application-export contract.
+ */
 #ifndef HXRT_STATUS_H_INCLUDED
 #define HXRT_STATUS_H_INCLUDED
 

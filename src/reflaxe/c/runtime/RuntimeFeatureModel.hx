@@ -34,6 +34,18 @@ enum abstract RuntimeFeatureAvailability(String) to String {
 	var NativeSeedOnly = "native-seed-only";
 }
 
+/** How a feature can enter the dependency-closed runtime plan. */
+enum abstract RuntimeFeatureSelectionRootKind(String) to String {
+	/** A reachable HxcIR operation can request this feature directly. */
+	var HxcIrOperation = "hxc-ir-operation";
+
+	/** The feature has no semantic root of its own and is selected by a parent. */
+	var TransitiveDependency = "transitive-dependency";
+
+	/** Only the independent native harness may request this provisional slice. */
+	var NativeSeedFixture = "native-seed-fixture";
+}
+
 enum abstract RuntimePlanningPurpose(String) to String {
 	var CompilerProgram = "compiler-program";
 	var NativeSeedFixture = "native-seed-fixture";
@@ -111,6 +123,46 @@ class RuntimeFeatureArtifact {
 	}
 }
 
+/** One stable, reviewable way in which a feature can become selected. */
+class RuntimeFeatureSelectionRoot {
+	public final id:String;
+	public final kind:RuntimeFeatureSelectionRootKind;
+	public final description:String;
+
+	public function new(id:String, kind:RuntimeFeatureSelectionRootKind, description:String) {
+		this.id = id;
+		this.kind = kind;
+		this.description = description;
+	}
+}
+
+/**
+ * Human-facing contract kept beside the machine-owned feature definition.
+ *
+ * These fields make the design rationale and executable evidence drift with
+ * the same typed record that owns dependencies, artifacts, and symbols.
+ */
+class RuntimeFeatureDocumentation {
+	public final contract:String;
+	public final selectionRoots:Array<RuntimeFeatureSelectionRoot>;
+	public final directAlternative:String;
+	public final programLocalAlternative:String;
+	public final runtimeRationale:String;
+	public final referencePath:String;
+	public final evidence:Array<String>;
+
+	public function new(contract:String, selectionRoots:Array<RuntimeFeatureSelectionRoot>, directAlternative:String, programLocalAlternative:String,
+			runtimeRationale:String, referencePath:String, evidence:Array<String>) {
+		this.contract = contract;
+		this.selectionRoots = selectionRoots.copy();
+		this.directAlternative = directAlternative;
+		this.programLocalAlternative = programLocalAlternative;
+		this.runtimeRationale = runtimeRationale;
+		this.referencePath = referencePath;
+		this.evidence = evidence.copy();
+	}
+}
+
 class RuntimeFeatureDefinition {
 	public final id:RuntimeFeatureId;
 	public final summary:String;
@@ -122,10 +174,11 @@ class RuntimeFeatureDefinition {
 	public final symbols:Array<String>;
 	public final libraries:Array<String>;
 	public final defines:Array<RuntimeFeatureDefine>;
+	public final documentation:RuntimeFeatureDocumentation;
 
 	public function new(id:RuntimeFeatureId, summary:String, availability:RuntimeFeatureAvailability, minimalAllowed:Bool, environments:Array<CEnvironment>,
 			dependencies:Array<RuntimeFeatureId>, artifacts:Array<RuntimeFeatureArtifact>, symbols:Array<String>, libraries:Array<String>,
-			defines:Array<RuntimeFeatureDefine>) {
+			defines:Array<RuntimeFeatureDefine>, documentation:RuntimeFeatureDocumentation) {
 		this.id = id;
 		this.summary = summary;
 		this.availability = availability;
@@ -136,6 +189,7 @@ class RuntimeFeatureDefinition {
 		this.symbols = symbols.copy();
 		this.libraries = libraries.copy();
 		this.defines = defines.copy();
+		this.documentation = documentation;
 	}
 }
 
@@ -414,6 +468,23 @@ typedef RuntimeFeatureDefinitionRecord = {
 	final symbols:Array<String>;
 	final libraries:Array<String>;
 	final defines:Array<String>;
+	final documentation:RuntimeFeatureDocumentationRecord;
+}
+
+typedef RuntimeFeatureSelectionRootRecord = {
+	final id:String;
+	final kind:RuntimeFeatureSelectionRootKind;
+	final description:String;
+}
+
+typedef RuntimeFeatureDocumentationRecord = {
+	final contract:String;
+	final selectionRoots:Array<RuntimeFeatureSelectionRootRecord>;
+	final directAlternative:String;
+	final programLocalAlternative:String;
+	final runtimeRationale:String;
+	final referencePath:String;
+	final evidence:Array<String>;
 }
 
 typedef RuntimeFeatureArtifactRecord = {

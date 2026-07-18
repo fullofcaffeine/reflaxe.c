@@ -112,11 +112,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 221,
+            "line": 224,
             "column": 2
           },
           "start": {
-            "line": 221,
+            "line": 224,
             "column": 1
           }
         }
@@ -357,11 +357,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 68,
+            "line": 71,
             "column": 2
           },
           "start": {
-            "line": 68,
+            "line": 71,
             "column": 1
           }
         }
@@ -506,11 +506,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 234,
+              "line": 237,
               "column": 2
             },
             "start": {
-              "line": 234,
+              "line": 237,
               "column": 1
             }
           }
@@ -532,11 +532,11 @@
           "source": {
             "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
             "end": {
-              "line": 234,
+              "line": 237,
               "column": 2
             },
             "start": {
-              "line": 234,
+              "line": 237,
               "column": 1
             }
           }
@@ -550,7 +550,7 @@
         "string-literal"
       ],
       "id": "HXC2000",
-      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:234:1-234:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:234:1-234:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
+      "message": "runtime policy `none` found 2 deduplicated runtime blocker(s):\n- fixture.none.a kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:237:1-237:2 feature=string dependency-chains=[string -> alloc -> status -> runtime-base; string -> string-literal -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`\n- fixture.none.z kind=fixture-semantic-gap operation=fixture-runtime-operation surface=`fixture.RuntimeFeatureGraph` source=test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx:237:1-237:2 feature=alloc dependency-chains=[alloc -> status -> runtime-base] alternative=`use a direct fixture representation when it preserves semantics`"
     }
   },
   "compilerIo": {
@@ -729,11 +729,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 192,
+            "line": 195,
             "column": 2
           },
           "start": {
-            "line": 192,
+            "line": 195,
             "column": 1
           }
         }
@@ -1036,11 +1036,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 78,
+            "line": 81,
             "column": 2
           },
           "start": {
-            "line": 78,
+            "line": 81,
             "column": 1
           }
         }
@@ -1212,11 +1212,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 67,
+            "line": 70,
             "column": 2
           },
           "start": {
-            "line": 67,
+            "line": 70,
             "column": 1
           }
         }
@@ -1518,11 +1518,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 70,
+            "line": 73,
             "column": 2
           },
           "start": {
-            "line": 70,
+            "line": 73,
             "column": 1
           }
         }
@@ -1537,11 +1537,11 @@
         "source": {
           "file": "test/runtime/runtime-feature-graph/RuntimeFeatureGraphGolden.hx",
           "end": {
-            "line": 69,
+            "line": 72,
             "column": 2
           },
           "start": {
-            "line": 69,
+            "line": 72,
             "column": 1
           }
         }

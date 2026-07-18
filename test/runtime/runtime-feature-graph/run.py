@@ -151,15 +151,15 @@ def validate_schema_document() -> None:
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         raise RuntimeFeatureFailure("runtime feature schema must use JSON Schema 2020-12")
     properties = record(schema.get("properties"), "runtime feature schema properties")
-    if record(properties.get("schemaVersion"), "schemaVersion schema").get("const") != 2:
-        raise RuntimeFeatureFailure("runtime feature schema must require version 2")
+    if record(properties.get("schemaVersion"), "schemaVersion schema").get("const") != 3:
+        raise RuntimeFeatureFailure("runtime feature schema must require version 3")
     for required in ("algorithm", "features", "reservedFeatures", "noUnconditionalCore", "runtimeAbi"):
         if required not in properties:
             raise RuntimeFeatureFailure(f"runtime feature schema omitted {required}")
 
 
 def validate_catalog(catalog: dict[str, object]) -> None:
-    if catalog.get("schemaVersion") != 2 or catalog.get("algorithm") != "hxc-runtime-feature-graph-v2":
+    if catalog.get("schemaVersion") != 3 or catalog.get("algorithm") != "hxc-runtime-feature-graph-v3":
         raise RuntimeFeatureFailure("runtime feature catalog schema or algorithm drifted")
     if catalog.get("status") != "selective-compiler-packaging":
         raise RuntimeFeatureFailure("runtime feature catalog readiness drifted")
@@ -233,12 +233,68 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "io": "compiler-selectable",
     }
     source_records: list[tuple[str, str]] = []
+    registered_sources: set[str] = set()
+    registered_symbols: set[str] = set()
     for identifier, dependencies in expected_dependencies.items():
         feature = features[identifier]
         if feature.get("availability") != expected_availability[identifier] or feature.get("dependencies") != dependencies:
             raise RuntimeFeatureFailure(f"feature {identifier} availability/dependencies drifted")
         if feature.get("minimalAllowed") is not True:
             raise RuntimeFeatureFailure(f"seed feature {identifier} left the narrow allowlist")
+        documentation = record(feature.get("documentation"), f"feature {identifier} documentation")
+        expected_documentation_fields = {
+            "contract",
+            "selectionRoots",
+            "directAlternative",
+            "programLocalAlternative",
+            "runtimeRationale",
+            "referencePath",
+            "evidence",
+        }
+        if set(documentation) != expected_documentation_fields:
+            raise RuntimeFeatureFailure(f"feature {identifier} documentation fields drifted")
+        for field in (
+            "contract",
+            "directAlternative",
+            "programLocalAlternative",
+            "runtimeRationale",
+        ):
+            if not isinstance(documentation.get(field), str) or not str(documentation.get(field)).strip():
+                raise RuntimeFeatureFailure(f"feature {identifier} omitted documented {field}")
+        reference_path = documentation.get("referencePath")
+        if not isinstance(reference_path, str):
+            raise RuntimeFeatureFailure(f"feature {identifier} omitted its documentation reference")
+        reference = safe_output_path(ROOT, reference_path)
+        if not reference.is_file() or f"<!-- hxrt-feature:{identifier} -->" not in reference.read_text(encoding="utf-8"):
+            raise RuntimeFeatureFailure(f"feature {identifier} documentation reference is missing or stale")
+        evidence = text_list(documentation.get("evidence"), f"feature {identifier} evidence")
+        if not evidence:
+            raise RuntimeFeatureFailure(f"feature {identifier} has no executable evidence")
+        for evidence_path in evidence:
+            evidence_file = safe_output_path(ROOT, evidence_path)
+            if not evidence_file.is_file() or not evidence_path.startswith(
+                ("test/", "runtime/hxrt/test/", "scripts/ci/", "examples/")
+            ):
+                raise RuntimeFeatureFailure(
+                    f"feature {identifier} evidence is missing or not executable repository evidence: {evidence_path}"
+                )
+        roots = [
+            record(value, f"feature {identifier} selection root")
+            for value in records(documentation.get("selectionRoots"), f"feature {identifier} selection roots")
+        ]
+        if not roots or len({root.get("id") for root in roots}) != len(roots):
+            raise RuntimeFeatureFailure(f"feature {identifier} selection roots are absent or duplicated")
+        for root in roots:
+            if set(root) != {"id", "kind", "description"} or not root.get("description"):
+                raise RuntimeFeatureFailure(f"feature {identifier} has an incomplete selection root")
+            kind = root.get("kind")
+            if kind == "hxc-ir-operation" and expected_availability[identifier] != "compiler-selectable":
+                raise RuntimeFeatureFailure(f"native feature {identifier} advertised a compiler root")
+            if kind == "native-seed-fixture" and expected_availability[identifier] != "native-seed-only":
+                raise RuntimeFeatureFailure(f"compiler feature {identifier} advertised a native-only root")
+            if kind not in ("hxc-ir-operation", "transitive-dependency", "native-seed-fixture"):
+                raise RuntimeFeatureFailure(f"feature {identifier} has an unknown selection-root kind")
+        registered_symbols.update(text_list(feature.get("symbols"), f"feature {identifier} symbols"))
         for value in records(feature.get("artifacts"), f"feature {identifier} artifacts"):
             artifact = record(value, f"feature {identifier} artifact")
             source_path = artifact.get("sourcePath")
@@ -246,9 +302,58 @@ def validate_catalog(catalog: dict[str, object]) -> None:
             if not isinstance(source_path, str) or not isinstance(source_sha256, str):
                 raise RuntimeFeatureFailure(f"feature {identifier} artifact lost source provenance")
             source = safe_output_path(ROOT, source_path)
+            source_text = source.read_text(encoding="utf-8")
+            ownership_marker = (
+                f"hxrt feature: {identifier}"
+                if source.suffix == ".h"
+                else f"feature `{identifier}`"
+            )
+            if ownership_marker not in source_text[:1600]:
+                raise RuntimeFeatureFailure(
+                    f"feature {identifier} artifact lacks its file-level source contract: {source_path}"
+                )
             if hashlib.sha256(source.read_bytes()).hexdigest() != source_sha256:
                 raise RuntimeFeatureFailure(f"feature {identifier} artifact source digest drifted: {source_path}")
             source_records.append((source_path, source_sha256))
+            registered_sources.add(source_path)
+    if [root.get("id") for root in records(record(features["io"].get("documentation"), "io documentation").get("selectionRoots"), "io roots")] != [
+        "sys-println-literal",
+        "trace-literal",
+    ]:
+        raise RuntimeFeatureFailure("io documented HxcIR roots drifted")
+    production_sources = {
+        str(path.relative_to(ROOT))
+        for directory, suffix in ((RUNTIME_SOURCE_ROOT / "include/hxrt", "*.h"), (RUNTIME_SOURCE_ROOT / "src", "*.c"))
+        for path in directory.glob(suffix)
+    }
+    if registered_sources != production_sources:
+        raise RuntimeFeatureFailure(
+            "production hxrt artifact ownership drifted: "
+            f"missing={sorted(production_sources - registered_sources)!r} "
+            f"stale={sorted(registered_sources - production_sources)!r}"
+        )
+    umbrella = RUNTIME_SOURCE_ROOT / "include/hxc_runtime.h"
+    if (
+        not umbrella.is_file()
+        or "not a compiler-selectable hxrt feature" not in umbrella.read_text(encoding="utf-8")[:1600]
+        or str(umbrella.relative_to(ROOT)) in registered_sources
+    ):
+        raise RuntimeFeatureFailure("the provisional hxc_runtime.h umbrella classification drifted")
+    declared_symbols: set[str] = set()
+    for header in (RUNTIME_SOURCE_ROOT / "include/hxrt").glob("*.h"):
+        declared_symbols.update(
+            re.findall(
+                r"\bHXC_API\b[^;]*?\b(hxc_[A-Za-z0-9_]+)\s*\(",
+                header.read_text(encoding="utf-8"),
+                flags=re.DOTALL,
+            )
+        )
+    if registered_symbols != declared_symbols:
+        raise RuntimeFeatureFailure(
+            "runtime public symbol documentation drifted: "
+            f"missing={sorted(declared_symbols - registered_symbols)!r} "
+            f"stale={sorted(registered_symbols - declared_symbols)!r}"
+        )
     source_records.sort(key=lambda entry: entry[0].encode("utf-8"))
     source_set_payload = "".join(f"{path}\0{digest}\n" for path, digest in source_records).encode("utf-8")
     if provenance.get("sourceSetSha256") != hashlib.sha256(source_set_payload).hexdigest():

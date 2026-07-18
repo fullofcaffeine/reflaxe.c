@@ -17,10 +17,10 @@
   ],
   "properties": {
     "schemaVersion": {
-      "const": 2
+      "const": 3
     },
     "algorithm": {
-      "const": "hxc-runtime-feature-graph-v2"
+      "const": "hxc-runtime-feature-graph-v3"
     },
     "status": {
       "enum": [
@@ -94,7 +94,8 @@
         "artifacts",
         "symbols",
         "libraries",
-        "defines"
+        "defines",
+        "documentation"
       ],
       "properties": {
         "id": {
@@ -163,8 +164,84 @@
             "pattern": "^[A-Z][A-Z0-9_]*=.+$"
           },
           "uniqueItems": true
+        },
+        "documentation": {
+          "$ref": "#/$defs/featureDocumentation"
         }
       }
+    },
+    "featureDocumentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract",
+        "selectionRoots",
+        "directAlternative",
+        "programLocalAlternative",
+        "runtimeRationale",
+        "referencePath",
+        "evidence"
+      ],
+      "properties": {
+        "contract": {
+          "$ref": "#/$defs/singleLineText"
+        },
+        "selectionRoots": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/selectionRoot"
+          }
+        },
+        "directAlternative": {
+          "$ref": "#/$defs/singleLineText"
+        },
+        "programLocalAlternative": {
+          "$ref": "#/$defs/singleLineText"
+        },
+        "runtimeRationale": {
+          "$ref": "#/$defs/singleLineText"
+        },
+        "referencePath": {
+          "allOf": [
+            { "$ref": "#/$defs/relativePath" },
+            { "pattern": "^docs/.+\\.md$" }
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/relativePath"
+          }
+        }
+      }
+    },
+    "selectionRoot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "description"],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/featureId"
+        },
+        "kind": {
+          "enum": [
+            "hxc-ir-operation",
+            "transitive-dependency",
+            "native-seed-fixture"
+          ]
+        },
+        "description": {
+          "$ref": "#/$defs/singleLineText"
+        }
+      }
+    },
+    "singleLineText": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[^\\r\\n\\u0000]+$"
     },
     "artifact": {
       "type": "object",

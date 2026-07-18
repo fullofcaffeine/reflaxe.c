@@ -1,3 +1,11 @@
+/*
+ * Fixture-only C++17 consumer of the provisional C runtime umbrella.
+ *
+ * This file is deliberately .cpp: a C++ compiler must prove that the headers'
+ * extern "C" linkage, callback signatures, standard-layout records, alignment,
+ * and C/C++ layout facts agree. Reflaxe.C still emits C, not C++; this fixture is
+ * never generated or packaged and does not establish a stable public C++ API.
+ */
 #include "hxc_runtime.h"
 
 #include <array>

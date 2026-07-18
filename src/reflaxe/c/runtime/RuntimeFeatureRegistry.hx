@@ -7,15 +7,17 @@ import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureCatalogSnapshot;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureCatalogStatus;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureAvailability;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefinition;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureDefinitionRecord;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureId;
 import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureReservation;
+import reflaxe.c.runtime.RuntimeFeatureModel.RuntimeFeatureSelectionRootKind;
 
 /** Validated immutable-by-convention graph with deterministic dependency order. */
 class RuntimeFeatureRegistry {
-	public static inline final ALGORITHM = "hxc-runtime-feature-graph-v2";
-	public static inline final SCHEMA_VERSION = 2;
+	public static inline final ALGORITHM = "hxc-runtime-feature-graph-v3";
+	public static inline final SCHEMA_VERSION = 3;
 
 	final definitions:Array<RuntimeFeatureDefinition>;
 	final reservations:Array<RuntimeFeatureReservation>;
@@ -70,6 +72,15 @@ class RuntimeFeatureRegistry {
 			final libraries = sortedUniqueCopy(definition.libraries);
 			final defines = definition.defines.map(define -> define.display());
 			defines.sort(compareUtf8);
+			final selectionRoots = definition.documentation.selectionRoots.map(root -> {
+				id: root.id,
+				kind: root.kind,
+				description: root.description
+			});
+			selectionRoots.sort((left, right) -> {
+				final idOrder = compareUtf8(left.id, right.id);
+				return idOrder == 0 ? compareUtf8(Std.string(left.kind), Std.string(right.kind)) : idOrder;
+			});
 			featureRecords.push({
 				id: definition.id.text(),
 				summary: definition.summary,
@@ -80,7 +91,16 @@ class RuntimeFeatureRegistry {
 				artifacts: artifacts,
 				symbols: symbols,
 				libraries: libraries,
-				defines: defines
+				defines: defines,
+				documentation: {
+					contract: definition.documentation.contract,
+					selectionRoots: selectionRoots,
+					directAlternative: definition.documentation.directAlternative,
+					programLocalAlternative: definition.documentation.programLocalAlternative,
+					runtimeRationale: definition.documentation.runtimeRationale,
+					referencePath: definition.documentation.referencePath,
+					evidence: sortedUniqueCopy(definition.documentation.evidence)
+				}
 			});
 		}
 		compilerSelectableFeatures.sort(compareUtf8);
@@ -120,6 +140,7 @@ class RuntimeFeatureRegistry {
 			validateText(definition.summary, 'runtime feature `$id` summary');
 			validateAvailability(definition);
 			validateEnvironments(definition);
+			validateDocumentation(definition);
 			definitionsById.set(id, definition);
 			for (artifact in definition.artifacts) {
 				validateArtifact(id, artifact.sourcePath, artifact.outputPath, artifact.kind, artifact.sourceSha256);
@@ -180,6 +201,57 @@ class RuntimeFeatureRegistry {
 			}
 		}
 		validateAcyclic();
+	}
+
+	function validateDocumentation(definition:RuntimeFeatureDefinition):Void {
+		final id = definition.id.text();
+		final documentation = definition.documentation;
+		validateText(documentation.contract, 'runtime feature `$id` semantic contract');
+		validateText(documentation.directAlternative, 'runtime feature `$id` direct-C alternative');
+		validateText(documentation.programLocalAlternative, 'runtime feature `$id` program-local alternative');
+		validateText(documentation.runtimeRationale, 'runtime feature `$id` runtime rationale');
+		validateRelativePath(documentation.referencePath, 'runtime feature `$id` documentation reference');
+		if (!StringTools.startsWith(documentation.referencePath, "docs/") || !StringTools.endsWith(documentation.referencePath, ".md")) {
+			internal('runtime feature `$id` documentation reference must be a docs/*.md path', [id]);
+		}
+		if (documentation.selectionRoots.length == 0) {
+			internal('runtime feature `$id` has no documented selection root', [id]);
+		}
+		final rootIds:Map<String, Bool> = [];
+		for (root in documentation.selectionRoots) {
+			if (!~/^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/.match(root.id)) {
+				internal('runtime feature `$id` has invalid documented root `${root.id}`', [id]);
+			}
+			if (rootIds.exists(root.id)) {
+				internal('runtime feature `$id` repeats documented root `${root.id}`', [id]);
+			}
+			rootIds.set(root.id, true);
+			validateText(root.description, 'runtime feature `$id` root `${root.id}` description');
+			switch root.kind {
+				case RuntimeFeatureSelectionRootKind.HxcIrOperation:
+					if (definition.availability != RuntimeFeatureAvailability.CompilerSelectable) {
+						internal('native-seed feature `$id` cannot advertise HxcIR root `${root.id}`', [id]);
+					}
+				case RuntimeFeatureSelectionRootKind.TransitiveDependency:
+				case RuntimeFeatureSelectionRootKind.NativeSeedFixture:
+					if (definition.availability != RuntimeFeatureAvailability.NativeSeedOnly) {
+						internal('compiler-selectable feature `$id` cannot advertise native-only root `${root.id}`', [id]);
+					}
+				case _:
+					internal('runtime feature `$id` has unknown documented root kind `${Std.string(root.kind)}`', [id]);
+			}
+		}
+		if (documentation.evidence.length == 0) {
+			internal('runtime feature `$id` has no executable evidence path', [id]);
+		}
+		final evidencePaths:Map<String, Bool> = [];
+		for (path in documentation.evidence) {
+			validateRelativePath(path, 'runtime feature `$id` evidence');
+			if (evidencePaths.exists(path)) {
+				internal('runtime feature `$id` repeats evidence path `$path`', [id]);
+			}
+			evidencePaths.set(path, true);
+		}
 	}
 
 	function validateAvailability(definition:RuntimeFeatureDefinition):Void {
@@ -288,6 +360,12 @@ class RuntimeFeatureRegistry {
 	static function validateText(value:String, label:String):Void {
 		if (StringTools.trim(value) == "" || value.indexOf("\x00") != -1 || value.indexOf("\r") != -1 || value.indexOf("\n") != -1) {
 			internal('$label must be non-empty single-line text');
+		}
+	}
+
+	static function validateRelativePath(value:String, label:String):Void {
+		if (!GeneratedFile.isNormalizedRelativePath(value)) {
+			internal('$label must be a normalized repository-relative path: `$value`');
 		}
 	}
 

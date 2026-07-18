@@ -1,3 +1,13 @@
+/*
+ * Implementation of native-seed-only feature `alloc`.
+ *
+ * Allocator/array/string native evidence calls these checked ownership helpers;
+ * generated Haxe cannot select them yet. Every live owner stores its allocator
+ * identity, caller contexts must outlive allocations, and outputs publish only
+ * after success. Hosted builds provide an aligned malloc adapter; freestanding
+ * callers must supply callbacks. There is no hidden global or thread state and
+ * every exposed record is private internal ABI.
+ */
 #include "hxrt/allocator.h"
 
 #if !defined(HXC_FREESTANDING)
@@ -26,6 +36,7 @@ static bool hxc_pointer_is_aligned(const void *memory, size_t alignment) {
 }
 
 static void hxc_copy_bytes(void *destination, const void *source, size_t size) {
+  /* Unsigned-character access is C's alias-safe representation-copy boundary. */
   unsigned char *output = (unsigned char *)destination;
   const unsigned char *input = (const unsigned char *)source;
   size_t index;
@@ -56,6 +67,7 @@ static bool hxc_allocation_is_empty(const hxc_allocation *allocation) {
 
 #if !defined(HXC_FREESTANDING)
 static void hxc_host_store_base(void *memory, void *base) {
+  /* Use byte copies because the prefix is not guaranteed pointer-aligned. */
   unsigned char *prefix = (unsigned char *)memory - sizeof(base);
   hxc_copy_bytes(prefix, &base, sizeof(base));
 }
@@ -89,6 +101,7 @@ static hxc_status hxc_host_allocate(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  /* Overallocate for both the recoverable malloc base and alignment padding. */
   status = hxc_size_add(size, sizeof(base), &total_size);
   if (status != HXC_STATUS_OK) {
     return status;
@@ -106,6 +119,7 @@ static hxc_status hxc_host_allocate(
   remainder = (size_t)(candidate_address % (uintptr_t)alignment);
   padding = remainder == 0u ? 0u : alignment - remainder;
   memory = (unsigned char *)base + sizeof(base) + padding;
+  /* The hidden prefix lets release recover the original malloc pointer. */
   hxc_host_store_base(memory, base);
   *out_memory = memory;
   return HXC_STATUS_OK;
@@ -142,6 +156,7 @@ static hxc_status hxc_host_reallocate(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  /* Allocate first so failure leaves the original allocation live and intact. */
   hxc_copy_bytes(resized, memory, copy_size);
   hxc_host_release(context, memory, old_size, alignment);
   *out_memory = resized;
@@ -220,6 +235,7 @@ hxc_status hxc_alloc(
     return status;
   }
   if (size == 0u) {
+    /* Zero-sized ownership is canonical null storage and calls no allocator. */
     *out_memory = NULL;
     return HXC_STATUS_OK;
   }
@@ -232,6 +248,7 @@ hxc_status hxc_alloc(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  /* Treat a callback that violates its alignment contract as an internal error. */
   if (!hxc_pointer_is_aligned(memory, alignment)) {
     if (memory != NULL) {
       allocator->release(allocator->context, memory, size, alignment);
@@ -288,6 +305,7 @@ hxc_status hxc_realloc(
     if (status != HXC_STATUS_OK) {
       return status;
     }
+    /* A successful callback transfers ownership, even if validation then fails. */
     if (!hxc_pointer_is_aligned(resized, alignment)) {
       if (resized != NULL) {
         allocator->release(
@@ -300,6 +318,7 @@ hxc_status hxc_realloc(
       return HXC_STATUS_INTERNAL_ERROR;
     }
   } else {
+    /* The fallback preserves failure atomicity by releasing only after copy. */
     status = hxc_alloc(allocator, new_size, alignment, &resized);
     if (status != HXC_STATUS_OK) {
       return status;
@@ -375,6 +394,7 @@ hxc_status hxc_allocation_allocate(
   }
   allocation.alignment = alignment;
   allocation.allocator = *allocator;
+  /* Publish the complete owner only after every fallible step has succeeded. */
   *out_allocation = allocation;
   return HXC_STATUS_OK;
 }
@@ -409,6 +429,7 @@ hxc_status hxc_allocation_resize(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  /* hxc_realloc leaves the old owner untouched when it reports failure. */
   allocation->memory = resized;
   allocation->size = new_size;
   return HXC_STATUS_OK;
@@ -425,6 +446,7 @@ hxc_status hxc_allocation_move(
     || !hxc_allocation_is_empty(out_allocation)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
+  /* Clear the source immediately so ordinary struct copying cannot double-own. */
   *out_allocation = *source;
   hxc_allocation_clear(source);
   return HXC_STATUS_OK;

@@ -1,3 +1,13 @@
+/*
+ * Implementation of native-seed-only feature `string`.
+ *
+ * String differential and selective-package native fixtures call these UTF-8,
+ * ownership, builder, slice, hash, and CString boundaries; generated Haxe
+ * cannot select them yet, and literals use the separate allocation-free carrier.
+ * Owners retain allocator identity, borrowed values never extend lifetime, and
+ * fallible functions publish initialized outputs only on success. The slice has
+ * no hidden global/thread state and its records remain private internal ABI.
+ */
 #include "hxrt/string.h"
 
 typedef struct hxc_utf8_step {
@@ -6,6 +16,7 @@ typedef struct hxc_utf8_step {
   bool valid;
 } hxc_utf8_step;
 
+/* Empty owned strings share immutable storage while retaining a zero-size owner. */
 static const uint8_t hxc_empty_string_storage[1] = { UINT8_C(0) };
 
 static bool hxc_byte_view_has_valid_shape(hxc_byte_view source) {
@@ -53,6 +64,7 @@ static hxc_utf8_step hxc_utf8_read(const uint8_t *data, size_t length) {
     return hxc_valid_step(2u, scalar);
   }
 
+  /* Boundary checks reject overlong encodings and UTF-16 surrogate scalars. */
   if (first >= UINT8_C(0xE0) && first <= UINT8_C(0xEF)) {
     if (length < 2u) {
       return hxc_invalid_step(1u);
@@ -76,6 +88,7 @@ static hxc_utf8_step hxc_utf8_read(const uint8_t *data, size_t length) {
     return hxc_valid_step(3u, scalar);
   }
 
+  /* F0/F4 bounds keep decoded values within U+10000..U+10FFFF. */
   if (first >= UINT8_C(0xF0) && first <= UINT8_C(0xF4)) {
     if (length < 2u) {
       return hxc_invalid_step(1u);
@@ -342,6 +355,7 @@ static hxc_status hxc_string_buffer_alias_offset(
     return HXC_STATUS_OK;
   }
   data = (const uint8_t *)buffer->storage.memory;
+  /* Convert an interior borrow to an offset before reserve can relocate it. */
   for (index = 0u; index <= buffer->byte_length; index++) {
     if (source.data == data + index) {
       if (source.length > buffer->byte_length - index) {
@@ -484,6 +498,7 @@ hxc_status hxc_string_from_utf8_lossy(
     || !hxc_owned_string_slot_is_empty(out_string)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
+  /* First pass computes the exact replacement-expanded size before allocation. */
   while (input_index < source.length) {
     step = hxc_utf8_read(source.data + input_index, source.length - input_index);
     contribution = step.valid ? step.consumed : 3u;
@@ -518,6 +533,7 @@ hxc_status hxc_string_from_utf8_lossy(
   }
   destination = (uint8_t *)value.storage.memory;
   (void)hxc_utf8_encode(UINT32_C(0xFFFD), replacement);
+  /* Second pass cannot fail and publishes only fully valid, terminated UTF-8. */
   input_index = 0u;
   while (input_index < source.length) {
     step = hxc_utf8_read(source.data + input_index, source.length - input_index);
@@ -835,6 +851,7 @@ hxc_status hxc_string_buffer_append_utf8_checked(
   if (status != HXC_STATUS_OK) {
     return status;
   }
+  /* Rebuild an aliased source from its offset after a possible reallocation. */
   destination = (uint8_t *)buffer->storage.memory;
   input = alias ? destination + alias_offset : source.data;
   hxc_copy_bytes(destination + destination_offset, input, source.length);
@@ -864,6 +881,7 @@ hxc_status hxc_string_buffer_finish(
     || !hxc_owned_string_slot_is_empty(out_string)) {
     return HXC_STATUS_INVALID_ARGUMENT;
   }
+  /* Transfer the buffer allocation; copying the owner would permit double free. */
   status = hxc_allocation_move(&buffer->storage, &value.storage);
   if (status != HXC_STATUS_OK) {
     return status;
@@ -911,6 +929,7 @@ hxc_status hxc_string_borrow_cstring(
   if (hxc_string_contains_nul(*source)) {
     return HXC_STATUS_EMBEDDED_NUL;
   }
+  /* A borrow is sound only when the byte immediately after content is owned NUL. */
   if (!source->has_trailing_nul) {
     return HXC_STATUS_BORROW_UNAVAILABLE;
   }

@@ -1,3 +1,14 @@
+/*
+ * hxrt feature: string (native-seed-only).
+ *
+ * The string differential/native package harness calls this API for runtime
+ * UTF-8 validation, Unicode-scalar indexing, owned values, builders, slicing,
+ * hashing, and explicit CString conversion. Generated Haxe cannot select it yet;
+ * literals use string_literal.h without allocation. Owned records retain their
+ * allocator identity and are move-only by convention; borrowed views never
+ * extend owner lifetime. Failures use hxc_status and preserve output slots. The
+ * slice has no hidden global/thread state and all layouts are internal ABI.
+ */
 #ifndef HXRT_STRING_H_INCLUDED
 #define HXRT_STRING_H_INCLUDED
 
