@@ -14,6 +14,7 @@ in code or examples.
 | [0006](0006-explicit-failure-edges-and-contained-unwinding.md) | Accepted | Result lowering plus contained strict-C unwinding |
 | [0007](0007-strict-c11-target-and-platform-baseline.md) | Accepted | C11 target identity and version 1.0 support lanes |
 | [0008](0008-primitive-representations-and-conversions.md) | Accepted | Exact primitive representation, conversion, operation, and nullability semantics |
+| [0009](0009-raylibhx-companion-boundary.md) | Accepted | Incubated raw/semantic RaylibHx companion and extraction boundary |
 
 Numbers are stable once referenced by the PRD or Beads plan, so a reserved
 number can legitimately appear as a gap in the checked-in files.
