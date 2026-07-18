@@ -189,6 +189,27 @@ code should be admitted only after at least two backends independently require
 the same semantic operation and executable tests show that the observable Haxe
 contract is genuinely identical.
 
+A universal low- or middle-level executable IR is therefore deliberately not
+the current goal. Across C, Rust, Go, JavaScript, Ruby, and Elixir, such a model
+would tend toward one of two failure modes: a lowest-common-denominator form
+that discards useful target structure, or a growing set of target-specific
+variants that merely relocates every backend into one harder-to-evolve schema.
+It could also force representation decisions too early: C cleanup and
+undefined-behavior proofs, Rust ownership, Go interfaces and multiple results,
+BEAM processes and immutable values, and dynamic Ruby/JavaScript operations do
+not become clearer when encoded as exceptions to a single target-neutral
+machine model. That coupling would be counterproductive even if the shared IR
+were technically expressive enough.
+
+The useful universal layer is currently the observable contract rather than a
+universal backend program representation: Haxe source and `TypedExpr`, portable
+Haxe APIs, capability declarations, semantic specifications, normalized test
+fixtures, and cross-target differential evidence. Each backend can preserve
+that contract through its own focused semantic plans and target AST. This is
+not a permanent prohibition on shared IR; it is a requirement that any shared
+form be extracted from proven duplication without becoming the mandatory path
+for unrelated target semantics.
+
 A candidate extraction must satisfy all of these conditions:
 
 1. Two or more target implementations currently duplicate the same semantic

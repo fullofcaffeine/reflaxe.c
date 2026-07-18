@@ -1,6 +1,8 @@
 # Extracted repository patterns
 
-This document records the concrete patterns extracted from the supplied Repomix snapshots. It is descriptive evidence for the scaffold; `docs/PRD.md` is the normative product contract.
+This document records the concrete patterns extracted from the supplied Repomix
+snapshots and inspected sibling checkouts. It is descriptive evidence for the
+scaffold; `docs/PRD.md` is the normative product contract.
 
 ## Inputs inspected
 
@@ -9,6 +11,10 @@ This document records the concrete patterns extracted from the supplied Repomix 
 - Haxe-to-OCaml/HxHx snapshot
 - Haxe-to-Ruby target snapshot
 - Haxe-to-Go target snapshot (additional family evidence)
+- Genes Haxe-to-TypeScript/classic-JavaScript checkout (additional dual-output
+  evidence; local `origin/main` at
+  `f0d917ccd54e97075de874993d32253212114fe5` was inspected without modifying
+  its dirty working tree)
 - Reflaxe framework snapshot
 - Haxe compiler snapshot, especially the C++ generator and `std/cpp`
 
@@ -85,6 +91,7 @@ The current sibling checkouts use these broad shapes:
 | Ruby | `TypedExpr -> RubyFile/RubyExpr -> printer` | The fail-closed typed-expression switch and focused block/keyword analyzers are strong; the target AST remains small, so ordinary control and access forms still cross `RubyRawExpr`/`RubyRawStatement` boundaries inside a very large compiler. A richer Ruby AST and focused semantic plans are a clearer next step than a general CFG. |
 | Elixir | `TypedExpr -> ElixirAST -> ordered pass registry -> printer` | A focused `LoopIR` is introduced only for loop analysis/emission strategy, and function-result invariants are checked between passes. Large builder/transformer stages and early `ERaw`/printed-AST boundaries remain candidates for focused plans and richer nodes. |
 | OCaml | `TypedExpr -> OcamlExpr -> OCaml printer` | `OcamlExpr` is a structural target AST. The separate `hxhx` path has compiler-owned typed program models, while its current `GenIrProgram` is explicitly an alias rather than a normalized cross-backend IR. |
+| Genes TS/classic JS | `TypedExpr -> shared semantic facts and focused plans -> TS emitter or classic JS emitter (+ optional declarations)` | Two closely related output profiles share public-surface, nullish, dependency, binding, JSX, name/temporary, and template-literal decisions while retaining profile-specific syntax. The typed Haxe AST remains the source IR. |
 
 The reusable family principle is not “every target needs HxcIR.” It is:
 
@@ -109,6 +116,19 @@ syntax or runtime symbols; and every backend must remain free to choose its own
 representation. The `hxhx` `GenIrProgram` documentation already states a
 compatible rule: its alias should become a normalized IR only after two or more
 backends prove the repeated transformation.
+
+Genes supplies a particularly useful intermediate case. Its TypeScript and
+classic JavaScript profiles share one JavaScript runtime semantic baseline and
+one compiler, so they can justifiably share more planning than unrelated C,
+Rust, Go, or BEAM targets. Even there, the implementation does not normalize
+the whole program into a universal IR. It extracts one immutable decision at a
+time when two printers need it, retains the original `TypedExpr` on focused
+nodes where useful, and leaves syntax with the profile emitter. Its separate
+ts2hx tool uses a small semantic IR because it translates a supported
+TypeScript subset into Haxe; that reverse-migration boundary is not evidence
+that the Haxe-to-target compiler family needs the same IR. This supports a
+layered portability strategy: share observable contracts and proven analyses,
+then keep representation and target control flow target-owned.
 
 Implementation language is orthogonal to this layering. The `haxe.ocaml`
 Reflaxe compiler is Haxe code that emits OCaml, and its use of `OcamlExpr` shows

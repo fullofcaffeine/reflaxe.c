@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-14
 - Amended: 2026-07-15 (production Haxe carrier selected)
+- Reviewed: 2026-07-18 (official Haxe 4.3.7 pin re-audited; decision unchanged)
 - Decision owners: project owner and compiler maintainers
 - Related requirements: HXC-RT-011, HXC-RT-012, HXC-QA-002,
   HXC-QA-003, HXC-QA-007, HXC-QA-010
@@ -120,7 +121,12 @@ The exact preview is checksum-locked for Linux, macOS, and Windows. The custom
 target API is preview surface and may change, so a broader Haxe range is not
 permitted without a pin update, API/source audit, snapshot review, and complete
 toolchain test evidence. Moving back to Haxe 4 would require maintaining and
-distributing a compiler fork and is not the selected baseline.
+distributing a compiler fork and is not the selected baseline. The
+source-anchored and executable re-audit is recorded in [Haxe 4.3.7 carrier
+audit](../research/haxe-4.3.7-carrier-audit.md). It also records current
+typed-AST and standard-library drift, the rejected built-in carrier
+alternatives, and the minimum ownership contract for any future Haxe 4
+custom-target fork.
 
 The earlier Haxe 4.3.7 experiment remains important negative evidence:
 
