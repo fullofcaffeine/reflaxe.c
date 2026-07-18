@@ -1,0 +1,12 @@
+#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+
+#include <raylib.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+#include "hxc_raylib_smoke_constants.h"
+
+void hxc_method_Main_main(void);
+
+#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

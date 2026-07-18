@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-provisioning-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-FFI-001",
+    "HXC-FFI-010",
+    "HXC-QA-007"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/raylib_provisioning/expected/include/hxc/program.h",
+    "test/raylib_provisioning/expected/src/program.c",
+    "test/raylib_provisioning/expected/hxc.runtime-plan.json",
+    "test/raylib_provisioning/expected/build-linux-memory.json",
+    "test/raylib_provisioning/expected/build-linux-desktop.json",
+    "test/raylib_provisioning/expected/build-macos-desktop.json",
+    "test/raylib_provisioning/expected/build-windows-desktop.json",
+    "test/raylib_provisioning/expected/build-system-desktop.json",
+    "test/raylib_provisioning/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "raylib-provisioning"
+    ],
+    "workingDirectory": "test/snapshot/raylib-provisioning",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/raylib_provisioning/expected/include/hxc/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-linux-memory.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-linux-desktop.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-macos-desktop.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-windows-desktop.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-system-desktop.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

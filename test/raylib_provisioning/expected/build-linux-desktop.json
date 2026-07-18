@@ -1,0 +1,86 @@
+{
+  "publicHeaders": [],
+  "sources": [
+    "src/program.c"
+  ],
+  "cStandard": "c11",
+  "definitions": [],
+  "extensions": false,
+  "schemaVersion": 1,
+  "privateHeaders": [
+    "include/hxc/program.h"
+  ],
+  "frameworks": [],
+  "includeDirectories": [
+    "include"
+  ],
+  "requiredHeaders": [
+    {
+      "path": "hxc_raylib_smoke_constants.h",
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "kind": "local"
+    },
+    {
+      "path": "raylib.h",
+      "ownerModulePaths": [
+        "Color",
+        "RaylibNative",
+        "TraceLogLevel"
+      ],
+      "kind": "system"
+    }
+  ],
+  "libraries": [
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "m"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "GL"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "dl"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "rt"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "X11"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "raylib"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "pthread"
+    }
+  ],
+  "runtimeHeaders": [],
+  "artifact": {
+    "targetName": "hxc_program",
+    "kind": "executable"
+  },
+  "pkgConfigPackages": [],
+  "warningPolicy": "strict"
+}

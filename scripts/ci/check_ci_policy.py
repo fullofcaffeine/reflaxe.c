@@ -559,6 +559,30 @@ REQUIRED_GATE_FILES = (
     "test/native/cpp_shim/include/counter_shim.h",
     "test/native/cpp_shim/src/counter_shim.cpp",
     "test/native/cpp_shim/smoke.c",
+    "docs/raylib-provisioning.md",
+    "docs/specs/raylib-provisioning-lock.json",
+    "docs/specs/raylib-provisioning-lock.schema.json",
+    "scripts/raylib/provision.py",
+    "test/raylib_provisioning/fixtures/smoke/Color.hx",
+    "test/raylib_provisioning/fixtures/smoke/TraceLogLevel.hx",
+    "test/raylib_provisioning/fixtures/smoke/RaylibNative.hx",
+    "test/raylib_provisioning/fixtures/smoke/Main.hx",
+    "test/raylib_provisioning/fixtures/smoke/build.hxml",
+    "test/raylib_provisioning/support/include/hxc_raylib_smoke_constants.h",
+    "test/raylib_provisioning/expected/include/hxc/program.h",
+    "test/raylib_provisioning/expected/src/program.c",
+    "test/raylib_provisioning/expected/hxc.runtime-plan.json",
+    "test/raylib_provisioning/expected/build-linux-memory.json",
+    "test/raylib_provisioning/expected/build-linux-desktop.json",
+    "test/raylib_provisioning/expected/build-macos-desktop.json",
+    "test/raylib_provisioning/expected/build-windows-desktop.json",
+    "test/raylib_provisioning/expected/build-system-desktop.json",
+    "test/raylib_provisioning/test_provision.py",
+    "test/raylib_provisioning/run.py",
+    "test/positive/raylib-provisioning/case.json",
+    "test/negative/raylib-provisioning/case.json",
+    "test/snapshot/raylib-provisioning/case.json",
+    "test/runtime/raylib-provisioning/case.json",
     "scripts/ci/runtime_smoke.py",
 )
 
@@ -568,6 +592,8 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
     "  native-smoke:\n",
     "  build-adapters:\n",
+    "  raylib-headless:\n",
+    "  raylib-desktop:\n",
     "  license-and-provenance:\n",
     "      fail-fast: false\n",
     "        toolchain:\n",
@@ -597,6 +623,18 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "--only-binary=:all:",
     "-r scripts/ci/build-adapter-requirements.txt",
     'npm run test:build-adapters -- --toolchain "${{ matrix.toolchain }}"',
+    "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "--authority pinned-source",
+    "--configuration memory-software",
+    "--configuration desktop",
+    "--platform linux",
+    ' --platform "${{ matrix.platform }}"',
+    "--allow-network",
+    "--run",
+    "Raylib clean-cache lane found a pre-existing cache",
+    "name: linux-gcc",
+    "name: macos-apple-clang",
+    "name: windows-clang-cl",
     "python3 scripts/beads/validate_plan.py --json",
     "python3 scripts/beads/bootstrap.py --json",
     "python3 scripts/ci/check_governance_policy.py",
@@ -671,6 +709,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:c-ast entry point")
     if scripts.get("test:c-import") != "python3 test/c_import/run.py":
         errors.append("package.json must retain the test:c-import entry point")
+    if (
+        scripts.get("test:raylib-provisioning")
+        != "python3 test/raylib_provisioning/run.py"
+    ):
+        errors.append("package.json must retain the test:raylib-provisioning entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:symbol-registry") != "python3 test/symbol_registry/run.py":
@@ -824,6 +867,12 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run test:c-import" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-import")
+    if "npm run test:raylib-provisioning" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append(
+            "package.json test:toolchain must execute test:raylib-provisioning"
+        )
     if "npm run test:beads-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:beads-plan")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -941,6 +990,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the typed-AST normalization test")
     if "test/c_import/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated direct C-import test")
+    if "test/raylib_provisioning/run.py" not in pre_commit:
+        errors.append("pre-commit must run the locked Raylib provisioning test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
         errors.append("pre-commit must validate the fixture and example policy")
     if "scripts/ci/check_capability_manifest.py" not in pre_commit:
@@ -961,6 +1012,41 @@ def validate() -> list[str]:
         errors.append("pre-push must scan every reachable Git revision for secrets")
     if "scripts/ci/check_security_tooling.py" not in pre_push:
         errors.append("pre-push must validate security-tool and workflow pins")
+
+    raylib_provisioner = read_text(ROOT / "scripts/raylib/provision.py", errors)
+    for required_raylib_provisioning_contract in (
+        "hxc-path-size-content-sha256-v1",
+        "safe_extract_archive",
+        "pinned-source",
+        "offline-source",
+        "system-pkg-config",
+        "network access was not explicitly enabled",
+        "system-pkg-config authority cannot prove PLATFORM_MEMORY",
+        "normalizedCompileCommandsSha256",
+        "assert_report_redacted",
+    ):
+        if required_raylib_provisioning_contract not in raylib_provisioner:
+            errors.append(
+                "raylib provisioner lost a fail-closed contract: "
+                + required_raylib_provisioning_contract
+            )
+    raylib_runner = read_text(ROOT / "test/raylib_provisioning/run.py", errors)
+    for required_raylib_runner_contract in (
+        "STRICT_C_FLAGS",
+        "STRICT_CLANG_CL_FLAGS",
+        "EXPECTED_HEADLESS_STDOUT",
+        "validate_build_plan",
+        "validate_runtime_free",
+        "cacheAuthorityExplicit",
+        "networkAfterProvision",
+        "--integration",
+        "--run",
+    ):
+        if required_raylib_runner_contract not in raylib_runner:
+            errors.append(
+                "raylib integration runner lost required evidence: "
+                + required_raylib_runner_contract
+            )
 
     runner = read_text(ROOT / "scripts/ci/runtime_smoke.py", errors)
     for required_flag in ("-std=c11", "-std=c++17", "-Werror", "-pedantic"):

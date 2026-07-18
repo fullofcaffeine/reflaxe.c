@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "evidenceCheckedAt": "2026-07-16",
+  "evidenceCheckedAt": "2026-07-17",
   "project": {
     "name": "reflaxe.c",
     "licenseExpression": "GPL-3.0-only",
@@ -172,6 +172,22 @@
       "upstreamUrl": "https://github.com/mesonbuild/meson",
       "licenseExpression": "Apache-2.0",
       "licenseUrl": "https://github.com/mesonbuild/meson/blob/1.11.1/COPYING",
+      "bundled": false,
+      "paths": [],
+      "localLicenseFiles": []
+    },
+    {
+      "id": "raylib-native-library",
+      "name": "raylib",
+      "role": "raylibhx-and-example-native-framework-dependency",
+      "usage": "external-application-native-dependency-not-redistributed",
+      "selectionStatus": "version-revision-archive-and-source-tree-content-pinned",
+      "version": "6.0.0",
+      "sourceRevision": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+      "observedRevision": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+      "upstreamUrl": "https://github.com/raysan5/raylib",
+      "licenseExpression": "Zlib",
+      "licenseUrl": "https://github.com/raysan5/raylib/blob/dbc56a87da87d973a9c5baa4e7438a9d20121d28/LICENSE",
       "bundled": false,
       "paths": [],
       "localLicenseFiles": []

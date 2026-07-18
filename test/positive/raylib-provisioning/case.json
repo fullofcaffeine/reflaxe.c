@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-provisioning-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-006",
+    "HXC-FFI-001",
+    "HXC-FFI-010",
+    "HXC-QA-007"
+  ],
+  "sources": [
+    "docs/specs/raylib-provisioning-lock.json",
+    "test/raylib_provisioning/fixtures/smoke/Color.hx",
+    "test/raylib_provisioning/fixtures/smoke/TraceLogLevel.hx",
+    "test/raylib_provisioning/fixtures/smoke/RaylibNative.hx",
+    "test/raylib_provisioning/fixtures/smoke/Main.hx",
+    "test/raylib_provisioning/fixtures/smoke/build.hxml",
+    "test/raylib_provisioning/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../raylib_provisioning/run.py"
+    ],
+    "workingDirectory": "test/positive/raylib-provisioning",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "five neutral plans, deterministic generated C, and zero-hxrt evidence$"
+    },
+    "artifacts": [
+      {
+        "path": "test/raylib_provisioning/expected/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/build-linux-memory.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

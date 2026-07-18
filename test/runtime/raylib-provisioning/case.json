@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-provisioning-runtime",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-005",
+    "HXC-FFI-010",
+    "HXC-QA-003",
+    "HXC-QA-007"
+  ],
+  "sources": [
+    ".github/workflows/governance.yml",
+    "scripts/raylib/provision.py",
+    "test/raylib_provisioning/fixtures/smoke/Main.hx",
+    "test/raylib_provisioning/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../raylib_provisioning/run.py"
+    ],
+    "workingDirectory": "test/runtime/raylib-provisioning",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "runtimePlan": "test/raylib_provisioning/expected/hxc.runtime-plan.json",
+    "stdout": {
+      "mode": "regex",
+      "value": "zero-hxrt evidence$"
+    }
+  }
+}

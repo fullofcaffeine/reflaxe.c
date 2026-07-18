@@ -22,6 +22,7 @@ EXPECTED_COMPONENT_LICENSES = {
     "haxe-standard-library": "MIT",
     "llvm-clang-tooling": "Apache-2.0 WITH LLVM-exception",
     "meson-build-system": "Apache-2.0",
+    "raylib-native-library": "Zlib",
 }
 EXPECTED_RELEASE_FILES = {
     "LICENSE",
@@ -33,6 +34,8 @@ EXPECTED_RELEASE_FILES = {
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 MESON_WHEEL_SHA256 = "9b3a023657e393dbc5335b95c561337d49b7a458f5541e47ec44f2cc566e0d80"
+RAYLIB_REVISION = "dbc56a87da87d973a9c5baa4e7438a9d20121d28"
+RAYLIB_ARCHIVE_SHA256 = "81b06ce7c19cf3b634b0271c23c361ba6ad8bf45fb8b036abbfeb4260ec1e126"
 
 
 def sha256(path: Path) -> str:
@@ -317,6 +320,20 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
         or meson.get("bundled") is not False
     ):
         errors.append("Meson must remain a non-redistributed 1.11.1 checksum-pinned CI tool")
+    raylib = component_map.get("raylib-native-library", {})
+    if raylib and (
+        raylib.get("version") != "6.0.0"
+        or raylib.get("sourceRevision") != RAYLIB_REVISION
+        or raylib.get("observedRevision") != RAYLIB_REVISION
+        or raylib.get("selectionStatus")
+        != "version-revision-archive-and-source-tree-content-pinned"
+        or raylib.get("usage")
+        != "external-application-native-dependency-not-redistributed"
+        or raylib.get("bundled") is not False
+    ):
+        errors.append(
+            "raylib must remain the non-redistributed, revision/content-pinned 6.0.0 native dependency"
+        )
     try:
         third_party_notice = (root / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
@@ -324,6 +341,14 @@ def validate_policy(root: Path, policy_relative: str) -> tuple[dict[str, Any] | 
     else:
         if "| Meson |" not in third_party_notice or MESON_WHEEL_SHA256 not in third_party_notice:
             errors.append("THIRD_PARTY_NOTICES.md must retain the Meson wheel provenance and SHA-256")
+        if (
+            "| raylib |" not in third_party_notice
+            or RAYLIB_REVISION not in third_party_notice
+            or RAYLIB_ARCHIVE_SHA256 not in third_party_notice
+        ):
+            errors.append(
+                "THIRD_PARTY_NOTICES.md must retain raylib revision and archive provenance"
+            )
 
     raw_runtime = data.get("runtimeDependencies")
     runtime_dependencies: list[Any] = raw_runtime if isinstance(raw_runtime, list) else []

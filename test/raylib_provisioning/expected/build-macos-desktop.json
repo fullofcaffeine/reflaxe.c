@@ -1,0 +1,75 @@
+{
+  "publicHeaders": [],
+  "sources": [
+    "src/program.c"
+  ],
+  "cStandard": "c11",
+  "definitions": [],
+  "extensions": false,
+  "schemaVersion": 1,
+  "privateHeaders": [
+    "include/hxc/program.h"
+  ],
+  "frameworks": [
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "CoreFoundation"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "Cocoa"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "IOKit"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "OpenGL"
+    }
+  ],
+  "includeDirectories": [
+    "include"
+  ],
+  "requiredHeaders": [
+    {
+      "path": "hxc_raylib_smoke_constants.h",
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "kind": "local"
+    },
+    {
+      "path": "raylib.h",
+      "ownerModulePaths": [
+        "Color",
+        "RaylibNative",
+        "TraceLogLevel"
+      ],
+      "kind": "system"
+    }
+  ],
+  "libraries": [
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "raylib"
+    }
+  ],
+  "runtimeHeaders": [],
+  "artifact": {
+    "targetName": "hxc_program",
+    "kind": "executable"
+  },
+  "pkgConfigPackages": [],
+  "warningPolicy": "strict"
+}

@@ -1,0 +1,221 @@
+{
+  "schemaVersion": 1,
+  "upstream": {
+    "name": "raylib",
+    "release": "6.0",
+    "packageVersion": "6.0.0",
+    "apiVersion": 600,
+    "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+    "archive": {
+      "url": "https://codeload.github.com/raysan5/raylib/tar.gz/dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+      "sha256": "81b06ce7c19cf3b634b0271c23c361ba6ad8bf45fb8b036abbfeb4260ec1e126",
+      "sizeBytes": 52562578,
+      "rootDirectory": "raylib-dbc56a87da87d973a9c5baa4e7438a9d20121d28"
+    },
+    "sourceTree": {
+      "algorithm": "hxc-path-size-content-sha256-v1",
+      "sha256": "09abd409023b82fbe0723931aa751258b5052b058a2a1cf7c2613388ee309281",
+      "fileCount": 1384,
+      "sizeBytes": 97543278
+    },
+    "licenseExpression": "Zlib",
+    "licenseUrl": "https://github.com/raysan5/raylib/blob/dbc56a87da87d973a9c5baa4e7438a9d20121d28/LICENSE"
+  },
+  "reviewedInputs": [
+    {
+      "path": "CMakeLists.txt",
+      "sha256": "66c4dcfcdb20754e57cfa8eee23473d300c95405512417b09e41652b5b5263bd"
+    },
+    {
+      "path": "CMakeOptions.txt",
+      "sha256": "4f58628ebdcde3a8075ca5a10871ea2901ddf1f0b4486ca9a29b76b3d0c4b844"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "882a5a819cf562aa3583aae3af3f2211dda15c63de9fc8cc4b399a2f9e78d799"
+    },
+    {
+      "path": "cmake/CompileDefinitions.cmake",
+      "sha256": "068806d90e22a29e08e7cca18451ba776c79fa4676fa35c8dd5f68492129a402"
+    },
+    {
+      "path": "cmake/GlfwImport.cmake",
+      "sha256": "533dc29c0392035afe1790c8bb35d1b5a7dc83d9eae12fcc0a24ee31535b845f"
+    },
+    {
+      "path": "cmake/LibraryConfigurations.cmake",
+      "sha256": "d325845a807cb18e5585327cf29660750d15c07637fe7cacc8d88b1687ce3618"
+    },
+    {
+      "path": "src/CMakeLists.txt",
+      "sha256": "c4438de5db90fe00ccf7b62dbfcc4128fa08b9f1ef6306b62f019e1c50fc9d51"
+    },
+    {
+      "path": "src/Makefile",
+      "sha256": "91b091069276eaa062eff235e6990c9810ad64f0a199fb1586505b8713294e49"
+    },
+    {
+      "path": "src/config.h",
+      "sha256": "0495bce56ae6e1cd5c4e3e1e635fec8915c551e41ee3b62c7841537bed3878d7"
+    },
+    {
+      "path": "src/external/glfw/src/CMakeLists.txt",
+      "sha256": "2cb9fd73457e14a751f12fac3556c576fcffb54e25c462b5aeb7fe76d4d94aae"
+    },
+    {
+      "path": "src/external/rlsw.h",
+      "sha256": "c878af1036f0f20ad716be61f0f2269f33626fc101fd4ef36dd8c664b49836e9"
+    },
+    {
+      "path": "src/platforms/rcore_memory.c",
+      "sha256": "1f7f92694d696c81e631638d477354a275e1daf41dac31a89622aae1a66e2809"
+    },
+    {
+      "path": "src/raylib.h",
+      "sha256": "047e7255f93f8c34039cab906ad76136706b5c7b4c5b5b065d84141963ee9b6b"
+    },
+    {
+      "path": "src/raymath.h",
+      "sha256": "2b8b88f5b3f748e3cf8bdbfb8b7da23a76c755dc40f9c6e455bfc09b3669d028"
+    },
+    {
+      "path": "src/rlgl.h",
+      "sha256": "1c9b802c219971dbf2ba9725fb8cea3f14616c039891810a2d31aa442aea4be3"
+    },
+    {
+      "path": "tools/rlparser/output/raylib_api.json",
+      "sha256": "d4e2dd0727a8edf4d4f828e23f86e3bb74e373861edd0eabef4a634ae74936d6"
+    }
+  ],
+  "configurations": {
+    "memory-software": {
+      "platform": "Memory",
+      "graphicsApi": "Software",
+      "runEvidence": true,
+      "cmakeDefinitions": [
+        "BUILD_EXAMPLES=OFF",
+        "BUILD_SHARED_LIBS=OFF",
+        "CMAKE_BUILD_TYPE=Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "CUSTOMIZE_BUILD=ON",
+        "OPENGL_VERSION=Software",
+        "PLATFORM=Memory",
+        "SUPPORT_MODULE_RAUDIO=OFF",
+        "USE_EXTERNAL_GLFW=OFF"
+      ]
+    },
+    "desktop": {
+      "platform": "Desktop",
+      "graphicsApi": "3.3",
+      "runEvidence": false,
+      "cmakeDefinitions": [
+        "BUILD_EXAMPLES=OFF",
+        "BUILD_SHARED_LIBS=OFF",
+        "CMAKE_BUILD_TYPE=Release",
+        "CMAKE_EXPORT_COMPILE_COMMANDS=ON",
+        "CUSTOMIZE_BUILD=ON",
+        "OPENGL_VERSION=3.3",
+        "PLATFORM=Desktop",
+        "SUPPORT_MODULE_RAUDIO=OFF",
+        "USE_EXTERNAL_GLFW=OFF"
+      ]
+    }
+  },
+  "platforms": {
+    "linux": {
+      "memory-software": {
+        "libraries": [
+          "raylib",
+          "m"
+        ],
+        "frameworks": []
+      },
+      "desktop": {
+        "libraries": [
+          "raylib",
+          "m",
+          "pthread",
+          "GL",
+          "X11",
+          "dl",
+          "rt"
+        ],
+        "frameworks": [],
+        "cmakeDefinitions": [
+          "GLFW_BUILD_WAYLAND=OFF",
+          "GLFW_BUILD_X11=ON"
+        ]
+      }
+    },
+    "macos": {
+      "memory-software": {
+        "libraries": [
+          "raylib"
+        ],
+        "frameworks": []
+      },
+      "desktop": {
+        "libraries": [
+          "raylib"
+        ],
+        "frameworks": [
+          "OpenGL",
+          "Cocoa",
+          "IOKit",
+          "CoreFoundation"
+        ]
+      }
+    },
+    "windows": {
+      "memory-software": {
+        "libraries": [
+          "raylib",
+          "winmm"
+        ],
+        "frameworks": []
+      },
+      "desktop": {
+        "libraries": [
+          "raylib",
+          "opengl32",
+          "gdi32",
+          "winmm",
+          "shell32"
+        ],
+        "frameworks": []
+      }
+    }
+  },
+  "authorities": [
+    "pinned-source",
+    "offline-source",
+    "system-pkg-config"
+  ],
+  "report": {
+    "schemaVersion": 1,
+    "pathPlaceholders": [
+      "${CACHE_ROOT}",
+      "${RAYLIB_SOURCE}",
+      "${RAYLIB_BUILD}",
+      "${GENERATED_ROOT}",
+      "${FIXTURE_ROOT}",
+      "${NATIVE_ROOT}",
+      "${SYSTEM_INCLUDE}",
+      "${SYSTEM_LIBRARY_DIR}",
+      "${SYSTEM_LIBRARY}",
+      "${C_COMPILER}",
+      "${CXX_COMPILER}",
+      "${CMAKE}",
+      "${BUILD_TOOL}",
+      "${PKG_CONFIG}",
+      "${HAXE}",
+      "${SUPPORT_INCLUDE}"
+    ],
+    "forbiddenHostFacts": [
+      "absolute paths",
+      "timestamps",
+      "locale-formatted values",
+      "shell command strings"
+    ]
+  }
+}

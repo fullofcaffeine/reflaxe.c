@@ -142,6 +142,46 @@ def c_import_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def raylib_provisioning_artifacts() -> list[Artifact]:
+    module = load_module(
+        "raylib_provisioning", "test/raylib_provisioning/run.py"
+    )
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure(
+            "two raylib-provisioning snapshot renders were not byte-identical"
+        )
+    formats = {
+        "include/hxc/program.h": "header",
+        "src/program.c": "c",
+        "hxc.runtime-plan.json": "json",
+        "build-linux-memory.json": "json",
+        "build-linux-desktop.json": "json",
+        "build-macos-desktop.json": "json",
+        "build-windows-desktop.json": "json",
+        "build-system-desktop.json": "json",
+    }
+    artifacts: list[Artifact] = []
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(
+                    f"raylib-provisioning snapshot omitted {name}"
+                )
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"raylib-provisioning snapshot omitted {name}")
+        artifacts.append(
+            Artifact(
+                Path("test/raylib_provisioning/expected") / name,
+                format_name,
+                value,
+            )
+        )
+    return artifacts
+
+
 def typed_ast_artifacts() -> list[Artifact]:
     module = load_module("typed_ast", "test/typed_ast/run.py")
     result = module.render_snapshot()
@@ -873,6 +913,7 @@ GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
     "c-import": c_import_artifacts,
+    "raylib-provisioning": raylib_provisioning_artifacts,
     "typed-ast": typed_ast_artifacts,
     "c-ast": c_ast_artifacts,
     "declaration-plan": declaration_plan_artifacts,

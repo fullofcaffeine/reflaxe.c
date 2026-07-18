@@ -53,6 +53,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "bootstrap",
                 "typed-c",
                 "c-import",
+                "raylib-provisioning",
                 "typed-ast",
                 "c-ast",
                 "declaration-plan",

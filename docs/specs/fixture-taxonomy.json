@@ -28,6 +28,7 @@
         "diagnostics",
         "typed-c",
         "c-import",
+        "raylib-provisioning",
         "typed-ast",
         "symbol-registry",
         "hxc-ir",
@@ -67,6 +68,7 @@
         "diagnostics",
         "typed-c",
         "c-import",
+        "raylib-provisioning",
         "typed-ast",
         "symbol-registry",
         "project-emitter",
@@ -118,6 +120,7 @@
         "bootstrap",
         "typed-c",
         "c-import",
+        "raylib-provisioning",
         "typed-ast",
         "c-ast",
         "declaration-plan",
@@ -157,6 +160,7 @@
       "suiteIds": [
         "native-smoke",
         "c-import",
+        "raylib-provisioning",
         "c-ast",
         "body-lowering",
         "function-lowering",
@@ -328,6 +332,28 @@
         "compiled C11 probes verify imported size, alignment, offsets, constants, field mutation, arguments, and returns under identity-verified GCC and Clang at O0 and O2",
         "headers and libraries appear once in the neutral build plan with source owners, generated artifacts are order/root/locale deterministic, and the runtime plan proves complete hxrt absence",
         "callbacks, variadics, retained pointer returns, and declarations without exact C names fail closed as deliberately deferred ABI contracts"
+      ]
+    },
+    {
+      "id": "raylib-provisioning",
+      "directory": "test/raylib_provisioning",
+      "runner": [
+        "python3",
+        "test/raylib_provisioning/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "the immutable raylib 6.0 archive, full source tree, reviewed build inputs, configurations, and per-platform link facts are checksum locked",
+        "pinned-source, explicit offline-source, and exact-version system pkg-config authorities fail closed instead of silently switching provenance",
+        "generated Haxe emits deterministic strict C and five reviewable neutral build plans with exact argument-array libraries, frameworks, headers, and pkg-config facts",
+        "Linux, macOS, and Windows source lanes compile and link generated C against real raylib while the Linux PLATFORM_MEMORY/software lane also runs with exact output",
+        "normal compilation and post-provision builds are network-free, select no hxrt feature, and serialize no checkout, cache, or temporary path"
       ]
     },
     {
@@ -938,6 +964,24 @@
           "test/c_import/expected/program.c",
           "test/c_import/expected/build.json",
           "test/c_import/expected/runtime-plan.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "json"
+        ]
+      },
+      {
+        "id": "raylib-provisioning",
+        "expectedRoots": [
+          "test/raylib_provisioning/expected/include/hxc/program.h",
+          "test/raylib_provisioning/expected/src/program.c",
+          "test/raylib_provisioning/expected/hxc.runtime-plan.json",
+          "test/raylib_provisioning/expected/build-linux-memory.json",
+          "test/raylib_provisioning/expected/build-linux-desktop.json",
+          "test/raylib_provisioning/expected/build-macos-desktop.json",
+          "test/raylib_provisioning/expected/build-windows-desktop.json",
+          "test/raylib_provisioning/expected/build-system-desktop.json"
         ],
         "formats": [
           "c",

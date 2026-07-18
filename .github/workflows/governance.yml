@@ -180,6 +180,155 @@ jobs:
       - name: Build raw, CMake, and Meson plans from one manifest
         run: npm run test:build-adapters -- --toolchain "${{ matrix.toolchain }}"
 
+  raylib-headless:
+    name: Raylib 6.0 headless (Linux GCC)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Require native build tools
+        run: |
+          gcc --version
+          g++ --version
+          cmake --version
+          ninja --version
+
+      - name: Build, link, and run generated Haxe against pinned Raylib
+        shell: bash
+        run: |
+          set -euo pipefail
+          raylib_cache="$RUNNER_TEMP/raylib-headless-cache"
+          raylib_build="$RUNNER_TEMP/raylib-headless-build"
+          raylib_report="$RUNNER_TEMP/raylib-headless-report.json"
+          if [ -e "$raylib_cache" ]; then
+            echo "Raylib clean-cache lane found a pre-existing cache" >&2
+            exit 1
+          fi
+          python3 test/raylib_provisioning/run.py \
+            --integration \
+            --authority pinned-source \
+            --configuration memory-software \
+            --platform linux \
+            --cache-root "$raylib_cache" \
+            --build-root "$raylib_build" \
+            --cc gcc \
+            --cxx g++ \
+            --cmake cmake \
+            --generator Ninja \
+            --allow-network \
+            --run \
+            --report "$raylib_report"
+
+      - name: Preserve normalized Raylib headless evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: raylib-headless-linux-gcc
+          path: ${{ runner.temp }}/raylib-headless-report.json
+          if-no-files-found: error
+          retention-days: 14
+
+  raylib-desktop:
+    name: Raylib 6.0 desktop (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            os: ubuntu-latest
+            platform: linux
+            cc: gcc
+            cxx: g++
+          - name: macos-apple-clang
+            os: macos-latest
+            platform: macos
+            cc: clang
+            cxx: clang++
+          - name: windows-clang-cl
+            os: windows-latest
+            platform: windows
+            cc: clang-cl
+            cxx: clang-cl
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Install recorded Linux desktop SDK inputs
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgl1-mesa-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxext-dev \
+            libxfixes-dev \
+            libxi-dev \
+            libxinerama-dev \
+            libxrandr-dev
+
+      - name: Require native build tools
+        shell: bash
+        run: |
+          "${{ matrix.cc }}" --version
+          "${{ matrix.cxx }}" --version
+          cmake --version
+          ninja --version
+
+      - name: Compile and link generated Haxe against pinned Raylib desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
+          raylib_build="$RUNNER_TEMP/raylib-desktop-build"
+          raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
+          if [ -e "$raylib_cache" ]; then
+            echo "Raylib clean-cache lane found a pre-existing cache" >&2
+            exit 1
+          fi
+          python3 test/raylib_provisioning/run.py \
+            --integration \
+            --authority pinned-source \
+            --configuration desktop \
+            --platform "${{ matrix.platform }}" \
+            --cache-root "$raylib_cache" \
+            --build-root "$raylib_build" \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --cmake cmake \
+            --generator Ninja \
+            --allow-network \
+            --report "$raylib_report"
+
+      - name: Preserve normalized Raylib desktop evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: raylib-desktop-${{ matrix.name }}
+          path: ${{ runner.temp }}/raylib-desktop-report.json
+          if-no-files-found: error
+          retention-days: 14
+
   license-and-provenance:
     runs-on: ubuntu-latest
     timeout-minutes: 10

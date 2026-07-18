@@ -37,6 +37,12 @@ The direct-import suite adds exact header-owned scalar/typedef/enum/constant and
 by-value struct calls, structural field access, allocation-free literal
 `CString` borrowing, reached-only build facts, compiled ABI probes, and
 runtime-free strict C11 evidence.
+The Raylib provisioning suite composes that bounded compiler slice with an
+immutable Raylib 6.0 source authority. It adds adversarial archive and
+pkg-config checks, five neutral build-plan snapshots, real Linux/macOS/Windows
+compile/link jobs, and one deterministic Linux memory/software execution lane.
+The fixture-local extern subset is integration evidence, not yet the public
+RaylibHx raw binding.
 The generic-specialization suite adds full semantic-key sharing, closed
 primitive/function/enum instances, recursive worklist closure, bounded
 code-size reporting, exact dynamic/open/budget rejection, and runtime-free
@@ -57,11 +63,11 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3/E6 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, direct C import, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001`/`HXC3000` unsupported boundaries including body/signature/argument, aggregate/class/constructor/dispatch/enum/generic/span/string forms and malformed direct imports, plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3/E6 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, direct C import, locked Raylib provisioning, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001`/`HXC3000` unsupported boundaries including body/signature/argument, aggregate/class/constructor/dispatch/enum/generic/span/string forms, malformed direct imports, fail-closed Raylib authorities, and invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span/direct-import execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span/direct-import execution, a zero-`hxrt` Raylib integration plan plus real headless CI execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars and array mutation, generated literal output, and exact hello stdout against pinned Haxe oracles |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator, array lifecycle, borrowed/owned CString seeds, and compiled pointlib import layout/constant probes plus independent C++ interop seed; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
@@ -136,6 +142,8 @@ The registered snapshot selectors are:
 
 - `bootstrap`
 - `typed-c`
+- `c-import`
+- `raylib-provisioning`
 - `typed-ast`
 - `c-ast`
 - `declaration-plan`
@@ -416,6 +424,20 @@ variadic, native-pointer return, missing exact name, unsupported preprocessor
 definition, embedded-NUL literal, and nonliteral `CString` fixtures fail with
 source-positioned `HXC3000` and no
 plausible artifact. See [typed C authoring](typed-c-authoring.md).
+
+`test/raylib_provisioning` is the focused positive/negative/snapshot/runtime
+suite for the first real third-party framework consumer. The ordinary runner
+does no networking: it validates the Raylib 6.0 archive/tree/configuration
+lock, attacks extraction and authority boundaries, renders five exact neutral
+plans, compares generated C across isolated roots, and proves an empty `hxrt`
+selection. Separate source-authority CI jobs acquire only the immutable archive
+from a previously absent cache, build static Raylib, compile the production
+custom-target output with strict warnings, and link Linux GCC, Apple Clang, and
+Windows clang-cl consumers. Only the Linux `PLATFORM=Memory` software renderer
+executes, with exact stdout and empty stderr; desktop jobs make compile/link
+claims only. Normalized JSON evidence retains compiler targets, argument
+arrays, input/output hashes, and actual claim scope without host paths. See
+[Raylib 6.0 provisioning](raylib-provisioning.md).
 
 `test/runtime/runtime-feature-graph` is the focused
 positive/negative/AST/snapshot/runtime suite for E4.T01/E4.T10. It renders the typed

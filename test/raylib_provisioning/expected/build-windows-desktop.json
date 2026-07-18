@@ -1,0 +1,74 @@
+{
+  "publicHeaders": [],
+  "sources": [
+    "src/program.c"
+  ],
+  "cStandard": "c11",
+  "definitions": [],
+  "extensions": false,
+  "schemaVersion": 1,
+  "privateHeaders": [
+    "include/hxc/program.h"
+  ],
+  "frameworks": [],
+  "includeDirectories": [
+    "include"
+  ],
+  "requiredHeaders": [
+    {
+      "path": "hxc_raylib_smoke_constants.h",
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "kind": "local"
+    },
+    {
+      "path": "raylib.h",
+      "ownerModulePaths": [
+        "Color",
+        "RaylibNative",
+        "TraceLogLevel"
+      ],
+      "kind": "system"
+    }
+  ],
+  "libraries": [
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "gdi32"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "winmm"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "raylib"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "shell32"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
+      "name": "opengl32"
+    }
+  ],
+  "runtimeHeaders": [],
+  "artifact": {
+    "targetName": "hxc_program",
+    "kind": "executable"
+  },
+  "pkgConfigPackages": [],
+  "warningPolicy": "strict"
+}

@@ -1,0 +1,68 @@
+{
+  "selectedFeatures": [],
+  "directDecisions": [
+    "direct-calls",
+    "executable-entry-point",
+    "explicit-evaluation-order",
+    "primitive-static-storage",
+    "primitive-values",
+    "static-functions",
+    "typed-header-owned-c-imports",
+    "ub-safe-primitive-operations"
+  ],
+  "profile": "portable",
+  "environment": "hosted",
+  "dependencyEdges": [],
+  "manualOverrides": [],
+  "noRuntimeProof": {
+    "directDecisions": [
+      "direct-calls",
+      "executable-entry-point",
+      "explicit-evaluation-order",
+      "primitive-static-storage",
+      "primitive-values",
+      "static-functions",
+      "typed-header-owned-c-imports",
+      "ub-safe-primitive-operations"
+    ],
+    "reachability": {
+      "typeInstances": 2,
+      "functions": 1,
+      "blocks": 4,
+      "modules": 3,
+      "runtimeIntents": 0,
+      "instructions": 20,
+      "cleanupActions": 0
+    },
+    "programLocalHelpers": [],
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation",
+    "scope": "reachable-whole-program",
+    "status": "eligible",
+    "schemaVersion": 1,
+    "runtimeAbsence": {
+      "sources": [],
+      "features": [],
+      "symbols": [],
+      "libraries": [],
+      "includes": [],
+      "defines": []
+    },
+    "algorithm": "hxc-no-runtime-eligibility-v1"
+  },
+  "features": [],
+  "artifactDetails": [],
+  "status": "analyzed-runtime-free",
+  "schemaVersion": 2,
+  "diagnosticProvenance": "direct-define:hxc_runtime_diagnostics",
+  "symbols": [],
+  "diagnosticMode": "off",
+  "resolvedPolicy": "auto",
+  "artifacts": [],
+  "libraries": [],
+  "rootReasons": [],
+  "requestedPolicy": "auto",
+  "defines": [],
+  "planPurpose": "compiler-program",
+  "algorithm": "hxc-runtime-plan-v2",
+  "policyProvenance": "profile-preset:portable"
+}

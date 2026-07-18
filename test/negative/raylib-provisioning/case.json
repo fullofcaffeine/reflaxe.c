@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-provisioning-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SCAF-006",
+    "HXC-FFI-010",
+    "HXC-QA-011"
+  ],
+  "sources": [
+    "docs/specs/raylib-provisioning-lock.json",
+    "scripts/raylib/provision.py",
+    "test/raylib_provisioning/test_provision.py",
+    "test/raylib_provisioning/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../raylib_provisioning/run.py"
+    ],
+    "workingDirectory": "test/negative/raylib-provisioning",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed authorities, five neutral plans"
+    }
+  }
+}

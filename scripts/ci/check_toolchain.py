@@ -239,11 +239,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_span_lowering_script = "python3 test/span_lowering/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_c_import_script = "python3 test/c_import/run.py"
+    expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
         "npm run test:all-sources && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:typed-ast && npm run test:c-ast && "
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:runtime-features && npm run test:array-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
@@ -276,6 +277,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:c-import") != expected_c_import_script
     ):
         errors.append("package.json must retain the generated direct C-import gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:raylib-provisioning")
+        != expected_raylib_provisioning_script
+    ):
+        errors.append("package.json must retain the locked Raylib provisioning gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:declaration-plan") != expected_declaration_plan_script
