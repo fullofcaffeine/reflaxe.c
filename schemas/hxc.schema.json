@@ -1,0 +1,270 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/hxc.schema.json",
+  "title": "reflaxe.c hxc project configuration",
+  "description": "Strict structured hxc orchestration settings. HXML remains the authoritative Haxe compiler input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "https://reflaxe-c.dev/schemas/hxc.schema.json"
+    },
+    "artifact": {
+      "$ref": "#/$defs/artifact"
+    },
+    "build": {
+      "$ref": "#/$defs/build"
+    },
+    "cExtensions": {
+      "$ref": "#/$defs/cExtensions"
+    },
+    "cStandard": {
+      "$ref": "#/$defs/cStandard"
+    },
+    "environment": {
+      "$ref": "#/$defs/environment"
+    },
+    "hxml": {
+      "$ref": "#/$defs/hxmlPath"
+    },
+    "output": {
+      "$ref": "#/$defs/projectPath"
+    },
+    "overlays": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/overlay"
+      }
+    },
+    "profile": {
+      "$ref": "#/$defs/profile"
+    },
+    "runtime": {
+      "$ref": "#/$defs/runtime"
+    },
+    "runtimeDiagnostics": {
+      "$ref": "#/$defs/runtimeDiagnostics"
+    },
+    "schemaVersion": {
+      "const": 1
+    }
+  },
+  "allOf": [
+    {
+      "not": {
+        "required": [
+          "environment",
+          "artifact"
+        ],
+        "properties": {
+          "environment": {
+            "const": "freestanding"
+          },
+          "artifact": {
+            "const": "shared-library"
+          }
+        }
+      }
+    },
+    {
+      "not": {
+        "required": [
+          "environment",
+          "cExtensions"
+        ],
+        "properties": {
+          "environment": {
+            "enum": [
+              "emscripten",
+              "freestanding",
+              "wasi"
+            ]
+          },
+          "cExtensions": {
+            "const": "msvc"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "artifact": {
+      "type": "string",
+      "enum": [
+        "executable",
+        "shared-library",
+        "static-library"
+      ]
+    },
+    "build": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "minsizerel",
+        "release"
+      ]
+    },
+    "cExtensions": {
+      "type": "string",
+      "enum": [
+        "gnu",
+        "msvc",
+        "none"
+      ]
+    },
+    "cStandard": {
+      "type": "string",
+      "enum": [
+        "c11",
+        "c17",
+        "c23"
+      ]
+    },
+    "environment": {
+      "type": "string",
+      "enum": [
+        "emscripten",
+        "freestanding",
+        "hosted",
+        "wasi"
+      ]
+    },
+    "hxmlPath": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/projectPath"
+        },
+        {
+          "pattern": "\\.hxml$"
+        }
+      ]
+    },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/artifact"
+        },
+        "build": {
+          "$ref": "#/$defs/build"
+        },
+        "cExtensions": {
+          "$ref": "#/$defs/cExtensions"
+        },
+        "cStandard": {
+          "$ref": "#/$defs/cStandard"
+        },
+        "environment": {
+          "$ref": "#/$defs/environment"
+        },
+        "hxml": {
+          "$ref": "#/$defs/hxmlPath"
+        },
+        "output": {
+          "$ref": "#/$defs/projectPath"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        },
+        "runtime": {
+          "$ref": "#/$defs/runtime"
+        },
+        "runtimeDiagnostics": {
+          "$ref": "#/$defs/runtimeDiagnostics"
+        }
+      },
+      "allOf": [
+        {
+          "not": {
+            "required": [
+              "environment",
+              "artifact"
+            ],
+            "properties": {
+              "environment": {
+                "const": "freestanding"
+              },
+              "artifact": {
+                "const": "shared-library"
+              }
+            }
+          }
+        },
+        {
+          "not": {
+            "required": [
+              "environment",
+              "cExtensions"
+            ],
+            "properties": {
+              "environment": {
+                "enum": [
+                  "emscripten",
+                  "freestanding",
+                  "wasi"
+                ]
+              },
+              "cExtensions": {
+                "const": "msvc"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "profile": {
+      "type": "string",
+      "enum": [
+        "metal",
+        "portable"
+      ]
+    },
+    "projectPath": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![/~])(?!.*\\\\)(?!.*(?:^|/)\\.\\.(?:/|$))(?![\\s])(?!.*[\\s]$)(?!.*[\\u0000-\\u001F\\u007F]).+",
+      "not": {
+        "pattern": "^(?:\\.?/)*\\.?$"
+      }
+    },
+    "runtime": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "minimal",
+        "none"
+      ]
+    },
+    "runtimeDiagnostics": {
+      "type": "string",
+      "enum": [
+        "off",
+        "summary",
+        "warn"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "$schema": "https://reflaxe-c.dev/schemas/hxc.schema.json",
+      "schemaVersion": 1,
+      "hxml": "build.hxml",
+      "output": "build/c",
+      "profile": "portable",
+      "artifact": "executable",
+      "overlays": {
+        "release": {
+          "build": "release",
+          "output": "build/release"
+        }
+      }
+    }
+  ]
+}

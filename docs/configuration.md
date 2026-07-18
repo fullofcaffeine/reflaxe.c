@@ -1,8 +1,11 @@
 # Configuration model
 
-`hxc.json` is the user-facing configuration; HXML remains the compiler-facing
-transport. M8 must compile validated JSON into deterministic HXML/command plans
-and print the exact plan through `hxc inspect build`.
+`hxc.json` is the optional user-facing orchestration configuration; HXML remains
+the authoritative compiler input and transport. The implemented E8.T01 core
+strictly parses and resolves the project model. The E8.T02/E8.T04 command and
+build-driver work must compile that validated model into deterministic
+HXML/argument-array plans and eventually print the exact plan through
+`hxc inspect build`.
 
 Precedence, from lowest to highest:
 
@@ -18,9 +21,104 @@ axes. A configuration error is reported before Haxe typing or native compilation
 where possible. Unknown JSON keys are errors so typos do not silently change
 semantics.
 
-The schema lives at `schemas/hxc.schema.json`. M8 acceptance includes JSON Schema
-validation, path normalization independent of the current working directory,
-config provenance in `hxc.manifest.json`, and secret-free reproducible reports.
+The schema lives at `schemas/hxc.schema.json`. The E8 configuration/build
+milestone requires schema validation, path normalization independent of the
+current working directory, config provenance in `hxc.manifest.json`, and
+secret-free reproducible reports. Manifest integration remains E8.T04 scope.
+
+## Implemented schema-1 core
+
+The target-neutral implementation lives under `src/hxc/config/` and runs on the
+Eval bootstrap host without depending on Reflaxe registration. It uses a closed,
+location-bearing JSON tree rather than allowing `haxe.Json.parse`, `Dynamic`, or
+reflection into configuration semantics. Duplicate keys, unknown keys,
+malformed JSON or Unicode escapes, wrong value types, unsupported schema
+identity/version, and unsafe paths all fail with `HXC0003` before a Haxe or C
+compiler is invoked.
+
+The root object requires `schemaVersion: 1` and admits these settings:
+
+| Key | Default | Direct-define equivalent | Meaning |
+| --- | --- | --- | --- |
+| `hxml` | `build.hxml` | none | Authoritative Haxe input, relative to the config directory. |
+| `output` | `build/c` | custom-target output remains the direct-Haxe authority | Generated-project root intent. |
+| `profile` | `portable` | `reflaxe_c_profile` | Source-semantics/fallback preset. |
+| `runtime` | profile preset | `hxc_runtime` | Independent runtime fallback policy. |
+| `runtimeDiagnostics` | profile preset | `hxc_runtime_diagnostics` | Runtime-reason presentation only. |
+| `environment` | `hosted` | `hxc_environment` | Hosted/freestanding/WASI/Emscripten environment. |
+| `cStandard` | `c11` | `hxc_c_standard` | C11/C17/C23 source mode. |
+| `cExtensions` | `none` | `hxc_c_extensions` | Explicit GNU/MSVC compatibility family. |
+| `build` | `debug` | `hxc_build` | Optimization intent, never a semantic relaxation. |
+| `artifact` | `executable` | none | Executable/static-library/shared-library planning intent. |
+| `overlays` | empty | none | Named partial settings selected explicitly by the caller. |
+
+`$schema` is optional, but when present it must be the stable schema ID
+`https://reflaxe-c.dev/schemas/hxc.schema.json`. A minimal reviewable project is:
+
+```json
+{
+  "$schema": "https://reflaxe-c.dev/schemas/hxc.schema.json",
+  "schemaVersion": 1,
+  "hxml": "build.hxml",
+  "output": "build/c",
+  "overlays": {
+    "release": {
+      "build": "release",
+      "output": "build/release"
+    }
+  }
+}
+```
+
+An overlay accepts exactly the ten setting keys above and cannot recursively
+declare schemas or overlays. Names match `[A-Za-z][A-Za-z0-9_-]*`; asking for a
+missing overlay is an error rather than a fallback to the base project.
+
+### Resolution and provenance
+
+The resolver applies the six layers in the documented order. Environment
+presets and CLI values are typed inputs supplied by the future platform/command
+adapters; they are not hidden JSON keys. Direct define collection consumes only
+the seven documented configuration defines, rejects duplicate or misspelled
+`hxc_*` configuration names, and leaves unrelated Haxe defines outside this
+model.
+
+Every effective field is a `HxcResolvedSetting<T>` with a stable origin kind,
+detail, and numeric priority. The canonical schema-1 inspection record includes
+all ten fields, the selected overlay, logical config filename, and the complete
+precedence list. It never serializes the config root, process cwd, temporary
+directory, timestamp, locale value, or map iteration order. Profile-derived
+runtime defaults are explicitly reported as `profile-preset:portable` or
+`profile-preset:metal`; an explicit runtime value remains independent even if a
+higher-precedence layer changes the profile.
+
+### Paths and early combination checks
+
+Project-file and overlay paths use portable `/` spelling and are normalized
+against the directory that owns `hxc.json`, not `Sys.getCwd()`. Absolute paths,
+Windows drive paths, backslashes, NUL/control characters, empty results, and
+parent (`..`) segments or surrounding whitespace fail closed; redundant `.` and
+`/` segments normalize away. Host-native absolute paths exist only
+inside `HxcLoadedProjectConfig` for later I/O and are excluded from inspection.
+
+The resolved HXML must end in `.hxml`; the output directory cannot equal or own
+that input. A freestanding shared-library request and a non-hosted MSVC-extension
+request are rejected before planning. Valid independent combinations remain
+valid—specifically portable plus `runtime=none` and metal plus `runtime=auto`.
+Tuple capability checks that require a compiler, SDK, sysroot, or target triple
+remain E8.T04 planning work.
+
+The executable corpus at `test/hxc_config/` keeps the schema and parser key/enum
+sets synchronized and covers malformed inputs, all precedence sources, exact
+per-field provenance, config-root host resolution, CRLF and locale variance,
+define order, repeated cold requests, and warm compiler-server isolation. The
+checked-in effective record is centrally owned by the snapshot updater.
+
+No `hxc` command is claimed by this slice. Direct Haxe/HXML remains the recovery
+path, and the compiler deliberately does not discover an ambient `hxc.json`.
+E8.T04 will feed this resolved model into native build planning and
+`hxc.manifest.json`; the separate dev/watch task will reuse the same normalized
+input graph so rebuilds and one-shot builds cannot disagree about configuration.
 
 ## Target activation and native tuple
 

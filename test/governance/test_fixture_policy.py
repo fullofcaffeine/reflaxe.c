@@ -51,6 +51,7 @@ class FixturePolicyTests(unittest.TestCase):
             tuple(entries),
             (
                 "bootstrap",
+                "hxc-configuration",
                 "typed-c",
                 "c-import",
                 "raylib-provisioning",

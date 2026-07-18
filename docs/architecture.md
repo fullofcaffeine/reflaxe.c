@@ -640,6 +640,16 @@ narrow host-service seams for files, processes, environment, and terminal I/O.
 It is not part of Reflaxe compiler registration and cannot be required for
 direct Haxe/HXML compilation.
 
+The implemented configuration slice follows that boundary. `src/hxc/config`
+parses untrusted JSON into a closed typed tree without `Dynamic` or reflection,
+normalizes project paths relative to the directory containing `hxc.json`, and
+resolves compiler defaults, environment presets, the project file, a named
+overlay, CLI inputs, and direct Haxe defines into one immutable effective model.
+Every value carries its winning source and priority. The model is reusable by
+the Eval and future native CLI hosts; the compiler itself does not search for or
+read an ambient project file. E8.T04 will pass the already resolved build model
+into planning and manifest emission.
+
 The bootstrap host is Haxe Eval, exposed through `haxe --run` and
 `haxelib run reflaxe.c`. Once the C target supports the CLI's required semantic
 and `sys` surface, the same core is compiled through `reflaxe.c` into the native

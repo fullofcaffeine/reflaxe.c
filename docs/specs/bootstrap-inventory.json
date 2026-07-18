@@ -309,20 +309,24 @@
     {
       "id": "configuration-policies",
       "area": "configuration",
-      "status": "scaffold-only",
-      "disposition": "reserved",
-      "summary": "Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts.",
-      "scope": "Direct defines resolve selected bootstrap facts, and build mode cannot weaken admitted span semantics.",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A target-neutral typed core strictly parses schema-1 hxc.json, resolves six precedence layers, and reports every effective value with provenance.",
+      "scope": "The bounded core owns closed project and overlay keys, independent profile/runtime/environment/C/build/artifact axes, config-root-relative paths, canonical defaults and profile presets, CLI/direct-define override inputs, and deterministic inspection JSON.",
       "evidence": [
         "docs/configuration.md",
-        "src/reflaxe/c/BuildModeResolver.hx",
-        "src/reflaxe/c/ProfileResolver.hx"
+        "schemas/hxc.schema.json",
+        "src/hxc/config/HxcConfigParser.hx",
+        "src/hxc/config/HxcConfigResolver.hx",
+        "test/hxc_config/run.py"
       ],
       "owners": [
         "E8.T01"
       ],
       "limitations": [
-        "There is no hxc.json parser, precedence model, schema, canonical effective-config report, or complete capability matrix."
+        "The E8.T02 command router and E8.T04 native build driver do not yet expose hxc build, run, test, clean, inspect, or watch commands.",
+        "Configured library artifact kinds and non-hosted/toolchain tuples are typed intent only until their build/export adapters pass their separate capability gates.",
+        "Direct Haxe/HXML compilation remains authoritative; compiler-manifest integration of an hxc-resolved project model is deferred to the build-driver boundary rather than making the compiler read ambient project files."
       ]
     },
     {

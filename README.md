@@ -190,6 +190,14 @@ shared `hxc` CLI core will run on Haxe's built-in Eval target through
 `haxe --run` or `haxelib run reflaxe.c`, so development requires no additional
 host runtime.
 
+The first target-neutral CLI component is now executable: the strict
+[`hxc.json` configuration core](docs/configuration.md#implemented-schema-1-core)
+validates the published schema, resolves defaults/presets/project/overlay/CLI/
+direct-define precedence, roots project paths at the config file, and exposes
+provenance for every effective value. This is a library-level bootstrap slice;
+the user-facing `hxc build`, `run`, `inspect`, and dev/watch commands remain
+owned by their later E8 tasks.
+
 `hxc` exists for C's multi-tool workflows—native compiler selection, manifests,
 headers, ABI inspection, bindgen, and diagnostics—not because Reflaxe or Haxe
 requires a wrapper command. It is an optional ergonomics layer that could inform
@@ -248,8 +256,8 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 33 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
-| `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
+| `implemented` | 34 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `scaffold-only` | 3 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
 
@@ -264,7 +272,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `c23-internal-dialect` | `experimental` | The c23 internal dialect spelling is explicit and opt-in but has no support-matrix claim. |
 | `class-layout` | `implemented` | Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts. |
 | `closed-anonymous-record-lowering` | `implemented` | A bounded closed anonymous-record graph emits deduplicated private value structs and runs as runtime-free strict C11. |
-| `configuration-policies` | `scaffold-only` | Typed profile, runtime-policy, environment, and build-mode values exist as compiler contracts. |
+| `configuration-policies` | `implemented` | A target-neutral typed core strictly parses schema-1 hxc.json, resolves six precedence layers, and reports every effective value with provenance. |
 | `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |

@@ -212,6 +212,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json postinstall must resolve the scoped Haxe toolchain with lix download")
     expected_all_sources_script = "python3 test/all_sources/run.py"
     expected_diagnostics_script = "python3 test/diagnostics/run.py"
+    expected_hxc_config_script = "python3 test/hxc_config/run.py"
     expected_c_ast_script = "python3 test/c_ast/run.py"
     expected_declaration_plan_script = "python3 test/declaration_plan/run.py"
     expected_symbol_registry_script = "python3 test/symbol_registry/run.py"
@@ -244,7 +245,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
-        "npm run test:all-sources && "
+        "npm run test:hxc-config && npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
         "npm run test:runtime-features && npm run test:array-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
@@ -263,6 +264,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:diagnostics") != expected_diagnostics_script
     ):
         errors.append("package.json must retain the typed diagnostic policy gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:hxc-config") != expected_hxc_config_script
+    ):
+        errors.append("package.json must retain the strict hxc configuration gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:toolchain") != expected_toolchain_script
@@ -459,11 +465,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "-lib reflaxe.c",
         '--macro include("reflaxe.c", true)',
         '--macro include("c", true)',
+        '--macro include("hxc", true)',
         "-main AllSourcesProbe",
     ]
     if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
         errors.append(
-            "all_sources.hxml must include every reflaxe.c and c module through the scoped target library"
+            "all_sources.hxml must include every reflaxe.c, c, and hxc module through the scoped target library"
         )
     if not (root / "test/all_sources/run.py").is_file():
         errors.append("dedicated all-source Haxe gate runner is missing")

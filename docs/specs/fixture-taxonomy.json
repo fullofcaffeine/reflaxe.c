@@ -26,6 +26,7 @@
         "all-sources",
         "bootstrap",
         "diagnostics",
+        "hxc-configuration",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -67,6 +68,7 @@
         "all-sources",
         "bootstrap",
         "diagnostics",
+        "hxc-configuration",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -120,6 +122,7 @@
       ],
       "suiteIds": [
         "bootstrap",
+        "hxc-configuration",
         "typed-c",
         "c-import",
         "raylib-provisioning",
@@ -295,6 +298,26 @@
         "typed Haxe definitions match every machine-readable catalog entry",
         "structured records are deterministic, source-positioned, profile-aware, and schema-valid",
         "unregistered IDs, absolute paths, and disallowed severity changes fail closed"
+      ]
+    },
+    {
+      "id": "hxc-configuration",
+      "directory": "test/hxc_config",
+      "runner": [
+        "python3",
+        "test/hxc_config/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot"
+      ],
+      "status": "active",
+      "assertions": [
+        "the JSON Schema and typed parser expose the same closed root keys, overlay keys, enums, and schema identity",
+        "compiler defaults, environment presets, project values, named overlays, CLI flags, and direct defines resolve in documented order with source provenance on every effective field",
+        "config-relative paths and effective reports are byte-stable across process cwd, CRLF, locale, input order, repeated cold runs, and warm compiler-server requests",
+        "unknown or duplicate keys and defines, malformed JSON/Unicode, invalid values/combinations, and path traversal fail with HXC0003 before compilation without exposing a host path"
       ]
     },
     {
@@ -976,6 +999,15 @@
         "id": "bootstrap",
         "expectedRoots": [
           "test/bootstrap/expected/target-contract.json"
+        ],
+        "formats": [
+          "json"
+        ]
+      },
+      {
+        "id": "hxc-configuration",
+        "expectedRoots": [
+          "test/hxc_config/expected/effective-config.json"
         ],
         "formats": [
           "json"

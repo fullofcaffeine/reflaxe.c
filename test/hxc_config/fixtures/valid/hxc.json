@@ -1,0 +1,20 @@
+{
+  "$schema": "https://reflaxe-c.dev/schemas/hxc.schema.json",
+  "schemaVersion": 1,
+  "hxml": "haxe/./build.hxml",
+  "output": "build/base",
+  "profile": "metal",
+  "environment": "hosted",
+  "build": "debug",
+  "overlays": {
+    "dev": {
+      "output": "build/./dev",
+      "runtime": "auto",
+      "runtimeDiagnostics": "off"
+    },
+    "release": {
+      "build": "release",
+      "output": "build/release"
+    }
+  }
+}

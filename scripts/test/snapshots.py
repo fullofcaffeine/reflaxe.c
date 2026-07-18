@@ -84,6 +84,23 @@ def bootstrap_artifacts() -> list[Artifact]:
     ]
 
 
+def hxc_configuration_artifacts() -> list[Artifact]:
+    module = load_module("hxc_configuration", "test/hxc_config/run.py")
+    first = module.render_snapshot()
+    repeated = module.render_snapshot(reverse=True)
+    if first != repeated:
+        raise SnapshotFailure(
+            "hxc configuration snapshot changed with direct-define input order"
+        )
+    return [
+        Artifact(
+            Path("test/hxc_config/expected/effective-config.json"),
+            "json",
+            first,
+        )
+    ]
+
+
 def typed_c_artifacts() -> list[Artifact]:
     module = load_module("typed_c", "test/typed_c/run.py")
     forward = module.compile_fixture("positive", "Main", report=True)
@@ -940,6 +957,7 @@ def caxecraft_domain_artifacts() -> list[Artifact]:
 
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
+    "hxc-configuration": hxc_configuration_artifacts,
     "typed-c": typed_c_artifacts,
     "c-import": c_import_artifacts,
     "raylib-provisioning": raylib_provisioning_artifacts,

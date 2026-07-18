@@ -6,5 +6,6 @@
 
 --macro include("reflaxe.c", true)
 --macro include("c", true)
+--macro include("hxc", true)
 
 -main AllSourcesProbe
