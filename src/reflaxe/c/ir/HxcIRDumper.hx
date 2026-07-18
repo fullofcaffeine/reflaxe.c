@@ -64,7 +64,7 @@ class HxcIRDumper {
 	}
 
 	function dumpFunction(fn:HxcIRFunction):Void {
-		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
+		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)} failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
 		for (parameter in fn.parameters) {
 			line('    parameter ${quote(parameter.id)} type=${typeRef(parameter.type)} ${source(parameter.source)}');
 		}
@@ -127,6 +127,8 @@ class HxcIRDumper {
 			case IRIODeallocate(place, selected): 'deallocate place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIORetain(place, selected): 'retain place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIOTrace(place, selected): 'trace place=${renderPlace(place)} implementation=${implementation(selected)}';
+			case IRIODefaultInitialize(place, from, to):
+				'default-initialize place=${renderPlace(place)} transition=${state(from)}->${state(to)}';
 			case IRIOInitialize(place, valueId, from, to):
 				'initialize place=${renderPlace(place)} value=${quote(valueId)} transition=${state(from)}->${state(to)}';
 			case IRIOInitializeFixedArray(place, values, from, to):
@@ -139,6 +141,13 @@ class HxcIRDumper {
 			case IRIOLifetime(place, from, to, reason):
 				'lifetime place=${renderPlace(place)} transition=${state(from)}->${state(to)} reason=${quote(reason)}';
 		}
+	}
+
+	function functionFailure(value:HxcIRFunctionFailureConvention):String {
+		return switch value {
+			case IRFCInfallible: "infallible";
+			case IRFCStatus(kind): 'status(${failureKind(kind)})';
+		};
 	}
 
 	function classHeader(value:HxcIRClassHeader):String {

@@ -1,12 +1,12 @@
-hxcir schema=5
+hxcir schema=6
 module "app.SideEffectSupport" @"test/hxc_ir/fixtures/SideEffectSupport.hx":1:1-10:2
-  function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
+  function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
     block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
       instruction "fn.nextIndex.constant" result="fn.nextIndex.result":i32 constant value=int(0) @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
       terminator return value="fn.nextIndex.result" cleanup=[] @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
     end block "entry"
   end function "fn.nextIndex"
-  function "fn.produce" name="app.SideEffectSupport.produce" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
+  function "fn.produce" name="app.SideEffectSupport.produce" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
     block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
       instruction "fn.produce.constant" result="fn.produce.result":i32 constant value=int(7) @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
       terminator return value="fn.produce.result" cleanup=[] @"test/hxc_ir/fixtures/SideEffectSupport.hx":6:1-6:2
@@ -23,7 +23,7 @@ module "app.SideEffects" @"test/hxc_ir/fixtures/SideEffects.hx":1:1-40:2
   instance "instance.buffer" declaration="type.buffer" arguments=[] representation=direct @"test/hxc_ir/fixtures/SideEffects.hx":1:1-4:2
   instance "instance.error" declaration="type.error" arguments=[] representation=tagged @"test/hxc_ir/fixtures/SideEffects.hx":5:1-8:2
   global "global.calls" type=i32 mutable=true initialization=constant(int(0)) @"test/hxc_ir/fixtures/SideEffects.hx":10:1-10:2
-  function "fn.main" name="app.SideEffects.main" returns=i32 entry="entry" @"test/hxc_ir/fixtures/SideEffects.hx":12:1-24:2
+  function "fn.main" name="app.SideEffects.main" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffects.hx":12:1-24:2
     local "local.array" type=instance("instance.buffer") storage=automatic state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":14:1-14:2
     local "local.scratch" type=i32 storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
     local "local.token" type=pointer(nullable,void) storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2

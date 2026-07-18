@@ -1,4 +1,4 @@
-hxcir schema=5
+hxcir schema=6
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-70:3
   type "type.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef" name="Option<bool>" kind=tagged-union @"test/enum_lowering/fixtures/positive/EnumFixture.hx":6:1-9:2
     case "None" value=0 payload=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":7:2-7:7
@@ -16,7 +16,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
   instance "instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb" declaration="type.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb" arguments=[i32] representation=tagged @"test/enum_lowering/fixtures/positive/EnumFixture.hx":6:1-9:2
   instance "instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73" declaration="type.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73" arguments=[i32] representation=tagged @"test/enum_lowering/fixtures/positive/EnumFixture.hx":11:1-14:2
   instance "instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6" declaration="type.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6" arguments=[] representation=direct @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-4:2
-  function "function.EnumFixture.boolOptionValue" name="EnumFixture.boolOptionValue" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":43:58-48:3
+  function "function.EnumFixture.boolOptionValue" name="EnumFixture.boolOptionValue" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":43:58-48:3
     parameter "parameter.0" type=instance("instance.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":43:58-48:3
     local "local.1" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":44:10-47:4
     local "local.2" type=bool storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":46:14-46:21
@@ -62,7 +62,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator jump edge(target="block.2.enum-switch-value-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":44:10-47:4
     end block "block.5.conditional-join"
   end function "function.EnumFixture.boolOptionValue"
-  function "function.EnumFixture.guardedValue" name="EnumFixture.guardedValue" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":35:54-41:3
+  function "function.EnumFixture.guardedValue" name="EnumFixture.guardedValue" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":35:54-41:3
     parameter "parameter.0" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":35:54-41:3
     local "local.1" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":36:10-40:4
     local "local.2" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":38:14-38:21
@@ -115,13 +115,13 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator jump edge(target="block.2.enum-switch-value-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":36:10-40:4
     end block "block.5.conditional-join"
   end function "function.EnumFixture.guardedValue"
-  function "function.EnumFixture.identity" name="EnumFixture.identity" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":17:42-19:3
+  function "function.EnumFixture.identity" name="EnumFixture.identity" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":17:42-19:3
     parameter "parameter.0" type=i32 @"test/enum_lowering/fixtures/positive/EnumFixture.hx":17:42-19:3
     block "entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":17:42-19:3
       terminator return value="parameter.0" cleanup=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":18:3-18:15
     end block "entry"
   end function "function.EnumFixture.identity"
-  function "function.EnumFixture.main" name="EnumFixture.main" returns=void entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":63:30-70:3
+  function "function.EnumFixture.main" name="EnumFixture.main" returns=void failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":63:30-70:3
     local "local.0" type=instance("instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6") storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":64:3-64:17
     local "local.1" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":65:3-65:47
     local "local.2" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":66:3-66:33
@@ -224,7 +224,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/enum_lowering/fixtures/positive/EnumFixture.hx":68:12-68:150
     end block "block.9.short-circuit-rhs"
   end function "function.EnumFixture.main"
-  function "function.EnumFixture.modeValue" name="EnumFixture.modeValue" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":21:44-26:3
+  function "function.EnumFixture.modeValue" name="EnumFixture.modeValue" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":21:44-26:3
     parameter "parameter.0" type=instance("instance.enum.84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":21:44-26:3
     local "local.1" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":22:10-25:4
     block "entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":21:44-26:3
@@ -247,7 +247,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator return value="value.3" cleanup=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":22:3-25:4
     end block "block.2.enum-switch-value-join"
   end function "function.EnumFixture.modeValue"
-  function "function.EnumFixture.optionValue" name="EnumFixture.optionValue" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":28:53-33:3
+  function "function.EnumFixture.optionValue" name="EnumFixture.optionValue" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":28:53-33:3
     parameter "parameter.0" type=instance("instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb") @"test/enum_lowering/fixtures/positive/EnumFixture.hx":28:53-33:3
     local "local.1" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":29:10-32:4
     local "local.2" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":31:14-31:21
@@ -276,7 +276,7 @@ module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-
       terminator return value="value.5" cleanup=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":29:3-32:4
     end block "block.2.enum-switch-value-join"
   end function "function.EnumFixture.optionValue"
-  function "function.EnumFixture.recursiveLocal" name="EnumFixture.recursiveLocal" returns=i32 entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":50:39-61:3
+  function "function.EnumFixture.recursiveLocal" name="EnumFixture.recursiveLocal" returns=i32 failure=infallible entry="entry" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":50:39-61:3
     local "local.0" type=instance("instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73") storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":51:3-51:32
     local "local.1" type=instance("instance.enum.39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73") storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":52:3-52:39
     local "local.10" type=i32 storage=automatic state=uninitialized @"test/enum_lowering/fixtures/positive/EnumFixture.hx":56:5-59:6

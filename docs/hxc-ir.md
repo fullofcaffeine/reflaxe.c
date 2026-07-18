@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 5
+the structural C AST. Its schema is internal to the compiler: schema version 6
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -18,7 +18,9 @@ E3.T02 adds ordered tagged cases, checked payload projection, tag matching,
 exhaustive tag-switch edges, and finite recursive enum representation for the
 bounded direct-value slice. E3.T04 adds concrete class layouts, explicit header
 intent, nullable class-reference checks, and inspectable representation-safe
-upcasts to schema version 5.
+upcasts. E3.T05 adds default object initialization plus explicit infallible or
+typed-status function failure conventions for bounded constructor propagation
+and cleanup, advancing the schema to version 6.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -31,8 +33,9 @@ cleanup execution before a C expression or statement is selected.
 
 A program contains modules. Modules own semantic type declarations, concrete
 type instances, global/static storage, and functions. Functions contain typed
-parameters, addressable locals, cleanup regions, and basic blocks. A block owns
-an ordered instruction array and exactly one terminator.
+parameters, an explicit failure convention, addressable locals, cleanup
+regions, and basic blocks. A block owns an ordered instruction array and
+exactly one terminator.
 
 An `HxcIRTypeRef` describes Haxe-level semantic types and selected type
 instances, not C declarator spelling. `IRTDynamic` is the explicit Haxe
@@ -142,6 +145,8 @@ need to recover intent from target syntax.
   feature is an internal invariant failure, not a fallback;
 - local entry states and every explicit lifetime transition are legal. An
   initialization ends in `initialized`; a destroy cleanup ends in `destroyed`;
+- default initialization targets a structurally resolvable class-instance
+  place whose storage type matches the instruction exactly;
 - a deferred global names an existing zero-argument `Void` initializer, and
   that function contains exactly one `uninitialized -> initialized`
   `initialize-global` instruction for the named global;
@@ -153,6 +158,10 @@ need to recover intent from target syntax.
   result-error, allocation-failure, or native-status behavior explicitly. The
   normal continuation of a successful instruction is the next instruction (or
   its block terminator); the non-normal successor is never implicit;
+- an infallible function cannot propagate a throw, while a status-bearing
+  function names the exact failure kind represented by its native status. A
+  direct constructor call may carry a failure successor only when the called
+  constructor has the matching status convention;
 - the admitted `io` runtime call is exactly `sys-println-literal` or
   `trace-literal`, accepts one `IRTString`, returns `Void`, and retains the
   cleanup-free native-status abort edge used by the hosted fail-stop policy.
@@ -195,6 +204,15 @@ derived-to-base conversion remains `IRCRepresentation` with static intent, so
 the emitter can select a null-preserving embedded-member address without an
 unchecked cast. See [concrete class instance layouts](class-layout.md).
 
+For E3.T05, a stack-constructed object begins as default-initialized direct
+storage, transitions through `initializing`, and becomes `initialized` only
+after its constructor succeeds. Constructor functions remain semantically
+`Void`, while their explicit failure convention lets structural C use a
+private `bool` status without disguising that status as a Haxe return value.
+Failure edges carry the already-ordered partial and initialized cleanup steps;
+the emitter never reconstructs them from C lexical scope. See [bounded
+constructor lowering](constructor-lowering.md).
+
 ## Runtime and profile policy
 
 The IR has no unconditional runtime concept. `IRIStatic` is a direct semantic
@@ -202,9 +220,9 @@ operation, `IRIProgramLocal` names a compilation-local specialized helper, and
 `IRIRuntime` names the exact requested feature. Runtime call dispatch likewise
 records a feature and operation. Merely constructing a type, calling a direct
 function, constructing or copying a closed record, initializing a fixed
-array/span, constructing/matching a bounded enum, laying out a concrete class,
-checking a class reference/tag/bounds, performing a safe upcast, or using
-cleanup selects nothing from `hxrt`.
+array/span, constructing/matching a bounded enum, laying out or stack-
+constructing a concrete class, checking a class reference/tag/bounds,
+performing a safe upcast, or using cleanup selects nothing from `hxrt`.
 
 E2.T07 is the first bounded compiler-selected exception: a compiler-known
 literal remains direct static UTF-8 storage, while its observable hosted output
@@ -226,8 +244,8 @@ The body frontend calls
 stops at the first unsupported typed node with stable diagnostic `HXC1001`. It
 must not insert a `Dynamic`, null, raw C string, or invented constant in place
 of an unsupported node. A fully admitted primitive, local fixed-array/span,
-closed anonymous-record, bounded direct-value enum, or concrete class-reference
-static graph reaches
+closed anonymous-record, bounded direct-value enum, concrete class-reference,
+or bounded nonescaping constructor static graph reaches
 validated HxcIR, structural C, and an owned runtime-free executable project.
 Recursive enum parameters and returns remain rejected until escape/lifetime
 analysis can choose owned storage. The separately admitted literal-output edge
@@ -236,7 +254,8 @@ output APIs still stop without output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md), plus [closed anonymous-record
 lowering](aggregate-lowering.md), [Haxe enum lowering](enum-lowering.md), and
-[concrete class instance layouts](class-layout.md).
+[concrete class instance layouts](class-layout.md), and [bounded constructor
+lowering](constructor-lowering.md).
 
 ## Canonical dump
 
@@ -266,8 +285,9 @@ runtime request. The checked-in Haxe fixture runs independently under Eval and
 asserts the oracle trace `nextIndex,produce:8`. `coverage.hxcir` exercises all
 dispatch forms plus ABI integers, tagged/pointer nullability, an exact UTF-8
 string constant and hosted-output failure edge, explicit primitive
-conversion/failure forms, aggregate/tag, allocation, retain/trace, and lifetime
-forms. Its named runtime requests are explicit non-primitive coverage.
+conversion/failure forms, aggregate/tag, allocation, retain/trace, lifetime,
+default initialization, and function failure conventions. Its named runtime
+requests are explicit non-primitive coverage.
 `diagnostics.json` covers missing termination, use-before-definition, invalid
 cleanup order, path redaction, constant/load/address/store/initializer type
 mismatches, primitive runtime rejection, missing nullable-unwrap failure,
@@ -276,7 +296,8 @@ mismatch, tag construction/projection mismatches, invalid enum representation,
 non-exhaustive and redundant-default tag switches, illegal direct recursive
 layout, unchecked class dereference, unsafe class representation conversion,
 mismatched class-reference equality, a bad UTF-8 byte length, missing
-hosted-output failure, and `HXC1001`.
+hosted-output failure, invalid default initialization, inconsistent status
+conventions, a throw without status propagation, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
 
@@ -306,8 +327,13 @@ The class-layout suite adds source-backed private concrete structs, embedded
 base prefixes, explicit null checks, inherited field places, identity
 operations, and null-preserving upcasts. Its independent C and C++17 consumers
 verify private size, alignment, offsets, base paths, field access, and reference
-behavior without claiming constructors, allocation, dispatch, object runtime,
-or public ABI.
+behavior without claiming construction or ownership.
+The constructor-lowering suite adds source-backed `new`, ordinary private C
+constructor functions, exact pinned-Haxe field/`super`/body ordering,
+default-initialized automatic storage, trivial-chain elision, typed status
+propagation, and ordered partial-initialization cleanup. It remains bounded to
+unconditional nonescaping locals and does not claim heap allocation, general
+exceptions, dispatch, object runtime, or public ABI.
 The separate string-output suite selects only the four-feature literal/I/O
 closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
 closed-stdout failure, and runs the generated project at both optimization

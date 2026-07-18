@@ -1,6 +1,6 @@
-hxcir schema=5
+hxcir schema=6
 module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-37:3
-  function "function.SpanFixture.checkedAt" name="SpanFixture.checkedAt" returns=i32 entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":27:43-31:3
+  function "function.SpanFixture.checkedAt" name="SpanFixture.checkedAt" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":27:43-31:3
     parameter "parameter.0" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":27:43-31:3
     local "local.1" type=fixed-array(length=4,witness="Length4",element=i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":28:3-28:51
     local "local.2" type=span(const,i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":29:3-29:48
@@ -16,7 +16,7 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-37:3
       terminator return value="value.4" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":30:3-30:21
     end block "entry"
   end function "function.SpanFixture.checkedAt"
-  function "function.SpanFixture.constSum" name="SpanFixture.constSum" returns=i32 entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":17:33-25:3
+  function "function.SpanFixture.constSum" name="SpanFixture.constSum" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":17:33-25:3
     local "local.0" type=fixed-array(length=4,witness="Length4",element=i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":18:3-18:51
     local "local.1" type=span(const,i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":19:3-19:48
     local "local.2" type=i32 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":20:3-20:27
@@ -63,7 +63,7 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-37:3
       terminator return value="value.17" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":24:3-24:15
     end block "block.3.span-loop-exit"
   end function "function.SpanFixture.constSum"
-  function "function.SpanFixture.main" name="SpanFixture.main" returns=void entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":33:30-37:3
+  function "function.SpanFixture.main" name="SpanFixture.main" returns=void failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":33:30-37:3
     block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":33:30-37:3
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.SpanFixture.mutableSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":34:3-34:15
       instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.SpanFixture.constSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":35:3-35:13
@@ -72,7 +72,7 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-37:3
       terminator return value=none cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":33:30-37:3
     end block "entry"
   end function "function.SpanFixture.main"
-  function "function.SpanFixture.mutableSum" name="SpanFixture.mutableSum" returns=i32 entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-15:3
+  function "function.SpanFixture.mutableSum" name="SpanFixture.mutableSum" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":6:35-15:3
     local "local.0" type=fixed-array(length=4,witness="Length4",element=i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":7:3-7:51
     local "local.1" type=span(mutable,i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":8:3-8:38
     local "local.2" type=i32 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":10:3-10:21

@@ -66,6 +66,10 @@ class HxcIRGolden {
 				nullableUnwrapWithoutFailure: invalidDiagnostics(nullableUnwrapWithoutFailureProgram()),
 				stringByteLengthMismatch: invalidDiagnostics(stringByteLengthMismatchProgram()),
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
+				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
+				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
+				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
+				throwWithoutStatus: invalidDiagnostics(throwWithoutStatusProgram()),
 				unsupportedTypedNode: [
 					HxcIRDiagnostic.unsupportedTypedAstNode(PROFILE, "TUnop(OpIncrement,Postfix)", "function app.Main.main expression", span(MAIN_SOURCE, 18))
 						.render()]
@@ -221,6 +225,7 @@ class HxcIRGolden {
 				local("local.token", IRTPointer(IRTVoid, true), IRLSRegion("cleanup.inner"), IRISInitialized, MAIN_SOURCE, 16)
 			],
 			returnType: IRTInt(32, true),
+			failureConvention: IRFCInfallible,
 			entryBlockId: "entry",
 			blocks: [entry, catchBlock],
 			cleanupRegions: [
@@ -262,6 +267,7 @@ class HxcIRGolden {
 			parameters: [],
 			locals: [],
 			returnType: IRTInt(32, true),
+			failureConvention: IRFCInfallible,
 			entryBlockId: "entry",
 			blocks: [
 				{
@@ -324,6 +330,12 @@ class HxcIRGolden {
 			kind: IRTKReference,
 			source: span(COVERAGE_SOURCE, 9)
 		};
+		final constructedType:HxcIRTypeDeclaration = {
+			id: "type.constructed",
+			displayName: "coverage.Constructed",
+			kind: IRTKClass({baseInstanceId: null, fields: [], header: IRCHNone}),
+			source: span(COVERAGE_SOURCE, 10)
+		};
 		final instances:Array<HxcIRTypeInstance> = [
 			{
 				id: "instance.record",
@@ -352,6 +364,13 @@ class HxcIRGolden {
 				arguments: [],
 				representation: IRRDirect,
 				source: span(COVERAGE_SOURCE, 9)
+			},
+			{
+				id: "instance.constructed",
+				declarationId: "type.constructed",
+				arguments: [],
+				representation: IRRDirect,
+				source: span(COVERAGE_SOURCE, 10)
 			}
 		];
 		return {
@@ -359,7 +378,7 @@ class HxcIRGolden {
 			modules: [
 				{
 					id: "coverage.IR",
-					types: [recordType, optionType, objectType, interfaceType],
+					types: [recordType, optionType, objectType, interfaceType, constructedType],
 					typeInstances: instances,
 					globals: [],
 					functions: [
@@ -385,6 +404,7 @@ class HxcIRGolden {
 			parameters: [parameter("value.thrown", IRTDynamic, COVERAGE_SOURCE, 14)],
 			locals: [],
 			returnType: IRTVoid,
+			failureConvention: IRFCStatus(IRFException),
 			entryBlockId: "entry",
 			blocks: [
 				{
@@ -439,9 +459,11 @@ class HxcIRGolden {
 				local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "coverage.Length2"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.span", IRTSpan(IRTInt(32, true), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
+				local("local.constructed", IRTInstance("instance.constructed"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.owned", IRTPointer(IRTInstance("instance.object"), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17)
 			],
 			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
 			entryBlockId: "entry",
 			blocks: [
 				{
@@ -466,6 +488,8 @@ class HxcIRGolden {
 						instruction("c00.bounds-static", null, IRIOBoundsCheck(IRPLocal("local.span"), "value.one", IRBPStaticProof(2, 1)), COVERAGE_SOURCE,
 							18),
 						instruction("c00.span-load", result("value.span-one", IRTInt(32, true)), IRIOLoad(IRPIndex(IRPLocal("local.span"), "value.one")),
+							COVERAGE_SOURCE, 18),
+						instruction("c00.default-initialize", null, IRIODefaultInitialize(IRPLocal("local.constructed"), IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 18),
 						instruction("c00.bounds-checked", null,
 							IRIOBoundsCheck(IRPLocal("local.span"), "value.argument", IRBPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 18),
@@ -578,6 +602,7 @@ class HxcIRGolden {
 			],
 			locals: [],
 			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
 			entryBlockId: "entry",
 			blocks: [
 				{
@@ -1093,9 +1118,50 @@ class HxcIRGolden {
 		], terminator(IRTReturn(null, []), file, 4), [], [], file);
 	}
 
+	static function defaultInitializationTypeProgram():HxcIRProgram {
+		final file = "test/negative/DefaultInitializationType.hx";
+		return minimalProgram("invalid.DefaultInitializationType", [
+			instruction("bad.default", null, IRIODefaultInitialize(IRPLocal("local.value"), IRISUninitialized, IRISInitialized), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [
+			local("local.value", IRTInt(32, true), IRLSAutomatic, IRISUninitialized, file, 1)
+		], [], file);
+	}
+
+	static function statusConventionReturnTypeProgram():HxcIRProgram {
+		final file = "test/negative/StatusConventionReturnType.hx";
+		final program = minimalProgram("invalid.StatusConventionReturnType", [
+			instruction("bad.value", result("value.result", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2)
+		],
+			terminator(IRTReturn("value.result", []), file, 3), [], [], file, IRTInt(32, true), IRFCStatus(IRFException));
+		return program;
+	}
+
+	static function statusCallWithoutFailureProgram():HxcIRProgram {
+		final file = "test/negative/StatusCallWithoutFailure.hx";
+		final program = minimalProgram("invalid.StatusCallWithoutFailure", [
+			instruction("bad.call", null, IRIOCall(call(IRCDDirect("fn.status"), [], IRTVoid)), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		final target = voidFunction("fn.status", "invalid.StatusCallWithoutFailure.status", file, 4, IRFCStatus(IRFException));
+		program.modules[0].functions.push(target);
+		return program;
+	}
+
+	static function throwWithoutStatusProgram():HxcIRProgram {
+		final file = "test/negative/ThrowWithoutStatus.hx";
+		return minimalProgram("invalid.ThrowWithoutStatus", [
+			instruction("bad.value", result("value.thrown", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2)
+		], terminator(IRTThrow("value.thrown", {
+			kind: IRFException,
+			target: IRFTPropagate,
+			arguments: [],
+			cleanup: []
+		}), file, 3), [], [], file);
+	}
+
 	static function minimalProgram(moduleId:String, instructions:Array<HxcIRInstruction>, terminatorValue:Null<HxcIRTerminator>, locals:Array<HxcIRLocal>,
-			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef):HxcIRProgram {
+			regions:Array<HxcIRCleanupRegion>, file:String, ?returnType:HxcIRTypeRef, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRProgram {
 		final functionReturnType = returnType == null ? IRTVoid : returnType;
+		final functionFailureConvention = failureConvention == null ? IRFCInfallible : failureConvention;
 		return {
 			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
 			modules: [
@@ -1111,6 +1177,7 @@ class HxcIRGolden {
 							parameters: [],
 							locals: locals,
 							returnType: functionReturnType,
+							failureConvention: functionFailureConvention,
 							entryBlockId: "entry",
 							blocks: [
 								{
@@ -1139,13 +1206,14 @@ class HxcIRGolden {
 		return diagnostics.map(diagnostic -> diagnostic.render());
 	}
 
-	static function voidFunction(id:String, displayName:String, file:String, line:Int):HxcIRFunction {
+	static function voidFunction(id:String, displayName:String, file:String, line:Int, ?failureConvention:HxcIRFunctionFailureConvention):HxcIRFunction {
 		return {
 			id: id,
 			displayName: displayName,
 			parameters: [],
 			locals: [],
 			returnType: IRTVoid,
+			failureConvention: failureConvention == null ? IRFCInfallible : failureConvention,
 			entryBlockId: "entry",
 			blocks: [
 				{

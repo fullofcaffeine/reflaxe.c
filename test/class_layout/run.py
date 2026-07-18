@@ -762,7 +762,6 @@ def check_negative_cases() -> None:
     cases = {
         "interface": "interface-reference-requires-E3.T07:Marker",
         "generic": "generic-class-reference-requires-bounded-class-specialization:Box",
-        "allocation": "TNew",
         "downcast": "function.Std.downcast",
     }
     with tempfile.TemporaryDirectory(prefix="hxc-class-layout-negative-") as temporary:

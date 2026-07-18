@@ -14,7 +14,6 @@
     "src/reflaxe/c/lowering/CBodyClass.hx",
     "test/class_layout/fixtures/interface/Main.hx",
     "test/class_layout/fixtures/generic/Main.hx",
-    "test/class_layout/fixtures/allocation/Main.hx",
     "test/class_layout/fixtures/downcast/Main.hx",
     "test/class_layout/run.py"
   ],

@@ -217,6 +217,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.github/workflows/governance\.ym
   python3 "$ROOT_DIR/test/class_layout/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.github/workflows/governance\.yml|src/reflaxe/c/(CCompiler\.hx|CompilationContext\.hx|ast/|emit/|ir/|lowering/|naming/|plan/|runtime/|semantics/)|test/(constructor_lowering|positive/constructor-lowering|negative/constructor-lowering|snapshot/constructor-lowering|runtime/constructor-lowering)/|docs/(PRD|architecture|body-lowering|class-layout|constructor-lowering|hxc-ir|project-emission|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy)\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json|scripts/(ci/(check_ci_policy|check_toolchain)\.py|hooks/pre-commit|test/snapshots\.py))'; then
+  echo "[pre-commit] Running bounded constructor lowering and cleanup probes..."
+  python3 "$ROOT_DIR/test/constructor_lowering/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler\.hx|CompilationContext\.hx|ast/|emit/|ir/|lowering/|naming/|plan/|runtime/|semantics/)|test/(enum_lowering|positive/enum-lowering|negative/enum-lowering|snapshot/enum-lowering|runtime/enum-lowering)/|docs/(architecture|body-lowering|enum-lowering|hxc-ir|project-emission|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy)\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running Haxe enum lowering and C/C++ layout probes..."
   python3 "$ROOT_DIR/test/enum_lowering/run.py"

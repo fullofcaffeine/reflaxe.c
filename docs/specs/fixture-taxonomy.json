@@ -36,6 +36,7 @@
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
+        "constructor-lowering",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -72,6 +73,7 @@
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
+        "constructor-lowering",
         "enum-lowering",
         "generic-specialization",
         "static-initialization",
@@ -123,6 +125,7 @@
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
+        "constructor-lowering",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -152,6 +155,7 @@
         "function-lowering",
         "aggregate-lowering",
         "class-layout",
+        "constructor-lowering",
         "enum-lowering",
         "generic-specialization",
         "evaluation-order",
@@ -534,7 +538,30 @@
         "class references are nullable pointers; derived-to-base conversion follows an inspectable nested-member address path and preserves null without pointer reinterpretation",
         "field reads and writes require an explicit same-block HxcIR null proof before dereference, inherited fields retain their declaring storage, and reference equality compares the common base identity",
         "every emitted layout carries structural size, alignment, offset, and non-overlap assertions; paired C and C++17 consumers agree under identity-verified GCC and Clang at O0 and O2",
-        "portable, metal, and explicit runtime-none projects remain deterministic and hxrt-free, keep the generated layout in exactly one private header, and record no public ABI exports; allocation, downcast, generic-class, and interface edges fail closed for their owning later tasks"
+        "portable, metal, and explicit runtime-none projects remain deterministic and hxrt-free, keep the generated layout in exactly one private header, and record no public ABI exports; downcast, generic-class, and interface edges fail closed for their owning later tasks"
+      ]
+    },
+    {
+      "id": "constructor-lowering",
+      "directory": "test/constructor_lowering",
+      "runner": [
+        "python3",
+        "test/constructor_lowering/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "snapshot",
+        "runtime"
+      ],
+      "status": "active",
+      "assertions": [
+        "direct unconditional local new expressions receive default-initialized automatic class storage and ordinary private C constructor functions without selecting hxrt; a target-native fixture proves static-platform integer, Boolean, floating, and reference defaults",
+        "constructor arguments, pinned-Haxe derived field initializers, super calls, base fields/bodies, and derived bodies retain exact observable order against the Eval oracle",
+        "empty zero-argument constructor chains elide their C symbols and calls only after preserving source argument evaluation",
+        "throwing constructors use explicit HxcIR status conventions and failure edges whose partial and initialized cleanup steps execute in validated reverse order",
+        "return, alias, argument, assignment, self escape, conditional construction, dependency cycles, native layouts, and generic classes fail closed with source-positioned HXC1001 and no plausible artifact",
+        "portable, metal, reversed-input, repeated, and explicit runtime-none projects are byte-identical; strict GCC and Clang O0/O2 C11 execution, fail-stop status, and a C++17 private-header consumer pass"
       ]
     },
     {
@@ -773,7 +800,7 @@
       ],
       "status": "active",
       "assertions": [
-        "real typed String literals lower through schema-5 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
+        "real typed String literals lower through schema-6 HxcIR into explicit UTF-8 byte-counted C values, including non-BMP scalars and embedded NUL",
         "literal Sys.println and default literal trace select only the dependency-closed runtime-base, status, string-literal, and io feature graph while allocator, full string operations, object, GC, dynamic, reflection, and exception machinery remains absent",
         "portable auto and metal minimal builds emit source-rooted runtime diagnostics; runtime none reports all four sorted operation/surface/source blockers with both dependency chains before output; freestanding and neighboring unsupported surfaces fail closed",
         "generated portable and metal projects are deterministic across output roots and caller working directories and compile and run under strict GCC and Clang at O0 and O2",
@@ -977,6 +1004,22 @@
           "test/class_layout/expected/classes.json",
           "test/class_layout/expected/functions.json",
           "test/class_layout/expected/symbols.json"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "hxcir",
+          "json"
+        ]
+      },
+      {
+        "id": "constructor-lowering",
+        "expectedRoots": [
+          "test/constructor_lowering/expected/constructors.hxcir",
+          "test/constructor_lowering/expected/program.h",
+          "test/constructor_lowering/expected/program.c",
+          "test/constructor_lowering/expected/constructors.json",
+          "test/constructor_lowering/expected/symbols.json"
         ],
         "formats": [
           "c",

@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "id": "bounded-constructor-lowering-snapshot",
+  "role": "fixture",
+  "type": "snapshot",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-013",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "scripts/test/snapshots.py",
+    "test/constructor_lowering/expected/constructors.hxcir",
+    "test/constructor_lowering/expected/program.h",
+    "test/constructor_lowering/expected/program.c",
+    "test/constructor_lowering/expected/constructors.json",
+    "test/constructor_lowering/expected/symbols.json",
+    "test/constructor_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../../scripts/test/snapshots.py",
+      "--check",
+      "--suite",
+      "constructor-lowering"
+    ],
+    "workingDirectory": "test/snapshot/constructor-lowering",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "artifacts": [
+      {
+        "path": "test/constructor_lowering/expected/constructors.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/constructor_lowering/expected/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/constructor_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/constructor_lowering/expected/constructors.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/constructor_lowering/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

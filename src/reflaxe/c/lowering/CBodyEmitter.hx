@@ -131,9 +131,10 @@ class CBodyEmitter {
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			helperNames:Map<String, CIdentifier>, lineDirectives:Bool, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
 			?nonReturningFunctionIds:Map<String, Bool>, ?spanLengthNames:Map<String, CIdentifier>, ?boundsAbortName:CIdentifier):CStmt {
-		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id || fn.cleanupRegions.length != 0) {
-			fail('body lowering requires a cleanup-free entry-first block graph in `${fn.id}`');
+		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id) {
+			fail('body lowering requires an entry-first block graph in `${fn.id}`');
 		}
+		validateConstructionCleanupRegions(fn);
 		final values:Map<String, CExpr> = [];
 		final declared:Map<String, Bool> = [];
 		final referencedValues = referencedValueIds(fn);
@@ -179,6 +180,8 @@ class CBodyEmitter {
 					case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
 						emitEnumProjection(statements, values, referencedValues, instruction, valueId, tagName, payloadIndex, fn, temporaryNames,
 							boundsAbortName, lineDirectives);
+					case IRIODefaultInitialize(IRPLocal(localId), from, to):
+						emitDefaultInitialize(statements, declared, referencedLocals, instruction, localId, from, to, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 						emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
 					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
@@ -229,6 +232,10 @@ class CBodyEmitter {
 						final expression = classUpcastExpression(requireValue(values, valueId, fn.id), valueType(fn, valueId), targetType, instruction.id,
 							fn.id);
 						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
+					case IRIOConvert(valueId, IRCNullableInject, _, IRIStatic, null):
+						final result = requireResult(instruction, fn.id);
+						recordPureResult(statements, values, referencedValues, instruction, result, requireValue(values, valueId, fn.id), lineDirectives,
+							fn.id);
 					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 						final result = requireResult(instruction, fn.id);
 						final expression = switch kind {
@@ -258,8 +265,10 @@ class CBodyEmitter {
 							terminatedByTailLoop = true;
 						} else {
 							terminatedByNonReturningCall = emitCall(statements, values, referencedValues, instruction, call, temporaryNames, functionNames,
-								lineDirectives, nonReturningFunctionIds, fn.id);
+								lineDirectives, nonReturningFunctionIds, boundsAbortName, fn);
 						}
+					case IRIOLifetime(_, _, _, _):
+						// Direct stack-object lifetime transitions are semantic proof only.
 					case _:
 						fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced direct-value function subset');
 				}
@@ -278,7 +287,7 @@ class CBodyEmitter {
 				continue;
 			}
 			addLineDirective(statements, terminator.source, lineDirectives);
-			emitTerminator(statements, values, terminator, labelNames, fn);
+			emitTerminator(statements, values, terminator, labelNames, fn, boundsAbortName);
 		}
 		if (terminatedByTailLoop) {
 			if (fn.blocks.length != 1) {
@@ -342,6 +351,8 @@ class CBodyEmitter {
 						referenced.set(valueId, true);
 					case IRTTagSwitch(valueId, _, _):
 						referenced.set(valueId, true);
+					case IRTThrow(valueId, _):
+						referenced.set(valueId, true);
 					case _:
 				}
 			}
@@ -367,12 +378,22 @@ class CBodyEmitter {
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
-					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBoundsCheck(place, _, _):
+					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBoundsCheck(place, _, _) | IRIODefaultInitialize(place, _, _) |
+						IRIOLifetime(place, _, _, _):
 						markReferencedLocals(place, referenced);
 					case IRIOInitializeSpan(place, sourceArray, _, _):
 						markReferencedLocals(place, referenced);
 						markReferencedLocals(sourceArray, referenced);
 					case _:
+				}
+			}
+		}
+		for (region in fn.cleanupRegions) {
+			for (action in region.actions) {
+				switch action.kind {
+					case IRCADestroy(place, _, _) | IRCARelease(place, _) | IRCADeallocate(place, _):
+						markReferencedLocals(place, referenced);
+					case IRCAFinally(_):
 				}
 			}
 		}
@@ -564,6 +585,34 @@ class CBodyEmitter {
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
 	}
 
+	function emitDefaultInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>, instruction:HxcIRInstruction,
+			localId:String, from:HxcIRInitializationState, to:HxcIRInitializationState, fn:HxcIRFunction, localNames:Map<String, CIdentifier>,
+			lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId) || from != IRISUninitialized || to != IRISInitializing && to != IRISInitialized) {
+			fail('default initializer `${instruction.id}` in `${fn.id}` has invalid declaration or lifetime state');
+		}
+		final local = requireLocal(fn, localId);
+		switch local.type {
+			case IRTInstance(instanceId) if (classTags.exists(instanceId)):
+			case _:
+				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct concrete-class storage');
+		}
+		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IList([{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("0")))}]),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(requireLocalName(localNames, localId, fn.id)))));
+		}
+	}
+
 	function enumTagExpression(value:CExpr, instanceId:String):CExpr {
 		return switch requireEnumRepresentation(instanceId) {
 			case CBECNative: value;
@@ -695,30 +744,38 @@ class CBodyEmitter {
 	}
 
 	function classUpcastExpression(value:CExpr, sourceType:Null<HxcIRTypeRef>, targetType:HxcIRTypeRef, instructionId:String, functionId:String):CExpr {
-		final sourceId = switch sourceType {
-			case IRTPointer(IRTInstance(instanceId), true): instanceId;
-			case _: return fail('class upcast `$instructionId` in `$functionId` lost its nullable source instance');
+		final source = switch sourceType {
+			case IRTPointer(IRTInstance(instanceId), nullable): {instanceId: instanceId, nullable: nullable};
+			case _: return fail('class upcast `$instructionId` in `$functionId` lost its source instance pointer');
 		};
-		final targetId = switch targetType {
-			case IRTPointer(IRTInstance(instanceId), true): instanceId;
-			case _: return fail('class upcast `$instructionId` in `$functionId` lost its nullable target instance');
+		final target = switch targetType {
+			case IRTPointer(IRTInstance(instanceId), nullable): {instanceId: instanceId, nullable: nullable};
+			case _: return fail('class upcast `$instructionId` in `$functionId` lost its target instance pointer');
 		};
-		final path = classBasePath(sourceId, targetId, instructionId, functionId);
+		if (source.nullable != target.nullable)
+			return fail('class upcast `$instructionId` in `$functionId` changed pointer nullability');
+		final path = classBasePath(source.instanceId, target.instanceId, instructionId, functionId);
 		var projected:CExpr = value;
 		for (index in 0...path.length)
 			projected = EMember(projected, path[index], index == 0);
-		return EConditional(EBinary(Equal, value, ENull), ENull, EUnary(AddressOf, projected));
+		final address = EUnary(AddressOf, projected);
+		return source.nullable ? EConditional(EBinary(Equal, value, ENull), ENull, address) : address;
 	}
 
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
-			fn:HxcIRFunction):Void {
+			fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>):Void {
 		final functionId = fn.id;
 		switch terminator.kind {
 			case IRTReturn(valueId, cleanup):
-				if (cleanup.length != 0) {
-					fail('return in `$functionId` unexpectedly requires cleanup');
+				emitCleanupSteps(statements, cleanup, fn);
+				switch fn.failureConvention {
+					case IRFCInfallible:
+						statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, functionId)));
+					case IRFCStatus(_):
+						if (valueId != null || fn.returnType != IRTVoid)
+							fail('status-returning function `$functionId` lost its Void semantic result');
+						statements.push(SReturn(EBool(true)));
 				}
-				statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, functionId)));
 			case IRTJump(edge):
 				requirePlainEdge(edge, functionId);
 				statements.push(SGoto(requireLabelName(labelNames, edge.targetBlockId, functionId)));
@@ -765,9 +822,75 @@ class CBodyEmitter {
 					});
 				}
 				statements.push(SSwitch(enumTagExpression(requireValue(values, valueId, functionId), instanceId), emittedCases));
+			case IRTThrow(valueId, failure):
+				statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, valueId, functionId))));
+				emitCleanupSteps(statements, failure.cleanup, fn);
+				emitFailureTarget(statements, failure, fn, boundsAbortName, "throw");
 			case _:
 				fail('function `$functionId` has a terminator outside the sequenced direct-value subset');
 		}
+	}
+
+	function validateConstructionCleanupRegions(fn:HxcIRFunction):Void {
+		for (region in fn.cleanupRegions) {
+			if (region.id != "cleanup.construction" || region.parentId != null)
+				fail('function `${fn.id}` has a cleanup region outside direct stack construction');
+			for (action in region.actions) {
+				if (action.idempotence != IRCExactlyOnce)
+					fail('construction cleanup `${action.id}` in `${fn.id}` must execute exactly once');
+				switch action.kind {
+					case IRCADestroy(IRPLocal(localId), from, IRISDestroyed):
+						if (from != IRISInitializing && from != IRISInitialized)
+							fail('construction cleanup `${action.id}` in `${fn.id}` has an invalid source state');
+						switch requireLocal(fn, localId).type {
+							case IRTInstance(instanceId) if (classTags.exists(instanceId)):
+							case _:
+								fail('construction cleanup `${action.id}` in `${fn.id}` does not own direct class storage');
+						}
+					case _:
+						fail('construction cleanup `${action.id}` in `${fn.id}` is outside the direct stack-object subset');
+				}
+			}
+		}
+	}
+
+	function emitCleanupSteps(statements:Array<CStmt>, steps:Array<HxcIRCleanupStep>, fn:HxcIRFunction):Void {
+		for (step in steps) {
+			final action = requireCleanupAction(fn, step);
+			switch action.kind {
+				case IRCADestroy(IRPLocal(_), IRISInitializing | IRISInitialized, IRISDestroyed):
+					// Direct class storage currently contains only borrowed/direct fields, so
+					// destruction is a proven no-op. The ordered HxcIR edge remains authoritative.
+				case _:
+					fail('cleanup `${step.regionId}.${step.actionId}` in `${fn.id}` is not directly emittable');
+			}
+		}
+	}
+
+	function emitFailureTarget(statements:Array<CStmt>, failure:HxcIRFailureEdge, fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>, owner:String):Void {
+		switch failure.target {
+			case IRFTPropagate:
+				switch fn.failureConvention {
+					case IRFCStatus(kind) if (kind == failure.kind): statements.push(SReturn(EBool(false)));
+					case _: fail('$owner in `${fn.id}` cannot propagate without a matching status convention');
+				}
+			case IRFTAbort:
+				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, owner, fn.id)), [])));
+			case IRFTBlock(blockId):
+				fail('$owner in `${fn.id}` has unsupported failure continuation block `$blockId`');
+		}
+	}
+
+	static function requireCleanupAction(fn:HxcIRFunction, step:HxcIRCleanupStep):HxcIRCleanupAction {
+		for (region in fn.cleanupRegions) {
+			if (region.id == step.regionId) {
+				for (action in region.actions) {
+					if (action.id == step.actionId)
+						return action;
+				}
+			}
+		}
+		throw new CBodyEmissionError('function `${fn.id}` cannot resolve cleanup `${step.regionId}.${step.actionId}`');
 	}
 
 	static function requirePlainEdge(edge:HxcIRBlockEdge, functionId:String):Void {
@@ -963,6 +1086,13 @@ class CBodyEmitter {
 		};
 	}
 
+	public function functionDeclarator(fn:HxcIRFunction, inner:CDeclarator):CTypedDeclarator {
+		return switch fn.failureConvention {
+			case IRFCInfallible: typedDeclarator(fn.returnType, inner);
+			case IRFCStatus(_): {type: new CType(TBool), declarator: inner};
+		};
+	}
+
 	public function globalInitializer(global:HxcIRGlobal):Null<CInitializer> {
 		return switch global.initialization {
 			case IRGIConstant(value): IExpr(constantExpression(value));
@@ -978,6 +1108,11 @@ class CBodyEmitter {
 
 	public function requiredHeaders(fn:HxcIRFunction):Array<String> {
 		final headers:Array<String> = [];
+		switch fn.failureConvention {
+			case IRFCStatus(_):
+				addUnique(headers, "stdbool.h");
+			case IRFCInfallible:
+		}
 		addTypeHeaders(headers, fn.returnType);
 		for (parameter in fn.parameters) {
 			addTypeHeaders(headers, parameter.type);
@@ -1001,6 +1136,15 @@ class CBodyEmitter {
 						addUnique(headers, "stdlib.h");
 					case IRIONullCheck(_, IRNCPCheckedAbort(_, _)):
 						addUnique(headers, "stddef.h");
+						addUnique(headers, "stdlib.h");
+					case IRIOCall({failure: {target: IRFTAbort}}):
+						addUnique(headers, "stdlib.h");
+					case _:
+				}
+			}
+			if (block.terminator != null) {
+				switch block.terminator.kind {
+					case IRTThrow(_, {target: IRFTAbort}):
 						addUnique(headers, "stdlib.h");
 					case _:
 				}
@@ -1428,7 +1572,8 @@ class CBodyEmitter {
 
 	function emitCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction, call:HxcIRCall,
 			temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>, lineDirectives:Bool,
-			nonReturningFunctionIds:Null<Map<String, Bool>>, functionId:String):Bool {
+			nonReturningFunctionIds:Null<Map<String, Bool>>, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Bool {
+		final functionId = fn.id;
 		final targetId = switch call.dispatch {
 			case IRCDDirect(value): value;
 			case dispatch if (isHostedOutputDispatch(dispatch)):
@@ -1441,6 +1586,17 @@ class CBodyEmitter {
 		final arguments = call.arguments.map(argument -> requireValue(values, argument, functionId));
 		final callExpression:CExpr = ECall(EIdentifier(targetName), arguments);
 		addLineDirective(statements, instruction.source, lineDirectives);
+		if (call.failure != null) {
+			final failure = call.failure;
+			if (failure.kind != IRFException || call.returnType != IRTVoid || instruction.result != null || doesNotReturn) {
+				return fail('failable direct call `${instruction.id}` in `$functionId` is outside the constructor-status subset');
+			}
+			final failedStatements:Array<CStmt> = [];
+			emitCleanupSteps(failedStatements, failure.cleanup, fn);
+			emitFailureTarget(failedStatements, failure, fn, boundsAbortName, 'call `${instruction.id}`');
+			statements.push(SIf(EUnary(LogicalNot, callExpression), SBlock(failedStatements), null));
+			return false;
+		}
 		if (call.returnType == IRTVoid) {
 			if (instruction.result != null) {
 				fail('Void call `${instruction.id}` in `$functionId` unexpectedly defines a value');

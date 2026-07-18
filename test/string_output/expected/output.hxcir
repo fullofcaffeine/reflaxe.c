@@ -1,6 +1,6 @@
-hxcir schema=5
+hxcir schema=6
 module "Main" @"Main.hx":2:30-7:3
-  function "function.Main.main" name="Main.main" returns=void entry="entry" @"Main.hx":2:30-7:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-7:3
     block "entry" @"Main.hx":2:30-7:3
       instruction "instruction.0.string-literal" result="value.0":string-utf8 constant value=string-utf8(bytes=5,value="ASCII") @"Main.hx":3:3-3:23
       instruction "instruction.1.hosted-output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.0"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"Main.hx":3:3-3:23

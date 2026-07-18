@@ -65,8 +65,8 @@ The emitter owns these schema-1 sidecars:
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   direct executable's schema-2 `hxc-runtime-plan-v2`
-  analyzed record. Primitive, closed-record, and bounded enum graphs use
-  `analyzed-runtime-free`; literal
+  analyzed record. Primitive, closed-record, concrete-class, bounded
+  constructor, and bounded enum graphs use `analyzed-runtime-free`; literal
   hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
   `status`, `string-literal`, and `io`. Both are produced by the typed runtime
   feature planner and contain resolved policy/diagnostic provenance, planning

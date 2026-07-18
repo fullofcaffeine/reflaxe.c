@@ -9,7 +9,8 @@ option is feasible. There is no unconditional `core` feature.
 This is a bounded M0 capability. The graph, reachability-based requirement
 analysis, policy checks, no-runtime eligibility proof, reason propagation, and
 exact packager are implemented for the admitted generated-program slice.
-Primitive and fixed-array/span programs remain runtime-free. E2.T07
+Primitive, fixed-array/span, aggregate, bounded enum, concrete-class, and
+bounded nonescaping constructor programs remain runtime-free. E2.T07
 additionally admits compiler-known String literals passed to hosted
 `Sys.println` or default `trace`; that edge selects only the literal carrier and
 minimal output closure. The allocator, full string-operation, and resizable-
@@ -99,7 +100,9 @@ symbols, libraries, and defines. Input root order does not affect the result.
 An empty request is accepted only with a positive compiler-owned no-runtime
 proof. The admitted compiler path uses this same planner after direct
 representations, request-local helpers, and static initialization have been
-decided. The structured proof records reachable module/type-instance/function/
+decided. Bounded constructor graphs retain the
+`bounded-stack-construction` direct decision rather than selecting an object or
+allocator feature. The structured proof records reachable module/type-instance/function/
 block/instruction/cleanup counts, zero runtime intents, the exact direct
 decisions and program-local helper IDs, and empty feature/include/source/define/
 library/symbol sets. Project emission and packaging validate the proof again
@@ -148,7 +151,7 @@ from becoming a generated-Haxe support claim.
 | Portable/metal | One planner serves both. Portable defaults to `auto + summary`; metal defaults to `minimal + warn`; explicit valid combinations remain available. |
 | Runtime policy | `auto`, `minimal`, and `none` are enforced after direct C and program-local decisions, with provenance retained in every plan. `none` either records the structured whole-program proof or reports every blocker before output/native linking. |
 | Environment | Literal output is hosted-only and fails planning for freestanding, WASI, or Emscripten. The native allocator retains hosted execution and freestanding custom-allocator/no-libc-allocation evidence. |
-| Generated C | Primitive-only admitted programs remain byte-stable and runtime-free. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership, then checks ABI major 0 structurally. |
+| Generated C | Admitted runtime-free graphs, including bounded stack constructors, remain byte-stable and contain no `hxrt` artifact or symbol. Literal output packages only the four-feature closure and one runtime C source through normal Reflaxe ownership, then checks ABI major 0 structurally. |
 | Public ABI | Runtime 0.5.0 is a versioned internal same-major contract. The manifest marks all runtime-owned layouts forbidden in application exports; generated application exports remain unsupported and E7/E10.T09 own their future admission and stabilization. |
 
 ## Exact packaging

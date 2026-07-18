@@ -75,10 +75,28 @@ private typedef StaticInitializationInspection = {
 	final hxcir:String;
 }
 
+private typedef ConstructorInspectionRecord = {
+	final id:String;
+	final haxePath:String;
+	final instanceId:String;
+	final elided:Bool;
+	final canFail:Bool;
+	final cName:Null<String>;
+}
+
+private typedef ConstructorLoweringInspection = {
+	final schemaVersion:Int;
+	final profile:String;
+	final constructors:Array<ConstructorInspectionRecord>;
+	final hxcir:String;
+}
+
 /** Whole-program adapter into the primitive static-function executable slice. */
 class CCompiler {
 	public static inline final STATIC_INITIALIZATION_REPORT_DEFINE = "reflaxe_c_static_initialization_report";
 	public static inline final STATIC_INITIALIZATION_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION=";
+	public static inline final CONSTRUCTOR_LOWERING_REPORT_DEFINE = "reflaxe_c_constructor_lowering_report";
+	public static inline final CONSTRUCTOR_LOWERING_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING=";
 
 	final context:CompilationContext;
 
@@ -125,7 +143,7 @@ class CCompiler {
 				context.symbols.register(initializationRequest);
 			}
 			context.symbols.register(headerGuardRequest);
-			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs);
+			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors);
 			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
 				final inspection:StaticInitializationInspection = {
 					schemaVersion: 1,
@@ -134,13 +152,30 @@ class CCompiler {
 				};
 				Sys.println(STATIC_INITIALIZATION_REPORT_PREFIX + Json.stringify(inspection));
 			}
+			if (Context.defined(CONSTRUCTOR_LOWERING_REPORT_DEFINE)) {
+				final inspection:ConstructorLoweringInspection = {
+					schemaVersion: 1,
+					profile: Std.string(context.profile),
+					constructors: lowered.constructors.map(value -> {
+						id: value.id,
+						haxePath: value.haxePath,
+						instanceId: value.instanceId,
+						elided: value.elided,
+						canFail: value.canFail,
+						cName: value.cName == null ? null : value.cName.value
+					}),
+					hxcir: new HxcIRDumper().dump(lowered.program)
+				};
+				Sys.println(CONSTRUCTOR_LOWERING_REPORT_PREFIX + Json.stringify(inspection));
+			}
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final genericFunctionCount = graph.specializations.length;
 			final genericTypeCount = lowered.enums.filter(value -> value.prepared.typeParameterNames.length > 0).length;
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
-					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, genericFunctionCount, genericTypeCount, registry);
+					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, lowered.constructors.length, genericFunctionCount,
+					genericTypeCount, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -178,6 +213,7 @@ class CCompiler {
 				directAggregateCount: lowered.aggregates.length,
 				directEnumCount: lowered.enums.length,
 				directClassCount: lowered.classes.length,
+				directConstructorCount: lowered.constructors.length,
 				directGenericFunctionCount: genericFunctionCount,
 				directGenericTypeCount: genericTypeCount,
 				specializationReport: specializationReport,
@@ -206,8 +242,8 @@ class CCompiler {
 
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
-			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, genericFunctionCount:Int,
-			genericTypeCount:Int, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
+			genericFunctionCount:Int, genericTypeCount:Int, registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
 			"ub-safe-primitive-operations",
@@ -228,6 +264,9 @@ class CCompiler {
 		}
 		if (classCount > 0) {
 			directDecisions.push("concrete-class-reference-layouts");
+		}
+		if (constructorCount > 0) {
+			directDecisions.push("bounded-stack-construction");
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			directDecisions.push("closed-generic-specializations");
@@ -250,6 +289,9 @@ class CCompiler {
 		}
 		if (classCount > 0) {
 			proof += ", plus nullable concrete class references with base-prefix subobjects, explicit null checks, and private direct field storage";
+		}
+		if (constructorCount > 0) {
+			proof += ", with compiler-proven stack construction, explicit partial/initialized cleanup order, and no escaping object lifetime";
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			proof += ", with closed generic instances shared by collision-checked semantic keys and bounded code-size planning";

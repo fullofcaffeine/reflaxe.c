@@ -1,15 +1,16 @@
 # Concrete class instance layouts
 
 E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-5 HxcIR to private
+classes. Reachable class declarations lower through schema-6 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
 storage. The slice is available in both `portable` and `metal`, selects no
 `hxrt` feature, and does not establish a public C ABI.
 
-This task defines storage and reference operations only. Haxe-side allocation,
-constructors, `super` calls, and field-initialization order remain E3.T05 work.
-The positive Haxe fixture can therefore pass, compare, upcast, and access class
-references, but it does not pretend that `new` is already supported.
+This task defines storage and reference operations. E3.T05 separately adds a
+bounded `new` path for unconditional, nonescaping local objects, including
+constructors, `super`, field initialization, and cleanup. General allocation
+and escaping ownership remain later work; see [bounded constructor
+lowering](constructor-lowering.md).
 
 ## Nominal storage and inheritance
 
@@ -82,11 +83,12 @@ not a public export. Production evidence requires the ABI report to retain
 tag, member name, size, alignment, offset, or reference spelling in this slice
 is stable across compiler versions.
 
-Instance methods and constructors remain unsupported; virtual dispatch is
-E3.T06, interfaces are E3.T07, and the object descriptor/header plus tracing
-policy belongs to E4.T05. Generic class specialization, reflection, dynamic
-casts/type tests, allocation, escaping ownership, and public class ABI also
-remain fail-closed.
+Instance methods remain unsupported; virtual dispatch is E3.T06, interfaces
+are E3.T07, and the object descriptor/header plus tracing policy belongs to
+E4.T05. Constructors are admitted only through E3.T05's bounded nonescaping
+stack model. Generic class specialization, reflection, dynamic casts/type
+tests, general allocation, escaping ownership, and public class ABI remain
+fail-closed.
 
 ## Evidence
 
@@ -106,4 +108,5 @@ byte-identical production roots under automatic and explicit runtime-none
 policy. Required CI lanes compile and run the checked-in generated C plus its
 C++17 layout companion under identity-verified GCC/G++ and Clang/Clang++ at
 both optimization levels. Negative fixtures cover interfaces, generic classes,
-allocation, and downcasts without broadening those later-owned capabilities.
+and downcasts without broadening those later-owned capabilities. Constructor
+and escaping-allocation boundaries live in the dedicated E3.T05 suite.

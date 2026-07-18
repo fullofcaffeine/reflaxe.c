@@ -270,7 +270,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts.",
-      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-5 HxcIR and run as runtime-free strict C11.",
+      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-6 HxcIR and run as runtime-free strict C11.",
       "evidence": [
         "docs/class-layout.md",
         "src/reflaxe/c/lowering/CBodyClass.hx",
@@ -283,7 +283,7 @@
         "E3.T04"
       ],
       "limitations": [
-        "Haxe-side allocation and constructors, instance methods, virtual/interface dispatch, generic classes, object headers/descriptors, reflection/type tests, ownership/GC, and public class ABI remain fail-closed.",
+        "Bounded nonescaping stack construction is a separate capability; general allocation, instance methods, virtual/interface dispatch, generic classes, object headers/descriptors, reflection/type tests, ownership/GC, and public class ABI remain fail-closed.",
         "The generated program header and every asserted layout are private compiler implementation details, not stable exports."
       ]
     },
@@ -323,6 +323,28 @@
       ],
       "limitations": [
         "There is no hxc.json parser, precedence model, schema, canonical effective-config report, or complete capability matrix."
+      ]
+    },
+    {
+      "id": "constructor-lowering",
+      "area": "compiler",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-6 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
+      "evidence": [
+        "docs/constructor-lowering.md",
+        "src/reflaxe/c/lowering/CBodyConstructor.hx",
+        "test/constructor_lowering/expected/constructors.hxcir",
+        "test/constructor_lowering/expected/program.h",
+        "test/constructor_lowering/expected/program.c",
+        "test/constructor_lowering/run.py"
+      ],
+      "owners": [
+        "E3.T05"
+      ],
+      "limitations": [
+        "Escaping, aliased, assigned, returned, passed, or conditional object references, constructor cycles, native layouts, generic/interface construction, heap allocation, general exceptions, instance dispatch, object runtime metadata, and public class ABI remain fail-closed."
       ]
     },
     {
@@ -391,7 +413,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks.",
-      "scope": "Focused M0/E3 suites and the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
+      "scope": "Focused M0/E3 suites, including constructor lowering, and the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
       "evidence": [
         "docs/specs/fixture-taxonomy.json",
         "scripts/ci/check_fixture_policy.py",
@@ -399,7 +421,8 @@
       ],
       "owners": [
         "E0.T09",
-        "E2.T10"
+        "E2.T10",
+        "E3.T05"
       ],
       "limitations": [
         "A registered lane proves only its declared artifact and assertion scope."
@@ -411,7 +434,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
-      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded direct-value enum, and compiler-known literal-output subsets are admitted.",
+      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded nonescaping constructor, bounded direct-value enum, and compiler-known literal-output subsets are admitted.",
       "evidence": [
         "src/reflaxe/c/CCompiler.hx",
         "test/all_sources/run.py",
@@ -422,7 +445,7 @@
         "E3.T10"
       ],
       "limitations": [
-        "Class allocation/constructors, instance methods, virtual/interface calls, closures, generic classes/references or descriptor-driven bodies, general String values, general arrays, exceptions, and dynamic/reflection semantics remain outside the admitted slice."
+        "General or escaping class allocation, instance methods, virtual/interface calls, closures, generic classes/references or descriptor-driven bodies, general String values, general arrays, catch/finally and exception payloads, and dynamic/reflection semantics remain outside the admitted slice."
       ]
     },
     {
@@ -532,11 +555,12 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-5 HxcIR structurally records values, tagged cases, concrete class layouts/references, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, concrete class-reference, bounded enum, and literal-output lowering slices.",
+      "summary": "Schema-6 HxcIR structurally records values, tagged cases, concrete class layouts/references, default initialization, function failure conventions, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, concrete class-reference, bounded constructor, bounded enum, and literal-output lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
+        "test/constructor_lowering/expected/constructors.hxcir",
         "test/class_layout/expected/classes.hxcir",
         "test/hxc_ir/run.py"
       ],
@@ -545,7 +569,8 @@
         "E2.T07",
         "E3.T01",
         "E3.T02",
-        "E3.T04"
+        "E3.T04",
+        "E3.T05"
       ],
       "limitations": [
         "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
@@ -600,13 +625,14 @@
       "area": "quality",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/class/enum-layout, generic-specialization, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate, class, and enum C/C++ layout agreement, checked class-reference behavior, closed generic C11 execution, the checked-in generated hello baseline, and the seeded primitive ASan/UBSan corpus registered by the runners.",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/class/constructor/enum-layout, generic-specialization, and hello corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate, class, constructor-header, and enum C/C++ agreement, checked class-reference and constructor-failure behavior, closed generic C11 execution, the checked-in generated hello baseline, and the seeded primitive ASan/UBSan corpus registered by the runners.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
         "test/aggregate_lowering/run.py",
         "test/class_layout/run.py",
+        "test/constructor_lowering/run.py",
         "test/enum_lowering/run.py",
         "test/generic_specialization/run.py",
         "test/primitive_differential/run.py",
@@ -619,7 +645,8 @@
         "E3.T01",
         "E3.T02",
         "E3.T03",
-        "E3.T04"
+        "E3.T04",
+        "E3.T05"
       ],
       "limitations": [
         "Component-native evidence is not a complete supported-platform or release matrix."
@@ -961,7 +988,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
-      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-5 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
+      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-6 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
       "evidence": [
         "docs/enum-lowering.md",
         "src/reflaxe/c/lowering/CBodyEnum.hx",

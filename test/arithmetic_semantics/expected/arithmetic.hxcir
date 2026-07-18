@@ -1,6 +1,6 @@
-hxcir schema=5
+hxcir schema=6
 module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-145:3
-  function "function.ArithmeticFixture.fadd" name="ArithmeticFixture.fadd" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
+  function "function.ArithmeticFixture.fadd" name="ArithmeticFixture.fadd" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
@@ -8,7 +8,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     end block "entry"
   end function "function.ArithmeticFixture.fadd"
-  function "function.ArithmeticFixture.fdiv" name="ArithmeticFixture.fdiv" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
+  function "function.ArithmeticFixture.fdiv" name="ArithmeticFixture.fdiv" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
@@ -16,7 +16,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     end block "entry"
   end function "function.ArithmeticFixture.fdiv"
-  function "function.ArithmeticFixture.fequal" name="ArithmeticFixture.fequal" returns=bool entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
+  function "function.ArithmeticFixture.fequal" name="ArithmeticFixture.fequal" returns=bool failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
@@ -24,14 +24,14 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     end block "entry"
   end function "function.ArithmeticFixture.fequal"
-  function "function.ArithmeticFixture.fint" name="ArithmeticFixture.fint" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
+  function "function.ArithmeticFixture.fint" name="ArithmeticFixture.fint" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
       instruction "instruction.0.std-int" result="value.0":i32 convert value="parameter.0" kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:10-63:24
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
     end block "entry"
   end function "function.ArithmeticFixture.fint"
-  function "function.ArithmeticFixture.fmod" name="ArithmeticFixture.fmod" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
+  function "function.ArithmeticFixture.fmod" name="ArithmeticFixture.fmod" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
@@ -39,7 +39,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     end block "entry"
   end function "function.ArithmeticFixture.fmod"
-  function "function.ArithmeticFixture.fmul" name="ArithmeticFixture.fmul" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
+  function "function.ArithmeticFixture.fmul" name="ArithmeticFixture.fmul" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
@@ -47,14 +47,14 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     end block "entry"
   end function "function.ArithmeticFixture.fmul"
-  function "function.ArithmeticFixture.fneg" name="ArithmeticFixture.fneg" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
+  function "function.ArithmeticFixture.fneg" name="ArithmeticFixture.fneg" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
       instruction "instruction.0.unary" result="value.0":f64 unary operation="haxe.f64.negate" value="parameter.0" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:10-54:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
     end block "entry"
   end function "function.ArithmeticFixture.fneg"
-  function "function.ArithmeticFixture.fsub" name="ArithmeticFixture.fsub" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
+  function "function.ArithmeticFixture.fsub" name="ArithmeticFixture.fsub" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
@@ -62,7 +62,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     end block "entry"
   end function "function.ArithmeticFixture.fsub"
-  function "function.ArithmeticFixture.iadd" name="ArithmeticFixture.iadd" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
+  function "function.ArithmeticFixture.iadd" name="ArithmeticFixture.iadd" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
@@ -70,7 +70,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     end block "entry"
   end function "function.ArithmeticFixture.iadd"
-  function "function.ArithmeticFixture.iand" name="ArithmeticFixture.iand" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
+  function "function.ArithmeticFixture.iand" name="ArithmeticFixture.iand" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
@@ -78,7 +78,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     end block "entry"
   end function "function.ArithmeticFixture.iand"
-  function "function.ArithmeticFixture.idiv" name="ArithmeticFixture.idiv" returns=f64 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
+  function "function.ArithmeticFixture.idiv" name="ArithmeticFixture.idiv" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
@@ -88,7 +88,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.2" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
     end block "entry"
   end function "function.ArithmeticFixture.idiv"
-  function "function.ArithmeticFixture.iless" name="ArithmeticFixture.iless" returns=bool entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
+  function "function.ArithmeticFixture.iless" name="ArithmeticFixture.iless" returns=bool failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
@@ -96,7 +96,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     end block "entry"
   end function "function.ArithmeticFixture.iless"
-  function "function.ArithmeticFixture.imod" name="ArithmeticFixture.imod" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
+  function "function.ArithmeticFixture.imod" name="ArithmeticFixture.imod" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
@@ -104,7 +104,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     end block "entry"
   end function "function.ArithmeticFixture.imod"
-  function "function.ArithmeticFixture.imul" name="ArithmeticFixture.imul" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
+  function "function.ArithmeticFixture.imul" name="ArithmeticFixture.imul" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
@@ -112,21 +112,21 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     end block "entry"
   end function "function.ArithmeticFixture.imul"
-  function "function.ArithmeticFixture.ineg" name="ArithmeticFixture.ineg" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
+  function "function.ArithmeticFixture.ineg" name="ArithmeticFixture.ineg" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
       instruction "instruction.0.unary" result="value.0":i32 unary operation="haxe.i32.negate" value="parameter.0" implementation=program-local("hxc.i32.negate.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:10-12:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
     end block "entry"
   end function "function.ArithmeticFixture.ineg"
-  function "function.ArithmeticFixture.inot" name="ArithmeticFixture.inot" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
+  function "function.ArithmeticFixture.inot" name="ArithmeticFixture.inot" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
       instruction "instruction.0.unary" result="value.0":i32 unary operation="haxe.i32.bit-not" value="parameter.0" implementation=program-local("hxc.i32.bit-not") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:10-39:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
     end block "entry"
   end function "function.ArithmeticFixture.inot"
-  function "function.ArithmeticFixture.ior" name="ArithmeticFixture.ior" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
+  function "function.ArithmeticFixture.ior" name="ArithmeticFixture.ior" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
@@ -134,7 +134,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     end block "entry"
   end function "function.ArithmeticFixture.ior"
-  function "function.ArithmeticFixture.ishl" name="ArithmeticFixture.ishl" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
+  function "function.ArithmeticFixture.ishl" name="ArithmeticFixture.ishl" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
@@ -142,7 +142,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     end block "entry"
   end function "function.ArithmeticFixture.ishl"
-  function "function.ArithmeticFixture.ishr" name="ArithmeticFixture.ishr" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
+  function "function.ArithmeticFixture.ishr" name="ArithmeticFixture.ishr" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
@@ -150,7 +150,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     end block "entry"
   end function "function.ArithmeticFixture.ishr"
-  function "function.ArithmeticFixture.isub" name="ArithmeticFixture.isub" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
+  function "function.ArithmeticFixture.isub" name="ArithmeticFixture.isub" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
@@ -158,7 +158,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     end block "entry"
   end function "function.ArithmeticFixture.isub"
-  function "function.ArithmeticFixture.iushr" name="ArithmeticFixture.iushr" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
+  function "function.ArithmeticFixture.iushr" name="ArithmeticFixture.iushr" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
@@ -166,7 +166,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     end block "entry"
   end function "function.ArithmeticFixture.iushr"
-  function "function.ArithmeticFixture.ixor" name="ArithmeticFixture.ixor" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
+  function "function.ArithmeticFixture.ixor" name="ArithmeticFixture.ixor" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
@@ -174,7 +174,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     end block "entry"
   end function "function.ArithmeticFixture.ixor"
-  function "function.ArithmeticFixture.main" name="ArithmeticFixture.main" returns=void entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
+  function "function.ArithmeticFixture.main" name="ArithmeticFixture.main" returns=void failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":117:8-117:9
       instruction "instruction.1.constant" result="value.1":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":117:11-117:12
@@ -261,7 +261,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value=none cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":89:30-145:3
     end block "entry"
   end function "function.ArithmeticFixture.main"
-  function "function.ArithmeticFixture.uadd" name="ArithmeticFixture.uadd" returns=u32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
+  function "function.ArithmeticFixture.uadd" name="ArithmeticFixture.uadd" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     parameter "parameter.1" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
@@ -269,7 +269,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     end block "entry"
   end function "function.ArithmeticFixture.uadd"
-  function "function.ArithmeticFixture.umod" name="ArithmeticFixture.umod" returns=u32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
+  function "function.ArithmeticFixture.umod" name="ArithmeticFixture.umod" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     parameter "parameter.1" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
@@ -277,7 +277,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     end block "entry"
   end function "function.ArithmeticFixture.umod"
-  function "function.ArithmeticFixture.update" name="ArithmeticFixture.update" returns=i32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
+  function "function.ArithmeticFixture.update" name="ArithmeticFixture.update" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
     parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":80:40-87:3
     local "local.1" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":81:3-81:23
     local "local.2" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":82:3-82:23
@@ -306,7 +306,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.12" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":86:3-86:17
     end block "entry"
   end function "function.ArithmeticFixture.update"
-  function "function.ArithmeticFixture.ushl" name="ArithmeticFixture.ushl" returns=u32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
+  function "function.ArithmeticFixture.ushl" name="ArithmeticFixture.ushl" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
@@ -314,7 +314,7 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     end block "entry"
   end function "function.ArithmeticFixture.ushl"
-  function "function.ArithmeticFixture.ushr" name="ArithmeticFixture.ushr" returns=u32 entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
+  function "function.ArithmeticFixture.ushr" name="ArithmeticFixture.ushr" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
     parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
     parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23

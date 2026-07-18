@@ -1,9 +1,9 @@
-hxcir schema=5
+hxcir schema=6
 module "AStaticInitDependent" @"AStaticInitDependent.hx":2:2-7:69
   global "global.AStaticInitDependent.first" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.first") @"AStaticInitDependent.hx":2:2-2:62
   global "global.AStaticInitDependent.second" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.second") @"AStaticInitDependent.hx":3:2-3:43
   global "global.AStaticInitDependent.value" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.value") @"AStaticInitDependent.hx":4:2-4:98
-  function "initializer.AStaticInitDependent.class" name="AStaticInitDependent.class-init" returns=void entry="entry" @"AStaticInitDependent.hx":7:3-7:69
+  function "initializer.AStaticInitDependent.class" name="AStaticInitDependent.class-init" returns=void failure=infallible entry="entry" @"AStaticInitDependent.hx":7:3-7:69
     block "entry" @"AStaticInitDependent.hx":7:3-7:69
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.classOrder") @"AStaticInitDependent.hx":7:33-7:60
       instruction "instruction.1.constant" result="value.1":i32 constant value=int(10) @"AStaticInitDependent.hx":7:63-7:65
@@ -14,14 +14,14 @@ module "AStaticInitDependent" @"AStaticInitDependent.hx":2:2-7:69
       terminator return value=none cleanup=[] @"AStaticInitDependent.hx":7:3-7:69
     end block "entry"
   end function "initializer.AStaticInitDependent.class"
-  function "initializer.AStaticInitDependent.field.first" name="AStaticInitDependent.static-field-first" returns=void entry="entry" @"AStaticInitDependent.hx":2:32-2:61
+  function "initializer.AStaticInitDependent.field.first" name="AStaticInitDependent.static-field-first" returns=void failure=infallible entry="entry" @"AStaticInitDependent.hx":2:32-2:61
     block "entry" @"AStaticInitDependent.hx":2:32-2:61
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.ZStaticInitPrerequisite.value") @"AStaticInitDependent.hx":2:32-2:61
       instruction "instruction.1.initialize-global" result=- initialize place=global("global.AStaticInitDependent.first") value="value.0" transition=uninitialized->initialized @"AStaticInitDependent.hx":2:32-2:61
       terminator return value=none cleanup=[] @"AStaticInitDependent.hx":2:32-2:61
     end block "entry"
   end function "initializer.AStaticInitDependent.field.first"
-  function "initializer.AStaticInitDependent.field.second" name="AStaticInitDependent.static-field-second" returns=void entry="entry" @"AStaticInitDependent.hx":3:33-3:42
+  function "initializer.AStaticInitDependent.field.second" name="AStaticInitDependent.static-field-second" returns=void failure=infallible entry="entry" @"AStaticInitDependent.hx":3:33-3:42
     block "entry" @"AStaticInitDependent.hx":3:33-3:42
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.AStaticInitDependent.first") @"AStaticInitDependent.hx":3:33-3:38
       instruction "instruction.1.constant" result="value.1":i32 constant value=int(5) @"AStaticInitDependent.hx":3:41-3:42
@@ -30,7 +30,7 @@ module "AStaticInitDependent" @"AStaticInitDependent.hx":2:2-7:69
       terminator return value=none cleanup=[] @"AStaticInitDependent.hx":3:33-3:42
     end block "entry"
   end function "initializer.AStaticInitDependent.field.second"
-  function "initializer.AStaticInitDependent.field.value" name="AStaticInitDependent.static-field-value" returns=void entry="entry" @"AStaticInitDependent.hx":4:32-4:97
+  function "initializer.AStaticInitDependent.field.value" name="AStaticInitDependent.static-field-value" returns=void failure=infallible entry="entry" @"AStaticInitDependent.hx":4:32-4:97
     block "entry" @"AStaticInitDependent.hx":4:32-4:97
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(3) @"AStaticInitDependent.hx":4:54-4:55
       instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.MStaticInitTrace.mark") arguments=["value.0"] returns=i32 failure=none @"AStaticInitDependent.hx":4:32-4:56
@@ -47,7 +47,7 @@ module "MStaticInitTrace" @"MStaticInitTrace.hx":2:2-18:3
   global "global.MStaticInitTrace.classOrder" type=i32 mutable=true initialization=deferred("initializer.MStaticInitTrace.field.classOrder") @"MStaticInitTrace.hx":2:2-2:48
   global "global.MStaticInitTrace.phaseValue" type=i32 mutable=true initialization=deferred("initializer.MStaticInitTrace.field.phaseValue") @"MStaticInitTrace.hx":3:2-3:39
   global "global.MStaticInitTrace.trace" type=i32 mutable=true initialization=deferred("initializer.MStaticInitTrace.field.trace") @"MStaticInitTrace.hx":4:2-4:39
-  function "function.MStaticInitTrace.mark" name="MStaticInitTrace.mark" returns=i32 entry="entry" @"MStaticInitTrace.hx":15:45-18:3
+  function "function.MStaticInitTrace.mark" name="MStaticInitTrace.mark" returns=i32 failure=infallible entry="entry" @"MStaticInitTrace.hx":15:45-18:3
     parameter "parameter.0" type=i32 @"MStaticInitTrace.hx":15:45-18:3
     block "entry" @"MStaticInitTrace.hx":15:45-18:3
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.trace") @"MStaticInitTrace.hx":16:11-16:16
@@ -59,13 +59,13 @@ module "MStaticInitTrace" @"MStaticInitTrace.hx":2:2-18:3
       terminator return value="value.4" cleanup=[] @"MStaticInitTrace.hx":17:3-17:15
     end block "entry"
   end function "function.MStaticInitTrace.mark"
-  function "function.MStaticInitTrace.seed" name="MStaticInitTrace.seed" returns=i32 entry="entry" @"MStaticInitTrace.hx":11:29-13:3
+  function "function.MStaticInitTrace.seed" name="MStaticInitTrace.seed" returns=i32 failure=infallible entry="entry" @"MStaticInitTrace.hx":11:29-13:3
     block "entry" @"MStaticInitTrace.hx":12:3-12:11
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(1) @"MStaticInitTrace.hx":12:10-12:11
       terminator return value="value.0" cleanup=[] @"MStaticInitTrace.hx":12:3-12:11
     end block "entry"
   end function "function.MStaticInitTrace.seed"
-  function "initializer.MStaticInitTrace.class" name="MStaticInitTrace.class-init" returns=void entry="entry" @"MStaticInitTrace.hx":6:34-9:3
+  function "initializer.MStaticInitTrace.class" name="MStaticInitTrace.class-init" returns=void failure=infallible entry="entry" @"MStaticInitTrace.hx":6:34-9:3
     block "entry" @"MStaticInitTrace.hx":6:34-9:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(3) @"MStaticInitTrace.hx":7:16-7:17
       instruction "instruction.1.store" result=- store place=global("global.MStaticInitTrace.phaseValue") value="value.0" @"MStaticInitTrace.hx":7:3-7:17
@@ -74,21 +74,21 @@ module "MStaticInitTrace" @"MStaticInitTrace.hx":2:2-18:3
       terminator return value=none cleanup=[] @"MStaticInitTrace.hx":6:34-9:3
     end block "entry"
   end function "initializer.MStaticInitTrace.class"
-  function "initializer.MStaticInitTrace.field.classOrder" name="MStaticInitTrace.static-field-classOrder" returns=void entry="entry" @"MStaticInitTrace.hx":2:37-2:47
+  function "initializer.MStaticInitTrace.field.classOrder" name="MStaticInitTrace.static-field-classOrder" returns=void failure=infallible entry="entry" @"MStaticInitTrace.hx":2:37-2:47
     block "entry" @"MStaticInitTrace.hx":2:37-2:47
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.classOrder") @"MStaticInitTrace.hx":2:37-2:47
       instruction "instruction.1.initialize-global" result=- initialize place=global("global.MStaticInitTrace.classOrder") value="value.0" transition=uninitialized->initialized @"MStaticInitTrace.hx":2:37-2:47
       terminator return value=none cleanup=[] @"MStaticInitTrace.hx":2:37-2:47
     end block "entry"
   end function "initializer.MStaticInitTrace.field.classOrder"
-  function "initializer.MStaticInitTrace.field.phaseValue" name="MStaticInitTrace.static-field-phaseValue" returns=void entry="entry" @"MStaticInitTrace.hx":3:37-3:38
+  function "initializer.MStaticInitTrace.field.phaseValue" name="MStaticInitTrace.static-field-phaseValue" returns=void failure=infallible entry="entry" @"MStaticInitTrace.hx":3:37-3:38
     block "entry" @"MStaticInitTrace.hx":3:37-3:38
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(7) @"MStaticInitTrace.hx":3:37-3:38
       instruction "instruction.1.initialize-global" result=- initialize place=global("global.MStaticInitTrace.phaseValue") value="value.0" transition=uninitialized->initialized @"MStaticInitTrace.hx":3:37-3:38
       terminator return value=none cleanup=[] @"MStaticInitTrace.hx":3:37-3:38
     end block "entry"
   end function "initializer.MStaticInitTrace.field.phaseValue"
-  function "initializer.MStaticInitTrace.field.trace" name="MStaticInitTrace.static-field-trace" returns=void entry="entry" @"MStaticInitTrace.hx":4:32-4:38
+  function "initializer.MStaticInitTrace.field.trace" name="MStaticInitTrace.static-field-trace" returns=void failure=infallible entry="entry" @"MStaticInitTrace.hx":4:32-4:38
     block "entry" @"MStaticInitTrace.hx":4:32-4:38
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.MStaticInitTrace.seed") arguments=[] returns=i32 failure=none @"MStaticInitTrace.hx":4:32-4:38
       instruction "instruction.1.initialize-global" result=- initialize place=global("global.MStaticInitTrace.trace") value="value.0" transition=uninitialized->initialized @"MStaticInitTrace.hx":4:32-4:38
@@ -97,13 +97,13 @@ module "MStaticInitTrace" @"MStaticInitTrace.hx":2:2-18:3
   end function "initializer.MStaticInitTrace.field.trace"
 end module "MStaticInitTrace"
 module "StaticInitializationFixture" @"StaticInitializationFixture.hx":2:32-22:3
-  function "function.StaticInitializationFixture.main" name="StaticInitializationFixture.main" returns=void entry="entry" @"StaticInitializationFixture.hx":7:30-22:3
+  function "function.StaticInitializationFixture.main" name="StaticInitializationFixture.main" returns=void failure=infallible entry="entry" @"StaticInitializationFixture.hx":7:30-22:3
     block "entry" @"StaticInitializationFixture.hx":20:3-20:12
       instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.StaticInitializationFixture.outcome") arguments=[] returns=i32 failure=none @"StaticInitializationFixture.hx":20:3-20:12
       terminator return value=none cleanup=[] @"StaticInitializationFixture.hx":20:3-20:12
     end block "entry"
   end function "function.StaticInitializationFixture.main"
-  function "function.StaticInitializationFixture.outcome" name="StaticInitializationFixture.outcome" returns=i32 entry="entry" @"StaticInitializationFixture.hx":2:32-5:3
+  function "function.StaticInitializationFixture.outcome" name="StaticInitializationFixture.outcome" returns=i32 failure=infallible entry="entry" @"StaticInitializationFixture.hx":2:32-5:3
     block "entry" @"StaticInitializationFixture.hx":3:3-4:91
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.classOrder") @"StaticInitializationFixture.hx":3:10-3:37
       instruction "instruction.1.global-load" result="value.1":i32 load place=global("global.MStaticInitTrace.phaseValue") @"StaticInitializationFixture.hx":3:40-3:67
@@ -124,7 +124,7 @@ module "StaticInitializationFixture" @"StaticInitializationFixture.hx":2:32-22:3
 end module "StaticInitializationFixture"
 module "ZStaticInitPrerequisite" @"ZStaticInitPrerequisite.hx":2:2-5:69
   global "global.ZStaticInitPrerequisite.value" type=i32 mutable=true initialization=deferred("initializer.ZStaticInitPrerequisite.field.value") @"ZStaticInitPrerequisite.hx":2:2-2:57
-  function "initializer.ZStaticInitPrerequisite.class" name="ZStaticInitPrerequisite.class-init" returns=void entry="entry" @"ZStaticInitPrerequisite.hx":5:3-5:69
+  function "initializer.ZStaticInitPrerequisite.class" name="ZStaticInitPrerequisite.class-init" returns=void failure=infallible entry="entry" @"ZStaticInitPrerequisite.hx":5:3-5:69
     block "entry" @"ZStaticInitPrerequisite.hx":5:3-5:69
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.classOrder") @"ZStaticInitPrerequisite.hx":5:33-5:60
       instruction "instruction.1.constant" result="value.1":i32 constant value=int(10) @"ZStaticInitPrerequisite.hx":5:63-5:65
@@ -135,7 +135,7 @@ module "ZStaticInitPrerequisite" @"ZStaticInitPrerequisite.hx":2:2-5:69
       terminator return value=none cleanup=[] @"ZStaticInitPrerequisite.hx":5:3-5:69
     end block "entry"
   end function "initializer.ZStaticInitPrerequisite.class"
-  function "initializer.ZStaticInitPrerequisite.field.value" name="ZStaticInitPrerequisite.static-field-value" returns=void entry="entry" @"ZStaticInitPrerequisite.hx":2:32-2:56
+  function "initializer.ZStaticInitPrerequisite.field.value" name="ZStaticInitPrerequisite.static-field-value" returns=void failure=infallible entry="entry" @"ZStaticInitPrerequisite.hx":2:32-2:56
     block "entry" @"ZStaticInitPrerequisite.hx":2:32-2:56
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(2) @"ZStaticInitPrerequisite.hx":2:54-2:55
       instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.MStaticInitTrace.mark") arguments=["value.0"] returns=i32 failure=none @"ZStaticInitPrerequisite.hx":2:32-2:56

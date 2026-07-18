@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "bounded-constructor-lowering-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-013",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyConstructor.hx",
+    "test/constructor_lowering/fixtures/conditional/Main.hx",
+    "test/constructor_lowering/fixtures/cycle/Main.hx",
+    "test/constructor_lowering/fixtures/escape_alias/Main.hx",
+    "test/constructor_lowering/fixtures/escape_argument/Main.hx",
+    "test/constructor_lowering/fixtures/escape_return/Main.hx",
+    "test/constructor_lowering/fixtures/escape_self/Main.hx",
+    "test/constructor_lowering/fixtures/generic/Main.hx",
+    "test/constructor_lowering/fixtures/native_layout/Main.hx",
+    "test/constructor_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../constructor_lowering/run.py"
+    ],
+    "workingDirectory": "test/negative/constructor-lowering",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC1001"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed escape/cycle/native-layout/generic edges passed$"
+    }
+  }
+}

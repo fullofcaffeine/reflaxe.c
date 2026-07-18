@@ -30,7 +30,7 @@ enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
 	CBVKEnum(value:CPreparedBodyEnumInstance);
-	CBVKClass(value:CPreparedBodyClass);
+	CBVKClass(value:CPreparedBodyClass, nullable:Bool);
 }
 
 /** The exact admitted representation of one Haxe body value. */
@@ -51,9 +51,9 @@ class CBodyValueType {
 			case CBVKEnum(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-enum:${value.digest}';
-			case CBVKClass(value):
-				this.irType = IRTPointer(IRTInstance(value.instanceId), true);
-				this.cSpelling = 'haxe-class-reference:${value.digest}';
+			case CBVKClass(value, nullable):
+				this.irType = IRTPointer(IRTInstance(value.instanceId), nullable);
+				this.cSpelling = 'haxe-class-reference:${nullable ? "nullable" : "nonnull"}:${value.digest}';
 		}
 	}
 
@@ -66,13 +66,13 @@ class CBodyValueType {
 	public static function enumeration(value:CPreparedBodyEnumInstance):CBodyValueType
 		return new CBodyValueType(CBVKEnum(value));
 
-	public static function classReference(value:CPreparedBodyClass):CBodyValueType
-		return new CBodyValueType(CBVKClass(value));
+	public static function classReference(value:CPreparedBodyClass, nullable:Bool = true):CBodyValueType
+		return new CBodyValueType(CBVKClass(value, nullable));
 
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_): null;
+			case CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
 		};
 	}
 
@@ -80,13 +80,13 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(_): null;
 			case CBVKAggregate(aggregate): aggregate;
-			case CBVKEnum(_) | CBVKClass(_): null;
+			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
 	}
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKClass(_): null;
+			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
@@ -94,7 +94,14 @@ class CBodyValueType {
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKEnum(_): null;
-			case CBVKClass(value): value;
+			case CBVKClass(value, _): value;
+		};
+	}
+
+	public function classNullable():Null<Bool> {
+		return switch kind {
+			case CBVKClass(_, nullable): nullable;
+			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKEnum(_): null;
 		};
 	}
 }

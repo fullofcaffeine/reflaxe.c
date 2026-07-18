@@ -10,7 +10,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 5;
+	public static inline final SCHEMA_VERSION = 6;
 
 	public function new() {}
 
@@ -268,6 +268,13 @@ private class HxcIRValidationState {
 		validateSpan(fn.source, '$path.source');
 		validateText(fn.displayName, '$path.displayName', fn.source);
 		validateTypeRef(fn.returnType, '$path.returnType', fn.source, true);
+		switch fn.failureConvention {
+			case IRFCInfallible:
+			case IRFCStatus(_):
+				if (fn.returnType != IRTVoid) {
+					add(path, "the admitted status convention requires a Void semantic result", fn.source);
+				}
+		}
 		validateStableId(fn.entryBlockId, '$path.entryBlockId', fn.source);
 
 		final locals:Map<String, HxcIRLocal> = [];
@@ -667,6 +674,18 @@ private class HxcIRValidationState {
 			case IRIODeallocate(place, implementation) | IRIORetain(place, implementation) | IRIOTrace(place, implementation):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validateImplementation(implementation, '$path.implementation', instruction.source);
+			case IRIODefaultInitialize(place, from, to):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				final initializedType = knownPlaceType(place, available, locals);
+				switch initializedType {
+					case IRTInstance(instanceId) if (isClassInstance(instanceId)):
+					case _:
+						add(path, "default object initialization requires a direct concrete-class place", instruction.source);
+				}
+				validateTransition(from, to, '$path.transition', instruction.source);
+				if (from != IRISUninitialized || to != IRISInitializing && to != IRISInitialized) {
+					add(path, "default object initialization must begin uninitialized and end initializing or initialized", instruction.source);
+				}
 			case IRIOInitialize(place, valueId, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = requireValue(valueId, '$path.value', instruction.source, available);
@@ -758,9 +777,9 @@ private class HxcIRValidationState {
 				true;
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
-			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIOInitialize(_, _, _, _) |
-				IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) |
-				IRIOLifetime(_, _, _, _):
+			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIODefaultInitialize(_, _, _) |
+				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBoundsCheck(_, _, _) |
+				IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}
@@ -779,6 +798,15 @@ private class HxcIRValidationState {
 					add(path, 'direct call refers to unknown function `$functionId`', source);
 				} else {
 					validateKnownCallSignature(call, argumentTypes, target.parameters, target.returnType, path, source);
+					switch target.failureConvention {
+						case IRFCInfallible:
+						case IRFCStatus(kind):
+							if (call.failure == null) {
+								add(path, 'status-returning direct call `$functionId` requires an explicit failure edge', source);
+							} else if (call.failure.kind != kind) {
+								add(path, 'status-returning direct call `$functionId` failure kind does not match its target convention', source);
+							}
+					}
 				}
 			case IRCDVirtual(slotId, receiverValueId):
 				validateStableId(slotId, '$path.virtualSlot', source);
@@ -934,6 +962,15 @@ private class HxcIRValidationState {
 				validateFailureEdge(edge, '$path.failure', source, available, blocks, regions);
 				if (edge.kind != IRFException) {
 					add(path, "throw terminator must use an exception failure edge", source);
+				}
+				switch edge.target {
+					case IRFTPropagate:
+						switch fn.failureConvention {
+							case IRFCStatus(kind) if (kind == edge.kind):
+							case _:
+								add(path, "throw propagation requires a matching function status convention", source);
+						}
+					case IRFTBlock(_) | IRFTAbort:
 				}
 			case IRTUnreachable:
 		}

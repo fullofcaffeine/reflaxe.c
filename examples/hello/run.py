@@ -154,7 +154,7 @@ def text_list(value: object, label: str) -> list[str]:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=5",
+        "hxcir schema=6",
         'string-utf8(bytes=14,value="Hello from hxc")',
         'runtime(feature="io",operation="sys-println-literal")',
         "failure(kind=native-status,target=abort,arguments=[],cleanup=[])",

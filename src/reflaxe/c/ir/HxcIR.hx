@@ -231,6 +231,12 @@ enum HxcIRFailureKind {
 	IRFNativeStatus;
 }
 
+/** How a generated C function reports a semantic failure to its caller. */
+enum HxcIRFunctionFailureConvention {
+	IRFCInfallible;
+	IRFCStatus(kind:HxcIRFailureKind);
+}
+
 enum HxcIRFailureTarget {
 	IRFTBlock(blockId:String);
 	IRFTPropagate;
@@ -299,6 +305,7 @@ enum HxcIRInstructionKind {
 	IRIODeallocate(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIORetain(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIOTrace(place:HxcIRPlace, implementation:HxcIRImplementation);
+	IRIODefaultInitialize(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
@@ -386,6 +393,7 @@ typedef HxcIRFunction = {
 	final parameters:Array<HxcIRParameter>;
 	final locals:Array<HxcIRLocal>;
 	final returnType:HxcIRTypeRef;
+	final failureConvention:HxcIRFunctionFailureConvention;
 	final entryBlockId:String;
 	final blocks:Array<HxcIRBlock>;
 	final cleanupRegions:Array<HxcIRCleanupRegion>;

@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "id": "bounded-constructor-lowering-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-007",
+    "HXC-SEM-013",
+    "HXC-SEM-021"
+  ],
+  "sources": [
+    "src/reflaxe/c/lowering/CBodyConstructor.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/constructor_lowering/fixtures/positive/Main.hx",
+    "test/constructor_lowering/fixtures/minimal/Main.hx",
+    "test/constructor_lowering/fixtures/oracle/Main.hx",
+    "test/constructor_lowering/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../constructor_lowering/run.py"
+    ],
+    "workingDirectory": "test/positive/constructor-lowering",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^constructor-lowering: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/constructor_lowering/expected/constructors.hxcir",
+        "format": "hxcir",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/constructor_lowering/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      }
+    ]
+  }
+}

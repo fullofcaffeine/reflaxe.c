@@ -1,0 +1,81 @@
+#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+{
+  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  {
+    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+  }
+  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+}
+
+static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+}
+
+static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0 * (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1));
+}
+
+struct hxc_type_compiler_haxezx2Dclass_BaseRecord;
+
+struct hxc_type_compiler_haxezx2Dclass_LeafRecord;
+
+struct hxc_type_compiler_haxezx2Dclass_FailableBase;
+
+struct hxc_type_compiler_haxezx2Dclass_FailableLeaf;
+
+struct hxc_type_compiler_haxezx2Dclass_EmptyBase;
+
+struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf;
+
+struct hxc_type_compiler_haxezx2Dclass_BaseRecord {
+  int32_t hxc_field_compiler_haxezx2Dclass_BaseRecord_field_defaulted_n0;
+  int32_t hxc_field_compiler_haxezx2Dclass_BaseRecord_field_baseField_n1;
+};
+
+struct hxc_type_compiler_haxezx2Dclass_LeafRecord {
+  struct hxc_type_compiler_haxezx2Dclass_BaseRecord hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0;
+  int32_t hxc_field_compiler_haxezx2Dclass_LeafRecord_field_firstLeafField_n1;
+  int32_t hxc_field_compiler_haxezx2Dclass_LeafRecord_field_secondLeafField_n2;
+};
+
+struct hxc_type_compiler_haxezx2Dclass_FailableBase {
+  int32_t hxc_field_compiler_haxezx2Dclass_FailableBase_field_initializzedBeforeFailure_n0;
+};
+
+struct hxc_type_compiler_haxezx2Dclass_FailableLeaf {
+  struct hxc_type_compiler_haxezx2Dclass_FailableBase hxc_field_compiler_haxezx2Dclass_FailableLeaf_base_n0;
+};
+
+struct hxc_type_compiler_haxezx2Dclass_EmptyBase {
+  unsigned char hxc_field_compiler_haxezx2Dclass_EmptyBase_emptyzx2Danchor_n0;
+};
+
+struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf {
+  struct hxc_type_compiler_haxezx2Dclass_EmptyBase hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0;
+};
+
+extern int32_t hxc_field_ConstructorTrace_value;
+
+void hxc_method_compiler_constructor_BaseRecord_n0(struct hxc_type_compiler_haxezx2Dclass_BaseRecord *hxc_local_BaseRecord_new_self_n0, int32_t hxc_local_BaseRecord_new_value_n1);
+
+bool hxc_method_compiler_constructor_FailableBase_n0(struct hxc_type_compiler_haxezx2Dclass_FailableBase *hxc_local_FailableBase_new_self_n0, bool hxc_local_FailableBase_new_shouldFail_n1);
+
+bool hxc_method_compiler_constructor_FailableLeaf_n0(struct hxc_type_compiler_haxezx2Dclass_FailableLeaf *hxc_local_FailableLeaf_new_self_n0, bool hxc_local_FailableLeaf_new_shouldFail_n1);
+
+void hxc_method_compiler_constructor_LeafRecord_n0(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_LeafRecord_new_self_n0, int32_t hxc_local_LeafRecord_new_value_n1);
+
+int32_t hxc_method_ConstructorTrace_mark(int32_t hxc_local_ConstructorTrace_mark_digit_n0);
+
+void hxc_method_Main_main(void);
+
+#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

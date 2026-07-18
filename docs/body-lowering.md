@@ -88,9 +88,11 @@ C body emitter consumes only validated IR.
 Default/optional/rest parameters, indirect calls, arbitrary collection/iterator
 lowering, general Haxe arrays, escaping spans, string/Float switches, guarded
 patterns outside the admitted enum form, recursive enum parameters/returns,
-reference or aggregate enum payloads, class instances and their fields,
-mutable/open/reflective records, record or enum identity/equality, strings,
-closures, allocation, exceptions, and cleanup remain outside this slice. The first
+reference or aggregate enum payloads, mutable/open/reflective records, record
+or enum identity/equality, strings, closures, general allocation, exceptions,
+and cleanup remain outside this primitive slice. Concrete class
+references/fields and bounded nonescaping constructors are separately admitted
+by E3.T04/E3.T05. The first
 unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 Source that remains after a terminating return or loop jump receives the same
@@ -127,6 +129,13 @@ union member and call the registered C `abort` symbol on mismatch. Exhaustive
 HxcIR tag switches become structural C switches, and recursive local values use
 typed pointer declarators to function-local backing storage.
 
+Bounded constructor sites use structural automatic class storage, explicit
+default initialization, and ordinary private C constructor calls. HxcIR keeps
+the `initializing`/`initialized` transitions, status failure convention, and
+ordered cleanup edges visible before C emission. See [bounded constructor
+lowering](constructor-lowering.md); escaping references and general object
+allocation remain fail-closed.
+
 Every local/global load first becomes a typed stable-value temporary; an unused
 read then becomes an explicit `(void)temporary` statement so source order is
 retained without native warnings. The emitted body slice selects no runtime
@@ -161,6 +170,7 @@ npm run test:evaluation-order
 npm run test:arithmetic-semantics
 npm run test:span-lowering
 npm run test:aggregate-lowering
+npm run test:constructor-lowering
 npm run test:enum-lowering
 npm run snapshots:check
 ```
@@ -177,8 +187,8 @@ command identity before compiling the checked-in generated snapshots. The enum
 suite additionally pairs each required C compiler with its C++17 companion to
 verify private tagged-union and recursive layout.
 
-This slice has no public C ABI, broad standard-library support, allocation, or
-`hxrt` dependency. The one admitted `Std.int` intrinsic is compiler lowering,
+This slice has no public C ABI, broad standard-library support, general object
+allocation, or `hxrt` dependency. The one admitted `Std.int` intrinsic is compiler lowering,
 not a general stdlib claim. Standard-library parity remains the E5 feature
 graph: direct idiomatic C first, program-local specialization next, and only
 the narrowest justified optimized runtime slice last.

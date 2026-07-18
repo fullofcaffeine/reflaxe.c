@@ -153,7 +153,7 @@ class CStaticFunctionProjectEmitter {
 		for (fn in lowered.functions) {
 			if (!initializerIds.exists(fn.ir.id)) {
 				final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-				final declaration = bodyEmitter.typedDeclarator(fn.ir.returnType,
+				final declaration = bodyEmitter.functionDeclarator(fn.ir,
 					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
 				headerUnit.declarations.push(DPrototype([], functionSpecifiers, declaration.type, declaration.declarator, []));
 			}
@@ -193,7 +193,7 @@ class CStaticFunctionProjectEmitter {
 				throw new ProjectEmissionError('static initializer `${fn.ir.id}` unexpectedly participates in a closed call cycle');
 			}
 			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-			final signature = bodyEmitter.typedDeclarator(fn.ir.returnType,
+			final signature = bodyEmitter.functionDeclarator(fn.ir,
 				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames), false)));
 			final definition:CDecl = DFunction({
 				storage: isInitializer ? [SStatic] : [],

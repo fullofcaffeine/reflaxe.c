@@ -280,7 +280,6 @@ REQUIRED_GATE_FILES = (
     "test/class_layout/fixtures/positive/ClassLayoutFixture.hx",
     "test/class_layout/fixtures/interface/Main.hx",
     "test/class_layout/fixtures/generic/Main.hx",
-    "test/class_layout/fixtures/allocation/Main.hx",
     "test/class_layout/fixtures/downcast/Main.hx",
     "test/class_layout/native/behavior_consumer.c",
     "test/class_layout/native/layout_consumer.cpp",
@@ -296,6 +295,32 @@ REQUIRED_GATE_FILES = (
     "test/negative/class-layout/case.json",
     "test/snapshot/class-layout/case.json",
     "test/runtime/class-layout/case.json",
+    "src/reflaxe/c/lowering/CBodyConstructor.hx",
+    "docs/constructor-lowering.md",
+    "test/constructor_lowering/fixtures/positive/Main.hx",
+    "test/constructor_lowering/fixtures/minimal/Main.hx",
+    "test/constructor_lowering/fixtures/oracle/Main.hx",
+    "test/constructor_lowering/fixtures/default_runtime/Main.hx",
+    "test/constructor_lowering/fixtures/failure_runtime/Main.hx",
+    "test/constructor_lowering/fixtures/conditional/Main.hx",
+    "test/constructor_lowering/fixtures/cycle/Main.hx",
+    "test/constructor_lowering/fixtures/escape_alias/Main.hx",
+    "test/constructor_lowering/fixtures/escape_argument/Main.hx",
+    "test/constructor_lowering/fixtures/escape_return/Main.hx",
+    "test/constructor_lowering/fixtures/escape_self/Main.hx",
+    "test/constructor_lowering/fixtures/generic/Main.hx",
+    "test/constructor_lowering/fixtures/native_layout/Main.hx",
+    "test/constructor_lowering/native/constructor_header_cpp.cpp",
+    "test/constructor_lowering/expected/constructors.hxcir",
+    "test/constructor_lowering/expected/constructors.json",
+    "test/constructor_lowering/expected/program.h",
+    "test/constructor_lowering/expected/program.c",
+    "test/constructor_lowering/expected/symbols.json",
+    "test/constructor_lowering/run.py",
+    "test/positive/constructor-lowering/case.json",
+    "test/negative/constructor-lowering/case.json",
+    "test/snapshot/constructor-lowering/case.json",
+    "test/runtime/constructor-lowering/case.json",
     "src/reflaxe/c/lowering/CBodyEnum.hx",
     "docs/enum-lowering.md",
     "test/enum_lowering/EnumLoweringProbe.hx",
@@ -528,6 +553,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/function_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/aggregate_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/class_layout/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 test/constructor_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/enum_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/generic_specialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/evaluation_order/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
@@ -646,6 +672,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:aggregate-lowering entry point")
     if scripts.get("test:class-layout") != "python3 test/class_layout/run.py":
         errors.append("package.json must retain the test:class-layout entry point")
+    if (
+        scripts.get("test:constructor-lowering")
+        != "python3 test/constructor_lowering/run.py"
+    ):
+        errors.append("package.json must retain the test:constructor-lowering entry point")
     if scripts.get("test:enum-lowering") != "python3 test/enum_lowering/run.py":
         errors.append("package.json must retain the test:enum-lowering entry point")
     if (
@@ -731,6 +762,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:aggregate-lowering")
     if "npm run test:class-layout" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:class-layout")
+    if "npm run test:constructor-lowering" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append("package.json test:toolchain must execute test:constructor-lowering")
     if "npm run test:enum-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:enum-lowering")
     if "npm run test:generic-specialization" not in str(
@@ -844,6 +879,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the closed aggregate-lowering test")
     if "test/class_layout/run.py" not in pre_commit:
         errors.append("pre-commit must run the concrete class-layout test")
+    if "test/constructor_lowering/run.py" not in pre_commit:
+        errors.append("pre-commit must run the bounded constructor-lowering test")
     if "test/enum_lowering/run.py" not in pre_commit:
         errors.append("pre-commit must run the Haxe enum-lowering test")
     if "test/generic_specialization/run.py" not in pre_commit:
@@ -1158,6 +1195,34 @@ def validate() -> list[str]:
     if "compiler_identity" not in class_runner or '"--version"' not in class_runner:
         errors.append(
             "class-layout runner must verify required compiler-family identity"
+        )
+
+    constructor_runner = read_text(ROOT / "test/constructor_lowering/run.py", errors)
+    for required_constructor_contract in (
+        "C11_STRICT_FLAGS",
+        "-std=c++17",
+        "-pedantic",
+        "-Werror",
+        "-O0",
+        "-O2",
+        "run_c_fixture_corpus",
+        "constructor_header_cpp.cpp",
+        "bounded-stack-construction",
+        "failure=status(exception)",
+        "reflaxe_c_constructor_lowering_report",
+    ):
+        if required_constructor_contract not in constructor_runner:
+            errors.append(
+                "constructor-lowering runner lost strict semantic/native contract "
+                + required_constructor_contract
+            )
+    if "--native-only" not in constructor_runner or "--toolchain" not in constructor_runner:
+        errors.append(
+            "constructor-lowering runner must expose the required native matrix seam"
+        )
+    if "resolve_toolchains" not in constructor_runner:
+        errors.append(
+            "constructor-lowering runner must verify required compiler-family identity"
         )
 
     enum_runner = read_text(ROOT / "test/enum_lowering/run.py", errors)

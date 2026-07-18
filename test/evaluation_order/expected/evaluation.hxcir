@@ -1,36 +1,36 @@
-hxcir schema=5
+hxcir schema=6
 module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-126:3
   global "global.EvaluationFixture.callFlag" type=bool mutable=true initialization=constant(bool(false)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-2:35
   global "global.EvaluationFixture.counter" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":5:2-5:30
   global "global.EvaluationFixture.shortCircuitIntact" type=bool mutable=true initialization=constant(bool(true)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":3:2-3:44
   global "global.EvaluationFixture.switchCalls" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":6:2-6:34
   global "global.EvaluationFixture.ternaryIntact" type=bool mutable=true initialization=constant(bool(true)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":4:2-4:39
-  function "function.EvaluationFixture.consumePair" name="EvaluationFixture.consumePair" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
+  function "function.EvaluationFixture.consumePair" name="EvaluationFixture.consumePair" returns=void failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
     parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
     parameter "parameter.1" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
       terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":13:60-16:3
     end block "entry"
   end function "function.EvaluationFixture.consumePair"
-  function "function.EvaluationFixture.finish" name="EvaluationFixture.finish" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
+  function "function.EvaluationFixture.finish" name="EvaluationFixture.finish" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
     parameter "parameter.0" type=u32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
       terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":33:3-33:15
     end block "entry"
   end function "function.EvaluationFixture.finish"
-  function "function.EvaluationFixture.keepTernary" name="EvaluationFixture.keepTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:37-25:3
+  function "function.EvaluationFixture.keepTernary" name="EvaluationFixture.keepTernary" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:37-25:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":23:37-25:3
       instruction "instruction.0.constant" result="value.0":u32 constant value=int(7) @"test/evaluation_order/fixtures/EvaluationFixture.hx":24:10-24:11
       terminator return value="value.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":24:3-24:11
     end block "entry"
   end function "function.EvaluationFixture.keepTernary"
-  function "function.EvaluationFixture.main" name="EvaluationFixture.main" returns=void entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
+  function "function.EvaluationFixture.main" name="EvaluationFixture.main" returns=void failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
       instruction "instruction.0.call" result="value.0":u32 call dispatch=direct("function.EvaluationFixture.run") arguments=[] returns=u32 failure=none @"test/evaluation_order/fixtures/EvaluationFixture.hx":124:3-124:8
       terminator return value=none cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":120:30-126:3
     end block "entry"
   end function "function.EvaluationFixture.main"
-  function "function.EvaluationFixture.run" name="EvaluationFixture.run" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:29-119:3
+  function "function.EvaluationFixture.run" name="EvaluationFixture.run" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":41:29-119:3
     local "local.0" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":46:3-47:25
     local "local.1" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":48:3-49:25
     local "local.10" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:21-72:96
@@ -426,14 +426,14 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
       terminator branch condition="value.23" true=edge(target="block.10.if-true",arguments=[],cleanup=[]) false=edge(target="block.11.if-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":57:3-58:30
     end block "block.9.short-circuit-join"
   end function "function.EvaluationFixture.run"
-  function "function.EvaluationFixture.setCallFlag" name="EvaluationFixture.setCallFlag" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
+  function "function.EvaluationFixture.setCallFlag" name="EvaluationFixture.setCallFlag" returns=bool failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
     parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":8:47-11:3
       instruction "instruction.0.store" result=- store place=global("global.EvaluationFixture.callFlag") value="parameter.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:3-9:19
       terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":10:3-10:15
     end block "entry"
   end function "function.EvaluationFixture.setCallFlag"
-  function "function.EvaluationFixture.spoilShortCircuit" name="EvaluationFixture.spoilShortCircuit" returns=bool entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:43-21:3
+  function "function.EvaluationFixture.spoilShortCircuit" name="EvaluationFixture.spoilShortCircuit" returns=bool failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:43-21:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":18:43-21:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:24-19:29
       instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.shortCircuitIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":19:3-19:29
@@ -441,7 +441,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
       terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":20:3-20:14
     end block "entry"
   end function "function.EvaluationFixture.spoilShortCircuit"
-  function "function.EvaluationFixture.spoilTernary" name="EvaluationFixture.spoilTernary" returns=u32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:38-30:3
+  function "function.EvaluationFixture.spoilTernary" name="EvaluationFixture.spoilTernary" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:38-30:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":27:38-30:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:19-28:24
       instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.ternaryIntact") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":28:3-28:24
@@ -449,7 +449,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
       terminator return value="value.1" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":29:3-29:11
     end block "entry"
   end function "function.EvaluationFixture.spoilTernary"
-  function "function.EvaluationFixture.switchSubject" name="EvaluationFixture.switchSubject" returns=i32 entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
+  function "function.EvaluationFixture.switchSubject" name="EvaluationFixture.switchSubject" returns=i32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
     parameter "parameter.0" type=i32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
       instruction "instruction.0.increment-load" result="value.0":u32 load place=global("global.EvaluationFixture.switchCalls") @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:14

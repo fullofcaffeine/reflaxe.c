@@ -25,6 +25,10 @@ local layout, and independent C/C++17 layout agreement.
 The class-layout suite adds private nominal structs, embedded base prefixes,
 explicit nullable-reference checks, inherited field access, identity, safe
 upcasts, structural assertions, and independent C/C++17 layout agreement.
+The constructor-lowering suite adds real `new`/`super`/field/body ordering,
+default automatic storage, ordinary C constructor functions, trivial-chain
+elision, status propagation, partial-initialization cleanup, escape/cycle
+negatives, and strict C11/C++17 native evidence.
 The generic-specialization suite adds full semantic-key sharing, closed
 primitive/function/enum instances, recursive worklist closure, bounded
 code-size reporting, exact dynamic/open/budget rejection, and runtime-free
@@ -45,8 +49,8 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, class interface/generic/allocation/downcast, recursive enum escape/payload, dynamic/open/excess generic specialization, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, class interface/generic/downcast, constructor escape/cycle/native-layout, recursive enum escape/payload, dynamic/open/excess generic specialization, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
 | Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
@@ -136,6 +140,7 @@ The registered snapshot selectors are:
 - `function-lowering`
 - `aggregate-lowering`
 - `class-layout`
+- `constructor-lowering`
 - `enum-lowering`
 - `generic-specialization`
 - `evaluation-order`
@@ -252,14 +257,24 @@ independent C provider and C++17 consumer compare size, alignment, offsets,
 base paths, field behavior, null preservation, and identity at O0/O2 under
 GCC/G++ and Clang/Clang++. Production roots are deterministic and runtime-free
 across portable, metal, and explicit runtime-none policies, retain no public
-ABI exports, and fail closed on interfaces, generic classes, allocation, and
-downcasts. See [concrete class instance layouts](class-layout.md).
+ABI exports, and fail closed on interfaces, generic classes, and downcasts.
+See [concrete class instance layouts](class-layout.md).
+
+`test/constructor_lowering` is the focused E3.T05
+positive/negative/snapshot/runtime suite. It compares pinned-Haxe Eval order
+with generated strict C, checks default automatic storage and ordinary private
+constructor calls, proves trivial-chain elision, and validates explicit status
+propagation plus reverse partial-initialization cleanup. Repeated, reversed,
+portable, metal, and runtime-none builds remain byte-identical and runtime-free;
+escape, cycle, conditional, native-layout, and generic boundaries fail closed.
+Interface instantiation is rejected by Haxe before target lowering.
+See [bounded constructor lowering](constructor-lowering.md).
 
 `test/enum_lowering` is the focused E3.T02
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-5 HxcIR. A recursive local uses an
+plus exhaustive tag-switch edges in schema-6 HxcIR. A recursive local uses an
 explicit finite pointer edge, while recursive signatures, reference/aggregate
 payloads, and non-exhaustive source patterns fail closed without artifacts.
 Generated private layout assertions compile under strict C11; independent C
@@ -418,7 +433,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-5 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-6 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

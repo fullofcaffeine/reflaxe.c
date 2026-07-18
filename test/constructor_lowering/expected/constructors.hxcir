@@ -1,0 +1,270 @@
+hxcir schema=6
+module "Main" @"Main.hx":2:2-71:3
+  type "type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3" name="BaseRecord" kind=class @"Main.hx":10:1-18:2
+    class-layout base=none header=none
+    field "defaulted" type=i32 mutable=true @"Main.hx":11:2-11:27
+    field "baseField" type=i32 mutable=true @"Main.hx":12:2-12:54
+  type "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" name="EmptyBase" kind=class @"Main.hx":30:1-32:2
+    class-layout base=none header=none
+  type "type.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b" name="FailableLeaf" kind=class @"Main.hx":51:1-56:2
+    class-layout base="instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb" header=none
+  type "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" name="EmptyLeaf" kind=class @"Main.hx":34:1-38:2
+    class-layout base="instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" header=none
+  type "type.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb" name="FailableBase" kind=class @"Main.hx":40:1-49:2
+    class-layout base=none header=none
+    field "initializedBeforeFailure" type=i32 mutable=true @"Main.hx":41:2-41:69
+  type "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" name="LeafRecord" kind=class @"Main.hx":20:1-28:2
+    class-layout base="instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3" header=none
+    field "firstLeafField" type=i32 mutable=true @"Main.hx":21:2-21:59
+    field "secondLeafField" type=i32 mutable=true @"Main.hx":22:2-22:60
+  instance "instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3" declaration="type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3" arguments=[] representation=direct @"Main.hx":10:1-18:2
+  instance "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" declaration="type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" arguments=[] representation=direct @"Main.hx":30:1-32:2
+  instance "instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b" declaration="type.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b" arguments=[] representation=direct @"Main.hx":51:1-56:2
+  instance "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" declaration="type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a" arguments=[] representation=direct @"Main.hx":34:1-38:2
+  instance "instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb" declaration="type.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb" arguments=[] representation=direct @"Main.hx":40:1-49:2
+  instance "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" declaration="type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6" arguments=[] representation=direct @"Main.hx":20:1-28:2
+  global "global.ConstructorTrace.value" type=i32 mutable=true initialization=deferred("initializer.ConstructorTrace.field.value") @"Main.hx":2:2-2:34
+  function "constructor.BaseRecord" name="BaseRecord.new" returns=void failure=infallible entry="entry" @"Main.hx":14:2-17:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3")) @"Main.hx":14:2-17:3
+    parameter "parameter.0" type=i32 @"Main.hx":14:2-17:3
+    block "entry" @"Main.hx":10:1-18:2
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(4) @"Main.hx":12:51-12:52
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.0"] returns=i32 failure=none @"Main.hx":12:29-12:53
+      instruction "instruction.2.store" result=- store place=field(dereference("parameter.self"),"baseField") value="value.1" @"Main.hx":12:29-12:53
+      instruction "instruction.3.constant" result="value.2":i32 constant value=int(5) @"Main.hx":15:25-15:26
+      instruction "instruction.4.call" result="value.3":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.2"] returns=i32 failure=none @"Main.hx":15:3-15:27
+      instruction "instruction.5.store" result=- store place=field(dereference("parameter.self"),"defaulted") value="parameter.0" @"Main.hx":16:3-16:20
+      terminator return value=none cleanup=[] @"Main.hx":10:1-18:2
+    end block "entry"
+  end function "constructor.BaseRecord"
+  function "constructor.FailableBase" name="FailableBase.new" returns=void failure=status(exception) entry="entry" @"Main.hx":43:2-48:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb")) @"Main.hx":43:2-48:3
+    parameter "parameter.0" type=bool @"Main.hx":43:2-48:3
+    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) storage=automatic state=uninitialized @"Main.hx":44:3-44:35
+    local "local.3" type=instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a") storage=automatic state=uninitialized @"Main.hx":44:3-44:35
+    local "local.4" type=bool storage=automatic state=uninitialized @"Main.hx":45:7-45:38
+    cleanup "cleanup.construction" parent=none registration-order @"Main.hx":43:2-48:3
+      action "construction.0.partial" idempotence=exactly-once destroy place=local("local.3") transition=initializing->destroyed @"Main.hx":44:3-44:35
+      action "construction.0.initialized" idempotence=exactly-once destroy place=local("local.3") transition=initialized->destroyed @"Main.hx":44:3-44:35
+    block "entry" @"Main.hx":40:1-49:2
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(8) @"Main.hx":41:66-41:67
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.0"] returns=i32 failure=none @"Main.hx":41:44-41:68
+      instruction "instruction.2.store" result=- store place=field(dereference("parameter.self"),"initializedBeforeFailure") value="value.1" @"Main.hx":41:44-41:68
+      instruction "instruction.3.class-default-initialize" result=- default-initialize place=local("local.3") transition=uninitialized->initialized @"Main.hx":44:3-44:35
+      instruction "instruction.4.class-object-address" result="value.2":pointer(nonnull,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) address place=local("local.3") @"Main.hx":44:3-44:35
+      instruction "instruction.5.class-nullable-inject" result="value.3":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) convert value="value.2" kind=nullable-inject target=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) implementation=static failure=none @"Main.hx":44:19-44:34
+      instruction "instruction.6.initialize-class-reference" result=- initialize place=local("local.2") value="value.3" transition=uninitialized->initialized @"Main.hx":44:3-44:35
+      instruction "instruction.7.short-circuit-result-initialize" result=- initialize place=local("local.4") value="parameter.0" transition=uninitialized->initialized @"Main.hx":45:7-45:38
+      terminator branch condition="parameter.0" true=edge(target="block.0.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":45:7-45:38
+    end block "entry"
+    block "block.0.short-circuit-rhs" @"Main.hx":45:7-45:38
+      instruction "instruction.8.load" result="value.4":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) load place=local("local.2") @"Main.hx":45:21-45:30
+      instruction "instruction.9.null-class-reference" result="value.5":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":45:34-45:38
+      instruction "instruction.10.class-reference-equality" result="value.6":bool binary operation="haxe.class-reference.not-equal" left="value.4" right="value.5" implementation=static @"Main.hx":45:21-45:38
+      instruction "instruction.11.short-circuit-store" result=- store place=local("local.4") value="value.6" @"Main.hx":45:7-45:38
+      terminator jump edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":45:7-45:38
+    end block "block.0.short-circuit-rhs"
+    block "block.1.short-circuit-join" @"Main.hx":45:7-45:38
+      instruction "instruction.12.short-circuit-load" result="value.7":bool load place=local("local.4") @"Main.hx":45:7-45:38
+      terminator branch condition="value.7" true=edge(target="block.2.if-true",arguments=[],cleanup=[]) false=edge(target="block.3.if-join",arguments=[],cleanup=[]) @"Main.hx":45:3-46:9
+    end block "block.1.short-circuit-join"
+    block "block.2.if-true" @"Main.hx":45:3-46:9
+      instruction "instruction.13.constant" result="value.8":i32 constant value=int(99) @"Main.hx":46:10-46:12
+      terminator throw value="value.8" edge=failure(kind=exception,target=propagate,arguments=[],cleanup=["cleanup.construction"."construction.0.initialized"]) @"Main.hx":46:4-46:9
+    end block "block.2.if-true"
+    block "block.3.if-join" @"Main.hx":45:3-46:9
+      instruction "instruction.14.constant" result="value.9":i32 constant value=int(0) @"Main.hx":47:25-47:26
+      instruction "instruction.15.call" result="value.10":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.9"] returns=i32 failure=none @"Main.hx":47:3-47:27
+      terminator return value=none cleanup=["cleanup.construction"."construction.0.initialized"] @"Main.hx":40:1-49:2
+    end block "block.3.if-join"
+  end function "constructor.FailableBase"
+  function "constructor.FailableLeaf" name="FailableLeaf.new" returns=void failure=status(exception) entry="entry" @"Main.hx":52:39-55:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) @"Main.hx":52:39-55:3
+    parameter "parameter.0" type=bool @"Main.hx":52:39-55:3
+    block "entry" @"Main.hx":52:39-55:3
+      instruction "instruction.0.class-upcast" result="value.0":pointer(nonnull,instance("instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb")) convert value="parameter.self" kind=representation target=pointer(nonnull,instance("instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb")) implementation=static failure=none @"Main.hx":53:3-53:20
+      instruction "instruction.1.super-constructor-call" result=- call dispatch=direct("constructor.FailableBase") arguments=["value.0","parameter.0"] returns=void failure=failure(kind=exception,target=propagate,arguments=[],cleanup=[]) @"Main.hx":53:3-53:20
+      instruction "instruction.2.constant" result="value.1":i32 constant value=int(9) @"Main.hx":54:25-54:26
+      instruction "instruction.3.call" result="value.2":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.1"] returns=i32 failure=none @"Main.hx":54:3-54:27
+      terminator return value=none cleanup=[] @"Main.hx":52:39-55:3
+    end block "entry"
+  end function "constructor.FailableLeaf"
+  function "constructor.LeafRecord" name="LeafRecord.new" returns=void failure=infallible entry="entry" @"Main.hx":24:2-27:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) @"Main.hx":24:2-27:3
+    parameter "parameter.0" type=i32 @"Main.hx":24:2-27:3
+    block "entry" @"Main.hx":20:1-28:2
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(3) @"Main.hx":22:57-22:58
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.0"] returns=i32 failure=none @"Main.hx":22:35-22:59
+      instruction "instruction.2.store" result=- store place=field(dereference("parameter.self"),"secondLeafField") value="value.1" @"Main.hx":22:35-22:59
+      instruction "instruction.3.constant" result="value.2":i32 constant value=int(2) @"Main.hx":21:56-21:57
+      instruction "instruction.4.call" result="value.3":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.2"] returns=i32 failure=none @"Main.hx":21:34-21:58
+      instruction "instruction.5.store" result=- store place=field(dereference("parameter.self"),"firstLeafField") value="value.3" @"Main.hx":21:34-21:58
+      instruction "instruction.6.class-upcast" result="value.4":pointer(nonnull,instance("instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3")) convert value="parameter.self" kind=representation target=pointer(nonnull,instance("instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3")) implementation=static failure=none @"Main.hx":25:3-25:42
+      instruction "instruction.7.constant" result="value.5":i32 constant value=int(6) @"Main.hx":25:31-25:32
+      instruction "instruction.8.call" result="value.6":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.5"] returns=i32 failure=none @"Main.hx":25:9-25:33
+      instruction "instruction.9.binary" result="value.7":i32 binary operation="haxe.i32.add" left="value.6" right="parameter.0" implementation=program-local("hxc.i32.add.wrapping") @"Main.hx":25:9-25:41
+      instruction "instruction.10.super-constructor-call" result=- call dispatch=direct("constructor.BaseRecord") arguments=["value.4","value.7"] returns=void failure=none @"Main.hx":25:3-25:42
+      instruction "instruction.11.constant" result="value.8":i32 constant value=int(7) @"Main.hx":26:25-26:26
+      instruction "instruction.12.call" result="value.9":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.8"] returns=i32 failure=none @"Main.hx":26:3-26:27
+      terminator return value=none cleanup=[] @"Main.hx":20:1-28:2
+    end block "entry"
+  end function "constructor.LeafRecord"
+  function "function.ConstructorTrace.mark" name="ConstructorTrace.mark" returns=i32 failure=infallible entry="entry" @"Main.hx":4:45-7:3
+    parameter "parameter.0" type=i32 @"Main.hx":4:45-7:3
+    block "entry" @"Main.hx":4:45-7:3
+      instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.ConstructorTrace.value") @"Main.hx":5:11-5:16
+      instruction "instruction.1.constant" result="value.1":i32 constant value=int(10) @"Main.hx":5:19-5:21
+      instruction "instruction.2.binary" result="value.2":i32 binary operation="haxe.i32.multiply" left="value.0" right="value.1" implementation=program-local("hxc.i32.multiply.wrapping") @"Main.hx":5:11-5:21
+      instruction "instruction.3.binary" result="value.3":i32 binary operation="haxe.i32.add" left="value.2" right="parameter.0" implementation=program-local("hxc.i32.add.wrapping") @"Main.hx":5:11-5:29
+      instruction "instruction.4.store" result=- store place=global("global.ConstructorTrace.value") value="value.3" @"Main.hx":5:3-5:29
+      terminator return value="parameter.0" cleanup=[] @"Main.hx":6:3-6:15
+    end block "entry"
+  end function "function.ConstructorTrace.mark"
+  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":59:30-71:3
+    local "local.0" type=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) storage=automatic state=uninitialized @"Main.hx":61:3-61:55
+    local "local.1" type=instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6") storage=automatic state=uninitialized @"Main.hx":61:3-61:55
+    local "local.10" type=bool storage=automatic state=uninitialized @"Main.hx":64:12-69:45
+    local "local.11" type=bool storage=automatic state=uninitialized @"Main.hx":64:11-70:21
+    local "local.2" type=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) storage=automatic state=uninitialized @"Main.hx":62:3-62:31
+    local "local.3" type=instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a") storage=automatic state=uninitialized @"Main.hx":62:3-62:31
+    local "local.4" type=pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) storage=automatic state=uninitialized @"Main.hx":63:3-63:42
+    local "local.5" type=instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b") storage=automatic state=uninitialized @"Main.hx":63:3-63:42
+    local "local.6" type=bool storage=automatic state=uninitialized @"Main.hx":64:12-65:26
+    local "local.7" type=bool storage=automatic state=uninitialized @"Main.hx":64:12-66:26
+    local "local.8" type=bool storage=automatic state=uninitialized @"Main.hx":64:12-67:31
+    local "local.9" type=bool storage=automatic state=uninitialized @"Main.hx":64:12-68:32
+    cleanup "cleanup.construction" parent=none registration-order @"Main.hx":59:30-71:3
+      action "construction.0.partial" idempotence=exactly-once destroy place=local("local.1") transition=initializing->destroyed @"Main.hx":61:3-61:55
+      action "construction.0.initialized" idempotence=exactly-once destroy place=local("local.1") transition=initialized->destroyed @"Main.hx":61:3-61:55
+      action "construction.1.partial" idempotence=exactly-once destroy place=local("local.3") transition=initializing->destroyed @"Main.hx":62:3-62:31
+      action "construction.1.initialized" idempotence=exactly-once destroy place=local("local.3") transition=initialized->destroyed @"Main.hx":62:3-62:31
+      action "construction.2.partial" idempotence=exactly-once destroy place=local("local.5") transition=initializing->destroyed @"Main.hx":63:3-63:42
+      action "construction.2.initialized" idempotence=exactly-once destroy place=local("local.5") transition=initialized->destroyed @"Main.hx":63:3-63:42
+    block "entry" @"Main.hx":59:30-71:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Main.hx":60:28-60:29
+      instruction "instruction.1.store" result=- store place=global("global.ConstructorTrace.value") value="value.0" @"Main.hx":60:3-60:29
+      instruction "instruction.2.constant" result="value.1":i32 constant value=int(1) @"Main.hx":61:51-61:52
+      instruction "instruction.3.call" result="value.2":i32 call dispatch=direct("function.ConstructorTrace.mark") arguments=["value.1"] returns=i32 failure=none @"Main.hx":61:29-61:53
+      instruction "instruction.4.class-default-initialize" result=- default-initialize place=local("local.1") transition=uninitialized->initializing @"Main.hx":61:3-61:55
+      instruction "instruction.5.class-object-address" result="value.3":pointer(nonnull,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) address place=local("local.1") @"Main.hx":61:3-61:55
+      instruction "instruction.6.constructor-call" result=- call dispatch=direct("constructor.LeafRecord") arguments=["value.3","value.2"] returns=void failure=none @"Main.hx":61:3-61:55
+      instruction "instruction.7.constructor-complete" result=- lifetime place=local("local.1") transition=initializing->initialized reason="constructor completed" @"Main.hx":61:3-61:55
+      instruction "instruction.8.class-nullable-inject" result="value.4":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) convert value="value.3" kind=nullable-inject target=pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) implementation=static failure=none @"Main.hx":61:14-61:54
+      instruction "instruction.9.initialize-class-reference" result=- initialize place=local("local.0") value="value.4" transition=uninitialized->initialized @"Main.hx":61:3-61:55
+      instruction "instruction.10.class-default-initialize" result=- default-initialize place=local("local.3") transition=uninitialized->initialized @"Main.hx":62:3-62:31
+      instruction "instruction.11.class-object-address" result="value.5":pointer(nonnull,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) address place=local("local.3") @"Main.hx":62:3-62:31
+      instruction "instruction.12.class-nullable-inject" result="value.6":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) convert value="value.5" kind=nullable-inject target=pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) implementation=static failure=none @"Main.hx":62:15-62:30
+      instruction "instruction.13.initialize-class-reference" result=- initialize place=local("local.2") value="value.6" transition=uninitialized->initialized @"Main.hx":62:3-62:31
+      instruction "instruction.14.constant" result="value.7":bool constant value=bool(false) @"Main.hx":63:35-63:40
+      instruction "instruction.15.class-default-initialize" result=- default-initialize place=local("local.5") transition=uninitialized->initializing @"Main.hx":63:3-63:42
+      instruction "instruction.16.class-object-address" result="value.8":pointer(nonnull,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) address place=local("local.5") @"Main.hx":63:3-63:42
+      instruction "instruction.17.constructor-call" result=- call dispatch=direct("constructor.FailableLeaf") arguments=["value.8","value.7"] returns=void failure=failure(kind=exception,target=abort,arguments=[],cleanup=["cleanup.construction"."construction.2.partial","cleanup.construction"."construction.1.initialized","cleanup.construction"."construction.0.initialized"]) @"Main.hx":63:3-63:42
+      instruction "instruction.18.constructor-complete" result=- lifetime place=local("local.5") transition=initializing->initialized reason="constructor completed" @"Main.hx":63:3-63:42
+      instruction "instruction.19.class-nullable-inject" result="value.9":pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) convert value="value.8" kind=nullable-inject target=pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) implementation=static failure=none @"Main.hx":63:18-63:41
+      instruction "instruction.20.initialize-class-reference" result=- initialize place=local("local.4") value="value.9" transition=uninitialized->initialized @"Main.hx":63:3-63:42
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"Main.hx":64:3-70:25
+    end block "entry"
+    block "block.0.while-condition" @"Main.hx":64:3-70:25
+      instruction "instruction.21.global-load" result="value.10":i32 load place=global("global.ConstructorTrace.value") @"Main.hx":64:12-64:34
+      instruction "instruction.22.constant" result="value.11":i32 constant value=int(1326457809) @"Main.hx":64:38-64:48
+      instruction "instruction.23.binary" result="value.12":bool binary operation="haxe.i32.equal" left="value.10" right="value.11" implementation=static @"Main.hx":64:12-64:48
+      instruction "instruction.24.short-circuit-result-initialize" result=- initialize place=local("local.6") value="value.12" transition=uninitialized->initialized @"Main.hx":64:12-65:26
+      terminator branch condition="value.12" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-65:26
+    end block "block.0.while-condition"
+    block "block.1.while-body" @"Main.hx":64:3-70:25
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"Main.hx":64:3-70:25
+    end block "block.1.while-body"
+    block "block.10.short-circuit-join" @"Main.hx":64:12-68:32
+      instruction "instruction.55.short-circuit-load" result="value.32":bool load place=local("local.9") @"Main.hx":64:12-68:32
+      instruction "instruction.56.short-circuit-result-initialize" result=- initialize place=local("local.10") value="value.32" transition=uninitialized->initialized @"Main.hx":64:12-69:45
+      terminator branch condition="value.32" true=edge(target="block.11.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-69:45
+    end block "block.10.short-circuit-join"
+    block "block.11.short-circuit-rhs" @"Main.hx":64:12-69:45
+      instruction "instruction.57.load" result="value.33":pointer(nullable,instance("instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b")) load place=local("local.4") @"Main.hx":69:7-69:15
+      instruction "instruction.58.class-field-null-check" result=- null-check value="value.33" policy=checked-abort(profile="portable",build="debug") @"Main.hx":69:7-69:15
+      instruction "instruction.59.class-field-load" result="value.34":i32 load place=field(dereference("value.33"),"initializedBeforeFailure") @"Main.hx":69:7-69:40
+      instruction "instruction.60.constant" result="value.35":i32 constant value=int(8) @"Main.hx":69:44-69:45
+      instruction "instruction.61.binary" result="value.36":bool binary operation="haxe.i32.equal" left="value.34" right="value.35" implementation=static @"Main.hx":69:7-69:45
+      instruction "instruction.62.short-circuit-store" result=- store place=local("local.10") value="value.36" @"Main.hx":64:12-69:45
+      terminator jump edge(target="block.12.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-69:45
+    end block "block.11.short-circuit-rhs"
+    block "block.12.short-circuit-join" @"Main.hx":64:12-69:45
+      instruction "instruction.63.short-circuit-load" result="value.37":bool load place=local("local.10") @"Main.hx":64:12-69:45
+      instruction "instruction.64.short-circuit-result-initialize" result=- initialize place=local("local.11") value="value.37" transition=uninitialized->initialized @"Main.hx":64:11-70:21
+      terminator branch condition="value.37" true=edge(target="block.13.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:11-70:21
+    end block "block.12.short-circuit-join"
+    block "block.13.short-circuit-rhs" @"Main.hx":64:11-70:21
+      instruction "instruction.65.load" result="value.38":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) load place=local("local.2") @"Main.hx":70:7-70:12
+      instruction "instruction.66.null-class-reference" result="value.39":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":70:16-70:20
+      instruction "instruction.67.class-reference-equality" result="value.40":bool binary operation="haxe.class-reference.not-equal" left="value.38" right="value.39" implementation=static @"Main.hx":70:7-70:20
+      instruction "instruction.68.short-circuit-store" result=- store place=local("local.11") value="value.40" @"Main.hx":64:11-70:21
+      terminator jump edge(target="block.14.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:11-70:21
+    end block "block.13.short-circuit-rhs"
+    block "block.14.short-circuit-join" @"Main.hx":64:11-70:21
+      instruction "instruction.69.short-circuit-load" result="value.41":bool load place=local("local.11") @"Main.hx":64:11-70:21
+      instruction "instruction.70.unary" result="value.42":bool unary operation="haxe.bool.not" value="value.41" implementation=static @"Main.hx":64:10-70:21
+      terminator branch condition="value.42" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"Main.hx":64:3-70:25
+    end block "block.14.short-circuit-join"
+    block "block.2.while-exit" @"Main.hx":64:3-70:25
+      terminator return value=none cleanup=["cleanup.construction"."construction.2.initialized","cleanup.construction"."construction.1.initialized","cleanup.construction"."construction.0.initialized"] @"Main.hx":59:30-71:3
+    end block "block.2.while-exit"
+    block "block.3.short-circuit-rhs" @"Main.hx":64:12-65:26
+      instruction "instruction.25.load" result="value.13":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"Main.hx":65:7-65:11
+      instruction "instruction.26.class-field-null-check" result=- null-check value="value.13" policy=checked-abort(profile="portable",build="debug") @"Main.hx":65:7-65:11
+      instruction "instruction.27.class-field-load" result="value.14":i32 load place=field(dereference("value.13"),"defaulted") @"Main.hx":65:7-65:21
+      instruction "instruction.28.constant" result="value.15":i32 constant value=int(7) @"Main.hx":65:25-65:26
+      instruction "instruction.29.binary" result="value.16":bool binary operation="haxe.i32.equal" left="value.14" right="value.15" implementation=static @"Main.hx":65:7-65:26
+      instruction "instruction.30.short-circuit-store" result=- store place=local("local.6") value="value.16" @"Main.hx":64:12-65:26
+      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-65:26
+    end block "block.3.short-circuit-rhs"
+    block "block.4.short-circuit-join" @"Main.hx":64:12-65:26
+      instruction "instruction.31.short-circuit-load" result="value.17":bool load place=local("local.6") @"Main.hx":64:12-65:26
+      instruction "instruction.32.short-circuit-result-initialize" result=- initialize place=local("local.7") value="value.17" transition=uninitialized->initialized @"Main.hx":64:12-66:26
+      terminator branch condition="value.17" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-66:26
+    end block "block.4.short-circuit-join"
+    block "block.5.short-circuit-rhs" @"Main.hx":64:12-66:26
+      instruction "instruction.33.load" result="value.18":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"Main.hx":66:7-66:11
+      instruction "instruction.34.class-field-null-check" result=- null-check value="value.18" policy=checked-abort(profile="portable",build="debug") @"Main.hx":66:7-66:11
+      instruction "instruction.35.class-field-load" result="value.19":i32 load place=field(dereference("value.18"),"baseField") @"Main.hx":66:7-66:21
+      instruction "instruction.36.constant" result="value.20":i32 constant value=int(4) @"Main.hx":66:25-66:26
+      instruction "instruction.37.binary" result="value.21":bool binary operation="haxe.i32.equal" left="value.19" right="value.20" implementation=static @"Main.hx":66:7-66:26
+      instruction "instruction.38.short-circuit-store" result=- store place=local("local.7") value="value.21" @"Main.hx":64:12-66:26
+      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-66:26
+    end block "block.5.short-circuit-rhs"
+    block "block.6.short-circuit-join" @"Main.hx":64:12-66:26
+      instruction "instruction.39.short-circuit-load" result="value.22":bool load place=local("local.7") @"Main.hx":64:12-66:26
+      instruction "instruction.40.short-circuit-result-initialize" result=- initialize place=local("local.8") value="value.22" transition=uninitialized->initialized @"Main.hx":64:12-67:31
+      terminator branch condition="value.22" true=edge(target="block.7.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-67:31
+    end block "block.6.short-circuit-join"
+    block "block.7.short-circuit-rhs" @"Main.hx":64:12-67:31
+      instruction "instruction.41.load" result="value.23":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"Main.hx":67:7-67:11
+      instruction "instruction.42.class-field-null-check" result=- null-check value="value.23" policy=checked-abort(profile="portable",build="debug") @"Main.hx":67:7-67:11
+      instruction "instruction.43.class-field-load" result="value.24":i32 load place=field(dereference("value.23"),"firstLeafField") @"Main.hx":67:7-67:26
+      instruction "instruction.44.constant" result="value.25":i32 constant value=int(2) @"Main.hx":67:30-67:31
+      instruction "instruction.45.binary" result="value.26":bool binary operation="haxe.i32.equal" left="value.24" right="value.25" implementation=static @"Main.hx":67:7-67:31
+      instruction "instruction.46.short-circuit-store" result=- store place=local("local.8") value="value.26" @"Main.hx":64:12-67:31
+      terminator jump edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-67:31
+    end block "block.7.short-circuit-rhs"
+    block "block.8.short-circuit-join" @"Main.hx":64:12-67:31
+      instruction "instruction.47.short-circuit-load" result="value.27":bool load place=local("local.8") @"Main.hx":64:12-67:31
+      instruction "instruction.48.short-circuit-result-initialize" result=- initialize place=local("local.9") value="value.27" transition=uninitialized->initialized @"Main.hx":64:12-68:32
+      terminator branch condition="value.27" true=edge(target="block.9.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-68:32
+    end block "block.8.short-circuit-join"
+    block "block.9.short-circuit-rhs" @"Main.hx":64:12-68:32
+      instruction "instruction.49.load" result="value.28":pointer(nullable,instance("instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6")) load place=local("local.0") @"Main.hx":68:7-68:11
+      instruction "instruction.50.class-field-null-check" result=- null-check value="value.28" policy=checked-abort(profile="portable",build="debug") @"Main.hx":68:7-68:11
+      instruction "instruction.51.class-field-load" result="value.29":i32 load place=field(dereference("value.28"),"secondLeafField") @"Main.hx":68:7-68:27
+      instruction "instruction.52.constant" result="value.30":i32 constant value=int(3) @"Main.hx":68:31-68:32
+      instruction "instruction.53.binary" result="value.31":bool binary operation="haxe.i32.equal" left="value.29" right="value.30" implementation=static @"Main.hx":68:7-68:32
+      instruction "instruction.54.short-circuit-store" result=- store place=local("local.9") value="value.31" @"Main.hx":64:12-68:32
+      terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":64:12-68:32
+    end block "block.9.short-circuit-rhs"
+  end function "function.Main.main"
+  function "initializer.ConstructorTrace.field.value" name="ConstructorTrace.static-field-value" returns=void failure=infallible entry="entry" @"Main.hx":2:32-2:33
+    block "entry" @"Main.hx":2:32-2:33
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Main.hx":2:32-2:33
+      instruction "instruction.1.initialize-global" result=- initialize place=global("global.ConstructorTrace.value") value="value.0" transition=uninitialized->initialized @"Main.hx":2:32-2:33
+      terminator return value=none cleanup=[] @"Main.hx":2:32-2:33
+    end block "entry"
+  end function "initializer.ConstructorTrace.field.value"
+end module "Main"

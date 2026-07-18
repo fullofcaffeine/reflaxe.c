@@ -455,6 +455,44 @@ def class_layout_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def constructor_lowering_artifacts() -> list[Artifact]:
+    module = load_module("constructor_lowering", "test/constructor_lowering/run.py")
+    first_payload, report = module.render("snapshot first constructor render")
+    second_payload, repeated = module.render("snapshot second constructor render")
+    reverse_payload, reversed_report = module.render(
+        "snapshot reverse-input constructor render", reverse=True
+    )
+    if (
+        first_payload != second_payload
+        or report != repeated
+        or first_payload != reverse_payload
+        or report != reversed_report
+    ):
+        raise SnapshotFailure(
+            "constructor snapshot changed across repeated or reverse-input renders"
+        )
+    module.validate(report)
+    values = module.snapshot_values(report)
+    artifacts: list[Artifact] = []
+    for name, format_name in (
+        ("constructors.hxcir", "hxcir"),
+        ("constructors.json", "json"),
+        ("program.h", "header"),
+        ("program.c", "c"),
+        ("symbols.json", "json"),
+    ):
+        value = values.get(name)
+        if format_name == "json":
+            if not isinstance(value, (dict, list)):
+                raise SnapshotFailure(f"constructor report omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"constructor report omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/constructor_lowering/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 def enum_lowering_artifacts() -> list[Artifact]:
     module = load_module("enum_lowering", "test/enum_lowering/run.py")
     first_payload, report = module.render("snapshot first enum render")
@@ -797,6 +835,7 @@ GENERATORS: dict[str, Generator] = {
     "function-lowering": function_lowering_artifacts,
     "aggregate-lowering": aggregate_lowering_artifacts,
     "class-layout": class_layout_artifacts,
+    "constructor-lowering": constructor_lowering_artifacts,
     "enum-lowering": enum_lowering_artifacts,
     "generic-specialization": generic_specialization_artifacts,
     "evaluation-order": evaluation_order_artifacts,

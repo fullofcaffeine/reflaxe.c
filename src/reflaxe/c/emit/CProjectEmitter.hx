@@ -55,6 +55,7 @@ typedef CProjectEmissionPlan = {
 	final ?directAggregateCount:Int;
 	final ?directEnumCount:Int;
 	final ?directClassCount:Int;
+	final ?directConstructorCount:Int;
 	final ?directGenericFunctionCount:Int;
 	final ?directGenericTypeCount:Int;
 	final ?specializationReport:CGenericSpecializationReportSnapshot;
@@ -301,12 +302,16 @@ class CProjectEmitter {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
 		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
+		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
 		final directValueCount = aggregateCount + enumCount + classCount + genericFunctionCount;
 		if (aggregateCount < 0
 			|| enumCount < 0
 			|| classCount < 0
+			|| constructorCount < 0
+			|| constructorCount > 0
+			&& classCount == 0
 			|| genericFunctionCount < 0
 			|| genericTypeCount < 0
 			|| genericTypeCount > enumCount
@@ -414,6 +419,7 @@ class CProjectEmitter {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
 		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
+		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
@@ -480,6 +486,9 @@ class CProjectEmitter {
 		}
 		if (classCount > 0) {
 			expectedDirectDecisions.push("concrete-class-reference-layouts");
+		}
+		if (constructorCount > 0) {
+			expectedDirectDecisions.push("bounded-stack-construction");
 		}
 		if (genericFunctionCount + genericTypeCount > 0) {
 			expectedDirectDecisions.push("closed-generic-specializations");
