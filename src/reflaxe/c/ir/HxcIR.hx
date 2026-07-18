@@ -78,6 +78,9 @@ enum HxcIRTypeRef {
 	/** Immutable valid UTF-8 with Unicode-scalar Haxe indexing semantics. */
 	IRTString;
 
+	/** Borrowed NUL-terminated bytes backed by stable C string-literal storage. */
+	IRTCString;
+
 	IRTVoid;
 	IRTInstance(instanceId:String);
 	IRTPointer(pointee:HxcIRTypeRef, nullable:Bool);
@@ -178,6 +181,12 @@ enum HxcIRConstant {
 
 	/** Source text plus its independently validated UTF-8 byte length. */
 	IRCString(value:String, byteLength:Int);
+
+	/** A NUL-free source literal borrowed as a native `const char *`. */
+	IRCCStringLiteral(value:String, byteLength:Int);
+
+	/** A header-owned C enum or object-like macro with a typed result. */
+	IRCNativeConstant(constantId:String);
 
 	IRCNull;
 }

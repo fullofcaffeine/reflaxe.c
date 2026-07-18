@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "direct-c-import-abi",
+  "role": "fixture",
+  "type": "abi",
+  "status": "active",
+  "requirements": [
+    "HXC-FFI-001",
+    "HXC-FFI-005",
+    "HXC-MAC-002"
+  ],
+  "sources": [
+    "test/native/pointlib/include/pointlib.h",
+    "test/c_import/native/abi_probe.c",
+    "test/c_import/expected/program.h",
+    "test/c_import/expected/program.c",
+    "test/c_import/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../c_import/run.py",
+      "--native-only"
+    ],
+    "workingDirectory": "test/abi/c-import",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "by-value struct calls, compiled ABI probes"
+    }
+  }
+}

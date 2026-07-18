@@ -1,17 +1,18 @@
 package reflaxe.c.lowering;
 
+#if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.interop.CImportRegistry.CImportTypeKind;
+import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
-#if (macro || reflaxe_runtime)
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
-#end
 
 private enum CBodyEnumCRepresentation {
 	CBECNative;
@@ -93,10 +94,12 @@ class CBodyEmitter {
 	final virtualSlots:Map<String, CBodyEmitterVirtualSlot> = [];
 	final virtualTables:Map<String, CBodyEmitterVirtualTable> = [];
 	final virtualThunks:Array<CBodyEmitterVirtualThunk> = [];
+	final imports:CLoweredImports;
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
-			?dispatch:CLoweredBodyDispatch) {
+			?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports) {
+		this.imports = imports == null ? CLoweredImports.empty() : imports;
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
@@ -231,7 +234,9 @@ class CBodyEmitter {
 		}
 	}
 	#else
-	public function new() {}
+	public function new() {
+		this.imports = CLoweredImports.empty();
+	}
 	#end
 
 	public function emitBody(fn:HxcIRFunction, parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>,
@@ -630,7 +635,7 @@ class CBodyEmitter {
 			case IRTInstance(id): id;
 			case _: return fail('aggregate projection `${instruction.id}` in `${fn.id}` lost its validated instance value');
 		};
-		final expression = EMember(requireValue(values, valueId, fn.id), requireAggregateFieldName(instanceId, fieldName, instruction.id, fn.id), false);
+		final expression = EMember(requireValue(values, valueId, fn.id), requireDirectFieldName(instanceId, fieldName, instruction.id, fn.id), false);
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
 	}
 
@@ -1049,8 +1054,8 @@ class CBodyEmitter {
 					case _: return fail('function `${fn.id}` lost the aggregate/class type of field place `$fieldName`');
 				};
 				final baseExpression = placeExpression(base, fn, localNames, globalNames, spanLengthNames, values);
-				if (aggregateTags.exists(instanceId)) {
-					EMember(baseExpression, requireAggregateFieldName(instanceId, fieldName, "place", fn.id), false);
+				if (aggregateTags.exists(instanceId) || imports.typeByInstance(instanceId) != null) {
+					EMember(baseExpression, requireDirectFieldName(instanceId, fieldName, "place", fn.id), false);
 				} else {
 					classFieldExpression(baseExpression, instanceId, fieldName, "place", fn.id);
 				}
@@ -1188,20 +1193,33 @@ class CBodyEmitter {
 			case IRTBool: new CType(TBool);
 			case IRTInt(width, signed): new CType(TInt(width, signed));
 			case IRTAbiInteger(IRAKSize): new CType(TSizeT);
+			case IRTAbiInteger(IRAKPtrDiff): new CType(TNamed(new CIdentifier("ptrdiff_t")));
+			case IRTAbiInteger(IRAKIntPtr): new CType(TNamed(new CIdentifier("intptr_t")));
+			case IRTAbiInteger(IRAKUIntPtr): new CType(TNamed(new CIdentifier("uintptr_t")));
+			case IRTFloat(32): new CType(TFloat);
 			case IRTFloat(64): new CType(TDouble);
 			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
 			case IRTInstance(instanceId):
-				final aggregateTag = aggregateTags.get(instanceId);
-				if (aggregateTag != null) {
-					new CType(TStruct(aggregateTag));
+				final imported = imports.typeByInstance(instanceId);
+				if (imported != null) {
+					switch imported.prepared.kind {
+						case CITStruct: new CType(TStruct(imported.cName));
+						case CITEnum: new CType(TNamed(imported.cName));
+						case CITTypedef: new CType(TNamed(imported.cName));
+					}
 				} else {
-					final classTag = classTags.get(instanceId);
-					if (classTag != null) {
-						new CType(TStruct(classTag));
+					final aggregateTag = aggregateTags.get(instanceId);
+					if (aggregateTag != null) {
+						new CType(TStruct(aggregateTag));
 					} else {
-						switch requireEnumRepresentation(instanceId) {
-							case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
-							case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+						final classTag = classTags.get(instanceId);
+						if (classTag != null) {
+							new CType(TStruct(classTag));
+						} else {
+							switch requireEnumRepresentation(instanceId) {
+								case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
+								case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+							}
 						}
 					}
 				}
@@ -1212,6 +1230,8 @@ class CBodyEmitter {
 
 	public function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
 		return switch type {
+			case IRTCString:
+				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
 			case IRTPointer(pointee, _):
 				final nested = typedDeclarator(pointee, DPointer(inner, []));
 				{type: nested.type, declarator: nested.declarator};
@@ -1741,9 +1761,16 @@ class CBodyEmitter {
 				addUnique(headers, "stdint.h");
 			case IRTAbiInteger(IRAKSize):
 				addUnique(headers, "stddef.h");
+			case IRTAbiInteger(IRAKPtrDiff):
+				addUnique(headers, "stddef.h");
+			case IRTAbiInteger(IRAKIntPtr) | IRTAbiInteger(IRAKUIntPtr):
+				addUnique(headers, "stdint.h");
 			case IRTString:
 				addUnique(headers, "hxrt/string_literal.h");
+			case IRTCString:
 			case IRTInstance(instanceId):
+				if (imports.typeByInstance(instanceId) != null)
+					return;
 				if (visited.exists(instanceId))
 					return;
 				visited.set(instanceId, true);
@@ -1786,18 +1813,25 @@ class CBodyEmitter {
 			case IRTSpan(element, _):
 				addTypeHeaders(headers, element, visited);
 				addUnique(headers, "stddef.h");
-			case IRTVoid | IRTFloat(64):
+			case IRTVoid | IRTFloat(32) | IRTFloat(64):
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C direct-value header mapping');
 		}
 	}
 
-	static function constantExpression(value:HxcIRConstant):CExpr {
+	function constantExpression(value:HxcIRConstant):CExpr {
 		return switch value {
 			case IRCInt(text): integerExpression(text);
 			case IRCFloat(text): floatExpression(text);
 			case IRCBool(value): EBool(value);
 			case IRCString(text, byteLength): stringLiteralExpression(text, byteLength);
+			case IRCCStringLiteral(text, byteLength):
+				if (byteLength < 0 || text.indexOf("\x00") != -1)
+					fail("validated C string literal lost its length or NUL-free invariant");
+				EString(text);
+			case IRCNativeConstant(constantId):
+				final constant = imports.constantById(constantId);
+				constant == null ? fail('native constant `$constantId` has no finalized import') : EIdentifier(constant.cName);
 			case IRCNull: ENull;
 		};
 	}
@@ -1861,6 +1895,21 @@ class CBodyEmitter {
 				ECall(EIdentifier(targetName), call.arguments.map(argument -> requireValue(values, argument, functionId)));
 			case IRCDVirtual(slotId, receiverValueId):
 				virtualCallExpression(slotId, receiverValueId, call.arguments, values, fn, instruction.id);
+			case IRCDNative(importId):
+				final imported = imports.functionById(importId);
+				if (imported == null)
+					return fail('native call `${instruction.id}` in `$functionId` has no finalized import `$importId`');
+				if (call.failure != null)
+					return fail('direct imported call `${instruction.id}` in `$functionId` unexpectedly carries a failure edge');
+				if (call.arguments.length != imported.prepared.parameters.length
+					|| typeKey(call.returnType) != typeKey(imported.prepared.returnType.irType))
+					return fail('native call `${instruction.id}` in `$functionId` does not match `$importId`');
+				for (index in 0...call.arguments.length) {
+					final actual = valueType(fn, call.arguments[index]);
+					if (actual == null || typeKey(actual) != typeKey(imported.prepared.parameters[index].irType))
+						return fail('native call `${instruction.id}` in `$functionId` argument $index does not match `$importId`');
+				}
+				ECall(EIdentifier(imported.cName), call.arguments.map(argument -> requireValue(values, argument, functionId)));
 			case dispatch if (isHostedOutputDispatch(dispatch)):
 				emitHostedPrintln(statements, values, instruction, call, lineDirectives, functionId);
 				return false;
@@ -2026,7 +2075,13 @@ class CBodyEmitter {
 				switch placeType(base, fn) {
 					case IRTInstance(instanceId):
 						final aggregateType = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
-						aggregateType == null ? classFieldType(instanceId, fieldName) : aggregateType;
+						if (aggregateType != null) {
+							aggregateType;
+						} else {
+							final imported = imports.typeByInstance(instanceId);
+							final importedField = imported == null ? null : imported.field(fieldName);
+							importedField == null ? classFieldType(instanceId, fieldName) : importedField.prepared.type.irType;
+						}
 					case _: null;
 				}
 			case IRPIndex(base, _):
@@ -2072,6 +2127,17 @@ class CBodyEmitter {
 			throw new CBodyEmissionError('aggregate use `$instructionId` in `$functionId` has no finalized member `$fieldName` for `$instanceId`');
 		}
 		return name;
+	}
+
+	function requireDirectFieldName(instanceId:String, fieldName:String, instructionId:String, functionId:String):CIdentifier {
+		final imported = imports.typeByInstance(instanceId);
+		if (imported != null) {
+			final field = imported.field(fieldName);
+			if (field == null)
+				return fail('imported aggregate use `$instructionId` in `$functionId` has no finalized member `$fieldName` for `$instanceId`');
+			return field.cName;
+		}
+		return requireAggregateFieldName(instanceId, fieldName, instructionId, functionId);
 	}
 
 	function requireAggregateFieldType(instanceId:String, fieldName:String):CType {
@@ -2454,6 +2520,7 @@ class CBodyEmitter {
 			case IRTAbiInteger(kind): 'abi-int:$kind';
 			case IRTFloat(width): 'float:$width';
 			case IRTString: "string-utf8";
+			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(_, nullable): 'pointer:${nullable ? "nullable" : "non-null"}';
@@ -2481,3 +2548,8 @@ class CBodyEmitter {
 	static function fail<T>(detail:String):T
 		throw new CBodyEmissionError(detail);
 }
+#else
+class CBodyEmitter {
+	public function new() {}
+}
+#end

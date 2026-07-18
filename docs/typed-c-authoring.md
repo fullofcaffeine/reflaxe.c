@@ -23,9 +23,12 @@ The M0 contract plus M1 declaration-planning slice do five things:
 
 The declaration-contract report itself does **not** lower types, emit C, prove
 an ABI layout, expose raw C, or make `c.Unsafe` operational; its explicit status
-remains `contract-seed-no-lowering`. Separately, E2.T08 admits one narrow local
-operation slice: nonempty literal-backed `CArray<T, N>` plus `Span<T>` and
-`ConstSpan<T>` borrowing, indexing, and iteration. Other `c.*` operations remain
+remains `contract-seed-no-lowering`. Production lowering now consumes two
+separate bounded surfaces. E2.T08 admits nonempty literal-backed `CArray<T, N>`
+plus `Span<T>` and `ConstSpan<T>` borrowing, indexing, and iteration. The first
+E6 vertical slice admits reached hand-authored extern C declarations with exact
+names and headers for scalars, typedefs, fieldless enums/constants, by-value
+structs, and literal borrowed `CString` arguments. Other `c.*` operations remain
 fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
 until their owning safety and inspection work is complete.
 
@@ -65,6 +68,54 @@ corpus from this plan. Its headers are compiled independently and together by
 the native matrix. That is executable planning evidence, not the production
 E1.T07 output writer, export ABI, or proof of arbitrary Haxe declaration
 lowering. Planning selects no `hxrt` feature.
+
+## Direct import boundary
+
+`CImportRegistry` consumes the same typed snapshot together with the real
+typed-AST declaration graph. It prepares every reached import before symbol
+finalization, then lowers exact names only through `CSymbolRegistry`. A valid
+import has these properties:
+
+- every reached type, constant, field, and function has an exact `@:c.name`;
+- an authoritative `@:c.include` supplies the definition; generated C never
+  recreates the foreign struct, enum, or typedef;
+- an imported enum name is the header's typedef use-site spelling, so anonymous
+  `typedef enum { ... } Name` declarations remain usable without inventing a tag;
+- functions are static extern, fixed-arity, non-callback C calls whose admitted
+  parameter and result types are exact scalars or by-value imported values;
+- imported struct fields are ordinary typed HxcIR places, so reads and writes
+  stay structural rather than becoming C fragments;
+- a `String` literal can be borrowed as `c.CString` only at a direct call site.
+  The compiler validates its UTF-8 byte length, rejects embedded NUL, emits
+  immutable translation-unit literal storage, and performs no allocation; and
+- reached include, logical library, pkg-config, and framework facts are
+  deduplicated with declaration provenance in the neutral build plan. Merely
+  declaring an unused extern selects no fact and no runtime feature.
+
+For example, the executable point-library fixture uses ordinary Haxe declarations:
+
+```haxe
+@:c.layout(c.Layout.Struct)
+@:c.name("pointlib_point")
+@:c.include("pointlib.h", c.IncludeKind.Local)
+extern class Point {
+  @:c.name("x") public var x:Coord;
+  @:c.name("y") public var y:Coord;
+}
+
+@:c.include("pointlib.h", c.IncludeKind.Local)
+@:c.link("pointlib")
+extern class PointLib {
+  @:c.name("pointlib_point_translate")
+  public static function translate(point:Point, dx:Coord, dy:Coord):Point;
+}
+```
+
+Callbacks, variadics, native pointers, retained strings, opaque resource
+ownership, unions, bit fields, packed layouts, source preprocessor definitions,
+C++, and inferred or exported ABI remain outside this slice. They fail with source-positioned `HXC3000` and
+leave no plausible artifact; adding an unsafe cast or raw C string is not an
+escape hatch.
 
 ## C concepts expressed in Haxe
 
@@ -155,10 +206,11 @@ evidence.
 
 The declaration planner now owns complete-versus-forward dependency structure,
 header/source grouping, include provenance, and the complete-type/public-private
-conflicts described above. Later compiler analyses still own qualifier and
-ownership consistency, callback lifetime, exported-ABI leakage, variadics,
-target capabilities, and non-include build-fact conflicts. Native authority
-remains separate:
+conflicts described above. Later compiler analyses still own broader qualifier
+and ownership consistency, callback lifetime, exported-ABI leakage, variadics,
+target capabilities, and non-include build-fact conflicts. The bounded
+direct-import registry validates and reaches the exact supported subset; native
+authority remains separate:
 
 - Clang-derived facts define imported declarations and layouts;
 - generated `_Static_assert` checks size, alignment, offset, and configuration;
@@ -170,9 +222,10 @@ snapshot without reparsing metadata, preserves exact names, assigns deterministi
 defaults, and supplies finalized names to declaration planning. During M0, the
 implementation-only
 `reflaxe_c_contract_report` define prints its deterministic JSON payload for the
-compile-backed snapshot test. The whole-program compiler will later consume the
-same typed snapshot and emit inspected artifacts through Reflaxe output
-ownership. `hxc inspect macros` is owned by E8 and is not implemented.
+compile-backed snapshot test. The whole-program compiler now consumes the same
+snapshot for the bounded reached direct-import slice and emits its C, build
+plan, and runtime-free proof through Reflaxe output ownership. General typed-C
+declaration emission and `hxc inspect macros` remain later E6/E7/E8 work.
 
 The fixture compiles equivalent roots in opposite reference orders and runs a
 valid/invalid/valid sequence through one Haxe compiler server. The reports must
@@ -209,8 +262,10 @@ inspection, and no-runtime evidence; and document ownership and unsafe effects.
   [fixed arrays and span-based iteration](span-lowering.md).
 - E3 owns aggregate representation, pointer/ownership operations, and unsafe
   lexical enforcement.
-- E6 owns imported qualifiers, constants, layouts, functions, and exact external
-  build facts derived from Clang.
+- E6.T03-E6.T05 and E6.T09 now have the bounded hand-authored direct-import
+  vertical slice described above. Full qualifiers, layouts, callbacks,
+  variadics, deterministic Clang derivation, and broad build inputs remain with
+  their original E6 owners.
 - E7 owns export discovery, ABI-safe type validation, generated public headers,
   and independent consumers.
 - E1.T08 owns the executable-only schema-1 neutral build plan and optional

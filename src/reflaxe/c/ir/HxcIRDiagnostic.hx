@@ -43,6 +43,12 @@ class HxcIRDiagnostic {
 			"Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.", source.stableForDiagnostic());
 	}
 
+	/** A source-authored imported C boundary that cannot preserve its contract. */
+	public static function invalidAbiBoundary(profile:String, context:String, message:String, source:HxcSourceSpan):HxcIRDiagnostic {
+		return new HxcIRDiagnostic(CDiagnosticId.InvalidAbiBoundary, CDiagnosticSeverity.Error, profile, context, message,
+			"Use exact C scalar and nominal types, explicit ownership/lifetimes, and a non-variadic C signature.", source.stableForDiagnostic());
+	}
+
 	public function render():String {
 		return '$id $severity [profile=$profile] ${source.display()} [$irPath] $message Remediation: $remediation';
 	}

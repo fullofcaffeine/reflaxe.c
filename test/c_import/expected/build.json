@@ -1,0 +1,44 @@
+{
+  "publicHeaders": [],
+  "sources": [
+    "src/program.c"
+  ],
+  "cStandard": "c11",
+  "definitions": [],
+  "extensions": false,
+  "schemaVersion": 1,
+  "privateHeaders": [
+    "include/hxc/program.h"
+  ],
+  "frameworks": [],
+  "includeDirectories": [
+    "include"
+  ],
+  "requiredHeaders": [
+    {
+      "path": "pointlib.h",
+      "ownerModulePaths": [
+        "Axis",
+        "Coord",
+        "Point",
+        "PointLib"
+      ],
+      "kind": "local"
+    }
+  ],
+  "libraries": [
+    {
+      "ownerModulePaths": [
+        "PointLib"
+      ],
+      "name": "pointlib"
+    }
+  ],
+  "runtimeHeaders": [],
+  "artifact": {
+    "targetName": "hxc_program",
+    "kind": "executable"
+  },
+  "pkgConfigPackages": [],
+  "warningPolicy": "strict"
+}

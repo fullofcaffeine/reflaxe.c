@@ -1,4 +1,4 @@
-hxcir schema=7
+hxcir schema=8
 module "ClassLayoutFixture" @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-75:3
   type "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911" name="EmptyBase" kind=class @"test/class_layout/fixtures/positive/ClassLayoutFixture.hx":1:1-1:19
     class-layout base=none header=none

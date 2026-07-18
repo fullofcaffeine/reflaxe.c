@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 7
+the structural C AST. Its schema is internal to the compiler: schema version 8
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -24,6 +24,9 @@ and cleanup, advancing the schema to version 6. E3.T06 adds a reachable
 whole-program virtual-dispatch plan, named hierarchy layouts and slots,
 root-header intent, table binding, and receiver-bearing virtual calls,
 advancing the schema to version 7.
+The bounded E6 direct-import slice adds a distinct borrowed literal-C-string
+type, header-owned nominal values and constants, and exact native dispatch,
+advancing the schema to version 8.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -71,6 +74,12 @@ inferred from C pointer spelling.
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
 termination or character count.
+`IRTCString` is a separate borrowed, NUL-terminated C view. Its only admitted
+constructor is `IRCCStringLiteral`: immutable literal storage with a validated
+UTF-8 byte count and no embedded NUL. `IRCNativeConstant` retains the exact
+header-owned constant identity and a nominal imported value retains its Haxe
+type identity through `IRTInstance`; neither is guessed from a host value or
+redeclared as generated C.
 
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
@@ -105,8 +114,9 @@ slot and receiver separately from the explicit source arguments.
 - constant families match their result types; for structurally resolvable
   places, loads match the place type, initialization/store values match their
   destination, and address results are pointers to the addressed type;
-- every string constant is a valid Unicode-scalar sequence and its recorded
-  UTF-8 byte length is exact, including embedded NUL bytes;
+- every Haxe string constant is a valid Unicode-scalar sequence and its
+  recorded UTF-8 byte length is exact, including embedded NUL bytes; every C
+  string literal also has an exact byte length and rejects embedded NUL;
 - fixed-array initialization supplies exactly the declared number and element
   type of values; span initialization borrows compatible fixed storage; index
   places resolve to the collection element type; and every admitted collection
@@ -180,6 +190,9 @@ slot and receiver separately from the explicit source arguments.
 - the admitted `io` runtime call is exactly `sys-println-literal` or
   `trace-literal`, accepts one `IRTString`, returns `Void`, and retains the
   cleanup-free native-status abort edge used by the hosted fail-stop policy.
+- a direct imported call is represented as native dispatch with exact argument
+  order and value types. Header-owned scalar, typedef, enum/constant, and
+  by-value struct identities remain structural; they select no runtime intent.
 
 These checks make a malformed internal IR an `HXC9000` compiler invariant
 failure. They do not replace later semantic passes such as representation
@@ -235,6 +248,15 @@ user constructor code, and each indirect call retains its receiver and slot.
 Override implementations must preserve the slot's target representation;
 typed receiver adapters are explicit program-local C emission facts rather
 than runtime intent. See [closed-world virtual dispatch](virtual-dispatch.md).
+
+For the bounded E6 direct-import slice, reached typed extern declarations lower
+to exact native dispatch only after their names, headers, fixed arity, calling
+convention, argument types, and return type validate. Imported struct field
+places remain ordinary structural HxcIR places; the authoritative header owns
+their layout and definition. Literal `String -> c.CString` borrowing is static,
+allocation-free storage local to the generated translation unit. Callbacks,
+variadics, pointer lifetimes, retained strings, opaque ownership, and inferred
+ABI facts remain fail-closed with `HXC3000`.
 
 ## Runtime and profile policy
 

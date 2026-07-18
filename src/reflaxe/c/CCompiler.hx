@@ -30,6 +30,7 @@ import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportBuilder;
 import reflaxe.c.lowering.CStaticFunctionGraph;
 import reflaxe.c.lowering.CStaticFunctionGraph.CStaticFunctionGraphCollector;
+import reflaxe.c.macros.TypedCContractMacro;
 import reflaxe.c.ir.HxcIRValidationError;
 import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIR.HxcIRProgram;
@@ -133,6 +134,7 @@ class CCompiler {
 		};
 		try {
 			final configuration = resolveProjectConfiguration(context.profile);
+			final typedCContract = TypedCContractMacro.collect(program.rawModules);
 			if (configuration.environment != CProjectEnvironment.Hosted) {
 				CDiagnostic.fatal(CDiagnosticId.LoweringNotImplemented,
 					'direct executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
@@ -155,7 +157,7 @@ class CCompiler {
 			}
 			context.symbols.register(headerGuardRequest);
 			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
-				graph.dispatch);
+				graph.dispatch, program, typedCContract);
 			final dispatchReport = new CDispatchReportBuilder().build(graph.dispatch, lowered.dispatch);
 			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
 				final inspection:StaticInitializationInspection = {
@@ -199,7 +201,7 @@ class CCompiler {
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
 					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, lowered.constructors.length, genericFunctionCount,
-					genericTypeCount, indirectInstanceCallCount, registry);
+					genericTypeCount, indirectInstanceCallCount, lowered.imports.functions.length + lowered.imports.constants.length, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -223,6 +225,8 @@ class CCompiler {
 				compilationStatus: lowered.aggregates.length == 0
 				&& lowered.enums.length == 0
 				&& lowered.classes.length == 0
+				&& lowered.imports.functions.length == 0
+				&& lowered.imports.constants.length == 0
 				&& genericFunctionCount == 0 ? CProjectCompilationStatus.PrimitiveExecutable : CProjectCompilationStatus.DirectValueExecutable,
 				profile: context.profile,
 				environment: configuration.environment,
@@ -240,6 +244,8 @@ class CCompiler {
 				directConstructorCount: lowered.constructors.length,
 				directGenericFunctionCount: genericFunctionCount,
 				directGenericTypeCount: genericTypeCount,
+				directImportCount: lowered.imports.types.length + lowered.imports.functions.length + lowered.imports.constants.length,
+				directImportTypeCount: lowered.imports.types.length,
 				directInstanceCallCount: directInstanceCallCount,
 				indirectInstanceCallCount: indirectInstanceCallCount,
 				dispatchReport: dispatchReport,
@@ -270,7 +276,7 @@ class CCompiler {
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
-			genericFunctionCount:Int, genericTypeCount:Int, indirectInstanceCallCount:Int,
+			genericFunctionCount:Int, genericTypeCount:Int, indirectInstanceCallCount:Int, importOperationCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
@@ -302,6 +308,9 @@ class CCompiler {
 		if (indirectInstanceCallCount > 0) {
 			directDecisions.push("reachable-program-local-virtual-dispatch");
 		}
+		if (importOperationCount > 0) {
+			directDecisions.push("typed-header-owned-c-imports");
+		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
@@ -329,6 +338,9 @@ class CCompiler {
 		}
 		if (indirectInstanceCallCount > 0) {
 			proof += ", with root-only program-local vtable pointers, reachable slots, concrete tables, and representation-checked override adapters selecting no runtime feature";
+		}
+		if (importOperationCount > 0) {
+			proof += ", plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";

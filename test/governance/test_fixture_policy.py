@@ -52,6 +52,7 @@ class FixturePolicyTests(unittest.TestCase):
             (
                 "bootstrap",
                 "typed-c",
+                "c-import",
                 "typed-ast",
                 "c-ast",
                 "declaration-plan",

@@ -1,4 +1,4 @@
-hxcir schema=7
+hxcir schema=8
 module "EnumFixture" @"test/enum_lowering/fixtures/positive/EnumFixture.hx":1:1-70:3
   type "type.enum.13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef" name="Option<bool>" kind=tagged-union @"test/enum_lowering/fixtures/positive/EnumFixture.hx":6:1-9:2
     case "None" value=0 payload=[] @"test/enum_lowering/fixtures/positive/EnumFixture.hx":7:2-7:7

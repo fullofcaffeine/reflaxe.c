@@ -33,6 +33,10 @@ The virtual-dispatch suite adds reachable ordinary instance methods,
 direct-call preservation, deterministic hierarchy slots, root-only minimal
 tables, representation-checked override adapters, a production explanation
 sidecar, and runtime-free strict C11/C++17 evidence.
+The direct-import suite adds exact header-owned scalar/typedef/enum/constant and
+by-value struct calls, structural field access, allocation-free literal
+`CString` borrowing, reached-only build facts, compiled ABI probes, and
+runtime-free strict C11 evidence.
 The generic-specialization suite adds full semantic-key sharing, closed
 primitive/function/enum instances, recursive worklist closure, bounded
 code-size reporting, exact dynamic/open/budget rejection, and runtime-free
@@ -53,13 +57,13 @@ general `hxrt` support.
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
-| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001` unsupported/unreachable body, signature, argument, aggregate identity/mutation/`Void`/`Dynamic`, class interface/generic/downcast, constructor escape/cycle/native-layout, virtual-override representation variance, recursive enum escape/payload, dynamic/open/excess generic specialization, general-array, empty-array, nonliteral output, and lookalike-intrinsic boundaries plus invalid build configuration |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3/E6 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, direct C import, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001`/`HXC3000` unsupported boundaries including body/signature/argument, aggregate/class/constructor/dispatch/enum/generic/span/string forms and malformed direct imports, plus invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
 | Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span/direct-import execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
 | Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars and array mutation, generated literal output, and exact hello stdout against pinned Haxe oracles |
-| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator, array lifecycle, and borrowed/owned CString seeds plus independent interop seeds; no generated public ABI |
+| ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator, array lifecycle, borrowed/owned CString seeds, and compiled pointlib import layout/constant probes plus independent C++ interop seed; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
 The canonical directories are stable homes for new cases. Existing focused
@@ -279,7 +283,7 @@ See [bounded constructor lowering](constructor-lowering.md).
 positive/negative/snapshot/runtime suite. It discovers ordinary instance
 methods from real typed calls, preserves final/private/metadata/`super` calls
 as direct C calls, and emits only the one reachable hierarchy slot plus tables
-for the two constructed dynamic classes. Schema-7 HxcIR retains the root
+for the two constructed dynamic classes. Schema-8 HxcIR retains the root
 layout, table binding, receiver, and call dispatch; the conditional
 `hxc.dispatch.json` sidecar explains every choice and finalized adapter.
 Repeated cold builds, reversed typed modules, another locale, portable,
@@ -294,7 +298,7 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-7 HxcIR. A recursive local uses an
+plus exhaustive tag-switch edges in schema-8 HxcIR. A recursive local uses an
 explicit finite pointer edge, while recursive signatures, reference/aggregate
 payloads, and non-exhaustive source patterns fail closed without artifacts.
 Generated private layout assertions compile under strict C11; independent C
@@ -394,6 +398,25 @@ the schema-2 plan proves that merely seeing that declaration adds no runtime
 intent, helper, artifact, or symbol. See
 [fixed arrays and span-based iteration](span-lowering.md).
 
+`test/c_import` is the focused E6
+positive/negative/snapshot/runtime/ABI suite for the bounded hand-authored
+direct-import slice. Its Haxe fixture reaches an authoritative independent
+pointlib header and source through exact names, calls scalar and by-value struct
+functions in both directions, reads and writes an imported field, uses typedef
+and enum/constant identities, and passes a non-ASCII literal borrowed
+`c.CString`. Repeated isolated roots plus reversed typed modules and locale
+changes must produce byte-identical normal artifacts. The neutral build plan
+must contain one reached header and logical library with all sorted declaration
+owners, while the runtime plan records `typed-header-owned-c-imports` and no
+`hxrt` features, files, or symbols; a typed but unreachable extern contributes
+none of its header/library/package/framework facts. A separately compiled probe verifies the
+header's size, alignment, offsets, and constant values; identity-verified GCC
+and Clang link the generated program with pointlib at O0/O2. Callback return,
+variadic, native-pointer return, missing exact name, unsupported preprocessor
+definition, embedded-NUL literal, and nonliteral `CString` fixtures fail with
+source-positioned `HXC3000` and no
+plausible artifact. See [typed C authoring](typed-c-authoring.md).
+
 `test/runtime/runtime-feature-graph` is the focused
 positive/negative/AST/snapshot/runtime suite for E4.T01/E4.T10. It renders the typed
 catalog and plans twice, reverses definition/reservation/reason input, and
@@ -453,7 +476,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-7 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-8 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "direct-c-import-negative",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-006",
+    "HXC-FFI-007",
+    "HXC-FFI-008",
+    "HXC-FFI-009"
+  ],
+  "sources": [
+    "src/reflaxe/c/interop/CImportRegistry.hx",
+    "test/c_import/fixtures/callback_return/CallbackApi.hx",
+    "test/c_import/fixtures/embedded_nul/Main.hx",
+    "test/c_import/fixtures/missing_name/MissingNameApi.hx",
+    "test/c_import/fixtures/nonliteral_cstring/Main.hx",
+    "test/c_import/fixtures/pointer_return/PointerApi.hx",
+    "test/c_import/fixtures/preprocessor_define/DefineApi.hx",
+    "test/c_import/fixtures/variadic/VariadicApi.hx",
+    "test/c_import/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../c_import/run.py"
+    ],
+    "workingDirectory": "test/negative/c-import",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC3000"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "fail-closed ABI edges passed$"
+    }
+  }
+}

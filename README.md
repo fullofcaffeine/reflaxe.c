@@ -247,7 +247,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 32 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 33 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 4 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -267,6 +267,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `constructor-lowering` | `implemented` | Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup. |
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
+| `direct-c-import` | `implemented` | Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C. |
 | `example-portfolio` | `implemented` | The repository-owned hello example compiles ordinary Haxe through generated C and runs with exact output. |
 | `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
 | `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
@@ -275,10 +276,10 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
-| `hxc-ir` | `implemented` | Schema-7 HxcIR structurally records values, tagged cases, concrete class layouts/references, reachable virtual layouts/slots/tables, table binding, default initialization, function failure conventions, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent. |
+| `hxc-ir` | `implemented` | Schema-8 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent. |
 | `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
-| `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes. |
-| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus. |
+| `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim inputs validate interop boundary shapes. |
+| `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11. |

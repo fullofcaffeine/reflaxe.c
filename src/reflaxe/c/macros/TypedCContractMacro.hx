@@ -1,6 +1,6 @@
 package reflaxe.c.macros;
 
-#if macro
+#if (macro || reflaxe_runtime)
 import haxe.Json;
 import haxe.macro.Compiler;
 import haxe.macro.Context;
@@ -9,6 +9,8 @@ import haxe.macro.Expr.MetadataEntry;
 import haxe.macro.Type;
 import haxe.macro.Type.ClassField;
 import haxe.macro.Type.ClassType;
+import haxe.macro.Type.EnumField;
+import haxe.macro.Type.EnumType;
 import haxe.macro.Type.MetaAccess;
 import reflaxe.c.CDiagnostic;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
@@ -31,7 +33,7 @@ import reflaxe.c.contract.TypedCContract.TypedCTypeRef;
 class TypedCContractMacro {
 	public static inline final REPORT_DEFINE = "reflaxe_c_contract_report";
 
-	#if macro
+	#if (macro || reflaxe_runtime)
 	static inline final INSTALLED_DEFINE = "reflaxe_c_contract_validator_installed";
 
 	static final TYPE_METADATA = [
@@ -243,6 +245,9 @@ class TypedCContractMacro {
 		if (shell.classType != null) {
 			collectClassFields(shell, layout, layouts, fields, dependencies, explicitSymbols);
 		}
+		if (shell.enumType != null) {
+			collectEnumFields(shell, layout, fields, explicitSymbols);
+		}
 
 		final dependencyRequirements:Map<String, String> = [];
 		for (edge in dependencies) {
@@ -314,6 +319,50 @@ class TypedCContractMacro {
 		}
 		for (field in staticFields) {
 			collectField(shell, field, true, layout, layouts, fields, dependencies, explicitSymbols);
+		}
+	}
+
+	static function collectEnumFields(shell:DeclarationShell, layout:Null<String>, fields:Array<TypedCContractField>,
+			explicitSymbols:Map<String, SymbolOrigin>):Void {
+		final enumType = shell.enumType;
+		if (enumType == null || layout != "enum")
+			return;
+		final constructors = [for (field in enumType.constructs) field];
+		constructors.sort(compareEnumFieldsByPosition);
+		for (field in constructors) {
+			validateKnownMetadata(field.meta, FIELD_METADATA, 'enum constructor `${shell.path}.${field.name}`');
+			final cNameEntry = single(field.meta, "c.name", '${shell.path}.${field.name}');
+			if (cNameEntry != null)
+				requireArity(cNameEntry, 1);
+			final cName = cNameEntry == null ? null : readCIdentifier(cNameEntry, 0, "C enum constant name");
+			if (cName != null)
+				registerSymbol(cName, '${shell.path}.${field.name}', "ordinary:translation-unit", cNameEntry.pos, explicitSymbols);
+			for (name in [
+				"c.bitField",
+				"c.align",
+				"c.linkage",
+				"c.callingConvention",
+				"c.visibility",
+				"c.section",
+				"c.export",
+				"c.constant"
+			]) {
+				if (single(field.meta, name, '${shell.path}.${field.name}') != null)
+					error('`@:$name` is not valid on a C enum constant', single(field.meta, name, '${shell.path}.${field.name}').pos);
+			}
+			fields.push({
+				name: field.name,
+				cName: cName,
+				kind: "constant",
+				type: typeRef(field.type),
+				bitWidth: null,
+				align: null,
+				exported: false,
+				linkage: null,
+				callingConvention: null,
+				visibility: null,
+				section: null
+			});
 		}
 	}
 
@@ -603,7 +652,8 @@ class TypedCContractMacro {
 					sourceKind: "class",
 					meta: value.meta,
 					pos: value.pos,
-					classType: value
+					classType: value,
+					enumType: null
 				};
 			case TEnumDecl(enumRef):
 				final value = enumRef.get();
@@ -612,7 +662,8 @@ class TypedCContractMacro {
 					sourceKind: "enum",
 					meta: value.meta,
 					pos: value.pos,
-					classType: null
+					classType: null,
+					enumType: value
 				};
 			case TTypeDecl(typeRef):
 				final value = typeRef.get();
@@ -621,7 +672,8 @@ class TypedCContractMacro {
 					sourceKind: "typedef",
 					meta: value.meta,
 					pos: value.pos,
-					classType: null
+					classType: null,
+					enumType: null
 				};
 			case TAbstract(abstractRef):
 				final value = abstractRef.get();
@@ -630,7 +682,8 @@ class TypedCContractMacro {
 					sourceKind: "abstract",
 					meta: value.meta,
 					pos: value.pos,
-					classType: null
+					classType: null,
+					enumType: null
 				};
 		};
 	}
@@ -957,6 +1010,15 @@ class TypedCContractMacro {
 		return byPosition != 0 ? byPosition : compareStrings(left.name, right.name);
 	}
 
+	static function compareEnumFieldsByPosition(left:EnumField, right:EnumField):Int {
+		final leftInfo = Context.getPosInfos(left.pos);
+		final rightInfo = Context.getPosInfos(right.pos);
+		if (leftInfo.file != rightInfo.file)
+			return compareStrings(leftInfo.file, rightInfo.file);
+		final byPosition = leftInfo.min - rightInfo.min;
+		return byPosition != 0 ? byPosition : compareStrings(left.name, right.name);
+	}
+
 	static function compareStrings(left:String, right:String):Int {
 		return left < right ? -1 : (left > right ? 1 : 0);
 	}
@@ -969,13 +1031,14 @@ class TypedCContractMacro {
 	#end
 }
 
-#if macro
+#if (macro || reflaxe_runtime)
 private typedef DeclarationShell = {
 	final path:String;
 	final sourceKind:String;
 	final meta:MetaAccess;
 	final pos:Position;
 	final classType:Null<ClassType>;
+	final enumType:Null<EnumType>;
 }
 
 private typedef DependencyEdge = {

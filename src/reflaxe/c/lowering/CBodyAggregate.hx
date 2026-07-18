@@ -7,8 +7,15 @@ import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
+import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
+import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.interop.CImportRegistry;
+import reflaxe.c.interop.CImportRegistry.CLoweredImports;
+import reflaxe.c.interop.CImportRegistry.CPreparedImportConstant;
+import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
+import reflaxe.c.interop.CImportRegistry.CPreparedImportType;
 import reflaxe.c.lowering.CBodyClass.CBodyClassRegistry;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
@@ -28,6 +35,8 @@ class CBodyAggregate {
 /** A closed body value category; aggregate values never enter primitive semantics. */
 enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
+	CBVKCString;
+	CBVKImport(value:CPreparedImportType);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
 	CBVKEnum(value:CPreparedBodyEnumInstance);
 	CBVKClass(value:CPreparedBodyClass, nullable:Bool);
@@ -45,6 +54,12 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping):
 				this.irType = mapping.irType;
 				this.cSpelling = mapping.cSpelling;
+			case CBVKCString:
+				this.irType = IRTCString;
+				this.cSpelling = "const-char-pointer:borrowed-literal";
+			case CBVKImport(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'c-import:${value.haxePath}';
 			case CBVKAggregate(aggregate):
 				this.irType = IRTInstance(aggregate.instanceId);
 				this.cSpelling = 'closed-record:${aggregate.digest}';
@@ -60,6 +75,12 @@ class CBodyValueType {
 	public static function primitive(mapping:CPrimitiveTypeMapping):CBodyValueType
 		return new CBodyValueType(CBVKPrimitive(mapping));
 
+	public static function cString():CBodyValueType
+		return new CBodyValueType(CBVKCString);
+
+	public static function imported(value:CPreparedImportType):CBodyValueType
+		return new CBodyValueType(CBVKImport(value));
+
 	public static function aggregate(value:CPreparedBodyAggregate):CBodyValueType
 		return new CBodyValueType(CBVKAggregate(value));
 
@@ -72,13 +93,30 @@ class CBodyValueType {
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
+			case CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
+		};
+	}
+
+	public function isCString():Bool
+		return kind == CBVKCString;
+
+	public function importedValue():Null<CPreparedImportType> {
+		return switch kind {
+			case CBVKImport(value): value;
+			case _: null;
+		};
+	}
+
+	public function importedStructValue():Null<CPreparedImportType> {
+		return switch kind {
+			case CBVKImport(value) if (value.kind == CITStruct): value;
+			case _: null;
 		};
 	}
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKPrimitive(_): null;
+			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -86,14 +124,14 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
+			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
 			case CBVKClass(value, _): value;
 		};
 	}
@@ -101,7 +139,7 @@ class CBodyValueType {
 	public function classNullable():Null<Bool> {
 		return switch kind {
 			case CBVKClass(_, nullable): nullable;
-			case CBVKPrimitive(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKPrimitive(_) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
 		};
 	}
 }
@@ -219,15 +257,20 @@ class CBodyAggregateRegistry {
 	final byShape:Map<String, CPreparedBodyAggregate> = [];
 	final enumRegistry:CBodyEnumRegistry;
 	final classRegistry:CBodyClassRegistry;
+	final importRegistry:Null<CImportRegistry>;
 
-	public function new(context:CompilationContext) {
+	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot) {
 		this.context = context;
 		this.enumRegistry = new CBodyEnumRegistry(context, valueType);
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
+		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
 	}
 
 	public function valueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
 			node:String):CBodyValueType {
+		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
+		if (imported != null)
+			return imported;
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
 			case TInst(reference, parameters) if (!reference.get().isExtern):
@@ -249,6 +292,22 @@ class CBodyAggregateRegistry {
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
 		};
 	}
+
+	public function importFunction(callee:TypedExpr, position:Position, sourcePath:String):Null<CPreparedImportFunction>
+		return importRegistry == null ? null : importRegistry.functionFor(callee, position, sourcePath);
+
+	public function importStaticConstant(classReference:Ref<ClassType>, fieldReference:Ref<ClassField>, position:Position,
+			sourcePath:String):Null<CPreparedImportConstant>
+		return importRegistry == null ? null : importRegistry.staticConstantFor(classReference, fieldReference, position, sourcePath);
+
+	public function importEnumConstant(reference:Ref<EnumType>, field:EnumField, position:Position, sourcePath:String):Null<CPreparedImportConstant>
+		return importRegistry == null ? null : importRegistry.enumConstantFor(reference, field, position, sourcePath);
+
+	public function canonicalImports():Array<CPreparedImportType>
+		return importRegistry == null ? [] : importRegistry.canonicalTypes();
+
+	public function finalizeImports(symbols:CSymbolRegistry):CLoweredImports
+		return importRegistry == null ? CLoweredImports.empty() : importRegistry.finalize(symbols);
 
 	public function canonicalEnums():Array<CPreparedBodyEnumInstance>
 		return enumRegistry.canonicalEnums();
@@ -364,10 +423,7 @@ class CBodyAggregateRegistry {
 	function admittedPrimitive(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
 		return switch CPrimitiveTypeMapper.map(type, context.profile) {
 			case CTPrimitive(mapping):
-				final admitted = mapping.nullability == CPNonNullable && switch mapping.sourceType {
-					case CPHaxeVoid | CPHaxeBool | CPHaxeInt | CPHaxeUInt | CPHaxeFloat: true;
-					case _: false;
-				};
+				final admitted = mapping.nullability == CPNonNullable;
 				if (!admitted) {
 					return rejected(fail, position, '$node:${mapping.cSpelling}');
 				}

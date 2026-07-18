@@ -259,6 +259,7 @@ class HxcIRDumper {
 			case IRTAbiInteger(kind): 'abi-int(${abiIntegerKind(kind)})';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
+			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance(${quote(instanceId)})';
 			case IRTPointer(pointee, nullable): 'pointer(${nullable ? "nullable" : "nonnull"},${typeRef(pointee)})';
@@ -392,6 +393,8 @@ class HxcIRDumper {
 			case IRCFloat(text): 'float($text)';
 			case IRCBool(flag): 'bool($flag)';
 			case IRCString(text, byteLength): 'string-utf8(bytes=$byteLength,value=${quote(text)})';
+			case IRCCStringLiteral(text, byteLength): 'cstring-literal(bytes=$byteLength,value=${quote(text)})';
+			case IRCNativeConstant(constantId): 'native-constant(${quote(constantId)})';
 			case IRCNull: "null";
 		}
 	}

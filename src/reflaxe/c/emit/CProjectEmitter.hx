@@ -61,6 +61,8 @@ typedef CProjectEmissionPlan = {
 	final ?directConstructorCount:Int;
 	final ?directGenericFunctionCount:Int;
 	final ?directGenericTypeCount:Int;
+	final ?directImportCount:Int;
+	final ?directImportTypeCount:Int;
 	final ?directInstanceCallCount:Int;
 	final ?indirectInstanceCallCount:Int;
 	final ?dispatchReport:CDispatchReportSnapshot;
@@ -314,7 +316,9 @@ class CProjectEmitter {
 		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
-		final directValueCount = aggregateCount + enumCount + classCount + genericFunctionCount;
+		final importCount = plan.directImportCount == null ? 0 : plan.directImportCount;
+		final importTypeCount = plan.directImportTypeCount == null ? 0 : plan.directImportTypeCount;
+		final directValueCount = aggregateCount + enumCount + classCount + genericFunctionCount + importCount;
 		if (aggregateCount < 0
 			|| enumCount < 0
 			|| classCount < 0
@@ -323,6 +327,9 @@ class CProjectEmitter {
 			&& classCount == 0
 			|| genericFunctionCount < 0
 			|| genericTypeCount < 0
+			|| importCount < 0
+			|| importTypeCount < 0
+			|| importTypeCount > importCount
 			|| genericTypeCount > enumCount
 			|| plan.compilationStatus == DirectValueExecutable
 			&& directValueCount == 0
@@ -389,8 +396,20 @@ class CProjectEmitter {
 			validateInitializationSource(initializer.source, 'initializer `${initializer.id}`');
 		}
 		for (fact in plan.buildFacts) {
-			if (fact.kind != "link" || fact.name != "m" || fact.value != null || fact.valueKind != null || fact.ownerModulePaths.length == 0) {
-				fail('direct executable emission only admits the compiler-selected C math link fact; found `${fact.kind}` `${fact.name}`');
+			if (fact.ownerModulePaths.length == 0)
+				fail('direct executable build fact `${fact.kind}` `${fact.name}` has no source owner');
+			switch fact.kind {
+				case "include":
+					if (importCount == 0 || fact.valueKind != "enum" || (fact.value != "system" && fact.value != "local"))
+						fail('direct executable header fact `${fact.name}` is not a validated reached C import');
+				case "link":
+					if (fact.value != null || fact.valueKind != null || (importCount == 0 && fact.name != "m"))
+						fail('direct executable link fact `${fact.name}` is neither the C math library nor a reached C import');
+				case "pkg-config" | "framework":
+					if (importCount == 0 || fact.value != null || fact.valueKind != null)
+						fail('direct executable build fact `${fact.kind}` `${fact.name}` is not a validated reached C import');
+				case _:
+					fail('direct executable emission does not admit build fact `${fact.kind}` `${fact.name}`');
 			}
 		}
 		var sources = 0;
@@ -432,6 +451,8 @@ class CProjectEmitter {
 		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
+		final importCount = plan.directImportCount == null ? 0 : plan.directImportCount;
+		final importTypeCount = plan.directImportTypeCount == null ? 0 : plan.directImportTypeCount;
 		final indirectInstanceCallCount = plan.indirectInstanceCallCount == null ? 0 : plan.indirectInstanceCallCount;
 		if (runtimePlan.schemaVersion != RuntimeFeaturePlanner.PLAN_SCHEMA_VERSION
 			|| runtimePlan.algorithm != RuntimeFeaturePlanner.PLAN_ALGORITHM
@@ -467,7 +488,7 @@ class CProjectEmitter {
 					case proof:
 						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
 							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
-						if (proof.reachability.typeInstances != aggregateCount + enumCount + classCount) {
+						if (proof.reachability.typeInstances != aggregateCount + enumCount + classCount + importTypeCount) {
 							fail("runtime-free direct executable value-layout count differs from reachable HxcIR instances");
 						}
 				}
@@ -506,6 +527,9 @@ class CProjectEmitter {
 		}
 		if (indirectInstanceCallCount > 0) {
 			expectedDirectDecisions.push("reachable-program-local-virtual-dispatch");
+		}
+		if (importCount > 0) {
+			expectedDirectDecisions.push("typed-header-owned-c-imports");
 		}
 		if (helperIds.length > 0) {
 			expectedDirectDecisions.push("selected-program-local-helpers");

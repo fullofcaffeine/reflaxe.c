@@ -978,6 +978,7 @@ class CBodyDispatchPreparer {
 			case IRTAbiInteger(kind): 'abi:${Std.string(kind)}';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string";
+			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}:${typeKey(pointee)}';

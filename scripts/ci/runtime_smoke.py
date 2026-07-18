@@ -26,6 +26,7 @@ ARRAY_RUNTIME = ROOT / "test/differential/array-runtime/run.py"
 STRING_RUNTIME = ROOT / "test/differential/string-runtime/run.py"
 HELLO_EXAMPLE = ROOT / "examples/hello/run.py"
 PRIMITIVE_DIFFERENTIAL = ROOT / "test/primitive_differential/run.py"
+C_IMPORT = ROOT / "test/c_import/run.py"
 DECLARATION_PLAN = ROOT / "test/declaration_plan"
 DECLARATION_PLAN_INCLUDE = DECLARATION_PLAN / "expected/include"
 DECLARATION_PLAN_SUPPORT_INCLUDE = DECLARATION_PLAN / "support/include"
@@ -339,6 +340,19 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         echo_output=True,
     )
     lanes.append("primitive-differential-sanitizer-run")
+
+    run_command(
+        [
+            sys.executable,
+            str(C_IMPORT),
+            "--toolchain",
+            family,
+            "--native-only",
+        ],
+        label=f"{family} generated direct C import and ABI probe",
+        echo_output=True,
+    )
+    lanes.append("generated-direct-c-import-run")
 
     run_command(
         [

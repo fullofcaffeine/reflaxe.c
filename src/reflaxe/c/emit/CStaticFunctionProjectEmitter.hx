@@ -75,7 +75,7 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.dispatch);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.dispatch, lowered.imports);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		final functionNames:Map<String, CIdentifier> = [];
@@ -115,6 +115,22 @@ class CStaticFunctionProjectEmitter {
 		for (header in headers) {
 			headerUnit.includes.push({path: header, kind: System});
 		}
+		for (include in lowered.imports.includes) {
+			var duplicate = false;
+			for (existing in headerUnit.includes) {
+				if (existing.path != include.path)
+					continue;
+				if (existing.kind != include.kind)
+					throw new ProjectEmissionError('imported header `${include.path}` has conflicting local/system delimiter policy');
+				duplicate = true;
+			}
+			if (!duplicate)
+				headerUnit.includes.push(include);
+		}
+		headerUnit.includes.sort((left, right) -> {
+			final kindOrder = (left.kind == System ? 0 : 1) - (right.kind == System ? 0 : 1);
+			return kindOrder != 0 ? kindOrder : compareStrings(left.path, right.path);
+		});
 		final hasRuntimeHeader = headers.filter(header -> StringTools.startsWith(header, "hxrt/")).length > 0;
 		if (hasRuntimeHeader != (runtimeAbiMajor != null)) {
 			throw new ProjectEmissionError("runtime headers and the generated runtime ABI check must be selected together");

@@ -116,6 +116,32 @@ def typed_c_artifacts() -> list[Artifact]:
     ]
 
 
+def c_import_artifacts() -> list[Artifact]:
+    module = load_module("c_import", "test/c_import/run.py")
+    first = module.render_snapshot()
+    second = module.render_snapshot()
+    if first != second:
+        raise SnapshotFailure("two C-import snapshot renders were not byte-identical")
+    formats = {
+        "program.h": "header",
+        "program.c": "c",
+        "build.json": "json",
+        "runtime-plan.json": "json",
+    }
+    artifacts: list[Artifact] = []
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"C-import snapshot omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"C-import snapshot omitted {name}")
+        artifacts.append(
+            Artifact(Path("test/c_import/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 def typed_ast_artifacts() -> list[Artifact]:
     module = load_module("typed_ast", "test/typed_ast/run.py")
     result = module.render_snapshot()
@@ -846,6 +872,7 @@ def hello_artifacts() -> list[Artifact]:
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
+    "c-import": c_import_artifacts,
     "typed-ast": typed_ast_artifacts,
     "c-ast": c_ast_artifacts,
     "declaration-plan": declaration_plan_artifacts,

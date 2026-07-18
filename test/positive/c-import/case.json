@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "id": "direct-c-import-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-FFI-001",
+    "HXC-MAC-001",
+    "HXC-MAC-002",
+    "HXC-MAC-003"
+  ],
+  "sources": [
+    "src/reflaxe/c/interop/CImportRegistry.hx",
+    "src/reflaxe/c/lowering/CBodyLowering.hx",
+    "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "test/c_import/fixtures/build_facts/BuildFactApi.hx",
+    "test/c_import/fixtures/build_facts/Main.hx",
+    "test/c_import/fixtures/build_facts/build.hxml",
+    "test/c_import/fixtures/positive/Axis.hx",
+    "test/c_import/fixtures/positive/Coord.hx",
+    "test/c_import/fixtures/positive/Main.hx",
+    "test/c_import/fixtures/positive/Point.hx",
+    "test/c_import/fixtures/positive/PointLib.hx",
+    "test/c_import/fixtures/positive/UnusedLib.hx",
+    "test/c_import/fixtures/positive/build.hxml",
+    "test/c_import/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../c_import/run.py"
+    ],
+    "workingDirectory": "test/positive/c-import",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^c-import: OK:"
+    },
+    "artifacts": [
+      {
+        "path": "test/c_import/expected/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/c_import/expected/build.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      }
+    ]
+  }
+}

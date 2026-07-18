@@ -550,6 +550,12 @@ REQUIRED_GATE_FILES = (
     "test/native/pointlib/include/pointlib.h",
     "test/native/pointlib/src/pointlib.c",
     "test/native/pointlib/smoke.c",
+    "test/c_import/expected/program.h",
+    "test/c_import/expected/program.c",
+    "test/c_import/expected/build.json",
+    "test/c_import/expected/runtime-plan.json",
+    "test/c_import/native/abi_probe.c",
+    "test/c_import/run.py",
     "test/native/cpp_shim/include/counter_shim.h",
     "test/native/cpp_shim/src/counter_shim.cpp",
     "test/native/cpp_shim/smoke.c",
@@ -663,6 +669,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:diagnostics entry point")
     if scripts.get("test:c-ast") != "python3 test/c_ast/run.py":
         errors.append("package.json must retain the test:c-ast entry point")
+    if scripts.get("test:c-import") != "python3 test/c_import/run.py":
+        errors.append("package.json must retain the test:c-import entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:symbol-registry") != "python3 test/symbol_registry/run.py":
@@ -814,6 +822,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:span-lowering")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
+    if "npm run test:c-import" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:c-import")
     if "npm run test:beads-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:beads-plan")
     if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
@@ -929,6 +939,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the fixed-array/span lowering test")
     if "test/typed_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed-AST normalization test")
+    if "test/c_import/run.py" not in pre_commit:
+        errors.append("pre-commit must run the generated direct C-import test")
     if "scripts/ci/check_fixture_policy.py" not in pre_commit:
         errors.append("pre-commit must validate the fixture and example policy")
     if "scripts/ci/check_capability_manifest.py" not in pre_commit:
@@ -967,6 +979,12 @@ def validate() -> list[str]:
             errors.append(
                 "native smoke runner lost reusable C AST lane: "
                 + required_c_ast_lane
+            )
+    for required_import_lane in ("C_IMPORT", "generated-direct-c-import-run"):
+        if required_import_lane not in runner:
+            errors.append(
+                "native smoke runner lost generated direct C-import lane: "
+                + required_import_lane
             )
     if "declaration-header-independent-compile" not in runner or "declaration-plan-header-run" not in runner:
         errors.append("native smoke runner must independently compile and execute declaration-plan headers")

@@ -458,7 +458,7 @@ def validate_dispatch(report: dict[str, object]) -> None:
 def validate_hxcir(project: RenderedProject) -> None:
     hxcir = project.hxcir
     required = (
-        "hxcir schema=7\n",
+        "hxcir schema=8\n",
         'layout "vtable.layout.BaseWorker"',
         'slot "slot.BaseWorker.value"',
         'table "vtable.LeafWorker"',
@@ -472,7 +472,7 @@ def validate_hxcir(project: RenderedProject) -> None:
         "class-layout base=none header=none",
     )
     if not hxcir.startswith(required[0]) or any(marker not in hxcir for marker in required[1:]):
-        raise VirtualDispatchFailure("schema-7 dispatch HxcIR lost a structural marker")
+        raise VirtualDispatchFailure("schema-8 dispatch HxcIR lost a structural marker")
     if hxcir.count('dispatch=virtual(slot="slot.BaseWorker.value"') != 3:
         raise VirtualDispatchFailure("HxcIR did not retain exactly three indirect calls")
     if str(ROOT) in hxcir or "\\" in hxcir or "hxrt" in hxcir.lower():

@@ -10,7 +10,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 7;
+	public static inline final SCHEMA_VERSION = 8;
 
 	public function new() {}
 
@@ -1681,7 +1681,7 @@ private class HxcIRValidationState {
 				}
 			case IRTNullable(inner, IRNTagged) | IRTFixedArray(inner, _, _):
 				collectDirectLayoutDependencies(inner, result);
-			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, IRNPointer) |
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTPointer(_, _) | IRTNullable(_, IRNPointer) |
 				IRTFunction(_, _) | IRTSpan(_, _) | IRTDynamic:
 		}
 	}
@@ -1978,7 +1978,7 @@ private class HxcIRValidationState {
 
 	function validateTypeRef(type:HxcIRTypeRef, path:String, source:HxcSourceSpan, allowVoid:Bool):Void {
 		switch type {
-			case IRTBool | IRTString | IRTDynamic:
+			case IRTBool | IRTString | IRTCString | IRTDynamic:
 			case IRTInt(width, _):
 				if (width != 8 && width != 16 && width != 32 && width != 64) {
 					add(path, 'integer width $width is unsupported; expected 8, 16, 32, or 64', source);
@@ -2003,8 +2003,8 @@ private class HxcIRValidationState {
 				switch inner {
 					case IRTNullable(_, _):
 						add(path, "nested nullable values must be canonicalized to one nullable layer", source);
-					case IRTVoid | IRTFunction(_, _) | IRTDynamic:
-						add(path, "Void, function, and Dynamic types cannot use a primitive nullable representation", source);
+					case IRTVoid | IRTFunction(_, _) | IRTString | IRTCString | IRTDynamic:
+						add(path, "Void, string views, function, and Dynamic types cannot use a primitive nullable representation", source);
 					case _:
 				}
 				switch representation {
@@ -2067,10 +2067,21 @@ private class HxcIRValidationState {
 				} else if (byteLength != actual) {
 					add(path, 'string constant records UTF-8 byte length $byteLength but encodes to $actual byte(s)', source);
 				}
+			case IRCCStringLiteral(text, byteLength):
+				final actual = HxcUtf8.byteLength(text);
+				if (actual == null) {
+					add(path, "C string literal is not a valid Unicode-scalar sequence", source);
+				} else if (text.indexOf("\x00") != -1) {
+					add(path, "C string literal contains an embedded NUL byte", source);
+				} else if (byteLength != actual) {
+					add(path, 'C string literal records UTF-8 byte length $byteLength but encodes to $actual byte(s)', source);
+				}
+			case IRCNativeConstant(constantId):
+				validateStableId(constantId, '$path.nativeConstant', source);
 		}
 	}
 
-	static function constantMatchesType(value:HxcIRConstant, type:HxcIRTypeRef):Bool {
+	function constantMatchesType(value:HxcIRConstant, type:HxcIRTypeRef):Bool {
 		return switch value {
 			case IRCInt(_):
 				switch type {
@@ -2084,6 +2095,12 @@ private class HxcIRValidationState {
 				}
 			case IRCBool(_): type == IRTBool;
 			case IRCString(_, _): type == IRTString;
+			case IRCCStringLiteral(_, _): type == IRTCString;
+			case IRCNativeConstant(_): switch type {
+					case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_): true;
+					case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId); declaration != null && declaration.kind == IRTKExtern;
+					case _: false;
+				};
 			case IRCNull:
 				switch type {
 					case IRTPointer(_, true) | IRTNullable(_, _): true;
@@ -2146,6 +2163,7 @@ private class HxcIRValidationState {
 			case IRTAbiInteger(kind): 'abi:${abiIntegerKey(kind)}';
 			case IRTFloat(width): 'f$width';
 			case IRTString: "string-utf8";
+			case IRTCString: "cstring-borrowed-literal";
 			case IRTVoid: "void";
 			case IRTInstance(instanceId): 'instance:$instanceId';
 			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "nonnull"}<${typeKey(pointee)}>';
@@ -2179,6 +2197,8 @@ private class HxcIRValidationState {
 			case IRCFloat(text): 'float:$text';
 			case IRCBool(flag): 'bool:$flag';
 			case IRCString(text, byteLength): 'string-utf8:$byteLength:${escaped(text)}';
+			case IRCCStringLiteral(text, byteLength): 'cstring-literal:$byteLength:${escaped(text)}';
+			case IRCNativeConstant(constantId): 'native-constant:${escaped(constantId)}';
 			case IRCNull: "null";
 		}
 	}

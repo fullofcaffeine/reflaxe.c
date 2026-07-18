@@ -82,7 +82,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-7 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-8 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -93,6 +93,11 @@ implementations, so the IR never selects an implicit runtime core.
 Validated UTF-8 String constants additionally retain their exact byte length;
 the only admitted String consumer is the explicit hosted literal-output call
 with a native-status abort edge.
+The bounded direct-import slice keeps borrowed literal C strings distinct as
+`IRTCString`, retains header-owned constants as `IRCNativeConstant`, and uses
+`IRCDNative` only after exact import validation. Imported nominal values remain
+structural HxcIR types and places even though their definitions belong to the
+authoritative header; no import selects runtime intent.
 Concrete class declarations retain their private base-prefix layout, own fields,
 and explicit header intent; nullable references require validated null proofs,
 and derived-to-base conversion stays inspectable until the C emitter selects a
@@ -528,7 +533,7 @@ Haxe declarations and types
   -> validated metadata/macros
   -> deterministic TypedCContractSnapshot
   -> TypedCNameFinalizer / CSymbolRegistry
-  -> CDeclarationPlanner (complete/forward/include/header decisions)
+  -> CDeclarationPlanner or reached CImportRegistry
   -> declaration, header, layout, ownership, and build facts
   -> HxcIR / C AST / neutral manifest
 ```
@@ -553,10 +558,14 @@ writes no files. Schema 2 build facts preserve sorted declaration owners so
 planner is likewise pure: complete edges order or include definitions,
 pointer-only edges forward-declare, and authoritative external opaque includes
 are propagated. Its report/header adapter remains test-only. The implemented
-project emitter can package finalized structural header/source artifacts and
-typed build facts through Reflaxe ownership, but production declaration/HxcIR
-lowering still does not reach it. See [typed C authoring](typed-c-authoring.md)
-and [project emission](project-emission.md).
+project emitter packages finalized structural header/source artifacts and typed
+build facts through Reflaxe ownership. Production lowering now reaches it for
+exact fixed-arity scalar/typedef/enum/constant/by-value-struct imports and
+literal borrowed C strings. The authoritative header remains the ABI source,
+compiled probes verify layout/constants, and unsupported callbacks, variadics,
+pointer lifetimes, ownership, and broader bindgen remain fail-closed. See
+[typed C authoring](typed-c-authoring.md) and [project
+emission](project-emission.md).
 
 ## ABI boundary
 

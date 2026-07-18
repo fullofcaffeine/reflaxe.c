@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "direct-c-import-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-FFI-001",
+    "HXC-MAC-001",
+    "HXC-MAC-002"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/native/pointlib/include/pointlib.h",
+    "test/native/pointlib/src/pointlib.c",
+    "test/c_import/native/abi_probe.c",
+    "test/c_import/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../c_import/run.py",
+      "--native-only"
+    ],
+    "workingDirectory": "test/runtime/c-import",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "compiled ABI probes.*runtime absence"
+    }
+  }
+}

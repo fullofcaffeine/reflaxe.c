@@ -25,6 +25,12 @@ E3.T04-E3.T06 use the same status for private concrete class layouts, bounded
 nonescaping construction, ordinary instance methods, and reachable closed-world
 virtual dispatch. Dispatch projects conditionally add a validated explanation
 sidecar and remain runtime-free with no public exports.
+The bounded E6 direct-import slice uses that executable boundary for exact
+header-owned scalar/typedef/enum/constant/by-value-struct calls and literal
+borrowed C strings. Reached includes and logical library/pkg-config/framework
+facts enter the neutral build plan with declaration provenance; the program
+remains runtime-free and the generated project never owns the foreign header or
+library.
 Unsupported nodes stop at exact `HXC1001` without output. The broader generic
 `lowered-program` status remains rejected until real semantic runtime, ABI, and
 stdlib analyses exist for those programs. The checked-in structural project
@@ -70,7 +76,8 @@ The emitter owns these schema-1 sidecars:
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   direct executable's schema-2 `hxc-runtime-plan-v2`
   analyzed record. Primitive, closed-record, concrete-class, bounded
-  constructor, and bounded enum graphs use `analyzed-runtime-free`; literal
+  constructor, bounded enum, and direct-import graphs use
+  `analyzed-runtime-free`; literal
   hosted output uses `analyzed-runtime-features` with exactly `runtime-base`,
   `status`, `string-literal`, and `io`. Both are produced by the typed runtime
   feature planner and contain resolved policy/diagnostic provenance, planning
@@ -83,7 +90,9 @@ The emitter owns these schema-1 sidecars:
   `selected-program-local-helpers` decision appears only when that compilation
   selected at least one helper. A reachable virtual-dispatch graph additionally
   records `reachable-program-local-virtual-dispatch`; this is a direct compiler
-  decision, not an `hxrt` feature;
+  decision, not an `hxrt` feature. A reached import graph records
+  `typed-header-owned-c-imports` plus exact reached function/value/type counts;
+  header and linker build facts remain outside the runtime feature sets;
 - `hxc.abi.json`: either `placeholder-no-export-analysis` or the admitted
   executable's `analyzed-no-public-exports` plus its C `main` entry;
 - `hxc.stdlib-report.json`: either `placeholder-no-stdlib-analysis` or the
@@ -113,8 +122,9 @@ definition, so its declared hash scope is every compiler artifact except
 `hxc.manifest.json` and Reflaxe's `_GeneratedFiles.json`. The `GeneratedFile`
 value for the manifest still carries and verifies its own in-memory SHA-256.
 Floating modulo contributes a provenance-bearing `m` link fact to the neutral
-manifest. This is an ordinary C build requirement and does not change the empty
-runtime plan. A nonempty runtime payload is additionally traced to the schema-2
+manifest. Reached C imports similarly contribute only their validated include,
+logical library, pkg-config, or framework facts. These are ordinary C build
+requirements and do not change the empty runtime plan. A nonempty runtime payload is additionally traced to the schema-2
 feature catalog: packaging verifies each registered source SHA-256, and this
 manifest hashes the emitted copy plus its exact source/include build plan.
 
@@ -217,6 +227,7 @@ npm run test:project-emitter
 npm run test:build-adapters -- --toolchain clang
 npm run test:runtime-features
 npm run test:arithmetic-semantics
+npm run test:c-import
 npm run snapshots:check
 npm run test:native
 ```
@@ -246,11 +257,11 @@ units through CMake and Meson. Paths include spaces and apostrophes, and an
 adversarial string definition contains semicolon, CMake generator-expression,
 quote, and backslash characters. The native matrix also compiles every emitted
 header and links/runs the structural project under GCC and Clang. The
-function-lowering, arithmetic, aggregate-lowering, enum-lowering, and
+function-lowering, arithmetic, aggregate-lowering, enum-lowering, direct-import, and
 generic-specialization suites
 prove that the narrow direct-value production paths pass through this
 ownership boundary with analyzed empty runtime/ABI/stdlib records, a typed static-initialization plan,
-optional request-local helpers, and the exact math build fact. The structural
+optional request-local helpers, and exact reached math/import build facts. The structural
 corpus itself remains emitted-C shape
 and ownership evidence, not generated-Haxe semantic evidence or a public ABI,
 runtime, standard-library, or generated-output licensing claim.

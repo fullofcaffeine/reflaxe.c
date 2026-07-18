@@ -270,7 +270,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts.",
-      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-7 HxcIR and run as runtime-free strict C11.",
+      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-8 HxcIR and run as runtime-free strict C11.",
       "evidence": [
         "docs/class-layout.md",
         "src/reflaxe/c/lowering/CBodyClass.hx",
@@ -331,7 +331,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup.",
-      "scope": "Unconditional entry-block local new expressions lower through schema-7 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-8 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -385,6 +385,32 @@
       ]
     },
     {
+      "id": "direct-c-import",
+      "area": "interop",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
+      "scope": "Exact fixed-arity C functions, scalars, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-8 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts.",
+      "evidence": [
+        "docs/typed-c-authoring.md",
+        "src/reflaxe/c/interop/CImportRegistry.hx",
+        "test/c_import/expected/program.c",
+        "test/c_import/native/abi_probe.c",
+        "test/c_import/run.py"
+      ],
+      "owners": [
+        "E6.T03",
+        "E6.T04",
+        "E6.T05",
+        "E6.T09"
+      ],
+      "limitations": [
+        "Bindings are hand-authored and exact; Clang-backed bindgen remains unsupported.",
+        "Callbacks, variadics, pointers and retained lifetimes, opaque ownership, unions, bit fields, packing, C++, public exports, and stable ABI remain fail-closed.",
+        "Compiled pointlib probes establish only the declared fixture header and target compiler invocation, not general cross-platform ABI compatibility."
+      ]
+    },
+    {
       "id": "example-portfolio",
       "area": "product",
       "status": "implemented",
@@ -413,7 +439,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks.",
-      "scope": "Focused M0/E3 suites, including constructor lowering and virtual dispatch, and the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
+      "scope": "Focused M0/E3/E6 suites, including constructor lowering, virtual dispatch, and direct C import, plus the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
       "evidence": [
         "docs/specs/fixture-taxonomy.json",
         "scripts/ci/check_fixture_policy.py",
@@ -423,7 +449,8 @@
         "E0.T09",
         "E2.T10",
         "E3.T05",
-        "E3.T06"
+        "E3.T06",
+        "E6.T05"
       ],
       "limitations": [
         "A registered lane proves only its declared artifact and assertion scope."
@@ -435,7 +462,7 @@
       "status": "unsupported",
       "disposition": "fails-closed",
       "summary": "General Haxe programs are not supported and stop at the first unsupported typed construct.",
-      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded nonescaping constructor, closed-world virtual-dispatch, bounded direct-value enum, and compiler-known literal-output subsets are admitted.",
+      "scope": "Only the separately listed primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, concrete class-reference/layout, bounded nonescaping constructor, closed-world virtual-dispatch, bounded direct-value enum, compiler-known literal-output, and exact direct-C-import subsets are admitted.",
       "evidence": [
         "src/reflaxe/c/CCompiler.hx",
         "test/all_sources/run.py",
@@ -455,10 +482,11 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling.",
-      "scope": "The writer rejects path escapes, symlink escapes, unowned collisions, and stale files outside the prior manifest.",
+      "scope": "The writer rejects path escapes, symlink escapes, unowned collisions, and stale files outside the prior manifest; admitted direct imports reach the same owned project/build/runtime-plan boundary.",
       "evidence": [
         "docs/project-emission.md",
         "src/reflaxe/c/emit/ReflaxeOutputWriter.hx",
+        "test/c_import/run.py",
         "test/project_emitter/run.py"
       ],
       "owners": [
@@ -556,14 +584,15 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-7 HxcIR structurally records values, tagged cases, concrete class layouts/references, reachable virtual layouts/slots/tables, table binding, default initialization, function failure conventions, UTF-8 string constants, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, and literal-output lowering slices.",
+      "summary": "Schema-8 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, and direct-C-import lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
         "test/constructor_lowering/expected/constructors.hxcir",
         "test/virtual_dispatch/expected/dispatch.hxcir",
         "test/class_layout/expected/classes.hxcir",
+        "test/c_import/run.py",
         "test/hxc_ir/run.py"
       ],
       "owners": [
@@ -573,7 +602,9 @@
         "E3.T02",
         "E3.T04",
         "E3.T05",
-        "E3.T06"
+        "E3.T06",
+        "E6.T03",
+        "E6.T05"
       ],
       "limitations": [
         "An IR node does not imply frontend lowering or C emission exists for that semantic feature."
@@ -609,8 +640,8 @@
       "area": "interop",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Independent C-library and C++ extern-C shim fixtures validate future interop boundary shapes.",
-      "scope": "The native inputs compile and run as isolated C/C++ consumer evidence.",
+      "summary": "Independent C-library and C++ extern-C shim inputs validate interop boundary shapes.",
+      "scope": "Both native inputs compile and run independently; pointlib also serves as the authoritative external library for the bounded generated-Haxe direct-import proof.",
       "evidence": [
         "test/native/cpp_shim/smoke.c",
         "test/native/pointlib/smoke.c"
@@ -620,7 +651,7 @@
         "E6.T12"
       ],
       "limitations": [
-        "They are not generated from Haxe and do not prove bindgen, export, or generated ABI support."
+        "The C++ shim remains independent seed evidence; neither fixture proves bindgen, export, or a stable public ABI."
       ]
     },
     {
@@ -628,8 +659,8 @@
       "area": "quality",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, private aggregate, class, constructor-header, virtual-dispatch-header, and enum C/C++ agreement, checked class-reference, constructor-failure, and indirect-call behavior, closed generic C11 execution, the checked-in generated hello baseline, and the seeded primitive ASan/UBSan corpus registered by the runners.",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, direct pointlib import plus compiled ABI probe, private aggregate, class, constructor-header, virtual-dispatch-header, and enum C/C++ agreement, checked class-reference, constructor-failure, and indirect-call behavior, closed generic C11 execution, the checked-in generated hello baseline, and the seeded primitive ASan/UBSan corpus registered by the runners.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
@@ -651,7 +682,10 @@
         "E3.T03",
         "E3.T04",
         "E3.T05",
-        "E3.T06"
+        "E3.T06",
+        "E6.T03",
+        "E6.T04",
+        "E6.T05"
       ],
       "limitations": [
         "Component-native evidence is not a complete supported-platform or release matrix."
@@ -993,7 +1027,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
-      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-7 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
+      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-8 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
       "evidence": [
         "docs/enum-lowering.md",
         "src/reflaxe/c/lowering/CBodyEnum.hx",
@@ -1031,18 +1065,22 @@
       "status": "scaffold-only",
       "disposition": "reserved",
       "summary": "Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check.",
-      "scope": "The contract macro validates the current declaration/build surface; fixed CArray and local Span operations have a separate admitted lowering slice.",
+      "scope": "The contract macro validates the current declaration/build surface; fixed CArray/local Span and exact reached direct-import operations have separate admitted lowering slices.",
       "evidence": [
         "std/c/Ptr.hx",
+        "std/c/CString.hx",
         "std/c/Span.hx",
+        "test/c_import/run.py",
         "test/typed_c/run.py"
       ],
       "owners": [
         "E1.T03",
-        "E3.T01"
+        "E3.T01",
+        "E6.T03",
+        "E6.T05"
       ],
       "limitations": [
-        "Most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
+        "Only the separately listed CArray/Span and direct-import subsets lower; most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
       ]
     },
     {
@@ -1145,7 +1183,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reachable ordinary class methods support deterministic minimal closed-world virtual dispatch while statically known calls remain direct.",
-      "scope": "Non-generic infallible class methods lower through schema-7 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
+      "scope": "Non-generic infallible class methods lower through schema-8 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
       "evidence": [
         "docs/virtual-dispatch.md",
         "docs/specs/dispatch-report.schema.json",

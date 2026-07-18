@@ -34,6 +34,7 @@ class HxcIRGolden {
 			diagnostics: {
 				missingTerminator: invalidDiagnostics(missingTerminatorProgram()),
 				constantTypeMismatch: invalidDiagnostics(constantTypeMismatchProgram()),
+				nativeConstantAggregate: invalidDiagnostics(nativeConstantAggregateProgram()),
 				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
 				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
 				aggregateConstructionMismatch: invalidDiagnostics(aggregateConstructionMismatchProgram()),
@@ -69,6 +70,8 @@ class HxcIRGolden {
 				primitiveRuntimeConversion: invalidDiagnostics(primitiveRuntimeConversionProgram()),
 				nullableUnwrapWithoutFailure: invalidDiagnostics(nullableUnwrapWithoutFailureProgram()),
 				stringByteLengthMismatch: invalidDiagnostics(stringByteLengthMismatchProgram()),
+				cstringByteLengthMismatch: invalidDiagnostics(cstringByteLengthMismatchProgram()),
+				cstringEmbeddedNul: invalidDiagnostics(cstringEmbeddedNulProgram()),
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
@@ -532,6 +535,9 @@ class HxcIRGolden {
 					instructions: [
 						instruction("c00.one", result("value.one", IRTInt(32, true)), IRIOConstant(IRCInt("1")), COVERAGE_SOURCE, 18),
 						instruction("c00.string", result("value.string", IRTString), IRIOConstant(IRCString("line\x00é🙂", 11)), COVERAGE_SOURCE, 18),
+						instruction("c00.cstring", result("value.cstring", IRTCString), IRIOConstant(IRCCStringLiteral("native-é", 9)), COVERAGE_SOURCE, 18),
+						instruction("c00.native-constant", result("value.native-constant", IRTInt(32, true)),
+							IRIOConstant(IRCNativeConstant("native.constant.coverage")), COVERAGE_SOURCE, 18),
 						instruction("c00.output", null, IRIOCall(call(IRCDRuntime("io", "sys-println-literal"), ["value.string"], IRTVoid,
 							{
 								kind: IRFNativeStatus,
@@ -716,6 +722,14 @@ class HxcIRGolden {
 		return minimalProgram("invalid.ConstantTypeMismatch", [
 			instruction("bad.constant", result("value.bad", IRTInt(32, true)), IRIOConstant(IRCBool(true)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function nativeConstantAggregateProgram():HxcIRProgram {
+		final file = "test/negative/NativeConstantAggregate.hx";
+		return aggregateProgram(file, [
+			instruction("bad.native-constant", result("value.bad", IRTInstance("instance.record")),
+				IRIOConstant(IRCNativeConstant("native.constant.aggregate")), file, 2)
+		], [], "invalid.NativeConstantAggregate");
 	}
 
 	static function loadTypeMismatchProgram():HxcIRProgram {
@@ -1226,6 +1240,20 @@ class HxcIRGolden {
 		final file = "test/negative/StringByteLengthMismatch.hx";
 		return minimalProgram("invalid.StringByteLengthMismatch", [
 			instruction("bad.string", result("value.string", IRTString), IRIOConstant(IRCString("é🙂", 3)), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function cstringByteLengthMismatchProgram():HxcIRProgram {
+		final file = "test/negative/CStringByteLengthMismatch.hx";
+		return minimalProgram("invalid.CStringByteLengthMismatch", [
+			instruction("bad.cstring", result("value.cstring", IRTCString), IRIOConstant(IRCCStringLiteral("é🙂", 3)), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function cstringEmbeddedNulProgram():HxcIRProgram {
+		final file = "test/negative/CStringEmbeddedNul.hx";
+		return minimalProgram("invalid.CStringEmbeddedNul", [
+			instruction("bad.cstring", result("value.cstring", IRTCString), IRIOConstant(IRCCStringLiteral("before\x00after", 12)), file, 2)
 		], terminator(IRTReturn(null, []), file, 3), [], [], file);
 	}
 
