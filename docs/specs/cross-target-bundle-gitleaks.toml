@@ -1,0 +1,17 @@
+title = "reflaxe.c cross-target research bundle Gitleaks config"
+minVersion = "8.30.0"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Public semantic hashes in the generated pinned-stdlib ledger"
+condition = "AND"
+paths = ['''(^|[/:])sources/haxe-c/docs/specs/stdlib-ledger\.(json|csv)$''']
+regexTarget = "match"
+regexes = [
+  '''(hxc-stdlib-api-v1:|(stdlibPathInventory|applicableSource|apiSurface|source)Sha256"\s*:\s*")[0-9a-f]{64}''',
+]
+# These are source/content fingerprints and stable API identities, not keys.
+# Requiring both the exact bundled ledger suffix and an admitted field prefix
+# keeps every other token and every other included file under the default rules.

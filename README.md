@@ -342,6 +342,7 @@ jq empty \
   docs/specs/beads-plan.schema.json \
   docs/specs/bootstrap-inventory.json \
   docs/specs/bootstrap-inventory.schema.json \
+  docs/specs/cross-target-research-bundle.json \
   docs/specs/diagnostic-event.schema.json \
   docs/specs/diagnostics.json \
   docs/specs/diagnostics.schema.json \
@@ -419,6 +420,7 @@ fail-closed.
 - [hxrt architecture, inspection, and source guide](docs/hxrt.md)
 - [Pinned toolchain and update procedure](docs/toolchain.md)
 - [HxcIR semantic contract](docs/hxc-ir.md)
+- [Cross-target semantics GPT-5.6 research bundle](docs/research/cross-target-semantics-bundle.md)
 - [Primitive function-body lowering](docs/body-lowering.md)
 - [Static function and direct-call lowering](docs/function-lowering.md)
 - [Explicit Haxe evaluation order](docs/evaluation-order.md)

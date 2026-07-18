@@ -1,0 +1,587 @@
+{
+  "schemaVersion": 1,
+  "artifact": {
+    "id": "haxe-cross-target-semantics-gpt-5-6-pro",
+    "title": "Haxe cross-target semantics architecture study",
+    "promptPath": "docs/research/cross-target-semantics-gpt-5.6-prompt.md",
+    "defaultBaseName": "haxe-cross-target-semantics-gpt-5.6-pro",
+    "releaseArtifact": false
+  },
+  "tooling": {
+    "gitleaksVersion": "8.30.0",
+    "gitleaksConfigPath": "docs/specs/cross-target-bundle-gitleaks.toml"
+  },
+  "policy": {
+    "sourceAuthority": "git-commit-objects",
+    "dirtyStateHandling": "Record whether the checkout is dirty, but export only blobs from the resolved commit. Working-tree and untracked bytes are never admitted.",
+    "zipTimestamp": "1980-01-01T00:00:00Z",
+    "forbiddenPathSegments": [
+      ".beads",
+      ".cache",
+      ".claude",
+      ".dolt",
+      ".git",
+      ".github",
+      ".idea",
+      ".haxelib",
+      ".lix",
+      ".reflaxe_elixir",
+      ".taskmaster",
+      ".vscode",
+      "__pycache__",
+      "_build",
+      "build",
+      "cache",
+      "coverage",
+      "deps",
+      "dist",
+      "generated",
+      "intended",
+      "node_modules",
+      "out",
+      "release",
+      "src-gen",
+      "target",
+      "tmp",
+      "vendor"
+    ],
+    "forbiddenPathSegmentPrefixes": [
+      "dist-",
+      "dist_",
+      "generated",
+      "out_"
+    ],
+    "forbiddenPathSegmentSuffixes": [
+      "-out",
+      "_out"
+    ],
+    "forbiddenBasenames": [
+      ".env",
+      ".envrc",
+      ".netrc",
+      ".npmrc",
+      ".pypirc",
+      "credentials.json",
+      "id_ed25519",
+      "id_rsa"
+    ],
+    "forbiddenSuffixes": [
+      ".a",
+      ".class",
+      ".db",
+      ".dll",
+      ".dylib",
+      ".exe",
+      ".gz",
+      ".jar",
+      ".key",
+      ".kdbx",
+      ".keystore",
+      ".o",
+      ".ovpn",
+      ".p12",
+      ".pem",
+      ".pfx",
+      ".pyc",
+      ".so",
+      ".tar",
+      ".tgz",
+      ".zip"
+    ]
+  },
+  "repositories": [
+    {
+      "id": "haxe-c",
+      "checkout": ".",
+      "revision": "HEAD",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.c",
+      "role": "Strict-C11 backend, target-owned HxcIR, CAST, selective hxrt, typed C interop, capability and stdlib contracts, and Caxecraft/RaylibHx plans.",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "LICENSE",
+        "README.md",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "haxe_libraries",
+        "haxelib.json",
+        "package-lock.json",
+        "package.json",
+        "runtime",
+        "scripts",
+        "src",
+        "std",
+        "test"
+      ],
+      "excludePaths": [
+        "test/governance/test_cross_target_bundle.py"
+      ]
+    },
+    {
+      "id": "haxe-rust",
+      "checkout": "../haxe.rust",
+      "revision": "8e4973032b4ef6868a92661084758e48fbc14522",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.rust",
+      "role": "Rust backend with target ASTs, representation analysis, native/portable boundaries, selective runtime planning, and no-runtime evidence.",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "Cargo.lock",
+        "Cargo.toml",
+        "LICENSE",
+        "README.md",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "family",
+        "haxe_libraries",
+        "haxelib.json",
+        "package-lock.json",
+        "package.json",
+        "prd.md",
+        "runtime",
+        "rust-raw-authority-policy.json",
+        "rust-representation-policy.json",
+        "rust-source-map-policy.json",
+        "rust-toolchain-policy.json",
+        "scripts",
+        "src",
+        "std",
+        "templates",
+        "test"
+      ],
+      "excludePaths": [
+        "test/snapshot/sys_ssl_sni"
+      ]
+    },
+    {
+      "id": "haxe-go",
+      "checkout": "../haxe.go",
+      "revision": "07467e5a84d733ec30ca718f2dbdbcf48c8cae4d",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.go",
+      "role": "Go backend with typed Go IR/AST, profile and native-boundary policy, selective runtime packaging, and portable example evidence.",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "LICENSE",
+        "LICENSING.md",
+        "README.md",
+        "benchmarks",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "family",
+        "haxe_libraries",
+        "haxelib.json",
+        "license-policy.json",
+        "package-lock.json",
+        "package.json",
+        "prd.md",
+        "runtime",
+        "scripts",
+        "src",
+        "std",
+        "templates",
+        "test",
+        "tools"
+      ],
+      "excludePaths": [
+        "runtime/hxrt/http_test.go",
+        "test/snapshot/stdlib/sys_ssl_leaf_direct",
+        "test/snapshot/stdlib/sys_ssl_socket_direct",
+        "test/snapshot/stdlib/sys_ssl_socket_sni_direct",
+        "test/snapshot/sys/http_helper_source_owned_ownership/expected.stdout",
+        "test/snapshot/sys/http_proxy_socket_contract/expected.stdout"
+      ]
+    },
+    {
+      "id": "haxe-elixir",
+      "checkout": "../haxe.elixir.codex",
+      "revision": "40254f38d9c07c069c7c3e19831096dcc2d6c95d",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.elixir",
+      "role": "Elixir/BEAM backend with structural Elixir AST, ordered transformations, focused LoopIR, Mix integration, managed Haxe server, and file-watch workflow.",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "LICENSE",
+        "README.md",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "haxe_libraries",
+        "haxelib.json",
+        "lib",
+        "mix.exs",
+        "mix.lock",
+        "package-lock.json",
+        "package.json",
+        "scripts",
+        "src",
+        "std",
+        "test",
+        "tooling",
+        "tools"
+      ],
+      "excludePaths": [
+        "docs/03-compiler-development/CLAUDE.md",
+        "docs/CLAUDE.md",
+        "examples/03-phoenix-app/config",
+        "examples/12-phoenix-chat/config",
+        "examples/13-elixir-first-liveview/config",
+        "examples/15-phoenix-chat-haxe-first/config",
+        "examples/17-railshx-to-phoenixhx-todo/config",
+        "examples/todo-app/CLAUDE.md",
+        "examples/todo-app/config",
+        "lib/CLAUDE.md",
+        "lib/mix/tasks/CLAUDE.md",
+        "src/reflaxe/elixir/CLAUDE.md",
+        "src/reflaxe/elixir/ast/CLAUDE.md",
+        "src/reflaxe/elixir/ast/transformers/CLAUDE.md",
+        "std/CLAUDE.md",
+        "test/CLAUDE.md",
+        "test/snapshot/CLAUDE.md",
+        "test/snapshot/phoenix/CLAUDE.md",
+        "test/snapshot/stdlib/stdlib_externs",
+        "test/support/CLAUDE.md"
+      ]
+    },
+    {
+      "id": "haxe-ruby",
+      "checkout": "../haxe.ruby",
+      "revision": "79059c98644e0de2c14326fe149305628ee78ed3",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.ruby",
+      "role": "Ruby backend with a typed Ruby AST, focused block/keyword analyses, Rails integration, portable/ruby-first profiles, and explicit raw-node pressure points.",
+      "license": {
+        "spdx": "GPL-3.0-only",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "LICENSE",
+        "README.md",
+        "Rakefile",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "haxe_libraries",
+        "haxelib.json",
+        "hxruby.gemspec",
+        "lib",
+        "package-lock.json",
+        "package.json",
+        "prd.md",
+        "runtime",
+        "scripts",
+        "src",
+        "std",
+        "test",
+        "tools"
+      ],
+      "excludePaths": [
+        "docs/railshx-devisehx-gpt55-prompt.md",
+        "docs/rubyhx-railshx-gpt56-1.0-review.md",
+        "scripts/ci/uri-facade-smoke.js",
+        "test/uri_facade/src_haxe/Main.hx"
+      ]
+    },
+    {
+      "id": "genes-ts",
+      "checkout": "../genes",
+      "revision": "2b4b71b00528fb376f7f0f8527237cf336b0f36b",
+      "upstream": "https://github.com/fullofcaffeine/genes-ts",
+      "role": "TypeScript and classic-JavaScript backend showing shared focused semantic plans across closely related output profiles without a universal whole-program IR.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "HAXE_TO_TYPESCRIPT_COMPILER_PLAN.md",
+        "LICENSE",
+        "config",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "haxe_libraries",
+        "haxelib.json",
+        "package.json",
+        "readme.md",
+        "scripts",
+        "src",
+        "tests",
+        "tools"
+      ],
+      "excludePaths": [
+        "HAXE_TO_TYPESCRIPT_COMPILER_PLAN.md"
+      ]
+    },
+    {
+      "id": "haxe-ocaml-hxhx",
+      "checkout": "../haxe.ocaml",
+      "revision": "f051d16b7e0c636b26e76f5687c494661b0812b2",
+      "upstream": "https://github.com/fullofcaffeine/hxhx",
+      "role": "Current OCaml backend plus HxHx self-hosting work, including structural OcamlExpr and the explicitly provisional GenIrProgram alias boundary.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        ".haxerc",
+        "AGENTS.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "PROVENANCE.md",
+        "README.md",
+        "THIRD_PARTY_NOTICES.md",
+        "bench",
+        "docs",
+        "examples",
+        "extraParams.hxml",
+        "haxe_libraries",
+        "haxelib.json",
+        "package-lock.json",
+        "package.json",
+        "packages",
+        "scripts",
+        "test",
+        "workloads"
+      ],
+      "excludePaths": [
+        "scripts/ci/local-path-check-fixture-test.js",
+        "scripts/ci/reflaxe-ocaml-perf-matrix-summary-fixture-test.js"
+      ]
+    },
+    {
+      "id": "reflaxe-framework",
+      "checkout": "../haxe.compilerdev.reference/reflaxe",
+      "revision": "73a983112e039daad46b37912ab238df6bf0cf53",
+      "upstream": "https://github.com/SomeRanDev/reflaxe",
+      "role": "Pinned Reflaxe framework source that defines the shared typed-AST callback, output ownership, compiler registration, and helper boundaries used by several targets.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        "LICENSE",
+        "README.md",
+        "documentation",
+        "haxelib.json",
+        "newproject",
+        "src",
+        "test"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "reflaxe-cpp-reference",
+      "checkout": "../haxe.compilerdev.reference/reflaxe.CPP",
+      "revision": "538a729503dd813c15639c4a746869b34fbef1e5",
+      "upstream": "https://github.com/SomeRanDev/reflaxe.CPP",
+      "role": "Small Reflaxe C++ backend used as an additional structural-target and runtime comparison, distinct from Haxe's built-in hxcpp generator.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        "DevEnv.hxml",
+        "LICENSE",
+        "README.md",
+        "Test.hxml",
+        "extraParams.hxml",
+        "haxelib.json",
+        "src",
+        "std",
+        "test"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "reflaxe-csharp-reference",
+      "checkout": "../haxe.compilerdev.reference/reflaxe.CSharp",
+      "revision": "735cd615f9513b5e00ee557e2be698b85e4e45ef",
+      "upstream": "https://github.com/SomeRanDev/reflaxe.CSharp",
+      "role": "Small managed-target Reflaxe backend used to compare how much semantics can remain in a structural target AST.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        "CONTRIBUTING.md",
+        "DevEnv.hxml",
+        "LICENSE",
+        "README.md",
+        "Test.hxml",
+        "extraParams.hxml",
+        "haxelib.json",
+        "src",
+        "test"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "reflaxe-gdscript-reference",
+      "checkout": "../haxe.compilerdev.reference/reflaxe.GDScript",
+      "revision": "d39db6e6c8cbbc041f2839bcb97579447a59e6de",
+      "upstream": "https://github.com/SomeRanDev/reflaxe.GDScript",
+      "role": "Dynamic game-engine backend used to compare target-native idioms, standard-library shaping, and the cost of a common low-level representation.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        "DevEnv.hxml",
+        "LICENSE",
+        "README.md",
+        "Submit.hx",
+        "documentation",
+        "extraParams.hxml",
+        "haxelib.json",
+        "src",
+        "std",
+        "test"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "reflaxe-lua-reference",
+      "checkout": "../haxe.compilerdev.reference/reflaxe.lua",
+      "revision": "7e5cd11fdde8fcff8c7b43dfb7d2ecbb93e7a944",
+      "upstream": "https://github.com/Davvex87/reflaxe.lua",
+      "role": "Small dynamic-target backend used as a second comparison for direct TypedExpr-to-target lowering and standard-library overrides.",
+      "license": {
+        "spdx": "MIT",
+        "paths": [
+          "LICENSE"
+        ]
+      },
+      "includePaths": [
+        "DevEnv.hxml",
+        "LICENSE",
+        "README.md",
+        "TROUBLESHOOTING.md",
+        "extraParams.hxml",
+        "haxelib.json",
+        "src",
+        "std",
+        "test"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "haxe-compiler-5-preview-pinned",
+      "checkout": "../haxe.compilerdev.reference/haxe",
+      "revision": "2c1e544e0a2c7524ef4c8e103f1b0580362ea538",
+      "upstream": "https://github.com/HaxeFoundation/haxe",
+      "role": "Exact Haxe 5.0.0-preview.1 compiler and standard-library source pinned by reflaxe.c, including TypedExpr and custom-target platform APIs.",
+      "license": {
+        "spdx": "GPL-2.0-or-later AND MIT",
+        "paths": [
+          "extra/LICENSE.txt"
+        ],
+        "note": "Compiler source under src is GPL-2.0-or-later; standard-library source under std is MIT. See the included notice."
+      },
+      "includePaths": [
+        "README.md",
+        "extra/LICENSE.txt",
+        "src",
+        "std"
+      ],
+      "excludePaths": []
+    },
+    {
+      "id": "haxe-compiler-4-3-7",
+      "checkout": "../haxe.compilerdev.reference/haxe",
+      "revision": "e0b355c6be312c1b17382603f018cf52522ec651",
+      "upstream": "https://github.com/HaxeFoundation/haxe",
+      "role": "Official Haxe 4.3.7 compiler and standard-library source for the stable-carrier comparison and target-configuration API audit.",
+      "license": {
+        "spdx": "GPL-2.0-or-later AND MIT",
+        "paths": [
+          "extra/LICENSE.txt"
+        ],
+        "note": "Compiler source under src is GPL-2.0-or-later; standard-library source under std is MIT. See the included notice."
+      },
+      "includePaths": [
+        "README.md",
+        "extra/LICENSE.txt",
+        "src",
+        "std"
+      ],
+      "excludePaths": []
+    }
+  ],
+  "omittedCandidates": [
+    {
+      "id": "ocaml-haxe-historical-reference",
+      "upstream": "https://github.com/waneck/ocaml-haxe",
+      "reason": "The local historical checkout has no top-level license evidence. The current licensed haxe-ocaml-hxhx snapshot supersedes it for this architecture study."
+    },
+    {
+      "id": "reflaxe-go-historical-reference",
+      "upstream": "https://github.com/SomeRanDev/reflaxe_go",
+      "reason": "The checkout declares CC-BY-NC-ND-4.0 and is superseded by the current GPL-licensed haxe-go snapshot; it is not needed to answer the architecture question."
+    },
+    {
+      "id": "language-runtime-reference-checkouts",
+      "upstream": "https://github.com/HaxeFoundation/haxe",
+      "reason": "The sibling elixir, ruby, rails, and other language/framework source checkouts are not Haxe backends. Target adapters and examples already carry the relevant boundary evidence."
+    },
+    {
+      "id": "duplicate-and-dirty-worktrees",
+      "upstream": "https://github.com/fullofcaffeine",
+      "reason": "Backup, experiment, review, alternate-worktree, Repomix, and duplicate compiler directories are excluded. Only the named canonical committed snapshots are admitted."
+    },
+    {
+      "id": "native-framework-sources",
+      "upstream": "https://github.com/raysan5/raylib",
+      "reason": "Raylib and other native framework implementations are outside the shared-semantics question. The typed RaylibHx/Caxecraft boundary plans in haxe-c are included."
+    },
+    {
+      "id": "dependencies-history-and-build-products",
+      "upstream": "https://github.com/fullofcaffeine/reflaxe.c",
+      "reason": "Git/Dolt/Beads history, package caches, vendored duplicates, generated output, binaries, archives, credentials, editor state, and untracked files are categorically excluded."
+    }
+  ]
+}

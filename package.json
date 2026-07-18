@@ -11,6 +11,8 @@
     "security:gitleaks:staged": "bash scripts/security/run-gitleaks.sh --staged",
     "security:beads-history": "bash scripts/security/run-beads-gitleaks.sh",
     "beads:push": "bash scripts/beads/push-safe.sh",
+    "research:cross-target-bundle": "python3 scripts/research/build_cross_target_bundle.py",
+    "test:research-bundle": "python3 -m unittest discover -s test/governance -p 'test_cross_target_bundle.py'",
     "test:security-tooling": "python3 scripts/ci/check_security_tooling.py",
     "public:preflight": "npm run format:haxe:check && npm run security:gitleaks && npm run security:beads-history && npm run test:security-tooling && npm run test:governance",
     "deps:verify": "python3 scripts/ci/check_toolchain.py --require-tools",
