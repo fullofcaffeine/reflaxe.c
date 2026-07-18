@@ -184,9 +184,9 @@ removes a required check or changes failure semantics. `hxc_build` defaults to
 before output.
 
 Dynamic negative and upper-bound failures are executable evidence in every
-profile/build combination. The current failure hook is the exact standard C
-`abort` function, registered through `CSymbolRegistry`; it is not raw C and is
-not an `hxrt` feature.
+profile/build combination for both local views and forwarded span parameters.
+The current failure hook is the exact standard C `abort` function, registered
+through `CSymbolRegistry`; it is not raw C and is not an `hxrt` feature.
 
 ## Generated C shape and safety proof
 
@@ -252,10 +252,13 @@ npm run snapshots:check
 The suite renders twice and reverses function discovery across both profiles
 and all three build modes. It snapshots HxcIR/C/header/symbol output; executes
 literal and 16,384-byte zero-initialized `UInt8` storage, repeated mutation,
-mutable/const borrowing, exact-width iteration, and ordinary-Haxe 3D indexing
-at GCC/Clang `-O0` and `-O2`; and exercises dynamic negative/upper fail-stop
-paths. Source-positioned negatives cover zero, negative, unknown, overflowing,
-and over-budget lengths, unsupported element storage, static out-of-bounds
-access, escaping borrows, general/empty arrays, and lookalike intrinsics.
-Required native lanes inspect generated artifacts and linked images for the
-absence of allocation and `hxrt` dependencies.
+mutable/const borrowing, exact-width iteration, nested parameter forwarding,
+and ordinary-Haxe 3D indexing at GCC/Clang `-O0`, `-O2`, and combined
+ASan/UBSan; and exercises local and parameter dynamic negative/upper fail-stop
+paths in every profile/build coordinate. Source-positioned negatives cover
+zero, negative, unknown, overflowing, and over-budget lengths, unsupported
+element storage, static out-of-bounds access, borrowed returns, field/global
+storage, instance/virtual dispatch, callbacks, recursion, exported/native ABI
+boundaries, general/empty arrays, and lookalike intrinsics. Required native
+lanes inspect generated artifacts and linked images for the absence of
+allocation and `hxrt` dependencies.

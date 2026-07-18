@@ -798,10 +798,11 @@
       "assertions": [
         "typed nonempty CArray literals and positive compiler-known CArray.zero products lower to structural automatic C arrays, with zero storage emitted as a C11 aggregate initializer and no allocation or memset",
         "the shared fixed-array policy admits exact-size integer or binary64 elements up to 65536 bytes per zero-initialized array and rejects invalid, unknown, overflowing, over-budget, or unsupported storage at exact source spans",
-        "Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects, and an escaping borrowed return is rejected at its exact function range",
-        "compile-time and loop-guarded bounds proofs remain explicit in schema-9 HxcIR, statically out-of-range indexes fail before C emission, and dynamic indexing emits a signed and size_t fail-stop check in every profile and build mode",
+        "Span or ConstSpan borrows lower to typed pointer-and-length views without iterator objects; reached direct static parameters and nested forwarding retain one semantic HxcIR span argument plus an explicit callee borrow while strict C11 receives correctly qualified pointer-and-size_t parameters with no wrapper",
+        "compile-time and loop-guarded bounds proofs remain explicit in schema-9 HxcIR, statically out-of-range indexes fail before C emission, and dynamic local or parameter indexing emits a signed and size_t fail-stop check against the exact local or forwarded element count in every profile and build mode",
         "ordinary-Haxe 32 by 16 by 32 linearization, repeated UInt8 mutation, and exact-width span iteration compile to element-scaled guarded access whose generated C is byte-identical across profile and build mode",
-        "portable and metal runtime-none projects carry a structured reachable-program proof and compile and execute as strict C11 under required GCC and Clang lanes with no allocation or hxrt artifact, include, library, or symbol",
+        "borrowed returns, field or global storage, instance or virtual dispatch, callbacks, recursion, and other language-level span escapes fail with source-positioned HXC1001, while exported or native ABI boundaries fail with source-positioned HXC3000; neither family leaves a plausible artifact",
+        "portable and metal runtime-none projects carry a structured reachable-program proof and compile and execute as strict C11 under required GCC and Clang O0, O2, and sanitizer lanes with no allocation or hxrt artifact, include, library, or symbol",
         "an unreachable String-typed declaration is present in typed input but absent from reachable HxcIR, generated symbols, runtime roots, and output"
       ]
     },

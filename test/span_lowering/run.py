@@ -539,8 +539,20 @@ def available_compilers(selected: str | None = None) -> list[NativeToolchain]:
     return result
 
 
-def run_command(command: list[str], label: str, *, timeout: int = 30) -> None:
-    result = subprocess.run(command, capture_output=True, text=True, timeout=timeout)
+def run_command(
+    command: list[str],
+    label: str,
+    *,
+    timeout: int = 30,
+    environment: dict[str, str] | None = None,
+) -> None:
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        env=environment,
+    )
     if result.returncode != 0 or result.stdout or result.stderr:
         raise SpanLoweringFailure(
             f"{label} failed\nexit={result.returncode}\n"
@@ -597,16 +609,30 @@ def check_native_artifacts(
         renamed.write_text("int hxc_generated_main(void);\n", encoding="utf-8", newline="\n")
         harness = root / "harness.c"
         harness.write_text(harness_source(symbols), encoding="utf-8", newline="\n")
+        native_lanes = (
+            ("O0", ["-O0"], []),
+            ("O2", ["-O2"], []),
+            (
+                "asan-ubsan",
+                [
+                    "-O1",
+                    "-g",
+                    "-fno-omit-frame-pointer",
+                    "-fsanitize=address,undefined",
+                ],
+                ["-fsanitize=address,undefined"],
+            ),
+        )
         for toolchain in available_compilers(selected):
-            for optimization in ("-O0", "-O2"):
-                generated_object = root / f"generated-{toolchain.family}-{optimization[1:]}.o"
-                harness_object = root / f"harness-{toolchain.family}-{optimization[1:]}.o"
-                executable = root / f"span-{toolchain.family}-{optimization[1:]}"
+            for lane, compile_flags, link_flags in native_lanes:
+                generated_object = root / f"generated-{toolchain.family}-{lane}.o"
+                harness_object = root / f"harness-{toolchain.family}-{lane}.o"
+                executable = root / f"span-{toolchain.family}-{lane}"
                 run_command(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
-                        optimization,
+                        *compile_flags,
                         "-I",
                         str(root / "include"),
                         "-Dmain=hxc_generated_main",
@@ -617,13 +643,13 @@ def check_native_artifacts(
                         "-o",
                         str(generated_object),
                     ],
-                    f"{toolchain.family} {optimization} generated span compile",
+                    f"{toolchain.family} {lane} generated span compile",
                 )
                 run_command(
                     [
                         toolchain.compiler,
                         *STRICT_FLAGS,
-                        optimization,
+                        *compile_flags,
                         "-I",
                         str(root / "include"),
                         "-c",
@@ -631,14 +657,30 @@ def check_native_artifacts(
                         "-o",
                         str(harness_object),
                     ],
-                    f"{toolchain.family} {optimization} span harness compile",
+                    f"{toolchain.family} {lane} span harness compile",
                 )
                 run_command(
-                    [toolchain.compiler, str(generated_object), str(harness_object), "-o", str(executable)],
-                    f"{toolchain.family} {optimization} span link",
+                    [
+                        toolchain.compiler,
+                        *link_flags,
+                        str(generated_object),
+                        str(harness_object),
+                        "-o",
+                        str(executable),
+                    ],
+                    f"{toolchain.family} {lane} span link",
                 )
-                run_command([str(executable)], f"{toolchain.family} {optimization} span behavior")
-                check_no_hxrt_symbols(executable, f"{toolchain.family} {optimization}")
+                run_environment = None
+                if lane == "asan-ubsan":
+                    run_environment = os.environ.copy()
+                    run_environment["ASAN_OPTIONS"] = "halt_on_error=1:abort_on_error=1"
+                    run_environment["UBSAN_OPTIONS"] = "halt_on_error=1:print_stacktrace=1"
+                run_command(
+                    [str(executable)],
+                    f"{toolchain.family} {lane} span behavior",
+                    environment=run_environment,
+                )
+                check_no_hxrt_symbols(executable, f"{toolchain.family} {lane}")
 
 
 def compile_failure_fixture(
@@ -647,6 +689,7 @@ def compile_failure_fixture(
     *,
     profile: str,
     expected_anchor: str | None = None,
+    diagnostic_id: str = "HXC1001",
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-span-negative-") as temporary:
         output = Path(temporary) / "out"
@@ -654,7 +697,7 @@ def compile_failure_fixture(
         combined = result.stdout + result.stderr
         if (
             result.returncode != 1
-            or "HXC1001" not in combined
+            or diagnostic_id not in combined
             or expected_fragment not in combined
             or (expected_anchor is not None and expected_anchor not in combined)
             or f"[profile={profile}]" not in combined
@@ -663,7 +706,7 @@ def compile_failure_fixture(
                 f"{profile} {main_class} did not fail closed as expected\n"
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
-        assert_no_output(output, f"{profile} {main_class} HXC1001")
+        assert_no_output(output, f"{profile} {main_class} {diagnostic_id}")
 
 
 def check_configuration_failure(*, profile: str) -> None:
@@ -763,9 +806,12 @@ def check_production(selected: str | None = None) -> dict[str, object]:
         for build in BUILD_MODES:
             check_abort_fixture("UpperBoundsFixture", toolchain, profile=profile, build=build)
             check_abort_fixture("NegativeBoundsFixture", toolchain, profile=profile, build=build)
-    check_abort_fixture(
-        "ParameterUpperBoundsFixture", toolchain, profile="portable", build="debug"
-    )
+            check_abort_fixture(
+                "ParameterUpperBoundsFixture", toolchain, profile=profile, build=build
+            )
+            check_abort_fixture(
+                "ParameterNegativeBoundsFixture", toolchain, profile=profile, build=build
+            )
     return canonical
 
 
@@ -891,6 +937,44 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "TCall(recursive-borrowed-span-target-not-admitted:",
                 profile=profile,
                 expected_anchor="RecursiveSpanParameterFixture.hx:6: characters 10-25",
+            )
+            compile_failure_fixture(
+                "StoredSpanFieldFixture",
+                "borrowed-span-field-escape",
+                profile=profile,
+                expected_anchor="StoredSpanFieldFixture.hx:6: characters 2-34",
+            )
+            compile_failure_fixture(
+                "StoredSpanGlobalFixture",
+                "TField(static:borrowed:abstract `c.Span` is not an admitted primitive",
+                profile=profile,
+                expected_anchor="StoredSpanGlobalFixture.hx:9: characters 3-11",
+            )
+            compile_failure_fixture(
+                "VirtualSpanParameterFixture",
+                "borrowed-span-requires-static-function",
+                profile=profile,
+                expected_anchor="VirtualSpanParameterFixture.hx:18: lines 18-20",
+            )
+            compile_failure_fixture(
+                "CallbackSpanParameterFixture",
+                "TVar(callback:type):function values await closure/function representation lowering",
+                profile=profile,
+                expected_anchor="CallbackSpanParameterFixture.hx:13: characters 3-56",
+            )
+            compile_failure_fixture(
+                "ExportedSpanParameterFixture",
+                "Imported functions must belong to an extern class.",
+                profile=profile,
+                expected_anchor="ExportedSpanParameterFixture.hx:7: lines 7-9",
+                diagnostic_id="HXC3000",
+            )
+            compile_failure_fixture(
+                "NativeSpanParameterFixture",
+                "Pointer and retained-borrow lifetimes are outside this direct by-value slice.",
+                profile=profile,
+                expected_anchor="SpanNativeApi.hx:7: characters 2-72",
+                diagnostic_id="HXC3000",
             )
         for profile in PROFILES:
             check_configuration_failure(profile=profile)

@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, bounded direct-value enum, and compiler-known literal-output slices have generated-C evidence.",
+    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record, bounded direct-value enum, and compiler-known literal-output slices have generated-C evidence.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
@@ -39,7 +39,7 @@
         "E2.T10",
         "E3.T10"
       ],
-      "reason": "Only bounded primitive and closed-generic static-function, local fixed-array/span, closed anonymous-record, direct-value enum, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
+      "reason": "Only bounded primitive and closed-generic static-function, local fixed-array/span storage with nonescaping internal span parameters, closed anonymous-record, direct-value enum, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
     },
     {
       "id": "performance-validated",
@@ -584,8 +584,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-8 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, and direct-C-import lowering slices.",
+      "summary": "Schema-9 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, fixed-array/span, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, and direct-C-import lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
@@ -734,8 +734,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, and literal or bounded zero-initialized local fixed-array/span storage emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, range-preserving `c.IntConvert.exact` and unsigned-target `c.IntConvert.modulo` operations, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, and exact-width spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
+      "summary": "A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, and literal or bounded zero-initialized local fixed-array/span storage plus nonescaping internal span parameters emits and runs runtime-free strict C11.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, range-preserving `c.IntConvert.exact` and unsigned-target `c.IntConvert.modulo` operations, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, exact-width spans, and mutable or const spans forwarded through reached direct static calls as an internal pointer-plus-length pair; its primitive operations have seeded Eval/ASan/UBSan evidence.",
       "evidence": [
         "std/c/IntConvert.hx",
         "test/arithmetic_semantics/run.py",
@@ -755,6 +755,7 @@
       ],
       "limitations": [
         "Invalid, helper-requiring signed-target, checked, failing, and target-ABI integer conversions remain outside the executable slice.",
+        "Span parameters are limited to reached non-generic direct static implementation calls; storage, returns, recursive or indirect calls, instance or virtual dispatch, callbacks, native calls, and public exports remain fail-closed.",
         "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."
       ]
     },
@@ -1067,7 +1068,7 @@
       "status": "scaffold-only",
       "disposition": "reserved",
       "summary": "Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check.",
-      "scope": "The contract macro validates the current declaration/build surface; literal and bounded compile-time-sized zero-initialized CArray/local Span operations and exact reached direct imports have separate admitted lowering slices.",
+      "scope": "The contract macro validates the current declaration/build surface; literal and bounded compile-time-sized zero-initialized CArray/local Span operations, nonescaping Span or ConstSpan parameters on reached direct static implementation calls, and exact reached direct imports have separate admitted lowering slices.",
       "evidence": [
         "std/c/CArray.hx",
         "std/c/Ptr.hx",
@@ -1083,7 +1084,7 @@
         "E6.T05"
       ],
       "limitations": [
-        "Only the separately listed bounded CArray/Span and direct-import subsets lower; dynamic/heap fixed-array storage and most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
+        "Only the separately listed bounded CArray/Span and direct-import subsets lower; span parameters are not a public ABI, dynamic/heap fixed-array storage and most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
       ]
     },
     {
