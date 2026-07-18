@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import io
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -23,6 +24,7 @@ from scripts.raylib.provision import (
     path_replacements,
     pinned_source,
     resolve_system_pkg_config,
+    run_command,
     safe_extract_archive,
     sha256_file,
     split_pkg_config_flags,
@@ -94,6 +96,34 @@ def synthetic_source_lock(root: Path) -> dict[str, object]:
 
 
 class RaylibProvisioningTests(unittest.TestCase):
+    def test_failed_command_reports_redacted_stdout_and_stderr_tails(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="hxc-raylib-command-") as raw_root:
+            root = Path(raw_root)
+            with self.assertRaises(ProvisionFailure) as caught:
+                run_command(
+                    [
+                        sys.executable,
+                        "-c",
+                        (
+                            "import sys; "
+                            "print('stdout marker ' + sys.argv[1]); "
+                            "print('stderr marker', file=sys.stderr); "
+                            "raise SystemExit(7)"
+                        ),
+                        str(root),
+                    ],
+                    cwd=root,
+                    replacements={str(root): "${COMMAND_ROOT}"},
+                    timeout=30,
+                    label="synthetic native command",
+                )
+
+        message = str(caught.exception)
+        self.assertIn("failed with exit 7", message)
+        self.assertIn("stdout:\nstdout marker ${COMMAND_ROOT}", message)
+        self.assertIn("stderr:\nstderr marker", message)
+        self.assertNotIn(str(root), message)
+
     def test_repository_lock_rejects_semantic_version_drift(self) -> None:
         lock = copy.deepcopy(load_lock())
         upstream = lock["upstream"]

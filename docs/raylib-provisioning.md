@@ -109,7 +109,7 @@ The neutral generated build plan uses logical facts rather than shell text:
 | --- | --- | --- |
 | Linux | `raylib`, `m` | `raylib`, `m`, `pthread`, `GL`, `X11`, `dl`, `rt` |
 | macOS | `raylib` | `raylib`; frameworks `OpenGL`, `Cocoa`, `IOKit`, `CoreFoundation` |
-| Windows | `raylib`, `winmm` | `raylib`, `opengl32`, `gdi32`, `winmm`, `shell32` |
+| Windows | `raylib`, `winmm` | `raylib`, `opengl32`, `gdi32`, `winmm`, `shell32`, `user32` |
 
 These are argument-array facts. The generated `hxc.manifest.json` never stores
 `-l...`, `-framework ...`, quoting, command substitution, or another shell

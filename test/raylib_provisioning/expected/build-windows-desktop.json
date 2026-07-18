@@ -55,6 +55,12 @@
       "ownerModulePaths": [
         "RaylibNative"
       ],
+      "name": "user32"
+    },
+    {
+      "ownerModulePaths": [
+        "RaylibNative"
+      ],
       "name": "shell32"
     },
     {

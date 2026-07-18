@@ -112,7 +112,11 @@ EXPECTED_LINK_FACTS = {
     (
         "windows",
         "desktop",
-    ): (("raylib", "opengl32", "gdi32", "winmm", "shell32"), (), ()),
+    ): (
+        ("raylib", "opengl32", "gdi32", "winmm", "shell32", "user32"),
+        (),
+        (),
+    ),
 }
 EXPECTED_REPORT_PLACEHOLDERS = (
     "${CACHE_ROOT}",
@@ -779,9 +783,16 @@ def run_command(
         "stderr": stream_evidence(process.stderr, replacements),
     }
     if process.returncode != 0:
-        stderr = normalize_text(process.stderr.decode("utf-8", errors="replace"), replacements)
-        tail = "\n".join(stderr.splitlines()[-12:])
-        suffix = f"\n{tail}" if tail else ""
+        output_sections = []
+        for stream_name, stream in (("stdout", process.stdout), ("stderr", process.stderr)):
+            normalized = normalize_text(
+                stream.decode("utf-8", errors="replace"), replacements
+            )
+            tail = "\n".join(normalized.splitlines()[-12:])
+            if tail:
+                output_sections.append(f"{stream_name}:\n{tail}")
+        joined_output = "\n".join(output_sections)
+        suffix = f"\n{joined_output}" if joined_output else ""
         raise ProvisionFailure(f"{label} failed with exit {process.returncode}{suffix}")
     return CommandResult(process, evidence)
 

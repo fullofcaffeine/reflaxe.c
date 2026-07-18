@@ -15,7 +15,7 @@
 	#elseif raylib_platform_windows
 	@:c.link("raylib") @:c.link("winmm")
 		#if raylib_configuration_desktop
-		@:c.link("opengl32") @:c.link("gdi32") @:c.link("shell32")
+		@:c.link("opengl32") @:c.link("gdi32") @:c.link("shell32") @:c.link("user32")
 		#end
 	#else
 	#error "Select exactly one reviewed raylib provisioning platform"
