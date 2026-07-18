@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "id": "caxecraft-domain",
+  "role": "example",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-001",
+    "HXC-EX-001",
+    "HXC-QA-002",
+    "HXC-QA-005"
+  ],
+  "sources": [
+    "examples/caxecraft/README.md",
+    "examples/caxecraft/build.hxml",
+    "examples/caxecraft/oracle.hxml",
+    "examples/caxecraft/run.py",
+    "examples/caxecraft/src/caxecraft/domain/AxisMove.hx",
+    "examples/caxecraft/src/caxecraft/domain/BlockCoord.hx",
+    "examples/caxecraft/src/caxecraft/domain/BlockKind.hx",
+    "examples/caxecraft/src/caxecraft/domain/CaxecraftTrace.hx",
+    "examples/caxecraft/src/caxecraft/domain/PlayerPhysics.hx",
+    "examples/caxecraft/src/caxecraft/domain/PlayerState.hx",
+    "examples/caxecraft/src/caxecraft/domain/RaycastHit.hx",
+    "examples/caxecraft/src/caxecraft/domain/StepInput.hx",
+    "examples/caxecraft/src/caxecraft/domain/VoxelRaycast.hx",
+    "examples/caxecraft/src/caxecraft/domain/World.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldCells.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldStorage.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldVolume.hx",
+    "examples/caxecraft/test/caxecraft/qa/DomainProbe.hx",
+    "examples/caxecraft/test/native/domain_harness.c",
+    "examples/caxecraft/test/native/generated_program.c",
+    "examples/caxecraft/expected/include/hxc/program.h",
+    "examples/caxecraft/expected/src/program.c",
+    "examples/caxecraft/expected/hxc.runtime-plan.json",
+    "examples/caxecraft/expected/method-symbols.json",
+    "examples/caxecraft/expected/oracle.txt",
+    "docs/caxecraft-domain.md"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "examples/caxecraft",
+    "timeoutSeconds": 300,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "caxecraft-domain: OK:.*32 seeded properties.*ASan/UBSan passed"
+    },
+    "artifacts": [
+      {
+        "path": "examples/caxecraft/expected/include/hxc/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/caxecraft/expected/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/caxecraft/expected/hxc.runtime-plan.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "examples/caxecraft/expected/method-symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "examples/caxecraft/expected/oracle.txt",
+        "format": "text",
+        "comparison": "exact"
+      }
+    ],
+    "runtimePlan": "examples/caxecraft/expected/hxc.runtime-plan.json",
+    "oracle": "examples/caxecraft/expected/oracle.txt"
+  }
+}

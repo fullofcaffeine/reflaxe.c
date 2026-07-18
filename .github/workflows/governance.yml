@@ -136,6 +136,9 @@ jobs:
       - name: Verify fixed-array and span lowering at O0 and O2
         run: python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"
 
+      - name: Verify generated Caxecraft domain at O0, O2, and under sanitizers
+        run: python3 examples/caxecraft/run.py --native-only --toolchain "${{ matrix.toolchain }}"
+
   build-adapters:
     name: Build adapters (${{ matrix.toolchain }})
     runs-on: ubuntu-latest

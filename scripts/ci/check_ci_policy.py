@@ -522,6 +522,33 @@ REQUIRED_GATE_FILES = (
     "examples/hello/expected/src/program.c",
     "examples/hello/expected/hxc.runtime-plan.json",
     "examples/hello/expected/hxc.stdlib-report.json",
+    "examples/caxecraft/README.md",
+    "examples/caxecraft/build.hxml",
+    "examples/caxecraft/oracle.hxml",
+    "examples/caxecraft/case.json",
+    "examples/caxecraft/run.py",
+    "examples/caxecraft/src/caxecraft/domain/AxisMove.hx",
+    "examples/caxecraft/src/caxecraft/domain/BlockCoord.hx",
+    "examples/caxecraft/src/caxecraft/domain/BlockKind.hx",
+    "examples/caxecraft/src/caxecraft/domain/CaxecraftTrace.hx",
+    "examples/caxecraft/src/caxecraft/domain/PlayerPhysics.hx",
+    "examples/caxecraft/src/caxecraft/domain/PlayerState.hx",
+    "examples/caxecraft/src/caxecraft/domain/RaycastHit.hx",
+    "examples/caxecraft/src/caxecraft/domain/StepInput.hx",
+    "examples/caxecraft/src/caxecraft/domain/VoxelRaycast.hx",
+    "examples/caxecraft/src/caxecraft/domain/World.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldCells.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldStorage.hx",
+    "examples/caxecraft/src/caxecraft/domain/WorldVolume.hx",
+    "examples/caxecraft/test/caxecraft/qa/DomainProbe.hx",
+    "examples/caxecraft/test/native/domain_harness.c",
+    "examples/caxecraft/test/native/generated_program.c",
+    "examples/caxecraft/expected/include/hxc/program.h",
+    "examples/caxecraft/expected/src/program.c",
+    "examples/caxecraft/expected/hxc.runtime-plan.json",
+    "examples/caxecraft/expected/method-symbols.json",
+    "examples/caxecraft/expected/oracle.txt",
+    "docs/caxecraft-domain.md",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -627,6 +654,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/static_initialization/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    'python3 examples/caxecraft/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "--require-hashes",
     "--no-input",
     "--only-binary=:all:",
@@ -782,6 +810,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:primitive-differential entry point")
     if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
         errors.append("package.json must retain the test:span-lowering entry point")
+    if scripts.get("test:caxecraft-domain") != "python3 examples/caxecraft/run.py":
+        errors.append("package.json must retain the test:caxecraft-domain entry point")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))
     for required_beads_command in (
         "python3 scripts/beads/validate_plan.py",
@@ -872,6 +902,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:primitive-differential")
     if "npm run test:span-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:span-lowering")
+    if "npm run test:caxecraft-domain" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-domain")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run test:c-import" not in str(scripts.get("test:toolchain", "")):
@@ -963,6 +995,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the generated literal-output test")
     if "examples/hello/run.py" not in pre_commit:
         errors.append("pre-commit must run the generated hello product example")
+    if "examples/caxecraft/run.py" not in pre_commit:
+        errors.append("pre-commit must run the generated Caxecraft domain example")
     if "test/hxc_ir/run.py" not in pre_commit:
         errors.append("pre-commit must run the HxcIR semantic golden test")
     if "test/primitive_semantics/run.py" not in pre_commit:

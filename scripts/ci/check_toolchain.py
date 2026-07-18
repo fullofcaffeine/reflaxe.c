@@ -237,6 +237,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_arithmetic_semantics_script = "python3 test/arithmetic_semantics/run.py"
     expected_primitive_differential_script = "python3 test/primitive_differential/run.py"
     expected_span_lowering_script = "python3 test/span_lowering/run.py"
+    expected_caxecraft_domain_script = "python3 examples/caxecraft/run.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
@@ -250,7 +251,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run snapshots:check"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:caxecraft-domain && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -409,6 +410,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:span-lowering") != expected_span_lowering_script
     ):
         errors.append("package.json must retain the fixed-array/span lowering gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-domain") != expected_caxecraft_domain_script
+    ):
+        errors.append("package.json must retain the Caxecraft domain e2e gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script

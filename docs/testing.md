@@ -56,20 +56,23 @@ trace. The array-runtime suite adds bounded native primitive/reference growth,
 aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
 The string-output suite adds the narrow generated-Haxe `Sys.println` and
 default `trace` proof. The declared `examples/hello` product proof composes that
-same reusable compiler slice into the first ordinary Haxe-to-C executable. None
-proves broader language, standard-library, public ABI, general String, or
-general `hxrt` support.
+same reusable compiler slice into the first ordinary Haxe-to-C executable. The
+declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel
+world, deterministic terrain/edits/DDA/fixed-step collision, a shared Eval
+oracle, 32 seeded properties, cold/reversed/locale/warm-server determinism, and
+allocation-free strict/sanitized generated C. None proves broader language,
+standard-library, public ABI, general String, or general `hxrt` support.
 
 ## Canonical lanes
 
 | Lane | Canonical directory | Required evidence | Current state |
 | --- | --- | --- | --- |
-| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3/E6 suites and the declared hello example, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, direct C import, locked Raylib provisioning, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
+| Positive | `test/positive/` | Success exit plus exact semantic assertions and declared artifacts/effects | Active through mapped M0/E3/E6 suites and the declared hello and Caxecraft-domain examples, including primitive body, static-function, aggregate, class-layout/constructor/virtual dispatch, direct C import, locked Raylib provisioning, enum, generic specialization, evaluation-order, arithmetic/differential, fixed-array/span, and literal-output lowering |
 | Negative | `test/negative/` | Failure exit, stable diagnostic ID/essential fields/source span, and no plausible output | Active through exact `HXC1001`/`HXC3000` unsupported boundaries including body/signature/argument, aggregate/class/constructor/dispatch/enum/generic/span/string forms, malformed direct imports, fail-closed Raylib authorities, and invalid build configuration |
 | AST/IR | `test/ast/` | Deterministic structural model, validator result, and native compile/run when C is produced | Active through `c_ast`, `declaration_plan`, `project_emitter`, `hxc_ir`, and lowering snapshots |
-| Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees and the hello generated baseline are mapped explicitly |
-| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span/direct-import execution, a zero-`hxrt` Raylib integration plan plus real headless CI execution, fixed arithmetic UBSan, seeded primitive ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
-| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars and array mutation, generated literal output, and exact hello stdout against pinned Haxe oracles |
+| Snapshot | `test/snapshot/` | Byte-exact text or semantic JSON, deterministic rerender, and reviewable diff | Active; existing focused trees plus the hello and Caxecraft generated baselines are mapped explicitly |
+| Runtime | `test/runtime/` | Exit/stdout/stderr, runtime-plan effects, strict native build, and sanitizers where eligible | Runtime-free generated-body/span/direct-import/Caxecraft execution, a zero-`hxrt` Raylib integration plan plus real headless CI execution, fixed arithmetic UBSan, seeded primitive/Caxecraft ASan/UBSan, selective native-seed packages, allocator/string/array native contracts, generated literal output, and the hello executable |
+| Differential | `test/differential/` | Named oracle, normalized oracle/target traces, deterministic seed, and allowed normalizations | Active for evaluation order, fixed and seeded arithmetic, static initialization, native string scalars and array mutation, generated literal output, exact hello stdout, and exact Caxecraft domain traces against pinned Haxe oracles |
 | ABI | `test/abi/` | Headers, symbols/layouts, ownership/calling convention, and external consumers | Hardened internal allocator, array lifecycle, borrowed/owned CString seeds, and compiled pointlib import layout/constant probes plus independent C++ interop seed; no generated public ABI |
 | Performance | `test/performance/` | Versioned measurements, units, inputs/toolchain/hardware/variance, baseline, and budget decision | Contract only |
 
@@ -167,6 +170,7 @@ The registered snapshot selectors are:
 - `runtime-feature-graph`
 - `string-output`
 - `hello`
+- `caxecraft-domain`
 - `span-lowering`
 
 List them from the executable registry with:

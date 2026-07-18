@@ -77,6 +77,7 @@ class FixturePolicyTests(unittest.TestCase):
                 "runtime-feature-graph",
                 "string-output",
                 "hello",
+                "caxecraft-domain",
                 "span-lowering",
             ),
         )

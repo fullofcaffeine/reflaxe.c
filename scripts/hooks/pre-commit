@@ -272,6 +272,11 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(std/c/(CArray|ConstSpan|Span)\.hx
   python3 "$ROOT_DIR/test/span_lowering/run.py"
 fi
 
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/caxecraft/|docs/caxecraft-domain\.md|std/c/(CArray|Span|UInt8|IntConvert)\.hx|src/reflaxe/c/(CCompiler|CReflaxeCompiler|CompilationContext)\.hx|src/reflaxe/c/(ast|emit|frontend|ir|lowering|naming|plan|semantics)/|scripts/test/(c_fixture_harness|snapshots)\.py|docs/(span-lowering|testing)\.md|docs/specs/fixture-taxonomy\.json|package\.json)'; then
+  echo "[pre-commit] Running deterministic Caxecraft domain differential and native probes..."
+  python3 "$ROOT_DIR/examples/caxecraft/run.py"
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/features\.json|test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/expected/|test/runtime/runtime-feature-graph/expected/|test/(primitive_semantics|stdlib_ledger|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/|docs/specs/(primitive-divergences|primitive-semantics|stdlib-ledger)\.(json|csv)|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
   echo "[pre-commit] Checking registered snapshots without updating them..."
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --check

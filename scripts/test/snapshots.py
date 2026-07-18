@@ -909,6 +909,35 @@ def hello_artifacts() -> list[Artifact]:
     return artifacts
 
 
+def caxecraft_domain_artifacts() -> list[Artifact]:
+    module = load_module("caxecraft_domain", "examples/caxecraft/run.py")
+    first = module.snapshot_values()
+    second = module.snapshot_values()
+    if first != second:
+        raise SnapshotFailure(
+            "two Caxecraft-domain snapshot renders were not byte-identical"
+        )
+    formats = {
+        "include/hxc/program.h": "header",
+        "src/program.c": "c",
+        "hxc.runtime-plan.json": "json",
+        "method-symbols.json": "json",
+        "oracle.txt": "text",
+    }
+    artifacts: list[Artifact] = []
+    for name, format_name in formats.items():
+        value = first.get(name)
+        if format_name == "json":
+            if not isinstance(value, dict):
+                raise SnapshotFailure(f"Caxecraft-domain snapshot omitted {name}")
+        elif not isinstance(value, str):
+            raise SnapshotFailure(f"Caxecraft-domain snapshot omitted {name}")
+        artifacts.append(
+            Artifact(Path("examples/caxecraft/expected") / name, format_name, value)
+        )
+    return artifacts
+
+
 GENERATORS: dict[str, Generator] = {
     "bootstrap": bootstrap_artifacts,
     "typed-c": typed_c_artifacts,
@@ -937,6 +966,7 @@ GENERATORS: dict[str, Generator] = {
     "runtime-feature-graph": runtime_feature_graph_artifacts,
     "string-output": string_output_artifacts,
     "hello": hello_artifacts,
+    "caxecraft-domain": caxecraft_domain_artifacts,
     "span-lowering": span_lowering_artifacts,
 }
 

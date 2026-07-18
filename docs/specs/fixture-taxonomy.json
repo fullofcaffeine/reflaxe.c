@@ -49,7 +49,8 @@
         "span-lowering",
         "runtime-feature-graph",
         "string-output",
-        "hello"
+        "hello",
+        "caxecraft-domain"
       ]
     },
     {
@@ -145,7 +146,8 @@
         "span-lowering",
         "runtime-feature-graph",
         "string-output",
-        "hello"
+        "hello",
+        "caxecraft-domain"
       ]
     },
     {
@@ -181,7 +183,8 @@
         "array-runtime",
         "string-runtime",
         "string-output",
-        "hello"
+        "hello",
+        "caxecraft-domain"
       ]
     },
     {
@@ -203,7 +206,8 @@
         "array-runtime",
         "string-runtime",
         "string-output",
-        "hello"
+        "hello",
+        "caxecraft-domain"
       ]
     },
     {
@@ -918,6 +922,28 @@
       ]
     },
     {
+      "id": "caxecraft-domain",
+      "directory": "examples/caxecraft",
+      "runner": [
+        "python3",
+        "examples/caxecraft/run.py"
+      ],
+      "types": [
+        "positive",
+        "snapshot",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, and fixed-step AABB player collision over a narrow fixed-array storage seam",
+        "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
+        "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
+        "the generated program matches centrally owned private-header, C-source, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
+        "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2 and under address and undefined-behavior sanitizers"
+      ]
+    },
+    {
       "id": "native-smoke",
       "directory": "test/native",
       "runner": [
@@ -1279,6 +1305,22 @@
           "header",
           "hxcir",
           "json"
+        ]
+      },
+      {
+        "id": "caxecraft-domain",
+        "expectedRoots": [
+          "examples/caxecraft/expected/include/hxc/program.h",
+          "examples/caxecraft/expected/src/program.c",
+          "examples/caxecraft/expected/hxc.runtime-plan.json",
+          "examples/caxecraft/expected/method-symbols.json",
+          "examples/caxecraft/expected/oracle.txt"
+        ],
+        "formats": [
+          "c",
+          "header",
+          "json",
+          "text"
         ]
       },
       {

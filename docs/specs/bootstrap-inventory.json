@@ -19,7 +19,7 @@
     "profiles": "This manifest describes evidence only and does not change portable or metal semantics.",
     "runtimePolicy": "This manifest selects no hxrt feature and does not change auto, minimal, or none resolution.",
     "environments": "Native fixture evidence is not a supported environment or platform tuple; no support matrix is claimed.",
-    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record, bounded direct-value enum, and compiler-known literal-output slices have generated-C evidence.",
+    "generatedC": "Only the separately admitted primitive and closed-generic static-function, local fixed-array/span storage with bounded nonescaping internal span parameters, closed anonymous-record, bounded direct-value enum, and compiler-known literal-output slices have generated-C evidence; the Caxecraft domain composes only that bounded runtime-free subset.",
     "publicAbi": "The target-facing vocabulary is provisional and no generated public C ABI is stable or supported."
   },
   "claimGates": [
@@ -39,7 +39,7 @@
         "E2.T10",
         "E3.T10"
       ],
-      "reason": "Only bounded primitive and closed-generic static-function, local fixed-array/span storage with nonescaping internal span parameters, closed anonymous-record, direct-value enum, and compiler-known literal-output subsets reach generated C; hello exercises the literal-output slice."
+      "reason": "Only bounded primitive and closed-generic static-function, local fixed-array/span storage with nonescaping internal span parameters, closed anonymous-record, direct-value enum, and compiler-known literal-output subsets reach generated C; hello exercises literal output and the Caxecraft domain composes the runtime-free subset without broadening it."
     },
     {
       "id": "performance-validated",
@@ -415,13 +415,17 @@
       "area": "product",
       "status": "implemented",
       "disposition": "available",
-      "summary": "The repository-owned hello example compiles ordinary Haxe through generated C and runs with exact output.",
-      "scope": "Only examples/hello is implemented: it compares the production C target with Haxe Eval, snapshots readable output, and runs the exact four-feature runtime closure under strict GCC and Clang.",
+      "summary": "Repository-owned hello and Caxecraft-domain examples compile ordinary Haxe through generated C and run with exact Eval differentials.",
+      "scope": "examples/hello proves the exact four-feature literal-output closure. examples/caxecraft proves a finite 16 KiB voxel world, deterministic terrain/edits/DDA/fixed-step AABB collision, 32 property seeds, compiler-server determinism, and allocation-free runtime-none C under strict and sanitized native lanes; it is the renderer-independent core rather than the pending playable Raylib shell.",
       "evidence": [
         "examples/hello/README.md",
         "examples/hello/case.json",
         "examples/hello/expected/src/program.c",
-        "examples/hello/run.py"
+        "examples/hello/run.py",
+        "docs/caxecraft-domain.md",
+        "examples/caxecraft/case.json",
+        "examples/caxecraft/expected/src/program.c",
+        "examples/caxecraft/run.py"
       ],
       "owners": [
         "E2.T10",
@@ -429,8 +433,8 @@
         "E9.T02"
       ],
       "limitations": [
-        "No other planned example, packaged hxc workflow, fresh-install walkthrough, general Haxe or String support, supported platform, or stable public ABI is implied.",
-        "The example uses the reusable literal-output compiler path without raw C injection or an example-specific compiler branch."
+        "The playable Raylib shell, packaged hxc/watch workflow, fresh-install walkthrough, general Haxe or String support, supported platform, performance claim, and stable public ABI remain unproven.",
+        "Both examples use reusable compiler paths without raw C injection or an example-specific compiler branch; fixture-only native consumers are not generated application source."
       ]
     },
     {
@@ -439,7 +443,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks.",
-      "scope": "Focused M0/E3/E6 suites, including constructor lowering, virtual dispatch, and direct C import, plus the declared hello product example map exact runners and evidence without treating examples as implicit test globs.",
+      "scope": "Focused M0/E3/E6 suites, including constructor lowering, virtual dispatch, and direct C import, plus the declared hello and Caxecraft-domain product examples map exact runners and evidence without treating examples as implicit test globs.",
       "evidence": [
         "docs/specs/fixture-taxonomy.json",
         "scripts/ci/check_fixture_policy.py",
@@ -659,8 +663,8 @@
       "area": "quality",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus.",
-      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, direct pointlib import plus compiled ABI probe, private aggregate, class, constructor-header, virtual-dispatch-header, and enum C/C++ agreement, checked class-reference, constructor-failure, and indirect-call behavior, closed generic C11 execution, the checked-in generated hello baseline, and the seeded primitive ASan/UBSan corpus registered by the runners.",
+      "summary": "Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, hello, and Caxecraft-domain corpus.",
+      "scope": "The matrix uses strict C11/C++17 flags and exercises the precise fixture set, direct pointlib import plus compiled ABI probe, private aggregate, class, constructor-header, virtual-dispatch-header, and enum C/C++ agreement, checked class-reference, constructor-failure, and indirect-call behavior, closed generic C11 execution, the checked-in generated hello and allocation-free Caxecraft-domain baselines, and seeded primitive/Caxecraft ASan/UBSan corpora registered by the runners.",
       "evidence": [
         ".github/workflows/governance.yml",
         "scripts/ci/runtime_smoke.py",
@@ -671,6 +675,7 @@
         "test/enum_lowering/run.py",
         "test/generic_specialization/run.py",
         "test/primitive_differential/run.py",
+        "examples/caxecraft/run.py",
         "test/governance/test_runtime_smoke_policy.py"
       ],
       "owners": [
@@ -735,14 +740,15 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, and literal or bounded zero-initialized local fixed-array/span storage plus nonescaping internal span parameters emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, range-preserving `c.IntConvert.exact` and unsigned-target `c.IntConvert.modulo` operations, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, exact-width spans, and mutable or const spans forwarded through reached direct static calls as an internal pointer-plus-length pair; its primitive operations have seeded Eval/ASan/UBSan evidence.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, range-preserving `c.IntConvert.exact` and unsigned-target `c.IntConvert.modulo` operations, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, exact-width spans, and mutable or const spans forwarded through reached direct static calls as an internal pointer-plus-length pair; its primitive operations have seeded Eval/ASan/UBSan evidence and the Caxecraft domain composes them into a 16 KiB finite voxel workload.",
       "evidence": [
         "std/c/IntConvert.hx",
         "test/arithmetic_semantics/run.py",
         "test/function_lowering/run.py",
         "test/primitive_differential/run.py",
         "test/static_initialization/run.py",
-        "test/span_lowering/run.py"
+        "test/span_lowering/run.py",
+        "examples/caxecraft/run.py"
       ],
       "owners": [
         "E2.T03",
@@ -756,7 +762,7 @@
       "limitations": [
         "Invalid, helper-requiring signed-target, checked, failing, and target-ABI integer conversions remain outside the executable slice.",
         "Span parameters are limited to reached non-generic direct static implementation calls; storage, returns, recursive or indirect calls, instance or virtual dispatch, callbacks, native calls, and public exports remain fail-closed.",
-        "The scope is not general Haxe, standard-library parity, object semantics, or a hello product example."
+        "The scope is not general Haxe, standard-library parity, object semantics, or evidence for the pending playable Raylib shell."
       ]
     },
     {
