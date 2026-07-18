@@ -82,7 +82,7 @@ normalized into the compiler-artifact comparison.
 
 `CAST` models C declarations and syntax precisely. It does not decide Haxe semantics.
 
-The schema-8 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-9 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -207,9 +207,12 @@ warning-clean. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
 [explicit evaluation order and control flow](evaluation-order.md); E2.T05 operation selection is
-in [UB-safe primitive arithmetic](arithmetic-semantics.md). E2.T08 adds typed
-fixed-array storage, borrowed span views, explicit bounds policies, and direct
-guarded span iteration; its representation and proof matrix are in
+in [UB-safe primitive arithmetic](arithmetic-semantics.md). E2.T08 and its
+bounded storage extension add typed literal and compile-time-sized zero-
+initialized fixed arrays, a shared 65,536-byte per-array automatic-storage
+ceiling, borrowed span views, explicit static/dynamic bounds policies, and
+direct guarded exact-width span iteration; their representation and proof
+matrix are in
 [fixed arrays and span-based iteration](span-lowering.md).
 
 E2.T09 adds a whole-program static-initialization graph before body lowering.

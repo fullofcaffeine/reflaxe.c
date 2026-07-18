@@ -152,6 +152,8 @@ class HxcIRDumper {
 				'initialize place=${renderPlace(place)} value=${quote(valueId)} transition=${state(from)}->${state(to)}';
 			case IRIOInitializeFixedArray(place, values, from, to):
 				'initialize-fixed-array place=${renderPlace(place)} values=${strings(values)} transition=${state(from)}->${state(to)}';
+			case IRIOZeroInitializeFixedArray(place, from, to):
+				'zero-initialize-fixed-array place=${renderPlace(place)} transition=${state(from)}->${state(to)}';
 			case IRIOInitializeSpan(place, sourceArray, from, to):
 				'initialize-span place=${renderPlace(place)} source=${renderPlace(sourceArray)} transition=${state(from)}->${state(to)}';
 			case IRIOBindVirtualTable(place, tableId): 'bind-virtual-table place=${renderPlace(place)} table=${quote(tableId)}';

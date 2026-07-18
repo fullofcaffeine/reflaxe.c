@@ -15,7 +15,8 @@ evidence; the arithmetic suite adds generated UB-safe operation, sanitizer,
 and optimized-shape evidence. The primitive-differential suite adds a
 reproducible generated corpus, exact Eval comparison, mismatch reduction,
 ledgered target refinements, and combined ASan/UBSan evidence. The span suite
-adds local fixed-array/view, bounds-policy, and runtime-free iteration evidence.
+adds literal and bounded zero-initialized fixed storage, local mutable/const
+views, size/bounds policy, and runtime-free exact-width iteration evidence.
 The aggregate suite adds real closed-record structural deduplication, ordered
 construction, explicit copy/address semantics, private layout assertions, and
 independent C/C++17 layout agreement.
@@ -306,7 +307,7 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-8 HxcIR. A recursive local uses an
+plus exhaustive tag-switch edges in schema-9 HxcIR. A recursive local uses an
 explicit finite pointer edge, while recursive signatures, reference/aggregate
 payloads, and non-exhaustive source patterns fail closed without artifacts.
 Generated private layout assertions compile under strict C11; independent C
@@ -393,17 +394,20 @@ under combined AddressSanitizer/UndefinedBehaviorSanitizer. See the
 [seeded primitive differential suite](primitive-differential.md).
 
 `test/span_lowering` is the focused positive/negative/snapshot/runtime suite for
-E2.T08. It admits typed nonempty `CArray` literals, mutable and const local span
-borrows, direct indexing, and exact typed span `for` iteration. Repeated and
-reversed renders cover both profiles and all three build modes; checked,
-static-proof, and loop-guarded bounds policies remain visible in HxcIR. The
-suite executes in-range behavior at O0/O2, executes both negative and upper
-out-of-range fail-stop paths in the six-way configuration matrix, rejects
-general/empty arrays and lookalike intrinsic names without output, validates the
-profile-aware `hxc_build` diagnostic, and inspects runtime-none links for zero
-`hxrt` symbols. Its source also contains an unreachable String-typed function;
-the schema-2 plan proves that merely seeing that declaration adds no runtime
-intent, helper, artifact, or symbol. See
+E2.T08 and the bounded voxel-storage extension. It admits typed nonempty
+`CArray` literals and positive compiler-known `CArray.zero` products, including
+a 32 × 16 × 32 `UInt8` volume; mutable and const local borrows; direct indexing;
+ordinary-Haxe three-dimensional linearization; and exact-width span `for`
+iteration. Repeated and reversed renders cover both profiles and all three
+build modes. The suite keeps zero initialization and checked/static/loop bounds
+policies visible in schema-9 HxcIR, executes mutation and iteration at O0/O2,
+and runs dynamic negative and upper fail-stop paths across the six-way
+configuration matrix. Exact-span negatives reject zero/negative/nonconstant/
+overflowing/over-budget lengths, unsupported element storage, static out-of-
+bounds access, escaping borrows, general/empty arrays, and lookalike intrinsics.
+It also validates `hxc_build` and inspects runtime-none artifacts and links for
+no allocation or `hxrt` symbol. An unreachable String-typed function remains
+absent from reachable HxcIR and the schema-2 runtime plan. See
 [fixed arrays and span-based iteration](span-lowering.md).
 
 `test/c_import` is the focused E6
@@ -498,7 +502,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-8 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-9 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

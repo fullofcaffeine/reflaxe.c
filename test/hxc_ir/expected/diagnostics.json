@@ -18,13 +18,16 @@
     "HXC9000 error [profile=portable] test/negative/DirectPayloadRepresentation.hx:1:1-1:2 [module:invalid.DirectPayloadRepresentation.instance:instance.option] Invalid HxcIR: direct native-enum instance `instance.option` cannot contain payload case `Some` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uncheckedVirtualCall": [
-    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:22:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:23:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unknownVirtualImplementation": [
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:8:1-8:2 [dispatch.table:vtable.coverage.Object.entry:0:slot.render] Invalid HxcIR: virtual table refers to unknown implementation `fn.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "nonExhaustiveTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/NonExhaustiveTagSwitch.hx:3:1-3:2 [module:invalid.NonExhaustiveTagSwitch.function:invalid.NonExhaustiveTagSwitch.main.block:entry.terminator] Invalid HxcIR: tag switch without a default omits `None` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "zeroFixedArrayNonAutomatic": [
+    "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "defaultInitializationType": [
     "HXC9000 error [profile=portable] test/negative/DefaultInitializationType.hx:2:1-2:2 [module:invalid.DefaultInitializationType.function:invalid.DefaultInitializationType.main.block:entry.instruction:0:bad.default] Invalid HxcIR: default object initialization requires a direct concrete-class place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -33,7 +36,7 @@
     "HXC9000 error [profile=portable] test/negative/ConstantTypeMismatch.hx:2:1-2:2 [module:invalid.ConstantTypeMismatch.function:invalid.ConstantTypeMismatch.main.block:entry.instruction:0:bad.constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "mismatchedVirtualTableBind": [
-    "HXC9000 error [profile=portable] test/negative/MismatchedVirtualTableBind.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:11:c00.virtual-bind] Invalid HxcIR: virtual-table bind `vtable.coverage.Object` does not match its concrete object place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/MismatchedVirtualTableBind.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:12:c00.virtual-bind] Invalid HxcIR: virtual-table bind `vtable.coverage.Object` does not match its concrete object place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "switchCaseTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/SwitchCaseTypeMismatch.hx:3:1-3:2 [module:invalid.SwitchCaseTypeMismatch.function:invalid.SwitchCaseTypeMismatch.main.block:entry.terminator] Invalid HxcIR: switch case 0 literal family does not match its subject type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -61,6 +64,9 @@
   ],
   "loadTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/LoadTypeMismatch.hx:2:1-2:2 [module:invalid.LoadTypeMismatch.function:invalid.LoadTypeMismatch.main.block:entry.instruction:0:bad.load] Invalid HxcIR: load result type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "zeroFixedArrayOverBudget": [
+    "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayOverBudget.hx:2:1-2:2 [module:invalid.ZeroFixedArrayOverBudget.function:invalid.ZeroFixedArrayOverBudget.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage 65537 bytes exceeds the 65536-byte automatic limit Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unknownLoopBoundsGuard": [
     "HXC9000 error [profile=portable] test/negative/UnknownLoopBoundsGuard.hx:4:1-4:2 [module:invalid.UnknownLoopBoundsGuard.function:invalid.UnknownLoopBoundsGuard.main.block:entry.instruction:2:bad.bounds.policy] Invalid HxcIR: loop bounds proof refers to unknown guard instruction `missing.guard` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

@@ -4,6 +4,8 @@ package reflaxe.c.lowering;
 import haxe.io.Bytes;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRFixedArrayPolicy;
+import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 import reflaxe.c.interop.CImportRegistry.CImportTypeKind;
 import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.ir.HxcSourceSpan;
@@ -309,6 +311,8 @@ class CBodyEmitter {
 					case IRIOInitializeFixedArray(IRPLocal(localId), valueIds, IRISUninitialized, IRISInitialized):
 						emitFixedArrayInitialize(statements, values, declared, referencedLocals, instruction, localId, valueIds, fn, localNames,
 							lineDirectives);
+					case IRIOZeroInitializeFixedArray(IRPLocal(localId), IRISUninitialized, IRISInitialized):
+						emitZeroFixedArrayInitialize(statements, declared, referencedLocals, instruction, localId, fn, localNames, lineDirectives);
 					case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
 						emitSpanInitialize(statements, declared, referencedLocals, referencedSpanLengths, instruction, localId, sourceArray, fn, localNames,
 							resolvedSpanLengthNames, globalNames, lineDirectives);
@@ -809,6 +813,42 @@ class CBodyEmitter {
 				designators: [],
 				value: IExpr(requireValue(values, valueId, fn.id))
 			})),
+			attributes: []
+		}));
+		declared.set(localId, true);
+		if (!referencedLocals.exists(localId)) {
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(name))));
+		}
+	}
+
+	function emitZeroFixedArrayInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+			instruction:HxcIRInstruction, localId:String, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+		if (instruction.result != null || declared.exists(localId)) {
+			fail('zero fixed-array initializer `${instruction.id}` in `${fn.id}` has invalid declaration state');
+		}
+		final local = requireLocal(fn, localId);
+		final fixed = switch local.type {
+			case IRTFixedArray(element, length, _): {element: element, length: length};
+			case _: return fail('zero fixed-array initializer `${instruction.id}` in `${fn.id}` targets a non-array local');
+		};
+		switch HxcIRFixedArrayPolicy.zeroStorage(fixed.element, fixed.length) {
+			case IRFASAutomatic(_, _):
+			case _:
+				return fail('zero fixed-array initializer `${instruction.id}` in `${fn.id}` violates its validated automatic-storage policy');
+		}
+		final name = requireLocalName(localNames, localId, fn.id);
+		addLineDirective(statements, instruction.source, lineDirectives);
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: cType(fixed.element),
+			declarator: DArray(DName(name), ABFixed(EInt(CIntegerLiteral.decimal(Std.string(fixed.length)))), []),
+			initializer: IList([
+				{
+					designators: [],
+					value: IExpr(EInt(CIntegerLiteral.decimal("0")))
+				}
+			]),
 			attributes: []
 		}));
 		declared.set(localId, true);

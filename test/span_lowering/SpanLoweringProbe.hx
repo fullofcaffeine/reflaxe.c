@@ -42,7 +42,15 @@ class SpanLoweringProbe {
 			case TInst(reference, _): reference.get();
 			case _: fatal("SpanFixture must remain a class");
 		};
-		final selected = ["checkedAt", "constSum", "main", "mutableSum"];
+		final selected = [
+			"checkedAt",
+			"constSum",
+			"linearIndex",
+			"main",
+			"mutableSum",
+			"mutatedGridCell",
+			"zeroedGridCell"
+		];
 		final inputs:Array<CBodyFunctionInput> = [];
 		for (sourceOrder => field in fixture.statics.get()) {
 			if (selected.indexOf(field.name) == -1) {
@@ -91,8 +99,8 @@ class SpanLoweringProbe {
 		}
 		functions.sort((left, right) -> compareStrings(left.field, right.field));
 		final record:SpanLoweringProbeRecord = {
-			schemaVersion: 1,
-			status: "typed-fixed-arrays-and-spans-runtime-free",
+			schemaVersion: 2,
+			status: "typed-zero-fixed-arrays-and-spans-runtime-free",
 			profile: Std.string(profile),
 			buildMode: Std.string(buildMode),
 			hxcir: new HxcIRDumper().dump(result.program),

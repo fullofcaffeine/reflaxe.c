@@ -24,8 +24,10 @@ The M0 contract plus M1 declaration-planning slice do five things:
 The declaration-contract report itself does **not** lower types, emit C, prove
 an ABI layout, expose raw C, or make `c.Unsafe` operational; its explicit status
 remains `contract-seed-no-lowering`. Production lowering now consumes two
-separate bounded surfaces. E2.T08 admits nonempty literal-backed `CArray<T, N>`
-plus `Span<T>` and `ConstSpan<T>` borrowing, indexing, and iteration. The first
+separate bounded surfaces. E2.T08 and its bounded storage extension admit
+nonempty literal-backed `CArray<T, N>` plus positive compile-time-sized
+`CArray.zero` automatic storage and local `Span<T>`/`ConstSpan<T>` borrowing,
+indexing, and iteration. The first
 E6 vertical slice admits reached hand-authored extern C declarations with exact
 names and headers for scalars, typedefs, fieldless enums/constants, by-value
 structs, and literal borrowed `CString` arguments. Other `c.*` operations remain
@@ -124,7 +126,7 @@ escape hatch.
 | Functions, modules, enums, constants | Ordinary typed Haxe declarations | Haxe already models them and supplies IDE/type-checker support. |
 | Exact integer widths and `size_t`-class types | `c.Int8` through `c.UInt64`, `c.Size`, `c.PtrDiff`, `c.IntPtr`, `c.UIntPtr` | They must not inherit Haxe `Int` semantics or an assumed host width. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
-| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. E2.T08 preserves `N` as the typed identity of a directly assigned nonempty literal and lowers local span views without runtime objects; broader forms remain reserved. |
+| Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects; broader forms remain reserved. |
 | Ownership and allocation | `c.Owned<T>`, `Borrowed<T>`, `Allocator`, `Arena`, `Result<T, E>` | Ownership and failure cannot disappear behind a convenient call. |
 | Struct, union, enum, or opaque intent | ordinary declaration plus `@:c.layout(c.Layout.*)` | Layout is a declaration fact that Haxe syntax alone cannot state. |
 | Header group and stable native name | `@:c.header("path.h", c.Header.Public\|Private)` and `@:c.name("symbol")` | The compiler can derive guards, forward declarations, dependencies, and ordering. |

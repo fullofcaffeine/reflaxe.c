@@ -358,6 +358,7 @@ enum HxcIRInstructionKind {
 	IRIODefaultInitialize(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeFixedArray(place:HxcIRPlace, values:Array<String>, from:HxcIRInitializationState, to:HxcIRInitializationState);
+	IRIOZeroInitializeFixedArray(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitializeSpan(place:HxcIRPlace, sourceArray:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOBindVirtualTable(place:HxcIRPlace, tableId:String);
 	IRIOBoundsCheck(collection:HxcIRPlace, indexValueId:String, policy:HxcIRBoundsPolicy);

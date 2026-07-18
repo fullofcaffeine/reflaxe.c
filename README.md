@@ -13,8 +13,9 @@ replacement Haxe compiler or a requirement imposed by Reflaxe.
 executable slices.**
 The complete target-owned Haxe source graph type-checks. Typed primitive static
 functions, arguments, conversions, calls, assignments, static fields, lazy and
-value/statement control flow, UB-safe arithmetic, local fixed arrays, checked
-span access, direct span iteration, and dependency-ordered class/static
+value/statement control flow, UB-safe arithmetic, literal and bounded zero-
+initialized local fixed arrays, checked span access, direct exact-width span
+iteration, and dependency-ordered class/static
 initialization now pass through
 explicitly sequenced validated HxcIR and emit an owned runtime-free strict-C11
 project with a private header and `int main(void)`. Compiler-known String
@@ -151,9 +152,9 @@ temporaries, partitions compiler-proven closed recursion warning-cleanly, and
 packages the production primitive executable project. [Explicit evaluation
 order](docs/evaluation-order.md) documents the stable-value proof and Eval/C
 differential boundary. [Fixed arrays and span-based
-iteration](docs/span-lowering.md) documents the nonempty literal-backed
-`CArray`, pointer-and-length view, explicit bounds-policy, and zero-iterator
-lowering slice.
+iteration](docs/span-lowering.md) documents nonempty literals and compiler-known
+zero-initialized `CArray` storage, pointer-and-length views, explicit size and
+bounds policies, and zero-iterator lowering.
 
 The [primitive semantic contract](docs/primitive-semantics.md) now maps real
 typed Haxe declarations for both profiles to exact fixed-width and target-ABI
@@ -282,7 +283,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, and hello corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
-| `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11. |
+| `primitive-executable-lowering` | `implemented` | A bounded primitive static-function, deterministic initialization, and literal or bounded zero-initialized local fixed-array/span graph emits and runs runtime-free strict C11. |
 | `primitive-semantics` | `implemented` | A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |

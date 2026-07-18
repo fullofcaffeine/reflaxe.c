@@ -1,7 +1,7 @@
 # Concrete class instance layouts
 
 E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-8 HxcIR to private
+classes. Reachable class declarations lower through schema-9 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
 storage. The slice is available in both `portable` and `metal`, selects no
 `hxrt` feature, and does not establish a public C ABI.

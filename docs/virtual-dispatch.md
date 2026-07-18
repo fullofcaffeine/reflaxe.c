@@ -3,7 +3,7 @@
 E3.T06 admits ordinary instance methods and reachable class-hierarchy virtual
 calls for the bounded concrete-class program already supported by E3.T04 and
 E3.T05. The compiler discovers calls from pinned-Haxe typed expressions,
-records the choice in schema-8 HxcIR, and emits program-local strict C11. The
+records the choice in schema-9 HxcIR, and emits program-local strict C11. The
 slice works in `portable` and `metal`, selects no `hxrt` feature, and exposes no
 public C ABI.
 

@@ -79,7 +79,8 @@ convenience alone is not authority to weaken sequencing.
 ## Boundaries
 
 This remains a primitive control-flow slice, not general pattern matching or
-collection iteration. E2.T08 admits only local literal-backed fixed arrays and
+collection iteration. The fixed-array slice admits only local literal-backed or
+bounded compile-time-sized zero-initialized fixed arrays and
 the exact typed span iterator shape. Enum/string/object patterns, Float
 switches, arbitrary iterators, general arrays, escaping views, exception edges,
 and cleanup-bearing exits remain fail-closed.

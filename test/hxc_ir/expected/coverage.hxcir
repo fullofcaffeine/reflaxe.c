@@ -1,4 +1,4 @@
-hxcir schema=8
+hxcir schema=9
 dispatch
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
   slot "slot.render" owner="instance.object" parameters=[i32] returns=i32 @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -30,6 +30,7 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
     parameter "value.nullable-reference" type=nullable(pointer,instance("instance.object")) @"test/hxc_ir/fixtures/IRCoverage.hx":16:1-16:2
     local "local.constructed" type=instance("instance.constructed") storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.fixed" type=fixed-array(length=2,witness="coverage.Length2",element=i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
+    local "local.fixed-zero" type=fixed-array(length=16,witness="coverage.Length16",element=u8) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.owned" type=pointer(nonnull,instance("instance.object")) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.record" type=instance("instance.record") storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
     local "local.span" type=span(const,i32) storage=automatic state=uninitialized @"test/hxc_ir/fixtures/IRCoverage.hx":17:1-17:2
@@ -41,6 +42,7 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       instruction "c00.native-constant" result="value.native-constant":i32 constant value=native-constant("native.constant.coverage") @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.output" result=- call dispatch=runtime(feature="io",operation="sys-println-literal") arguments=["value.string"] returns=void failure=failure(kind=native-status,target=abort,arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.fixed" result=- initialize-fixed-array place=local("local.fixed") values=["value.one","value.one"] transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
+      instruction "c00.fixed-zero" result=- zero-initialize-fixed-array place=local("local.fixed-zero") transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.span" result=- initialize-span place=local("local.span") source=local("local.fixed") transition=uninitialized->initialized @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.bounds-static" result=- bounds-check collection=local("local.span") index="value.one" policy=static-proof(length=2,index=1) @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.span-load" result="value.span-one":i32 load place=index(local("local.span"),"value.one") @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2

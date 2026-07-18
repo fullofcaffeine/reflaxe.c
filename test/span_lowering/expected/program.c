@@ -52,11 +52,19 @@ hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2:
   goto hxc_temp_SpanFixture_constSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
 }
 
+int32_t hxc_method_SpanFixture_linearIndex(int32_t hxc_local_SpanFixture_linearIndex_x_n0, int32_t hxc_local_SpanFixture_linearIndex_y_n1, int32_t hxc_local_SpanFixture_linearIndex_zz_n2)
+{
+  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_local_SpanFixture_linearIndex_x_n0, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(32, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_local_SpanFixture_linearIndex_y_n1, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(16, hxc_local_SpanFixture_linearIndex_zz_n2))));
+}
+
 void hxc_method_SpanFixture_main(void)
 {
   hxc_method_SpanFixture_mutableSum();
   hxc_method_SpanFixture_constSum();
   hxc_method_SpanFixture_checkedAt(2);
+  hxc_method_SpanFixture_zzeroedGridCell();
+  uint8_t hxc_temp_SpanFixture_main_callzx2Dresult_n0 = hxc_method_SpanFixture_zzeroedGridCell();
+  hxc_method_SpanFixture_mutatedGridCell(hxc_temp_SpanFixture_main_callzx2Dresult_n0);
   return;
 }
 
@@ -97,6 +105,80 @@ hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2:
   size_t hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n4 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3;
   hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dindex_n3 = hxc_temp_SpanFixture_mutableSum_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n4 + 1;
   goto hxc_temp_SpanFixture_mutableSum_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+}
+
+uint8_t hxc_method_SpanFixture_mutatedGridCell(uint8_t hxc_local_SpanFixture_mutatedGridCell_replacement_n0)
+{
+  uint8_t hxc_local_SpanFixture_mutatedGridCell_values_n1[16384] = { 0 };
+  int32_t hxc_temp_SpanFixture_mutatedGridCell_callzx2Dresult_n0 = hxc_method_SpanFixture_linearIndex(31, 15, 31);
+  int32_t hxc_local_SpanFixture_mutatedGridCell_index_n2 = hxc_temp_SpanFixture_mutatedGridCell_callzx2Dresult_n0;
+  int32_t hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n1 = hxc_local_SpanFixture_mutatedGridCell_index_n2;
+  if (hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n1 < 0 || (size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n1 >= sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1) / sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1[0]))
+  {
+    abort();
+  }
+  hxc_local_SpanFixture_mutatedGridCell_values_n1[(size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n1] = hxc_local_SpanFixture_mutatedGridCell_replacement_n0;
+  uint8_t *hxc_local_SpanFixture_mutatedGridCell_mutable_n3 = hxc_local_SpanFixture_mutatedGridCell_values_n1;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_mutable_length_n3 = sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1) / sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1[0]);
+  int32_t hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n2 = hxc_local_SpanFixture_mutatedGridCell_index_n2;
+  if (hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n2 < 0 || (size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n2 >= hxc_temp_SpanFixture_mutatedGridCell_mutable_length_n3)
+  {
+    abort();
+  }
+  hxc_local_SpanFixture_mutatedGridCell_mutable_n3[(size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n2] = hxc_local_SpanFixture_mutatedGridCell_replacement_n0;
+  uint8_t hxc_temp_SpanFixture_mutatedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n3 = hxc_local_SpanFixture_mutatedGridCell_values_n1[(size_t)0];
+  uint8_t hxc_local_SpanFixture_mutatedGridCell_observed_n4 = hxc_temp_SpanFixture_mutatedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n3;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dindex_n5 = 0;
+  goto hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0:
+    ;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n4 = hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dindex_n5;
+  if (hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dconditionzx2Dindexzx2Dresult_n4 < 16384)
+  {
+    goto hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1;
+  }
+  else
+  {
+    goto hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3;
+  }
+hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dbody_n1:
+    ;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n5 = hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dindex_n5;
+  uint8_t hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Delementzx2Dresult_n6 = hxc_local_SpanFixture_mutatedGridCell_mutable_n3[(size_t)hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dbodyzx2Dindexzx2Dresult_n5];
+  hxc_local_SpanFixture_mutatedGridCell_observed_n4 = hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Delementzx2Dresult_n6;
+  goto hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2;
+hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dexit_n3:
+    ;
+  const uint8_t *hxc_local_SpanFixture_mutatedGridCell_readOnly_n6 = hxc_local_SpanFixture_mutatedGridCell_values_n1;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_readOnly_length_n6 = sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1) / sizeof(hxc_local_SpanFixture_mutatedGridCell_values_n1[0]);
+  int32_t hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n8 = hxc_local_SpanFixture_mutatedGridCell_index_n2;
+  if (hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n8 < 0 || (size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n8 >= hxc_temp_SpanFixture_mutatedGridCell_readOnly_length_n6)
+  {
+    abort();
+  }
+  uint8_t hxc_temp_SpanFixture_mutatedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n9 = hxc_local_SpanFixture_mutatedGridCell_readOnly_n6[(size_t)hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n8];
+  hxc_local_SpanFixture_mutatedGridCell_observed_n4 = hxc_temp_SpanFixture_mutatedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n9;
+  uint8_t hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n10 = hxc_local_SpanFixture_mutatedGridCell_observed_n4;
+  return hxc_temp_SpanFixture_mutatedGridCell_loadzx2Dresult_n10;
+hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dincrement_n2:
+    ;
+  size_t hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n7 = hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dindex_n5;
+  hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dindex_n5 = hxc_temp_SpanFixture_mutatedGridCell_spanzx2Dloopzx2Dincrementzx2Dindexzx2Dresult_n7 + 1;
+  goto hxc_temp_SpanFixture_mutatedGridCell_blockzx2Dlabel_spanzx2Dloopzx2Dcondition_n0;
+}
+
+uint8_t hxc_method_SpanFixture_zzeroedGridCell(void)
+{
+  uint8_t hxc_local_SpanFixture_zzeroedGridCell_values_n0[16384] = { 0 };
+  const uint8_t *hxc_local_SpanFixture_zzeroedGridCell_view_n1 = hxc_local_SpanFixture_zzeroedGridCell_values_n0;
+  size_t hxc_temp_SpanFixture_zzeroedGridCell_view_length_n1 = sizeof(hxc_local_SpanFixture_zzeroedGridCell_values_n0) / sizeof(hxc_local_SpanFixture_zzeroedGridCell_values_n0[0]);
+  int32_t hxc_temp_SpanFixture_zzeroedGridCell_callzx2Dresult_n0 = hxc_method_SpanFixture_linearIndex(0, 0, 0);
+  if (hxc_temp_SpanFixture_zzeroedGridCell_callzx2Dresult_n0 < 0 || (size_t)hxc_temp_SpanFixture_zzeroedGridCell_callzx2Dresult_n0 >= hxc_temp_SpanFixture_zzeroedGridCell_view_length_n1)
+  {
+    abort();
+  }
+  uint8_t hxc_temp_SpanFixture_zzeroedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n1 = hxc_local_SpanFixture_zzeroedGridCell_view_n1[(size_t)hxc_temp_SpanFixture_zzeroedGridCell_callzx2Dresult_n0];
+  return hxc_temp_SpanFixture_zzeroedGridCell_collectionzx2Dindexzx2Dloadzx2Dresult_n1;
 }
 
 int main(void)

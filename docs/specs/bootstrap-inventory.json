@@ -270,7 +270,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts.",
-      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-8 HxcIR and run as runtime-free strict C11.",
+      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-9 HxcIR and run as runtime-free strict C11.",
       "evidence": [
         "docs/class-layout.md",
         "src/reflaxe/c/lowering/CBodyClass.hx",
@@ -331,7 +331,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup.",
-      "scope": "Unconditional entry-block local new expressions lower through schema-8 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-9 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -390,7 +390,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, scalars, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-8 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts.",
+      "scope": "Exact fixed-arity C functions, scalars, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-9 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "src/reflaxe/c/interop/CImportRegistry.hx",
@@ -734,8 +734,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A bounded primitive static-function, deterministic initialization, and local fixed-array/span graph emits and runs runtime-free strict C11.",
-      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, and admitted spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
+      "summary": "A bounded primitive static-function, deterministic initialization, and literal or bounded zero-initialized local fixed-array/span graph emits and runs runtime-free strict C11.",
+      "scope": "The slice covers typed constants, locals, globals, dependency-ordered class/static initialization, direct calls, conversions, sequenced control flow, UB-safe arithmetic, fixed arrays with compile-time size/bounds policy, and exact-width spans; its primitive operations have a seeded Eval/ASan/UBSan corpus.",
       "evidence": [
         "test/arithmetic_semantics/run.py",
         "test/function_lowering/run.py",
@@ -1027,7 +1027,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
-      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-8 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
+      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-9 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
       "evidence": [
         "docs/enum-lowering.md",
         "src/reflaxe/c/lowering/CBodyEnum.hx",
@@ -1065,8 +1065,9 @@
       "status": "scaffold-only",
       "disposition": "reserved",
       "summary": "Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check.",
-      "scope": "The contract macro validates the current declaration/build surface; fixed CArray/local Span and exact reached direct-import operations have separate admitted lowering slices.",
+      "scope": "The contract macro validates the current declaration/build surface; literal and bounded compile-time-sized zero-initialized CArray/local Span operations and exact reached direct imports have separate admitted lowering slices.",
       "evidence": [
+        "std/c/CArray.hx",
         "std/c/Ptr.hx",
         "std/c/CString.hx",
         "std/c/Span.hx",
@@ -1080,7 +1081,7 @@
         "E6.T05"
       ],
       "limitations": [
-        "Only the separately listed CArray/Span and direct-import subsets lower; most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
+        "Only the separately listed bounded CArray/Span and direct-import subsets lower; dynamic/heap fixed-array storage and most c.* operations have no runtime body or compiler lowering, and Syntax/Unsafe intentionally expose no authority."
       ]
     },
     {
@@ -1183,7 +1184,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reachable ordinary class methods support deterministic minimal closed-world virtual dispatch while statically known calls remain direct.",
-      "scope": "Non-generic infallible class methods lower through schema-8 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
+      "scope": "Non-generic infallible class methods lower through schema-9 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
       "evidence": [
         "docs/virtual-dispatch.md",
         "docs/specs/dispatch-report.schema.json",

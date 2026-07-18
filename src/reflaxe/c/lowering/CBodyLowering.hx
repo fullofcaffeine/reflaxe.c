@@ -15,6 +15,8 @@ import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
 import reflaxe.c.frontend.TypedProgramInput;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRFixedArrayPolicy;
+import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcUtf8;
@@ -628,6 +630,11 @@ private enum BodyCollectionKind {
 	BCKSpan(mutable:Bool);
 }
 
+private enum BodyFixedArrayInitializer {
+	BFAIValues(values:Array<String>);
+	BFAIZero;
+}
+
 private typedef BodyCollectionType = {
 	final kind:BodyCollectionKind;
 	final element:CPrimitiveTypeMapping;
@@ -929,6 +936,9 @@ private class FunctionPreparer {
 				mapping: mapping
 			});
 		}
+		if (isBorrowedSpanType(declaredSignature.result)) {
+			unsupported(input.expression.pos, "TFunction(return-type:borrowed-span-escape)");
+		}
 		final returnMapping = admittedValueType(declaredSignature.result, input.expression.pos, "TFunction(return-type)");
 		final returnEnum = returnMapping.enumValue();
 		if (returnEnum != null && returnEnum.scopedLifetime) {
@@ -1016,6 +1026,21 @@ private class FunctionPreparer {
 				final resolved = reference.get();
 				resolved == null ? false : isRestType(resolved);
 			case TLazy(resolve): isRestType(resolve());
+			case _: false;
+		};
+	}
+
+	static function isBorrowedSpanType(type:Type):Bool {
+		return switch type {
+			case TAbstract(reference, _): final abstractType = reference.get(); abstractType.pack.join(".") == "c" && (abstractType.name == "Span"
+					|| abstractType.name == "ConstSpan");
+			case TType(reference, parameters):
+				final definition = reference.get();
+				isBorrowedSpanType(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? false : isBorrowedSpanType(resolved);
+			case TLazy(resolve): isBorrowedSpanType(resolve());
 			case _: false;
 		};
 	}
@@ -1454,7 +1479,7 @@ private class FunctionBuilder {
 				&& isIteratorCall(initializer, iterator.variable.id, "next")): variable;
 			case _: return null;
 		};
-		if (typeKey(span.element.irType) != typeKey(primitiveMapping(loopVariable.t, expressions[0].pos, 'TFor(${loopVariable.name}:type)').irType)) {
+		if (typeKey(span.element.irType) != typeKey(collectionElement(loopVariable.t, expressions[0].pos, 'TFor(${loopVariable.name}:type)').irType)) {
 			return null;
 		}
 		return {
@@ -1875,30 +1900,47 @@ private class FunctionBuilder {
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
 		switch collectionType.kind {
 			case BCKFixedArray(witnessId):
-				final elements = requireArrayLiteral(expression, variable.name);
-				if (elements.length == 0) {
-					unsupported(expression, 'TArrayDecl(empty-fixed-array-not-strict-c11)');
-				}
-				final values:Array<String> = [];
-				for (element in elements) {
-					final elementType = CBodyValueType.primitive(collectionType.element);
-					values.push(coerce(lowerValue(element, elementType), elementType, element.pos, 'TArrayDecl(element:${values.length})').id);
+				final zeroLengthExpression = fixedArrayZeroLengthExpression(expression);
+				var length:Int;
+				var initializer:BodyFixedArrayInitializer;
+				if (zeroLengthExpression == null) {
+					final elements = requireArrayLiteral(expression, variable.name);
+					if (elements.length == 0) {
+						unsupported(expression, 'TArrayDecl(empty-fixed-array-not-strict-c11)');
+					}
+					final values:Array<String> = [];
+					for (element in elements) {
+						final elementType = CBodyValueType.primitive(collectionType.element);
+						values.push(coerce(lowerValue(element, elementType), elementType, element.pos, 'TArrayDecl(element:${values.length})').id);
+					}
+					length = elements.length;
+					initializer = BFAIValues(values);
+				} else {
+					length = requireFixedArrayZeroLength(zeroLengthExpression);
+					requireFixedArrayZeroStorage(collectionType.element.irType, length, zeroLengthExpression);
+					initializer = BFAIZero;
 				}
 				locals.push({
 					id: localId,
-					type: IRTFixedArray(collectionType.element.irType, elements.length, witnessId),
+					type: IRTFixedArray(collectionType.element.irType, length, witnessId),
 					storage: IRLSAutomatic,
 					initialState: IRISUninitialized,
 					source: source
 				});
 				registerCollectionLocal(variable, ordinal, localId, false);
-				appendInstruction(null, IRIOInitializeFixedArray(IRPLocal(localId), values, IRISUninitialized, IRISInitialized), source,
-					"fixed-array-initialize");
+				switch initializer {
+					case BFAIValues(values):
+						appendInstruction(null, IRIOInitializeFixedArray(IRPLocal(localId), values, IRISUninitialized, IRISInitialized), source,
+							"fixed-array-initialize");
+					case BFAIZero:
+						appendInstruction(null, IRIOZeroInitializeFixedArray(IRPLocal(localId), IRISUninitialized, IRISInitialized), source,
+							"fixed-array-zero-initialize");
+				}
 				collectionBindingsByCompilerId.set(variable.id, {
 					localId: localId,
 					kind: collectionType.kind,
 					element: collectionType.element,
-					length: elements.length
+					length: length
 				});
 			case BCKSpan(mutable):
 				final sourceVariable = requireSpanSource(expression, mutable);
@@ -1951,6 +1993,77 @@ private class FunctionBuilder {
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): requireArrayLiteral(inner, variableName);
 			case _: unsupported(expression, 'TVar($variableName:fixed-array-requires-direct-literal)');
 		};
+	}
+
+	function fixedArrayZeroLengthExpression(expression:TypedExpr):Null<TypedExpr> {
+		return switch expression.expr {
+			case TCall(callee, arguments) if (isAbstractMethod(callee, "c.CArray", "zero")):
+				if (arguments.length != 1) {
+					unsupported(expression, 'TCall(c.CArray.zero:argument-count=${arguments.length})');
+				}
+				arguments[0];
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): fixedArrayZeroLengthExpression(inner);
+			case _: null;
+		};
+	}
+
+	function requireFixedArrayZeroLength(expression:TypedExpr):Int {
+		final length = foldFixedArrayLength(expression, expression, []);
+		if (length <= 0) {
+			unsupported(expression, 'TCall(c.CArray.zero:length-must-be-positive:$length)');
+		}
+		return length;
+	}
+
+	function foldFixedArrayLength(expression:TypedExpr, anchor:TypedExpr, activeInlineFields:Array<String>):Int {
+		return switch expression.expr {
+			case TConst(TInt(value)): value;
+			case TBinop(OpMult, left, right):
+				final leftValue = foldFixedArrayLength(left, anchor, activeInlineFields);
+				final rightValue = foldFixedArrayLength(right, anchor, activeInlineFields);
+				if (leftValue <= 0 || rightValue <= 0) {
+					unsupported(anchor, 'TCall(c.CArray.zero:length-must-be-positive-product:$leftValue*$rightValue)');
+				}
+				if (leftValue > Std.int(2147483647 / rightValue)) {
+					unsupported(anchor, 'TCall(c.CArray.zero:length-product-overflow:$leftValue*$rightValue)');
+				}
+				leftValue * rightValue;
+			case TField(_, FStatic(classReference, fieldReference)):
+				final field = fieldReference.get();
+				final owner = classReference.get();
+				final fieldId = owner.pack.concat([owner.name, field.name]).join(".");
+				switch field.kind {
+					case FVar(AccInline, _):
+						if (activeInlineFields.indexOf(fieldId) != -1) {
+							unsupported(anchor, 'TCall(c.CArray.zero:recursive-inline-length:$fieldId)');
+						}
+						final value = field.expr();
+						if (value == null) {
+							unsupported(anchor, 'TCall(c.CArray.zero:inline-length-without-value:$fieldId)');
+						}
+						foldFixedArrayLength(value, anchor, activeInlineFields.concat([fieldId]));
+					case _:
+						unsupported(anchor, 'TCall(c.CArray.zero:length-must-be-compile-time-product:${nodeName(expression)})');
+				}
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): foldFixedArrayLength(inner, anchor, activeInlineFields);
+			case TUnop(OpNeg, _, _): unsupported(anchor, 'TCall(c.CArray.zero:length-must-be-positive)');
+			case _: unsupported(anchor, 'TCall(c.CArray.zero:length-must-be-compile-time-product:${nodeName(expression)})');
+		};
+	}
+
+	function requireFixedArrayZeroStorage(element:HxcIRTypeRef, length:Int, expression:TypedExpr):Void {
+		switch HxcIRFixedArrayPolicy.zeroStorage(element, length) {
+			case IRFASAutomatic(_, _):
+			case IRFASInvalidLength(invalidLength):
+				unsupported(expression, 'TCall(c.CArray.zero:length-must-be-positive:$invalidLength)');
+			case IRFASUnsupportedElement:
+				unsupported(expression, 'TCall(c.CArray.zero:element-requires-exact-storage-size:${typeKey(element)})');
+			case IRFASSizeOverflow(elementBytes, invalidLength):
+				unsupported(expression, 'TCall(c.CArray.zero:storage-size-overflow:$invalidLength*$elementBytes)');
+			case IRFASOverBudget(elementBytes, totalBytes, maximumBytes):
+				unsupported(expression,
+					'TCall(c.CArray.zero:automatic-storage-over-budget:length=$length,element-bytes=$elementBytes,total-bytes=$totalBytes,limit-bytes=$maximumBytes)');
+		}
 	}
 
 	function requireSpanSource(expression:TypedExpr, mutable:Bool):TVar {
@@ -3291,14 +3404,19 @@ private class FunctionBuilder {
 
 	function boundsPolicy(binding:BodyCollectionBinding, index:TypedExpr):HxcIRBoundsPolicy {
 		final value = constantInt(index);
-		return value != null
-			&& value >= 0
-			&& value < binding.length ? IRBPStaticProof(binding.length, value) : IRBPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode));
+		if (value != null) {
+			if (value < 0 || value >= binding.length) {
+				unsupported(index, 'TArray(index-statically-out-of-bounds:length=${binding.length},index=$value)');
+			}
+			return IRBPStaticProof(binding.length, value);
+		}
+		return IRBPCheckedAbort(Std.string(context.profile), Std.string(context.buildMode));
 	}
 
 	static function constantInt(expression:TypedExpr):Null<Int> {
 		return switch expression.expr {
 			case TConst(TInt(value)): value;
+			case TUnop(OpNeg, _, inner): final value = constantInt(inner); value == null || value == -2147483648 ? null : -value;
 			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): constantInt(inner);
 			case _: null;
 		};

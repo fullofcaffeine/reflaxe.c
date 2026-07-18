@@ -2,6 +2,7 @@ package reflaxe.c.ir;
 
 import haxe.io.Bytes;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.ir.HxcIRFixedArrayPolicy.HxcIRFixedArrayStorageDecision;
 
 private typedef HxcIRInstructionSite = {
 	final instruction:HxcIRInstruction;
@@ -10,7 +11,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 8;
+	public static inline final SCHEMA_VERSION = 9;
 
 	public function new() {}
 
@@ -932,6 +933,40 @@ private class HxcIRValidationState {
 						add(path, "fixed-array initialization requires a fixed-array place", instruction.source);
 				}
 				validateInitializeTransition(from, to, path, instruction.source);
+			case IRIOZeroInitializeFixedArray(place, from, to):
+				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
+				switch place {
+					case IRPLocal(localId):
+						final local = locals.get(localId);
+						if (local != null) {
+							switch local.storage {
+								case IRLSAutomatic:
+								case _:
+									add(path, "zero-initialized fixed-array storage must be an automatic local", instruction.source);
+							}
+						}
+					case _:
+						add(path, "zero-initialized fixed-array storage must be an automatic local", instruction.source);
+				}
+				switch knownPlaceType(place, available, locals) {
+					case IRTFixedArray(element, length, _):
+						switch HxcIRFixedArrayPolicy.zeroStorage(element, length) {
+							case IRFASAutomatic(_, _):
+							case IRFASInvalidLength(_):
+								add(path, "zero-initialized fixed-array length must be positive", instruction.source);
+							case IRFASUnsupportedElement:
+								add(path, "zero-initialized fixed arrays require an exact-size integer or binary64 element", instruction.source);
+							case IRFASSizeOverflow(elementBytes, invalidLength):
+								add(path, 'zero-initialized fixed-array size overflows the compiler policy: $invalidLength * $elementBytes bytes',
+									instruction.source);
+							case IRFASOverBudget(_, totalBytes, maximumBytes):
+								add(path, 'zero-initialized fixed-array storage $totalBytes bytes exceeds the $maximumBytes-byte automatic limit',
+									instruction.source);
+						}
+					case _:
+						add(path, "zero-initialization requires a fixed-array place", instruction.source);
+				}
+				validateInitializeTransition(from, to, path, instruction.source);
 			case IRIOInitializeSpan(place, sourceArray, from, to):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				validatePlace(sourceArray, '$path.sourceArray', instruction.source, available, locals, nullProofs);
@@ -1007,8 +1042,8 @@ private class HxcIRValidationState {
 			case IRIOCall(call):
 				call.returnType != IRTVoid;
 			case IRIOSequence(_) | IRIOStore(_, _) | IRIODeallocate(_, _) | IRIORetain(_, _) | IRIOTrace(_, _) | IRIODefaultInitialize(_, _, _) |
-				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOInitializeSpan(_, _, _, _) | IRIOBindVirtualTable(_, _) |
-				IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
+				IRIOInitialize(_, _, _, _) | IRIOInitializeFixedArray(_, _, _, _) | IRIOZeroInitializeFixedArray(_, _, _) | IRIOInitializeSpan(_, _, _, _) |
+				IRIOBindVirtualTable(_, _) | IRIOBoundsCheck(_, _, _) | IRIONullCheck(_, _) | IRIOLifetime(_, _, _, _):
 				false;
 		}
 	}

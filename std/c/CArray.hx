@@ -9,6 +9,15 @@ package c;
 **/
 @:coreType
 extern abstract CArray<T, N> from Array<T> {
+	/**
+		Create compile-time-sized, zero-initialized automatic storage.
+
+		`length` must be a positive compiler-known integer expression. The C target
+		validates its storage budget before emitting a real fixed C array; no Haxe
+		`Array`, allocation, or runtime feature survives lowering.
+	**/
+	public static function zero<T, N>(length:Int):CArray<T, N>;
+
 	/** Checked element access. */
 	@:arrayAccess public function get(index:Int):T;
 

@@ -1,4 +1,4 @@
-hxcir schema=8
+hxcir schema=9
 module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":17:42-52:3
   type "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" name="anonymous.record.9cea43a168458d02" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
     field "a" type=i32 mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":3:2-3:12

@@ -9,8 +9,9 @@ operators, value conditionals, and unsigned increments. E2.T05 adds typed
 UB-safe primitive operators, compound updates, signed updates, and `Std.int`.
 E2.T06 adds statement conditionals, loops, primitive switches, and explicit
 loop jumps without changing the runtime-free compiler-first boundary. E2.T08
-adds nonempty literal-backed `c.CArray` locals, borrowed `Span`/`ConstSpan`
-views, checked indexing, and direct span iteration.
+and its bounded storage extension add nonempty literal-backed and compile-time-
+sized zero-initialized `c.CArray` locals, borrowed `Span`/`ConstSpan` views,
+checked indexing, and direct exact-width span iteration.
 E3.T01 extends the same typed pipeline with closed anonymous value records,
 including nested records, explicit copies, and typed field addressing and
 projection. Its exact boundary is documented in [closed anonymous-record
@@ -52,9 +53,11 @@ the stable-value and control-flow proof.
   decrement through explicit load/operation/store;
 - `Std.int(Float)` through the defined saturating/truncating primitive
   conversion;
-- nonempty primitive array literals assigned directly to `c.CArray<T, N>`,
-  local mutable/const span borrows, checked element reads/writes, and `for`
-  iteration over those views through explicit guarded HxcIR blocks;
+- nonempty primitive array literals assigned directly to `c.CArray<T, N>` or
+  `CArray.zero` with a positive compiler-known product within the exact element-
+  size and 65,536-byte per-array storage policy, local mutable/const span
+  borrows, checked element reads/writes, and `for` iteration over those views
+  through explicit guarded HxcIR blocks;
 - closed anonymous records containing admitted primitive or nested closed-record
   fields, including object literals, local copies, direct parameters/calls/
   returns, and read-only field access;
@@ -115,8 +118,9 @@ raw directive. Both forms are strict C11 and use only the required standard
 headers. Selected arithmetic helpers may add `<math.h>` or `<stdint.h>`, and
 floating modulo adds the exact `m` build fact.
 
-Fixed arrays use structural C array declarators. Span borrows use typed pointers
-plus `size_t` element counts, and array access uses structural subscripting.
+Fixed arrays use structural C array declarators; zero storage uses the C11
+aggregate initializer `{ 0 }` without allocation or `memset`. Span borrows use
+typed pointers plus `size_t` element counts, and array access uses structural subscripting.
 Static and loop-dominance proofs remove only redundant checks; all other
 admitted indexes retain an explicit negative/upper-bound fail-stop check. See
 [fixed arrays and span-based iteration](span-lowering.md) for the complete

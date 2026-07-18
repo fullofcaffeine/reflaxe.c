@@ -58,6 +58,8 @@ class HxcIRGolden {
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
 				fixedArrayInitializerMismatch: invalidDiagnostics(fixedArrayInitializerMismatchProgram()),
+				zeroFixedArrayOverBudget: invalidDiagnostics(zeroFixedArrayOverBudgetProgram()),
+				zeroFixedArrayNonAutomatic: invalidDiagnostics(zeroFixedArrayNonAutomaticProgram()),
 				invalidStaticBoundsProof: invalidDiagnostics(invalidStaticBoundsProofProgram()),
 				uncheckedCollectionAccess: invalidDiagnostics(uncheckedCollectionAccessProgram()),
 				unknownLoopBoundsGuard: invalidDiagnostics(unknownLoopBoundsGuardProgram()),
@@ -519,6 +521,7 @@ class HxcIRGolden {
 			],
 			locals: [
 				local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "coverage.Length2"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
+				local("local.fixed-zero", IRTFixedArray(IRTInt(8, false), 16, "coverage.Length16"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.span", IRTSpan(IRTInt(32, true), false), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.record", IRTInstance("instance.record"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.constructed", IRTInstance("instance.constructed"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
@@ -548,6 +551,8 @@ class HxcIRGolden {
 							COVERAGE_SOURCE, 18),
 						instruction("c00.fixed", null,
 							IRIOInitializeFixedArray(IRPLocal("local.fixed"), ["value.one", "value.one"], IRISUninitialized, IRISInitialized),
+							COVERAGE_SOURCE, 18),
+						instruction("c00.fixed-zero", null, IRIOZeroInitializeFixedArray(IRPLocal("local.fixed-zero"), IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 18),
 						instruction("c00.span", null, IRIOInitializeSpan(IRPLocal("local.span"), IRPLocal("local.fixed"), IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 18),
@@ -1123,6 +1128,24 @@ class HxcIRGolden {
 			instruction("bad.initialize", null, IRIOInitializeFixedArray(IRPLocal("local.fixed"), ["value.one"], IRISUninitialized, IRISInitialized), file, 3)
 		], terminator(IRTReturn(null, []), file, 4), [
 			local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "invalid.Length2"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], [], file);
+	}
+
+	static function zeroFixedArrayOverBudgetProgram():HxcIRProgram {
+		final file = "test/negative/ZeroFixedArrayOverBudget.hx";
+		return minimalProgram("invalid.ZeroFixedArrayOverBudget", [
+			instruction("bad.zero-initialize", null, IRIOZeroInitializeFixedArray(IRPLocal("local.fixed"), IRISUninitialized, IRISInitialized), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [
+			local("local.fixed", IRTFixedArray(IRTInt(8, false), 65537, "invalid.Length65537"), IRLSAutomatic, IRISUninitialized, file, 1)
+		], [], file);
+	}
+
+	static function zeroFixedArrayNonAutomaticProgram():HxcIRProgram {
+		final file = "test/negative/ZeroFixedArrayNonAutomatic.hx";
+		return minimalProgram("invalid.ZeroFixedArrayNonAutomatic", [
+			instruction("bad.zero-initialize", null, IRIOZeroInitializeFixedArray(IRPLocal("local.fixed"), IRISUninitialized, IRISInitialized), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [
+			local("local.fixed", IRTFixedArray(IRTInt(8, false), 16, "invalid.Length16"), IRLSStatic, IRISUninitialized, file, 1)
 		], [], file);
 	}
 
