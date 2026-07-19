@@ -95,139 +95,80 @@ void hxc_method_Main_main(void)
   struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3 = &hxc_temp_Main_main_derived_objectzx2Dstorage_n7;
   hxc_method_compiler_constructor_LeafWorker_n0(hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3, 1);
   struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_Main_main_derived_n6 = hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3;
-  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n4 = hxc_local_Main_main_leaf_n0;
-  if (hxc_temp_Main_main_loadzx2Dresult_n4 == NULL)
+  while (1)
   {
-    abort();
+    struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n4 = hxc_local_Main_main_leaf_n0;
+    if (hxc_temp_Main_main_loadzx2Dresult_n4 == NULL)
+    {
+      abort();
+    }
+    int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 = hxc_temp_Main_main_loadzx2Dresult_n4->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n4, 1);
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116;
+    if (hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116)
+    {
+      struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n6 = hxc_local_Main_main_middle_n2;
+      if (hxc_temp_Main_main_loadzx2Dresult_n6 == NULL)
+      {
+        abort();
+      }
+      int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 = hxc_temp_Main_main_loadzx2Dresult_n6->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n6, 3);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 == 15;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8;
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8;
+    if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
+    {
+      struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n9 = hxc_local_Main_main_leaf_n0;
+      if (hxc_temp_Main_main_loadzx2Dresult_n9 == NULL)
+      {
+        abort();
+      }
+      int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 = hxc_method_BaseWorker_finalValue(hxc_temp_Main_main_loadzx2Dresult_n9, 2);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 == 8;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9;
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11;
+    if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11)
+    {
+      struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n12 = hxc_local_Main_main_leaf_n0;
+      if (hxc_temp_Main_main_loadzx2Dresult_n12 == NULL)
+      {
+        abort();
+      }
+      int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 = hxc_method_BaseWorker_pinnedValue(hxc_temp_Main_main_loadzx2Dresult_n12, 3);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 == 10;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10;
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14;
+    if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14)
+    {
+      struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_temp_Main_main_loadzx2Dresult_n15 = hxc_local_Main_main_exact_n4;
+      if (hxc_temp_Main_main_loadzx2Dresult_n15 == NULL)
+      {
+        abort();
+      }
+      int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 = hxc_method_FinalWorker_value(hxc_temp_Main_main_loadzx2Dresult_n15, 3);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 == 10;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11;
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17;
+    if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17)
+    {
+      struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_loadzx2Dresult_n18 = hxc_local_Main_main_derived_n6;
+      if ((hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) == NULL)
+      {
+        abort();
+      }
+      int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 = (hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0)->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0, 2);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 == 113;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12;
+    if (!!hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20)
+    {
+      break;
+    }
   }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 = hxc_temp_Main_main_loadzx2Dresult_n4->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n4, 1);
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116;
-  if (hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n5 == 116)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1:
-    ;
-  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2:
-    ;
   return;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n6 = hxc_local_Main_main_middle_n2;
-  if (hxc_temp_Main_main_loadzx2Dresult_n6 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 = hxc_temp_Main_main_loadzx2Dresult_n6->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n6, 3);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n7 == 15;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8;
-  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n9 = hxc_local_Main_main_leaf_n0;
-  if (hxc_temp_Main_main_loadzx2Dresult_n9 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 = hxc_method_BaseWorker_finalValue(hxc_temp_Main_main_loadzx2Dresult_n9, 2);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n10 == 8;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11;
-  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n11)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_temp_Main_main_loadzx2Dresult_n12 = hxc_local_Main_main_leaf_n0;
-  if (hxc_temp_Main_main_loadzx2Dresult_n12 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 = hxc_method_BaseWorker_pinnedValue(hxc_temp_Main_main_loadzx2Dresult_n12, 3);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n13 == 10;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14;
-  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n14)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_temp_Main_main_loadzx2Dresult_n15 = hxc_local_Main_main_exact_n4;
-  if (hxc_temp_Main_main_loadzx2Dresult_n15 == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 = hxc_method_FinalWorker_value(hxc_temp_Main_main_loadzx2Dresult_n15, 3);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n16 == 10;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17;
-  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n17)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11:
-    ;
-  struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_temp_Main_main_loadzx2Dresult_n18 = hxc_local_Main_main_derived_n6;
-  if ((hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0) == NULL)
-  {
-    abort();
-  }
-  int32_t hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 = (hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0)->hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0->hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0(hxc_temp_Main_main_loadzx2Dresult_n18 == NULL ? NULL : &hxc_temp_Main_main_loadzx2Dresult_n18->hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0, 2);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12 = hxc_temp_Main_main_instancezx2Dcallzx2Dresult_n19 == 113;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n12;
-  if (!hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2;
-  }
 }
 
 int32_t hxc_method_BaseWorker_finalValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_finalValue_self_n0, int32_t hxc_local_BaseWorker_finalValue_delta_n1)

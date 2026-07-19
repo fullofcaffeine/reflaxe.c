@@ -42,6 +42,17 @@ initialization and lifetime transitions, call dispatch, conversion and
 primitive-operation strategy, allocation intent, failure successors, and
 cleanup execution before a C expression or statement is selected.
 
+HxcIR deliberately keeps control flow as explicit basic blocks and edges even
+when the eventual C should look like handwritten structured code. The CFG is
+the semantic truth used to validate evaluation order, failure, cleanup, and
+completion without depending on C lexical nesting. Only after that validation
+does `CBodyControlFlowPlanner` derive a temporary C-specific region plan. The
+plan references HxcIR blocks, proves reducibility and ownership, and is itself
+verified before CAST construction. This separation keeps readable C from
+becoming a reason to weaken the IR or move semantic repair into the printer.
+See [HxcIR-to-C control-flow
+structuralization](control-flow-structuralization.md).
+
 ## Why a second IR when Haxe already has one?
 
 Haxe's typed AST is already an intermediate representation. After parsing and

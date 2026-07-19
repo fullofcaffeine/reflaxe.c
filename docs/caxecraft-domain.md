@@ -256,7 +256,8 @@ The default `split` tree mirrors the Haxe module ownership under
 navigable, diffable, incrementally compilable, and easier to inspect beside
 the Haxe modules that own it. This is file-ownership infrastructure, not yet a
 claim that a C programmer can comfortably take over the generated program:
-`haxe_c-xge.18.2` owns structured control flow in place of blanket gotos,
+the `haxe_c-xge.18.2` structuralization boundary now removes blanket CFG
+labels/gotos from the reducible checked-in domain sources,
 `haxe_c-xge.18.3` owns human-oriented names and temporary cleanup, and the
 `haxe_c-xge.18.4` rubric must pass before final handoff readability is claimed.
 The optional `unity` layout puts the same declaration/function plan in

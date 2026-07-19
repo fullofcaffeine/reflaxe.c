@@ -43,14 +43,34 @@ whole-program path uses the E2.T09 deferred initializer and explicit bootstrap
 contract so class `__init__` ordering cannot be changed by C file-scope syntax.
 
 HxcIR instruction arrays remain semantic order. Lazy, conditional, loop, and
-switch expressions create explicit blocks and terminators; their C form uses
-typed labels, `if`, `switch`, and `goto` nodes. Every emitted C case body ends
-in a structural `goto`, including grouped Haxe cases and `default`, so there is
-no user-observable C fallthrough. Source `break` and `continue` are already
-resolved to HxcIR edges and are not reconstructed from C lexical nesting.
-Loads and stores retain structural local/global
-places. No source-derived C fragment, C ternary, raw injection, reflection,
-`Dynamic`, `Any`, or untyped escape is used.
+switch expressions create explicit blocks and terminators. After HxcIR
+validation, `CBodyControlFlowPlanner` derives a closed typed region plan and
+independently verifies exact block coverage, value availability, edge shape,
+dominance/post-dominance, loop ownership, and completion. Ordinary reducible
+graphs then become structural C `if`/`else`, `while`, `do`/`while`, `switch`,
+`break`, `continue`, and `return` nodes instead of a literal block-label dump.
+
+Each switch subject is still evaluated exactly once. Cases that share one
+HxcIR target share one emitted arm body, and each continuing C arm ends in a
+structural `break`, so there is no user-observable C fallthrough. Source
+`break` and `continue` are resolved to HxcIR edges first; the region plan may
+select lexical C statements only after verifying the target belongs to the
+active loop. The one bounded exception is a Haxe loop break nested inside an
+emitted C switch: C's nearest `break` would leave only the switch, so the plan
+may own one typed, reason-tagged jump to the already-proven loop exit. A
+genuinely irreducible multi-entry SCC may retain whole-function CFG emission;
+ordinary reducible functions may not. Loads and stores retain structural
+local/global places. No source-derived C fragment, C ternary, raw injection,
+reflection, `Dynamic`, `Any`, or untyped escape is used.
+
+Pre-test loops are commonly rendered as `while (1)` with the condition's
+ordered HxcIR instructions at the top and a structural `break` on false. That
+shape is intentional: a Haxe condition can require several sequenced loads or
+calls on every iteration, and moving them into a single C condition would
+weaken their explicit statement order or scope. Post-test loops use the same
+principle with a structural `do` body. A later canonicalizer may choose a
+compact `while (condition)` only when it can prove the condition is already a
+safe stable C expression.
 
 ## Stable-value and temporary proof
 
@@ -83,7 +103,8 @@ collection iteration. The fixed-array slice admits only local literal-backed or
 bounded compile-time-sized zero-initialized fixed arrays and
 the exact typed span iterator shape. Enum/string/object patterns, Float
 switches, arbitrary iterators, general arrays, escaping views, exception edges,
-and cleanup-bearing exits remain fail-closed.
+instruction failures targeting another HxcIR block, and cleanup-bearing exits
+remain fail-closed.
 E2.T05 routes signed updates through wrapping program-local helpers and keeps
 safe `UInt` updates as direct unsigned C. A
 right operand that creates control flow forces the already evaluated left value
@@ -116,10 +137,18 @@ npm run snapshots:check
 
 The suite renders repeated, reversed-input, portable, and metal reports;
 checks exact HxcIR/header/C/symbol snapshots; checks nested `while`/`do-while`
-and range-loop graphs, innermost jumps, statement/value switches, explicit
-non-fallthrough case edges, exact-once subjects, both required and skipped lazy
-operands, and the indexed compound-assignment IR; runs an Eval oracle; builds
-real production projects including `hxc_runtime=none`; and compiles/runs checked-in
+and range-loop graphs, lexical innermost jumps, statement/value switches,
+structural non-fallthrough case arms, exact-once subjects, both required and
+skipped lazy operands, and the indexed compound-assignment IR; directly probes
+reducible diamonds, abrupt-arm branch/switch normal joins, same-target arms,
+direct loop escapes, converging break chains, loops with early break/return,
+inverted pre/post-test condition edges, maximal and nested irreducible graphs,
+the bounded loop-break-through-switch escape, and malformed
+region/edge/sequence/reachability rejection. The bounded and irreducible plans
+are also passed through `CBodyEmitter`, CAST, and the printer; their checked-in
+strict-C fixture proves the bounded exit label and an irreducible backedge to
+the function-entry label natively. The suite runs an Eval oracle; builds real
+production projects including `hxc_runtime=none`; and compiles/runs checked-in
 and production-generated C
 with required GCC and Clang lanes at `-O0` and `-O2` under warning-clean strict
 C11. The arithmetic suite extends that proof to signed updates, compound

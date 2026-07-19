@@ -29,7 +29,8 @@ CCompiler
   -> CBodyAggregateRegistry deduplicates structural shapes and requests dependency-first type/member symbols
   -> CBodyEnumRegistry specializes concrete enum instances and selects finite direct/indirect storage
   -> selects the deterministic request-local helper closure before symbol finalization
-  -> validates HxcIR before CBodyEmitter constructs structural C
+  -> validates HxcIR before CBodyControlFlowPlanner derives and verifies a closed structural region plan
+  -> CBodyEmitter consumes that plan to construct structural C without reinterpreting Haxe control flow
   -> emits a private prototype header, source definitions, an initialization wrapper when needed, and int main(void)
   -> resolves an empty direct-value plan or exact source-rooted literal-output runtime requirements
   -> packages selected runtime artifacts as GeneratedFile records
@@ -78,11 +79,22 @@ at the Haxe/library/specification level; it does not depend on HxcIR.
 
 HxcIR is the narrower target-owned layer for decisions that must become
 explicit and independently valid before strict C syntax is selected. `CAST` is
-the later target-syntax layer. This gives the pipeline three compiler forms:
+the later target-syntax layer. This gives the pipeline three durable compiler
+forms plus one derived emission plan:
 
 ```text
-TypedExpr  -- admitted Haxe meaning -->  HxcIR  -- validated decisions -->  CAST
+TypedExpr
+  -- admitted Haxe meaning --> HxcIR
+  -- validated CFG facts --> derived CBodyControlFlowPlan
+  -- verified structural choice --> CAST
 ```
+
+`CBodyControlFlowPlan` is deliberately not another durable semantic IR. It
+references HxcIR blocks instead of copying their instructions and exists only
+long enough to prove that a reducible graph can be rendered as C sequences,
+`if`/`else`, loops, switches, returns, and lexical escapes. HxcIR remains the
+semantic authority and keeps explicit edges; CAST remains the syntax authority.
+See [HxcIR-to-C control-flow structuralization](control-flow-structuralization.md).
 
 This is an engineering boundary, not a rule that every `TypedExpr` case needs a
 matching HxcIR node. A new IR form is justified only when it preserves an
@@ -227,9 +239,12 @@ adds typed arithmetic/comparison operations, wrapping signed updates, compound
 assignment, masked shifts, zero-safe division/modulo, bit operations, and the
 defined `Std.int` conversion. E2.T06 adds statement conditionals, primitive
 pre/post-test and range-loop graphs, innermost loop jumps, and `Int`
-statement/value switches. Every C switch arm jumps explicitly to its HxcIR
-target, and a compiler-exposed value-switch carrier is admitted only after all
-case/default assignments are structurally proven. Within the remaining
+statement/value switches. The validated HxcIR still names every arm and edge;
+the later structural region plan groups cases that share a target, emits each
+arm body in place, and ends a continuing C arm with `break`, so Haxe never
+acquires accidental C fallthrough. A compiler-exposed value-switch carrier is
+admitted only after all case/default assignments are structurally proven.
+Within the remaining
 unconditional single-block subset, a
 closed direct-call cycle is compiler-proven non-returning and emitted with
 structural C11 `_Noreturn` plus no unreachable return. Direct
@@ -343,8 +358,9 @@ and builds strict structural statements plus optional typed `#line` nodes.
 Direct-call arguments remain ordered HxcIR instructions, conversions precede
 their calls, and every load plus each consumed call result becomes a typed
 stable-value temporary instead of a C subexpression with weaker evaluation
-order. Lazy/conditional expressions remain explicit labels and edges rather
-than C operators. `CPrimitiveHelperEmitter` builds only selected private
+order. Lazy/conditional expressions remain explicit HxcIR blocks and edges
+rather than C operators, then become verified structural regions before CAST.
+`CPrimitiveHelperEmitter` builds only selected private
 `static inline` helpers through structural CAST; safe unsigned fast paths remain
 direct C, and floating modulo contributes the exact `m` build fact without a
 runtime feature. Closed records become dependency-first private struct

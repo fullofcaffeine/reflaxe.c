@@ -97,10 +97,11 @@ optimizing C compilation from diagnosing the whole proven closed cycle while
 preserving ordinary direct calls, strict C11, and zero runtime support. A
 cycle-free unity program is exactly one implementation unit, as the layout
 contract promises. Making mutually recursive tail cycles a true single-unit
-structural dispatcher belongs to the CFG-structuralization work; this layout
-change does not hide the problem with a pragma, opaque call, printer rewrite,
-or disabled warning. The native gate keeps `-Winfinite-recursion` enabled at
-both `-O0` and `-O2`.
+structural dispatcher remains separate future tail-cycle lowering; the
+ordinary intra-function region structuralizer does not rewrite calls across
+functions. This layout change does not hide the problem with a pragma, opaque
+call, printer rewrite, or disabled warning. The native gate keeps
+`-Winfinite-recursion` enabled at both `-O0` and `-O2`.
 
 The Haxe entry function for this slice must be `static function main():Void`.
 It keeps its compiler-owned internal C name. The executable wrapper is the exact

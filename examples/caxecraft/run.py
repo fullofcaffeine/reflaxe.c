@@ -379,6 +379,14 @@ def validate_generated_text(header: bytes, source: bytes) -> None:
     match = forbidden.search(text)
     if match is not None:
         raise CaxecraftFailure(f"generated Caxecraft C selected {match.group(0)!r}")
+    # Match compiler statements, not story/localization text that happens to say "goto".
+    goto_match = re.search(r"(?m)^\s*goto\s+[A-Za-z_][A-Za-z0-9_]*\s*;$", text)
+    compiler_label = re.search(r"(?m)^\s*hxc_[A-Za-z0-9_]+:\s*$", text)
+    if goto_match is not None or compiler_label is not None:
+        marker = goto_match.group(0) if goto_match is not None else compiler_label.group(0).strip()
+        raise CaxecraftFailure(
+            f"generated Caxecraft C retained compiler control-flow marker {marker!r}"
+        )
     for marker in (
         "uint8_t hxc_local_caxecraft_domain_CaxecraftTrace_terrainTrace_storage",
         "hxc_method_caxecraft_domain_VoxelRaycast_trace",

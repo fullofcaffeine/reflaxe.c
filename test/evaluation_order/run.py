@@ -129,6 +129,42 @@ def source_records(report: dict[str, object]) -> dict[str, str]:
     return records
 
 
+def validate_control_flow_emission(source: str) -> None:
+    bounded_start = source.find("static void hxc_bounded_control_flow")
+    legacy_start = source.find("static void hxc_legacy_control_flow")
+    main_start = source.find("int main(void)")
+    if min(bounded_start, legacy_start, main_start) < 0 or not (
+        bounded_start < legacy_start < main_start
+    ):
+        raise EvaluationOrderFailure(
+            "synthetic control-flow C lost its bounded/legacy/main structure"
+        )
+    bounded = source[bounded_start:legacy_start]
+    legacy = source[legacy_start:main_start]
+    if bounded.count("goto ") != 1:
+        raise EvaluationOrderFailure(
+            "bounded structural escape did not emit exactly one goto"
+        )
+    if (
+        bounded.count("goto hxc_bounded_label_3;") != 1
+        or bounded.count("hxc_bounded_label_3:") != 1
+    ):
+        raise EvaluationOrderFailure(
+            "bounded structural escape lost its single owned exit label"
+        )
+    if (
+        "goto hxc_legacy_label_0;" not in legacy
+        or legacy.count("hxc_legacy_label_0:") != 1
+    ):
+        raise EvaluationOrderFailure(
+            "irreducible fallback lost the label for its targeted entry block"
+        )
+    if str(ROOT) in source or "\\" in source or "hxrt" in source.lower():
+        raise EvaluationOrderFailure(
+            "synthetic control-flow C leaked a host path or runtime dependency"
+        )
+
+
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
         report.get("schemaVersion") != 1
@@ -140,6 +176,14 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     proof = required_text(report, "temporaryElisionProof")
     if "every load and consumed call is materialized" not in proof:
         raise EvaluationOrderFailure("temporary-elision proof contract drifted")
+    control_flow_proof = required_text(report, "controlFlowPlanProof")
+    if control_flow_proof != (
+        "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
+        "maximal-and-nested-irreducible-fallback;"
+        "overlapping-normal-join-malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
+    ):
+        raise EvaluationOrderFailure("control-flow plan proof contract drifted")
+    validate_control_flow_emission(required_text(report, "controlFlowEmissionC"))
     hxcir = required_text(report, "hxcir")
     header = required_text(report, "header")
     sources = source_records(report)
@@ -244,8 +288,21 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EvaluationOrderFailure("generated C did not materialize call arguments left-to-right")
     if run_c.count("hxc_method_EvaluationFixture_setCallFlag(") != 4:
         raise EvaluationOrderFailure("generated C lost a required short-circuit RHS call")
-    if "globalzx2Dloadzx2Dresult" not in run_c or "goto hxc_temp_" not in run_c:
-        raise EvaluationOrderFailure("generated C lost stable loads or explicit CFG edges")
+    if "globalzx2Dloadzx2Dresult" not in run_c:
+        raise EvaluationOrderFailure("generated C lost stable loads")
+    if "goto " in run_c or re.search(r"(?m)^\s*hxc_temp_[A-Za-z0-9_]+:$", run_c):
+        raise EvaluationOrderFailure(
+            "reducible generated C regressed to blanket labels or gotos"
+        )
+    if (
+        run_c.count("while (1)") < 3
+        or "\n    do\n" not in run_c
+        or "continue;" not in run_c
+        or "break;" not in run_c
+    ):
+        raise EvaluationOrderFailure(
+            "generated C lost structured while/do-while/break/continue lowering"
+        )
     if run_c.count("switch (") != 2:
         raise EvaluationOrderFailure("generated C lost its statement/value structural switches")
     for label in (
@@ -257,21 +314,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "default:",
     ):
         start = run_c.find(label)
-        if start < 0 or "goto hxc_temp_" not in run_c[start : start + 180]:
+        if start < 0 or "break;" not in run_c[start : start + 1200]:
             raise EvaluationOrderFailure(
-                f"generated switch arm {label!r} lost its explicit non-fallthrough jump"
+                f"generated switch arm {label!r} lost its structural non-fallthrough break"
             )
     arm_labels = re.findall(r'(?m)^\s+(?:case [^:]+|default):$', run_c)
-    jump_arms = re.findall(
-        r'(?m)^\s+(?:case [^:]+|default):\n\s+\{\n\s+goto hxc_temp_[^;]+;\n\s+\}',
-        run_c,
-    )
-    if len(arm_labels) != 7 or len(jump_arms) != len(arm_labels):
-        raise EvaluationOrderFailure("a generated C switch arm can fall through")
-    if "break;" in run_c or "continue;" in run_c:
-        raise EvaluationOrderFailure(
-            "source break/continue escaped the explicit HxcIR edge lowering"
-        )
+    if len(arm_labels) != 7:
+        raise EvaluationOrderFailure("generated C switch arm grouping drifted")
     if run_c.count("hxc_method_EvaluationFixture_switchSubject(") != 1:
         raise EvaluationOrderFailure("switch subject was not evaluated exactly once")
 
@@ -333,6 +382,7 @@ def snapshot_values(report: dict[str, object]) -> dict[str, object]:
         "evaluation.hxcir": required_text(report, "hxcir"),
         "program.h": required_text(report, "header"),
         "program.c": source_records(report)["src/program.c"],
+        "synthetic-control-flow.c": required_text(report, "controlFlowEmissionC"),
         "symbols.json": report.get("symbols"),
     }
 
@@ -679,6 +729,48 @@ def check_native_snapshot(report: dict[str, object], selected: str | None = None
                 compile_and_run_project(root, sources, symbols, toolchain, optimization)
 
 
+def check_synthetic_control_flow_native(
+    report: dict[str, object], selected: str | None = None
+) -> None:
+    source_text = required_text(report, "controlFlowEmissionC")
+    validate_control_flow_emission(source_text)
+    with tempfile.TemporaryDirectory(prefix="hxc-control-flow-native-") as temporary:
+        root = Path(temporary)
+        source = root / "synthetic-control-flow.c"
+        source.write_text(source_text, encoding="utf-8", newline="\n")
+        for toolchain in available_compilers(selected):
+            for optimization in ("-O0", "-O2"):
+                executable = root / (
+                    f"synthetic-control-flow-{toolchain.family}-{optimization[1:]}"
+                )
+                compiled = subprocess.run(
+                    [
+                        toolchain.compiler,
+                        *STRICT_FLAGS,
+                        optimization,
+                        str(source),
+                        "-o",
+                        str(executable),
+                    ],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+                    raise EvaluationOrderFailure(
+                        f"{toolchain.family} {optimization} rejected synthetic control-flow C\n"
+                        f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
+                    )
+                ran = subprocess.run(
+                    [str(executable)], capture_output=True, text=True, timeout=10
+                )
+                if ran.returncode != 0 or ran.stdout or ran.stderr:
+                    raise EvaluationOrderFailure(
+                        f"{toolchain.family} {optimization} synthetic control-flow execution failed: "
+                        f"exit={ran.returncode} stdout={ran.stdout!r} stderr={ran.stderr!r}"
+                    )
+
+
 def snapshot_native_report() -> dict[str, object]:
     return {
         "header": (EXPECTED / "program.h").read_text(encoding="utf-8"),
@@ -689,6 +781,9 @@ def snapshot_native_report() -> dict[str, object]:
             }
         ],
         "symbols": json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8")),
+        "controlFlowEmissionC": (EXPECTED / "synthetic-control-flow.c").read_text(
+            encoding="utf-8"
+        ),
     }
 
 
@@ -706,7 +801,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     try:
         if args.native_only:
-            check_native_snapshot(snapshot_native_report(), args.toolchain)
+            native_report = snapshot_native_report()
+            check_native_snapshot(native_report, args.toolchain)
+            check_synthetic_control_flow_native(native_report, args.toolchain)
             print("evaluation-order: OK: required strict-C differential native matrix passed")
             return 0
         check_oracle()
@@ -725,6 +822,7 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise EvaluationOrderFailure("portable and metal sequencing reports diverged")
         check_snapshots(first)
         check_native_snapshot(first, args.toolchain)
+        check_synthetic_control_flow_native(first, args.toolchain)
         check_production(args.toolchain)
     except (
         EvaluationOrderFailure,

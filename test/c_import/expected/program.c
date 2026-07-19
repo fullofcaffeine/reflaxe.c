@@ -46,55 +46,36 @@ void hxc_method_Main_main(void)
   float hxc_local_Main_main_nan_n13 = (float)hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(0.0, 0.0);
   float hxc_local_Main_main_negativezZero_n14 = (float)-0.0;
   float hxc_local_Main_main_finiteOverflow_n15 = (float)1.0e300;
-  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0:
-    ;
-  struct pointlib_point hxc_temp_Main_main_loadzx2Dresult_n22 = hxc_local_Main_main_left_n0;
-  struct pointlib_point hxc_temp_Main_main_loadzx2Dresult_n23 = hxc_local_Main_main_right_n1;
-  int64_t hxc_temp_Main_main_loadzx2Dresult_n24 = hxc_local_Main_main_dot_n4;
-  pointlib_coord hxc_temp_Main_main_loadzx2Dresult_n25 = hxc_local_Main_main_component_n6;
-  pointlib_axis hxc_temp_Main_main_loadzx2Dresult_n26 = hxc_local_Main_main_axis_n5;
-  bool hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27 = pointlib_point_verify(hxc_temp_Main_main_loadzx2Dresult_n22, hxc_temp_Main_main_loadzx2Dresult_n23, hxc_temp_Main_main_loadzx2Dresult_n24, hxc_temp_Main_main_loadzx2Dresult_n25, hxc_temp_Main_main_loadzx2Dresult_n26, "c-import-\303\251");
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16 = !hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27;
-  if (!hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27)
+  while (1)
   {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
+    struct pointlib_point hxc_temp_Main_main_loadzx2Dresult_n22 = hxc_local_Main_main_left_n0;
+    struct pointlib_point hxc_temp_Main_main_loadzx2Dresult_n23 = hxc_local_Main_main_right_n1;
+    int64_t hxc_temp_Main_main_loadzx2Dresult_n24 = hxc_local_Main_main_dot_n4;
+    pointlib_coord hxc_temp_Main_main_loadzx2Dresult_n25 = hxc_local_Main_main_component_n6;
+    pointlib_axis hxc_temp_Main_main_loadzx2Dresult_n26 = hxc_local_Main_main_axis_n5;
+    bool hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27 = pointlib_point_verify(hxc_temp_Main_main_loadzx2Dresult_n22, hxc_temp_Main_main_loadzx2Dresult_n23, hxc_temp_Main_main_loadzx2Dresult_n24, hxc_temp_Main_main_loadzx2Dresult_n25, hxc_temp_Main_main_loadzx2Dresult_n26, "c-import-\303\251");
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16 = !hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27;
+    if (!!hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n27)
+    {
+      struct pointlib_float_point hxc_temp_Main_main_loadzx2Dresult_n28 = hxc_local_Main_main_floatPoint_n7;
+      float hxc_temp_Main_main_loadzx2Dresult_n29 = hxc_local_Main_main_floatDot_n8;
+      double hxc_temp_Main_main_loadzx2Dresult_n30 = hxc_local_Main_main_widened_n9;
+      float hxc_temp_Main_main_loadzx2Dresult_n31 = hxc_local_Main_main_tie_n10;
+      float hxc_temp_Main_main_loadzx2Dresult_n32 = hxc_local_Main_main_subnormal_n11;
+      float hxc_temp_Main_main_loadzx2Dresult_n33 = hxc_local_Main_main_positiveInfinity_n12;
+      float hxc_temp_Main_main_loadzx2Dresult_n34 = hxc_local_Main_main_nan_n13;
+      float hxc_temp_Main_main_loadzx2Dresult_n35 = hxc_local_Main_main_negativezZero_n14;
+      float hxc_temp_Main_main_loadzx2Dresult_n36 = hxc_local_Main_main_finiteOverflow_n15;
+      bool hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n37 = pointlib_float32_verify(hxc_temp_Main_main_loadzx2Dresult_n28, hxc_temp_Main_main_loadzx2Dresult_n29, hxc_temp_Main_main_loadzx2Dresult_n30, hxc_temp_Main_main_loadzx2Dresult_n31, hxc_temp_Main_main_loadzx2Dresult_n32, hxc_temp_Main_main_loadzx2Dresult_n33, hxc_temp_Main_main_loadzx2Dresult_n34, hxc_temp_Main_main_loadzx2Dresult_n35, hxc_temp_Main_main_loadzx2Dresult_n36);
+      hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16 = !hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n37;
+    }
+    bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n38 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16;
+    if (!hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n38)
+    {
+      break;
+    }
   }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3;
-  }
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1:
-    ;
-  goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0;
-hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2:
-    ;
   return;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3:
-    ;
-  struct pointlib_float_point hxc_temp_Main_main_loadzx2Dresult_n28 = hxc_local_Main_main_floatPoint_n7;
-  float hxc_temp_Main_main_loadzx2Dresult_n29 = hxc_local_Main_main_floatDot_n8;
-  double hxc_temp_Main_main_loadzx2Dresult_n30 = hxc_local_Main_main_widened_n9;
-  float hxc_temp_Main_main_loadzx2Dresult_n31 = hxc_local_Main_main_tie_n10;
-  float hxc_temp_Main_main_loadzx2Dresult_n32 = hxc_local_Main_main_subnormal_n11;
-  float hxc_temp_Main_main_loadzx2Dresult_n33 = hxc_local_Main_main_positiveInfinity_n12;
-  float hxc_temp_Main_main_loadzx2Dresult_n34 = hxc_local_Main_main_nan_n13;
-  float hxc_temp_Main_main_loadzx2Dresult_n35 = hxc_local_Main_main_negativezZero_n14;
-  float hxc_temp_Main_main_loadzx2Dresult_n36 = hxc_local_Main_main_finiteOverflow_n15;
-  bool hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n37 = pointlib_float32_verify(hxc_temp_Main_main_loadzx2Dresult_n28, hxc_temp_Main_main_loadzx2Dresult_n29, hxc_temp_Main_main_loadzx2Dresult_n30, hxc_temp_Main_main_loadzx2Dresult_n31, hxc_temp_Main_main_loadzx2Dresult_n32, hxc_temp_Main_main_loadzx2Dresult_n33, hxc_temp_Main_main_loadzx2Dresult_n34, hxc_temp_Main_main_loadzx2Dresult_n35, hxc_temp_Main_main_loadzx2Dresult_n36);
-  hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16 = !hxc_temp_Main_main_nativezx2Dcallzx2Dresult_n37;
-  goto hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4;
-hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4:
-    ;
-  bool hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n38 = hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n16;
-  if (hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n38)
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1;
-  }
-  else
-  {
-    goto hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2;
-  }
 }
 
 int main(void)

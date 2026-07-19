@@ -495,8 +495,10 @@ make source ownership recognizable, control flow should use structured C where
 semantics allow it, temporary names should be concise and stable, and the
 result should be usable by a C programmer as a maintained handoff. Unity mode
 remains available for embedding, debugging, or distribution needs. Exact
-readability gates are owned by the generated-C epic; this document does not
-pretend the current literal CFG/goto-heavy output has already met them.
+readability gates are owned by the generated-C epic. Reducible control flow is
+now structurally emitted without blanket CFG labels/gotos; human-oriented
+temporary and type names, declaration cleanup, and the formal handoff rubric
+remain unfinished and must not be implied by that first improvement.
 
 The implementation sequence is first playable and RaylibHx, visual integration,
 inventory/entities, CaxeMap plus editor/CaxeFlow, authored Adventure, measured

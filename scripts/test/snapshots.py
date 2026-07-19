@@ -702,6 +702,7 @@ def evaluation_order_artifacts() -> list[Artifact]:
         ("evaluation.hxcir", "hxcir"),
         ("program.h", "header"),
         ("program.c", "c"),
+        ("synthetic-control-flow.c", "c"),
         ("symbols.json", "json"),
     ):
         value = values.get(name)

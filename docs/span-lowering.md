@@ -218,9 +218,10 @@ dereference.
 The pinned Haxe compiler presents `for (value in span)` through its typed
 iterator protocol. The frontend recognizes only that exact shape and replaces
 it with HxcIR condition, body, increment, and exit blocks. Exact-width element
-types such as `UInt8` remain exact through iteration. The generated structural
-C currently prints labels, `if`, and `goto`, but semantically it is a guarded
-indexed loop with no iterator allocation or `iterator`, `hasNext`, or `next`
+types such as `UInt8` remain exact through iteration. The validated region
+planner turns those blocks into one structural C loop whose ordered condition,
+body, and increment statements remain explicit. It contains no blanket block
+labels/gotos and no iterator allocation or `iterator`, `hasNext`, or `next`
 call.
 
 ## Runtime, ABI, and compatibility boundary

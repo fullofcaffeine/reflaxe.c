@@ -81,9 +81,11 @@ The lowering preserves each typed instruction in Haxe evaluation order. Nested
 lexical blocks may share a semantic block only while they introduce no edge;
 lazy, conditional, loop, and switch forms create explicit branch/jump/switch
 blocks and typed flow locals. Each Haxe switch arm has its own HxcIR target and
-the structural C switch immediately jumps to that target, so one arm can never
-fall through into another. Locals and globals remain addressable HxcIR places,
-while constants, loads, calls, and pure operators produce immutable values.
+the target-owned control-flow plan groups identical targets, emits their region
+bodies under structural C case labels, and inserts an ordinary C `break` when
+the region rejoins, so one arm can never fall through into another. Locals and
+globals remain addressable HxcIR places, while constants, loads, calls, and
+pure operators produce immutable values.
 
 The pinned Reflaxe pass may expose a value switch as an uninitialized temporary
 followed by a switch that assigns it. The frontend admits that carrier only
@@ -126,11 +128,15 @@ order reversal and repeated renders must produce identical HxcIR, C, and symbol
 records.
 
 Haxe compiler positions become normalized, repository-relative, one-based
-HxcIR spans. The C body emitter has two structural modes: ordinary output and
-output with typed `#line` statement/declaration nodes. It never interpolates a
-raw directive. Both forms are strict C11 and use only the required standard
-headers. Selected arithmetic helpers may add `<math.h>` or `<stdint.h>`, and
-floating modulo adds the exact `m` build fact.
+HxcIR spans. Validated HxcIR CFGs pass through the typed structural region plan
+described in [HxcIR-to-C control-flow
+structuralization](control-flow-structuralization.md). Reducible control flow
+is source-shaped before CAST printing; the printer does not discover joins,
+loops, or switch ownership. The C body emitter has two structural modes:
+ordinary output and output with typed `#line` statement/declaration nodes. It
+never interpolates a raw directive. Both forms are strict C11 and use only the
+required standard headers. Selected arithmetic helpers may add `<math.h>` or
+`<stdint.h>`, and floating modulo adds the exact `m` build fact.
 
 Fixed arrays use structural C array declarators; zero storage uses the C11
 aggregate initializer `{ 0 }` without allocation or `memset`. Span borrows use

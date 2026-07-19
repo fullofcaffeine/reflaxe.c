@@ -105,8 +105,8 @@
       "cName": "hxc_method_Main_guarded_of_i32",
       "displayName": "guarded<Int>",
       "codeSize": {
-        "definitionSha256": "e0017409799620fcd60a6593e3faa96fde4f867bb194b4df82f63d07200ebac7",
-        "definitionBytes": 673,
+        "definitionSha256": "5b6b8ea13e1b9c4d9242c8928316f7c90505726dc2a4ea0855d51e085c7e53f2",
+        "definitionBytes": 425,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 2,
         "irBlocks": 3
@@ -575,12 +575,12 @@
     "functionSpecializations": 10,
     "typeSpecializations": 2,
     "generatedPayloadArtifacts": 3,
-    "specializedFunctionDefinitionBytes": 2801,
+    "specializedFunctionDefinitionBytes": 2553,
     "mergedTypeReasons": 11,
-    "generatedPayloadBytes": 26244,
+    "generatedPayloadBytes": 25103,
     "dependencyClosedEnumDefinitionBytes": 10793,
     "mergedFunctionReasons": 16,
-    "estimatedSpecializationCBytes": 13594
+    "estimatedSpecializationCBytes": 13346
   },
   "algorithm": "hxc-generic-specialization-v1"
 }

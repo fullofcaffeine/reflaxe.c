@@ -1291,6 +1291,7 @@
           "test/evaluation_order/expected/evaluation.hxcir",
           "test/evaluation_order/expected/program.h",
           "test/evaluation_order/expected/program.c",
+          "test/evaluation_order/expected/synthetic-control-flow.c",
           "test/evaluation_order/expected/symbols.json"
         ],
         "formats": [

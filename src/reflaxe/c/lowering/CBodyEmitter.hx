@@ -15,6 +15,13 @@ import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowCompletion;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowNode;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanner;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowRegion;
+import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowSwitchArm;
+import reflaxe.c.lowering.CBodyControlFlow.CBodySwitchLabel;
 
 private enum CBodyEnumCRepresentation {
 	CBECNative;
@@ -58,6 +65,30 @@ private typedef CBodyEmitterVirtualTable = {
 	final layout:CBodyEmitterVirtualLayout;
 	final cName:CIdentifier;
 	final entries:Array<CBodyEmitterVirtualTableEntry>;
+}
+
+/** Request-local mutable emission facts shared by structural region recursion. */
+private typedef CBodyEmissionState = {
+	final values:Map<String, CExpr>;
+	final spanValueLengths:Map<String, CExpr>;
+	final declared:Map<String, Bool>;
+	final referencedValues:Map<String, Bool>;
+	final referencedLocals:Map<String, Bool>;
+	final referencedSpanLengths:Map<String, Bool>;
+	final parameterNames:Map<String, CIdentifier>;
+	final localNames:Map<String, CIdentifier>;
+	final temporaryNames:Map<String, CIdentifier>;
+	final functionNames:Map<String, CIdentifier>;
+	final globalNames:Map<String, CIdentifier>;
+	final helperNames:Map<String, CIdentifier>;
+	final tailArgumentNames:Map<String, Array<CIdentifier>>;
+	final labelNames:Map<String, CIdentifier>;
+	final spanLengthNames:Map<String, CIdentifier>;
+	final nonReturningFunctionIds:Null<Map<String, Bool>>;
+	final boundsAbortName:Null<CIdentifier>;
+	final lineDirectives:Bool;
+	final labeledTargets:Map<String, Bool>;
+	var terminatedByTailLoop:Bool;
 }
 
 /** Lowers the admitted direct-value HxcIR body subset into structural strict C11. */
@@ -249,193 +280,384 @@ class CBodyEmitter {
 			fail('body lowering requires an entry-first block graph in `${fn.id}`');
 		}
 		validateConstructionCleanupRegions(fn);
-		final values:Map<String, CExpr> = [];
-		final spanValueLengths:Map<String, CExpr> = [];
-		final declared:Map<String, Bool> = [];
-		final referencedValues = referencedValueIds(fn);
-		final referencedLocals = referencedLocalIds(fn);
-		final referencedSpanLengths = referencedSpanLengthIds(fn);
 		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
 		final statements:Array<CStmt> = [];
-		var terminatedByTailLoop = false;
+		final state:CBodyEmissionState = {
+			values: [],
+			spanValueLengths: [],
+			declared: [],
+			referencedValues: referencedValueIds(fn),
+			referencedLocals: referencedLocalIds(fn),
+			referencedSpanLengths: referencedSpanLengthIds(fn),
+			parameterNames: parameterNames,
+			localNames: localNames,
+			temporaryNames: temporaryNames,
+			functionNames: functionNames,
+			globalNames: globalNames,
+			helperNames: helperNames,
+			tailArgumentNames: tailArgumentNames,
+			labelNames: labelNames,
+			spanLengthNames: resolvedSpanLengthNames,
+			nonReturningFunctionIds: nonReturningFunctionIds,
+			boundsAbortName: boundsAbortName,
+			lineDirectives: lineDirectives,
+			labeledTargets: [],
+			terminatedByTailLoop: false
+		};
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
-			values.set(parameter.id, EIdentifier(name));
+			state.values.set(parameter.id, EIdentifier(name));
 			switch parameter.type {
 				case IRTSpan(_, _):
-					spanValueLengths.set(parameter.id, EIdentifier(requireSpanLengthName(resolvedSpanLengthNames, parameter.id, fn.id)));
+					state.spanValueLengths.set(parameter.id, EIdentifier(requireSpanLengthName(resolvedSpanLengthNames, parameter.id, fn.id)));
 				case _:
 			}
-			if (!referencedValues.exists(parameter.id)) {
+			if (!state.referencedValues.exists(parameter.id)) {
 				addLineDirective(statements, parameter.source, lineDirectives);
 				statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(name))));
-				final spanLength = spanValueLengths.get(parameter.id);
+				final spanLength = state.spanValueLengths.get(parameter.id);
 				if (spanLength != null)
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), spanLength)));
 			}
 		}
-		for (blockIndex in 0...fn.blocks.length) {
-			final block = fn.blocks[blockIndex];
-			if (blockIndex > 0) {
-				statements.push(SLabel(requireLabelName(labelNames, block.id, fn.id), SEmpty));
-			}
-			var terminatedByNonReturningCall = false;
-			for (instruction in block.instructions) {
-				switch instruction.kind {
-					case IRIOConstant(value):
-						final result = requireResult(instruction, fn.id);
-						values.set(result.id, constantExpression(value));
-					case IRIOLoad(place):
-						switch requireResult(instruction, fn.id).type {
-							case IRTSpan(_, _):
-								emitSpanLoad(statements, values, spanValueLengths, referencedValues, instruction, place, fn, localNames, globalNames,
-									resolvedSpanLengthNames, lineDirectives);
-							case _:
-								emitLoad(statements, values, referencedValues, instruction,
-									placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values), temporaryNames, lineDirectives,
-									fn.id);
-						}
-					case IRIOAddress(place):
-						emitAddress(statements, values, referencedValues, instruction, place, fn, localNames, globalNames, resolvedSpanLengthNames,
-							temporaryNames, lineDirectives);
-					case IRIOConstructAggregate(instanceId, fields):
-						emitAggregateConstruction(statements, values, referencedValues, instruction, instanceId, fields, temporaryNames, lineDirectives, fn.id);
-					case IRIOProject(valueId, fieldName):
-						emitAggregateProjection(statements, values, referencedValues, instruction, valueId, fieldName, fn, temporaryNames, lineDirectives);
-					case IRIOConstructTag(instanceId, tagName, payload):
-						emitEnumConstruction(statements, values, referencedValues, instruction, instanceId, tagName, payload, temporaryNames, lineDirectives,
-							fn.id);
-					case IRIOMatchTag(valueId, tagName):
-						emitEnumMatch(statements, values, referencedValues, instruction, valueId, tagName, fn, temporaryNames, lineDirectives);
-					case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
-						emitEnumProjection(statements, values, referencedValues, instruction, valueId, tagName, payloadIndex, fn, temporaryNames,
-							boundsAbortName, lineDirectives);
-					case IRIODefaultInitialize(IRPLocal(localId), from, to):
-						emitDefaultInitialize(statements, declared, referencedLocals, instruction, localId, from, to, fn, localNames, lineDirectives);
-					case IRIOBindVirtualTable(IRPLocal(localId), tableId):
-						emitBindVirtualTable(statements, instruction, localId, tableId, fn, localNames, lineDirectives);
-					case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
-						switch requireLocal(fn, localId).type {
-							case IRTSpan(_, _):
-								emitSpanValueInitialize(statements, values, spanValueLengths, declared, referencedLocals, referencedSpanLengths, instruction,
-									localId, valueId, fn, localNames, resolvedSpanLengthNames, lineDirectives);
-							case _:
-								emitInitialize(statements, values, declared, referencedLocals, instruction, localId, valueId, fn, localNames, lineDirectives);
-						}
-					case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
-						if (instruction.result != null) {
-							fail('global initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
-						}
-						addLineDirective(statements, instruction.source, lineDirectives);
-						statements.push(SExpr(EBinary(Assign,
-							placeExpression(IRPGlobal(globalId), fn, localNames, globalNames, resolvedSpanLengthNames, values),
-							requireValue(values, valueId, fn.id))));
-					case IRIOInitializeFixedArray(IRPLocal(localId), valueIds, IRISUninitialized, IRISInitialized):
-						emitFixedArrayInitialize(statements, values, declared, referencedLocals, instruction, localId, valueIds, fn, localNames,
-							lineDirectives);
-					case IRIOZeroInitializeFixedArray(IRPLocal(localId), IRISUninitialized, IRISInitialized):
-						emitZeroFixedArrayInitialize(statements, declared, referencedLocals, instruction, localId, fn, localNames, lineDirectives);
-					case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
-						emitSpanInitialize(statements, declared, referencedLocals, referencedSpanLengths, instruction, localId, sourceArray, fn, localNames,
-							resolvedSpanLengthNames, globalNames, lineDirectives);
-					case IRIOBoundsCheck(collection, indexValueId, IRBPCheckedAbort(_, _)):
-						emitBoundsCheck(statements, values, instruction, collection, indexValueId, fn, localNames, globalNames, resolvedSpanLengthNames,
-							boundsAbortName, lineDirectives);
-					case IRIOBoundsCheck(_, _, IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _)):
-						// The semantic proof remains reviewable in HxcIR; no redundant C check survives.
-					case IRIONullCheck(valueId, IRNCPCheckedAbort(_, _)):
-						emitNullCheck(statements, values, instruction, valueId, boundsAbortName, lineDirectives, fn.id);
-					case IRIOStore(place, valueId):
-						if (instruction.result != null) {
-							fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
-						}
-						addLineDirective(statements, instruction.source, lineDirectives);
-						statements.push(SExpr(EBinary(Assign, placeExpression(place, fn, localNames, globalNames, resolvedSpanLengthNames, values),
-							requireValue(values, valueId, fn.id))));
-					case IRIOUnary(operationId, valueId, implementation):
-						final result = requireResult(instruction, fn.id);
-						final expression = operationExpression(operationId, implementation, [requireValue(values, valueId, fn.id)], helperNames,
-							instruction.id, fn.id);
-						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
-					case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
-						final result = requireResult(instruction, fn.id);
-						// The admitted operators are total and pure over values that loads/calls
-						// have already stabilized. The evaluation-order suite enforces that
-						// boundary before allowing this expression-level elision.
-						final expression = operationExpression(operationId, implementation, [
-							requireValue(values, leftValueId, fn.id),
-							requireValue(values, rightValueId, fn.id)
-						], helperNames, instruction.id, fn.id);
-						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
-					case IRIOConvert(valueId, IRCRepresentation, targetType, IRIStatic, null):
-						final result = requireResult(instruction, fn.id);
-						final expression = classUpcastExpression(requireValue(values, valueId, fn.id), valueType(fn, valueId), targetType, instruction.id,
-							fn.id);
-						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
-					case IRIOConvert(valueId, IRCNullableInject, _, IRIStatic, null):
-						final result = requireResult(instruction, fn.id);
-						recordPureResult(statements, values, referencedValues, instruction, result, requireValue(values, valueId, fn.id), lineDirectives,
-							fn.id);
-					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
-						final result = requireResult(instruction, fn.id);
-						final expression = switch kind {
-							case IRCNumericExact | IRCNumericRoundBinary32 | IRCNumericWidenBinary64 | IRCNumericWrapping:
-								ECast(cType(targetType), DName(null), requireValue(values, valueId, fn.id));
-							case _:
-								fail('conversion `${instruction.id}` in `${fn.id}` is outside the admitted direct primitive conversion subset');
-						};
-						values.set(result.id, expression);
-						if (!referencedValues.exists(result.id)) {
-							addLineDirective(statements, instruction.source, lineDirectives);
-							statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
-						}
-					case IRIOConvert(valueId, kind, _, IRIProgramLocal(helperId), null):
-						final result = requireResult(instruction, fn.id);
-						switch kind {
-							case IRCNumericExact | IRCNumericWrapping | IRCNumericSaturating:
-							case _:
-								fail('program-local conversion `${instruction.id}` in `${fn.id}` has unsupported kind `$kind`');
-						}
-						final expression = helperCall(helperId, [requireValue(values, valueId, fn.id)], helperNames, instruction.id, fn.id);
-						recordPureResult(statements, values, referencedValues, instruction, result, expression, lineDirectives, fn.id);
-					case IRIOCall(call):
-						if (isNonReturningSelfCall(fn.id, call, nonReturningFunctionIds)) {
-							emitTailLoopCall(statements, values, instruction, call, fn, parameterNames, tailArgumentNames, lineDirectives);
-							terminatedByNonReturningCall = true;
-							terminatedByTailLoop = true;
-						} else {
-							terminatedByNonReturningCall = emitCall(statements, values, spanValueLengths, referencedValues, instruction, call, temporaryNames,
-								functionNames, lineDirectives, nonReturningFunctionIds, boundsAbortName, fn);
-						}
-					case IRIOLifetime(_, _, _, _):
-						// Direct stack-object lifetime transitions are semantic proof only.
-					case _:
-						fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced direct-value function subset');
-				}
-				if (terminatedByNonReturningCall) {
-					break;
-				}
-			}
-
-			final terminator = requireTerminator(block.terminator, fn.id);
-			if (terminatedByNonReturningCall) {
-				switch terminator.kind {
-					case IRTReturn(_, cleanup) if (cleanup.length == 0):
-					case _:
-						fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
-				}
-				continue;
-			}
-			addLineDirective(statements, terminator.source, lineDirectives);
-			emitTerminator(statements, values, terminator, labelNames, fn, boundsAbortName);
+		final plan = new CBodyControlFlowPlanner().plan(fn);
+		switch plan {
+			case CCFStructured(root, labeledTargets):
+				for (target in labeledTargets)
+					state.labeledTargets.set(target, true);
+				emitRegion(statements, root, state, fn);
+			case CCFLegacyIrreducible(_):
+				emitLegacyGraph(statements, state, fn);
 		}
-		if (terminatedByTailLoop) {
+		if (state.terminatedByTailLoop) {
 			if (fn.blocks.length != 1) {
 				fail('tail-loop lowering in `${fn.id}` requires one HxcIR block');
 			}
 			return SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]);
 		}
 		return SBlock(statements);
+	}
+
+	/** The legacy graph form is retained only for a planner-proven irreducible CFG. */
+	function emitLegacyGraph(statements:Array<CStmt>, state:CBodyEmissionState, fn:HxcIRFunction):Void {
+		final entryIsTargeted = hasIncomingEdge(fn, fn.entryBlockId);
+		for (index in 0...fn.blocks.length) {
+			final block = fn.blocks[index];
+			final terminated = emitBlockInstructions(statements, block, state, fn, index > 0 || entryIsTargeted);
+			if (terminated)
+				continue;
+			final terminator = requireTerminator(block.terminator, fn.id);
+			addLineDirective(statements, terminator.source, state.lineDirectives);
+			emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName);
+		}
+	}
+
+	static function hasIncomingEdge(fn:HxcIRFunction, targetBlockId:String):Bool {
+		for (block in fn.blocks) {
+			if (block.terminator == null)
+				continue;
+			final targets:Array<String> = switch block.terminator.kind {
+				case IRTJump(edge): [edge.targetBlockId];
+				case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
+				case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
+				case IRTTagSwitch(_, cases, defaultEdge):
+					final values = cases.map(item -> item.edge.targetBlockId);
+					if (defaultEdge != null)
+						values.push(defaultEdge.targetBlockId);
+					values;
+				case IRTThrow(_, failure):
+					switch failure.target {
+						case IRFTBlock(target): [target];
+						case IRFTPropagate | IRFTAbort: [];
+					}
+				case IRTReturn(_, _) | IRTUnreachable: [];
+			};
+			if (targets.indexOf(targetBlockId) != -1)
+				return true;
+		}
+		return false;
+	}
+
+	/** Emit one already-validated structural region without rediscovering CFG facts. */
+	function emitRegion(statements:Array<CStmt>, region:CBodyControlFlowRegion, state:CBodyEmissionState, fn:HxcIRFunction):Bool {
+		for (node in region.nodes) {
+			if (emitControlFlowNode(statements, node, state, fn))
+				return true;
+		}
+		emitRegionCompletion(statements, region.completion, state, fn);
+		return false;
+	}
+
+	function emitControlFlowNode(statements:Array<CStmt>, node:CBodyControlFlowNode, state:CBodyEmissionState, fn:HxcIRFunction):Bool {
+		return switch node {
+			case CFNBlock(blockId):
+				emitBlockInstructions(statements, requireBlock(fn, blockId), state, fn, false);
+			case CFNIf(blockId, conditionValueId, whenTrue, whenFalse, _):
+				final block = requireBlock(fn, blockId);
+				if (emitBlockInstructions(statements, block, state, fn, false))
+					return true;
+				final condition = requireValue(state.values, conditionValueId, fn.id);
+				final trueStatements:Array<CStmt> = [];
+				final falseStatements:Array<CStmt> = [];
+				emitRegion(trueStatements, whenTrue, state, fn);
+				emitRegion(falseStatements, whenFalse, state, fn);
+				addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
+				if (trueStatements.length == 0 && falseStatements.length > 0) {
+					statements.push(SIf(EUnary(LogicalNot, condition), SBlock(falseStatements), null));
+				} else {
+					statements.push(SIf(condition, SBlock(trueStatements), falseStatements.length == 0 ? null : SBlock(falseStatements)));
+				}
+				false;
+			case CFNWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, conditionRegion, body, _):
+				final loopStatements:Array<CStmt> = [];
+				emitRegion(loopStatements, conditionRegion, state, fn);
+				final decision = requireBlock(fn, decisionBlockId);
+				addTerminatorLineDirective(loopStatements, decision, state.lineDirectives, fn.id);
+				final condition = requireValue(state.values, conditionValueId, fn.id);
+				loopStatements.push(SIf(continuesWhenTrue ? EUnary(LogicalNot, condition) : condition, SBreak, null));
+				emitRegion(loopStatements, body, state, fn);
+				statements.push(SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(loopStatements)));
+				false;
+			case CFNDoWhile(_, decisionBlockId, conditionValueId, continuesWhenTrue, body, conditionRegion, _):
+				final loopStatements:Array<CStmt> = [];
+				emitRegion(loopStatements, body, state, fn);
+				emitRegion(loopStatements, conditionRegion, state, fn);
+				final decision = requireBlock(fn, decisionBlockId);
+				addTerminatorLineDirective(loopStatements, decision, state.lineDirectives, fn.id);
+				final condition = requireValue(state.values, conditionValueId, fn.id);
+				loopStatements.push(SIf(continuesWhenTrue ? EUnary(LogicalNot, condition) : condition, SBreak, null));
+				statements.push(SDoWhile(SBlock(loopStatements), EInt(CIntegerLiteral.decimal("1"))));
+				false;
+			case CFNSwitch(blockId, valueId, arms, _):
+				emitStructuredSwitch(statements, blockId, valueId, arms, false, state, fn);
+			case CFNTagSwitch(blockId, valueId, arms, _):
+				emitStructuredSwitch(statements, blockId, valueId, arms, true, state, fn);
+		};
+	}
+
+	function emitStructuredSwitch(statements:Array<CStmt>, blockId:String, valueId:String, arms:Array<CBodyControlFlowSwitchArm>, tagged:Bool,
+			state:CBodyEmissionState, fn:HxcIRFunction):Bool {
+		final block = requireBlock(fn, blockId);
+		if (emitBlockInstructions(statements, block, state, fn, false))
+			return true;
+		final emittedCases:Array<CCase> = [];
+		for (arm in arms) {
+			final values:Array<CExpr> = [];
+			var isDefault = false;
+			for (label in arm.labels) {
+				switch label {
+					case CSLValue(value) if (!tagged):
+						values.push(constantExpression(value));
+					case CSLTag(tagName) if (tagged):
+						final instanceId = requireEnumInstanceId(valueType(fn, valueId), "terminator", fn.id);
+						values.push(EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName)));
+					case CSLDefault:
+						isDefault = true;
+					case _:
+						fail('structured switch `$blockId` in `${fn.id}` mixes value and tag labels');
+				}
+			}
+			final body:Array<CStmt> = [];
+			emitRegion(body, arm.body, state, fn);
+			if (arm.body.completion == CFCFallthrough)
+				body.push(SBreak);
+			emittedCases.push({values: values, isDefault: isDefault, body: body});
+		}
+		final subject = if (tagged) {
+			final instanceId = requireEnumInstanceId(valueType(fn, valueId), "terminator", fn.id);
+			enumTagExpression(requireValue(state.values, valueId, fn.id), instanceId);
+		} else {
+			requireValue(state.values, valueId, fn.id);
+		};
+		addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
+		statements.push(SSwitch(subject, emittedCases));
+		return false;
+	}
+
+	function emitRegionCompletion(statements:Array<CStmt>, completion:CBodyControlFlowCompletion, state:CBodyEmissionState, fn:HxcIRFunction):Void {
+		switch completion {
+			case CFCFallthrough | CFCClosed:
+			case CFCReturn(ownerBlockId) | CFCThrow(ownerBlockId):
+				final block = requireBlock(fn, ownerBlockId);
+				final terminator = requireTerminator(block.terminator, fn.id);
+				addLineDirective(statements, terminator.source, state.lineDirectives);
+				emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName);
+			case CFCUnreachable(ownerBlockId):
+				fail('unreachable completion in `${fn.id}` block `$ownerBlockId` has no admitted strict-C realization');
+			case CFCBreak(ownerBlockId, _):
+				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
+				statements.push(SBreak);
+			case CFCContinue(ownerBlockId, _):
+				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
+				statements.push(SContinue);
+			case CFCGoto(ownerBlockId, targetBlockId, _):
+				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
+				statements.push(SGoto(requireLabelName(state.labelNames, targetBlockId, fn.id)));
+		}
+	}
+
+	function emitBlockInstructions(statements:Array<CStmt>, block:HxcIRBlock, state:CBodyEmissionState, fn:HxcIRFunction, forceLabel:Bool):Bool {
+		if (forceLabel || state.labeledTargets.exists(block.id))
+			statements.push(SLabel(requireLabelName(state.labelNames, block.id, fn.id), SEmpty));
+		var terminatedByNonReturningCall = false;
+		for (instruction in block.instructions) {
+			switch instruction.kind {
+				case IRIOConstant(value):
+					final result = requireResult(instruction, fn.id);
+					state.values.set(result.id, constantExpression(value));
+				case IRIOLoad(place):
+					switch requireResult(instruction, fn.id).type {
+						case IRTSpan(_, _):
+							emitSpanLoad(statements, state.values, state.spanValueLengths, state.referencedValues, instruction, place, fn, state.localNames,
+								state.globalNames, state.spanLengthNames, state.lineDirectives);
+						case _:
+							emitLoad(statements, state.values, state.referencedValues, instruction,
+								placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values), state.temporaryNames,
+								state.lineDirectives, fn.id);
+					}
+				case IRIOAddress(place):
+					emitAddress(statements, state.values, state.referencedValues, instruction, place, fn, state.localNames, state.globalNames,
+						state.spanLengthNames, state.temporaryNames, state.lineDirectives);
+				case IRIOConstructAggregate(instanceId, fields):
+					emitAggregateConstruction(statements, state.values, state.referencedValues, instruction, instanceId, fields, state.temporaryNames,
+						state.lineDirectives, fn.id);
+				case IRIOProject(valueId, fieldName):
+					emitAggregateProjection(statements, state.values, state.referencedValues, instruction, valueId, fieldName, fn, state.temporaryNames,
+						state.lineDirectives);
+				case IRIOConstructTag(instanceId, tagName, payload):
+					emitEnumConstruction(statements, state.values, state.referencedValues, instruction, instanceId, tagName, payload, state.temporaryNames,
+						state.lineDirectives, fn.id);
+				case IRIOMatchTag(valueId, tagName):
+					emitEnumMatch(statements, state.values, state.referencedValues, instruction, valueId, tagName, fn, state.temporaryNames,
+						state.lineDirectives);
+				case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
+					emitEnumProjection(statements, state.values, state.referencedValues, instruction, valueId, tagName, payloadIndex, fn,
+						state.temporaryNames, state.boundsAbortName, state.lineDirectives);
+				case IRIODefaultInitialize(IRPLocal(localId), from, to):
+					emitDefaultInitialize(statements, state.declared, state.referencedLocals, instruction, localId, from, to, fn, state.localNames,
+						state.lineDirectives);
+				case IRIOBindVirtualTable(IRPLocal(localId), tableId):
+					emitBindVirtualTable(statements, instruction, localId, tableId, fn, state.localNames, state.lineDirectives);
+				case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
+					switch requireLocal(fn, localId).type {
+						case IRTSpan(_, _):
+							emitSpanValueInitialize(statements, state.values, state.spanValueLengths, state.declared, state.referencedLocals,
+								state.referencedSpanLengths, instruction, localId, valueId, fn, state.localNames, state.spanLengthNames, state.lineDirectives);
+						case _:
+							emitInitialize(statements, state.values, state.declared, state.referencedLocals, instruction, localId, valueId, fn,
+								state.localNames, state.lineDirectives);
+					}
+				case IRIOInitialize(IRPGlobal(globalId), valueId, IRISUninitialized, IRISInitialized):
+					if (instruction.result != null)
+						fail('global initializer `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					statements.push(SExpr(EBinary(Assign,
+						placeExpression(IRPGlobal(globalId), fn, state.localNames, state.globalNames, state.spanLengthNames, state.values),
+						requireValue(state.values, valueId, fn.id))));
+				case IRIOInitializeFixedArray(IRPLocal(localId), valueIds, IRISUninitialized, IRISInitialized):
+					emitFixedArrayInitialize(statements, state.values, state.declared, state.referencedLocals, instruction, localId, valueIds, fn,
+						state.localNames, state.lineDirectives);
+				case IRIOZeroInitializeFixedArray(IRPLocal(localId), IRISUninitialized, IRISInitialized):
+					emitZeroFixedArrayInitialize(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
+						state.lineDirectives);
+				case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
+					emitSpanInitialize(statements, state.declared, state.referencedLocals, state.referencedSpanLengths, instruction, localId, sourceArray, fn,
+						state.localNames, state.spanLengthNames, state.globalNames, state.lineDirectives);
+				case IRIOBoundsCheck(collection, indexValueId, IRBPCheckedAbort(_, _)):
+					emitBoundsCheck(statements, state.values, instruction, collection, indexValueId, fn, state.localNames, state.globalNames,
+						state.spanLengthNames, state.boundsAbortName, state.lineDirectives);
+				case IRIOBoundsCheck(_, _, IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _)):
+					// The semantic proof remains reviewable in HxcIR; no redundant C check survives.
+				case IRIONullCheck(valueId, IRNCPCheckedAbort(_, _)):
+					emitNullCheck(statements, state.values, instruction, valueId, state.boundsAbortName, state.lineDirectives, fn.id);
+				case IRIOStore(place, valueId):
+					if (instruction.result != null)
+						fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					statements.push(SExpr(EBinary(Assign,
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values),
+						requireValue(state.values, valueId, fn.id))));
+				case IRIOUnary(operationId, valueId, implementation):
+					final result = requireResult(instruction, fn.id);
+					final expression = operationExpression(operationId, implementation, [requireValue(state.values, valueId, fn.id)], state.helperNames,
+						instruction.id, fn.id);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
+					final result = requireResult(instruction, fn.id);
+					final expression = operationExpression(operationId, implementation, [
+						requireValue(state.values, leftValueId, fn.id),
+						requireValue(state.values, rightValueId, fn.id)
+					], state.helperNames, instruction.id, fn.id);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOConvert(valueId, IRCRepresentation, targetType, IRIStatic, null):
+					final result = requireResult(instruction, fn.id);
+					final expression = classUpcastExpression(requireValue(state.values, valueId, fn.id), valueType(fn, valueId), targetType, instruction.id,
+						fn.id);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOConvert(valueId, IRCNullableInject, _, IRIStatic, null):
+					final result = requireResult(instruction, fn.id);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, requireValue(state.values, valueId, fn.id),
+						state.lineDirectives, fn.id);
+				case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
+					final result = requireResult(instruction, fn.id);
+					final expression = switch kind {
+						case IRCNumericExact | IRCNumericRoundBinary32 | IRCNumericWidenBinary64 | IRCNumericWrapping:
+							ECast(cType(targetType), DName(null), requireValue(state.values, valueId, fn.id));
+						case _:
+							fail('conversion `${instruction.id}` in `${fn.id}` is outside the admitted direct primitive conversion subset');
+					};
+					state.values.set(result.id, expression);
+					if (!state.referencedValues.exists(result.id)) {
+						addLineDirective(statements, instruction.source, state.lineDirectives);
+						statements.push(SExpr(ECast(new CType(TVoid), DName(null), expression)));
+					}
+				case IRIOConvert(valueId, kind, _, IRIProgramLocal(helperId), null):
+					final result = requireResult(instruction, fn.id);
+					switch kind {
+						case IRCNumericExact | IRCNumericWrapping | IRCNumericSaturating:
+						case _:
+							fail('program-local conversion `${instruction.id}` in `${fn.id}` has unsupported kind `$kind`');
+					}
+					final expression = helperCall(helperId, [requireValue(state.values, valueId, fn.id)], state.helperNames, instruction.id, fn.id);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOCall(call):
+					if (isNonReturningSelfCall(fn.id, call, state.nonReturningFunctionIds)) {
+						emitTailLoopCall(statements, state.values, instruction, call, fn, state.parameterNames, state.tailArgumentNames, state.lineDirectives);
+						terminatedByNonReturningCall = true;
+						state.terminatedByTailLoop = true;
+					} else {
+						terminatedByNonReturningCall = emitCall(statements, state.values, state.spanValueLengths, state.referencedValues, instruction, call,
+							state.temporaryNames, state.functionNames, state.lineDirectives, state.nonReturningFunctionIds, state.boundsAbortName, fn);
+					}
+				case IRIOLifetime(_, _, _, _):
+					// Direct stack-object lifetime transitions are semantic proof only.
+				case _:
+					fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced direct-value function subset');
+			}
+			if (terminatedByNonReturningCall)
+				break;
+		}
+		if (terminatedByNonReturningCall) {
+			final terminator = requireTerminator(block.terminator, fn.id);
+			switch terminator.kind {
+				case IRTReturn(_, cleanup) if (cleanup.length == 0):
+				case _:
+					fail('non-returning call in `${fn.id}` cannot replace its non-return terminator or cleanup');
+			}
+		}
+		return terminatedByNonReturningCall;
+	}
+
+	static function addTerminatorLineDirective(statements:Array<CStmt>, block:HxcIRBlock, enabled:Bool, functionId:String):Void {
+		final terminator = requireTerminator(block.terminator, functionId);
+		addLineDirective(statements, terminator.source, enabled);
+	}
+
+	static function requireBlock(fn:HxcIRFunction, blockId:String):HxcIRBlock {
+		for (block in fn.blocks)
+			if (block.id == blockId)
+				return block;
+		return fail('function `${fn.id}` cannot resolve HxcIR block `$blockId`');
 	}
 
 	static function referencedValueIds(fn:HxcIRFunction):Map<String, Bool> {
