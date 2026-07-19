@@ -52,6 +52,15 @@ include dependencies. Explicit metadata may select public/private header groups,
 stable C names, visibility, or external includes, but users do not hand-author
 include guards or dependency ordering as strings.
 
+Metadata records a difference from a safe canonical default; it is not a
+boilerplate tax. For a header-owned `extern`, an absent `@:c.name` means the
+ordinary Haxe declaration or field spelling is the exact external C spelling,
+and an absent calling-convention annotation on a fixed-arity function means the
+ordinary C convention. The compiler validates and records those resolved facts
+exactly as it does explicit values. It does not extend this identity rule to
+layout, ownership, lifetime, retention, packing, or another fact that cannot be
+known from the declaration itself.
+
 The M0 source spellings are ratified below. Their semantic coverage must grow
 without bypassing the shared declaration model:
 
@@ -88,6 +97,8 @@ C facts that attach to declarations use namespaced metadata: `@:c.layout`,
 values such as `c.Layout.Struct`, `c.Header.Public`, and
 `c.CallingConvention.C`; external names and paths remain constrained literals
 because they describe external artifacts.
+An explicit `@:c.name` or `@:c.callingConvention` is therefore required only
+when the native fact differs from the canonical identity/default above.
 
 The M0 validator produces a typed deterministic declaration/build snapshot and
 rejects unknown metadata, malformed facts, reserved or duplicate explicit C

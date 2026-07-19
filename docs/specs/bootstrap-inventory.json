@@ -394,7 +394,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-10 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
+      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-10 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "src/reflaxe/c/interop/CImportRegistry.hx",
@@ -409,7 +409,7 @@
         "E6.T09"
       ],
       "limitations": [
-        "Bindings are hand-authored and exact; Clang-backed bindgen remains unsupported.",
+        "Declarations may be hand-authored or produced by a purpose-built reviewed generator such as the bounded raylib core; generic Clang-backed bindgen remains unsupported.",
         "Callbacks, variadics, pointers and retained lifetimes, opaque ownership, unions, bit fields, packing, C++, public exports, and stable ABI remain fail-closed.",
         "Compiled pointlib probes establish only the declared fixture header and target compiler invocation, not general cross-platform ABI compatibility."
       ]
@@ -807,6 +807,32 @@
       ],
       "limitations": [
         "Private generated headers and target-facing c.* contracts are not a public ABI."
+      ]
+    },
+    {
+      "id": "raylib-raw-core",
+      "area": "interop",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A version-locked public raylib.raw core is generated from Clang declaration facts and consumed directly by generated Haxe/C.",
+      "scope": "The coherent Caxecraft core covers 7 by-value records, the direct Camera/Camera3D struct alias, 5 integer enum domains with 143 constants, and 54 fixed-arity raylib 6.0 functions. A closed selection and binding lock retain upstream/header/Clang/target/declaration provenance; deterministic raw Haxe, five build-plan snapshots, a generated direct consumer, and a compiled independent ABI probe remain runtime-free.",
+      "evidence": [
+        "docs/raylib-raw-core.md",
+        "docs/specs/raylib-core-selection.json",
+        "docs/specs/raylib-core-binding-lock.json",
+        "scripts/raylib/core_binding.py",
+        "src/raylib/raw/Raylib.hx",
+        "test/raylib_provisioning/native/core_abi_probe.c",
+        "test/raylib_provisioning/run.py"
+      ],
+      "owners": [
+        "E6.T06",
+        "E6.T08"
+      ],
+      "limitations": [
+        "This is a precise coherent subset, not complete raylib.h coverage or a general bindgen claim.",
+        "Callbacks, variadics, borrowed or retained pointers, resource ownership, compound-literal color macros, and the remaining header families are explicitly omitted with owners.",
+        "The semantic raylib facade, other Haxe targets, public package extraction, stable ABI, and playable Caxecraft shell remain later work."
       ]
     },
     {

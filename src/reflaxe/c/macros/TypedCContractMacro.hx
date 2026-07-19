@@ -209,6 +209,11 @@ class TypedCContractMacro {
 		final cName = cNameEntry == null ? null : readCIdentifier(cNameEntry, 0, "C declaration name");
 		if (cName != null) {
 			registerSymbol(cName, shell.path, declarationSymbolNamespace(layout), cNameEntry.pos, explicitSymbols);
+		} else if (entries(shell.meta, "c.include").length > 0) {
+			// Header-owned declarations default to their Haxe identity. Validate an
+			// inferred spelling at this source-positioned boundary with the same
+			// policy used for explicit @:c.name values.
+			validateCIdentifier(unqualifiedName(shell.path), "inferred C declaration name", shell.pos);
 		}
 
 		final headerEntry = single(shell.meta, "c.header", shell.path);
@@ -335,8 +340,11 @@ class TypedCContractMacro {
 			if (cNameEntry != null)
 				requireArity(cNameEntry, 1);
 			final cName = cNameEntry == null ? null : readCIdentifier(cNameEntry, 0, "C enum constant name");
-			if (cName != null)
+			if (cName != null) {
 				registerSymbol(cName, '${shell.path}.${field.name}', "ordinary:translation-unit", cNameEntry.pos, explicitSymbols);
+			} else if (entries(shell.meta, "c.include").length > 0) {
+				validateCIdentifier(field.name, "inferred C enum constant name", field.pos);
+			}
 			for (name in [
 				"c.bitField",
 				"c.align",
@@ -375,7 +383,12 @@ class TypedCContractMacro {
 			case FMethod(_): false;
 		};
 		final layoutField = !isStatic && isVariable && (layout == "struct" || layout == "union");
-		if (!layoutField && !hasMetadata) {
+		final identityExternalFunction = isStatic
+			&& !isVariable
+			&& shell.classType != null
+			&& shell.classType.isExtern
+			&& entries(shell.meta, "c.include").length > 0;
+		if (!layoutField && !identityExternalFunction && !hasMetadata) {
 			return;
 		}
 
@@ -400,6 +413,9 @@ class TypedCContractMacro {
 			requireArity(cNameEntry, 1);
 		}
 		final cName = cNameEntry == null ? null : readCIdentifier(cNameEntry, 0, "C field or symbol name");
+		if (cName == null && entries(shell.meta, "c.include").length > 0) {
+			validateCIdentifier(field.name, "inferred C field or symbol name", field.pos);
+		}
 		final exported = marker(field.meta, "c.export", '${shell.path}.${field.name}');
 		final constant = marker(field.meta, "c.constant", '${shell.path}.${field.name}');
 		if (constant && (!isStatic || !isVariable)) {
@@ -998,6 +1014,11 @@ class TypedCContractMacro {
 	static function definitionPath(module:String, pack:Array<String>, name:String):String {
 		final expected = pack.length == 0 ? name : pack.join(".") + "." + name;
 		return module == expected ? module : module + "." + name;
+	}
+
+	static function unqualifiedName(path:String):String {
+		final separator = path.lastIndexOf(".");
+		return separator == -1 ? path : path.substr(separator + 1);
 	}
 
 	static function compareFieldsByPosition(left:ClassField, right:ClassField):Int {

@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    "BoundingBox",
+    "Camera3D",
+    "Color",
+    "Ray",
+    "RayCollision",
+    "Vector2",
+    "Vector3"
+  ],
+  "aliases": {
+    "Camera": "Camera3D"
+  },
+  "enums": [
+    "CameraProjection",
+    "ConfigFlags",
+    "KeyboardKey",
+    "MouseButton",
+    "TraceLogLevel"
+  ],
+  "functions": [
+    "BeginDrawing",
+    "BeginMode3D",
+    "CheckCollisionBoxes",
+    "ClearBackground",
+    "CloseWindow",
+    "DisableCursor",
+    "DrawCircle",
+    "DrawCube",
+    "DrawCubeV",
+    "DrawCubeWires",
+    "DrawCubeWiresV",
+    "DrawFPS",
+    "DrawGrid",
+    "DrawLine",
+    "DrawLine3D",
+    "DrawPixel",
+    "DrawRectangle",
+    "DrawRectangleLines",
+    "DrawSphere",
+    "DrawSphereWires",
+    "DrawText",
+    "EnableCursor",
+    "EndDrawing",
+    "EndMode3D",
+    "GetColor",
+    "GetFPS",
+    "GetFrameTime",
+    "GetMouseDelta",
+    "GetMousePosition",
+    "GetMouseWheelMove",
+    "GetRayCollisionBox",
+    "GetRayCollisionSphere",
+    "GetScreenHeight",
+    "GetScreenToWorldRay",
+    "GetScreenWidth",
+    "GetTime",
+    "InitWindow",
+    "IsCursorHidden",
+    "IsKeyDown",
+    "IsKeyPressed",
+    "IsKeyReleased",
+    "IsMouseButtonDown",
+    "IsMouseButtonPressed",
+    "IsMouseButtonReleased",
+    "IsWindowFocused",
+    "IsWindowReady",
+    "IsWindowResized",
+    "SetConfigFlags",
+    "SetExitKey",
+    "SetTargetFPS",
+    "SetTraceLogLevel",
+    "SetWindowMinSize",
+    "SetWindowSize",
+    "WindowShouldClose"
+  ],
+  "canonicalAbi": {
+    "target": "x86_64-unknown-linux-gnu",
+    "languageStandard": "c11",
+    "defines": [
+      "RAYLIB_NO_DEPRECATED"
+    ],
+    "records": {
+      "BoundingBox": {
+        "size": 24,
+        "alignment": 4,
+        "offsets": {
+          "max": 12,
+          "min": 0
+        }
+      },
+      "Camera3D": {
+        "size": 44,
+        "alignment": 4,
+        "offsets": {
+          "fovy": 36,
+          "position": 0,
+          "projection": 40,
+          "target": 12,
+          "up": 24
+        }
+      },
+      "Color": {
+        "size": 4,
+        "alignment": 1,
+        "offsets": {
+          "a": 3,
+          "b": 2,
+          "g": 1,
+          "r": 0
+        }
+      },
+      "Ray": {
+        "size": 24,
+        "alignment": 4,
+        "offsets": {
+          "direction": 12,
+          "position": 0
+        }
+      },
+      "RayCollision": {
+        "size": 32,
+        "alignment": 4,
+        "offsets": {
+          "distance": 4,
+          "hit": 0,
+          "normal": 20,
+          "point": 8
+        }
+      },
+      "Vector2": {
+        "size": 8,
+        "alignment": 4,
+        "offsets": {
+          "x": 0,
+          "y": 4
+        }
+      },
+      "Vector3": {
+        "size": 12,
+        "alignment": 4,
+        "offsets": {
+          "x": 0,
+          "y": 4,
+          "z": 8
+        }
+      }
+    }
+  },
+  "omissions": [
+    {
+      "family": "callbacks",
+      "reason": "Callback calling convention, retention, thread, and exception boundaries are not yet represented by the reusable C interop layer.",
+      "owner": "haxe_c-xge.10"
+    },
+    {
+      "family": "variadics",
+      "reason": "C variadics such as TraceLog and TextFormat require a separate typed policy and are never approximated as fixed-arity calls.",
+      "owner": "haxe_c-xge.10"
+    },
+    {
+      "family": "borrowed-or-retained-pointers",
+      "reason": "Pointer depth, nullability, lifetime, and mutation authority need explicit machine-readable ownership before admission.",
+      "owner": "haxe_c-xge.10"
+    },
+    {
+      "family": "resource-owning-apis",
+      "reason": "Images, textures, fonts, models, shaders, audio, and file buffers need paired ownership and unload contracts.",
+      "owner": "haxe_c-xge.10"
+    },
+    {
+      "family": "compound-literal-color-macros",
+      "reason": "Raylib color macros expand to C compound literals; typed allocation-free Haxe constants belong in the reviewed semantic facade.",
+      "owner": "haxe_c-xge.4"
+    },
+    {
+      "family": "remaining-public-header",
+      "reason": "This release is the complete coherent Caxecraft core, not a claim of complete raylib 6.0 binding coverage.",
+      "owner": "haxe_c-xge.10"
+    }
+  ]
+}

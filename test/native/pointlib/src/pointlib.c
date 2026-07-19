@@ -14,6 +14,10 @@ pointlib_point pointlib_point_translate(pointlib_point point, pointlib_coord dx,
   return point;
 }
 
+pointlib_point_alias pointlib_point_alias_identity(pointlib_point_alias point) {
+  return point;
+}
+
 int64_t pointlib_point_dot(pointlib_point left, pointlib_point right) {
   return ((int64_t)left.x * (int64_t)right.x)
     + ((int64_t)left.y * (int64_t)right.y);

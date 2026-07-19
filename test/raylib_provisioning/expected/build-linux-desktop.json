@@ -18,16 +18,21 @@
     {
       "path": "hxc_raylib_smoke_constants.h",
       "ownerModulePaths": [
-        "RaylibNative"
+        "SmokeConstants",
+        "SmokeValues"
       ],
       "kind": "local"
     },
     {
       "path": "raylib.h",
       "ownerModulePaths": [
-        "Color",
-        "RaylibNative",
-        "TraceLogLevel"
+        "raylib.raw.Camera",
+        "raylib.raw.Camera3D",
+        "raylib.raw.Color",
+        "raylib.raw.Ray",
+        "raylib.raw.Raylib",
+        "raylib.raw.Vector2",
+        "raylib.raw.Vector3"
       ],
       "kind": "system"
     }
@@ -35,43 +40,43 @@
   "libraries": [
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "m"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "GL"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "dl"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "rt"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "X11"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "raylib"
     },
     {
       "ownerModulePaths": [
-        "RaylibNative"
+        "raylib.raw.Raylib"
       ],
       "name": "pthread"
     }

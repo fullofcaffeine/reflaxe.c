@@ -4,11 +4,13 @@ class Main {
 	}
 
 	static function main():Void {
+		PointLib.pointlib_build_fact_probe();
 		var left = PointLib.make(PointLib.one, PointLib.negativeThree);
 		var right = PointLib.make(PointLib.five, PointLib.seven);
 		left.x = PointLib.one;
 		var delta = left.x;
 		left = PointLib.translate(left, delta, PointLib.five);
+		var pointAlias = PointLib.aliasIdentity(left);
 		var dot = PointLib.dot(left, right);
 		var axis = Axis.Y;
 		var component = PointLib.component(left, axis);

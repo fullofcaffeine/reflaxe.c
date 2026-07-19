@@ -204,6 +204,7 @@ jobs:
         run: |
           gcc --version
           g++ --version
+          clang --version
           cmake --version
           ninja --version
 
@@ -227,6 +228,7 @@ jobs:
             --build-root "$raylib_build" \
             --cc gcc \
             --cxx g++ \
+            --clang clang \
             --cmake cmake \
             --generator Ninja \
             --allow-network \
@@ -296,6 +298,7 @@ jobs:
         run: |
           "${{ matrix.cc }}" --version
           "${{ matrix.cxx }}" --version
+          clang --version
           cmake --version
           ninja --version
 
@@ -319,6 +322,7 @@ jobs:
             --build-root "$raylib_build" \
             --cc "${{ matrix.cc }}" \
             --cxx "${{ matrix.cxx }}" \
+            --clang clang \
             --cmake cmake \
             --generator Ninja \
             --allow-network \

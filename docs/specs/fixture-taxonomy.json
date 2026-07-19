@@ -226,6 +226,7 @@
       "suiteIds": [
         "native-smoke",
         "c-import",
+        "raylib-provisioning",
         "array-runtime",
         "string-runtime"
       ]
@@ -374,13 +375,16 @@
         "positive",
         "negative",
         "snapshot",
-        "runtime"
+        "runtime",
+        "abi"
       ],
       "status": "active",
       "assertions": [
         "the immutable raylib 6.0 archive, full source tree, reviewed build inputs, configurations, and per-platform link facts are checksum locked",
         "pinned-source, explicit offline-source, and exact-version system pkg-config authorities fail closed instead of silently switching provenance",
         "generated Haxe emits deterministic strict C and five reviewable neutral build plans with exact argument-array libraries, frameworks, headers, and pkg-config facts",
+        "the checked Clang-derived raw core lock renders 7 records, 1 struct alias, 5 enum domains with 143 constants, and 54 functions byte-identically from the pinned header",
+        "an independent native probe verifies every selected layout, alias, constant, and function signature while the generated smoke consumes the public raylib.raw package",
         "Linux, macOS, and Windows source lanes compile and link generated C against real raylib while the Linux PLATFORM_MEMORY/software lane also runs with exact output",
         "normal compilation and post-provision builds are network-free, select no hxrt feature, and serialize no checkout, cache, or temporary path"
       ]
@@ -1047,12 +1051,15 @@
           "test/raylib_provisioning/expected/build-linux-desktop.json",
           "test/raylib_provisioning/expected/build-macos-desktop.json",
           "test/raylib_provisioning/expected/build-windows-desktop.json",
-          "test/raylib_provisioning/expected/build-system-desktop.json"
+          "test/raylib_provisioning/expected/build-system-desktop.json",
+          "src/raylib/raw",
+          "test/raylib_provisioning/native/core_abi_probe.c"
         ],
         "formats": [
           "c",
           "header",
-          "json"
+          "json",
+          "text"
         ]
       },
       {

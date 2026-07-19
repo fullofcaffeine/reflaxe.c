@@ -13,7 +13,10 @@
   "sources": [
     ".github/workflows/governance.yml",
     "scripts/raylib/provision.py",
+    "scripts/raylib/core_binding.py",
+    "src/raylib/raw/Raylib.hx",
     "test/raylib_provisioning/fixtures/smoke/Main.hx",
+    "test/raylib_provisioning/native/core_abi_probe.c",
     "test/raylib_provisioning/run.py"
   ],
   "runner": {

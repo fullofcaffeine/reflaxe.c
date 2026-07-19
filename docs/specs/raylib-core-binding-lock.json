@@ -1,0 +1,2517 @@
+{
+  "canonicalAbi": {
+    "defines": [
+      "RAYLIB_NO_DEPRECATED"
+    ],
+    "languageStandard": "c11",
+    "records": {
+      "BoundingBox": {
+        "alignment": 4,
+        "offsets": {
+          "max": 12,
+          "min": 0
+        },
+        "size": 24
+      },
+      "Camera3D": {
+        "alignment": 4,
+        "offsets": {
+          "fovy": 36,
+          "position": 0,
+          "projection": 40,
+          "target": 12,
+          "up": 24
+        },
+        "size": 44
+      },
+      "Color": {
+        "alignment": 1,
+        "offsets": {
+          "a": 3,
+          "b": 2,
+          "g": 1,
+          "r": 0
+        },
+        "size": 4
+      },
+      "Ray": {
+        "alignment": 4,
+        "offsets": {
+          "direction": 12,
+          "position": 0
+        },
+        "size": 24
+      },
+      "RayCollision": {
+        "alignment": 4,
+        "offsets": {
+          "distance": 4,
+          "hit": 0,
+          "normal": 20,
+          "point": 8
+        },
+        "size": 32
+      },
+      "Vector2": {
+        "alignment": 4,
+        "offsets": {
+          "x": 0,
+          "y": 4
+        },
+        "size": 8
+      },
+      "Vector3": {
+        "alignment": 4,
+        "offsets": {
+          "x": 0,
+          "y": 4,
+          "z": 8
+        },
+        "size": 12
+      }
+    },
+    "target": "x86_64-unknown-linux-gnu"
+  },
+  "declarationSha256": "ec22d0aaec7a488991378a2efa4820ae0ee5c011f041050188e1680ade69f296",
+  "declarations": {
+    "aliases": [
+      {
+        "name": "Camera",
+        "sourceLine": 333,
+        "target": "Camera3D"
+      }
+    ],
+    "enums": [
+      {
+        "constants": [
+          {
+            "name": "CAMERA_PERSPECTIVE",
+            "sourceLine": 953,
+            "value": 0
+          },
+          {
+            "name": "CAMERA_ORTHOGRAPHIC",
+            "sourceLine": 954,
+            "value": 1
+          }
+        ],
+        "name": "CameraProjection",
+        "sourceLine": 952,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "FLAG_VSYNC_HINT",
+            "sourceLine": 554,
+            "value": 64
+          },
+          {
+            "name": "FLAG_FULLSCREEN_MODE",
+            "sourceLine": 555,
+            "value": 2
+          },
+          {
+            "name": "FLAG_WINDOW_RESIZABLE",
+            "sourceLine": 556,
+            "value": 4
+          },
+          {
+            "name": "FLAG_WINDOW_UNDECORATED",
+            "sourceLine": 557,
+            "value": 8
+          },
+          {
+            "name": "FLAG_WINDOW_HIDDEN",
+            "sourceLine": 558,
+            "value": 128
+          },
+          {
+            "name": "FLAG_WINDOW_MINIMIZED",
+            "sourceLine": 559,
+            "value": 512
+          },
+          {
+            "name": "FLAG_WINDOW_MAXIMIZED",
+            "sourceLine": 560,
+            "value": 1024
+          },
+          {
+            "name": "FLAG_WINDOW_UNFOCUSED",
+            "sourceLine": 561,
+            "value": 2048
+          },
+          {
+            "name": "FLAG_WINDOW_TOPMOST",
+            "sourceLine": 562,
+            "value": 4096
+          },
+          {
+            "name": "FLAG_WINDOW_ALWAYS_RUN",
+            "sourceLine": 563,
+            "value": 256
+          },
+          {
+            "name": "FLAG_WINDOW_TRANSPARENT",
+            "sourceLine": 564,
+            "value": 16
+          },
+          {
+            "name": "FLAG_WINDOW_HIGHDPI",
+            "sourceLine": 565,
+            "value": 8192
+          },
+          {
+            "name": "FLAG_WINDOW_MOUSE_PASSTHROUGH",
+            "sourceLine": 566,
+            "value": 16384
+          },
+          {
+            "name": "FLAG_BORDERLESS_WINDOWED_MODE",
+            "sourceLine": 567,
+            "value": 32768
+          },
+          {
+            "name": "FLAG_MSAA_4X_HINT",
+            "sourceLine": 568,
+            "value": 32
+          },
+          {
+            "name": "FLAG_INTERLACED_HINT",
+            "sourceLine": 569,
+            "value": 65536
+          }
+        ],
+        "name": "ConfigFlags",
+        "sourceLine": 553,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "KEY_NULL",
+            "sourceLine": 588,
+            "value": 0
+          },
+          {
+            "name": "KEY_APOSTROPHE",
+            "sourceLine": 590,
+            "value": 39
+          },
+          {
+            "name": "KEY_COMMA",
+            "sourceLine": 591,
+            "value": 44
+          },
+          {
+            "name": "KEY_MINUS",
+            "sourceLine": 592,
+            "value": 45
+          },
+          {
+            "name": "KEY_PERIOD",
+            "sourceLine": 593,
+            "value": 46
+          },
+          {
+            "name": "KEY_SLASH",
+            "sourceLine": 594,
+            "value": 47
+          },
+          {
+            "name": "KEY_ZERO",
+            "sourceLine": 595,
+            "value": 48
+          },
+          {
+            "name": "KEY_ONE",
+            "sourceLine": 596,
+            "value": 49
+          },
+          {
+            "name": "KEY_TWO",
+            "sourceLine": 597,
+            "value": 50
+          },
+          {
+            "name": "KEY_THREE",
+            "sourceLine": 598,
+            "value": 51
+          },
+          {
+            "name": "KEY_FOUR",
+            "sourceLine": 599,
+            "value": 52
+          },
+          {
+            "name": "KEY_FIVE",
+            "sourceLine": 600,
+            "value": 53
+          },
+          {
+            "name": "KEY_SIX",
+            "sourceLine": 601,
+            "value": 54
+          },
+          {
+            "name": "KEY_SEVEN",
+            "sourceLine": 602,
+            "value": 55
+          },
+          {
+            "name": "KEY_EIGHT",
+            "sourceLine": 603,
+            "value": 56
+          },
+          {
+            "name": "KEY_NINE",
+            "sourceLine": 604,
+            "value": 57
+          },
+          {
+            "name": "KEY_SEMICOLON",
+            "sourceLine": 605,
+            "value": 59
+          },
+          {
+            "name": "KEY_EQUAL",
+            "sourceLine": 606,
+            "value": 61
+          },
+          {
+            "name": "KEY_A",
+            "sourceLine": 607,
+            "value": 65
+          },
+          {
+            "name": "KEY_B",
+            "sourceLine": 608,
+            "value": 66
+          },
+          {
+            "name": "KEY_C",
+            "sourceLine": 609,
+            "value": 67
+          },
+          {
+            "name": "KEY_D",
+            "sourceLine": 610,
+            "value": 68
+          },
+          {
+            "name": "KEY_E",
+            "sourceLine": 611,
+            "value": 69
+          },
+          {
+            "name": "KEY_F",
+            "sourceLine": 612,
+            "value": 70
+          },
+          {
+            "name": "KEY_G",
+            "sourceLine": 613,
+            "value": 71
+          },
+          {
+            "name": "KEY_H",
+            "sourceLine": 614,
+            "value": 72
+          },
+          {
+            "name": "KEY_I",
+            "sourceLine": 615,
+            "value": 73
+          },
+          {
+            "name": "KEY_J",
+            "sourceLine": 616,
+            "value": 74
+          },
+          {
+            "name": "KEY_K",
+            "sourceLine": 617,
+            "value": 75
+          },
+          {
+            "name": "KEY_L",
+            "sourceLine": 618,
+            "value": 76
+          },
+          {
+            "name": "KEY_M",
+            "sourceLine": 619,
+            "value": 77
+          },
+          {
+            "name": "KEY_N",
+            "sourceLine": 620,
+            "value": 78
+          },
+          {
+            "name": "KEY_O",
+            "sourceLine": 621,
+            "value": 79
+          },
+          {
+            "name": "KEY_P",
+            "sourceLine": 622,
+            "value": 80
+          },
+          {
+            "name": "KEY_Q",
+            "sourceLine": 623,
+            "value": 81
+          },
+          {
+            "name": "KEY_R",
+            "sourceLine": 624,
+            "value": 82
+          },
+          {
+            "name": "KEY_S",
+            "sourceLine": 625,
+            "value": 83
+          },
+          {
+            "name": "KEY_T",
+            "sourceLine": 626,
+            "value": 84
+          },
+          {
+            "name": "KEY_U",
+            "sourceLine": 627,
+            "value": 85
+          },
+          {
+            "name": "KEY_V",
+            "sourceLine": 628,
+            "value": 86
+          },
+          {
+            "name": "KEY_W",
+            "sourceLine": 629,
+            "value": 87
+          },
+          {
+            "name": "KEY_X",
+            "sourceLine": 630,
+            "value": 88
+          },
+          {
+            "name": "KEY_Y",
+            "sourceLine": 631,
+            "value": 89
+          },
+          {
+            "name": "KEY_Z",
+            "sourceLine": 632,
+            "value": 90
+          },
+          {
+            "name": "KEY_LEFT_BRACKET",
+            "sourceLine": 633,
+            "value": 91
+          },
+          {
+            "name": "KEY_BACKSLASH",
+            "sourceLine": 634,
+            "value": 92
+          },
+          {
+            "name": "KEY_RIGHT_BRACKET",
+            "sourceLine": 635,
+            "value": 93
+          },
+          {
+            "name": "KEY_GRAVE",
+            "sourceLine": 636,
+            "value": 96
+          },
+          {
+            "name": "KEY_SPACE",
+            "sourceLine": 638,
+            "value": 32
+          },
+          {
+            "name": "KEY_ESCAPE",
+            "sourceLine": 639,
+            "value": 256
+          },
+          {
+            "name": "KEY_ENTER",
+            "sourceLine": 640,
+            "value": 257
+          },
+          {
+            "name": "KEY_TAB",
+            "sourceLine": 641,
+            "value": 258
+          },
+          {
+            "name": "KEY_BACKSPACE",
+            "sourceLine": 642,
+            "value": 259
+          },
+          {
+            "name": "KEY_INSERT",
+            "sourceLine": 643,
+            "value": 260
+          },
+          {
+            "name": "KEY_DELETE",
+            "sourceLine": 644,
+            "value": 261
+          },
+          {
+            "name": "KEY_RIGHT",
+            "sourceLine": 645,
+            "value": 262
+          },
+          {
+            "name": "KEY_LEFT",
+            "sourceLine": 646,
+            "value": 263
+          },
+          {
+            "name": "KEY_DOWN",
+            "sourceLine": 647,
+            "value": 264
+          },
+          {
+            "name": "KEY_UP",
+            "sourceLine": 648,
+            "value": 265
+          },
+          {
+            "name": "KEY_PAGE_UP",
+            "sourceLine": 649,
+            "value": 266
+          },
+          {
+            "name": "KEY_PAGE_DOWN",
+            "sourceLine": 650,
+            "value": 267
+          },
+          {
+            "name": "KEY_HOME",
+            "sourceLine": 651,
+            "value": 268
+          },
+          {
+            "name": "KEY_END",
+            "sourceLine": 652,
+            "value": 269
+          },
+          {
+            "name": "KEY_CAPS_LOCK",
+            "sourceLine": 653,
+            "value": 280
+          },
+          {
+            "name": "KEY_SCROLL_LOCK",
+            "sourceLine": 654,
+            "value": 281
+          },
+          {
+            "name": "KEY_NUM_LOCK",
+            "sourceLine": 655,
+            "value": 282
+          },
+          {
+            "name": "KEY_PRINT_SCREEN",
+            "sourceLine": 656,
+            "value": 283
+          },
+          {
+            "name": "KEY_PAUSE",
+            "sourceLine": 657,
+            "value": 284
+          },
+          {
+            "name": "KEY_F1",
+            "sourceLine": 658,
+            "value": 290
+          },
+          {
+            "name": "KEY_F2",
+            "sourceLine": 659,
+            "value": 291
+          },
+          {
+            "name": "KEY_F3",
+            "sourceLine": 660,
+            "value": 292
+          },
+          {
+            "name": "KEY_F4",
+            "sourceLine": 661,
+            "value": 293
+          },
+          {
+            "name": "KEY_F5",
+            "sourceLine": 662,
+            "value": 294
+          },
+          {
+            "name": "KEY_F6",
+            "sourceLine": 663,
+            "value": 295
+          },
+          {
+            "name": "KEY_F7",
+            "sourceLine": 664,
+            "value": 296
+          },
+          {
+            "name": "KEY_F8",
+            "sourceLine": 665,
+            "value": 297
+          },
+          {
+            "name": "KEY_F9",
+            "sourceLine": 666,
+            "value": 298
+          },
+          {
+            "name": "KEY_F10",
+            "sourceLine": 667,
+            "value": 299
+          },
+          {
+            "name": "KEY_F11",
+            "sourceLine": 668,
+            "value": 300
+          },
+          {
+            "name": "KEY_F12",
+            "sourceLine": 669,
+            "value": 301
+          },
+          {
+            "name": "KEY_LEFT_SHIFT",
+            "sourceLine": 670,
+            "value": 340
+          },
+          {
+            "name": "KEY_LEFT_CONTROL",
+            "sourceLine": 671,
+            "value": 341
+          },
+          {
+            "name": "KEY_LEFT_ALT",
+            "sourceLine": 672,
+            "value": 342
+          },
+          {
+            "name": "KEY_LEFT_SUPER",
+            "sourceLine": 673,
+            "value": 343
+          },
+          {
+            "name": "KEY_RIGHT_SHIFT",
+            "sourceLine": 674,
+            "value": 344
+          },
+          {
+            "name": "KEY_RIGHT_CONTROL",
+            "sourceLine": 675,
+            "value": 345
+          },
+          {
+            "name": "KEY_RIGHT_ALT",
+            "sourceLine": 676,
+            "value": 346
+          },
+          {
+            "name": "KEY_RIGHT_SUPER",
+            "sourceLine": 677,
+            "value": 347
+          },
+          {
+            "name": "KEY_KB_MENU",
+            "sourceLine": 678,
+            "value": 348
+          },
+          {
+            "name": "KEY_KP_0",
+            "sourceLine": 680,
+            "value": 320
+          },
+          {
+            "name": "KEY_KP_1",
+            "sourceLine": 681,
+            "value": 321
+          },
+          {
+            "name": "KEY_KP_2",
+            "sourceLine": 682,
+            "value": 322
+          },
+          {
+            "name": "KEY_KP_3",
+            "sourceLine": 683,
+            "value": 323
+          },
+          {
+            "name": "KEY_KP_4",
+            "sourceLine": 684,
+            "value": 324
+          },
+          {
+            "name": "KEY_KP_5",
+            "sourceLine": 685,
+            "value": 325
+          },
+          {
+            "name": "KEY_KP_6",
+            "sourceLine": 686,
+            "value": 326
+          },
+          {
+            "name": "KEY_KP_7",
+            "sourceLine": 687,
+            "value": 327
+          },
+          {
+            "name": "KEY_KP_8",
+            "sourceLine": 688,
+            "value": 328
+          },
+          {
+            "name": "KEY_KP_9",
+            "sourceLine": 689,
+            "value": 329
+          },
+          {
+            "name": "KEY_KP_DECIMAL",
+            "sourceLine": 690,
+            "value": 330
+          },
+          {
+            "name": "KEY_KP_DIVIDE",
+            "sourceLine": 691,
+            "value": 331
+          },
+          {
+            "name": "KEY_KP_MULTIPLY",
+            "sourceLine": 692,
+            "value": 332
+          },
+          {
+            "name": "KEY_KP_SUBTRACT",
+            "sourceLine": 693,
+            "value": 333
+          },
+          {
+            "name": "KEY_KP_ADD",
+            "sourceLine": 694,
+            "value": 334
+          },
+          {
+            "name": "KEY_KP_ENTER",
+            "sourceLine": 695,
+            "value": 335
+          },
+          {
+            "name": "KEY_KP_EQUAL",
+            "sourceLine": 696,
+            "value": 336
+          },
+          {
+            "name": "KEY_BACK",
+            "sourceLine": 698,
+            "value": 4
+          },
+          {
+            "name": "KEY_MENU",
+            "sourceLine": 699,
+            "value": 5
+          },
+          {
+            "name": "KEY_VOLUME_UP",
+            "sourceLine": 700,
+            "value": 24
+          },
+          {
+            "name": "KEY_VOLUME_DOWN",
+            "sourceLine": 701,
+            "value": 25
+          }
+        ],
+        "name": "KeyboardKey",
+        "sourceLine": 587,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "MOUSE_BUTTON_LEFT",
+            "sourceLine": 711,
+            "value": 0
+          },
+          {
+            "name": "MOUSE_BUTTON_RIGHT",
+            "sourceLine": 712,
+            "value": 1
+          },
+          {
+            "name": "MOUSE_BUTTON_MIDDLE",
+            "sourceLine": 713,
+            "value": 2
+          },
+          {
+            "name": "MOUSE_BUTTON_SIDE",
+            "sourceLine": 714,
+            "value": 3
+          },
+          {
+            "name": "MOUSE_BUTTON_EXTRA",
+            "sourceLine": 715,
+            "value": 4
+          },
+          {
+            "name": "MOUSE_BUTTON_FORWARD",
+            "sourceLine": 716,
+            "value": 5
+          },
+          {
+            "name": "MOUSE_BUTTON_BACK",
+            "sourceLine": 717,
+            "value": 6
+          }
+        ],
+        "name": "MouseButton",
+        "sourceLine": 710,
+        "underlyingCanonicalCType": "int"
+      },
+      {
+        "constants": [
+          {
+            "name": "LOG_ALL",
+            "sourceLine": 575,
+            "value": 0
+          },
+          {
+            "name": "LOG_TRACE",
+            "sourceLine": 576,
+            "value": 1
+          },
+          {
+            "name": "LOG_DEBUG",
+            "sourceLine": 577,
+            "value": 2
+          },
+          {
+            "name": "LOG_INFO",
+            "sourceLine": 578,
+            "value": 3
+          },
+          {
+            "name": "LOG_WARNING",
+            "sourceLine": 579,
+            "value": 4
+          },
+          {
+            "name": "LOG_ERROR",
+            "sourceLine": 580,
+            "value": 5
+          },
+          {
+            "name": "LOG_FATAL",
+            "sourceLine": 581,
+            "value": 6
+          },
+          {
+            "name": "LOG_NONE",
+            "sourceLine": 582,
+            "value": 7
+          }
+        ],
+        "name": "TraceLogLevel",
+        "sourceLine": 574,
+        "underlyingCanonicalCType": "int"
+      }
+    ],
+    "functions": [
+      {
+        "name": "BeginDrawing",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1046
+      },
+      {
+        "name": "BeginMode3D",
+        "parameters": [
+          {
+            "name": "camera",
+            "type": {
+              "cType": "Camera3D",
+              "canonicalCType": "struct Camera3D",
+              "haxeType": "raylib.raw.Camera3D"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1050
+      },
+      {
+        "name": "CheckCollisionBoxes",
+        "parameters": [
+          {
+            "name": "box1",
+            "type": {
+              "cType": "BoundingBox",
+              "canonicalCType": "struct BoundingBox",
+              "haxeType": "raylib.raw.BoundingBox"
+            }
+          },
+          {
+            "name": "box2",
+            "type": {
+              "cType": "BoundingBox",
+              "canonicalCType": "struct BoundingBox",
+              "haxeType": "raylib.raw.BoundingBox"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1648
+      },
+      {
+        "name": "ClearBackground",
+        "parameters": [
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1045
+      },
+      {
+        "name": "CloseWindow",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 987
+      },
+      {
+        "name": "DisableCursor",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1041
+      },
+      {
+        "name": "DrawCircle",
+        "parameters": [
+          {
+            "name": "centerX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "centerY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "radius",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1281
+      },
+      {
+        "name": "DrawCube",
+        "parameters": [
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "width",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "length",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1569
+      },
+      {
+        "name": "DrawCubeV",
+        "parameters": [
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "size",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1570
+      },
+      {
+        "name": "DrawCubeWires",
+        "parameters": [
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "width",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "length",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1571
+      },
+      {
+        "name": "DrawCubeWiresV",
+        "parameters": [
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "size",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1572
+      },
+      {
+        "name": "DrawFPS",
+        "parameters": [
+          {
+            "name": "posX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "posY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1502
+      },
+      {
+        "name": "DrawGrid",
+        "parameters": [
+          {
+            "name": "slices",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "spacing",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1584
+      },
+      {
+        "name": "DrawLine",
+        "parameters": [
+          {
+            "name": "startPosX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "startPosY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "endPosX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "endPosY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1275
+      },
+      {
+        "name": "DrawLine3D",
+        "parameters": [
+          {
+            "name": "startPos",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "endPos",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1564
+      },
+      {
+        "name": "DrawPixel",
+        "parameters": [
+          {
+            "name": "posX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "posY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1273
+      },
+      {
+        "name": "DrawRectangle",
+        "parameters": [
+          {
+            "name": "posX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "posY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1294
+      },
+      {
+        "name": "DrawRectangleLines",
+        "parameters": [
+          {
+            "name": "posX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "posY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1301
+      },
+      {
+        "name": "DrawSphere",
+        "parameters": [
+          {
+            "name": "centerPos",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "radius",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1573
+      },
+      {
+        "name": "DrawSphereWires",
+        "parameters": [
+          {
+            "name": "centerPos",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "radius",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "rings",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "slices",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1575
+      },
+      {
+        "name": "DrawText",
+        "parameters": [
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          },
+          {
+            "name": "posX",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "posY",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "fontSize",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "color",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1503
+      },
+      {
+        "name": "EnableCursor",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1040
+      },
+      {
+        "name": "EndDrawing",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1047
+      },
+      {
+        "name": "EndMode3D",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1051
+      },
+      {
+        "name": "GetColor",
+        "parameters": [
+          {
+            "name": "hexValue",
+            "type": {
+              "cType": "unsigned int",
+              "canonicalCType": "unsigned int",
+              "haxeType": "c.UInt32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "Color",
+          "canonicalCType": "Color",
+          "haxeType": "raylib.raw.Color"
+        },
+        "sourceLine": 1479
+      },
+      {
+        "name": "GetFPS",
+        "parameters": [],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 1095
+      },
+      {
+        "name": "GetFrameTime",
+        "parameters": [],
+        "returnType": {
+          "cType": "float",
+          "canonicalCType": "float",
+          "haxeType": "c.Float32"
+        },
+        "sourceLine": 1093
+      },
+      {
+        "name": "GetMouseDelta",
+        "parameters": [],
+        "returnType": {
+          "cType": "Vector2",
+          "canonicalCType": "Vector2",
+          "haxeType": "raylib.raw.Vector2"
+        },
+        "sourceLine": 1229
+      },
+      {
+        "name": "GetMousePosition",
+        "parameters": [],
+        "returnType": {
+          "cType": "Vector2",
+          "canonicalCType": "Vector2",
+          "haxeType": "raylib.raw.Vector2"
+        },
+        "sourceLine": 1228
+      },
+      {
+        "name": "GetMouseWheelMove",
+        "parameters": [],
+        "returnType": {
+          "cType": "float",
+          "canonicalCType": "float",
+          "haxeType": "c.Float32"
+        },
+        "sourceLine": 1233
+      },
+      {
+        "name": "GetRayCollisionBox",
+        "parameters": [
+          {
+            "name": "ray",
+            "type": {
+              "cType": "Ray",
+              "canonicalCType": "struct Ray",
+              "haxeType": "raylib.raw.Ray"
+            }
+          },
+          {
+            "name": "box",
+            "type": {
+              "cType": "BoundingBox",
+              "canonicalCType": "struct BoundingBox",
+              "haxeType": "raylib.raw.BoundingBox"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "RayCollision",
+          "canonicalCType": "RayCollision",
+          "haxeType": "raylib.raw.RayCollision"
+        },
+        "sourceLine": 1651
+      },
+      {
+        "name": "GetRayCollisionSphere",
+        "parameters": [
+          {
+            "name": "ray",
+            "type": {
+              "cType": "Ray",
+              "canonicalCType": "struct Ray",
+              "haxeType": "raylib.raw.Ray"
+            }
+          },
+          {
+            "name": "center",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "radius",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "RayCollision",
+          "canonicalCType": "RayCollision",
+          "haxeType": "raylib.raw.RayCollision"
+        },
+        "sourceLine": 1650
+      },
+      {
+        "name": "GetScreenHeight",
+        "parameters": [],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 1016
+      },
+      {
+        "name": "GetScreenToWorldRay",
+        "parameters": [
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector2",
+              "canonicalCType": "struct Vector2",
+              "haxeType": "raylib.raw.Vector2"
+            }
+          },
+          {
+            "name": "camera",
+            "type": {
+              "cType": "Camera",
+              "canonicalCType": "struct Camera3D",
+              "haxeType": "raylib.raw.Camera"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "Ray",
+          "canonicalCType": "Ray",
+          "haxeType": "raylib.raw.Ray"
+        },
+        "sourceLine": 1082
+      },
+      {
+        "name": "GetScreenWidth",
+        "parameters": [],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 1015
+      },
+      {
+        "name": "GetTime",
+        "parameters": [],
+        "returnType": {
+          "cType": "double",
+          "canonicalCType": "double",
+          "haxeType": "Float"
+        },
+        "sourceLine": 1094
+      },
+      {
+        "name": "InitWindow",
+        "parameters": [
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "title",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 986
+      },
+      {
+        "name": "IsCursorHidden",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1039
+      },
+      {
+        "name": "IsKeyDown",
+        "parameters": [
+          {
+            "name": "key",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1200
+      },
+      {
+        "name": "IsKeyPressed",
+        "parameters": [
+          {
+            "name": "key",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1198
+      },
+      {
+        "name": "IsKeyReleased",
+        "parameters": [
+          {
+            "name": "key",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1201
+      },
+      {
+        "name": "IsMouseButtonDown",
+        "parameters": [
+          {
+            "name": "button",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1223
+      },
+      {
+        "name": "IsMouseButtonPressed",
+        "parameters": [
+          {
+            "name": "button",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1222
+      },
+      {
+        "name": "IsMouseButtonReleased",
+        "parameters": [
+          {
+            "name": "button",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1224
+      },
+      {
+        "name": "IsWindowFocused",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 994
+      },
+      {
+        "name": "IsWindowReady",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 989
+      },
+      {
+        "name": "IsWindowResized",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 995
+      },
+      {
+        "name": "SetConfigFlags",
+        "parameters": [
+          {
+            "name": "flags",
+            "type": {
+              "cType": "unsigned int",
+              "canonicalCType": "unsigned int",
+              "haxeType": "c.UInt32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1113
+      },
+      {
+        "name": "SetExitKey",
+        "parameters": [
+          {
+            "name": "key",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1206
+      },
+      {
+        "name": "SetTargetFPS",
+        "parameters": [
+          {
+            "name": "fps",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1092
+      },
+      {
+        "name": "SetTraceLogLevel",
+        "parameters": [
+          {
+            "name": "logLevel",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1117
+      },
+      {
+        "name": "SetWindowMinSize",
+        "parameters": [
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1009
+      },
+      {
+        "name": "SetWindowSize",
+        "parameters": [
+          {
+            "name": "width",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1011
+      },
+      {
+        "name": "WindowShouldClose",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 988
+      }
+    ],
+    "records": [
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "max": 12,
+            "min": 0
+          },
+          "size": 24
+        },
+        "fields": [
+          {
+            "name": "min",
+            "sourceLine": 458,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "max",
+            "sourceLine": 459,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          }
+        ],
+        "name": "BoundingBox",
+        "sourceLine": 457
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "fovy": 36,
+            "position": 0,
+            "projection": 40,
+            "target": 12,
+            "up": 24
+          },
+          "size": 44
+        },
+        "fields": [
+          {
+            "name": "position",
+            "sourceLine": 326,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "target",
+            "sourceLine": 327,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "up",
+            "sourceLine": 328,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "fovy",
+            "sourceLine": 329,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "projection",
+            "sourceLine": 330,
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "name": "Camera3D",
+        "sourceLine": 325
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 1,
+          "offsets": {
+            "a": 3,
+            "b": 2,
+            "g": 1,
+            "r": 0
+          },
+          "size": 4
+        },
+        "fields": [
+          {
+            "name": "r",
+            "sourceLine": 247,
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "g",
+            "sourceLine": 248,
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "b",
+            "sourceLine": 249,
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "a",
+            "sourceLine": 250,
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          }
+        ],
+        "name": "Color",
+        "sourceLine": 246
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "direction": 12,
+            "position": 0
+          },
+          "size": 24
+        },
+        "fields": [
+          {
+            "name": "position",
+            "sourceLine": 444,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "direction",
+            "sourceLine": 445,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          }
+        ],
+        "name": "Ray",
+        "sourceLine": 443
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "distance": 4,
+            "hit": 0,
+            "normal": 20,
+            "point": 8
+          },
+          "size": 32
+        },
+        "fields": [
+          {
+            "name": "hit",
+            "sourceLine": 450,
+            "type": {
+              "cType": "bool",
+              "canonicalCType": "_Bool",
+              "haxeType": "Bool"
+            }
+          },
+          {
+            "name": "distance",
+            "sourceLine": 451,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "point",
+            "sourceLine": 452,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "normal",
+            "sourceLine": 453,
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          }
+        ],
+        "name": "RayCollision",
+        "sourceLine": 449
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "x": 0,
+            "y": 4
+          },
+          "size": 8
+        },
+        "fields": [
+          {
+            "name": "x",
+            "sourceLine": 215,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "sourceLine": 216,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "name": "Vector2",
+        "sourceLine": 214
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "x": 0,
+            "y": 4,
+            "z": 8
+          },
+          "size": 12
+        },
+        "fields": [
+          {
+            "name": "x",
+            "sourceLine": 221,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "sourceLine": 222,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "z",
+            "sourceLine": 223,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "name": "Vector3",
+        "sourceLine": 220
+      }
+    ]
+  },
+  "extraction": {
+    "arguments": [
+      "--target=x86_64-unknown-linux-gnu",
+      "-x",
+      "c",
+      "-std=c11",
+      "-ffreestanding",
+      "-DRAYLIB_NO_DEPRECATED",
+      "-I",
+      "${RAYLIB_INCLUDE}",
+      "-Xclang",
+      "-ast-dump=json",
+      "-fsyntax-only",
+      "${RAYLIB_HEADER}"
+    ],
+    "authority": "clang-ast-json",
+    "clang": {
+      "dumpMachine": "arm64-apple-darwin24.4.0",
+      "family": "clang",
+      "version": "Apple clang version 17.0.0 (clang-1700.0.13.3)"
+    },
+    "requestedTarget": "x86_64-unknown-linux-gnu"
+  },
+  "generatedPaths": [
+    "src/raylib/raw/BoundingBox.hx",
+    "src/raylib/raw/Camera.hx",
+    "src/raylib/raw/Camera3D.hx",
+    "src/raylib/raw/CameraProjection.hx",
+    "src/raylib/raw/Color.hx",
+    "src/raylib/raw/ConfigFlags.hx",
+    "src/raylib/raw/KeyboardKey.hx",
+    "src/raylib/raw/MouseButton.hx",
+    "src/raylib/raw/Ray.hx",
+    "src/raylib/raw/RayCollision.hx",
+    "src/raylib/raw/Raylib.hx",
+    "src/raylib/raw/TraceLogLevel.hx",
+    "src/raylib/raw/Vector2.hx",
+    "src/raylib/raw/Vector3.hx"
+  ],
+  "generator": {
+    "algorithm": "hxc-raylib-clang-core-v1",
+    "path": "scripts/raylib/core_binding.py"
+  },
+  "schemaVersion": 1,
+  "selection": {
+    "counts": {
+      "aliases": 1,
+      "enumConstants": 143,
+      "enums": 5,
+      "functions": 54,
+      "omittedFamilies": 6,
+      "records": 7
+    },
+    "coverageState": "coherent-caxecraft-core",
+    "omissions": [
+      {
+        "family": "callbacks",
+        "owner": "haxe_c-xge.10",
+        "reason": "Callback calling convention, retention, thread, and exception boundaries are not yet represented by the reusable C interop layer."
+      },
+      {
+        "family": "variadics",
+        "owner": "haxe_c-xge.10",
+        "reason": "C variadics such as TraceLog and TextFormat require a separate typed policy and are never approximated as fixed-arity calls."
+      },
+      {
+        "family": "borrowed-or-retained-pointers",
+        "owner": "haxe_c-xge.10",
+        "reason": "Pointer depth, nullability, lifetime, and mutation authority need explicit machine-readable ownership before admission."
+      },
+      {
+        "family": "resource-owning-apis",
+        "owner": "haxe_c-xge.10",
+        "reason": "Images, textures, fonts, models, shaders, audio, and file buffers need paired ownership and unload contracts."
+      },
+      {
+        "family": "compound-literal-color-macros",
+        "owner": "haxe_c-xge.4",
+        "reason": "Raylib color macros expand to C compound literals; typed allocation-free Haxe constants belong in the reviewed semantic facade."
+      },
+      {
+        "family": "remaining-public-header",
+        "owner": "haxe_c-xge.10",
+        "reason": "This release is the complete coherent Caxecraft core, not a claim of complete raylib 6.0 binding coverage."
+      }
+    ],
+    "path": "docs/specs/raylib-core-selection.json",
+    "sha256": "e6cc4d768e784188118bc46633d7fa53f7303f313a2fe0d257e6810ef27e9318"
+  },
+  "upstream": {
+    "apiVersion": 600,
+    "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+    "header": {
+      "path": "src/raylib.h",
+      "sha256": "047e7255f93f8c34039cab906ad76136706b5c7b4c5b5b065d84141963ee9b6b"
+    },
+    "licenseExpression": "Zlib",
+    "licenseUrl": "https://github.com/raysan5/raylib/blob/dbc56a87da87d973a9c5baa4e7438a9d20121d28/LICENSE",
+    "name": "raylib",
+    "release": "6.0"
+  }
+}

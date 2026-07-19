@@ -105,11 +105,18 @@ typed-AST declaration graph. It prepares every reached import before symbol
 finalization, then lowers exact names only through `CSymbolRegistry`. A valid
 import has these properties:
 
-- every reached type, constant, field, and function has an exact `@:c.name`;
+- every reached type, constant, field, and function resolves one exact external
+  C name. A header-owned `extern` declaration defaults to its identical Haxe
+  type/field spelling; `@:c.name` is required only when the native spelling
+  differs;
 - an authoritative `@:c.include` supplies the definition; generated C never
   recreates the foreign struct, enum, or typedef;
 - an imported enum name is the header's typedef use-site spelling, so anonymous
   `typedef enum { ... } Name` declarations remain usable without inventing a tag;
+- a direct one-level typedef alias to an imported struct preserves its exact C
+  typedef identity in the import plan while sharing the target struct's HxcIR
+  value representation. This needs no wrapper or conversion; alias chains,
+  cycles, and cross-family aliases remain fail-closed;
 - functions are static extern, fixed-arity, non-callback C calls whose admitted
   parameter and result types are exact scalars or by-value imported values;
 - imported struct fields are ordinary typed HxcIR places, so reads and writes
@@ -159,6 +166,28 @@ extern class PointLib {
   public static function translate(point:Point, dx:Coord, dy:Coord):Point;
 }
 ```
+
+The same fixture also proves a transparent native alias:
+
+```haxe
+@:c.name("pointlib_point_alias")
+@:c.include("pointlib.h", c.IncludeKind.Local)
+extern typedef PointAlias = Point;
+```
+
+Calls may use `PointAlias` exactly where the C header does while field/place
+semantics reuse `Point`'s imported layout. The compiler does not synthesize a C
+typedef or an adapter because the authoritative header already owns both.
+Raylib's `Camera` alias uses this same reusable path; see
+[the raw core binding](raylib-raw-core.md).
+
+The identity default is still an exact ABI fact, not a generated-name
+heuristic. `CSymbolRegistry` validates it against C spelling, reserved names,
+and namespace collisions and records it as the requested external name. A
+default C calling convention on a header-owned fixed-arity function is likewise
+implicit; non-default conventions remain explicit metadata. This is why a raw
+binding can write `public static function BeginDrawing():Void` without repeating
+either `@:c.name("BeginDrawing")` or `@:c.callingConvention(C)`.
 
 Callbacks, variadics, native pointers, retained strings, opaque resource
 ownership, unions, bit fields, packed layouts, source preprocessor definitions,

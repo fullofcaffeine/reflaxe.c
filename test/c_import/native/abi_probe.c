@@ -10,6 +10,10 @@ _Static_assert(offsetof(pointlib_point, x) == 0U, "pointlib_point.x offset drift
 _Static_assert(offsetof(pointlib_point, y) == sizeof(pointlib_coord), "pointlib_point.y offset drifted");
 _Static_assert(sizeof(pointlib_point) == (2U * sizeof(pointlib_coord)), "pointlib_point size drifted");
 _Static_assert(_Alignof(pointlib_point) == _Alignof(pointlib_coord), "pointlib_point alignment drifted");
+_Static_assert(sizeof(pointlib_point_alias) == sizeof(pointlib_point), "pointlib point alias size drifted");
+_Static_assert(_Alignof(pointlib_point_alias) == _Alignof(pointlib_point), "pointlib point alias alignment drifted");
+_Static_assert(_Generic((pointlib_point_alias){0}, pointlib_point: 1, default: 0) == 1,
+  "pointlib_point_alias must alias pointlib_point");
 _Static_assert(POINTLIB_AXIS_X == 0, "POINTLIB_AXIS_X value drifted");
 _Static_assert(POINTLIB_AXIS_Y == 1, "POINTLIB_AXIS_Y value drifted");
 _Static_assert(POINTLIB_COORD_NEGATIVE_THREE == -3, "negative constant drifted");
@@ -24,9 +28,11 @@ int main(void) {
   const pointlib_point right = pointlib_point_make(POINTLIB_COORD_FIVE, POINTLIB_COORD_SEVEN);
   left.x = POINTLIB_COORD_ONE;
   left = pointlib_point_translate(left, POINTLIB_COORD_ONE, POINTLIB_COORD_FIVE);
+  const pointlib_point_alias point_alias = pointlib_point_alias_identity(left);
   const int64_t dot = pointlib_point_dot(left, right);
   const pointlib_coord component = pointlib_point_component(left, POINTLIB_AXIS_Y);
-  if (!pointlib_point_verify(left, right, dot, component, POINTLIB_AXIS_Y, "c-import-é")) {
+  if (point_alias.x != left.x || point_alias.y != left.y
+      || !pointlib_point_verify(left, right, dot, component, POINTLIB_AXIS_Y, "c-import-é")) {
     return 1;
   }
   pointlib_float_point float_point = pointlib_float_point_make(POINTLIB_FLOAT_ONE_POINT_FIVE, POINTLIB_FLOAT_NEGATIVE_TWO);

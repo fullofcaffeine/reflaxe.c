@@ -62,7 +62,7 @@ class CBodyValueType {
 				this.irType = IRTCString;
 				this.cSpelling = "const-char-pointer:borrowed-literal";
 			case CBVKImport(value):
-				this.irType = IRTInstance(value.instanceId);
+				this.irType = value.semanticValueType();
 				this.cSpelling = 'c-import:${value.haxePath}';
 			case CBVKAggregate(aggregate):
 				this.irType = IRTInstance(aggregate.instanceId);
@@ -130,7 +130,7 @@ class CBodyValueType {
 
 	public function importedStructValue():Null<CPreparedImportType> {
 		return switch kind {
-			case CBVKImport(value) if (value.kind == CITStruct): value;
+			case CBVKImport(value): value.directStructTarget();
 			case _: null;
 		};
 	}

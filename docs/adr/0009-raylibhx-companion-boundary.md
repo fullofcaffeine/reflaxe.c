@@ -132,7 +132,11 @@ explicit user-supplied source tree only after it validates the complete lock.
 The central raw function module is `raylib.raw.Raylib`. Raw calls retain the
 upstream PascalCase field names, for example `InitWindow`, `BeginDrawing`, and
 `GetScreenToWorldRay`. Raw functions do not overload, allocate, translate
-errors, or invent default arguments.
+errors, or invent default arguments. Because those Haxe spellings are already
+the exact C spellings, generated raw source omits redundant `@:c.name` and
+default-C-calling-convention metadata; the direct-import registry still
+validates and records the resolved identities. Metadata remains present for a
+real spelling, convention, ownership, or other policy difference.
 
 `raylib.*` is the curated semantic layer. Its central module is
 `raylib.Raylib`. Core function names also remain PascalCase so raylib's manual,

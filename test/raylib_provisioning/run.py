@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SUITE = ROOT / "test/raylib_provisioning"
 FIXTURE = SUITE / "fixtures/smoke"
 SUPPORT_INCLUDE = SUITE / "support/include"
+ABI_PROBE = SUITE / "native/core_abi_probe.c"
 EXPECTED = SUITE / "expected"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -40,6 +41,15 @@ from scripts.raylib.provision import (  # noqa: E402
     run_command,
     sha256_file,
     write_report,
+)
+from scripts.raylib.core_binding import (  # noqa: E402
+    BindingFailure as CoreBindingFailure,
+    clang_identity as core_clang_identity,
+    extract_declarations as extract_core_declarations,
+    header_path as core_header_path,
+    load_lock as load_core_lock,
+    load_selection as load_core_selection,
+    parse_clang_ast as parse_core_clang_ast,
 )
 
 
@@ -76,6 +86,7 @@ STRICT_CLANG_CL_FLAGS = (
 )
 CLANG_CL_RUNTIME_FLAG = "/MD"
 EXPECTED_HEADLESS_STDOUT = "INFO: RLSW: Software renderer initialized successfully\n"
+EXPECTED_ABI_STDOUT = "raylib-core-abi: OK\n"
 VARIANTS = (
     ("linux-memory", "linux", "memory-software", False),
     ("linux-desktop", "linux", "desktop", False),
@@ -200,7 +211,7 @@ def rendered_project(root: Path) -> RenderedProject:
     return RenderedProject(normal_artifacts(root), manifest, runtime_plan)
 
 
-def fact_names(value: object, label: str) -> list[str]:
+def fact_names(value: object, label: str, owner_module: str) -> list[str]:
     if not isinstance(value, list):
         raise RaylibTestFailure(f"{label} must be an array")
     result: list[str] = []
@@ -208,8 +219,10 @@ def fact_names(value: object, label: str) -> list[str]:
         if not isinstance(entry, dict) or not isinstance(entry.get("name"), str):
             raise RaylibTestFailure(f"{label} contains an invalid fact: {entry!r}")
         owners = entry.get("ownerModulePaths")
-        if owners != ["RaylibNative"]:
-            raise RaylibTestFailure(f"{label} lost RaylibNative provenance: {entry!r}")
+        if owners != [owner_module]:
+            raise RaylibTestFailure(
+                f"{label} lost {owner_module} provenance: {entry!r}"
+            )
         result.append(entry["name"])
     return result
 
@@ -244,25 +257,41 @@ def validate_build_plan(
         {
             "path": "hxc_raylib_smoke_constants.h",
             "kind": "local",
-            "ownerModulePaths": ["RaylibNative"],
+            "ownerModulePaths": ["SmokeConstants", "SmokeValues"],
         },
         {
             "path": "raylib.h",
             "kind": "system",
-            "ownerModulePaths": ["Color", "RaylibNative", "TraceLogLevel"],
+            "ownerModulePaths": [
+                "raylib.raw.Camera",
+                "raylib.raw.Camera3D",
+                "raylib.raw.Color",
+                "raylib.raw.Ray",
+                "raylib.raw.Raylib",
+                "raylib.raw.Vector2",
+                "raylib.raw.Vector3",
+            ],
         },
     ]
     if plan.get("requiredHeaders") != expected_headers:
         raise RaylibTestFailure("neutral build plan lost exact raylib header facts")
     if system:
-        if fact_names(plan.get("pkgConfigPackages"), "pkgConfigPackages") != ["raylib"]:
+        if fact_names(
+            plan.get("pkgConfigPackages"),
+            "pkgConfigPackages",
+            "raylib.raw.Raylib",
+        ) != ["raylib"]:
             raise RaylibTestFailure("system neutral plan must select exactly pkg-config raylib")
         if plan.get("libraries") != [] or plan.get("frameworks") != []:
             raise RaylibTestFailure("system neutral plan silently mixed pkg-config with source facts")
     else:
         expected_libraries, expected_frameworks = link_facts(lock, platform_name, configuration)
-        actual_libraries = fact_names(plan.get("libraries"), "libraries")
-        actual_frameworks = fact_names(plan.get("frameworks"), "frameworks")
+        actual_libraries = fact_names(
+            plan.get("libraries"), "libraries", "raylib.raw.Raylib"
+        )
+        actual_frameworks = fact_names(
+            plan.get("frameworks"), "frameworks", "raylib.raw.Raylib"
+        )
         if len(actual_libraries) != len(expected_libraries) or set(actual_libraries) != set(expected_libraries):
             raise RaylibTestFailure(
                 f"neutral libraries differ for {platform_name}/{configuration}: {actual_libraries!r}"
@@ -454,6 +483,51 @@ def clang_cl_compile_arguments(
     return arguments, object_file
 
 
+def gcc_like_abi_compile_arguments(
+    compiler: str,
+    source: Path,
+    include_directory: Path,
+    native_root: Path,
+) -> tuple[list[str], Path]:
+    object_file = native_root / "core_abi_probe.o"
+    arguments = [
+        compiler,
+        "-std=c11",
+        *STRICT_C_FLAGS,
+        "-DRAYLIB_NO_DEPRECATED",
+        "-I",
+        str(include_directory),
+        "-c",
+        str(source),
+        "-o",
+        str(object_file),
+    ]
+    return arguments, object_file
+
+
+def clang_cl_abi_compile_arguments(
+    compiler: str,
+    source: Path,
+    include_directory: Path,
+    native_root: Path,
+) -> tuple[list[str], Path]:
+    object_file = native_root / "core_abi_probe.obj"
+    arguments = [
+        compiler,
+        "/nologo",
+        "/TC",
+        "/std:c11",
+        CLANG_CL_RUNTIME_FLAG,
+        *STRICT_CLANG_CL_FLAGS,
+        "/DRAYLIB_NO_DEPRECATED",
+        f"/I{include_directory}",
+        "/c",
+        str(source),
+        f"/Fo{object_file}",
+    ]
+    return arguments, object_file
+
+
 def gcc_like_link_arguments(
     compiler: str,
     object_file: Path,
@@ -513,6 +587,26 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
         generator=args.generator,
         allow_network=args.allow_network,
     )
+    core_lock = load_core_lock()
+    core_selection = load_core_selection()
+    clang = args.clang or "clang"
+    core_header = core_header_path(source_build.source_root)
+    core_ast = parse_core_clang_ast(clang, core_header)
+    core_declarations = extract_core_declarations(core_ast, core_selection)
+    if core_declarations != core_lock.get("declarations"):
+        raise RaylibTestFailure(
+            "pinned raylib Clang declarations differ from the checked core binding lock"
+        )
+    reverse_ast = dict(core_ast)
+    reverse_inner = core_ast.get("inner")
+    if not isinstance(reverse_inner, list):
+        raise RaylibTestFailure("pinned raylib Clang AST omitted top-level declarations")
+    reverse_ast["inner"] = list(reversed(reverse_inner))
+    if extract_core_declarations(reverse_ast, core_selection) != core_declarations:
+        raise RaylibTestFailure(
+            "raylib raw binding changed with Clang declaration discovery order"
+        )
+    current_core_clang = core_clang_identity(clang)
     work_root = source_build.build_root.parent
     generated_root = work_root / f"{source_build.build_root.name}-generated-haxe"
     native_root = work_root / f"{source_build.build_root.name}-generated-native"
@@ -533,6 +627,7 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
             "${CXX_COMPILER}": args.cxx,
             "${CMAKE}": cmake,
             "${HAXE}": haxe,
+            "${CLANG}": clang,
         }
     )
     haxe_identity = run_command(
@@ -620,6 +715,87 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
         timeout=120,
         label="generated raylib native link",
     )
+
+    abi_source = native_root / "core_abi_probe.c"
+    abi_source.write_bytes(ABI_PROBE.read_bytes())
+    if family == "clang-cl":
+        abi_compile_arguments, abi_object = clang_cl_abi_compile_arguments(
+            args.cc,
+            abi_source,
+            source_build.include_directory,
+            native_root,
+        )
+    else:
+        abi_compile_arguments, abi_object = gcc_like_abi_compile_arguments(
+            args.cc,
+            abi_source,
+            source_build.include_directory,
+            native_root,
+        )
+    abi_compile_result = run_command(
+        abi_compile_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="strict raylib core ABI probe compile",
+    )
+    abi_executable = native_root / (
+        "raylib-core-abi.exe" if args.platform == "windows" else "raylib-core-abi"
+    )
+    if family == "clang-cl":
+        abi_link_arguments = clang_cl_link_arguments(
+            args.cc,
+            abi_object,
+            source_build.library_file,
+            libraries,
+            abi_executable,
+        )
+    else:
+        abi_link_arguments = gcc_like_link_arguments(
+            args.cc,
+            abi_object,
+            source_build.library_file,
+            libraries,
+            frameworks,
+            abi_executable,
+        )
+    abi_link_result = run_command(
+        abi_link_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="raylib core ABI probe link",
+    )
+    abi_run_evidence: dict[str, object] = {"exercised": False}
+    if args.run:
+        abi_run_result = run_command(
+            [str(abi_executable)],
+            cwd=native_root,
+            replacements=replacements,
+            timeout=30,
+            label="raylib core ABI probe run",
+        )
+        abi_stdout = normalize_text(
+            abi_run_result.process.stdout.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        abi_stderr = normalize_text(
+            abi_run_result.process.stderr.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        if abi_stdout != EXPECTED_ABI_STDOUT or abi_stderr != "":
+            raise RaylibTestFailure(
+                f"raylib core ABI probe output drifted: stdout={abi_stdout!r}, "
+                f"stderr={abi_stderr!r}"
+            )
+        abi_run_evidence = dict(abi_run_result.evidence)
+        abi_run_evidence.update(
+            {
+                "exercised": True,
+                "stdoutText": abi_stdout,
+                "stderrText": abi_stderr,
+            }
+        )
     run_evidence: dict[str, object] = {"exercised": False}
     if args.run:
         if args.configuration != "memory-software":
@@ -666,6 +842,13 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
             "runtimePlan": project.runtime_plan,
             "artifacts": artifact_hashes(generated_root),
         },
+        "rawBinding": {
+            "declarationSha256": core_lock["declarationSha256"],
+            "selectedCounts": core_lock["selection"]["counts"],
+            "clang": current_core_clang,
+            "requestedTarget": core_lock["extraction"]["requestedTarget"],
+            "sourceOrderIndependent": True,
+        },
         "nativeConsumer": {
             "compiler": compiler_info,
             "compilerIdentity": compiler_commands,
@@ -683,10 +866,27 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "sizeBytes": executable.stat().st_size,
             },
         },
+        "abiProbe": {
+            "sourceSha256": sha256_file(abi_source),
+            "compile": abi_compile_result.evidence,
+            "link": abi_link_result.evidence,
+            "run": abi_run_evidence,
+            "object": {
+                "path": normalize_text(str(abi_object), replacements),
+                "sha256": sha256_file(abi_object),
+                "sizeBytes": abi_object.stat().st_size,
+            },
+            "executable": {
+                "path": normalize_text(str(abi_executable), replacements),
+                "sha256": sha256_file(abi_executable),
+                "sizeBytes": abi_executable.stat().st_size,
+            },
+        },
         "claims": {
             "cacheAuthorityExplicit": True,
             "networkAfterProvision": False,
             "generatedCCompiled": True,
+            "coreAbiVerified": True,
             "linked": True,
             "executed": bool(args.run),
             "runConfiguration": args.configuration if args.run else None,
@@ -704,6 +904,7 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
         args.cxx,
         cmake,
         haxe,
+        clang,
     ]
     if args.cache_root is not None:
         forbidden.append(args.cache_root.resolve())
@@ -723,6 +924,7 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     parser.add_argument("--cc")
     parser.add_argument("--cxx")
     parser.add_argument("--cmake")
+    parser.add_argument("--clang")
     parser.add_argument("--generator", choices=("Ninja", "Unix Makefiles"))
     parser.add_argument("--allow-network", action="store_true")
     parser.add_argument("--run", action="store_true")
@@ -768,12 +970,14 @@ def main(argv: Iterable[str] = ()) -> int:
                     args.cc,
                     args.cxx,
                     args.cmake,
+                    args.clang,
                 ],
             )
             if args.print_report:
                 print(canonical_json(report), end="")
             print(
-                "raylib-provisioning: OK: generated Haxe compiled and linked against "
+                "raylib-provisioning: OK: raw declarations and ABI probe verified; "
+                "generated Haxe compiled and linked against "
                 f"raylib 6.0 ({args.platform}/{args.configuration}); executed={str(args.run).lower()}"
             )
             return 0
@@ -789,6 +993,7 @@ def main(argv: Iterable[str] = ()) -> int:
                 args.cc,
                 args.cxx,
                 args.cmake,
+                args.clang,
                 args.generator,
                 args.allow_network,
                 args.run,
@@ -802,11 +1007,19 @@ def main(argv: Iterable[str] = ()) -> int:
         values = snapshot_values()
         validate_expected(values)
         print(
-            "raylib-provisioning: OK: lock, fail-closed authorities, five neutral plans, "
-            "deterministic generated C, and zero-hxrt evidence"
+            "raylib-provisioning: OK: provisioning/raw locks, fail-closed authorities, "
+            "deterministic raw Haxe and generated C, five neutral plans, ABI fixtures, "
+            "and zero-hxrt evidence"
         )
         return 0
-    except (OSError, UnicodeError, json.JSONDecodeError, ProvisionFailure, RaylibTestFailure) as error:
+    except (
+        OSError,
+        UnicodeError,
+        json.JSONDecodeError,
+        CoreBindingFailure,
+        ProvisionFailure,
+        RaylibTestFailure,
+    ) as error:
         print(f"raylib-provisioning: ERROR: {error}", file=sys.stderr)
         return 1
 

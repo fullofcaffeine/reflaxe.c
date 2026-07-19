@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-provisioning-abi",
+  "role": "fixture",
+  "type": "abi",
+  "status": "active",
+  "requirements": [
+    "HXC-FFI-001",
+    "HXC-FFI-005",
+    "HXC-FFI-010"
+  ],
+  "sources": [
+    "docs/specs/raylib-core-selection.json",
+    "docs/specs/raylib-core-binding-lock.json",
+    "scripts/raylib/core_binding.py",
+    "src/raylib/raw/Raylib.hx",
+    "test/raylib_provisioning/native/core_abi_probe.c",
+    "test/raylib_provisioning/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../raylib_provisioning/run.py"
+    ],
+    "workingDirectory": "test/abi/raylib-provisioning",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "ABI fixtures, and zero-hxrt evidence$"
+    },
+    "artifacts": [
+      {
+        "path": "test/raylib_provisioning/native/core_abi_probe.c",
+        "format": "c",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

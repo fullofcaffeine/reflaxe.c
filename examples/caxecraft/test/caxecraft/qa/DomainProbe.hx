@@ -47,6 +47,11 @@ final class DomainProbe {
 	/** Return zero on success, or a stable case number for the first failure. */
 	public static function selfCheck():Int {
 		#if c
+		// This is intentionally native fixed storage, not merely a way to make the
+		// test compile. It proves that a bounded 32 x 16 x 32 world can become one
+		// direct C byte array with no Haxe Array, heap allocation, GC, or hxrt. The
+		// Eval branch below supplies equivalent initialized storage only so an
+		// independent Haxe target can execute the shared gameplay as an oracle.
 		var storage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var cells:WorldCells = storage.span();
 		#else

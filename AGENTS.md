@@ -289,6 +289,14 @@ missing-metadata or missing-adapter assumptions.
   validated metadata/macros, a narrow typed DSL only for a demonstrated language
   gap, and finally explicit raw C authority. Repeated raw snippets indicate a
   missing abstraction.
+- Do not require or generate redundant metadata when a safe canonical identity
+  default expresses the exact same fact. Prefer the ordinary Haxe spelling or
+  structure, resolve that default once at the typed boundary, validate it with
+  the same rigor as an explicit value, and record the resolved fact in plans,
+  locks, or reports. Emit metadata only for a real source/target difference,
+  ambiguity, non-default policy, or unsafe authority. This rule removes
+  boilerplate; it never permits guessing an ABI fact that needs Clang, a native
+  probe, or an explicit ownership/lifetime decision.
 - A new macro, metadata spelling, or DSL needs typed/inspectable inputs and
   outputs, source-positioned negative diagnostics, deterministic expansion
   evidence, explicit allocation/ownership/unsafe/runtime/portability effects,
@@ -524,10 +532,12 @@ missing-metadata or missing-adapter assumptions.
   explicit and update `docs/symbol-naming.md` plus the owned snapshot together.
 - Exact `@:c.name` values are ABI/interop facts: preserve them byte-for-byte or
   reject them with `HXC5002`; never silently sanitize or hash them. Generated
-  internal/public/external defaults use the registry's `hxc_`, `hxc_api_`, and
-  `hxc_external_` namespaces. `hxc_` and `hxrt_` remain unavailable to authored
-  names, and public C/C++ spellings may not begin with underscore or contain
-  double underscore.
+  internal/public defaults use the registry's `hxc_` and `hxc_api_` namespaces.
+  A header-owned `extern` declaration without `@:c.name` uses its exact Haxe
+  declaration/field spelling as a validated external identity default; add
+  `@:c.name` only when the native spelling differs. `hxc_` and `hxrt_` remain
+  unavailable to authored or inferred external names, and public C/C++ spellings
+  may not begin with underscore or contain double underscore.
 - Respect C namespaces. Ordinary identifiers, tags, per-aggregate members, and
   per-function labels do not share one flat collision map. A generated collision
   is resolved from canonical semantic identity and recorded with both source and

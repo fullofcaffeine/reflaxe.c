@@ -428,7 +428,7 @@ owners, while the runtime plan records `typed-header-owned-c-imports` and no
 none of its header/library/package/framework facts. A separately compiled probe verifies the
 header's size, alignment, offsets, and constant values; identity-verified GCC
 and Clang link the generated program with pointlib at O0/O2. Callback return,
-variadic, native-pointer return, missing exact name, unsupported preprocessor
+variadic, native-pointer return, invalid inferred external name, unsupported preprocessor
 definition, embedded-NUL literal, and nonliteral `CString` fixtures fail with
 source-positioned `HXC3000` and no
 plausible artifact. See [typed C authoring](typed-c-authoring.md).

@@ -21,6 +21,8 @@ typedef struct pointlib_point {
   pointlib_coord y;
 } pointlib_point;
 
+typedef pointlib_point pointlib_point_alias;
+
 typedef struct pointlib_float_point {
   float x;
   float y;
@@ -37,6 +39,7 @@ typedef struct pointlib_float_point {
 
 pointlib_point pointlib_point_make(pointlib_coord x, pointlib_coord y);
 pointlib_point pointlib_point_translate(pointlib_point point, pointlib_coord dx, pointlib_coord dy);
+pointlib_point_alias pointlib_point_alias_identity(pointlib_point_alias point);
 int64_t pointlib_point_dot(pointlib_point left, pointlib_point right);
 pointlib_coord pointlib_point_component(pointlib_point point, pointlib_axis axis);
 bool pointlib_point_verify(pointlib_point left, pointlib_point right, int64_t dot, pointlib_coord component, pointlib_axis axis, const char *label);

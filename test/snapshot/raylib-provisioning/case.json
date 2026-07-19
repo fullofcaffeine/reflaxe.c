@@ -11,6 +11,9 @@
   ],
   "sources": [
     "scripts/test/snapshots.py",
+    "docs/specs/raylib-core-binding-lock.json",
+    "src/raylib/raw/Raylib.hx",
+    "test/raylib_provisioning/native/core_abi_probe.c",
     "test/raylib_provisioning/expected/include/hxc/program.h",
     "test/raylib_provisioning/expected/src/program.c",
     "test/raylib_provisioning/expected/hxc.runtime-plan.json",

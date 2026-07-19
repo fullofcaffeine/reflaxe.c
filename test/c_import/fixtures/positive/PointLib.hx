@@ -1,6 +1,8 @@
 @:c.include("pointlib.h", c.IncludeKind.Local)
 @:c.link("pointlib")
 extern class PointLib {
+	public static function pointlib_build_fact_probe():Void;
+
 	@:c.constant
 	@:c.name("POINTLIB_FLOAT_ONE_POINT_FIVE")
 	public static var floatOnePointFive(default, never):c.Float32;
@@ -38,6 +40,9 @@ extern class PointLib {
 
 	@:c.name("pointlib_point_translate")
 	public static function translate(point:Point, dx:Coord, dy:Coord):Point;
+
+	@:c.name("pointlib_point_alias_identity")
+	public static function aliasIdentity(point:PointAlias):PointAlias;
 
 	@:c.name("pointlib_point_dot")
 	public static function dot(left:Point, right:Point):c.Int64;

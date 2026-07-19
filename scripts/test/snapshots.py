@@ -196,6 +196,25 @@ def raylib_provisioning_artifacts() -> list[Artifact]:
                 value,
             )
         )
+    binding = load_module("raylib_core_binding", "scripts/raylib/core_binding.py")
+    lock = binding.load_lock()
+    raw_first = binding.render_files(lock)
+    raw_second = binding.render_files(lock)
+    if raw_first != raw_second:
+        raise SnapshotFailure("two raylib raw-binding renders were not byte-identical")
+    for name, value in raw_first.items():
+        artifacts.append(Artifact(Path("src/raylib/raw") / name, "text", value))
+    probe_first = binding.render_abi_probe(lock)
+    probe_second = binding.render_abi_probe(lock)
+    if probe_first != probe_second:
+        raise SnapshotFailure("two raylib core ABI-probe renders were not byte-identical")
+    artifacts.append(
+        Artifact(
+            Path("test/raylib_provisioning/native/core_abi_probe.c"),
+            "c",
+            probe_first,
+        )
+    )
     return artifacts
 
 

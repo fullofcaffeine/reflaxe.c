@@ -11,7 +11,12 @@
   ],
   "sources": [
     "docs/specs/raylib-provisioning-lock.json",
+    "docs/specs/raylib-core-selection.json",
+    "docs/specs/raylib-core-binding-lock.json",
     "scripts/raylib/provision.py",
+    "scripts/raylib/core_binding.py",
+    "test/raylib_provisioning/fixtures/nul_title/Main.hx",
+    "test/raylib_provisioning/test_core_binding.py",
     "test/raylib_provisioning/test_provision.py",
     "test/raylib_provisioning/run.py"
   ],
@@ -28,7 +33,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "fail-closed authorities, five neutral plans"
+      "value": "fail-closed authorities, deterministic raw Haxe"
     }
   }
 }

@@ -13,11 +13,12 @@
   ],
   "sources": [
     "src/reflaxe/c/interop/CImportRegistry.hx",
+    "src/reflaxe/c/macros/TypedCContractMacro.hx",
     "test/c_import/fixtures/callback_return/CallbackApi.hx",
     "test/c_import/fixtures/embedded_nul/Main.hx",
     "test/c_import/fixtures/implicit_float32/Main.hx",
     "test/c_import/fixtures/implicit_float32/build.hxml",
-    "test/c_import/fixtures/missing_name/MissingNameApi.hx",
+    "test/c_import/fixtures/inferred_keyword/InferredKeywordApi.hx",
     "test/c_import/fixtures/nonliteral_cstring/Main.hx",
     "test/c_import/fixtures/pointer_return/PointerApi.hx",
     "test/c_import/fixtures/preprocessor_define/DefineApi.hx",
@@ -36,7 +37,8 @@
   "expected": {
     "exitCode": 0,
     "diagnostics": [
-      "HXC3000"
+      "HXC3000",
+      "HXC5002"
     ],
     "stdout": {
       "mode": "regex",

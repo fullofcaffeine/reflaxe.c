@@ -26,12 +26,12 @@
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 2,
+      "typeInstances": 6,
       "functions": 1,
       "blocks": 4,
-      "modules": 3,
+      "modules": 7,
       "runtimeIntents": 0,
-      "instructions": 20,
+      "instructions": 40,
       "cleanupActions": 0
     },
     "programLocalHelpers": [],

@@ -12,10 +12,11 @@
   ],
   "sources": [
     "docs/specs/raylib-provisioning-lock.json",
-    "test/raylib_provisioning/fixtures/smoke/Color.hx",
-    "test/raylib_provisioning/fixtures/smoke/TraceLogLevel.hx",
-    "test/raylib_provisioning/fixtures/smoke/RaylibNative.hx",
+    "docs/specs/raylib-core-binding-lock.json",
+    "src/raylib/raw/Raylib.hx",
     "test/raylib_provisioning/fixtures/smoke/Main.hx",
+    "test/raylib_provisioning/fixtures/smoke/SmokeConstants.hx",
+    "test/raylib_provisioning/fixtures/smoke/SmokeValues.hx",
     "test/raylib_provisioning/fixtures/smoke/build.hxml",
     "test/raylib_provisioning/run.py"
   ],
@@ -32,7 +33,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "five neutral plans, deterministic generated C, and zero-hxrt evidence$"
+      "value": "five neutral plans, ABI fixtures, and zero-hxrt evidence$"
     },
     "artifacts": [
       {

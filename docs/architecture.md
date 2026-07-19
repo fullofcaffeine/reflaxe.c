@@ -337,6 +337,18 @@ places all prototypes before definitions, partitions proven non-returning cycle
 members, emits the ordered initialization wrapper for a non-empty plan, and produces a runtime-free project in
 both portable and metal. None of these stages can select `hxrt`.
 
+The direct-import registry also preserves one-level header-owned struct typedef
+aliases. The exact alias remains part of the C import/signature plan, while its
+semantic HxcIR value and structural field places share the target struct's
+representation. This is a zero-conversion boundary: no wrapper, duplicate
+layout, cast, allocation, or runtime feature is emitted. Alias chains, cycles,
+and aliases across semantic families are rejected rather than guessed.
+Header-owned extern names use the ordinary Haxe spelling as their validated
+external identity when `@:c.name` is absent; an explicit name remains the exact
+override only when the C spelling differs. Default fixed-arity C convention is
+resolved the same way. Both facts still enter the symbol/import plans before
+HxcIR emission.
+
 The type model normalizes base specifiers and keeps them separate from a
 grammar-level `CDeclarator` tree. Pointer, array, function, parenthesized, and
 abstract declarators therefore retain their association without reconstructing
@@ -376,8 +388,10 @@ Broader lowering remains fail-closed.
 `CSymbolRegistry` owns the boundary before any finalized name reaches that C
 AST. It batch-finalizes path-independent semantic requests against C's ordinary,
 tag, member, and label namespaces; exact `@:c.name` values are preserved or
-rejected, while compiler-owned defaults use readable `hxc_` provenance and
-stable hash suffixes only for collisions or length limits. The schema-1 table
+rejected. Header-owned extern declarations use their identical Haxe spelling as
+a validated exact external name when no override is present, while
+compiler-owned defaults use readable `hxc_` provenance and stable hash suffixes
+only for collisions or length limits. The schema-1 table
 and collision ledger are the in-memory shape of `hxc.symbols.json`.
 `TypedCNameFinalizer` applies that policy structurally to schema-2 typed C
 snapshots before declaration planning. See [deterministic symbol
@@ -599,7 +613,8 @@ pointer-only edges forward-declare, and authoritative external opaque includes
 are propagated. Its report/header adapter remains test-only. The implemented
 project emitter packages finalized structural header/source artifacts and typed
 build facts through Reflaxe ownership. Production lowering now reaches it for
-exact fixed-arity scalar/typedef/enum/constant/by-value-struct imports and
+exact fixed-arity scalar/typedef/enum/constant/by-value-struct imports,
+one-level imported struct aliases, and
 literal borrowed C strings. The authoritative header remains the ABI source,
 compiled probes verify layout/constants, and unsupported callbacks, variadics,
 pointer lifetimes, ownership, and broader bindgen remain fail-closed. See

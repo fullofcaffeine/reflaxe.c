@@ -22,6 +22,7 @@
         "Coord",
         "FloatPoint",
         "Point",
+        "PointAlias",
         "PointLib"
       ],
       "kind": "local"

@@ -36,30 +36,37 @@ PRODUCTION_FILES = {
 }
 NEGATIVE_CASES = {
     "callback_return": (
+        "HXC3000",
         "CallbackApi.hx:4",
         "Callbacks require the later typed function-pointer and context-lifetime contract.",
     ),
     "embedded_nul": (
+        "HXC3000",
         "Main.hx:3",
         "contains an embedded NUL byte",
     ),
-    "missing_name": (
-        "MissingNameApi.hx:4",
-        "An exact `@:c.name` is required",
+    "inferred_keyword": (
+        "HXC5002",
+        "InferredKeywordApi.hx:3",
+        "C identifier `goto` is reserved",
     ),
     "nonliteral_cstring": (
+        "HXC3000",
         "Main.hx:3",
         "requires a direct String literal so its borrowed lifetime is static",
     ),
     "pointer_return": (
+        "HXC3000",
         "PointerApi.hx:4",
         "Pointer and retained-borrow lifetimes are outside this direct by-value slice.",
     ),
     "preprocessor_define": (
+        "HXC3000",
         "DefineApi.hx:",
         "Preprocessor definitions require an exact configuration/ABI identity",
     ),
     "variadic": (
+        "HXC3000",
         "VariadicApi.hx:4",
         "Variadic functions are outside the admitted direct slice.",
     ),
@@ -294,6 +301,7 @@ def validate_positive(project: RenderedProject) -> None:
     for spelling in (
         "pointlib_point_make(",
         "pointlib_point_translate(",
+        "pointlib_point_alias_identity(",
         "pointlib_point_dot(",
         "pointlib_point_component(",
         "pointlib_point_verify(",
@@ -304,6 +312,7 @@ def validate_positive(project: RenderedProject) -> None:
         "struct pointlib_point",
         "struct pointlib_float_point",
         "pointlib_coord",
+        "pointlib_point_alias",
         "pointlib_axis",
         "POINTLIB_AXIS_Y",
         '"c-import-',
@@ -334,6 +343,7 @@ def validate_positive(project: RenderedProject) -> None:
         " = *hxc_temp_Main_main_importedzx2Dfieldzx2Daddress",
         "pointlib_axis hxc_local_Main_main_axis",
         "float hxc_local_Main_main_floatDot",
+        "struct pointlib_point hxc_local_Main_main_pointAlias",
         "double hxc_local_Main_main_widened",
     ):
         if spelling not in source:
@@ -351,7 +361,14 @@ def validate_positive(project: RenderedProject) -> None:
     if build.get("requiredHeaders") != [
         {
             "path": "pointlib.h",
-            "ownerModulePaths": ["Axis", "Coord", "FloatPoint", "Point", "PointLib"],
+            "ownerModulePaths": [
+                "Axis",
+                "Coord",
+                "FloatPoint",
+                "Point",
+                "PointAlias",
+                "PointLib",
+            ],
             "kind": "local",
         }
     ] or build.get("libraries") != [
@@ -392,8 +409,11 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_axis",
         "pointlib_coord",
         "pointlib_point",
+        "pointlib_point_alias",
+        "pointlib_build_fact_probe",
         "pointlib_point_make",
         "pointlib_point_translate",
+        "pointlib_point_alias_identity",
         "pointlib_point_dot",
         "pointlib_point_component",
         "pointlib_point_verify",
@@ -475,13 +495,13 @@ def check_reached_build_facts(root: Path) -> None:
 
 def check_negative_cases(root: Path) -> None:
     for case_name in sorted(NEGATIVE_CASES, key=lambda value: value.encode("utf-8")):
-        source_marker, detail = NEGATIVE_CASES[case_name]
+        diagnostic_id, source_marker, detail = NEGATIVE_CASES[case_name]
         output = root / case_name
         result = compile_fixture(FIXTURES / case_name, output)
         combined = result.stdout + result.stderr
         if (
             result.returncode == 0
-            or "HXC3000" not in combined
+            or diagnostic_id not in combined
             or source_marker not in combined
             or detail not in combined
             or generated_files(output)

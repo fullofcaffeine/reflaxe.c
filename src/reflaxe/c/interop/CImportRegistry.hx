@@ -109,6 +109,38 @@ class CPreparedImportType {
 		return null;
 	}
 
+	/**
+		Return the semantic value identity used by HxcIR.
+
+		A C typedef that directly names a struct is transparent in both Haxe and C:
+		it creates no new representation and needs no runtime conversion. Keep the
+		exact typedef spelling in this import plan for ABI/syntax inspection, while
+		sharing the struct's semantic instance so ordinary Haxe alias interchange is
+		not misdiagnosed as a conversion between unrelated records. Scalar typedefs
+		retain their nominal instance because their exact C spelling is the carrier
+		identity already exercised by the direct-import slice.
+	**/
+	public function semanticValueType():HxcIRTypeRef {
+		if (kind == CITTypedef && aliasTarget != null) {
+			final imported = aliasTarget.importedValue();
+			if (imported != null && imported.kind == CITStruct)
+				return aliasTarget.irType;
+		}
+		return IRTInstance(instanceId);
+	}
+
+	/** Resolve the one admitted transparent struct alias for field/place use. */
+	public function directStructTarget():Null<CPreparedImportType> {
+		if (kind == CITStruct)
+			return this;
+		if (kind == CITTypedef && aliasTarget != null) {
+			final imported = aliasTarget.importedValue();
+			if (imported != null && imported.kind == CITStruct)
+				return imported;
+		}
+		return null;
+	}
+
 	public function setAliasTarget(target:CBodyValueType):Void {
 		if (aliasTarget != null)
 			throw new haxe.Exception('import typedef `$haxePath` was prepared more than once');
@@ -347,7 +379,7 @@ class CImportRegistry {
 		final contract = contractsByPath.get(ownerPath);
 		final fieldContract = contract == null ? null : contractField(contract, field.name, "constant");
 		if (fieldContract == null)
-			abiFailure(field.pos, callerSourcePath, 'imported enum `$ownerPath`', 'Constructor `${field.name}` requires an exact `@:c.name`.');
+			abiFailure(field.pos, callerSourcePath, 'imported enum `$ownerPath`', 'Constructor `${field.name}` is missing from the typed C contract.');
 		final importedType = CBodyValueType.imported(prepareType(ownerPath, [], position, callerSourcePath));
 		return prepareEnumConstant(ownerPath, field, fieldContract, importedType, callerSourcePath);
 	}
@@ -381,7 +413,7 @@ class CImportRegistry {
 			abiFailure(position, callerSourcePath, 'imported type `$path`', "Generic C import types require a closed generated specialization.");
 		final contract = requireContract(path, position, callerSourcePath);
 		final declaration = requireDeclaration(path, position, callerSourcePath);
-		final cName = requireExactName(contract.cName, position, callerSourcePath, 'imported type `$path`');
+		final cName = externalName(contract.cName, unqualifiedName(path), position, callerSourcePath, 'imported type `$path`');
 		final kind = switch contract.sourceKind {
 			case "class" if (contract.layout == "struct"): CITStruct;
 			case "enum" if (contract.layout == "enum"): CITEnum;
@@ -436,7 +468,8 @@ class CImportRegistry {
 			if (type.irType == IRTVoid || type.isCString())
 				abiFailure(field.pos, declaration.sourcePath, 'imported field `${prepared.haxePath}.${field.name}`',
 					"Void and CString are not by-value struct fields.");
-			final cName = requireExactName(contractField.cName, field.pos, declaration.sourcePath, 'imported field `${prepared.haxePath}.${field.name}`');
+			final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath,
+				'imported field `${prepared.haxePath}.${field.name}`');
 			final request = new CSymbolRequest(CSKField, prepared.haxePath.split(".").concat([field.name]), CNSMember(prepared.declarationId), CSVExternal,
 				cName, [], [], index);
 			context.symbols.register(request);
@@ -456,7 +489,7 @@ class CImportRegistry {
 			final contractField = contractField(contract, field.name, "constant");
 			if (contractField == null)
 				abiFailure(field.rawEnumField.pos, declaration.sourcePath, 'imported enum `${prepared.haxePath}`',
-					'Constructor `${field.name}` requires an exact `@:c.name`.');
+					'Constructor `${field.name}` is missing from the typed C contract.');
 			if (enumHasPayload(field.rawEnumField.type))
 				abiFailure(field.rawEnumField.pos, declaration.sourcePath, 'imported enum `${prepared.haxePath}.${field.name}`',
 					"Payload constructors are not C enum constants.");
@@ -474,8 +507,13 @@ class CImportRegistry {
 			abiFailure(raw.pos, declaration.sourcePath, 'imported typedef `${prepared.haxePath}`', "Generic C typedefs are outside this direct slice.");
 		final target = resolveValueType(raw.type, raw.pos, declaration.ownerModulePath, declaration.sourcePath, abiRejectFor(declaration.sourcePath),
 			'imported-typedef:${prepared.haxePath}');
-		if (target.irType == IRTVoid || target.isCString() || target.importedValue() != null)
-			abiFailure(raw.pos, declaration.sourcePath, 'imported typedef `${prepared.haxePath}`', "This slice admits a scalar typedef target only.");
+		if (target.irType == IRTVoid || target.isCString())
+			abiFailure(raw.pos, declaration.sourcePath, 'imported typedef `${prepared.haxePath}`',
+				"This slice admits a scalar or direct imported-struct typedef target only.");
+		final importedTarget = target.importedValue();
+		if (importedTarget != null && importedTarget.kind != CITStruct)
+			abiFailure(raw.pos, declaration.sourcePath, 'imported typedef `${prepared.haxePath}`',
+				"An imported typedef may directly alias one header-owned struct; alias chains, enums, and cycles remain unsupported.");
 		prepared.setAliasTarget(target);
 	}
 
@@ -514,7 +552,7 @@ class CImportRegistry {
 		if (returnType.isCString())
 			abiFailure(field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`',
 				"Borrowed CString returns need an explicit lifetime owner.");
-		final cName = requireExactName(contractField.cName, field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`');
+		final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath, 'imported function `$ownerPath.${field.name}`');
 		final request = new CSymbolRequest(CSKMethod, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
 		context.symbols.register(request);
 		final prepared = new CPreparedImportFunction(id, declaration.ownerModulePath, '$ownerPath.${field.name}', parameters, returnType,
@@ -538,7 +576,7 @@ class CImportRegistry {
 		if (type.irType == IRTVoid || type.isCString() || type.importedStructValue() != null)
 			abiFailure(field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`',
 				"Constants must be scalar, typedef, or closed-enum values.");
-		final cName = requireExactName(contractField.cName, field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`');
+		final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`');
 		final request = new CSymbolRequest(CSKField, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
 		context.symbols.register(request);
 		final prepared = new CPreparedImportConstant(id, declaration.ownerModulePath, '$ownerPath.${field.name}', type,
@@ -554,7 +592,7 @@ class CImportRegistry {
 		final existing = preparedConstants.get(id);
 		if (existing != null)
 			return existing;
-		final cName = requireExactName(contractField.cName, field.pos, sourcePath, 'imported enum constant `$ownerPath.${field.name}`');
+		final cName = externalName(contractField.cName, field.name, field.pos, sourcePath, 'imported enum constant `$ownerPath.${field.name}`');
 		final request = new CSymbolRequest(CSKField, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
 		context.symbols.register(request);
 		final declaration = requireDeclaration(ownerPath, field.pos, sourcePath);
@@ -794,8 +832,26 @@ class CImportRegistry {
 		throw new haxe.Exception("C import registry requires at least one typed declaration");
 	}
 
-	function requireExactName(value:Null<String>, position:Position, sourcePath:String, context:String):String
-		return value == null ? abiFailure(position, sourcePath, context, "An exact `@:c.name` is required for a header-owned declaration.") : value;
+	/**
+		Resolve one exact header-owned C identifier.
+
+		An omitted `@:c.name` is not a generated-name request at this boundary: it
+		means that the ordinary Haxe declaration spelling is already the exact C
+		spelling. Passing the resolved identity as an explicit external request keeps
+		all lexical, reserved-name, collision, and symbol-report validation in the
+		single CSymbolRegistry boundary. Metadata remains necessary only when the C
+		and Haxe spellings differ.
+	**/
+	function externalName(value:Null<String>, identity:String, position:Position, sourcePath:String, context:String):String {
+		if (identity.length == 0)
+			return abiFailure(position, sourcePath, context, "The inferred external C name is empty.");
+		return value == null ? identity : value;
+	}
+
+	static function unqualifiedName(path:String):String {
+		final separator = path.lastIndexOf(".");
+		return separator == -1 ? path : path.substr(separator + 1);
+	}
 
 	static function unwrap(expression:TypedExpr):TypedExpr {
 		return switch expression.expr {
