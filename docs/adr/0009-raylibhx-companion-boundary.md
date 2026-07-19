@@ -99,6 +99,12 @@ preprocessor definitions, include search, configuration choices, declaration
 digests, and compiled ABI-probe results. The hashes above identify reviewed
 inputs; they are not a substitute for that target-specific lock.
 
+Repository-authored UTF-8 JSON selection text is hashed after normalizing only
+LF/CRLF/legacy-CR line separators to LF, so Git checkout policy cannot change
+its identity. Upstream raylib headers, archives, licenses, and parser inputs
+retain exact raw-byte hashes; their bytes are never normalized to satisfy a
+lock.
+
 `raylib.h` is the authority for the initial public raw API. `raymath.h` and
 `rlgl.h` are separate opt-in inventories and namespaces if later admitted;
 neither is pulled into the core companion merely because it ships in the same

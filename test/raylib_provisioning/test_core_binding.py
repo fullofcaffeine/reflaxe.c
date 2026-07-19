@@ -28,6 +28,7 @@ from scripts.raylib.core_binding import (
     load_selection,
     render_files,
     require_selected_node,
+    selection_sha256,
     type_fact,
     validate_lock,
 )
@@ -68,6 +69,38 @@ class RaylibCoreBindingTests(unittest.TestCase):
         lock["selection"]["sha256"] = "0" * 64
         with self.assertRaisesRegex(BindingFailure, "selection hash is stale"):
             validate_lock(lock)
+
+    def test_selection_hash_normalizes_only_text_line_endings(self) -> None:
+        lock = copy.deepcopy(load_lock())
+        source = SELECTION_PATH.read_bytes()
+        self.assertNotIn(b"\r", source)
+        with tempfile.TemporaryDirectory(
+            prefix="hxc-raylib-selection-eol-"
+        ) as raw_root:
+            root = Path(raw_root)
+            crlf_path = root / "selection-crlf.json"
+            crlf_path.write_bytes(source.replace(b"\n", b"\r\n"))
+            self.assertEqual(selection_sha256(), selection_sha256(crlf_path))
+            validate_lock(lock, selection_path=crlf_path)
+
+            changed = load_selection()
+            changed["omissions"][0]["reason"] += " Semantic drift probe."
+            changed_path = root / "selection-changed.json"
+            changed_path.write_text(
+                json.dumps(changed, ensure_ascii=False, indent=2, sort_keys=True)
+                + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            with self.assertRaisesRegex(BindingFailure, "selection hash is stale"):
+                validate_lock(lock, selection_path=changed_path)
+
+            malformed_path = root / "selection-malformed.json"
+            malformed_path.write_bytes(b"\xff")
+            with self.assertRaisesRegex(
+                BindingFailure, "cannot read raylib core selection"
+            ):
+                validate_lock(lock, selection_path=malformed_path)
 
     def test_lock_rejects_wrong_canonical_target(self) -> None:
         lock = copy.deepcopy(load_lock())

@@ -55,6 +55,31 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
+def selection_sha256(path: Path = SELECTION_PATH) -> str:
+    """Hash repository-owned selection text independently of checkout EOLs.
+
+    Git may materialize this UTF-8 JSON document with LF, CRLF, or legacy CR
+    separators. Those encodings have the same parsed selection semantics, so
+    normalize only line endings before hashing. Upstream raylib inputs continue
+    to use ``sha256_file`` because their reviewed hashes identify exact bytes.
+    """
+
+    try:
+        raw = path.read_bytes()
+    except OSError as error:
+        raise BindingFailure(
+            f"cannot read raylib core selection at {path}: {error}"
+        ) from error
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise BindingFailure(
+            f"raylib core selection at {path} is not valid UTF-8: {error}"
+        ) from error
+    normalized = text.replace("\r\n", "\n").replace("\r", "\n")
+    return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
 def read_object(path: Path, label: str) -> dict[str, object]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -599,7 +624,7 @@ def extract_lock(
     upstream = require_mapping(provisioning.get("upstream"), "provisioning.upstream")
     if upstream.get("commit") != PINNED_COMMIT:
         raise BindingFailure("raylib provisioning and core binding commits disagree")
-    selection_sha256 = sha256_file(selection_path)
+    selection_digest = selection_sha256(selection_path)
     generated_paths = [
         f"src/raylib/raw/{name}.hx"
         for name in sorted(
@@ -636,7 +661,7 @@ def extract_lock(
         },
         "selection": {
             "path": "docs/specs/raylib-core-selection.json",
-            "sha256": selection_sha256,
+            "sha256": selection_digest,
             "coverageState": "coherent-caxecraft-core",
             "counts": {
                 "records": len(declarations["records"]),
@@ -655,7 +680,12 @@ def extract_lock(
         "declarationSha256": digest_json(declarations),
         "generatedPaths": generated_paths,
     }
-    validate_lock(lock, selection=selection, check_selection_hash=False)
+    validate_lock(
+        lock,
+        selection=selection,
+        selection_path=selection_path,
+        check_selection_hash=False,
+    )
     return lock
 
 
@@ -676,6 +706,7 @@ def validate_lock(
     lock: Mapping[str, object],
     *,
     selection: Mapping[str, object] | None = None,
+    selection_path: Path = SELECTION_PATH,
     check_selection_hash: bool = True,
 ) -> None:
     require_exact_keys(
@@ -721,10 +752,15 @@ def validate_lock(
         if not isinstance(clang.get(key), str) or not clang.get(key):
             raise BindingFailure(f"lock.extraction.clang.{key} must be recorded")
 
-    selected = load_selection() if selection is None else dict(selection)
+    selected = (
+        load_selection(selection_path) if selection is None else dict(selection)
+    )
     validate_selection(selected)
     selection_lock = require_mapping(lock.get("selection"), "lock.selection")
-    if check_selection_hash and selection_lock.get("sha256") != sha256_file(SELECTION_PATH):
+    if (
+        check_selection_hash
+        and selection_lock.get("sha256") != selection_sha256(selection_path)
+    ):
         raise BindingFailure("raylib core selection hash is stale")
     if selection_lock.get("coverageState") != "coherent-caxecraft-core":
         raise BindingFailure("raylib core coverage state drifted")

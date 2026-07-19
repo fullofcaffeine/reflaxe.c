@@ -25,6 +25,14 @@ The raw Haxe files under `src/raylib/raw` and the native ABI probe at
 views. Change the selection or generator and use the registered snapshot
 updater; do not repair those outputs by hand.
 
+The selection digest treats its repository-owned JSON as UTF-8 text and
+normalizes LF, CRLF, and legacy CR separators to LF before hashing. This makes
+the same closed selection portable across Git checkout policies without
+ignoring whitespace or semantic changes. Hashes for upstream raylib headers,
+archives, licenses, and other reviewed inputs remain exact raw-byte identities;
+line-ending normalization must never be used to make a changed upstream input
+look pinned.
+
 ## Extraction and verification
 
 Clang's typed C AST is the declaration authority. Extraction always uses the
