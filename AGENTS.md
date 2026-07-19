@@ -38,6 +38,41 @@ npm run beads:push     # Scan and push Beads data to remote
   filenames or internal type names. Technical details are welcome, but
   introduce them in plain language and make the practical outcome clear first.
 
+## Readable, Educational Writing
+
+Treat source code, comments, diagnostics, examples, and documentation as a
+learning path for a curious contributor, not as notes for people who already
+know the compiler. Reading this repository should be accurate, approachable,
+and pleasant.
+
+- Prefer common, concrete words whenever they express the same idea. Do not use
+  specialist vocabulary merely because it sounds more formal.
+- When an exact technical term is necessary, define it in plain language the
+  first time it appears, then use the precise term consistently. Expand an
+  acronym on first use unless it is already a language-level name shown in the
+  surrounding code.
+- Lead with purpose and observable behavior: what problem this solves, what the
+  user writes, and what the compiler or program does. Introduce internal layers,
+  type names, and algorithms only after that frame is clear.
+- Use small examples to connect source input, compiler decision, generated C,
+  runtime behavior, or failure. Explain why the example matters instead of
+  assuming the reader will infer the contract from a snapshot or test name.
+- In code comments, explain intent, ownership, invariants, tradeoffs, and
+  surprising constraints. Do not narrate obvious syntax. A reader should learn
+  why the code has this shape and when the rule applies.
+- Link to the canonical deeper document when a short explanation would become
+  repetitive. The local text must still make sense on its own; a link is a path
+  to more depth, not a substitute for a basic definition.
+- Preserve precision. Plain language must not blur a normative distinction,
+  weaken a safety rule, or overstate support. Give the simple explanation first,
+  then state the exact bounded contract and unsupported cases.
+- Structure longer material from overview to example to implementation details
+  to evidence. Use headings, short paragraphs, and terminology consistently so
+  the document can be read as a tutorial as well as a reference.
+- Update nearby explanations and comments when behavior changes. Stale,
+  unexplained, or needlessly opaque documentation is a product and maintenance
+  defect, even when the implementation is correct.
+
 ## Non-Interactive Shell Commands
 
 **ALWAYS use non-interactive flags** with file operations to avoid hanging on confirmation prompts.

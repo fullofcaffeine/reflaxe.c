@@ -1,14 +1,28 @@
 # Fixed arrays, spans, and bounded span parameters
 
-The fixed-array slice admits compact local storage without admitting the general
-Haxe `Array` runtime. A nonempty literal or a typed `c.CArray.zero<T, N>(length)`
-construction lowers through validated HxcIR to an automatic C array. Calling
-`span()` or `constSpan()` creates a borrowed pointer-and-length view, and a Haxe
-`for` over a statically sized local view becomes compiler-owned indexed control
-flow. A reached direct static helper may receive the same nonescaping view as a
-typed parameter; the internal C call forwards its element pointer and exact
-element count. No array, view, parameter wrapper, or iterator object survives
-into C.
+Use this feature when a program knows how many values it needs and wants compact
+C storage without a general-purpose Haxe `Array` object.
+
+A **fixed array** owns a known number of adjacent values. For example, four
+integers become an ordinary C array with four elements. A **span** is a small,
+temporary view of existing storage: it carries where the elements begin and how
+many there are. The span does not own, copy, or free those elements. We call it
+**borrowed** because it may be used only while the original array is still alive
+and it cannot be saved somewhere that outlives that array.
+
+**Lowering** is the compiler step that turns a typed Haxe operation into a more
+concrete representation. Here, a nonempty literal or
+`c.CArray.zero<T, N>(length)` lowers to an automatic C array (normally local
+stack storage). `span()` and `constSpan()` lower to an element pointer plus an
+element count. A Haxe `for` loop becomes a direct indexed C loop. An admitted
+private helper function receives the same pointer and count. There is no
+allocated array object, span wrapper, or iterator object in the generated C;
+this is what this document means by **runtime-free**.
+
+The compiler first records and validates these choices in HxcIR, its typed
+semantic intermediate representation. That extra representation lets the
+compiler prove evaluation order, bounds policy, and borrow lifetime before it
+chooses C syntax. See [HxcIR](hxc-ir.md) for the broader design.
 
 This remains a bounded compiler feature, not broad collection or standard-
 library support. The compiler rejects general `Array<T>` values, empty fixed
@@ -243,10 +257,27 @@ arbitrary constant-expression evaluation remain fail-closed.
 
 ## Evidence
 
+The command name `test:span-lowering` refers to this complete proof suite, not
+to one compiler pass whose own computation takes several minutes. The suite
+deliberately starts many isolated Haxe compilations to test successful programs,
+expected failures, repeatability, build profiles, bounds failures, native
+optimization, and sanitizers. A measured five-minute suite therefore describes
+exhaustive test orchestration and cold compiler startup; it is not the expected
+compile time for one application that uses a span.
+
 Run:
 
 ```sh
 npm run test:span-lowering
+npm run snapshots:catalog
+```
+
+The first command runs this feature's complete semantic and native proof. The
+second quickly checks that its snapshots are registered and have exactly one
+focused owner. To independently re-render every snapshot suite in the
+repository, use the slower cold-audit command:
+
+```sh
 npm run snapshots:check
 ```
 

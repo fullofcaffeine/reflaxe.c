@@ -220,9 +220,16 @@ a developer-machine contention diagnostic, not a hosted baseline:
 | `caxecraft` | 5m01s | full Caxecraft QA, 5m00s |
 
 The non-rendering snapshot catalog took 0.55s. The critical path is therefore
-`span-lowering`, not snapshot ownership validation. Its runner currently starts
-87 separate Haxe processes with `HAXE_NO_SERVER=1`: 18 report/determinism
-renders, 36 negative fixtures, two invalid-configuration fixtures, seven
+`span-lowering`, not snapshot ownership validation. A span is a temporary,
+non-owning view of adjacent values, represented in C as an element pointer plus
+an element count. The compiler feature turns typed fixed arrays, borrowed spans,
+checked indexing, and direct iteration into allocation-free C. The readable
+feature and safety contract is in [Fixed arrays and spans](span-lowering.md).
+
+The measured time belongs to that feature's exhaustive **test suite**, not to a
+single lowering pass or a typical user build. Its runner currently starts 87
+separate Haxe processes with `HAXE_NO_SERVER=1`: 18 report/determinism renders,
+36 negative fixtures, two invalid-configuration fixtures, seven
 production/determinism builds, and 24 bounds-abort builds. It then runs its
 GCC/Clang optimization and sanitizer matrix. The next optimization should batch
 compatible typed fixtures or share validated compiler results, retain a
