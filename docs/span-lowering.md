@@ -259,11 +259,10 @@ arbitrary constant-expression evaluation remain fail-closed.
 
 The command name `test:span-lowering` refers to this complete proof suite, not
 to one compiler pass whose own computation takes several minutes. The suite
-deliberately starts many isolated Haxe compilations to test successful programs,
-expected failures, repeatability, build profiles, bounds failures, native
-optimization, and sanitizers. A measured five-minute suite therefore describes
-exhaustive test orchestration and cold compiler startup; it is not the expected
-compile time for one application that uses a span.
+tests successful programs, expected failures, repeatability, build profiles,
+bounds failures, native optimization, and sanitizers. Its total time therefore
+describes exhaustive test orchestration; it is not the expected compile time
+for one application that uses a span.
 
 Run:
 
@@ -281,8 +280,48 @@ repository, use the slower cold-audit command:
 npm run snapshots:check
 ```
 
-The suite renders twice and reverses function discovery across both profiles
-and all three build modes. It snapshots HxcIR/C/header/symbol output; executes
+The runner deliberately mixes two kinds of compiler request. A **cold** request
+starts a new Haxe compiler process and proves that the result does not depend on
+remembered process state. A **warm** request sends another compilation to one
+already-running compiler server. Warm requests are faster and, more
+importantly, prove that one build cannot leak symbols, configuration, or output
+into the next build.
+
+The exact full-suite topology is guarded in code:
+
+- three cold typed-report requests: normal, exact repeat, and reversed function
+  discovery;
+- each typed-report request types the fixture once, then lowers that same typed
+  input through all six `portable`/`metal` and
+  `debug`/`release`/`minsizerel` combinations with a fresh compiler context for
+  each combination;
+- 36 negative-diagnostic requests, with one cold representative for body
+  lowering and one for the C ABI boundary while the remaining 34 exercise the
+  warm server;
+- two invalid-configuration requests, seven production/repeat requests, and
+  six bounds-matrix requests, each retaining a cold representative; and
+- 54 Haxe requests in total: 8 cold and 46 warm. Including the one compiler
+  server, the compiler executable is loaded 9 times instead of the previous 87.
+
+The typed-report requests stay cold for a specific reason. The pinned Haxe
+compiler can represent a cached one-expression body with a narrower source
+position than its first typed form—for example, the `return` line instead of
+the surrounding block. Both forms mean the same thing, but an exact HxcIR dump
+must not silently erase or normalize a source-location difference. The three
+cold renders therefore remain the byte-determinism authority while the normal
+custom-target requests provide the ordered warm-server/reentrancy lane.
+Beads issue `haxe_c-xge.27` owns making those source anchors stable enough to
+add an exact warm HxcIR comparison later.
+
+Each bounds-matrix compilation keeps all four failure cases reachable. A tiny
+typed native selector chooses local upper, local negative, parameter upper, or
+parameter negative access. The native harness links and runs all four choices,
+records which branch was entered, requires that branch to abort, and checks the
+linked image for zero `hxrt` symbols. This performs six Haxe compilations—one
+per profile/build pair—instead of compiling four almost identical Haxe programs
+for every pair.
+
+The suite snapshots HxcIR/C/header/symbol output; executes
 literal and 16,384-byte zero-initialized `UInt8` storage, repeated mutation,
 mutable/const borrowing, exact-width iteration, nested parameter forwarding,
 and ordinary-Haxe 3D indexing at GCC/Clang `-O0`, `-O2`, and combined
@@ -294,3 +333,16 @@ storage, instance/virtual dispatch, callbacks, recursion, exported/native ABI
 boundaries, general/empty arrays, and lookalike intrinsics. Required native
 lanes inspect generated artifacts and linked images for the absence of
 allocation and `hxrt` dependencies.
+
+For a phase-by-phase, path-free timing record, run:
+
+```sh
+python3 test/span_lowering/run.py \
+  --timing-report /tmp/hxc-span-lowering-timing.json
+```
+
+The JSON conforms to
+[`span-lowering-timing.schema.json`](specs/span-lowering-timing.schema.json).
+It records suite phases, every request's cold/warm transport and exit code, the
+number of real compiler loads, and wall time. It deliberately omits checkout
+paths, temporary paths, timestamps, ports, and compiler output.

@@ -10,10 +10,13 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
-from collections.abc import Iterable
+import time
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -68,40 +71,354 @@ class NativeToolchain:
     version: str
 
 
+@dataclass(frozen=True)
+class HaxeInvocation:
+    phase: str
+    transport: str
+    exit_code: int | None
+    duration_ms: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "phase": self.phase,
+            "transport": self.transport,
+            "exitCode": self.exit_code,
+            "durationMs": self.duration_ms,
+        }
+
+
+@dataclass(frozen=True)
+class SuitePhase:
+    phase: str
+    outcome: str
+    duration_ms: int
+
+    def to_json(self) -> dict[str, object]:
+        return {
+            "phase": self.phase,
+            "outcome": self.outcome,
+            "durationMs": self.duration_ms,
+        }
+
+
+@dataclass(frozen=True)
+class NegativeCase:
+    main_class: str
+    expected_fragment: str
+    expected_anchor: str | None = None
+    diagnostic_id: str = "HXC1001"
+
+
+NEGATIVE_CASES = (
+    NegativeCase("NonLiteralFixture", "TFunction(return-type):reference-Array-non-null"),
+    NegativeCase("ZeroLengthFixture", "TArrayDecl(empty-fixed-array-not-strict-c11)"),
+    NegativeCase("LookalikeFixture", "TVar(Span:requires-fixed-array-borrow)"),
+    NegativeCase(
+        "ZeroConstructionLengthFixture",
+        "TCall(c.CArray.zero:length-must-be-positive:0)",
+        "ZeroConstructionLengthFixture.hx:6: characters 54-55",
+    ),
+    NegativeCase(
+        "NegativeConstructionLengthFixture",
+        "TCall(c.CArray.zero:length-must-be-positive:-1)",
+        "NegativeConstructionLengthFixture.hx:6: characters 54-56",
+    ),
+    NegativeCase(
+        "OversizedConstructionFixture",
+        "automatic-storage-over-budget:length=65537,element-bytes=1,total-bytes=65537,limit-bytes=65536",
+        "OversizedConstructionFixture.hx:6: characters 54-59",
+    ),
+    NegativeCase(
+        "OverflowConstructionFixture",
+        "TCall(c.CArray.zero:length-product-overflow:65536*65536)",
+        "OverflowConstructionFixture.hx:6: characters 54-67",
+    ),
+    NegativeCase(
+        "NonConstantConstructionFixture",
+        "TCall(c.CArray.zero:length-must-be-compile-time-product:TCall)",
+        "NonConstantConstructionFixture.hx:10: characters 54-62",
+    ),
+    NegativeCase(
+        "UnsupportedZeroElementFixture",
+        "TCall(c.CArray.zero:element-requires-exact-storage-size:bool)",
+        "UnsupportedZeroElementFixture.hx:5: characters 50-51",
+    ),
+    NegativeCase(
+        "StaticOutOfBoundsFixture",
+        "TArray(index-statically-out-of-bounds:length=16384,index=16384)",
+        "StaticOutOfBoundsFixture.hx:7: characters 17-22",
+    ),
+    NegativeCase(
+        "EscapingSpanFixture",
+        "TFunction(return-type:borrowed-span-escape)",
+        "EscapingSpanFixture.hx:6: lines 6-9",
+    ),
+    NegativeCase(
+        "RecursiveSpanParameterFixture",
+        "TCall(recursive-borrowed-span-target-not-admitted:",
+        "RecursiveSpanParameterFixture.hx:6: characters 10-25",
+    ),
+    NegativeCase(
+        "StoredSpanFieldFixture",
+        "borrowed-span-field-escape",
+        "StoredSpanFieldFixture.hx:6: characters 2-34",
+    ),
+    NegativeCase(
+        "StoredSpanGlobalFixture",
+        "TField(static:borrowed:abstract `c.Span` is not an admitted primitive",
+        "StoredSpanGlobalFixture.hx:9: characters 3-11",
+    ),
+    NegativeCase(
+        "VirtualSpanParameterFixture",
+        "borrowed-span-requires-static-function",
+        "VirtualSpanParameterFixture.hx:18: lines 18-20",
+    ),
+    NegativeCase(
+        "CallbackSpanParameterFixture",
+        "TVar(callback:type):function values await closure/function representation lowering",
+        "CallbackSpanParameterFixture.hx:13: characters 3-56",
+    ),
+    NegativeCase(
+        "ExportedSpanParameterFixture",
+        "Imported functions must belong to an extern class.",
+        "ExportedSpanParameterFixture.hx:7: lines 7-9",
+        "HXC3000",
+    ),
+    NegativeCase(
+        "NativeSpanParameterFixture",
+        "Pointer and retained-borrow lifetimes are outside this direct by-value slice.",
+        "SpanNativeApi.hx:7: characters 2-72",
+        "HXC3000",
+    ),
+)
+
+COLD_NEGATIVE_CASES = frozenset(
+    {
+        "NonLiteralFixture",
+        "ExportedSpanParameterFixture",
+    }
+)
+
+
 def development_tool(name: str) -> str:
     local = ROOT / "node_modules/.bin" / name
     return str(local) if local.is_file() else name
 
 
-def haxe_environment() -> dict[str, str]:
+def haxe_environment(*, server: bool) -> dict[str, str]:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    if server:
+        environment.pop("HAXE_NO_SERVER", None)
+    else:
+        environment["HAXE_NO_SERVER"] = "1"
     return environment
 
 
-def render(
+def elapsed_milliseconds(start_ns: int) -> int:
+    return max(0, (time.monotonic_ns() - start_ns + 500_000) // 1_000_000)
+
+
+def available_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+        candidate.bind(("127.0.0.1", 0))
+        return int(candidate.getsockname()[1])
+
+
+def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            stdout, stderr = server.communicate()
+            raise SpanLoweringFailure(
+                "Haxe compiler server exited before accepting span requests\n"
+                f"stdout:\n{stdout}\nstderr:\n{stderr}"
+            )
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                return
+        except OSError:
+            time.sleep(0.05)
+    raise SpanLoweringFailure("Haxe compiler server did not accept span requests")
+
+
+class HaxeHarness:
+    """Own one isolated server plus path-free timing evidence for this run."""
+
+    def __init__(self, *, use_server: bool) -> None:
+        self.use_server = use_server
+        self.started_ns = time.monotonic_ns()
+        self.server: subprocess.Popen[str] | None = None
+        self.endpoint: str | None = None
+        self.server_startup_ms: int | None = None
+        self.invocations: list[HaxeInvocation] = []
+        self.phases: list[SuitePhase] = []
+
+    def __enter__(self) -> HaxeHarness:
+        if not self.use_server:
+            return self
+        port = available_port()
+        self.endpoint = str(port)
+        startup = time.monotonic_ns()
+        self.server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", self.endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(self.server, port)
+        except BaseException:
+            self.server.terminate()
+            try:
+                self.server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.server.kill()
+                self.server.wait(timeout=5)
+            raise
+        self.server_startup_ms = elapsed_milliseconds(startup)
+        return self
+
+    def __exit__(self, _type: object, _value: object, _traceback: object) -> None:
+        if self.server is None:
+            return
+        self.server.terminate()
+        try:
+            self.server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self.server.kill()
+            self.server.wait(timeout=5)
+
+    @contextmanager
+    def phase(self, phase: str) -> Iterator[None]:
+        start = time.monotonic_ns()
+        outcome = "passed"
+        try:
+            yield
+        except BaseException:
+            outcome = "failed"
+            raise
+        finally:
+            self.phases.append(
+                SuitePhase(phase, outcome, elapsed_milliseconds(start))
+            )
+
+    def run(
+        self,
+        arguments: list[str],
+        *,
+        phase: str,
+        warm: bool,
+        timeout: int = 30,
+    ) -> subprocess.CompletedProcess[str]:
+        if warm and self.endpoint is None:
+            raise SpanLoweringFailure(
+                f"warm span request {phase!r} has no compiler server"
+            )
+        command = [development_tool("haxe")]
+        if warm:
+            command.extend(["--connect", self.endpoint or ""])
+        command.extend(arguments)
+        start = time.monotonic_ns()
+        try:
+            result = subprocess.run(
+                command,
+                cwd=ROOT,
+                env=haxe_environment(server=warm),
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except (OSError, subprocess.TimeoutExpired):
+            self.invocations.append(
+                HaxeInvocation(
+                    phase,
+                    "warm-server" if warm else "cold",
+                    None,
+                    elapsed_milliseconds(start),
+                )
+            )
+            raise
+        self.invocations.append(
+            HaxeInvocation(
+                phase,
+                "warm-server" if warm else "cold",
+                result.returncode,
+                elapsed_milliseconds(start),
+            )
+        )
+        return result
+
+    def validate_topology(self) -> None:
+        cold = sum(value.transport == "cold" for value in self.invocations)
+        warm = sum(value.transport == "warm-server" for value in self.invocations)
+        if len(self.invocations) != 54 or cold != 8 or warm != 46:
+            raise SpanLoweringFailure(
+                "span Haxe request topology drifted: "
+                f"total={len(self.invocations)}, cold={cold}, warm={warm}; "
+                "expected total=54, cold=8, warm=46"
+            )
+
+    def timing_report(self, *, outcome: str) -> dict[str, object]:
+        cold = sum(value.transport == "cold" for value in self.invocations)
+        warm = sum(value.transport == "warm-server" for value in self.invocations)
+        return {
+            "schemaVersion": 1,
+            "suite": "span-lowering",
+            "outcome": outcome,
+            "durationMs": elapsed_milliseconds(self.started_ns),
+            "compilerServer": {
+                "started": self.server_startup_ms is not None,
+                "startupMs": self.server_startup_ms,
+            },
+            "summary": {
+                "requests": len(self.invocations),
+                "coldCompilerLoads": cold,
+                "warmServerRequests": warm,
+                "compilerLoads": cold + (1 if self.server_startup_ms is not None else 0),
+            },
+            "phases": [value.to_json() for value in self.phases],
+            "invocations": [value.to_json() for value in self.invocations],
+        }
+
+
+def write_timing_report(path: Path, report: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        text=True,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
+            json.dump(report, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+
+
+def render_matrix(
     label: str,
     *,
+    harness: HaxeHarness,
+    warm: bool,
     reverse: bool = False,
-    profile: str = "portable",
-    build: str = "debug",
-) -> tuple[str, dict[str, object]]:
-    if profile not in PROFILES or build not in BUILD_MODES:
-        raise SpanLoweringFailure(f"invalid probe matrix coordinate {profile}/{build}")
-    command = [development_tool("haxe"), str(HXML)]
+) -> tuple[str, dict[tuple[str, str], dict[str, object]]]:
+    arguments = [str(HXML)]
     if reverse:
-        command.extend(["-D", "span_lowering_reverse_input"])
-    if profile == "metal":
-        command.extend(["-D", "span_lowering_profile=metal"])
-    if build != "debug":
-        command.extend(["-D", f"span_lowering_build={build}"])
-    result = subprocess.run(
-        command,
-        cwd=ROOT,
-        env=haxe_environment(),
-        check=False,
-        capture_output=True,
-        text=True,
+        arguments.extend(["-D", "span_lowering_reverse_input"])
+    result = harness.run(
+        arguments,
+        phase=f"report:{label}",
+        warm=warm,
         timeout=30,
     )
     lines = [line for line in result.stdout.splitlines() if line.startswith(REPORT_PREFIX)]
@@ -111,10 +428,34 @@ def render(
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
     payload = lines[0][len(REPORT_PREFIX) :]
-    report = json.loads(payload)
-    if not isinstance(report, dict):
-        raise SpanLoweringFailure(f"{label} report is not an object")
-    return payload, report
+    matrix = json.loads(payload)
+    if not isinstance(matrix, dict) or matrix.get("schemaVersion") != 1:
+        raise SpanLoweringFailure(f"{label} matrix is not a schema-1 object")
+    reports = matrix.get("reports")
+    if not isinstance(reports, list) or not all(
+        isinstance(report, dict) for report in reports
+    ):
+        raise SpanLoweringFailure(f"{label} matrix reports are not objects")
+    expected = [(profile, build) for profile in PROFILES for build in BUILD_MODES]
+    actual: list[tuple[str, str]] = []
+    indexed: dict[tuple[str, str], dict[str, object]] = {}
+    for report in reports:
+        profile = report.get("profile")
+        build = report.get("buildMode")
+        if not isinstance(profile, str) or not isinstance(build, str):
+            raise SpanLoweringFailure(f"{label} matrix report lost its coordinate")
+        coordinate = (profile, build)
+        if coordinate in indexed:
+            raise SpanLoweringFailure(
+                f"{label} matrix repeated {profile}/{build}"
+            )
+        actual.append(coordinate)
+        indexed[coordinate] = report
+    if actual != expected:
+        raise SpanLoweringFailure(
+            f"{label} matrix coordinates drifted: {actual!r}"
+        )
+    return payload, indexed
 
 
 def required_text(report: dict[str, object], key: str) -> str:
@@ -270,12 +611,14 @@ def custom_target(
     main_class: str,
     output: Path,
     *,
+    harness: HaxeHarness,
+    warm: bool,
+    phase: str,
     profile: str = "portable",
     build: str = "debug",
     runtime: str = "none",
 ) -> subprocess.CompletedProcess[str]:
-    command = [
-        development_tool("haxe"),
+    arguments = [
         "-cp",
         str(FIXTURE),
         "-lib",
@@ -288,15 +631,14 @@ def custom_target(
         f"hxc_runtime={runtime}",
     ]
     if profile == "metal":
-        command.extend(["-D", "reflaxe_c_profile=metal"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
-    return subprocess.run(
-        command,
-        cwd=ROOT,
-        env=haxe_environment(),
-        check=False,
-        capture_output=True,
-        text=True,
+        arguments.extend(["-D", "reflaxe_c_profile=metal"])
+    arguments.extend(
+        ["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"]
+    )
+    return harness.run(
+        arguments,
+        phase=phase,
+        warm=warm,
         timeout=30,
     )
 
@@ -443,10 +785,16 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
     return {"header": header, "source": source}
 
 
-def production_snapshot() -> dict[str, object]:
+def production_snapshot(harness: HaxeHarness) -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="hxc-span-snapshot-") as temporary:
         output = Path(temporary) / "out"
-        result = custom_target("SpanFixture", output)
+        result = custom_target(
+            "SpanFixture",
+            output,
+            harness=harness,
+            warm=False,
+            phase="snapshot:production",
+        )
         if result.returncode != 0 or result.stdout or result.stderr:
             raise SpanLoweringFailure(
                 "span production snapshot failed\n"
@@ -457,14 +805,20 @@ def production_snapshot() -> dict[str, object]:
 
 
 def snapshot_artifacts() -> dict[str, object]:
-    _, report = render("span snapshot render")
-    validate(report, profile="portable", build="debug")
-    artifacts: dict[str, object] = {
-        "span.hxcir": required_text(report, "hxcir"),
-        "symbols.json": report.get("symbols"),
-    }
-    artifacts.update(production_snapshot())
-    return artifacts
+    with HaxeHarness(use_server=False) as harness:
+        _, reports = render_matrix(
+            "span snapshot render",
+            harness=harness,
+            warm=False,
+        )
+        report = reports[("portable", "debug")]
+        validate(report, profile="portable", build="debug")
+        artifacts: dict[str, object] = {
+            "span.hxcir": required_text(report, "hxcir"),
+            "symbols.json": report.get("symbols"),
+        }
+        artifacts.update(production_snapshot(harness))
+        return artifacts
 
 
 def difference(expected: str, actual: str, name: str) -> str:
@@ -687,13 +1041,22 @@ def compile_failure_fixture(
     main_class: str,
     expected_fragment: str,
     *,
+    harness: HaxeHarness,
+    warm: bool,
     profile: str,
     expected_anchor: str | None = None,
     diagnostic_id: str = "HXC1001",
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-span-negative-") as temporary:
         output = Path(temporary) / "out"
-        result = custom_target(main_class, output, profile=profile)
+        result = custom_target(
+            main_class,
+            output,
+            harness=harness,
+            warm=warm,
+            phase=f"negative:{profile}:{main_class}",
+            profile=profile,
+        )
         combined = result.stdout + result.stderr
         if (
             result.returncode != 1
@@ -709,10 +1072,20 @@ def compile_failure_fixture(
         assert_no_output(output, f"{profile} {main_class} {diagnostic_id}")
 
 
-def check_configuration_failure(*, profile: str) -> None:
+def check_configuration_failure(
+    *, harness: HaxeHarness, warm: bool, profile: str
+) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-span-config-") as temporary:
         output = Path(temporary) / "out"
-        result = custom_target("SpanFixture", output, profile=profile, build="fast")
+        result = custom_target(
+            "SpanFixture",
+            output,
+            harness=harness,
+            warm=warm,
+            phase=f"configuration:{profile}:invalid-build",
+            profile=profile,
+            build="fast",
+        )
         combined = result.stdout + result.stderr
         if (
             result.returncode != 1
@@ -726,27 +1099,83 @@ def check_configuration_failure(*, profile: str) -> None:
         assert_no_output(output, f"{profile} invalid hxc_build")
 
 
-def check_abort_fixture(
-    main_class: str,
+def check_bounds_matrix(
     toolchain: NativeToolchain,
     *,
+    harness: HaxeHarness,
+    warm: bool,
     profile: str,
     build: str,
 ) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-span-bounds-") as temporary:
         root = Path(temporary)
         output = root / "out"
-        result = custom_target(main_class, output, profile=profile, build=build)
+        result = custom_target(
+            "BoundsMatrixFixture",
+            output,
+            harness=harness,
+            warm=warm,
+            phase=f"bounds:{profile}/{build}:matrix",
+            profile=profile,
+            build=build,
+        )
         if result.returncode != 0 or result.stdout or result.stderr:
-            raise SpanLoweringFailure(f"{profile}/{build} {main_class} did not compile")
+            raise SpanLoweringFailure(
+                f"{profile}/{build} bounds matrix did not compile\n"
+                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+            )
         combined = "\n".join(
             path.read_text(encoding="utf-8")
             for path in output.rglob("*")
             if path.is_file() and path.suffix in {".c", ".h", ".json"}
         )
-        if "hxrt" in combined.lower() or combined.count("abort();") != 1:
-            raise SpanLoweringFailure(f"{profile}/{build} {main_class} lost its no-hxrt abort")
-        executable = root / "bounds"
+        if "hxrt" in combined.lower() or combined.count("abort();") != 4:
+            raise SpanLoweringFailure(
+                f"{profile}/{build} bounds matrix lost its four no-hxrt aborts"
+            )
+        native_include = root / "include"
+        native_include.mkdir()
+        (native_include / "span_bounds_harness.h").write_text(
+            """#ifndef HXC_SPAN_BOUNDS_HARNESS_H
+#define HXC_SPAN_BOUNDS_HARNESS_H
+
+#include <stdint.h>
+
+int32_t span_bounds_case(void);
+void span_bounds_mark(int32_t actual);
+
+#endif
+""",
+            encoding="utf-8",
+            newline="\n",
+        )
+        selector = root / "selector.c"
+        selector.write_text(
+            """#include "span_bounds_harness.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#ifndef HXC_SPAN_BOUNDS_CASE
+#error "HXC_SPAN_BOUNDS_CASE is required"
+#endif
+
+int32_t span_bounds_case(void)
+{
+  return (int32_t)HXC_SPAN_BOUNDS_CASE;
+}
+
+void span_bounds_mark(int32_t actual)
+{
+  if (actual != (int32_t)HXC_SPAN_BOUNDS_CASE) _Exit(100);
+  if (fputc('0' + actual, stderr) == EOF) _Exit(101);
+  if (fflush(stderr) != 0) _Exit(102);
+}
+""",
+            encoding="utf-8",
+            newline="\n",
+        )
+        generated_object = root / "bounds-generated.o"
         run_command(
             [
                 toolchain.compiler,
@@ -754,19 +1183,69 @@ def check_abort_fixture(
                 "-O2",
                 "-I",
                 str(output / "include"),
+                "-I",
+                str(native_include),
+                "-c",
                 str(output / "src/program.c"),
                 "-o",
-                str(executable),
+                str(generated_object),
             ],
-            f"{profile}/{build} {main_class} strict compile",
+            f"{profile}/{build} bounds matrix strict compile",
         )
-        ran = subprocess.run([str(executable)], capture_output=True, text=True, timeout=10)
-        if ran.returncode == 0:
-            raise SpanLoweringFailure(f"{profile}/{build} {main_class} did not fail stop")
-        check_no_hxrt_symbols(executable, f"{profile}/{build} {main_class}")
+        cases = (
+            "local-upper",
+            "local-negative",
+            "parameter-upper",
+            "parameter-negative",
+        )
+        for case_index, case_name in enumerate(cases):
+            selector_object = root / f"bounds-selector-{case_index}.o"
+            executable = root / f"bounds-{case_index}"
+            run_command(
+                [
+                    toolchain.compiler,
+                    *STRICT_FLAGS,
+                    "-O2",
+                    "-I",
+                    str(native_include),
+                    f"-DHXC_SPAN_BOUNDS_CASE={case_index}",
+                    "-c",
+                    str(selector),
+                    "-o",
+                    str(selector_object),
+                ],
+                f"{profile}/{build} {case_name} selector compile",
+            )
+            run_command(
+                [
+                    toolchain.compiler,
+                    str(generated_object),
+                    str(selector_object),
+                    "-o",
+                    str(executable),
+                ],
+                f"{profile}/{build} {case_name} link",
+            )
+            ran = subprocess.run(
+                [str(executable)], capture_output=True, text=True, timeout=10
+            )
+            if (
+                ran.returncode == 0
+                or ran.returncode in {100, 101, 102}
+                or ran.stdout
+                or ran.stderr != str(case_index)
+            ):
+                raise SpanLoweringFailure(
+                    f"{profile}/{build} {case_name} did not reach its own fail-stop path"
+                )
+            check_no_hxrt_symbols(
+                executable, f"{profile}/{build} {case_name}"
+            )
 
 
-def check_production(selected: str | None = None) -> dict[str, object]:
+def check_production(
+    harness: HaxeHarness, selected: str | None = None
+) -> dict[str, object]:
     canonical: dict[str, object] | None = None
     canonical_source: str | None = None
     canonical_header: str | None = None
@@ -775,7 +1254,16 @@ def check_production(selected: str | None = None) -> dict[str, object]:
         for profile in PROFILES:
             for build in BUILD_MODES:
                 output = root / f"{profile}-{build}"
-                result = custom_target("SpanFixture", output, profile=profile, build=build)
+                cold_canonical = profile == "portable" and build == "debug"
+                result = custom_target(
+                    "SpanFixture",
+                    output,
+                    harness=harness,
+                    warm=not cold_canonical,
+                    phase=f"production:{profile}/{build}",
+                    profile=profile,
+                    build=build,
+                )
                 if result.returncode != 0 or result.stdout or result.stderr:
                     raise SpanLoweringFailure(
                         f"{profile}/{build} production compile failed\n"
@@ -792,7 +1280,13 @@ def check_production(selected: str | None = None) -> dict[str, object]:
                 elif project["header"] != canonical_header or project["source"] != canonical_source:
                     raise SpanLoweringFailure("profile/build matrix changed generated C bytes")
         repeat = root / "repeat"
-        result = custom_target("SpanFixture", repeat)
+        result = custom_target(
+            "SpanFixture",
+            repeat,
+            harness=harness,
+            warm=True,
+            phase="production:portable/debug:repeat-after-warm-failures",
+        )
         if result.returncode != 0 or result.stdout or result.stderr:
             raise SpanLoweringFailure("repeated production render failed")
         repeated = validate_project(repeat, profile="portable", build="debug")
@@ -804,13 +1298,12 @@ def check_production(selected: str | None = None) -> dict[str, object]:
     toolchain = available_compilers(selected)[0]
     for profile in PROFILES:
         for build in BUILD_MODES:
-            check_abort_fixture("UpperBoundsFixture", toolchain, profile=profile, build=build)
-            check_abort_fixture("NegativeBoundsFixture", toolchain, profile=profile, build=build)
-            check_abort_fixture(
-                "ParameterUpperBoundsFixture", toolchain, profile=profile, build=build
-            )
-            check_abort_fixture(
-                "ParameterNegativeBoundsFixture", toolchain, profile=profile, build=build
+            check_bounds_matrix(
+                toolchain,
+                harness=harness,
+                warm=not (profile == "portable" and build == "debug"),
+                profile=profile,
+                build=build,
             )
     return canonical
 
@@ -819,45 +1312,44 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("gcc", "clang"))
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument(
+        "--timing-report",
+        type=Path,
+        help="write a path-free JSON report for Haxe requests and suite phases",
+    )
     return parser.parse_args(list(arguments))
 
 
-def main(arguments: Iterable[str] = ()) -> int:
-    args = parse_args(arguments)
-    if not args.native_only and shutil.which(development_tool("haxe")) is None:
-        print("span-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
-        return 1
-    try:
-        if args.native_only:
-            artifacts = {
-                "program.h": (EXPECTED / "program.h").read_text(encoding="utf-8"),
-                "program.c": (EXPECTED / "program.c").read_text(encoding="utf-8"),
-            }
-            symbols = json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8"))
-            check_native_artifacts(artifacts, symbols, args.toolchain)
-            print("span-lowering: OK: required strict-C native matrix passed")
-            return 0
-
-        baseline: dict[str, object] | None = None
-        canonical_report: dict[str, object] | None = None
+def check_full_suite(args: argparse.Namespace, harness: HaxeHarness) -> None:
+    baseline: dict[str, object] | None = None
+    canonical_report: dict[str, object] | None = None
+    with harness.phase("typed-report-matrix"):
+        first_payload, first_reports = render_matrix(
+            "first span matrix render",
+            harness=harness,
+            warm=False,
+        )
+        second_payload, second_reports = render_matrix(
+            "second span matrix render",
+            harness=harness,
+            warm=False,
+        )
+        reverse_payload, reverse_reports = render_matrix(
+            "reverse span matrix render",
+            harness=harness,
+            warm=False,
+            reverse=True,
+        )
+        if first_payload != second_payload or first_payload != reverse_payload:
+            raise SpanLoweringFailure(
+                "span report matrix changed across cold repeat/input order"
+            )
         for profile in PROFILES:
             for build in BUILD_MODES:
-                first_payload, first = render(
-                    f"first {profile}/{build} span render", profile=profile, build=build
-                )
-                second_payload, second = render(
-                    f"second {profile}/{build} span render", profile=profile, build=build
-                )
-                reverse_payload, reverse = render(
-                    f"reverse {profile}/{build} span render",
-                    reverse=True,
-                    profile=profile,
-                    build=build,
-                )
-                if first_payload != second_payload or first_payload != reverse_payload:
-                    raise SpanLoweringFailure(
-                        f"{profile}/{build} span report changed across repeat/input order"
-                    )
+                coordinate = (profile, build)
+                first = first_reports[coordinate]
+                second = second_reports[coordinate]
+                reverse = reverse_reports[coordinate]
                 validate(first, profile=profile, build=build)
                 validate(second, profile=profile, build=build)
                 validate(reverse, profile=profile, build=build)
@@ -870,131 +1362,122 @@ def main(arguments: Iterable[str] = ()) -> int:
                         "profile/build bounds policy changed semantics beyond its provenance"
                     )
 
-        if canonical_report is None:
-            raise SpanLoweringFailure("span macro matrix produced no canonical report")
+    if canonical_report is None:
+        raise SpanLoweringFailure("span macro matrix produced no canonical report")
+
+    with harness.phase("negative-diagnostics"):
         for profile in PROFILES:
-            compile_failure_fixture(
-                "NonLiteralFixture", "TFunction(return-type):reference-Array-non-null", profile=profile
-            )
-            compile_failure_fixture(
-                "ZeroLengthFixture", "TArrayDecl(empty-fixed-array-not-strict-c11)", profile=profile
-            )
-            compile_failure_fixture(
-                "LookalikeFixture",
-                "TVar(Span:requires-fixed-array-borrow)",
-                profile=profile,
-            )
-            compile_failure_fixture(
-                "ZeroConstructionLengthFixture",
-                "TCall(c.CArray.zero:length-must-be-positive:0)",
-                profile=profile,
-                expected_anchor="ZeroConstructionLengthFixture.hx:6: characters 54-55",
-            )
-            compile_failure_fixture(
-                "NegativeConstructionLengthFixture",
-                "TCall(c.CArray.zero:length-must-be-positive:-1)",
-                profile=profile,
-                expected_anchor="NegativeConstructionLengthFixture.hx:6: characters 54-56",
-            )
-            compile_failure_fixture(
-                "OversizedConstructionFixture",
-                "automatic-storage-over-budget:length=65537,element-bytes=1,total-bytes=65537,limit-bytes=65536",
-                profile=profile,
-                expected_anchor="OversizedConstructionFixture.hx:6: characters 54-59",
-            )
-            compile_failure_fixture(
-                "OverflowConstructionFixture",
-                "TCall(c.CArray.zero:length-product-overflow:65536*65536)",
-                profile=profile,
-                expected_anchor="OverflowConstructionFixture.hx:6: characters 54-67",
-            )
-            compile_failure_fixture(
-                "NonConstantConstructionFixture",
-                "TCall(c.CArray.zero:length-must-be-compile-time-product:TCall)",
-                profile=profile,
-                expected_anchor="NonConstantConstructionFixture.hx:10: characters 54-62",
-            )
-            compile_failure_fixture(
-                "UnsupportedZeroElementFixture",
-                "TCall(c.CArray.zero:element-requires-exact-storage-size:bool)",
-                profile=profile,
-                expected_anchor="UnsupportedZeroElementFixture.hx:5: characters 50-51",
-            )
-            compile_failure_fixture(
-                "StaticOutOfBoundsFixture",
-                "TArray(index-statically-out-of-bounds:length=16384,index=16384)",
-                profile=profile,
-                expected_anchor="StaticOutOfBoundsFixture.hx:7: characters 17-22",
-            )
-            compile_failure_fixture(
-                "EscapingSpanFixture",
-                "TFunction(return-type:borrowed-span-escape)",
-                profile=profile,
-                expected_anchor="EscapingSpanFixture.hx:6: lines 6-9",
-            )
-            compile_failure_fixture(
-                "RecursiveSpanParameterFixture",
-                "TCall(recursive-borrowed-span-target-not-admitted:",
-                profile=profile,
-                expected_anchor="RecursiveSpanParameterFixture.hx:6: characters 10-25",
-            )
-            compile_failure_fixture(
-                "StoredSpanFieldFixture",
-                "borrowed-span-field-escape",
-                profile=profile,
-                expected_anchor="StoredSpanFieldFixture.hx:6: characters 2-34",
-            )
-            compile_failure_fixture(
-                "StoredSpanGlobalFixture",
-                "TField(static:borrowed:abstract `c.Span` is not an admitted primitive",
-                profile=profile,
-                expected_anchor="StoredSpanGlobalFixture.hx:9: characters 3-11",
-            )
-            compile_failure_fixture(
-                "VirtualSpanParameterFixture",
-                "borrowed-span-requires-static-function",
-                profile=profile,
-                expected_anchor="VirtualSpanParameterFixture.hx:18: lines 18-20",
-            )
-            compile_failure_fixture(
-                "CallbackSpanParameterFixture",
-                "TVar(callback:type):function values await closure/function representation lowering",
-                profile=profile,
-                expected_anchor="CallbackSpanParameterFixture.hx:13: characters 3-56",
-            )
-            compile_failure_fixture(
-                "ExportedSpanParameterFixture",
-                "Imported functions must belong to an extern class.",
-                profile=profile,
-                expected_anchor="ExportedSpanParameterFixture.hx:7: lines 7-9",
-                diagnostic_id="HXC3000",
-            )
-            compile_failure_fixture(
-                "NativeSpanParameterFixture",
-                "Pointer and retained-borrow lifetimes are outside this direct by-value slice.",
-                profile=profile,
-                expected_anchor="SpanNativeApi.hx:7: characters 2-72",
-                diagnostic_id="HXC3000",
-            )
+            for case in NEGATIVE_CASES:
+                compile_failure_fixture(
+                    case.main_class,
+                    case.expected_fragment,
+                    harness=harness,
+                    warm=not (
+                        profile == "portable"
+                        and case.main_class in COLD_NEGATIVE_CASES
+                    ),
+                    profile=profile,
+                    expected_anchor=case.expected_anchor,
+                    diagnostic_id=case.diagnostic_id,
+                )
+
+    with harness.phase("configuration-diagnostics"):
         for profile in PROFILES:
-            check_configuration_failure(profile=profile)
-        production = check_production(args.toolchain)
+            check_configuration_failure(
+                harness=harness,
+                warm=profile != "portable",
+                profile=profile,
+            )
+
+    with harness.phase("production-profile-build-and-bounds"):
+        production = check_production(harness, args.toolchain)
+
+    with harness.phase("snapshot-comparison"):
         snapshots: dict[str, object] = {
             "span.hxcir": required_text(canonical_report, "hxcir"),
             "symbols.json": canonical_report.get("symbols"),
             **production,
         }
         check_snapshots(snapshots)
-        symbols = canonical_report.get("symbols")
-        if not isinstance(symbols, dict):
-            raise SpanLoweringFailure("canonical span symbols are missing")
+
+    symbols = canonical_report.get("symbols")
+    if not isinstance(symbols, dict):
+        raise SpanLoweringFailure("canonical span symbols are missing")
+    with harness.phase("native-toolchain-matrix"):
         check_native_artifacts(production, symbols, args.toolchain)
+
+
+def main(arguments: Iterable[str] = ()) -> int:
+    args = parse_args(arguments)
+    if args.native_only and args.timing_report is not None:
+        print(
+            "span-lowering: ERROR: --timing-report requires the full suite",
+            file=sys.stderr,
+        )
+        return 1
+    if not args.native_only and shutil.which(development_tool("haxe")) is None:
+        print("span-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
+        return 1
+    if args.native_only:
+        try:
+            artifacts = {
+                "program.h": (EXPECTED / "program.h").read_text(encoding="utf-8"),
+                "program.c": (EXPECTED / "program.c").read_text(encoding="utf-8"),
+            }
+            symbols = json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8"))
+            check_native_artifacts(artifacts, symbols, args.toolchain)
+            print("span-lowering: OK: required strict-C native matrix passed")
+            return 0
+        except (
+            OSError,
+            subprocess.TimeoutExpired,
+            SpanLoweringFailure,
+            json.JSONDecodeError,
+        ) as error:
+            print(f"span-lowering: ERROR: {error}", file=sys.stderr)
+            return 1
+
+    harness = HaxeHarness(use_server=True)
+    try:
+        with harness:
+            check_full_suite(args, harness)
+            harness.validate_topology()
+        report = harness.timing_report(outcome="passed")
+        if args.timing_report is not None:
+            write_timing_report(args.timing_report, report)
+        summary = report["summary"]
+        if not isinstance(summary, dict):
+            raise SpanLoweringFailure("span timing summary is not an object")
+        print(
+            "span-lowering: TIMING: "
+            f"requests={summary['requests']}, "
+            f"cold-compiler-loads={summary['coldCompilerLoads']}, "
+            f"warm-server-requests={summary['warmServerRequests']}, "
+            f"compiler-loads={summary['compilerLoads']}, "
+            f"total={report['durationMs']}ms"
+        )
         print(
             "span-lowering: OK: literal/zero fixed arrays, exact-width spans and "
             "span parameters, bounds/storage matrix, strict C11, and zero-hxrt links passed"
         )
         return 0
-    except (OSError, subprocess.TimeoutExpired, SpanLoweringFailure, json.JSONDecodeError) as error:
+    except (
+        OSError,
+        subprocess.TimeoutExpired,
+        SpanLoweringFailure,
+        json.JSONDecodeError,
+    ) as error:
+        if args.timing_report is not None:
+            try:
+                write_timing_report(
+                    args.timing_report,
+                    harness.timing_report(outcome="failed"),
+                )
+            except OSError as report_error:
+                print(
+                    f"span-lowering: ERROR: could not write failed timing report: {report_error}",
+                    file=sys.stderr,
+                )
         print(f"span-lowering: ERROR: {error}", file=sys.stderr)
         return 1
 

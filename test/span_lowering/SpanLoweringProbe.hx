@@ -27,6 +27,11 @@ typedef SpanLoweringProbeRecord = {
 	final runtimeFeatures:Array<String>;
 	final runtimeArtifacts:Array<String>;
 }
+
+typedef SpanLoweringProbeMatrixRecord = {
+	final schemaVersion:Int;
+	final reports:Array<SpanLoweringProbeRecord>;
+}
 #end
 
 class SpanLoweringProbe {
@@ -81,13 +86,25 @@ class SpanLoweringProbe {
 		if (Context.defined("span_lowering_reverse_input")) {
 			inputs.reverse();
 		}
-		final profile = Context.definedValue("span_lowering_profile") == "metal" ? CProfile.Metal : CProfile.Portable;
-		final buildMode = switch Context.definedValue("span_lowering_build") {
-			case null | "" | "debug": CBuildMode.Debug;
-			case "release": CBuildMode.Release;
-			case "minsizerel": CBuildMode.MinSizeRel;
-			case value: fatal('invalid probe build mode `$value`');
+		// Typing this fixture is the expensive part. Reuse that one immutable
+		// typed input for every policy coordinate, but give each lowering a fresh
+		// compiler context so no symbols or mutable planning state can leak.
+		final profiles:Array<CProfile> = [CProfile.Portable, CProfile.Metal];
+		final buildModes:Array<CBuildMode> = [CBuildMode.Debug, CBuildMode.Release, CBuildMode.MinSizeRel];
+		final reports:Array<SpanLoweringProbeRecord> = [];
+		for (profile in profiles) {
+			for (buildMode in buildModes) {
+				reports.push(lower(inputs, profile, buildMode));
+			}
+		}
+		final matrix:SpanLoweringProbeMatrixRecord = {
+			schemaVersion: 1,
+			reports: reports
 		};
+		Sys.println(REPORT_PREFIX + Json.stringify(matrix));
+	}
+
+	static function lower(inputs:Array<CBodyFunctionInput>, profile:CProfile, buildMode:CBuildMode):SpanLoweringProbeRecord {
 		final result = new CBodyLowering(new CompilationContext(profile, buildMode)).lower(inputs);
 		final functions:Array<SpanLoweringFunctionRecord> = [];
 		for (fn in result.functions) {
@@ -114,7 +131,7 @@ class SpanLoweringProbe {
 			runtimeFeatures: [],
 			runtimeArtifacts: []
 		};
-		Sys.println(REPORT_PREFIX + Json.stringify(record));
+		return record;
 	}
 
 	static function compareStrings(left:String, right:String):Int

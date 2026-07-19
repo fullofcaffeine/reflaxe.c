@@ -9,7 +9,7 @@ class UpperBoundsFixture {
 		return view[index];
 	}
 
-	static function main():Void {
+	public static function main():Void {
 		read();
 	}
 }

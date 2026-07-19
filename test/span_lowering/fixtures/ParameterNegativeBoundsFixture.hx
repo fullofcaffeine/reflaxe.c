@@ -6,7 +6,7 @@ class ParameterNegativeBoundsFixture {
 		return values[index];
 	}
 
-	static function main():Void {
+	public static function main():Void {
 		var values:CArray<Int, Length4> = [1, 2, 3, 4];
 		var view:ConstSpan<Int> = values.constSpan();
 		readAt(view, -1);

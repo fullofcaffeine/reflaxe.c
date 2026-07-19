@@ -47,6 +47,7 @@ REQUIRED_GATE_FILES = (
     ".github/workflows/snapshot-audit.yml",
     "test/governance/test_toolchain_shard.py",
     "docs/specs/toolchain-timing.schema.json",
+    "docs/specs/span-lowering-timing.schema.json",
     "docs/test-performance.md",
     "CONTRIBUTING.md",
     "SECURITY.md",

@@ -227,15 +227,51 @@ checked indexing, and direct iteration into allocation-free C. The readable
 feature and safety contract is in [Fixed arrays and spans](span-lowering.md).
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a
-single lowering pass or a typical user build. Its runner currently starts 87
-separate Haxe processes with `HAXE_NO_SERVER=1`: 18 report/determinism renders,
-36 negative fixtures, two invalid-configuration fixtures, seven
-production/determinism builds, and 24 bounds-abort builds. It then runs its
-GCC/Clang optimization and sanitizer matrix. The next optimization should batch
-compatible typed fixtures or share validated compiler results, retain a
-separate warm-server lifecycle lane, and keep the complete negative/native
-contract. Merely deleting matrix coordinates is not an acceptable speedup.
-Beads issue `haxe_c-xge.26` owns that follow-up.
+single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
+runner started 87 independent Haxe processes: 18 report/determinism renders, 36
+negative fixtures, two invalid-configuration fixtures, seven
+production/determinism builds, and 24 bounds-abort builds. It then ran its
+GCC/Clang optimization and sanitizer matrix.
+
+The optimized runner keeps every coordinate and assertion but now performs 54
+Haxe requests: 8 retained cold requests and 46 ordered requests through one
+isolated compiler server. Together, those paths load the compiler executable 9
+times rather than 87. The request topology is executable and fails if a future
+edit accidentally changes those counts.
+
+Two changes remove duplicated semantic work:
+
+- one typed fixture now produces all six profile/build HxcIR reports using a
+  fresh compiler context for each coordinate, so normal, repeated, and reversed
+  discovery require three cold compilations instead of 18; and
+- one reachable bounds program per profile/build coordinate contains all four
+  local/parameter and upper/negative failure paths. A typed native selector
+  links and runs each path separately, proving the correct branch marker,
+  `abort()` failure, strict C, and zero `hxrt` symbols with six Haxe builds
+  instead of 24.
+
+The exact report renders remain cold because the pinned Haxe compiler's cached
+typed tree can retain a narrower—but semantically equivalent—source position
+for a one-expression body. Exact HxcIR source locations are evidence, so the
+runner does not normalize that difference away. Negative, configuration,
+production, repeat, and bounds requests use the serial warm server while
+retaining representative cold requests. That ordered sequence remains a
+request-leakage test and is intentionally not internally parallelized.
+Beads issue `haxe_c-xge.27` owns the source-anchor follow-up.
+
+The first full intermediate topology (72 requests, before bounds batching)
+completed locally in 145,336ms. The final 54-request topology completed on the
+same checkout and machine in 91,226ms and passed all native checks. The older
+285,042ms number above was captured under four-worker contention, so it is not
+an apples-to-apples wall-time ratio; the process/load counts are the stable
+structural comparison. The final isolated sample is below the initial two-minute
+focused-lane objective, while hosted timings still require their own sample.
+
+`test/span-lowering` accepts `--timing-report` through its Python runner. Its
+path-free report conforms to
+[`span-lowering-timing.schema.json`](specs/span-lowering-timing.schema.json) and
+accounts for phase time, cold/warm transport, exit codes, compiler loads, and
+total wall time even on a handled failure.
 
 Four simultaneous shards also made the span command about 39 seconds and the
 Caxecraft command about 50 seconds slower than an earlier two-worker sample.

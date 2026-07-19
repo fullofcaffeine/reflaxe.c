@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/span-lowering-timing.schema.json",
+  "title": "reflaxe.c span-lowering timing evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "suite",
+    "outcome",
+    "durationMs",
+    "compilerServer",
+    "summary",
+    "phases",
+    "invocations"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "suite": {
+      "const": "span-lowering"
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome"
+    },
+    "durationMs": {
+      "$ref": "#/$defs/durationMs"
+    },
+    "compilerServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started",
+        "startupMs"
+      ],
+      "properties": {
+        "started": {
+          "type": "boolean"
+        },
+        "startupMs": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/durationMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requests",
+        "coldCompilerLoads",
+        "warmServerRequests",
+        "compilerLoads"
+      ],
+      "properties": {
+        "requests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "coldCompilerLoads": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warmServerRequests": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "compilerLoads": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    },
+    "invocations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/invocation"
+      }
+    }
+  },
+  "$defs": {
+    "outcome": {
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "outcome",
+        "durationMs"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "durationMs": {
+          "$ref": "#/$defs/durationMs"
+        }
+      }
+    },
+    "invocation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase",
+        "transport",
+        "exitCode",
+        "durationMs"
+      ],
+      "properties": {
+        "phase": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transport": {
+          "enum": [
+            "cold",
+            "warm-server"
+          ]
+        },
+        "exitCode": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "durationMs": {
+          "$ref": "#/$defs/durationMs"
+        }
+      }
+    }
+  }
+}

@@ -838,25 +838,35 @@ def primitive_differential_artifacts() -> list[Artifact]:
 
 def span_lowering_artifacts() -> list[Artifact]:
     module = load_module("span_lowering", "test/span_lowering/run.py")
-    first_payload, report = module.render("snapshot first span-lowering render")
-    second_payload, repeated = module.render("snapshot second span-lowering render")
-    reverse_payload, reversed_report = module.render(
-        "snapshot reverse-input span-lowering render", reverse=True
-    )
+    with module.HaxeHarness(use_server=False) as harness:
+        first_payload, reports = module.render_matrix(
+            "snapshot first span-lowering matrix", harness=harness, warm=False
+        )
+        second_payload, repeated_reports = module.render_matrix(
+            "snapshot second span-lowering matrix", harness=harness, warm=False
+        )
+        reverse_payload, reversed_reports = module.render_matrix(
+            "snapshot reverse-input span-lowering matrix",
+            harness=harness,
+            warm=False,
+            reverse=True,
+        )
+        production = module.production_snapshot(harness)
     if (
         first_payload != second_payload
-        or report != repeated
+        or reports != repeated_reports
         or first_payload != reverse_payload
-        or report != reversed_report
+        or reports != reversed_reports
     ):
         raise SnapshotFailure(
             "span-lowering snapshot changed across repeated or reverse-input renders"
         )
+    report = reports[("portable", "debug")]
     module.validate(report, profile="portable", build="debug")
     values = {
         "span.hxcir": report.get("hxcir"),
         "symbols.json": report.get("symbols"),
-        **module.production_snapshot(),
+        **production,
     }
     artifacts: list[Artifact] = []
     for name, format_name in (
