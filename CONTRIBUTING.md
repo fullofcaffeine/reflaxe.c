@@ -115,6 +115,12 @@ intentionally deferred scope. “Implemented” or “tests pass” is not suffi
 - A checked-in generated artifact must have an owning source, deterministic
   regeneration command, reviewable diff, and applicable native/oracle proof.
   Do not hand-edit it to hide a generator regression.
+- A selected illustration or texture may instead be admitted explicitly as a
+  reviewed **primary source asset**. Its exact bytes, rights, creation
+  provenance, privacy-sensitive inputs, and complete directory inventory must
+  be checked; interactive creation history is not a regeneration command. Any
+  derived resize, atlas, compression, conversion, or runtime package remains a
+  generated artifact and needs deterministic source-to-byte regeneration.
 - Do not commit build directories, compiler caches, temporary probes, or
   machine-specific absolute paths.
 

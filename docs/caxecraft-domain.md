@@ -4,7 +4,9 @@ Caxecraft is both a future Raylib game and a compiler end-to-end workload. Its
 domain is kept independent of Raylib so renderer/input integration cannot make
 world, ray, or collision semantics depend on frame rate, window state, native
 handles, or platform facts. This document fixes the contract implemented by
-`examples/caxecraft/src/caxecraft/domain`.
+`examples/caxecraft/src/caxecraft/domain`. The player-facing modes, story,
+Ivvy companion, editor, localization, art direction, and release definition
+live in the [Caxecraft game design document](caxecraft-game-design.md).
 
 ## Compile-time target seam: why `#if c` exists
 

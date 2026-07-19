@@ -1,0 +1,420 @@
+{
+  "schemaVersion": 1,
+  "packId": "caxecraft-showcase-v1-draft",
+  "status": "design-source-not-runtime-integrated",
+  "coordinateOrder": "row-major-top-left",
+  "reproducibility": {
+    "cleanBuildNetworkRequired": false,
+    "selectedOutputBytesPinned": true,
+    "sourceToByteRegeneration": "not-applicable-primary-source",
+    "derivedRuntimeAssets": "deterministic-regeneration-required",
+    "gitStorage": "ordinary-git-v1-reassess-before-runtime-integration",
+    "owner": "haxe_c-xge.15",
+    "note": "These reviewed PNG bytes are primary design-source inputs, not build-generated artifacts. Interactive creation history is provenance only and cannot recreate the selected bytes. Any resized, packed, compressed, or runtime-ready derivative must have a deterministic source-to-byte command before it is checked in."
+  },
+  "rights": {
+    "caxecraft-original": {
+      "kind": "repository-original-reviewed-source-art",
+      "licenseExpression": "GPL-3.0-only",
+      "notice": "Original Caxecraft visual design contributed under the repository license; no Minecraft or other game asset was used as an input."
+    }
+  },
+  "generationRecords": {
+    "adventure-characters": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-65bcde77-9690-4093-90b8-3007d217d27b"
+      ],
+      "promptSummary": "Original transparent 4x4 polished voxel-RPG character atlas: Haxirio, active engineer-princess Ceesh, and original crowned T-rex tyrant Browser with readable boss actions; teal, copper, orange, slate; no existing characters, logos, text, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "adventure-items": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-9c29755d-ecb4-4aaa-92b1-9de0ace4ea2c"
+      ],
+      "promptSummary": "Original transparent 4x4 voxel-RPG icon atlas for the Tideweave Suit, compiler-themed powerups, four route glyphs, bridge puzzle parts, checkpoint, and Ceesh scroll; crisp readable silhouettes; no text, logos, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "adventure-terrain": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-3a08fd1c-e835-4a5d-ac67-3dcd2d54bc6b"
+      ],
+      "promptSummary": "Original seamless 4x4 voxel material atlas for snow, ice, ash, basalt, pine, underwater ruins, castle, copper roof, and bridge runes; edge-to-edge square textures; no text, logos, or copied game textures.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output and packed to 1024x1024 RGB."
+    },
+    "entities": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-24dc2123-03e2-4f59-a8bf-5284d5397a99"
+      ],
+      "promptSummary": "Original transparent 4x4 polished voxel-RPG atlas with four views each for friendly trailkeeper Moss, craftsmith Nia, hostile Mossling, and hostile Ember Wisp; distinct family-friendly silhouettes; no existing characters, text, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "hud": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-a3689e29-b1b6-4a05-98ad-014d115ab134"
+      ],
+      "promptSummary": "Original transparent 4x4 voxel-game HUD atlas for health, armor, stamina, food, hotbar states, backpack, crosshair, dialogue, quest, and damage feedback; high contrast, accessible shapes, no words, logos, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected the violet-key iteration, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "items": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-74e34a5c-6fe6-4f8d-a2aa-38acfc84f0e0"
+      ],
+      "promptSummary": "Original transparent 4x4 voxel-game inventory atlas for basic blocks, tools, copper sword, materials, food, map, lantern, herbs, and quest token; readable at small size; no text, logos, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "ivvy": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-9c0a1dda-705a-4cae-b1ab-f26f7789665a"
+      ],
+      "promptSummary": "Original transparent 4x4 warm voxel-RPG Siamese-cat companion atlas with cream coat, dark mask/ears/paws/tail, blue eyes, teal collar and amber tag; follow, alert, secret-point, retrieve, purr, bubble-collar, cover, sleep, and victory poses; no text or watermark.",
+      "referenceInputs": [
+        "Private user-provided family-cat photograph used only as visual reference; not included in or distributed from this repository."
+      ],
+      "processing": "Selected built-in output, removed the flat chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
+    },
+    "terrain": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-340384e8-120f-4779-ac53-143980811537"
+      ],
+      "promptSummary": "Original seamless 4x4 voxel material atlas for meadow, soil, slate, sand, teal water, oak, leaves, planks, cobble, brick, ores, and foundation rock; edge-to-edge square textures; no text, logos, or copied game textures.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output and packed to 1024x1024 RGB."
+    },
+    "wordmark": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-f3cc0f89-f975-4803-b543-7ede54cd409c"
+      ],
+      "promptSummary": "Original opaque CAXECRAFT engineering wordmark on a dark navy field: cyan circuit-trace C, orange diagonal split-stroke X, warm-white angular letters; no stone, soil, grass, moss, cubic construction typography, existing-game treatment, official Haxe glyph, extra text, or watermark.",
+      "referenceInputs": [],
+      "processing": "Selected the built-in output and losslessly normalized its PNG container metadata; retained as a 1983x793 RGB primary design source."
+    },
+    "panorama": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-8e3cde3f-c698-455f-af52-6bf15b277b65"
+      ],
+      "promptSummary": "Original wide cinematic Caxecraft title panorama with warm voxel valley, river, village, distant castle, teal/copper hero accents, friendly original creature, and amber crystals; appealing family-adventure lighting; no text, logos, or copied game composition.",
+      "referenceInputs": [],
+      "processing": "Selected built-in output and packed to 1600x900 RGB."
+    }
+  },
+  "assets": [
+    {
+      "id": "adventure-characters",
+      "path": "atlases/adventure-characters.png",
+      "kind": "sprite-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "7122505cca4a57091121840377c5033287eb7fd71ccb4ede244c77d06265df88",
+      "generationRecord": "adventure-characters",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "haxirio-front",
+          "haxirio-three-quarter",
+          "haxirio-side",
+          "haxirio-back",
+          "ceesh-front",
+          "ceesh-three-quarter",
+          "ceesh-side",
+          "ceesh-back",
+          "browser-front",
+          "browser-three-quarter",
+          "browser-side",
+          "browser-back",
+          "browser-roar",
+          "browser-charge",
+          "browser-tail-sweep",
+          "browser-stunned"
+        ]
+      }
+    },
+    {
+      "id": "adventure-items",
+      "path": "atlases/adventure-items.png",
+      "kind": "icon-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "4317ec8e7a23a3ef358124c01bb2982fb2846da46f83ab146e6a9aa522664938",
+      "generationRecord": "adventure-items",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "tideweave-suit-folded",
+          "tideweave-helmet",
+          "tideweave-air-canister",
+          "tideweave-suit-pickup",
+          "bounds-ward",
+          "inlining-spark",
+          "zero-cost-charm",
+          "cleanup-crest",
+          "glyph-wave",
+          "glyph-leaf",
+          "glyph-ember",
+          "glyph-forge",
+          "bridge-input",
+          "bridge-routing-elbow",
+          "checkpoint",
+          "ceesh-scroll"
+        ]
+      }
+    },
+    {
+      "id": "adventure-terrain",
+      "path": "atlases/adventure-terrain.png",
+      "kind": "tile-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": false,
+      "sha256": "9b4293014566b76c95f56e683b9380b51e19287087633f801be33477a237e3f0",
+      "generationRecord": "adventure-terrain",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "snow-top",
+          "snow-side",
+          "ancient-ice",
+          "frost-stone",
+          "ash-top",
+          "ash-side",
+          "charred-basalt",
+          "ember-rock",
+          "pine-canopy",
+          "snowy-pine-canopy",
+          "dark-pine-bark",
+          "submerged-ruin-stone",
+          "castle-slate",
+          "fortress-brick",
+          "teal-copper-roof",
+          "bridge-rune-tile"
+        ]
+      }
+    },
+    {
+      "id": "entities",
+      "path": "atlases/entities.png",
+      "kind": "sprite-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "6f41e7b20f31b368f50ca934725c7edeb2fb355ef303817cfa744e801afe0f1a",
+      "generationRecord": "entities",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "moss-front",
+          "moss-three-quarter",
+          "moss-side",
+          "moss-back",
+          "nia-front",
+          "nia-three-quarter",
+          "nia-side",
+          "nia-back",
+          "mossling-front",
+          "mossling-three-quarter",
+          "mossling-side",
+          "mossling-back",
+          "ember-wisp-front",
+          "ember-wisp-three-quarter",
+          "ember-wisp-side",
+          "ember-wisp-back"
+        ]
+      }
+    },
+    {
+      "id": "hud",
+      "path": "atlases/hud.png",
+      "kind": "icon-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "d64823fa0ce8168634f5b389f85bfb5002a68482ea4fe697e890c291333ee388",
+      "generationRecord": "hud",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "health-full",
+          "health-half",
+          "health-empty",
+          "armor",
+          "stamina-full",
+          "stamina-empty",
+          "food-full",
+          "food-empty",
+          "hotbar-normal",
+          "hotbar-selected",
+          "hotbar-locked",
+          "backpack",
+          "crosshair",
+          "dialogue",
+          "quest-marker",
+          "damage-indicator"
+        ]
+      }
+    },
+    {
+      "id": "items",
+      "path": "atlases/items.png",
+      "kind": "icon-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "0c5ee8db1ce5e8b19ff21d8e50a2abf088b23574c044ac88afa79bf50a067ed0",
+      "generationRecord": "items",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "grass-block",
+          "soil-block",
+          "slate-stone",
+          "oak-log",
+          "wood-pick",
+          "stone-axe",
+          "stone-shovel",
+          "copper-sword",
+          "amber-shard",
+          "copper-nugget",
+          "berries",
+          "bread",
+          "map",
+          "lantern",
+          "healing-herbs",
+          "quest-token"
+        ]
+      }
+    },
+    {
+      "id": "ivvy",
+      "path": "atlases/ivvy.png",
+      "kind": "sprite-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "ff3c17ec0aa1762a86dbf02d4668382f80cf4657ba655107029091aa20b8fc4d",
+      "generationRecord": "ivvy",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "sit-front",
+          "sit-three-quarter",
+          "stand-side",
+          "stand-back",
+          "walk-front",
+          "walk-three-quarter",
+          "walk-side",
+          "hop",
+          "point-secret",
+          "sniff-drop",
+          "retrieve-drop",
+          "checkpoint-purr",
+          "bubble-collar",
+          "cover",
+          "sleep",
+          "victory"
+        ]
+      }
+    },
+    {
+      "id": "terrain",
+      "path": "atlases/terrain.png",
+      "kind": "tile-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": false,
+      "sha256": "7bba5133568d69850f8764fe43b70a93228ab5aded8d276649685902691ec217",
+      "generationRecord": "terrain",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "meadow-grass-top",
+          "grass-side",
+          "rich-soil",
+          "slate-stone",
+          "river-sand",
+          "teal-water",
+          "bark-side",
+          "log-top",
+          "leafy-canopy",
+          "oak-planks",
+          "field-cobble",
+          "clay-brick",
+          "charcoal-ore",
+          "copper-ore",
+          "amber-crystal-ore",
+          "foundation-rock"
+        ]
+      }
+    },
+    {
+      "id": "caxecraft-wordmark",
+      "path": "branding/caxecraft-wordmark.png",
+      "kind": "wordmark",
+      "width": 1983,
+      "height": 793,
+      "alpha": false,
+      "sha256": "9afa069ce5547b46ed0d4881f247d7ece04d3380fb828cce10d5b72399e01b68",
+      "generationRecord": "wordmark",
+      "rights": "caxecraft-original"
+    },
+    {
+      "id": "title-panorama",
+      "path": "showcase/title-panorama.png",
+      "kind": "showcase-image",
+      "width": 1600,
+      "height": 900,
+      "alpha": false,
+      "sha256": "15fe8f38afb11392eeeeae9d503f368c47ce5a7c9d19b8dce4a28dc9f1ea5ce3",
+      "generationRecord": "panorama",
+      "rights": "caxecraft-original"
+    }
+  ]
+}

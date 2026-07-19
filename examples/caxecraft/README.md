@@ -1,9 +1,12 @@
 # Caxecraft
 
-Caxecraft is the repository's small Minecraft-like Raylib showcase. This first
-slice is deliberately the renderer-independent game core: a finite voxel world,
-seeded terrain, block edits, voxel raycasting, and a fixed-step first-person
-collision controller. The interactive Raylib shell follows in the next task.
+Caxecraft is the repository's small original voxel-sandbox Raylib showcase.
+This first slice is deliberately the renderer-independent game core: a finite
+voxel world, seeded terrain, block edits, voxel raycasting, and a fixed-step
+first-person collision controller. The interactive Raylib shell follows in the
+next task. The complete Creative/Adventure/editor/Ivvy direction and its honest
+present-versus-planned gates live in the
+[game design document](../../docs/caxecraft-game-design.md).
 
 The core is ordinary Haxe. Only `WorldCells` and `WorldStorage` know that the C
 build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
@@ -81,6 +84,8 @@ command above and the one-command proof remain the supported recovery paths.
 
 See [the domain design](../../docs/caxecraft-domain.md) for storage, target
 conditionals, the long-term adapter plan, DDA, collision, determinism, and QA
-details. This slice does not yet prove a playable window, public RaylibHx
-bindings, full Haxe portability, or general compiler support beyond the
-exercised language subset.
+details, and [the game design document](../../docs/caxecraft-game-design.md)
+for the product, story, content, editor, localization, accessibility, art, and
+release contract. This slice does not yet prove a playable window, public
+RaylibHx bindings, full Haxe portability, or general compiler support beyond
+the exercised language subset.

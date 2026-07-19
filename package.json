@@ -30,6 +30,7 @@
     "test:string-runtime": "python3 test/differential/string-runtime/run.py",
     "test:string-output": "python3 test/string_output/run.py",
     "test:hello": "python3 examples/hello/run.py",
+    "test:caxecraft-assets": "python3 examples/caxecraft/check_assets.py",
     "test:caxecraft-domain": "python3 examples/caxecraft/run.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",
