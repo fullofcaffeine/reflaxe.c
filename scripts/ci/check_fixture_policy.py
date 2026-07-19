@@ -439,8 +439,14 @@ def validate() -> list[str]:
     workflow = read_text(WORKFLOW, errors)
     if "snapshots:update" in workflow:
         errors.append("CI workflow must never invoke snapshot update mode")
-    if "npm run test:toolchain" not in workflow:
-        errors.append("CI workflow must retain the toolchain/snapshot gate")
+    if (
+        "npm run test:toolchain:shard" not in workflow
+        or "  pinned-toolchain:\n" not in workflow
+    ):
+        errors.append(
+            "CI workflow must retain the isolated toolchain shards and "
+            "fail-closed pinned-toolchain aggregate"
+        )
     if not (ROOT / "docs/testing.md").is_file():
         errors.append("human-readable fixture policy is missing: docs/testing.md")
 

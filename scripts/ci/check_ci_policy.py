@@ -12,6 +12,8 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/governance.yml"
 PACKAGE = ROOT / "package.json"
+AGENT_POLICY = ROOT / "AGENTS.md"
+TEST_PERFORMANCE = ROOT / "docs/test-performance.md"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 PRE_PUSH = ROOT / "scripts/hooks/pre-push"
 BUILD_ADAPTER_REQUIREMENTS = ROOT / "scripts/ci/build-adapter-requirements.txt"
@@ -40,6 +42,8 @@ REQUIRED_GATE_FILES = (
     "scripts/security/run-beads-gitleaks.sh",
     "scripts/ci/install-gitleaks.sh",
     "scripts/ci/check_security_tooling.py",
+    "scripts/ci/run_toolchain_shard.py",
+    "docs/test-performance.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
     "scripts/ci/check_governance_policy.py",
@@ -695,9 +699,19 @@ REQUIRED_GATE_FILES = (
 )
 
 REQUIRED_WORKFLOW_SNIPPETS = (
+    "concurrency:\n  group: governance-${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n",
     "  secret-scan:\n",
     "  haxe-format:\n",
-    "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
+    "  toolchain-shards:\n    name: Pinned toolchain (${{ matrix.shard }})\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
+    "      max-parallel: 5\n",
+    "          - contracts\n",
+    "          - lowering-objects\n",
+    "          - lowering-semantics\n",
+    "          - caxecraft\n",
+    "          - snapshots\n",
+    '        run: npm run test:toolchain:shard -- "${{ matrix.shard }}"\n',
+    "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    needs:\n      - toolchain-shards\n    if: ${{ always() }}\n",
+    "          TOOLCHAIN_SHARDS_RESULT: ${{ needs['toolchain-shards'].result }}\n",
     "  native-smoke:\n",
     "  build-adapters:\n",
     "  raylib-headless:\n",
@@ -926,6 +940,16 @@ def validate() -> list[str]:
         errors.append("package.json must retain the snapshots:check entry point")
     if scripts.get("snapshots:update") != "python3 scripts/test/snapshots.py --update":
         errors.append("package.json must retain the explicit snapshots:update entry point")
+    if (
+        scripts.get("test:toolchain-shards")
+        != "python3 scripts/ci/run_toolchain_shard.py --check"
+    ):
+        errors.append("package.json must retain the exact toolchain-shard coverage guard")
+    if (
+        scripts.get("test:toolchain:shard")
+        != "python3 scripts/ci/run_toolchain_shard.py --run"
+    ):
+        errors.append("package.json must retain the focused toolchain-shard runner")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
     if "npm run test:diagnostics" not in str(scripts.get("test:toolchain", "")):
@@ -1035,6 +1059,37 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:governance must execute the typed-boundary guard"
         )
+    if "npm run test:toolchain-shards" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must validate exact toolchain-shard coverage"
+        )
+
+    agent_policy = read_text(AGENT_POLICY, errors)
+    for directive in (
+        "## Developer Feedback-Loop Performance",
+        "Parallelize independent lanes",
+        "Never parallelize a lane whose purpose depends on warm compiler-server reuse",
+        "A timeout increase is containment",
+    ):
+        if directive not in agent_policy:
+            errors.append(
+                "AGENTS.md lost the developer feedback-loop directive: " + directive
+            )
+
+    performance_policy = read_text(TEST_PERFORMANCE, errors)
+    for contract in (
+        "## Current lane topology",
+        "## Parallelization safety rule",
+        "## Budgets and observability",
+        "## Optimization sequence",
+        "haxe_c-xge.25",
+    ):
+        if contract not in performance_policy:
+            errors.append(
+                "test performance policy lost required contract: " + contract
+            )
 
     workflow = read_text(WORKFLOW, errors)
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:

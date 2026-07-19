@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: governance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   secret-scan:
     name: Full-history secret scan
@@ -52,9 +56,20 @@ jobs:
       - name: Check repository-owned Haxe formatting
         run: npm run format:haxe:check
 
-  pinned-toolchain:
+  toolchain-shards:
+    name: Pinned toolchain (${{ matrix.shard }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        shard:
+          - contracts
+          - lowering-objects
+          - lowering-semantics
+          - caxecraft
+          - snapshots
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -68,8 +83,26 @@ jobs:
       - name: Resolve exact Haxe and Lix tools
         run: npm ci
 
-      - name: Verify pins, diagnostics, all sources, target lifecycle, typed contracts, stdlib ledger, fixtures, and snapshots
-        run: npm run test:toolchain
+      - name: Run exact isolated toolchain shard
+        run: npm run test:toolchain:shard -- "${{ matrix.shard }}"
+
+  pinned-toolchain:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs:
+      - toolchain-shards
+    if: ${{ always() }}
+    steps:
+      - name: Require every isolated toolchain shard
+        env:
+          TOOLCHAIN_SHARDS_RESULT: ${{ needs['toolchain-shards'].result }}
+        run: |
+          set -euo pipefail
+          if [ "$TOOLCHAIN_SHARDS_RESULT" != "success" ]; then
+            echo "one or more pinned toolchain shards did not succeed: $TOOLCHAIN_SHARDS_RESULT" >&2
+            exit 1
+          fi
+          echo "all pinned toolchain shards succeeded"
 
   native-smoke:
     name: Native smoke (${{ matrix.toolchain }})

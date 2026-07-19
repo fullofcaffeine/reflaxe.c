@@ -87,6 +87,12 @@ The canonical directories are stable homes for new cases. Existing focused
 suites stay in their current paths and are mapped by the catalog; moving them
 would create noise without improving their evidence.
 
+The exhaustive reference lane, focused developer shards, isolated GitHub
+matrix, timeout policy, safe/unsafe parallelism rules, and measured optimization
+sequence are documented in [test feedback-loop and CI performance](test-performance.md).
+Speed changes must preserve every evidence lane and the central snapshot
+ownership contract described below.
+
 The mapped `diagnostics` suite is both positive and negative policy evidence.
 It compares the typed Haxe definitions with the machine catalog, validates two
 byte-identical structured renders, and proves that unregistered IDs, absolute

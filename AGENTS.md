@@ -62,6 +62,47 @@ cp -rf source dest          # NOT: cp -r source dest
 - `apt-get` - use `-y` flag
 - `brew` - use `HOMEBREW_NO_AUTO_UPDATE=1` env var
 
+## Developer Feedback-Loop Performance
+
+Fast, dependable feedback is repository infrastructure, not optional polish.
+Design build, watch, test, snapshot, and CI tooling so developers spend as
+little time waiting as correctness permits.
+
+- Provide the narrowest useful focused command as well as the exhaustive
+  reference lane. Do not force an unrelated full repository run to answer a
+  local question.
+- Measure before and after changing a slow lane. Record phase timings, identify
+  the first real bottleneck, and keep enough evidence to distinguish useful
+  work from setup, contention, duplicated work, or a hang.
+- Do not repeat an expensive compile, render, native build, or oracle run in one
+  workflow unless the second execution proves a documented independent
+  invariant. Share or reuse evidence only when its inputs and provenance are
+  content-addressed and validated fail closed.
+- Parallelize independent lanes when each worker has isolated process state,
+  temporary/output roots, ports, caches, and artifact ownership. Bound local
+  concurrency with a documented, resource-aware setting; make result and log
+  collation deterministic.
+- Never parallelize a lane whose purpose depends on warm compiler-server reuse,
+  ordered mutation, shared-output stale deletion, contention, or a fixed port
+  until the test has an explicit isolation design proving that it remains the
+  same test.
+- CI must use bounded timeouts, visible per-lane status, and a fail-closed
+  aggregate required check. A timeout increase is containment, not a substitute
+  for removing redundant work or fixing a performance regression.
+- Caches must be derived from reviewed locks and complete input hashes. Keep a
+  cold path so a warm cache cannot become the only reason a required gate
+  passes.
+- Faster must never mean silently dropping snapshot ownership, deterministic
+  byte comparison, sanitizers, native compiler families, platform lanes,
+  negative diagnostics, or another acceptance requirement.
+- When a required lane exceeds its documented budget, create or update an
+  owning Beads issue with timing evidence and a remediation plan instead of
+  normalizing the delay.
+
+The current lane topology, commands, safety classifications, baseline, and
+optimization sequence are maintained in
+[`docs/test-performance.md`](docs/test-performance.md).
+
 ## Project-Specific Contract
 
 ### Normative sources and read order
