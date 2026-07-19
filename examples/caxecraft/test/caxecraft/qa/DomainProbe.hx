@@ -8,11 +8,20 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldVolume;
 #if c
+// Only the generated-C probe needs the fixed native storage carrier.
 import c.CArray;
 import c.UInt8;
 #end
 
-/** Shared Eval/generated-C executable specification for the voxel domain. */
+/**
+	Shared Eval/generated-C executable specification for the voxel domain.
+
+	`#if c` selects test plumbing, not different gameplay rules. Eval can print
+	the oracle through `Sys`; the deliberately runtime-free C program instead
+	exposes generated functions to the independent native harness. Both execute
+	the same `selfCheck` and trace code. The storage branch follows the same
+	fixed-C-versus-ordinary-Haxe contract documented by `WorldCells`.
+**/
 final class DomainProbe {
 	public static function main():Void {
 		#if !c

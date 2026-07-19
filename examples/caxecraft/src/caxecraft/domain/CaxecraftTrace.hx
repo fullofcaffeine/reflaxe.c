@@ -1,11 +1,24 @@
 package caxecraft.domain;
 
 #if c
+// C-only fixed storage imports are absent from the non-C oracle program.
 import c.CArray;
 import c.UInt8;
 #end
 
-/** Canonical deterministic traces consumed by Eval and strict generated C. */
+/**
+	Canonical deterministic traces consumed by Eval and strict generated C.
+
+	Each `#if c` block below changes only how a fresh world buffer is provided:
+	the C build uses a fixed stack-shaped `CArray`, while the non-C oracle uses an
+	ordinary Haxe array. The trace operations and hashes after that setup are the
+	same source on both paths. Haxe removes the inactive branch at compile time;
+	there is no target test in the generated game loop.
+
+	The repeated setup is intentionally visible evidence of the representation
+	boundary. Future target adapters should centralize their carrier construction
+	without moving terrain, edit, ray, or physics semantics behind conditionals.
+**/
 final class CaxecraftTrace {
 	public static function terrainTrace():Int {
 		#if c

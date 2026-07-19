@@ -6,6 +6,119 @@ world, ray, or collision semantics depend on frame rate, window state, native
 handles, or platform facts. This document fixes the contract implemented by
 `examples/caxecraft/src/caxecraft/domain`.
 
+## Compile-time target seam: why `#if c` exists
+
+Haxe conditional compilation is used here to select a representation at the
+edge of the domain without turning the domain itself into a lowest-common-
+denominator framework. In a conforming production invocation:
+
+```text
+haxe ... --custom-target c=<generated-directory>
+```
+
+the pinned Haxe compiler invokes this target's activation hook and exposes the
+public `c` define after validating the custom-target platform contract. Haxe
+resolves `#if c` during compilation. The inactive branch is not a runtime path:
+its imports and expressions are excluded before the selected program is typed
+and emitted. Consequently the generated C contains no `if (target_is_c)` test,
+no dormant `Array` fallback, and no cost for the conditional.
+
+Application code must test `#if c`, not the internal `reflaxe_c` marker or the
+path-bearing `c_output` transport. Manually supplying `-D c` does not activate
+or validate the custom target and is not a supported shortcut. The activation
+contract is documented in [configuration](configuration.md#target-activation-and-native-tuple).
+
+### Exact current conditional inventory
+
+| Location | C branch | Non-C branch | Why the difference is admitted |
+| --- | --- | --- | --- |
+| `WorldCells.hx` | `Span<UInt8>` | `Array<Int>` | C needs compact fixed native storage; the oracle needs an ordinary Haxe carrier. |
+| `WorldStorage.hx` | exact `UInt8` widening and explicit narrowing | direct `Int` array access | C ABI-width conversions must remain explicit without infecting algorithms. |
+| `CaxecraftTrace.hx` | fixed `CArray<UInt8, WorldVolume>` backing | freshly filled Haxe array | Each trace needs owned test storage, but all operations after construction stay shared. |
+| `DomainProbe.hx` | fixed storage and no Haxe `Sys` output | Haxe array and printed oracle lines | The C slice is runtime-free, so an independent fixture C consumer prints returned values. |
+
+The import guards are part of the same boundary: non-C compilation never sees
+the C-only carrier imports. The repeated storage setup in the trace is visible
+on purpose; it makes the representational difference reviewable rather than
+hiding it in an untyped factory or runtime service.
+
+No `#if c` appears in `World`, `VoxelRaycast`, or `PlayerPhysics`. Bounds,
+terrain, edits, material rules, DDA traversal, collision, and fixed-step state
+updates are one ordinary Haxe implementation. That placement is the central
+architectural rule: select carriers and platform services at a narrow edge,
+then pass typed data into shared algorithms.
+
+### What the non-C branch proves—and does not prove
+
+The fallback uses standard Haxe `Array<Int>` and is currently executed under
+the exact pinned Eval target. Comparing its traces with generated C proves the
+declared domain behavior for the exercised inputs, including integer results,
+floating calculations used by ray/collision code, iteration order, and edit
+rules. Eval is a differential oracle, not a second shipped Caxecraft platform.
+
+Because the fallback is ordinary Haxe, it is a useful starting point for other
+targets. It is not evidence that JavaScript, Rust, Go, or another backend can
+already build the complete game. Those targets may differ in numeric edge
+behavior, storage layout, ownership, clocks, input, rendering, resource
+lifecycle, standard-library coverage, and backend maturity. The Raylib shell is
+specifically a C adapter and is not made portable by the array fallback.
+
+### Long-term cross-target plan
+
+The C showcase remains first and authoritative. It should emit direct,
+inspectable raylib calls, use `CArray`/`Span` and exact ABI types where useful,
+avoid steady-state allocation, and never accept a slower generic abstraction
+merely to make a hypothetical port look uniform. Once that path is playable,
+measured, and covered by headless QA, the separate cross-target experiment will
+proceed in these stages:
+
+1. **Freeze observable domain behavior.** Retain fixed seeds, recorded inputs,
+   fixed timesteps, state hashes, and explicit floating-point tolerances. These
+   fixtures—not a shared backend IR—are the portable semantic contract.
+2. **Name four adapter boundaries.** Keep storage/allocation, clock and input,
+   window/rendering, and native-resource/build ownership separate. Raylib owns
+   the first C presentation adapter; another target may choose a genuinely
+   native library or browser API.
+3. **Add target carriers at the edge.** A JavaScript experiment may prefer a
+   typed array; Rust may prefer its backend's array/slice representation. Use
+   separate small adapter modules or target-specific source roots when that is
+   clearer than adding more branches to shared files.
+4. **Run semantic differential traces before sharing APIs.** Compare world,
+   ray, edit, movement, and collision state independently of pixels. Report
+   integer, float, iteration, and failure differences rather than normalizing
+   them away.
+5. **Keep presentation idiomatic per target.** Input events, graphics commands,
+   GPU resources, and cleanup remain target-owned. Cross-platform state does
+   not require a universal renderer, runtime, or Reflaxe IR.
+6. **Extract only proven common abstractions.** After at least two working
+   adapters expose the same stable Haxe-level contract, move that smallest
+   contract into shared code. Until then, duplication at a narrow target edge
+   is safer than a speculative framework.
+
+The preferred end state is mostly conditional-free shared domain source plus a
+small set of explicit adapter modules. A target conditional is still reasonable
+for a closed compile-time type alias or exact conversion that cannot be chosen
+at runtime. It should be replaced or isolated further when branches begin to
+contain algorithms, acquire target-specific side effects, multiply beyond a
+small closed set, or require different ownership/lifetime rules.
+
+### Guardrails for future changes
+
+- A target branch may choose representation, conversion, test plumbing, or a
+  platform adapter; it must not silently change gameplay rules.
+- Every new `#if c` site needs a documented reason and differential evidence.
+  Prefer adding an operation to the existing adapter over branching at each
+  call site.
+- C-only imports and `c.*` ABI types stay inside the selected branch or a
+  C-specific adapter module. They must not become fake portable types.
+- The fallback must not be described as allocation- or performance-equivalent:
+  its current job is semantic oracle execution.
+- Renderer screenshots are target evidence. Shared state traces are the
+  cross-target oracle; GPU pixels are not assumed identical.
+- HxcIR remains the C compiler's semantic lowering contract. Portable game
+  semantics live in Haxe source and tests, so another backend need not consume
+  HxcIR to reuse the domain.
+
 ## Boundary and representation
 
 The shared algorithm layer uses ordinary Haxe records, a fieldless Haxe enum,

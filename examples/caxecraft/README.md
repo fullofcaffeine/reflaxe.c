@@ -11,6 +11,38 @@ build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
 realistic, allocation-free C workload without hiding C behind a portability
 framework.
 
+## Why the source contains `#if c`
+
+`c` is a Haxe compile-time define exposed by the verified
+`--custom-target c=<output>` activation. Haxe resolves `#if c` before normal
+typing and code generation, so it is not a runtime platform check and adds no
+branch to the generated executable. Only the selected imports, types, and
+expressions exist in that compilation. Passing `-D c` manually does not start
+the C target and is not a supported build.
+
+The current conditionals are deliberately narrow:
+
+- `WorldCells` selects compact borrowed `Span<UInt8>` storage for C and an
+  ordinary `Array<Int>` fallback for the Haxe oracle;
+- `WorldStorage` performs the exact C integer conversions required by that
+  carrier;
+- `CaxecraftTrace` and `DomainProbe` construct fixed C storage or ordinary Haxe
+  test storage and choose the appropriate output plumbing.
+
+Terrain generation, block rules, DDA picking, player collision, and trace
+hashing contain no target conditional. The non-C path is tested under pinned
+Haxe Eval; it is useful portability evidence, but it does not by itself prove
+the game on JavaScript, Rust, or every Haxe target.
+
+The interactive Raylib window, input, renderer, and native resources will be a
+C-specific adapter around that shared domain. A later Rust/JavaScript experiment
+will provide target-appropriate storage, clock/input, rendering, and resource
+adapters and compare the same deterministic domain traces. We will not grow
+target branches throughout gameplay or impose one universal rendering API/IR.
+Only abstractions demonstrated by at least two working adapters should move
+into shared code. The detailed boundary rules, limitations, and migration
+sequence live in [the domain design](../../docs/caxecraft-domain.md).
+
 From the repository root, run the complete differential and native proof:
 
 ```sh
@@ -47,7 +79,8 @@ surface is intentionally being implemented with the target-neutral `hxc` CLI
 foundations rather than as a Caxecraft-only watcher. Until then, the direct HXML
 command above and the one-command proof remain the supported recovery paths.
 
-See [the domain design](../../docs/caxecraft-domain.md) for storage, DDA,
-collision, determinism, and QA details. This slice does not yet prove a playable
-window, public RaylibHx bindings, full Haxe portability, or general compiler
-support beyond the exercised language subset.
+See [the domain design](../../docs/caxecraft-domain.md) for storage, target
+conditionals, the long-term adapter plan, DDA, collision, determinism, and QA
+details. This slice does not yet prove a playable window, public RaylibHx
+bindings, full Haxe portability, or general compiler support beyond the
+exercised language subset.

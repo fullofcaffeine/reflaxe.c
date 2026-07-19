@@ -1,15 +1,23 @@
 package caxecraft.domain;
 
 #if c
+// The inactive import is removed before the non-C oracle is typed.
 import c.IntConvert;
 #end
 
 /**
-	The narrow storage adapter between semantic block codes and target storage.
+	The narrow storage-operation adapter between semantic block codes and the
+	compile-time carrier selected by `WorldCells`.
 
 	No method allocates in the C build. Reads widen an exact `uint8_t` to Haxe
 	`Int`; writes apply an explicit modulo conversion after `World` has validated
-	the material code.
+	the material code. The non-C branch uses `Array<Int>` directly so the pinned
+	Eval target can execute the same algorithms as a semantic oracle.
+
+	`#if c` is resolved by Haxe at compile time, so these methods do not branch at
+	runtime. Representation-specific conversion stays here instead of leaking
+	through terrain, picking, or physics. See `docs/caxecraft-domain.md` for the
+	target-seam rules and long-term adapter plan.
 **/
 final class WorldStorage {
 	public static function readCode(cells:WorldCells, index:Int):Int {
