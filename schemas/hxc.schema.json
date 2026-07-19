@@ -45,6 +45,9 @@
     "profile": {
       "$ref": "#/$defs/profile"
     },
+    "projectLayout": {
+      "$ref": "#/$defs/projectLayout"
+    },
     "runtime": {
       "$ref": "#/$defs/runtime"
     },
@@ -173,6 +176,9 @@
         "profile": {
           "$ref": "#/$defs/profile"
         },
+        "projectLayout": {
+          "$ref": "#/$defs/projectLayout"
+        },
         "runtime": {
           "$ref": "#/$defs/runtime"
         },
@@ -224,6 +230,13 @@
       "enum": [
         "metal",
         "portable"
+      ]
+    },
+    "projectLayout": {
+      "type": "string",
+      "enum": [
+        "split",
+        "unity"
       ]
     },
     "projectPath": {

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "project-layout-native",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-008",
+    "HXC-COMP-010"
+  ],
+  "sources": [
+    "scripts/test/c_fixture_harness.py",
+    "test/project_layout/native/entry.h",
+    "test/project_layout/native/harness.c",
+    "test/project_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../project_layout/run.py"
+    ],
+    "workingDirectory": "test/runtime/project-layout",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "requested/available native toolchain O0/O2 Eval parity passed$"
+    }
+  }
+}

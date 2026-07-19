@@ -153,7 +153,7 @@ def haxe_command(
     ]
     for definition in haxe_defines(platform_name, configuration, system):
         command.extend(["-D", definition])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return command
 
 

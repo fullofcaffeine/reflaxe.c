@@ -252,6 +252,7 @@ def check_schema_sync(contract: dict[str, object]) -> None:
         "cStandard",
         "environment",
         "profile",
+        "projectLayout",
         "runtime",
         "runtimeDiagnostics",
     ):
@@ -295,6 +296,7 @@ def check_report(report: dict[str, object]) -> None:
         "runtimeDiagnostics": ("off", "named-overlay", "dev", 3),
         "environment": ("hosted", "project-file", "hxc.json", 2),
         "cStandard": ("c23", "direct-define", "hxc_c_standard", 5),
+        "projectLayout": ("unity", "direct-define", "hxc_project_layout", 5),
         "cExtensions": ("gnu", "environment-preset", "host-toolchain", 1),
         "build": ("minsizerel", "direct-define", "hxc_build", 5),
         "artifact": ("static-library", "cli-flag", "--artifact", 4),
@@ -331,6 +333,7 @@ def check_defaults() -> None:
         "runtimeDiagnostics": ("summary", "profile-preset"),
         "environment": ("hosted", "compiler-default"),
         "cStandard": ("c11", "compiler-default"),
+        "projectLayout": ("split", "compiler-default"),
         "cExtensions": ("none", "compiler-default"),
         "build": ("debug", "compiler-default"),
         "artifact": ("executable", "compiler-default"),

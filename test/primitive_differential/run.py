@@ -534,6 +534,8 @@ def compile_production(source: str, output: Path, fixture_root: Path) -> None:
             "reflaxe.c",
             "-main",
             "PrimitiveDifferentialFixture",
+            "-D",
+            "hxc_project_layout=unity",
             "--custom-target",
             f"c={output}",
         ],

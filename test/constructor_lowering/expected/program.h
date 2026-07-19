@@ -78,4 +78,6 @@ int32_t hxc_method_ConstructorTrace_mark(int32_t hxc_local_ConstructorTrace_mark
 
 void hxc_method_Main_main(void);
 
+void hxc_init_compiler_staticzx2Dinitializzation_ConstructorTrace_staticzx2Dfieldzx2Dvalue_n1(void);
+
 #endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */

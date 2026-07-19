@@ -1,0 +1,4 @@
+-cp fixtures/src
+-lib reflaxe.c
+-main layout.Main
+-D hxc_runtime=none

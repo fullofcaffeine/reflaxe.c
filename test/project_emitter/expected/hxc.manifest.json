@@ -4,6 +4,7 @@
     "environment": "hosted",
     "cStandard": "c11",
     "runtimePolicy": "none",
+    "projectLayout": "unity",
     "runtimeDiagnostics": "off"
   },
   "ownershipManifest": "_GeneratedFiles.json",

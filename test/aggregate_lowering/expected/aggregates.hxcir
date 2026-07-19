@@ -1,13 +1,13 @@
 hxcir schema=10
-module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":17:42-52:3
-  type "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" name="anonymous.record.9cea43a168458d02" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
+module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-52:3
+  type "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" name="anonymous.record.9cea43a168458d02" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-4:2
     field "a" type=i32 mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":3:2-3:12
     field "z" type=i32 mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":2:2-2:12
-  type "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" name="anonymous.record.b661c8070fec7e24" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:50-41:3
+  type "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" name="anonymous.record.b661c8070fec7e24" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":11:1-14:2
     field "enabled" type=bool mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":13:2-13:19
     field "point" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":12:2-12:19
-  instance "instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" declaration="type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
-  instance "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" declaration="type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:50-41:3
+  instance "instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" declaration="type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-4:2
+  instance "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" declaration="type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":11:1-14:2
   function "function.AggregateFixture.copy" name="AggregateFixture.copy" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
     parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
     local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:3-26:29

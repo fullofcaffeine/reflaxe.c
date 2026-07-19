@@ -160,7 +160,7 @@ def custom_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,
@@ -356,16 +356,16 @@ def validate_render(render: ProductionRender) -> None:
     expected_calls = initializer_c_names(plan, symbol_table)
     for initializer_name in expected_calls:
         if not re.search(
-            rf"^static void {re.escape(initializer_name)}\(void\)$",
+            rf"^void {re.escape(initializer_name)}\(void\)$",
             source,
             re.MULTILINE,
         ):
             raise StaticInitializationFailure(
-                f"initializer {initializer_name} is not a file-local C function"
+                f"initializer {initializer_name} is not a project-private external C function"
             )
-        if re.search(rf"\b{re.escape(initializer_name)}\(void\);", header):
+        if not re.search(rf"^void {re.escape(initializer_name)}\(void\);$", header, re.MULTILINE):
             raise StaticInitializationFailure(
-                f"file-local initializer {initializer_name} leaked into the shared header"
+                f"project-private initializer {initializer_name} lacks its private prototype"
             )
     wrapper_name = initialization_wrapper_c_name(symbol_table)
     wrapper = re.search(

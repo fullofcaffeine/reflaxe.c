@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "project-layout-differential",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-002",
+    "HXC-COMP-009"
+  ],
+  "sources": [
+    "test/project_layout/fixtures/src/layout/Oracle.hx",
+    "test/project_layout/oracle.hxml",
+    "test/project_layout/native/entry.h",
+    "test/project_layout/native/harness.c",
+    "test/project_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../project_layout/run.py"
+    ],
+    "workingDirectory": "test/differential/project-layout",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "split-default/unity semantic parity.*Eval parity passed$"
+    }
+  }
+}

@@ -28,6 +28,7 @@ node_modules/.bin/haxe \
   --cwd examples/hello \
   build.hxml \
   -D hxc_runtime_diagnostics=off \
+  -D hxc_project_layout=unity \
   --custom-target c=_build/c
 
 cc -std=c11 -Wall -Wextra -Werror -pedantic-errors \

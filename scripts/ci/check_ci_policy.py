@@ -234,6 +234,7 @@ REQUIRED_GATE_FILES = (
     "test/snapshot/body-lowering/case.json",
     "test/runtime/body-lowering/case.json",
     "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "src/reflaxe/c/emit/CProjectLayout.hx",
     "src/reflaxe/c/lowering/CStaticFunctionGraph.hx",
     "docs/function-lowering.md",
     "test/function_lowering/FunctionLoweringProbe.hx",
@@ -242,6 +243,9 @@ REQUIRED_GATE_FILES = (
     "test/function_lowering/fixtures/default/Main.hx",
     "test/function_lowering/fixtures/optional/Main.hx",
     "test/function_lowering/fixtures/rest/Main.hx",
+    "test/function_lowering/fixtures/split_recursive/RecursiveFixture.hx",
+    "test/function_lowering/native/recursive_split_entry.h",
+    "test/function_lowering/native/recursive_split_harness.c",
     "test/function_lowering/expected/functions.h",
     "test/function_lowering/expected/functions.hxcir",
     "test/function_lowering/expected/nonreturn_0000.c",
@@ -523,7 +527,20 @@ REQUIRED_GATE_FILES = (
     "examples/hello/expected/hxc.runtime-plan.json",
     "examples/hello/expected/hxc.stdlib-report.json",
     "examples/caxecraft/README.md",
+    "examples/caxecraft/assets/README.md",
+    "examples/caxecraft/assets/manifest.json",
+    "examples/caxecraft/assets/atlases/adventure-characters.png",
+    "examples/caxecraft/assets/atlases/adventure-items.png",
+    "examples/caxecraft/assets/atlases/adventure-terrain.png",
+    "examples/caxecraft/assets/atlases/entities.png",
+    "examples/caxecraft/assets/atlases/hud.png",
+    "examples/caxecraft/assets/atlases/items.png",
+    "examples/caxecraft/assets/atlases/ivvy.png",
+    "examples/caxecraft/assets/atlases/terrain.png",
+    "examples/caxecraft/assets/branding/caxecraft-wordmark.png",
+    "examples/caxecraft/assets/showcase/title-panorama.png",
     "examples/caxecraft/build.hxml",
+    "examples/caxecraft/check_assets.py",
     "examples/caxecraft/oracle.hxml",
     "examples/caxecraft/case.json",
     "examples/caxecraft/run.py",
@@ -543,12 +560,42 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/test/caxecraft/qa/DomainProbe.hx",
     "examples/caxecraft/test/native/domain_harness.c",
     "examples/caxecraft/test/native/generated_program.c",
+    "examples/caxecraft/expected/include/hxc/detail/program_types.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/AxisMove.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/BlockCoord.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/BlockKind.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/PlayerState.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/RaycastHit.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/StepInput.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/World.h",
     "examples/caxecraft/expected/include/hxc/program.h",
-    "examples/caxecraft/expected/src/program.c",
+    "examples/caxecraft/expected/src/hxc/main.c",
+    "examples/caxecraft/expected/src/modules/caxecraft/domain/World.c",
     "examples/caxecraft/expected/hxc.runtime-plan.json",
     "examples/caxecraft/expected/method-symbols.json",
     "examples/caxecraft/expected/oracle.txt",
     "docs/caxecraft-domain.md",
+    "docs/caxecraft-game-design.md",
+    "src/hxc/config/HxcProjectLayout.hx",
+    "test/project_layout/LayoutPlannerProbe.hx",
+    "test/project_layout/build.hxml",
+    "test/project_layout/oracle.hxml",
+    "test/project_layout/planner.hxml",
+    "test/project_layout/fixtures/src/layout/Main.hx",
+    "test/project_layout/fixtures/src/layout/math/Numbers.hx",
+    "test/project_layout/fixtures/src/layout/model/Left.hx",
+    "test/project_layout/fixtures/src/layout/model/Phase.hx",
+    "test/project_layout/fixtures/src/layout/model/Point.hx",
+    "test/project_layout/fixtures/src/layout/model/Right.hx",
+    "test/project_layout/fixtures/src/layout/model/State.hx",
+    "test/project_layout/fixtures/src/layout/platform/Device.hx",
+    "test/project_layout/native/entry.h",
+    "test/project_layout/native/harness.c",
+    "test/project_layout/run.py",
+    "test/positive/project-layout/case.json",
+    "test/negative/project-layout/case.json",
+    "test/runtime/project-layout/case.json",
+    "test/differential/project-layout/case.json",
     "src/reflaxe/c/frontend/TypedProgramInput.hx",
     "src/reflaxe/c/frontend/TypedAstNormalizer.hx",
     "src/reflaxe/c/frontend/TypedAstInventory.hx",
@@ -837,8 +884,14 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:primitive-differential entry point")
     if scripts.get("test:span-lowering") != "python3 test/span_lowering/run.py":
         errors.append("package.json must retain the test:span-lowering entry point")
+    if scripts.get("test:project-layout") != "python3 test/project_layout/run.py":
+        errors.append("package.json must retain the generated-C project-layout gate")
     if scripts.get("test:caxecraft-domain") != "python3 examples/caxecraft/run.py":
         errors.append("package.json must retain the test:caxecraft-domain entry point")
+    if scripts.get("test:caxecraft-assets") != "python3 examples/caxecraft/check_assets.py":
+        errors.append("package.json must retain the offline Caxecraft asset-manifest gate")
+    if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
+        errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))
     for required_beads_command in (
         "python3 scripts/beads/validate_plan.py",
@@ -929,8 +982,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:primitive-differential")
     if "npm run test:span-lowering" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:span-lowering")
-    if "npm run test:caxecraft-domain" not in str(scripts.get("test:toolchain", "")):
-        errors.append("package.json test:toolchain must execute test:caxecraft-domain")
+    if "npm run test:project-layout" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:project-layout")
+    if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-domain:full")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:typed-ast")
     if "npm run test:c-import" not in str(scripts.get("test:toolchain", "")):

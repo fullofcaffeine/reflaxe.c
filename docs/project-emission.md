@@ -63,6 +63,80 @@ Payload kinds have fixed locations:
 | Runtime header | `runtime/include/**/*.h` |
 | Runtime source | `runtime/src/**/*.c` |
 
+### Source-shaped and unity generated C
+
+The executable emitter first builds one target-owned semantic declaration plan:
+program-wide includes and representation declarations, module-owned globals,
+module-owned function prototypes and definitions, layout/dispatch support, and
+the hosted entry wrapper. That plan consumes already validated HxcIR and
+finalized symbol/representation decisions. Only then does the pure
+`CProjectLayoutPlan` assign declarations to files; `CASTPrinter` receives the
+result and remains unaware of Haxe modules or layout policy.
+
+The closed `projectLayout` setting has two variants:
+
+| Layout | Compiler-owned shape | Intended use |
+| --- | --- | --- |
+| `split` (default) | `include/hxc/detail/program_types.h`, `include/hxc/modules/<package>/<Module>.h`, `src/modules/<package>/<Module>.c`, stable `include/hxc/program.h`, small `src/hxc/main.c`, and conditional `src/hxc/support.c` | Source-shaped navigation, review, debugging, and incremental native builds. |
+| `unity` | Stable `include/hxc/program.h` plus ordinary `src/program.c` | Tiny programs, embedding, archival inspection, and build systems that prefer amalgamation. |
+
+This task makes file ownership source-shaped; it does not by itself make the C
+takeover-ready. Structured control flow is owned by `haxe_c-xge.18.2`, readable
+names and temporary cleanup by `haxe_c-xge.18.3`, and the generated-code rubric
+by `haxe_c-xge.18.4`. Final human-maintainable handoff claims wait for those
+gates.
+
+Normalized Haxe ownership determines module paths. Portable ASCII components
+remain readable; short non-portable UTF-8 components are encoded losslessly for
+the filesystem. The encoding namespace and Windows device names such as `CON`
+are escaped as well. An encoding that would exceed the conservative 200-byte
+stem limit is shortened to a readable byte prefix plus its complete SHA-256;
+the remaining suffix budget accommodates recursive-cycle source suffixes below
+common 255-byte component limits. Case-insensitive path or digest collisions
+fail before printing.
+Header guards still pass through the complete symbol registry. The common
+types header owns system/import includes, program-wide ABI assertions and
+inline primitive helpers, and dependency-neutral forward declarations. Each
+split module header owns that module's complete aggregate,
+enum, and class definitions plus its private globals and function prototypes.
+It includes module headers only for hard definition-time layout edges and
+types, such as embedded by-value fields and native enums, that strict C11
+cannot declare incompletely. Aggregate, class, and tagged-enum struct tags are
+forward-declared in the common header, so function prototypes and `extern`
+objects that name them remain soft declaration edges. Pointer-like storage is
+also soft. Every module source includes the umbrella after all complete
+definitions exist. This distinction admits a C-valid mixed cycle where module
+A embeds B while a prototype in B mentions A, without hiding a real by-value
+definition cycle. For a named anonymous-record typedef, the compiler
+retains the innermost typedef declaration module before it unwraps aliases for
+structural shape deduplication, so a type-only `Point.hx` owns the complete
+record in `Point.h` instead of whichever function happened to consume it
+first. Shape-identical aliases still intentionally share one representation
+and C tag. The umbrella includes module headers in
+dependency-first order and owns whole-program dispatch declarations. Sources
+include that stable private umbrella so every reached linkage dependency is
+declared before use. Generated initializer functions and virtual-table objects
+use the same project-private external declarations and definitions in both
+layouts; split merely assigns their definitions to the module/support unit
+that needs cross-file linkage. Neither choice creates a public ABI.
+
+`hxc.manifest.json.configuration.projectLayout` records the choice, while its
+neutral build plan enumerates the exact source and private-header set consumed
+by raw arguments, CMake, and Meson. `ReflaxeOutputWriter` treats a layout switch
+as an ordinary ownership transaction: the complete old and new sets are
+validated before the first write, stale owned paths are deleted by
+`OutputManager`, and unowned neighbors are preserved. The
+`test/project_layout/` multi-package corpus proves semantic-plan parity,
+isolated-root/order/locale/warm-server determinism, exact manifests,
+standalone headers, hard/soft mixed-cycle classification, bidirectional stale
+cleanup, and GCC/Clang O0/O2 Eval parity. Caxecraft provides the larger
+source-tree snapshot and both-layout E2E proof.
+
+The implemented split is per Haxe module and preserves package directories;
+it is not a third package-coalesced layout. A distinct mode that groups several
+modules into one package translation unit remains future HXC-COMP-011 scope,
+owned by `haxe_c-xge.18.5`.
+
 The emitter owns these schema-1 sidecars:
 
 - `hxc.initialization-plan.json`: the admitted direct executable's

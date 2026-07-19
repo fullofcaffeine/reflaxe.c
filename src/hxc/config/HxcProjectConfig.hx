@@ -56,6 +56,7 @@ class HxcProjectConfig {
 			"output",
 			"overlays",
 			"profile",
+			"projectLayout",
 			"runtime",
 			"runtimeDiagnostics",
 			"schemaVersion"
@@ -71,6 +72,7 @@ class HxcProjectConfig {
 			"hxml",
 			"output",
 			"profile",
+			"projectLayout",
 			"runtime",
 			"runtimeDiagnostics"
 		];

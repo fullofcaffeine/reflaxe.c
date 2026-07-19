@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "id": "project-layout-positive",
+  "role": "fixture",
+  "type": "positive",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-008",
+    "HXC-COMP-009",
+    "HXC-COMP-010"
+  ],
+  "sources": [
+    "src/reflaxe/c/emit/CProjectLayout.hx",
+    "src/reflaxe/c/emit/CStaticFunctionProjectEmitter.hx",
+    "test/project_layout/LayoutPlannerProbe.hx",
+    "test/project_layout/fixtures/src/layout/Main.hx",
+    "test/project_layout/fixtures/src/layout/math/Numbers.hx",
+    "test/project_layout/fixtures/src/layout/model/Left.hx",
+    "test/project_layout/fixtures/src/layout/model/Phase.hx",
+    "test/project_layout/fixtures/src/layout/model/Point.hx",
+    "test/project_layout/fixtures/src/layout/model/Right.hx",
+    "test/project_layout/fixtures/src/layout/model/State.hx",
+    "test/project_layout/fixtures/src/layout/platform/Device.hx",
+    "test/project_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../project_layout/run.py"
+    ],
+    "workingDirectory": "test/positive/project-layout",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "^project-layout: OK: split-default/unity semantic parity"
+    }
+  }
+}

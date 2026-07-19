@@ -68,10 +68,15 @@ remains an explicit expression statement.
 ## Prototypes, recursion, and entry point
 
 All admitted signatures and symbol requests are prepared before the registry is
-finalized or any body is emitted. The private `include/hxc/program.h` header
-contains every prototype before `src/program.c` or a partitioned source defines
-any function. Recursive and mutually recursive call graphs therefore compile
-without discovery-order dependencies.
+finalized or any body is emitted. In unity mode the private
+`include/hxc/program.h` header contains every prototype before `src/program.c`
+defines a function. In the default split mode the stable umbrella includes
+deterministic module-private headers, and each such header owns its module's
+globals and prototypes, including initializer prototypes needed by the small
+entry unit. Recursive and mutually recursive
+call graphs therefore compile without discovery-order dependencies in either
+layout. Both file assignments consume the same finalized HxcIR, C names,
+representations, and function bodies.
 
 Only a one-block admitted body is eligible for the unconditional-call proof.
 Multi-block evaluation-order bodies are excluded conservatively. When the
@@ -84,11 +89,17 @@ parameters, so swaps and other parameter dependencies cannot weaken Haxe's
 evaluation semantics.
 
 Every remaining member of a closed multi-function cycle receives its own
-deterministically ordered `src/nonreturn_NNNN.c` translation unit and continues
-to call the next member directly through the shared prototype header. That
-partition prevents a single optimizing C compilation from diagnosing the
-whole closed cycle while preserving ordinary direct calls, strict C11, and
-zero runtime support. The native gate keeps `-Winfinite-recursion` enabled at
+deterministically ordered safety translation unit and continues to call the
+next member directly through the shared private headers. Unity names these
+`src/nonreturn_NNNN.c`; split keeps the partition beside its source-shaped
+module as `<Module>.nonreturn_NNNN.c`. That narrow exception prevents one
+optimizing C compilation from diagnosing the whole proven closed cycle while
+preserving ordinary direct calls, strict C11, and zero runtime support. A
+cycle-free unity program is exactly one implementation unit, as the layout
+contract promises. Making mutually recursive tail cycles a true single-unit
+structural dispatcher belongs to the CFG-structuralization work; this layout
+change does not hide the problem with a pragma, opaque call, printer rewrite,
+or disabled warning. The native gate keeps `-Winfinite-recursion` enabled at
 both `-O0` and `-O2`.
 
 The Haxe entry function for this slice must be `static function main():Void`.

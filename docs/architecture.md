@@ -248,6 +248,31 @@ direct guarded exact-width span iteration; their representation and proof
 matrix are in
 [fixed arrays and span-based iteration](span-lowering.md).
 
+Generated-C layout is a pure assignment made after that semantic and
+declaration planning, not another IR or an emitter-side reconstruction. The
+default `split` layout puts program-wide includes, ABI assertions, inline
+primitive helpers, and dependency-neutral forwards in a common private types
+header, assigns complete value-type definitions and private
+globals/prototypes to their owning Haxe module headers, includes direct
+definition-time complete-type dependencies, and uses common struct forwards
+for declaration-only aggregate/class/tagged-enum references as well as
+pointer-like edges. Native enums and embedded by-value fields remain hard
+edges; forward-declarable prototypes and `extern` objects remain soft, so a
+mixed hard/soft module cycle does not become a false include cycle. Anonymous-
+record typedef ownership is captured before alias unwrapping,
+while structural shape identity remains the representation key. Function/global
+definitions follow deterministic package-shaped
+module sources; compiler support and the host entry have small dedicated
+sources. `unity` assigns the same finalized declarations and function bodies
+to one implementation file. Both layouts use the same names, HxcIR, runtime
+decisions, and structural CAST; printers neither rediscover module ownership
+nor choose layout. `CProjectEmitter` receives the complete typed artifact set
+before any output is written, so manifest/build facts and stale-file ownership
+describe the selected tree exactly. See
+[project emission](project-emission.md#source-shaped-and-unity-generated-c).
+Package-coalesced file assignment remains separately owned by
+`haxe_c-xge.18.5`; split and unity evidence must not be used to claim it.
+
 E2.T09 adds a whole-program static-initialization graph before body lowering.
 It follows source-positioned superclass/interface/type/static/constructor
 dependencies, including static-function bodies, and computes dependency-first
@@ -256,10 +281,11 @@ the first execution phase; ordinary static fields form the second in type and
 source order; the Haxe entry is third. Explicit fields are HxcIR deferred
 globals whose private `():Void` initializer contains exactly one
 `initialize-global`. The validator proves that link, and the C emitter assigns
-zero-initialized storage through file-local initializer functions and one
-compiler-owned wrapper called once before Haxe `main`; the initializer
-prototypes stay out of the shared header, and an empty plan elides the wrapper
-and call. Cross-type cycles fail as `HXC1002`. See [deterministic static
+zero-initialized storage through project-private initializer functions and one
+file-local compiler-owned wrapper called once before Haxe `main`; initializer
+prototypes have identical project-private external linkage in split and unity
+layouts so the split entry unit can call module-owned definitions, and an
+empty plan elides the wrapper and call. Cross-type cycles fail as `HXC1002`. See [deterministic static
 initialization](static-initialization.md).
 
 E3.T01 adds request-local closed-record representation selection.

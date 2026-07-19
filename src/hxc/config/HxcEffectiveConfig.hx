@@ -21,6 +21,7 @@ typedef HxcEffectiveConfigJson = {
 	final runtimeDiagnostics:HxcInspectedSetting;
 	final environment:HxcInspectedSetting;
 	final cStandard:HxcInspectedSetting;
+	final projectLayout:HxcInspectedSetting;
 	final cExtensions:HxcInspectedSetting;
 	final build:HxcInspectedSetting;
 	final artifact:HxcInspectedSetting;
@@ -46,6 +47,7 @@ class HxcEffectiveConfig {
 	public final runtimeDiagnostics:HxcResolvedSetting<CRuntimeDiagnostics>;
 	public final environment:HxcResolvedSetting<CEnvironment>;
 	public final cStandard:HxcResolvedSetting<HxcCStandard>;
+	public final projectLayout:HxcResolvedSetting<HxcProjectLayout>;
 	public final cExtensions:HxcResolvedSetting<HxcCExtensionPolicy>;
 	public final build:HxcResolvedSetting<CBuildMode>;
 	public final artifact:HxcResolvedSetting<HxcArtifactKind>;
@@ -54,8 +56,9 @@ class HxcEffectiveConfig {
 
 	public function new(hxml:HxcResolvedSetting<HxcProjectPath>, output:HxcResolvedSetting<HxcProjectPath>, profile:HxcResolvedSetting<CProfile>,
 			runtime:HxcResolvedSetting<CRuntimePolicy>, runtimeDiagnostics:HxcResolvedSetting<CRuntimeDiagnostics>,
-			environment:HxcResolvedSetting<CEnvironment>, cStandard:HxcResolvedSetting<HxcCStandard>, cExtensions:HxcResolvedSetting<HxcCExtensionPolicy>,
-			build:HxcResolvedSetting<CBuildMode>, artifact:HxcResolvedSetting<HxcArtifactKind>, configurationFile:Null<String>, selectedOverlay:Null<String>) {
+			environment:HxcResolvedSetting<CEnvironment>, cStandard:HxcResolvedSetting<HxcCStandard>, projectLayout:HxcResolvedSetting<HxcProjectLayout>,
+			cExtensions:HxcResolvedSetting<HxcCExtensionPolicy>, build:HxcResolvedSetting<CBuildMode>, artifact:HxcResolvedSetting<HxcArtifactKind>,
+			configurationFile:Null<String>, selectedOverlay:Null<String>) {
 		this.hxml = hxml;
 		this.output = output;
 		this.profile = profile;
@@ -63,6 +66,7 @@ class HxcEffectiveConfig {
 		this.runtimeDiagnostics = runtimeDiagnostics;
 		this.environment = environment;
 		this.cStandard = cStandard;
+		this.projectLayout = projectLayout;
 		this.cExtensions = cExtensions;
 		this.build = build;
 		this.artifact = artifact;
@@ -92,6 +96,7 @@ class HxcEffectiveConfig {
 				runtimeDiagnostics: inspected(Std.string(runtimeDiagnostics.value), runtimeDiagnostics.origin),
 				environment: inspected(Std.string(environment.value), environment.origin),
 				cStandard: inspected(Std.string(cStandard.value), cStandard.origin),
+				projectLayout: inspected(Std.string(projectLayout.value), projectLayout.origin),
 				cExtensions: inspected(Std.string(cExtensions.value), cExtensions.origin),
 				build: inspected(Std.string(build.value), build.origin),
 				artifact: inspected(Std.string(artifact.value), artifact.origin)

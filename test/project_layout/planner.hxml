@@ -1,0 +1,5 @@
+-cp .
+-lib reflaxe.c
+-main LayoutPlannerProbe
+--macro LayoutPlannerProbe.verify()
+--interp

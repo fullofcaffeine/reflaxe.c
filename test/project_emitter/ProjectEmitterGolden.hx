@@ -14,6 +14,7 @@ import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
 import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
+import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.emit.ReflaxeOutputWriter;
@@ -74,6 +75,7 @@ class ProjectEmitterGolden {
 					profile: CProfile.Portable,
 					environment: CProjectEnvironment.Hosted,
 					cStandard: CProjectStandard.C11,
+					projectLayout: CProjectLayout.Unity,
 					runtimePolicy: CProjectRuntimePolicy.None,
 					runtimeDiagnostics: CProjectRuntimeDiagnostics.Off,
 					units: [
@@ -208,6 +210,7 @@ class ProjectEmitterGolden {
 			profile: CProfile.Portable,
 			environment: CProjectEnvironment.Hosted,
 			cStandard: CProjectStandard.C11,
+			projectLayout: CProjectLayout.Unity,
 			runtimePolicy: CProjectRuntimePolicy.None,
 			runtimeDiagnostics: CProjectRuntimeDiagnostics.Off,
 			units: units,
@@ -233,6 +236,7 @@ class ProjectEmitterGolden {
 			profile: CProfile.Portable,
 			environment: CProjectEnvironment.Hosted,
 			cStandard: CProjectStandard.C11,
+			projectLayout: CProjectLayout.Unity,
 			runtimePolicy: CProjectRuntimePolicy.None,
 			runtimeDiagnostics: CProjectRuntimeDiagnostics.Off,
 			units: [

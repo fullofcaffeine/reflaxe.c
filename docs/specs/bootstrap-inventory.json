@@ -420,7 +420,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Repository-owned hello and Caxecraft-domain examples compile ordinary Haxe through generated C and run with exact Eval differentials.",
-      "scope": "examples/hello proves the exact four-feature literal-output closure. examples/caxecraft proves a finite 16 KiB voxel world, deterministic terrain/edits/DDA/fixed-step AABB collision, 32 property seeds, compiler-server determinism, and allocation-free runtime-none C under strict and sanitized native lanes; it is the renderer-independent core rather than the pending playable Raylib shell.",
+      "scope": "examples/hello proves the exact four-feature literal-output closure. examples/caxecraft proves a finite 16 KiB voxel world, deterministic terrain/edits/DDA/fixed-step AABB collision, 32 property seeds, compiler-server determinism, source-shaped split/unity layout parity, and allocation-free runtime-none C under strict and sanitized native lanes; it is the renderer-independent core rather than the pending playable Raylib shell.",
       "evidence": [
         "examples/hello/README.md",
         "examples/hello/case.json",
@@ -428,7 +428,7 @@
         "examples/hello/run.py",
         "docs/caxecraft-domain.md",
         "examples/caxecraft/case.json",
-        "examples/caxecraft/expected/src/program.c",
+        "examples/caxecraft/expected/src/modules/caxecraft/domain/World.c",
         "examples/caxecraft/run.py"
       ],
       "owners": [

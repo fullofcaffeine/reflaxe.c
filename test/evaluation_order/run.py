@@ -593,7 +593,7 @@ def custom_target(output: Path, *, profile: str = "portable", runtime: str | Non
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     return subprocess.run(

@@ -19,6 +19,9 @@
     "src/reflaxe/c/plan/CDeclarationPlanner.hx",
     "test/function_lowering/FunctionLoweringProbe.hx",
     "test/function_lowering/fixtures/positive/FunctionFixture.hx",
+    "test/function_lowering/fixtures/split_recursive/RecursiveFixture.hx",
+    "test/function_lowering/native/recursive_split_entry.h",
+    "test/function_lowering/native/recursive_split_harness.c",
     "test/function_lowering/run.py"
   ],
   "runner": {

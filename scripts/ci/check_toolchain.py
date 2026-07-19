@@ -238,7 +238,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_arithmetic_semantics_script = "python3 test/arithmetic_semantics/run.py"
     expected_primitive_differential_script = "python3 test/primitive_differential/run.py"
     expected_span_lowering_script = "python3 test/span_lowering/run.py"
+    expected_project_layout_script = "python3 test/project_layout/run.py"
     expected_caxecraft_domain_script = "python3 examples/caxecraft/run.py"
+    expected_caxecraft_domain_full_script = "python3 examples/caxecraft/run.py --full"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
@@ -252,7 +254,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:caxecraft-domain && npm run snapshots:check"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-domain:full && npm run snapshots:check"
     )
     if (
         not isinstance(scripts, dict)
@@ -418,9 +420,20 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the fixed-array/span lowering gate")
     if (
         not isinstance(scripts, dict)
+        or scripts.get("test:project-layout") != expected_project_layout_script
+    ):
+        errors.append("package.json must retain the generated-C project-layout gate")
+    if (
+        not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-domain") != expected_caxecraft_domain_script
     ):
         errors.append("package.json must retain the Caxecraft domain e2e gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-domain:full")
+        != expected_caxecraft_domain_full_script
+    ):
+        errors.append("package.json must retain the exhaustive Caxecraft CI gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script
@@ -466,11 +479,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         '--macro include("reflaxe.c", true)',
         '--macro include("c", true)',
         '--macro include("hxc", true)',
+        '--macro include("raylib", true)',
         "-main AllSourcesProbe",
     ]
     if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
         errors.append(
-            "all_sources.hxml must include every reflaxe.c, c, and hxc module through the scoped target library"
+            "all_sources.hxml must include every reflaxe.c, c, hxc, and raylib module through the scoped target library"
         )
     if not (root / "test/all_sources/run.py").is_file():
         errors.append("dedicated all-source Haxe gate runner is missing")

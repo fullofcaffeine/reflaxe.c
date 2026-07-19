@@ -149,7 +149,7 @@ def compile_fixture(
     ]
     if reverse:
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,

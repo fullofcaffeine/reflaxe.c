@@ -289,7 +289,7 @@ def custom_target(
     ]
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,

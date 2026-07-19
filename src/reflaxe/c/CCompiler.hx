@@ -6,6 +6,7 @@ import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
 import haxe.Json;
+import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
 import reflaxe.c.emit.CProjectEmitter;
 import reflaxe.c.emit.CProjectEmitter.CProjectCompilationStatus;
@@ -13,6 +14,9 @@ import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimeDiagnostics;
 import reflaxe.c.emit.CProjectEmitter.CProjectRuntimePolicy;
 import reflaxe.c.emit.CProjectEmitter.CProjectStandard;
+import reflaxe.c.emit.CProjectLayout;
+import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
+import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.CStaticFunctionProjectEmitter;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.ProjectEmissionError;
@@ -23,7 +27,11 @@ import reflaxe.c.frontend.TypedProgramInput.TypedAstEntryPoint;
 import reflaxe.c.lowering.CBodyEmissionError;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
+import reflaxe.c.lowering.CBodyLowering.CBodyGlobalInput;
+import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
+import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CBodyRuntimeRequirement;
+import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
 import reflaxe.c.lowering.CBodyLoweringError;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportBuilder;
 import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
@@ -35,7 +43,6 @@ import reflaxe.c.ir.HxcIRValidationError;
 import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIR.HxcIRProgram;
 import reflaxe.c.naming.CSymbolRequest;
-import reflaxe.c.plan.CDeclarationPlanner;
 import reflaxe.c.plan.CStaticInitializationError;
 import reflaxe.c.plan.CStaticInitializationPlanner;
 import reflaxe.c.runtime.RuntimeAbiContract;
@@ -66,6 +73,7 @@ private typedef ResolvedRuntimeDiagnostics = {
 private typedef ResolvedProjectConfiguration = {
 	final environment:CProjectEnvironment;
 	final cStandard:CProjectStandard;
+	final projectLayout:CProjectLayout;
 	final runtimePolicy:CProjectRuntimePolicy;
 	final runtimePolicyProvenance:String;
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
@@ -149,15 +157,22 @@ class CCompiler {
 			final initializationRequest:Null<CSymbolRequest> = staticInitialization.executionFunctionIds.length == 0 ? null : new CSymbolRequest(CSKStaticInitializer,
 				["compiler", "static-initialization", "hosted-executable", graph.entryFunctionId], CNSOrdinary("translation-unit"),
 				CSVInternal);
-			final headerGuardRequest = new CSymbolRequest(CSKModule, ["compiler", "program-header", "guard"], CNSPreprocessor, CSVInternal,
-				CDeclarationPlanner.headerGuardFor(CStaticFunctionProjectEmitter.HEADER_PATH));
+			final layoutPlanner = new CProjectLayoutPlanner();
+			final guardLayout = layoutPlanner.plan(configuration.projectLayout,
+				projectModulePaths(program, graph.functions, graph.globals, graph.constructors, staticInitialization.initializerInputs));
+			final headerGuardRequests:Map<String, CSymbolRequest> = [];
+			for (headerPath in guardLayout.headerPaths) {
+				final request = guardLayout.guardRequest(headerPath);
+				headerGuardRequests.set(headerPath, request);
+				context.symbols.register(request);
+			}
 			context.symbols.register(entryRequest);
 			if (initializationRequest != null) {
 				context.symbols.register(initializationRequest);
 			}
-			context.symbols.register(headerGuardRequest);
 			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
 				graph.dispatch, program, typedCContract);
+			final projectLayout = layoutPlanner.plan(configuration.projectLayout, loweredProjectModulePaths(lowered));
 			final dispatchReport = new CDispatchReportBuilder().build(graph.dispatch, lowered.dispatch);
 			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
 				final inspection:StaticInitializationInspection = {
@@ -211,8 +226,15 @@ class CCompiler {
 			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
 			final runtimeAbiMajor = runtimePlan.features.length == 0 ? null : RuntimeAbiContract.MAJOR;
 			final staticProjectEmitter = new CStaticFunctionProjectEmitter();
-			final staticProject = staticProjectEmitter.plan(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
-				context.symbols.identifierFor(headerGuardRequest), staticInitialization.executionFunctionIds, initializationName, runtimeAbiMajor);
+			final headerGuards:Map<String, CIdentifier> = [];
+			for (headerPath in projectLayout.headerPaths) {
+				final request = headerGuardRequests.get(headerPath);
+				if (request == null)
+					throw new ProjectEmissionError('project layout lost header guard request for `$headerPath`');
+				headerGuards.set(headerPath, context.symbols.identifierFor(request));
+			}
+			final staticProject = staticProjectEmitter.planWithLayout(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
+				projectLayout, headerGuards, staticInitialization.executionFunctionIds, initializationName, runtimeAbiMajor);
 			final units = staticProjectEmitter.emitPlan(staticProject);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
@@ -231,6 +253,7 @@ class CCompiler {
 				profile: context.profile,
 				environment: configuration.environment,
 				cStandard: configuration.cStandard,
+				projectLayout: configuration.projectLayout,
 				runtimePolicy: configuration.runtimePolicy,
 				runtimeDiagnostics: configuration.runtimeDiagnostics,
 				runtimePolicyProvenance: configuration.runtimePolicyProvenance,
@@ -415,16 +438,61 @@ class CCompiler {
 		return capabilities;
 	}
 
+	static function projectModulePaths(program:TypedProgramInput, functions:Array<CBodyFunctionInput>, globals:Array<CBodyGlobalInput>,
+			constructors:Array<CBodyConstructorInput>, initializers:Array<CBodyInitializerInput>):Array<String> {
+		final paths:Array<String> = [];
+		// Header guards must be finalized with every normalized typed module that
+		// can later own a reached value type. The exact emitted subset is selected
+		// from validated HxcIR after lowering; unused candidate guards never become
+		// files.
+		for (module in program.modules)
+			addProjectModulePath(paths, module.path);
+		for (fn in functions)
+			addProjectModulePath(paths, fn.modulePath);
+		for (global in globals)
+			addProjectModulePath(paths, global.modulePath);
+		for (constructor in constructors)
+			addProjectModulePath(paths, constructor.modulePath);
+		for (initializer in initializers)
+			addProjectModulePath(paths, initializer.modulePath);
+		paths.sort(CBodyLowering.compareUtf8);
+		return paths;
+	}
+
+	static function loweredProjectModulePaths(lowered:CBodyLoweringResult):Array<String> {
+		final paths:Array<String> = [];
+		for (module in lowered.program.modules)
+			addProjectModulePath(paths, module.id);
+		paths.sort(CBodyLowering.compareUtf8);
+		return paths;
+	}
+
+	static function addProjectModulePath(paths:Array<String>, modulePath:String):Void {
+		if (paths.indexOf(modulePath) == -1)
+			paths.push(modulePath);
+	}
+
 	static function resolveProjectConfiguration(profile:CProfile):ResolvedProjectConfiguration {
 		final runtime = resolveRuntimePolicy(profile);
 		final diagnostics = resolveRuntimeDiagnostics(profile);
 		return {
 			environment: resolveEnvironment(),
 			cStandard: resolveCStandard(),
+			projectLayout: resolveProjectLayout(profile),
 			runtimePolicy: runtime.value,
 			runtimePolicyProvenance: runtime.provenance,
 			runtimeDiagnostics: diagnostics.value,
 			runtimeDiagnosticsProvenance: diagnostics.provenance
+		};
+	}
+
+	static function resolveProjectLayout(profile:CProfile):CProjectLayout {
+		return switch Context.definedValue("hxc_project_layout") {
+			case null | "" | "split": CProjectLayout.Split;
+			case "unity": CProjectLayout.Unity;
+			case invalid:
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_project_layout `$invalid`; expected split or unity.',
+					compilationPosition(), profile);
 		};
 	}
 

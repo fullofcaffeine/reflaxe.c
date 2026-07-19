@@ -953,13 +953,9 @@ def caxecraft_domain_artifacts() -> list[Artifact]:
         raise SnapshotFailure(
             "two Caxecraft-domain snapshot renders were not byte-identical"
         )
-    formats = {
-        "include/hxc/program.h": "header",
-        "src/program.c": "c",
-        "hxc.runtime-plan.json": "json",
-        "method-symbols.json": "json",
-        "oracle.txt": "text",
-    }
+    formats = module.SNAPSHOT_FORMATS
+    if not isinstance(formats, dict) or not formats:
+        raise SnapshotFailure("Caxecraft-domain snapshot formats are malformed")
     artifacts: list[Artifact] = []
     for name, format_name in formats.items():
         value = first.get(name)

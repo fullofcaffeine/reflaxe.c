@@ -105,6 +105,8 @@ def compile_target(
         "hxc_runtime_diagnostics=off",
         "-D",
         "reflaxe_c_static_initialization_report",
+        "-D",
+        "hxc_project_layout=unity",
         "--custom-target",
         f"c={output}",
     ]

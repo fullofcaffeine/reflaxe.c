@@ -12,6 +12,7 @@ import hxc.config.HxcConfigResolver;
 import hxc.config.HxcDirectDefine;
 import hxc.config.HxcEffectiveConfig;
 import hxc.config.HxcLoadedProjectConfig;
+import hxc.config.HxcProjectLayout;
 import reflaxe.c.CBuildMode;
 import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
@@ -91,6 +92,7 @@ class ConfigProbe {
 		final defines = [
 			new HxcDirectDefine("hxc_build", "minsizerel"),
 			new HxcDirectDefine("hxc_c_standard", "c23"),
+			new HxcDirectDefine("hxc_project_layout", "unity"),
 			new HxcDirectDefine("hxc_runtime", "none"),
 			new HxcDirectDefine("ordinary_haxe_define", "kept-outside-hxc")
 		];
@@ -106,6 +108,7 @@ class ConfigProbe {
 		require(Std.string(defaults.runtime.value) == "auto", "portable runtime preset");
 		require(Std.string(defaults.runtimeDiagnostics.value) == "summary", "portable diagnostic preset");
 		require(Std.string(defaults.artifact.value) == "executable", "default artifact");
+		require(defaults.projectLayout.value == HxcProjectLayout.Split, "default split project layout");
 
 		final metal = HxcConfigResolver.resolve(new HxcConfigResolutionRequest(null, null, null, null, new HxcConfigPatch({profile: CProfile.Metal})));
 		require(Std.string(metal.runtime.value) == "minimal", "metal runtime preset");

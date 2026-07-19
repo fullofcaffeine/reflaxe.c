@@ -15,6 +15,7 @@ private class HxcResolutionState {
 	public var runtimeDiagnostics:HxcResolvedSetting<CRuntimeDiagnostics>;
 	public var environment:HxcResolvedSetting<CEnvironment>;
 	public var cStandard:HxcResolvedSetting<HxcCStandard>;
+	public var projectLayout:HxcResolvedSetting<HxcProjectLayout>;
 	public var cExtensions:HxcResolvedSetting<HxcCExtensionPolicy>;
 	public var build:HxcResolvedSetting<CBuildMode>;
 	public var artifact:HxcResolvedSetting<HxcArtifactKind>;
@@ -30,6 +31,7 @@ private class HxcResolutionState {
 		runtimeDiagnostics = new HxcResolvedSetting(CRuntimeDiagnostics.Summary, new HxcConfigOrigin(HxcConfigOriginKind.ProfilePreset, "portable"));
 		environment = new HxcResolvedSetting(CEnvironment.Hosted, defaultOrigin);
 		cStandard = new HxcResolvedSetting(HxcCStandard.C11, defaultOrigin);
+		projectLayout = new HxcResolvedSetting(HxcProjectLayout.Split, defaultOrigin);
 		cExtensions = new HxcResolvedSetting(HxcCExtensionPolicy.None, defaultOrigin);
 		build = new HxcResolvedSetting(CBuildMode.Debug, defaultOrigin);
 		artifact = new HxcResolvedSetting(HxcArtifactKind.Executable, defaultOrigin);
@@ -55,8 +57,8 @@ class HxcConfigResolver {
 		applyDirectDefines(state, request.directDefines);
 		resolveProfilePresets(state);
 		final effective = new HxcEffectiveConfig(state.hxml, state.output, state.profile, state.runtime, state.runtimeDiagnostics, state.environment,
-			state.cStandard, state.cExtensions, state.build, state.artifact, request.project == null ? null : request.project.configSource,
-			request.selectedOverlay);
+			state.cStandard, state.projectLayout, state.cExtensions, state.build, state.artifact,
+			request.project == null ? null : request.project.configSource, request.selectedOverlay);
 		HxcConfigRules.validateEffective(effective);
 		return effective;
 	}
@@ -84,6 +86,9 @@ class HxcConfigResolver {
 		}
 		if (patch.cStandard != null) {
 			state.cStandard = new HxcResolvedSetting(patch.cStandard, origin(kind, detailFor(kind, detail, "cStandard")));
+		}
+		if (patch.projectLayout != null) {
+			state.projectLayout = new HxcResolvedSetting(patch.projectLayout, origin(kind, detailFor(kind, detail, "projectLayout")));
 		}
 		if (patch.cExtensions != null) {
 			state.cExtensions = new HxcResolvedSetting(patch.cExtensions, origin(kind, detailFor(kind, detail, "cExtensions")));
@@ -123,6 +128,8 @@ class HxcConfigResolver {
 					state.environment = new HxcResolvedSetting(HxcConfigParser.environment(define.value, source), origin);
 				case "hxc_c_standard":
 					state.cStandard = new HxcResolvedSetting(HxcConfigParser.cStandard(define.value, source), origin);
+				case "hxc_project_layout":
+					state.projectLayout = new HxcResolvedSetting(HxcConfigParser.projectLayout(define.value, source), origin);
 				case "hxc_c_extensions":
 					state.cExtensions = new HxcResolvedSetting(HxcConfigParser.cExtensions(define.value, source), origin);
 				case "hxc_build":
@@ -155,6 +162,7 @@ class HxcConfigResolver {
 		return kind == HxcConfigOriginKind.CliFlag ? "--" + switch field {
 			case "runtimeDiagnostics": "runtime-diagnostics";
 			case "cStandard": "c-standard";
+			case "projectLayout": "project-layout";
 			case "cExtensions": "c-extensions";
 			case _: field;
 		} : detail;

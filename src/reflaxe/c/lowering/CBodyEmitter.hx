@@ -1459,21 +1459,36 @@ class CBodyEmitter {
 
 	public function aggregateDefinitions():Array<CDecl> {
 		final result:Array<CDecl> = [];
-		for (instanceId in aggregateInstanceOrder) {
-			final order = requireAggregateFieldOrder(instanceId);
-			final fields:Array<CField> = [];
-			for (fieldName in order) {
-				fields.push({
-					type: requireAggregateFieldType(instanceId, fieldName),
-					declarator: DName(requireAggregateFieldName(instanceId, fieldName, "definition", instanceId)),
-					bitWidth: null,
-					alignments: [],
-					attributes: []
-				});
-			}
-			result.push(DStruct(requireAggregateTag(instanceId), fields, []));
-		}
+		for (instanceId in aggregateInstanceOrder)
+			result.push(aggregateDefinition(instanceId));
 		return result;
+	}
+
+	/** Aggregate tags are dependency-neutral and may be shared before definitions. */
+	public function aggregateForwardDeclarations():Array<CDecl>
+		return [
+			for (instanceId in aggregateInstanceOrder)
+				DForwardStruct(requireAggregateTag(instanceId), [])
+		];
+
+	/** Stable semantic order used when project layout assigns type definitions. */
+	public function orderedAggregateInstanceIds():Array<String>
+		return aggregateInstanceOrder.copy();
+
+	/** One complete aggregate definition; ownership remains a project-plan fact. */
+	public function aggregateDefinition(instanceId:String):CDecl {
+		final order = requireAggregateFieldOrder(instanceId);
+		final fields:Array<CField> = [];
+		for (fieldName in order) {
+			fields.push({
+				type: requireAggregateFieldType(instanceId, fieldName),
+				declarator: DName(requireAggregateFieldName(instanceId, fieldName, "definition", instanceId)),
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			});
+		}
+		return DStruct(requireAggregateTag(instanceId), fields, []);
 	}
 
 	public function virtualTableForwardDeclarations():Array<CDecl> {
@@ -1525,6 +1540,24 @@ class CBodyEmitter {
 		return result;
 	}
 
+	public function virtualTableObjectDeclarations():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final ids = [for (id in virtualTables.keys()) id];
+		ids.sort(compareUtf8);
+		for (id in ids) {
+			final table = requireVirtualTable(id);
+			result.push(DVariable({
+				storage: [SExtern],
+				alignments: [],
+				type: new CType(TStruct(table.layout.cTag), [QConst]),
+				declarator: DName(table.cName),
+				initializer: null,
+				attributes: []
+			}));
+		}
+		return result;
+	}
+
 	public function virtualTableObjects(functionNames:Map<String, CIdentifier>):Array<CDecl> {
 		final result:Array<CDecl> = [];
 		final ids = [for (id in virtualTables.keys()) id];
@@ -1543,7 +1576,7 @@ class CBodyEmitter {
 				initializers.push({designators: [DField(entry.slot.cMember)], value: IExpr(implementation)});
 			}
 			result.push(DVariable({
-				storage: [SStatic],
+				storage: [],
 				alignments: [],
 				type: new CType(TStruct(table.layout.cTag), [QConst]),
 				declarator: DName(table.cName),
@@ -1596,131 +1629,173 @@ class CBodyEmitter {
 		return typedDeclarator(thunk.slot.returnType, inner);
 
 	public function classDefinitions():Array<CDecl> {
-		final result:Array<CDecl> = [];
+		final result = classForwardDeclarations();
 		for (instanceId in classInstanceOrder)
-			result.push(DForwardStruct(requireClassTag(instanceId), []));
-		for (instanceId in classInstanceOrder) {
-			final fields:Array<CField> = [];
-			final dispatchLayoutId = classDispatchLayoutIds.get(instanceId);
-			if (dispatchLayoutId != null) {
-				final layout = requireVirtualLayout(dispatchLayoutId);
-				fields.push({
-					type: new CType(TStruct(layout.cTag), [QConst]),
-					declarator: DPointer(DName(requireClassDispatchHeader(instanceId)), []),
-					bitWidth: null,
-					alignments: [],
-					attributes: []
-				});
-			}
-			final baseInstance = classBaseInstances.get(instanceId);
-			if (baseInstance != null) {
-				fields.push({
-					type: cType(IRTInstance(baseInstance)),
-					declarator: DName(requireClassBaseMember(instanceId)),
-					bitWidth: null,
-					alignments: [],
-					attributes: []
-				});
-			}
-			final order = requireClassFieldOrder(instanceId);
-			for (fieldName in order) {
-				final type = requireClassFieldType(instanceId, fieldName);
-				final name = requireClassFieldName(instanceId, fieldName);
-				final declaration = typedDeclarator(type, DName(name));
-				fields.push({
-					type: declaration.type,
-					declarator: declaration.declarator,
-					bitWidth: null,
-					alignments: [],
-					attributes: []
-				});
-			}
-			final anchor = classEmptyAnchors.get(instanceId);
-			if (anchor != null) {
-				fields.push({
-					type: new CType(TChar(false)),
-					declarator: DName(anchor),
-					bitWidth: null,
-					alignments: [],
-					attributes: []
-				});
-			}
-			if (fields.length == 0)
-				fail('class instance `$instanceId` would emit an invalid empty strict-C11 struct');
-			result.push(DStruct(requireClassTag(instanceId), fields, []));
-		}
+			result.push(classDefinition(instanceId));
 		return result;
 	}
 
-	public function enumDefinitions():Array<CDecl> {
-		final result:Array<CDecl> = [];
-		for (instanceId in enumInstanceOrder) {
-			if (requireEnumRepresentation(instanceId) == CBECTagged) {
-				result.push(DForwardStruct(requireEnumValueTag(instanceId), []));
-			}
-		}
-		for (instanceId in enumInstanceOrder) {
-			final enumerators = requireEnumCaseOrder(instanceId).map(caseName -> {
-				name: requireEnumCaseDiscriminant(instanceId, caseName),
-				value: EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName)))),
+	/** Stable semantic order used when project layout assigns class definitions. */
+	public function orderedClassInstanceIds():Array<String>
+		return classInstanceOrder.copy();
+
+	/** Forward declarations are dependency-neutral and may live in a common header. */
+	public function classForwardDeclarations():Array<CDecl>
+		return [
+			for (instanceId in classInstanceOrder)
+				DForwardStruct(requireClassTag(instanceId), [])
+		];
+
+	/** One complete class definition without its dependency-neutral forward. */
+	public function classDefinition(instanceId:String):CDecl {
+		final fields:Array<CField> = [];
+		final dispatchLayoutId = classDispatchLayoutIds.get(instanceId);
+		if (dispatchLayoutId != null) {
+			final layout = requireVirtualLayout(dispatchLayoutId);
+			fields.push({
+				type: new CType(TStruct(layout.cTag), [QConst]),
+				declarator: DPointer(DName(requireClassDispatchHeader(instanceId)), []),
+				bitWidth: null,
+				alignments: [],
 				attributes: []
 			});
-			switch requireEnumRepresentation(instanceId) {
-				case CBECNative:
-					result.push(DEnum(requireEnumValueTag(instanceId), enumerators, []));
-				case CBECTagged:
-					result.push(DEnum(requireEnumDiscriminantTag(instanceId), enumerators, []));
-					for (caseName in requireEnumCaseOrder(instanceId)) {
-						final payloadNames = requireEnumPayloadNames(instanceId, caseName);
-						if (payloadNames.length == 0)
-							continue;
-						final fields:Array<CField> = [];
-						for (payloadName in payloadNames) {
-							final declaration = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, payloadName),
-								DName(requireEnumPayloadFieldName(instanceId, caseName, payloadName)));
-							fields.push({
-								type: declaration.type,
-								declarator: declaration.declarator,
-								bitWidth: null,
-								alignments: [],
-								attributes: []
-							});
-						}
-						result.push(DStruct(requireEnumCasePayloadStructTag(instanceId, caseName), fields, []));
-					}
-					final unionFields:Array<CField> = [];
-					for (caseName in requireEnumCaseOrder(instanceId)) {
-						if (requireEnumPayloadNames(instanceId, caseName).length == 0)
-							continue;
-						unionFields.push({
-							type: new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName))),
-							declarator: DName(requireEnumCaseUnionMember(instanceId, caseName)),
+		}
+		final baseInstance = classBaseInstances.get(instanceId);
+		if (baseInstance != null) {
+			fields.push({
+				type: cType(IRTInstance(baseInstance)),
+				declarator: DName(requireClassBaseMember(instanceId)),
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			});
+		}
+		final order = requireClassFieldOrder(instanceId);
+		for (fieldName in order) {
+			final type = requireClassFieldType(instanceId, fieldName);
+			final name = requireClassFieldName(instanceId, fieldName);
+			final declaration = typedDeclarator(type, DName(name));
+			fields.push({
+				type: declaration.type,
+				declarator: declaration.declarator,
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			});
+		}
+		final anchor = classEmptyAnchors.get(instanceId);
+		if (anchor != null) {
+			fields.push({
+				type: new CType(TChar(false)),
+				declarator: DName(anchor),
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			});
+		}
+		if (fields.length == 0)
+			fail('class instance `$instanceId` would emit an invalid empty strict-C11 struct');
+		return DStruct(requireClassTag(instanceId), fields, []);
+	}
+
+	public function enumDefinitions():Array<CDecl> {
+		final result = enumForwardDeclarations();
+		for (instanceId in enumInstanceOrder)
+			for (declaration in enumDefinitionsFor(instanceId))
+				result.push(declaration);
+		return result;
+	}
+
+	/** Stable semantic order used when project layout assigns enum definitions. */
+	public function orderedEnumInstanceIds():Array<String>
+		return enumInstanceOrder.copy();
+
+	/** Tagged-value forwards are dependency-neutral; native enums stay complete. */
+	public function enumForwardDeclarations():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in enumInstanceOrder)
+			if (requireEnumRepresentation(instanceId) == CBECTagged)
+				result.push(DForwardStruct(requireEnumValueTag(instanceId), []));
+		return result;
+	}
+
+	/**
+		Whether a generated instance has a strict-C11 forward declaration.
+
+		Native enums deliberately return false: ISO C11 cannot forward-declare them,
+		so a header declaration that names one still needs its defining header.
+	**/
+	public function typeInstanceIsForwardDeclarable(instanceId:String):Bool {
+		if (aggregateTags.exists(instanceId) || classTags.exists(instanceId))
+			return true;
+		final representation = enumRepresentations.get(instanceId);
+		return representation != null && representation == CBECTagged;
+	}
+
+	/** Complete declarations for one enum instance, excluding its common forward. */
+	public function enumDefinitionsFor(instanceId:String):Array<CDecl> {
+		final result:Array<CDecl> = [];
+		final enumerators = requireEnumCaseOrder(instanceId).map(caseName -> {
+			name: requireEnumCaseDiscriminant(instanceId, caseName),
+			value: EInt(CIntegerLiteral.decimal(Std.string(requireEnumCaseValue(instanceId, caseName)))),
+			attributes: []
+		});
+		switch requireEnumRepresentation(instanceId) {
+			case CBECNative:
+				result.push(DEnum(requireEnumValueTag(instanceId), enumerators, []));
+			case CBECTagged:
+				result.push(DEnum(requireEnumDiscriminantTag(instanceId), enumerators, []));
+				for (caseName in requireEnumCaseOrder(instanceId)) {
+					final payloadNames = requireEnumPayloadNames(instanceId, caseName);
+					if (payloadNames.length == 0)
+						continue;
+					final fields:Array<CField> = [];
+					for (payloadName in payloadNames) {
+						final declaration = typedDeclarator(requireEnumPayloadFieldType(instanceId, caseName, payloadName),
+							DName(requireEnumPayloadFieldName(instanceId, caseName, payloadName)));
+						fields.push({
+							type: declaration.type,
+							declarator: declaration.declarator,
 							bitWidth: null,
 							alignments: [],
 							attributes: []
 						});
 					}
-					if (unionFields.length == 0)
-						fail('tagged enum `$instanceId` has no payload union member');
-					result.push(DUnion(requireEnumPayloadUnionTag(instanceId), unionFields, []));
-					result.push(DStruct(requireEnumValueTag(instanceId), [
-						{
-							type: new CType(TEnum(requireEnumDiscriminantTag(instanceId))),
-							declarator: DName(requireEnumTagMember(instanceId)),
-							bitWidth: null,
-							alignments: [],
-							attributes: []
-						},
-						{
-							type: new CType(TUnion(requireEnumPayloadUnionTag(instanceId))),
-							declarator: DName(requireEnumPayloadMember(instanceId)),
-							bitWidth: null,
-							alignments: [],
-							attributes: []
-						}
-					], []));
-			}
+					result.push(DStruct(requireEnumCasePayloadStructTag(instanceId, caseName), fields, []));
+				}
+				final unionFields:Array<CField> = [];
+				for (caseName in requireEnumCaseOrder(instanceId)) {
+					if (requireEnumPayloadNames(instanceId, caseName).length == 0)
+						continue;
+					unionFields.push({
+						type: new CType(TStruct(requireEnumCasePayloadStructTag(instanceId, caseName))),
+						declarator: DName(requireEnumCaseUnionMember(instanceId, caseName)),
+						bitWidth: null,
+						alignments: [],
+						attributes: []
+					});
+				}
+				if (unionFields.length == 0)
+					fail('tagged enum `$instanceId` has no payload union member');
+				result.push(DUnion(requireEnumPayloadUnionTag(instanceId), unionFields, []));
+				result.push(DStruct(requireEnumValueTag(instanceId), [
+					{
+						type: new CType(TEnum(requireEnumDiscriminantTag(instanceId))),
+						declarator: DName(requireEnumTagMember(instanceId)),
+						bitWidth: null,
+						alignments: [],
+						attributes: []
+					},
+					{
+						type: new CType(TUnion(requireEnumPayloadUnionTag(instanceId))),
+						declarator: DName(requireEnumPayloadMember(instanceId)),
+						bitWidth: null,
+						alignments: [],
+						attributes: []
+					}
+				], []));
 		}
+
 		return result;
 	}
 

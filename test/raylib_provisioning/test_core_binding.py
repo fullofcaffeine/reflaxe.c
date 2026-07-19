@@ -116,6 +116,8 @@ class RaylibCoreBindingTests(unittest.TestCase):
                     "build.hxml",
                     "-D",
                     "hxc_runtime_diagnostics=off",
+                    "-D",
+                    "hxc_project_layout=unity",
                     "--custom-target",
                     f"c={output}",
                 ],

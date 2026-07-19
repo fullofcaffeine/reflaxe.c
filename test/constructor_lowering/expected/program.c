@@ -299,7 +299,7 @@ hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n14:
   }
 }
 
-static void hxc_init_compiler_staticzx2Dinitializzation_ConstructorTrace_staticzx2Dfieldzx2Dvalue_n1(void)
+void hxc_init_compiler_staticzx2Dinitializzation_ConstructorTrace_staticzx2Dfieldzx2Dvalue_n1(void)
 {
   hxc_field_ConstructorTrace_value = 0;
   return;

@@ -18,15 +18,21 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
+sys.path.insert(0, str(CASE))
+from check_assets import (  # noqa: E402
+    AssetValidationError,
+    negative_contracts,
+    validate_asset_pack,
+)
+
 BUILD_HXML = CASE / "build.hxml"
 ORACLE_HXML = CASE / "oracle.hxml"
 EXPECTED = CASE / "expected"
 NATIVE = CASE / "test/native"
 REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
-PRODUCTION_FILES = {
+COMMON_PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -35,13 +41,42 @@ PRODUCTION_FILES = {
     "hxc.runtime-plan.json",
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
-    "include/hxc/program.h",
     "meson.build",
-    "src/program.c",
+}
+SPLIT_HEADERS = (
+    "include/hxc/detail/program_types.h",
+    "include/hxc/modules/caxecraft/domain/AxisMove.h",
+    "include/hxc/modules/caxecraft/domain/BlockCoord.h",
+    "include/hxc/modules/caxecraft/domain/BlockKind.h",
+    "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
+    "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
+    "include/hxc/modules/caxecraft/domain/PlayerState.h",
+    "include/hxc/modules/caxecraft/domain/RaycastHit.h",
+    "include/hxc/modules/caxecraft/domain/StepInput.h",
+    "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
+    "include/hxc/modules/caxecraft/domain/World.h",
+    "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+    "include/hxc/modules/caxecraft/qa/DomainProbe.h",
+    "include/hxc/program.h",
+)
+SPLIT_SOURCES = (
+    "src/hxc/main.c",
+    "src/hxc/support.c",
+    "src/modules/caxecraft/domain/CaxecraftTrace.c",
+    "src/modules/caxecraft/domain/PlayerPhysics.c",
+    "src/modules/caxecraft/domain/VoxelRaycast.c",
+    "src/modules/caxecraft/domain/World.c",
+    "src/modules/caxecraft/domain/WorldStorage.c",
+    "src/modules/caxecraft/qa/DomainProbe.c",
+)
+PRODUCTION_FILES = {
+    "split": COMMON_PRODUCTION_FILES | set(SPLIT_HEADERS) | set(SPLIT_SOURCES),
+    "unity": COMMON_PRODUCTION_FILES
+    | {"include/hxc/program.h", "src/program.c"},
 }
 SNAPSHOT_FORMATS = {
-    "include/hxc/program.h": "header",
-    "src/program.c": "c",
+    **{path: "header" for path in SPLIT_HEADERS},
+    **{path: "c" for path in SPLIT_SOURCES},
     "hxc.runtime-plan.json": "json",
     "method-symbols.json": "json",
     "oracle.txt": "text",
@@ -82,6 +117,7 @@ sys.path.insert(0, str(ROOT / "scripts/test"))
 from c_fixture_harness import (  # noqa: E402
     CFixtureFailure,
     CFixtureProject,
+    resolve_toolchains,
     run_c_fixture_corpus,
     validate_report,
 )
@@ -118,6 +154,7 @@ def haxe_environment(locale: str, *, server: bool) -> dict[str, str]:
 def compile_target(
     output: Path,
     *,
+    layout: str = "split",
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
@@ -139,6 +176,10 @@ def compile_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
+    if layout == "unity":
+        command.extend(["-D", "hxc_project_layout=unity"])
+    elif layout != "split":
+        raise CaxecraftFailure(f"unknown Caxecraft project layout {layout!r}")
     command.extend(["--custom-target", f"c={output}"])
     return subprocess.run(
         command,
@@ -348,10 +389,24 @@ def validate_generated_text(header: bytes, source: bytes) -> None:
             raise CaxecraftFailure(f"generated Caxecraft C omitted {marker!r}")
 
 
+def generated_c_bytes(output: Path, layout: str) -> tuple[bytes, bytes]:
+    if layout == "split":
+        headers = b"\n".join((output / path).read_bytes() for path in SPLIT_HEADERS)
+        sources = b"\n".join((output / path).read_bytes() for path in SPLIT_SOURCES)
+        return headers, sources
+    if layout == "unity":
+        return (
+            (output / "include/hxc/program.h").read_bytes(),
+            (output / "src/program.c").read_bytes(),
+        )
+    raise CaxecraftFailure(f"unknown generated-C layout {layout!r}")
+
+
 def render_project(
     output: Path,
     *,
     label: str,
+    layout: str = "split",
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
@@ -359,6 +414,7 @@ def render_project(
 ) -> RenderedProject:
     result = compile_target(
         output,
+        layout=layout,
         reverse=reverse,
         locale=locale,
         connect=connect,
@@ -375,10 +431,24 @@ def render_project(
     ):
         raise CaxecraftFailure(f"{label} omitted its requested HxcIR report")
     actual_files = generated_files(output)
-    if actual_files != PRODUCTION_FILES:
+    expected_files = PRODUCTION_FILES.get(layout)
+    if expected_files is None or actual_files != expected_files:
         raise CaxecraftFailure(
             f"{label} generated file set drifted: {sorted(actual_files)!r}"
         )
+    manifest = load_json(output / "hxc.manifest.json", f"{label} compiler manifest")
+    configuration = manifest.get("configuration")
+    build = manifest.get("build")
+    if (
+        not isinstance(configuration, dict)
+        or configuration.get("projectLayout") != layout
+        or not isinstance(build, dict)
+        or build.get("sources")
+        != list(SPLIT_SOURCES if layout == "split" else ("src/program.c",))
+        or build.get("privateHeaders")
+        != list(SPLIT_HEADERS if layout == "split" else ("include/hxc/program.h",))
+    ):
+        raise CaxecraftFailure(f"{label} layout/build manifest drifted")
     runtime_plan = load_json(output / "hxc.runtime-plan.json", f"{label} runtime plan")
     validate_runtime_plan(runtime_plan)
     stdlib = load_json(output / "hxc.stdlib-report.json", f"{label} stdlib report")
@@ -392,8 +462,7 @@ def render_project(
     symbols = load_json(output / "hxc.symbols.json", f"{label} symbol table")
     projection = method_symbol_projection(symbols)
     validate_method_symbols(projection)
-    header = (output / "include/hxc/program.h").read_bytes()
-    source = (output / "src/program.c").read_bytes()
+    header, source = generated_c_bytes(output, layout)
     validate_generated_text(header, source)
     hxcir = extract_hxcir(result, label) if report else ""
     if report:
@@ -556,12 +625,10 @@ def snapshot_values() -> dict[str, object]:
         )
         oracle = run_oracle().decode("ascii")
         return {
-            "include/hxc/program.h": (
-                project.output / "include/hxc/program.h"
-            ).read_text(encoding="utf-8"),
-            "src/program.c": (project.output / "src/program.c").read_text(
-                encoding="utf-8"
-            ),
+            **{
+                path: (project.output / path).read_text(encoding="utf-8")
+                for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
+            },
             "hxc.runtime-plan.json": project.runtime_plan,
             "method-symbols.json": project.method_symbols,
             "oracle.txt": oracle,
@@ -584,37 +651,44 @@ def expected_values() -> dict[str, object]:
     }
 
 
-def validate_expected(values: dict[str, object]) -> tuple[bytes, bytes, bytes]:
-    header = values.get("include/hxc/program.h")
-    source = values.get("src/program.c")
+def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], bytes]:
     oracle = values.get("oracle.txt")
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
-    if not all(isinstance(value, str) for value in (header, source, oracle)):
+    generated = {
+        path: values.get(path) for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
+    }
+    if not isinstance(oracle, str) or not all(
+        isinstance(value, str) for value in generated.values()
+    ):
         raise CaxecraftFailure("Caxecraft text baseline is malformed")
     if not isinstance(runtime_plan, dict) or not isinstance(method_symbols, dict):
         raise CaxecraftFailure("Caxecraft JSON baseline is malformed")
     validate_runtime_plan(runtime_plan)
     validate_method_symbols(method_symbols)
-    header_bytes = header.encode("utf-8")
-    source_bytes = source.encode("utf-8")
+    generated_bytes = {
+        path: value.encode("utf-8")
+        for path, value in generated.items()
+        if isinstance(value, str)
+    }
     oracle_bytes = oracle.encode("ascii")
-    validate_generated_text(header_bytes, source_bytes)
+    validate_generated_text(
+        b"\n".join(generated_bytes[path] for path in SPLIT_HEADERS),
+        b"\n".join(generated_bytes[path] for path in SPLIT_SOURCES),
+    )
     lines = oracle_bytes.splitlines()
     if len(lines) != 38 or lines[0] != b"0" or not oracle_bytes.endswith(b"\n"):
         raise CaxecraftFailure("checked-in Caxecraft oracle baseline drifted")
-    return header_bytes, source_bytes, oracle_bytes
+    return generated_bytes, oracle_bytes
 
 
 def validate_snapshots(project: RenderedProject, oracle: bytes) -> None:
     expected = expected_values()
     actual: dict[str, object] = {
-        "include/hxc/program.h": (
-            project.output / "include/hxc/program.h"
-        ).read_text(encoding="utf-8"),
-        "src/program.c": (project.output / "src/program.c").read_text(
-            encoding="utf-8"
-        ),
+        **{
+            path: (project.output / path).read_text(encoding="utf-8")
+            for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
+        },
         "hxc.runtime-plan.json": project.runtime_plan,
         "method-symbols.json": project.method_symbols,
         "oracle.txt": oracle.decode("ascii"),
@@ -644,22 +718,53 @@ def validate_snapshots(project: RenderedProject, oracle: bytes) -> None:
 
 
 def prepare_native_fixture(
-    fixture: Path, header: bytes, source: bytes
+    fixture: Path, project: RenderedProject, layout: str
 ) -> None:
-    (fixture / "generated/include/hxc").mkdir(parents=True)
+    shutil.copytree(project.output / "include", fixture / "generated/include")
     (fixture / "generated/src").mkdir(parents=True)
     (fixture / "native").mkdir(parents=True)
-    (fixture / "generated/include/hxc/program.h").write_bytes(header)
-    (fixture / "generated/src/program.c").write_bytes(source)
     shutil.copy2(NATIVE / "domain_harness.c", fixture / "native/domain_harness.c")
-    shutil.copy2(NATIVE / "generated_program.c", fixture / "native/generated_program.c")
+    if layout == "unity":
+        shutil.copy2(
+            project.output / "src/program.c", fixture / "generated/src/program.c"
+        )
+        shutil.copy2(
+            NATIVE / "generated_program.c", fixture / "native/generated_program.c"
+        )
+    elif layout == "split":
+        for relative in SPLIT_SOURCES:
+            if relative == "src/hxc/main.c":
+                continue
+            destination = fixture / "generated" / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(project.output / relative, destination)
+    else:
+        raise CaxecraftFailure(f"unknown native Caxecraft layout {layout!r}")
 
 
-def native_project(oracle: bytes, *, sanitizer: bool) -> CFixtureProject:
+def native_project(layout: str, oracle: bytes, *, sanitizer: bool) -> CFixtureProject:
+    if layout == "split":
+        sources = (
+            "native/domain_harness.c",
+            *(
+                f"generated/{path}"
+                for path in SPLIT_SOURCES
+                if path != "src/hxc/main.c"
+            ),
+        )
+        headers = tuple(f"generated/{path}" for path in SPLIT_HEADERS)
+    elif layout == "unity":
+        sources = ("native/domain_harness.c", "native/generated_program.c")
+        headers = (
+            "generated/include/hxc/program.h",
+            "generated/src/program.c",
+        )
+    else:
+        raise CaxecraftFailure(f"unknown native Caxecraft layout {layout!r}")
     return CFixtureProject(
-        identifier="caxecraft-domain",
-        sources=("native/domain_harness.c", "native/generated_program.c"),
-        headers=("generated/include/hxc/program.h", "generated/src/program.c"),
+        identifier=f"caxecraft-domain-{layout}",
+        sources=sources,
+        headers=headers,
         include_directories=("generated/include",),
         expected_stdout=oracle.decode("ascii"),
         coverage=tuple(sorted(COVERAGE)),
@@ -668,7 +773,7 @@ def native_project(oracle: bytes, *, sanitizer: bool) -> CFixtureProject:
 
 
 def inspect_generated_object_symbols(
-    build_root: Path, report: dict[str, object]
+    build_root: Path, report: dict[str, object], layout: str
 ) -> None:
     toolchains = report.get("toolchains")
     if not isinstance(toolchains, list):
@@ -677,29 +782,32 @@ def inspect_generated_object_symbols(
         if not isinstance(entry, dict) or not isinstance(entry.get("family"), str):
             raise CaxecraftFailure("native Caxecraft report has a malformed toolchain")
         family = entry["family"]
-        generated_object = (
-            build_root
-            / family
-            / "caxecraft-domain/01-generated_program.o"
-        )
-        result = subprocess.run(
-            ["nm", "-u", str(generated_object)],
-            cwd=ROOT,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-        if result.returncode != 0:
+        project_root = build_root / family / f"caxecraft-domain-{layout}"
+        objects = sorted(project_root.glob("*.o"))
+        if not objects:
             raise CaxecraftFailure(
-                f"cannot inspect {family} generated Caxecraft object symbols\n"
-                f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                f"cannot inspect {family} generated Caxecraft object symbols"
             )
-        imported = {
-            line.split()[-1].lstrip("_").lower()
-            for line in result.stdout.splitlines()
-            if line.split()
-        }
+        imported: set[str] = set()
+        for generated_object in objects:
+            result = subprocess.run(
+                ["nm", "-u", str(generated_object)],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0:
+                raise CaxecraftFailure(
+                    f"cannot inspect {family} generated Caxecraft object symbols\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
+            imported.update(
+                line.split()[-1].lstrip("_").lower()
+                for line in result.stdout.splitlines()
+                if line.split()
+            )
         forbidden = sorted(
             symbol
             for symbol in imported
@@ -713,26 +821,70 @@ def inspect_generated_object_symbols(
             )
 
 
+def check_standalone_headers(
+    project: RenderedProject, layout: str, requested_toolchain: str
+) -> None:
+    headers = (
+        SPLIT_HEADERS if layout == "split" else ("include/hxc/program.h",)
+    )
+    include_root = project.output / "include"
+    for toolchain in resolve_toolchains(
+        requested_toolchain, repository_root=ROOT
+    ):
+        for header in headers:
+            result = subprocess.run(
+                [
+                    toolchain.compiler,
+                    *STRICT_FLAGS,
+                    "-I",
+                    str(include_root),
+                    "-x",
+                    "c",
+                    "-fsyntax-only",
+                    "-",
+                ],
+                input=f'#include "{header.removeprefix("include/")}"\n',
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise CaxecraftFailure(
+                    f"{toolchain.family} rejected standalone {layout} header "
+                    f"{header}\n{result.stdout}{result.stderr}"
+                )
+
+
 def run_native(
-    header: bytes,
-    source: bytes,
+    project: RenderedProject,
+    layout: str,
     oracle: bytes,
     *,
     requested_toolchain: str,
     root: Path,
+    full: bool,
 ) -> None:
-    fixture = root / "fixture"
-    prepare_native_fixture(fixture, header, source)
+    fixture = root / f"fixture-{layout}"
+    prepare_native_fixture(fixture, project, layout)
+    if full:
+        progress(f"standalone {layout} headers")
+        check_standalone_headers(project, layout, requested_toolchain)
     modes = (
-        ("o0", ("-O0",), False),
-        ("o2", ("-O2",), False),
-        ("sanitizer", ("-O1", *SANITIZER_FLAGS), True),
+        (
+            ("o0", ("-O0",), False),
+            ("o2", ("-O2",), False),
+            ("sanitizer", ("-O1", *SANITIZER_FLAGS), True),
+        )
+        if full
+        else (("o2", ("-O2",), False),)
     )
     for mode, extra_flags, sanitizer in modes:
+        progress(f"native {layout}/{mode}")
         build_root = root / mode
         report = run_c_fixture_corpus(
-            suite=f"caxecraft-domain-{mode}",
-            projects=(native_project(oracle, sanitizer=sanitizer),),
+            suite=f"caxecraft-domain-{layout}-{mode}",
+            projects=(native_project(layout, oracle, sanitizer=sanitizer),),
             fixture_root=fixture,
             build_root=build_root,
             repository_root=ROOT,
@@ -741,7 +893,7 @@ def run_native(
             timeout_seconds=120,
         )
         validate_report(report, required_coverage=COVERAGE)
-        inspect_generated_object_symbols(build_root, report)
+        inspect_generated_object_symbols(build_root, report, layout)
 
 
 def parse_args(argv: Iterable[str]) -> argparse.Namespace:
@@ -752,35 +904,96 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="compile and run the checked-in generated baseline without Haxe",
     )
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="run the exhaustive determinism and O0/O2/sanitizer CI matrix",
+    )
     return parser.parse_args(list(argv))
+
+
+def progress(stage: str) -> None:
+    print(f"caxecraft-domain: [{stage}]", flush=True)
+
+
+def checked_in_split_project(root: Path, values: dict[str, object]) -> tuple[RenderedProject, bytes]:
+    generated, oracle = validate_expected(values)
+    for relative, content in generated.items():
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(content)
+    runtime_plan = values.get("hxc.runtime-plan.json")
+    method_symbols = values.get("method-symbols.json")
+    if not isinstance(runtime_plan, dict) or not isinstance(method_symbols, dict):
+        raise CaxecraftFailure("checked-in Caxecraft JSON baseline is malformed")
+    return RenderedProject(root, {}, "", runtime_plan, method_symbols), oracle
 
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
     try:
+        progress("asset manifest + negative contracts")
+        validate_asset_pack(CASE / "assets")
+        negative_contracts()
         with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-domain-") as temporary:
             root = Path(temporary)
             if args.native_only:
-                header, source, oracle = validate_expected(expected_values())
+                progress("load checked-in split baseline")
+                split, oracle = checked_in_split_project(
+                    root / "checked-in-split", expected_values()
+                )
+                unity = None
             else:
+                progress("Eval oracle")
                 oracle = run_oracle()
+                progress("split render + HxcIR")
                 first = render_project(
                     root / "first",
                     label="first cold Caxecraft render",
                     report=True,
                 )
-                check_determinism(first, root / "determinism")
+                progress("unity render + semantic parity")
+                unity = render_project(
+                    root / "unity",
+                    label="unity Caxecraft render",
+                    layout="unity",
+                    report=True,
+                )
+                if (
+                    first.hxcir != unity.hxcir
+                    or first.runtime_plan != unity.runtime_plan
+                    or first.method_symbols != unity.method_symbols
+                ):
+                    raise CaxecraftFailure(
+                        "split and unity layouts changed HxcIR, runtime, or method symbols"
+                    )
+                if args.full:
+                    progress("cold/reversed/locale/warm determinism")
+                    check_determinism(first, root / "determinism")
+                progress("checked-in split snapshots")
                 validate_snapshots(first, oracle)
-                header = (first.output / "include/hxc/program.h").read_bytes()
-                source = (first.output / "src/program.c").read_bytes()
+                split = first
+            progress("split native differential")
             run_native(
-                header,
-                source,
+                split,
+                "split",
                 oracle,
                 requested_toolchain=args.toolchain,
-                root=root / "native",
+                root=root / "native-split",
+                full=args.full or args.native_only,
             )
+            if unity is not None:
+                progress("unity native differential")
+                run_native(
+                    unity,
+                    "unity",
+                    oracle,
+                    requested_toolchain=args.toolchain,
+                    root=root / "native-unity",
+                    full=args.full or args.native_only,
+                )
     except (
+        AssetValidationError,
         CFixtureFailure,
         CaxecraftFailure,
         OSError,
@@ -792,12 +1005,17 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"caxecraft-domain: ERROR: {error}", file=sys.stderr)
         return 1
 
-    mode = "checked-in C baseline" if args.native_only else "Eval/generated-C differential"
+    mode = "checked-in split C baseline" if args.native_only else "Eval/split+unity generated-C differential"
+    matrix = "full O0/O2/ASan+UBSan" if args.full or args.native_only else "quick O2"
+    parity = (
+        "checked-in split layout validation"
+        if args.native_only
+        else "split/unity layout semantic parity"
+    )
     print(
         "caxecraft-domain: OK: "
-        f"{mode}, 32 seeded properties, exact traces, deterministic cold/reversed/"
-        "locale/warm-server artifacts, zero hxrt/allocation symbols, strict O0/O2, "
-        "and ASan/UBSan passed"
+        f"{mode}, 32 seeded properties, exact traces, {matrix}, "
+        f"zero hxrt/allocation symbols, and {parity} passed"
     )
     return 0
 

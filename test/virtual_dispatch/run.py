@@ -166,6 +166,7 @@ def compile_fixture(
     report: bool = False,
     locale: str = "C",
     connect: str | None = None,
+    layout: str = "unity",
 ) -> subprocess.CompletedProcess[str]:
     command = [development_tool("haxe")]
     if connect is not None:
@@ -189,6 +190,10 @@ def compile_fixture(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_virtual_dispatch_report"])
+    if layout == "unity":
+        command.extend(["-D", "hxc_project_layout=unity"])
+    elif layout != "split":
+        raise VirtualDispatchFailure(f"unknown dispatch project layout {layout!r}")
     command.extend(["--custom-target", f"c={output}"])
     return subprocess.run(
         command,
@@ -505,7 +510,11 @@ def validate_generated_c(project: RenderedProject) -> None:
         raise VirtualDispatchFailure("root-only C object header or vtable shape drifted")
     for table in tables:
         c_name = require_text(table.get("cName"), "table C name")
-        if f"static const struct {c_tag} {c_name}" not in project.source:
+        if (
+            f"extern const struct {c_tag} {c_name};" not in project.header
+            or f"const struct {c_tag} {c_name}" not in project.source
+            or f"static const struct {c_tag} {c_name}" in project.source
+        ):
             raise VirtualDispatchFailure(f"generated C omitted table {c_name}")
     for adapter in adapters:
         if project.source.count(f"static int32_t {adapter}(") != 2:
@@ -881,6 +890,103 @@ def check_native(
         )
 
 
+def check_split_project(*, requested_toolchain: str) -> None:
+    with tempfile.TemporaryDirectory(
+        prefix="hxc-virtual-dispatch-split-"
+    ) as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = compile_fixture(POSITIVE, output, layout="split")
+        if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+            raise VirtualDispatchFailure(
+                "split virtual-dispatch project failed Haxe compilation\n"
+                f"exit={compiled.returncode}\nstdout:\n{compiled.stdout}\n"
+                f"stderr:\n{compiled.stderr}"
+            )
+        manifest = load_json(output / "hxc.manifest.json", "split manifest")
+        configuration = require_dict(
+            manifest.get("configuration"), "split manifest configuration"
+        )
+        build = require_dict(manifest.get("build"), "split manifest build")
+        sources = tuple(
+            require_text(value, "split source")
+            for value in require_list(build.get("sources"), "split sources")
+        )
+        headers = tuple(
+            require_text(value, "split private header")
+            for value in require_list(
+                build.get("privateHeaders"), "split private headers"
+            )
+        )
+        if (
+            configuration.get("projectLayout") != "split"
+            or "src/hxc/support.c" not in sources
+            or "src/hxc/main.c" not in sources
+            or len(sources) < 3
+            or len(headers) < 3
+        ):
+            raise VirtualDispatchFailure(
+                "split virtual-dispatch manifest omitted module/support ownership"
+            )
+        dispatch = load_json(output / "hxc.dispatch.json", "split dispatch")
+        layouts = {
+            require_text(layout.get("id"), "split layout ID"): require_text(
+                layout.get("cTag"), "split layout C tag"
+            )
+            for layout in (
+                require_dict(value, "split layout")
+                for value in require_list(dispatch.get("layouts"), "split layouts")
+            )
+        }
+        types_header = (
+            output / "include/hxc/detail/program_types.h"
+        ).read_text(encoding="utf-8")
+        support_source = (output / "src/hxc/support.c").read_text(encoding="utf-8")
+        for value in require_list(dispatch.get("tables"), "split tables"):
+            table = require_dict(value, "split table")
+            c_name = require_text(table.get("cName"), "split table C name")
+            layout_id = require_text(table.get("layoutId"), "split table layout")
+            c_tag = layouts.get(layout_id)
+            if c_tag is None:
+                raise VirtualDispatchFailure(
+                    f"split table {c_name!r} references unknown layout {layout_id!r}"
+                )
+            declaration = f"extern const struct {c_tag} {c_name};"
+            definition = f"const struct {c_tag} {c_name} ="
+            if (
+                declaration not in types_header
+                or definition not in support_source
+                or f"static {definition}" in support_source
+            ):
+                raise VirtualDispatchFailure(
+                    f"split table {c_name!r} lost cross-unit declaration/linkage"
+                )
+
+        project = CFixtureProject(
+            "virtual-dispatch-split",
+            sources,
+            headers,
+            ("include",),
+            "",
+            (*sorted(REQUIRED_NATIVE_COVERAGE), "split-project-layout"),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"virtual-dispatch-split-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=output,
+                build_root=root / f"build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(
+                report,
+                required_coverage=REQUIRED_NATIVE_COVERAGE
+                | {"split-project-layout"},
+            )
+
+
 def snapshot_project() -> dict[str, object]:
     return {
         "program.h": (EXPECTED / "program.h").read_text(encoding="utf-8"),
@@ -920,6 +1026,7 @@ def main(arguments: Iterable[str] = ()) -> int:
                     "warm-server dispatch inspection changed after rejected requests"
                 )
         check_native(snapshot_values(project), requested_toolchain=args.toolchain)
+        check_split_project(requested_toolchain=args.toolchain)
     except (
         VirtualDispatchFailure,
         CFixtureFailure,
@@ -933,7 +1040,7 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "virtual-dispatch: OK: direct-call preservation, minimal root-only tables, "
         "deterministic slots, representation-checked overrides, explanatory reports, "
-        "runtime-free strict C11/C++17 consumers, and fail-closed variance passed"
+        "runtime-free strict C11/C++17 split/unity consumers, and fail-closed variance passed"
     )
     return 0
 

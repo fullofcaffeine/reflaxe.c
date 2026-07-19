@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "project-layout-invalid-define",
+  "role": "fixture",
+  "type": "negative",
+  "status": "active",
+  "requirements": [
+    "HXC-COMP-014"
+  ],
+  "sources": [
+    "src/reflaxe/c/CCompiler.hx",
+    "test/project_layout/build.hxml",
+    "test/project_layout/fixtures/src/layout/Main.hx",
+    "test/project_layout/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "../../project_layout/run.py"
+    ],
+    "workingDirectory": "test/negative/project-layout",
+    "timeoutSeconds": 600,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "diagnostics": [
+      "HXC0003"
+    ],
+    "stdout": {
+      "mode": "regex",
+      "value": "^project-layout: OK:"
+    }
+  }
+}

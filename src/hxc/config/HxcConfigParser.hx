@@ -14,6 +14,7 @@ typedef HxcConfigEnumContract = {
 	final build:Array<String>;
 	final cExtensions:Array<String>;
 	final cStandard:Array<String>;
+	final projectLayout:Array<String>;
 	final environment:Array<String>;
 	final profile:Array<String>;
 	final runtime:Array<String>;
@@ -50,7 +51,8 @@ class HxcConfigParser {
 					}
 				case "overlays":
 					overlays = parseOverlays(field.value, source);
-				case "hxml" | "output" | "profile" | "runtime" | "runtimeDiagnostics" | "environment" | "cStandard" | "cExtensions" | "build" | "artifact":
+				case "hxml" | "output" | "profile" | "runtime" | "runtimeDiagnostics" | "environment" | "cStandard" | "projectLayout" | "cExtensions" |
+					"build" | "artifact":
 					patchFields.push(field);
 				case unknown:
 					throw new HxcConfigError('unknown hxc.json key `$unknown`', source, field.line, field.column);
@@ -75,6 +77,7 @@ class HxcConfigParser {
 				build: ["debug", "minsizerel", "release"],
 				cExtensions: ["gnu", "msvc", "none"],
 				cStandard: ["c11", "c17", "c23"],
+				projectLayout: ["split", "unity"],
 				environment: ["emscripten", "freestanding", "hosted", "wasi"],
 				profile: ["metal", "portable"],
 				runtime: ["auto", "minimal", "none"],
@@ -129,6 +132,14 @@ class HxcConfigParser {
 		};
 	}
 
+	public static function projectLayout(raw:String, source:String = "command-line", line:Int = 1, column:Int = 1):HxcProjectLayout {
+		return switch raw {
+			case "split": HxcProjectLayout.Split;
+			case "unity": HxcProjectLayout.Unity;
+			case _: throw new HxcConfigError('invalid project layout `$raw`; expected split or unity', source, line, column);
+		};
+	}
+
 	public static function cExtensions(raw:String, source:String = "command-line", line:Int = 1, column:Int = 1):HxcCExtensionPolicy {
 		return switch raw {
 			case "none": HxcCExtensionPolicy.None;
@@ -177,6 +188,7 @@ class HxcConfigParser {
 		var selectedRuntimeDiagnostics:Null<CRuntimeDiagnostics> = null;
 		var selectedEnvironment:Null<CEnvironment> = null;
 		var selectedCStandard:Null<HxcCStandard> = null;
+		var selectedProjectLayout:Null<HxcProjectLayout> = null;
 		var selectedCExtensions:Null<HxcCExtensionPolicy> = null;
 		var selectedBuild:Null<CBuildMode> = null;
 		var selectedArtifact:Null<HxcArtifactKind> = null;
@@ -197,6 +209,8 @@ class HxcConfigParser {
 					selectedEnvironment = environment(raw, source, field.value.line, field.value.column);
 				case "cStandard":
 					selectedCStandard = cStandard(raw, source, field.value.line, field.value.column);
+				case "projectLayout":
+					selectedProjectLayout = projectLayout(raw, source, field.value.line, field.value.column);
 				case "cExtensions":
 					selectedCExtensions = cExtensions(raw, source, field.value.line, field.value.column);
 				case "build":
@@ -215,6 +229,7 @@ class HxcConfigParser {
 			runtimeDiagnostics: selectedRuntimeDiagnostics,
 			environment: selectedEnvironment,
 			cStandard: selectedCStandard,
+			projectLayout: selectedProjectLayout,
 			cExtensions: selectedCExtensions,
 			build: selectedBuild,
 			artifact: selectedArtifact

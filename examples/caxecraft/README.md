@@ -46,17 +46,44 @@ Only abstractions demonstrated by at least two working adapters should move
 into shared code. The detailed boundary rules, limitations, and migration
 sequence live in [the domain design](../../docs/caxecraft-domain.md).
 
-From the repository root, run the complete differential and native proof:
+From the repository root, run the fast development proof:
 
 ```sh
 npm ci
 npm run test:caxecraft-domain
 ```
 
-It compares the same 38-line semantic trace under pinned Haxe Eval and generated
-C, checks deterministic output across cold and warm compiler-server builds,
-and runs strict O0/O2 plus ASan/UBSan native lanes. The generated program has an
-empty `hxrt` plan and imports no allocation symbol.
+It compares the same 38-line semantic trace under pinned Haxe Eval and both
+generated-C layouts, checks the registered split snapshots, and compiles and
+runs one strict optimized native lane for each layout. On this workstation that
+reduced the common edit/test cycle from about 128 seconds to about 20 seconds.
+The generated program has an empty `hxrt` plan and imports no allocation symbol.
+
+The exhaustive lane retains cold/reversed/locale/warm-server determinism,
+standalone-header checks, GCC/Clang coverage where available, O0/O2, and
+ASan/UBSan:
+
+```sh
+npm run test:caxecraft-domain:full
+```
+
+CI and the full repository toolchain gate use that exhaustive command. The
+short command is deliberately useful while developing the game or compiler; it
+is not a weaker replacement for release evidence.
+
+The first original design art pack is checked in and validated independently:
+
+```sh
+npm run test:caxecraft-assets
+```
+
+That command proves exact offline primary-source PNG bytes, dimensions, alpha
+contracts, semantic atlas-cell order, a complete no-sidecar file inventory,
+minimal PNG metadata, and repository-scoped generation/privacy records. The
+domain runner invokes the same validator before compiling.
+The images are not loaded by a playable renderer yet, so passing this gate is
+asset-inventory evidence rather than a gameplay or visual-polish claim. See
+[`assets/README.md`](assets/README.md) for the boundary.
 
 To compile only the C project through the direct recovery path:
 
@@ -67,6 +94,23 @@ node_modules/.bin/haxe \
   -D hxc_runtime_diagnostics=off \
   --custom-target c=examples/caxecraft/_build/c
 ```
+
+The default is the source-shaped `split` layout. It mirrors Haxe package/module
+ownership under `include/hxc/modules/` and `src/modules/`, with a common private
+types header and small `src/hxc/main.c` entry wrapper. This makes ownership and
+navigation reviewable, but it does not yet claim takeover-ready C: structured
+control flow (`haxe_c-xge.18.2`), human-oriented names and temporaries
+(`haxe_c-xge.18.3`), and the final generated-code rubric
+(`haxe_c-xge.18.4`) remain explicit follow-up work. To request the compact
+single-implementation form, add:
+
+```sh
+-D hxc_project_layout=unity
+```
+
+Unity and split are file assignments over the same validated semantic and
+declaration plan, so choosing a layout does not change names, runtime policy,
+or game behavior. Reviewable snapshots use the default split tree.
 
 `_build/` is scratch output. Reviewable generated evidence lives in
 [`expected/`](expected/) and is updated only through:

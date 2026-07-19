@@ -512,6 +512,7 @@ def check_manifest(output: Path, *, expected_original_build: bool = True) -> Non
         "profile": "portable",
         "environment": "hosted",
         "cStandard": "c11",
+        "projectLayout": "unity",
         "runtimePolicy": "none",
         "runtimeDiagnostics": "off",
     }:

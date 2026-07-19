@@ -1,8 +1,96 @@
 {
-  "schemaVersion": 1,
   "configSchemaVersion": 1,
-  "configurationFile": "hxc.json",
-  "selectedOverlay": "dev",
+  "schemaVersion": 1,
+  "effective": {
+    "profile": {
+      "value": "portable",
+      "source": {
+        "detail": "--profile",
+        "priority": 4,
+        "kind": "cli-flag"
+      }
+    },
+    "environment": {
+      "value": "hosted",
+      "source": {
+        "detail": "hxc.json",
+        "priority": 2,
+        "kind": "project-file"
+      }
+    },
+    "build": {
+      "value": "minsizerel",
+      "source": {
+        "detail": "hxc_build",
+        "priority": 5,
+        "kind": "direct-define"
+      }
+    },
+    "cStandard": {
+      "value": "c23",
+      "source": {
+        "detail": "hxc_c_standard",
+        "priority": 5,
+        "kind": "direct-define"
+      }
+    },
+    "runtime": {
+      "value": "none",
+      "source": {
+        "detail": "hxc_runtime",
+        "priority": 5,
+        "kind": "direct-define"
+      }
+    },
+    "projectLayout": {
+      "value": "unity",
+      "source": {
+        "detail": "hxc_project_layout",
+        "priority": 5,
+        "kind": "direct-define"
+      }
+    },
+    "runtimeDiagnostics": {
+      "value": "off",
+      "source": {
+        "detail": "dev",
+        "priority": 3,
+        "kind": "named-overlay"
+      }
+    },
+    "hxml": {
+      "value": "haxe/build.hxml",
+      "source": {
+        "detail": "hxc.json",
+        "priority": 2,
+        "kind": "project-file"
+      }
+    },
+    "cExtensions": {
+      "value": "gnu",
+      "source": {
+        "detail": "host-toolchain",
+        "priority": 1,
+        "kind": "environment-preset"
+      }
+    },
+    "output": {
+      "value": "build/dev",
+      "source": {
+        "detail": "dev",
+        "priority": 3,
+        "kind": "named-overlay"
+      }
+    },
+    "artifact": {
+      "value": "static-library",
+      "source": {
+        "detail": "--artifact",
+        "priority": 4,
+        "kind": "cli-flag"
+      }
+    }
+  },
   "precedence": [
     "compiler-default",
     "environment-preset",
@@ -11,86 +99,6 @@
     "cli-flag",
     "direct-define"
   ],
-  "effective": {
-    "hxml": {
-      "value": "haxe/build.hxml",
-      "source": {
-        "kind": "project-file",
-        "detail": "hxc.json",
-        "priority": 2
-      }
-    },
-    "output": {
-      "value": "build/dev",
-      "source": {
-        "kind": "named-overlay",
-        "detail": "dev",
-        "priority": 3
-      }
-    },
-    "profile": {
-      "value": "portable",
-      "source": {
-        "kind": "cli-flag",
-        "detail": "--profile",
-        "priority": 4
-      }
-    },
-    "runtime": {
-      "value": "none",
-      "source": {
-        "kind": "direct-define",
-        "detail": "hxc_runtime",
-        "priority": 5
-      }
-    },
-    "runtimeDiagnostics": {
-      "value": "off",
-      "source": {
-        "kind": "named-overlay",
-        "detail": "dev",
-        "priority": 3
-      }
-    },
-    "environment": {
-      "value": "hosted",
-      "source": {
-        "kind": "project-file",
-        "detail": "hxc.json",
-        "priority": 2
-      }
-    },
-    "cStandard": {
-      "value": "c23",
-      "source": {
-        "kind": "direct-define",
-        "detail": "hxc_c_standard",
-        "priority": 5
-      }
-    },
-    "cExtensions": {
-      "value": "gnu",
-      "source": {
-        "kind": "environment-preset",
-        "detail": "host-toolchain",
-        "priority": 1
-      }
-    },
-    "build": {
-      "value": "minsizerel",
-      "source": {
-        "kind": "direct-define",
-        "detail": "hxc_build",
-        "priority": 5
-      }
-    },
-    "artifact": {
-      "value": "static-library",
-      "source": {
-        "kind": "cli-flag",
-        "detail": "--artifact",
-        "priority": 4
-      }
-    }
-  }
+  "selectedOverlay": "dev",
+  "configurationFile": "hxc.json"
 }

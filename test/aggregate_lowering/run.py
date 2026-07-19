@@ -566,7 +566,7 @@ def custom_target(
         command.extend(["-D", f"hxc_runtime={runtime}"])
     if lifecycle_probe:
         command.extend(["-D", "reflaxe_c_lifecycle_probe"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,

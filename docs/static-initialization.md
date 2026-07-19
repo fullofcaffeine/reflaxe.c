@@ -69,11 +69,13 @@ Every successful primitive executable includes
 `reflaxe_c_static_initialization_report` is an implementation-only test seam
 that prints the same plan with the validated HxcIR dump. It is not application
 configuration. The production C emitter turns each initializer into a
-file-local `static` C function and omits those private implementation details
-from the shared prototype header. It turns the ordered IDs into one private
-`static void` bootstrap function for a non-empty plan. Hosted `int main(void)`
-calls that function once, then calls Haxe `main`, then returns zero. Empty plans
-are compile-time-elided. The HxcIR validator requires a
+project-private externally linked C function declared in the compiler-owned
+private header tree. That linkage is identical in split and unity layouts; it
+lets the small split entry unit call module-owned initializer definitions and
+does not create a public export or ABI promise. The emitter turns the ordered
+IDs into one file-local `static void` bootstrap function for a non-empty plan.
+Hosted `int main(void)` calls that function once, then calls Haxe `main`, then
+returns zero. Empty plans are compile-time-elided. The HxcIR validator requires a
 deferred initializer to have signature `():Void` and to initialize its named
 global exactly once.
 
@@ -95,7 +97,8 @@ outside the admitted project-emission slice.
 - class-before-field phase behavior against the pinned Haxe JavaScript
   generator oracle;
 - deferred globals and exact-once `initialize-global` HxcIR;
-- file-local initializer functions with no shared-header or public-symbol leak;
+- project-private initializer declarations with identical split/unity linkage
+  and no public-export/ABI claim;
 - byte-identical repeated and reversed-input production roots;
 - deterministic source-positioned `HXC1002` with no output;
 - portable, metal, and runtime-none zero-runtime plans;

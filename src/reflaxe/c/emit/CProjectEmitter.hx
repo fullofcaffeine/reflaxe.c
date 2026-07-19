@@ -7,6 +7,7 @@ import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
 import reflaxe.c.CRuntimeDiagnostics;
 import reflaxe.c.CRuntimePolicy;
+import reflaxe.c.emit.CProjectLayout;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.emit.CBuildPlan.CBuildPlanBuilder;
@@ -48,6 +49,7 @@ typedef CProjectEmissionPlan = {
 	final profile:CProfile;
 	final environment:CProjectEnvironment;
 	final cStandard:CProjectStandard;
+	final projectLayout:CProjectLayout;
 	final runtimePolicy:CProjectRuntimePolicy;
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
 	final ?runtimePolicyProvenance:String;
@@ -100,6 +102,7 @@ private typedef ProjectConfigurationRecord = {
 	final profile:CProfile;
 	final environment:CProjectEnvironment;
 	final cStandard:CProjectStandard;
+	final projectLayout:CProjectLayout;
 	final runtimePolicy:CProjectRuntimePolicy;
 	final runtimeDiagnostics:CProjectRuntimeDiagnostics;
 }
@@ -235,6 +238,7 @@ class CProjectEmitter {
 				profile: plan.profile,
 				environment: plan.environment,
 				cStandard: plan.cStandard,
+				projectLayout: plan.projectLayout,
 				runtimePolicy: plan.runtimePolicy,
 				runtimeDiagnostics: plan.runtimeDiagnostics
 			},
@@ -282,6 +286,11 @@ class CProjectEmitter {
 			case CProjectStandard.C11 | CProjectStandard.C17 | CProjectStandard.C23Experimental:
 			case _:
 				fail('unknown project C standard `${Std.string(plan.cStandard)}`');
+		}
+		switch plan.projectLayout {
+			case CProjectLayout.Split | CProjectLayout.Unity:
+			case _:
+				fail('unknown project layout `${Std.string(plan.projectLayout)}`');
 		}
 		switch plan.runtimePolicy {
 			case CProjectRuntimePolicy.Auto | CProjectRuntimePolicy.Minimal | CProjectRuntimePolicy.None:
@@ -427,8 +436,16 @@ class CProjectEmitter {
 					fail('direct executable payload has invalid kind `${Std.string(unit.kind)}`', [unit.relativePath]);
 			}
 		}
-		if (sources < 1 || privateHeaders != 1) {
-			fail('direct executable emission requires at least one source and exactly one private prototype header; found $sources source(s) and $privateHeaders header(s)');
+		if (sources < 1) {
+			fail("direct executable emission requires at least one generated C source");
+		}
+		switch plan.projectLayout {
+			case CProjectLayout.Unity:
+				if (privateHeaders != 1)
+					fail('unity direct executable emission requires exactly one private prototype header; found $privateHeaders');
+			case CProjectLayout.Split:
+				if (privateHeaders < 3)
+					fail('split direct executable emission requires an umbrella, representation detail, and at least one module header; found $privateHeaders');
 		}
 		var entryPoints = 0;
 		for (symbol in plan.symbolTable.symbols) {

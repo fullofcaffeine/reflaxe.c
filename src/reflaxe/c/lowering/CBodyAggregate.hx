@@ -182,6 +182,11 @@ class CPreparedBodyAggregateField {
 	}
 }
 
+private typedef CBodyAggregateTypedefOwner = {
+	final modulePath:String;
+	final position:Position;
+}
+
 /** One shape-deduplicated anonymous record before symbol finalization. */
 class CPreparedBodyAggregate {
 	public final shapeKey:String;
@@ -279,9 +284,13 @@ class CBodyAggregateRegistry {
 	final enumRegistry:CBodyEnumRegistry;
 	final classRegistry:CBodyClassRegistry;
 	final importRegistry:Null<CImportRegistry>;
+	final sourcePathsByModule:Map<String, String> = [];
 
 	public function new(context:CompilationContext, ?program:TypedProgramInput, ?contract:TypedCContractSnapshot) {
 		this.context = context;
+		if (program != null)
+			for (module in program.modules)
+				sourcePathsByModule.set(module.path, module.sourcePath);
 		this.enumRegistry = new CBodyEnumRegistry(context, valueType);
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
 		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
@@ -292,6 +301,7 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
+		final aliasOwner = anonymousTypedefOwner(type);
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
 			case TAbstract(reference, parameters) if (isSpan(reference.get(), parameters)):
@@ -309,7 +319,12 @@ class CBodyAggregateRegistry {
 				final shape = anonymousShape(reference, [], position, fail, node);
 				var aggregate = byShape.get(shape);
 				if (aggregate == null) {
-					aggregate = prepareAggregate(reference, shape, position, ownerModule, sourcePath, fail, node);
+					final aggregateOwner = aliasOwner == null ? ownerModule : aliasOwner.modulePath;
+					final aggregateSource = sourcePathsByModule.exists(aggregateOwner) ? sourcePathsByModule.get(aggregateOwner) : sourcePath;
+					if (aggregateSource == null)
+						return rejected(fail, position, '$node:missing-source-for-aggregate-owner:$aggregateOwner');
+					final aggregatePosition = aliasOwner == null ? position : aliasOwner.position;
+					aggregate = prepareAggregate(reference, shape, aggregatePosition, aggregateOwner, aggregateSource, fail, node);
 					byShape.set(shape, aggregate);
 				}
 				CBodyValueType.aggregate(aggregate);
@@ -486,6 +501,28 @@ class CBodyAggregateRegistry {
 				final definition = reference.get();
 				unwrapAliases(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, fail, node);
 			case _: type;
+		};
+	}
+
+	/**
+		Returns the innermost typedef module that actually declares an anonymous
+		record. Consumers may mention an alias of that typedef, but the generated
+		complete C definition should remain with the module that owns the fields.
+	**/
+	static function anonymousTypedefOwner(type:Type, ?candidate:CBodyAggregateTypedefOwner):Null<CBodyAggregateTypedefOwner> {
+		return switch type {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? null : anonymousTypedefOwner(resolved, candidate);
+			case TLazy(resolve): anonymousTypedefOwner(resolve(), candidate);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				anonymousTypedefOwner(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), {
+					modulePath: definition.module,
+					position: definition.pos
+				});
+			case TAnonymous(_): candidate;
+			case _: null;
 		};
 	}
 

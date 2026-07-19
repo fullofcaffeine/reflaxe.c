@@ -119,7 +119,7 @@ def compile_target(
         command.extend(["-D", f"hxc_environment={environment}"])
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
-    command.extend(["--custom-target", f"c={output}"])
+    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=cwd,

@@ -15,6 +15,7 @@ typedef HxcConfigPatchData = {
 	final ?runtimeDiagnostics:CRuntimeDiagnostics;
 	final ?environment:CEnvironment;
 	final ?cStandard:HxcCStandard;
+	final ?projectLayout:HxcProjectLayout;
 	final ?cExtensions:HxcCExtensionPolicy;
 	final ?build:CBuildMode;
 	final ?artifact:HxcArtifactKind;
@@ -29,6 +30,7 @@ class HxcConfigPatch {
 	public final runtimeDiagnostics:Null<CRuntimeDiagnostics>;
 	public final environment:Null<CEnvironment>;
 	public final cStandard:Null<HxcCStandard>;
+	public final projectLayout:Null<HxcProjectLayout>;
 	public final cExtensions:Null<HxcCExtensionPolicy>;
 	public final build:Null<CBuildMode>;
 	public final artifact:Null<HxcArtifactKind>;
@@ -41,6 +43,7 @@ class HxcConfigPatch {
 		this.runtimeDiagnostics = data.runtimeDiagnostics;
 		this.environment = data.environment;
 		this.cStandard = data.cStandard;
+		this.projectLayout = data.projectLayout;
 		this.cExtensions = data.cExtensions;
 		this.build = data.build;
 		this.artifact = data.artifact;

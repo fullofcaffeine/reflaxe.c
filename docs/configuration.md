@@ -47,6 +47,7 @@ The root object requires `schemaVersion: 1` and admits these settings:
 | `runtimeDiagnostics` | profile preset | `hxc_runtime_diagnostics` | Runtime-reason presentation only. |
 | `environment` | `hosted` | `hxc_environment` | Hosted/freestanding/WASI/Emscripten environment. |
 | `cStandard` | `c11` | `hxc_c_standard` | C11/C17/C23 source mode. |
+| `projectLayout` | `split` | `hxc_project_layout` | Compiler-owned generated-C file arrangement. |
 | `cExtensions` | `none` | `hxc_c_extensions` | Explicit GNU/MSVC compatibility family. |
 | `build` | `debug` | `hxc_build` | Optimization intent, never a semantic relaxation. |
 | `artifact` | `executable` | none | Executable/static-library/shared-library planning intent. |
@@ -70,7 +71,7 @@ The root object requires `schemaVersion: 1` and admits these settings:
 }
 ```
 
-An overlay accepts exactly the ten setting keys above and cannot recursively
+An overlay accepts exactly the eleven setting keys above and cannot recursively
 declare schemas or overlays. Names match `[A-Za-z][A-Za-z0-9_-]*`; asking for a
 missing overlay is an error rather than a fallback to the base project.
 
@@ -79,13 +80,13 @@ missing overlay is an error rather than a fallback to the base project.
 The resolver applies the six layers in the documented order. Environment
 presets and CLI values are typed inputs supplied by the future platform/command
 adapters; they are not hidden JSON keys. Direct define collection consumes only
-the seven documented configuration defines, rejects duplicate or misspelled
+the eight documented configuration defines, rejects duplicate or misspelled
 `hxc_*` configuration names, and leaves unrelated Haxe defines outside this
 model.
 
 Every effective field is a `HxcResolvedSetting<T>` with a stable origin kind,
 detail, and numeric priority. The canonical schema-1 inspection record includes
-all ten fields, the selected overlay, logical config filename, and the complete
+all eleven fields, the selected overlay, logical config filename, and the complete
 precedence list. It never serializes the config root, process cwd, temporary
 directory, timestamp, locale value, or map iteration order. Profile-derived
 runtime defaults are explicitly reported as `profile-preset:portable` or
@@ -171,9 +172,37 @@ The canonical expert/debug defines are:
 -D hxc_runtime_diagnostics=off|summary|warn
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 -D hxc_c_standard=c11|c17|c23
+-D hxc_project_layout=split|unity
 -D hxc_c_extensions=none|gnu|msvc
 -D hxc_build=debug|release|minsizerel
 ```
+
+`projectLayout` changes only compiler-owned file assignment after HxcIR,
+representation, symbol, and declaration planning are finalized:
+
+- `split` is the human-facing default. It emits a stable private umbrella at
+  `include/hxc/program.h`, program-wide representation declarations at
+  `include/hxc/detail/program_types.h`, module headers and sources under
+  `include/hxc/modules/<package>/<Module>.h` and
+  `src/modules/<package>/<Module>.c`, and a small hosted entry unit at
+  `src/hxc/main.c`. A support unit appears only when layout assertions or
+  virtual-dispatch objects require one.
+- `unity` emits the same planned declarations and functions through one
+  `src/program.c` and the same stable private umbrella. It is useful for
+  embedding, quick inspection, tiny programs, and build systems that prefer an
+  amalgamation; it does not select different Haxe or C semantics.
+
+There is no package-coalesced value yet. HXC-COMP-011's package strategy is
+tracked by `haxe_c-xge.18.5`; an unknown value fails closed rather than being
+silently interpreted as split or unity.
+
+Both modes are strict, deterministic compiler output. The neutral build plan
+lists the exact selected sources/headers, and switching modes uses the normal
+Reflaxe ownership transaction so stale generated files are removed without
+claiming neighboring user files. Compiler-proven closed recursive cycles may
+retain narrow safety partitions until their structural trampoline lowering is
+implemented; that warning-safety exception is recorded in the function-
+lowering contract rather than hidden in the printer.
 
 Profiles provide defaults for otherwise independent axes:
 

@@ -48,6 +48,7 @@
         "arithmetic-semantics",
         "primitive-differential",
         "span-lowering",
+        "project-layout",
         "runtime-feature-graph",
         "string-output",
         "hello",
@@ -88,6 +89,7 @@
         "static-initialization",
         "arithmetic-semantics",
         "span-lowering",
+        "project-layout",
         "runtime-feature-graph",
         "string-output"
       ]
@@ -182,6 +184,7 @@
         "primitive-differential",
         "project-emitter",
         "span-lowering",
+        "project-layout",
         "runtime-feature-graph",
         "array-runtime",
         "string-runtime",
@@ -210,6 +213,7 @@
         "string-runtime",
         "string-output",
         "hello",
+        "project-layout",
         "caxecraft-domain"
       ]
     },
@@ -950,11 +954,36 @@
       ]
     },
     {
+      "id": "project-layout",
+      "directory": "test/project_layout",
+      "runner": [
+        "python3",
+        "test/project_layout/run.py"
+      ],
+      "types": [
+        "positive",
+        "negative",
+        "runtime",
+        "differential"
+      ],
+      "status": "active",
+      "assertions": [
+        "split is the compiler default and maps normalized multi-package Haxe module ownership to deterministic private module headers and sources, with a common representation header and small entry unit",
+        "native enum and embedded by-value definitions retain hard owner-header edges, while forward-declarable struct prototypes and extern declarations use common forwards; a mixed hard/soft cycle and mutually referential class pointers compile without false dependency cycles",
+        "unity consumes the same HxcIR, finalized non-preprocessor symbols, runtime plan, and declaration/function plan while emitting one ordinary implementation source",
+        "both layouts record exact sources and private headers in hxc.manifest.json and remain byte-stable across roots, reversed discovery, locale, cold repetition, and warm compiler-server reuse",
+        "an invalid hxc_project_layout define emits source-anchored HXC0003 and leaves no output",
+        "switching layouts through Reflaxe output ownership deletes only stale compiler-owned files and preserves a user-owned neighbor",
+        "all generated headers compile independently and GCC/Clang O0/O2 traces from both layouts equal the Eval oracle"
+      ]
+    },
+    {
       "id": "caxecraft-domain",
       "directory": "examples/caxecraft",
       "runner": [
         "python3",
-        "examples/caxecraft/run.py"
+        "examples/caxecraft/run.py",
+        "--full"
       ],
       "types": [
         "positive",
@@ -964,6 +993,7 @@
       ],
       "status": "active",
       "assertions": [
+        "the initial non-playable design art pack is offline and exact: its manifest owns every primary-source PNG hash, dimensions, alpha contract, semantic atlas cell, generation/privacy record, complete file inventory, and minimal metadata policy before any runtime-integration claim",
         "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, and fixed-step AABB player collision over a narrow fixed-array storage seam",
         "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
         "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
@@ -1350,11 +1380,7 @@
       {
         "id": "caxecraft-domain",
         "expectedRoots": [
-          "examples/caxecraft/expected/include/hxc/program.h",
-          "examples/caxecraft/expected/src/program.c",
-          "examples/caxecraft/expected/hxc.runtime-plan.json",
-          "examples/caxecraft/expected/method-symbols.json",
-          "examples/caxecraft/expected/oracle.txt"
+          "examples/caxecraft/expected"
         ],
         "formats": [
           "c",

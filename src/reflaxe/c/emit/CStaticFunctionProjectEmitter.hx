@@ -3,15 +3,27 @@ package reflaxe.c.emit;
 #if (macro || reflaxe_runtime)
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ast.CASTPrinter;
+import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
+import reflaxe.c.emit.CProjectLayout.CProjectModuleLayout;
+import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.ir.HxcIR;
+import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyEmitter;
+import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter;
 import reflaxe.c.runtime.RuntimeAbiContract;
 
-/** Structural function prototype/definition plan for the first executable slice. */
+/** One guarded private header assigned before printing. */
+typedef CStaticFunctionHeaderPlan = {
+	final path:String;
+	final unit:CHeaderUnit;
+}
+
+/** Structural function source plan for the first executable slice. */
 typedef CStaticFunctionSourcePlan = {
 	final path:String;
 	final unit:CTranslationUnit;
@@ -25,31 +37,144 @@ typedef CStaticFunctionDefinitionPlan = {
 }
 
 class CStaticFunctionDeclarationPlan {
+	public final headers:Array<CStaticFunctionHeaderPlan>;
+
+	/** Compatibility view for callers that intentionally request unity output. */
 	public final headerPath:String;
+
+	/** Compatibility view for callers that intentionally request unity output. */
 	public final header:CHeaderUnit;
+
 	public final sources:Array<CStaticFunctionSourcePlan>;
 	public final functionDefinitions:Array<CStaticFunctionDefinitionPlan>;
 
-	public function new(headerPath:String, header:CHeaderUnit, sources:Array<CStaticFunctionSourcePlan>,
+	public function new(headers:Array<CStaticFunctionHeaderPlan>, sources:Array<CStaticFunctionSourcePlan>,
 			functionDefinitions:Array<CStaticFunctionDefinitionPlan>) {
-		this.headerPath = headerPath;
-		this.header = header;
+		if (headers.length == 0)
+			throw new ProjectEmissionError("static function declaration plan requires at least one private header");
+		this.headers = headers.copy();
+		this.headerPath = headers[0].path;
+		this.header = headers[0].unit;
 		this.sources = sources.copy();
 		this.functionDefinitions = functionDefinitions.copy();
 	}
 }
 
+private typedef CModuleDeclaration = {
+	final modulePath:String;
+	final declaration:CDecl;
+}
+
+/** One complete generated value type and the types it embeds by value. */
+private class CTypeSemanticPlan {
+	public final instanceId:String;
+	public final modulePath:String;
+	public final declarations:Array<CDecl>;
+	public final completeDependencies:Array<String>;
+
+	public function new(instanceId:String, modulePath:String, declarations:Array<CDecl>, completeDependencies:Array<String>) {
+		this.instanceId = instanceId;
+		this.modulePath = modulePath;
+		this.declarations = declarations.copy();
+		this.completeDependencies = completeDependencies.copy();
+	}
+}
+
+private class CFunctionSemanticPlan {
+	public final functionId:String;
+	public final modulePath:String;
+	public final isNonReturning:Bool;
+	public final prototype:CDecl;
+	public final returnType:CType;
+	public final declarator:CDeclarator;
+	public final body:CStmt;
+
+	public function new(functionId:String, modulePath:String, isNonReturning:Bool, prototype:CDecl, returnType:CType, declarator:CDeclarator, body:CStmt) {
+		this.functionId = functionId;
+		this.modulePath = modulePath;
+		this.isNonReturning = isNonReturning;
+		this.prototype = prototype;
+		this.returnType = returnType;
+		this.declarator = declarator;
+		this.body = body;
+	}
+
+	public function definition():CDecl {
+		return DFunction({
+			storage: [],
+			functionSpecifiers: isNonReturning ? [FNoReturn] : [],
+			returnType: returnType,
+			declarator: declarator,
+			body: body,
+			attributes: []
+		});
+	}
+}
+
+private class CStaticFunctionSemanticPlan {
+	public final common:CTranslationUnit;
+	public final aggregateForwards:Array<CDecl>;
+	public final aggregateTypes:Array<CTypeSemanticPlan>;
+	public final enumForwards:Array<CDecl>;
+	public final enumTypes:Array<CTypeSemanticPlan>;
+	public final virtualForwards:Array<CDecl>;
+	public final classForwards:Array<CDecl>;
+	public final classTypes:Array<CTypeSemanticPlan>;
+	public final virtualDefinitions:Array<CDecl>;
+	public final virtualObjectDeclarations:Array<CDecl>;
+	public final moduleDependencies:Map<String, Array<String>>;
+	public final support:Array<CDecl>;
+	public final supportGlobalSplit:Int;
+	public final globalDeclarations:Array<CModuleDeclaration>;
+	public final globalDefinitions:Array<CModuleDeclaration>;
+	public final functions:Array<CFunctionSemanticPlan>;
+	public final entry:Array<CDecl>;
+
+	public function new(common:CTranslationUnit, aggregateForwards:Array<CDecl>, aggregateTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>,
+			enumTypes:Array<CTypeSemanticPlan>, virtualForwards:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>,
+			virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>,
+			supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>,
+			functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
+		this.common = common;
+		this.aggregateForwards = aggregateForwards.copy();
+		this.aggregateTypes = aggregateTypes.copy();
+		this.enumForwards = enumForwards.copy();
+		this.enumTypes = enumTypes.copy();
+		this.virtualForwards = virtualForwards.copy();
+		this.classForwards = classForwards.copy();
+		this.classTypes = classTypes.copy();
+		this.virtualDefinitions = virtualDefinitions.copy();
+		this.virtualObjectDeclarations = virtualObjectDeclarations.copy();
+		this.moduleDependencies = moduleDependencies;
+		this.support = support.copy();
+		this.supportGlobalSplit = supportGlobalSplit;
+		this.globalDeclarations = globalDeclarations.copy();
+		this.globalDefinitions = globalDefinitions.copy();
+		this.functions = functions.copy();
+		this.entry = entry.copy();
+	}
+}
+
 /** Emits a runtime-free private prototype header and strict-C11 source units. */
 class CStaticFunctionProjectEmitter {
-	public static inline final HEADER_PATH = "include/hxc/program.h";
-	public static inline final HEADER_INCLUDE = "hxc/program.h";
-	public static inline final SOURCE_PATH = "src/program.c";
+	public static inline final HEADER_PATH = CProjectLayoutPlan.UMBRELLA_HEADER_PATH;
+	public static inline final HEADER_INCLUDE = CProjectLayoutPlan.UMBRELLA_HEADER_INCLUDE;
+	public static inline final SOURCE_PATH = CProjectLayoutPlan.UNITY_SOURCE_PATH;
 	public static inline final NON_RETURNING_SOURCE_PREFIX = "src/nonreturn_";
 
 	public function new() {}
 
 	public function plan(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
 			?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier, ?runtimeAbiMajor:Int):CStaticFunctionDeclarationPlan {
+		final layout = new CProjectLayoutPlanner().plan(CProjectLayout.Unity, modulePaths(lowered));
+		final guards:Map<String, CIdentifier> = [];
+		guards.set(HEADER_PATH, headerGuard);
+		return planWithLayout(lowered, entryFunctionId, entryName, layout, guards, initializerFunctionIds, initializationName, runtimeAbiMajor);
+	}
+
+	public function planWithLayout(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, layout:CProjectLayoutPlan,
+			headerGuards:Map<String, CIdentifier>, ?initializerFunctionIds:Array<String>, ?initializationName:CIdentifier,
+			?runtimeAbiMajor:Int):CStaticFunctionDeclarationPlan {
 		final entry = findFunction(lowered.functions, entryFunctionId);
 		if (entry.ir.parameters.length != 0 || entry.ir.returnType != IRTVoid) {
 			throw new ProjectEmissionError('Haxe executable entry `${entry.ir.id}` must have signature `static function main():Void`');
@@ -159,106 +284,87 @@ class CStaticFunctionProjectEmitter {
 		for (definition in helperEmitter.definitions(lowered.helpers)) {
 			headerUnit.declarations.push(definition);
 		}
-		for (definition in bodyEmitter.aggregateDefinitions()) {
-			headerUnit.declarations.push(definition);
-		}
-		for (definition in bodyEmitter.enumDefinitions()) {
-			headerUnit.declarations.push(definition);
-		}
-		for (declaration in bodyEmitter.virtualTableForwardDeclarations()) {
-			headerUnit.declarations.push(declaration);
-		}
-		for (definition in bodyEmitter.classDefinitions()) {
-			headerUnit.declarations.push(definition);
-		}
-		for (definition in bodyEmitter.virtualTableDefinitions()) {
-			headerUnit.declarations.push(definition);
-		}
+		final typeOwners = typeOwnerModules(lowered);
+		final aggregateForwards = bodyEmitter.aggregateForwardDeclarations();
+		final aggregateTypes = aggregateTypePlans(lowered, bodyEmitter);
+		final enumForwards = bodyEmitter.enumForwardDeclarations();
+		final enumTypes = enumTypePlans(lowered, bodyEmitter);
+		final virtualForwards = bodyEmitter.virtualTableForwardDeclarations();
+		final classForwards = bodyEmitter.classForwardDeclarations();
+		final classTypes = classTypePlans(lowered, bodyEmitter);
+		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
+		final virtualObjectDeclarations = bodyEmitter.virtualTableObjectDeclarations();
+		final moduleDependencies = completeModuleDependencies(lowered, aggregateTypes.concat(enumTypes).concat(classTypes), typeOwners, bodyEmitter);
+		final globalDeclarations:Array<CModuleDeclaration> = [];
+		final globalDefinitions:Array<CModuleDeclaration> = [];
 		for (global in lowered.globals) {
+			layout.module(global.modulePath);
 			final declaration = bodyEmitter.typedDeclarator(global.ir.type, DName(global.cName));
-			headerUnit.declarations.push(DVariable({
-				storage: [SExtern],
-				alignments: [],
-				type: declaration.type,
-				declarator: declaration.declarator,
-				initializer: null,
-				attributes: []
-			}));
-		}
-		for (fn in lowered.functions) {
-			if (!initializerIds.exists(fn.ir.id)) {
-				final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
-				final declaration = bodyEmitter.functionDeclarator(fn.ir,
-					DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames, fn.spanLengthNames), false)));
-				headerUnit.declarations.push(DPrototype([], functionSpecifiers, declaration.type, declaration.declarator, []));
-			}
+			globalDeclarations.push({
+				modulePath: global.modulePath,
+				declaration: DVariable({
+					storage: [SExtern],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: null,
+					attributes: []
+				})
+			});
+			globalDefinitions.push({
+				modulePath: global.modulePath,
+				declaration: DVariable({
+					storage: [],
+					alignments: [],
+					type: declaration.type,
+					declarator: declaration.declarator,
+					initializer: bodyEmitter.globalInitializer(global.ir),
+					attributes: []
+				})
+			});
 		}
 
-		final programUnit = sourceUnit();
+		final support:Array<CDecl> = [];
 		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
-			programUnit.declarations.push(assertion);
+			support.push(assertion);
 		}
 		for (assertion in bodyEmitter.enumLayoutAssertions()) {
-			programUnit.declarations.push(assertion);
+			support.push(assertion);
 		}
 		for (assertion in bodyEmitter.classLayoutAssertions()) {
-			programUnit.declarations.push(assertion);
+			support.push(assertion);
 		}
 		for (prototype in bodyEmitter.virtualThunkPrototypes()) {
-			programUnit.declarations.push(prototype);
+			support.push(prototype);
 		}
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in lowered.helpers) {
 			helperNames.set(helper.helperId, helper.cName);
 		}
-		for (global in lowered.globals) {
-			final declaration = bodyEmitter.typedDeclarator(global.ir.type, DName(global.cName));
-			programUnit.declarations.push(DVariable({
-				storage: [],
-				alignments: [],
-				type: declaration.type,
-				declarator: declaration.declarator,
-				initializer: bodyEmitter.globalInitializer(global.ir),
-				attributes: []
-			}));
-		}
+		final supportGlobalSplit = support.length;
 		for (table in bodyEmitter.virtualTableObjects(functionNames)) {
-			programUnit.declarations.push(table);
+			support.push(table);
 		}
 		for (thunk in bodyEmitter.virtualThunkDefinitions(functionNames)) {
-			programUnit.declarations.push(thunk);
+			support.push(thunk);
 		}
-		final sources:Array<CStaticFunctionSourcePlan> = [];
-		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];
-		var nonReturningOrdinal = 0;
+		final functions:Array<CFunctionSemanticPlan> = [];
 		for (fn in lowered.functions) {
+			layout.module(fn.modulePath);
 			final isInitializer = initializerIds.exists(fn.ir.id);
 			if (isInitializer && nonReturningFunctionIds.exists(fn.ir.id)) {
 				throw new ProjectEmissionError('static initializer `${fn.ir.id}` unexpectedly participates in a closed call cycle');
 			}
-			final functionSpecifiers = nonReturningFunctionIds.exists(fn.ir.id) ? [FNoReturn] : [];
+			final isNonReturning = nonReturningFunctionIds.exists(fn.ir.id);
+			final functionSpecifiers = isNonReturning ? [FNoReturn] : [];
 			final signature = bodyEmitter.functionDeclarator(fn.ir,
 				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames, fn.spanLengthNames), false)));
-			final definition:CDecl = DFunction({
-				storage: isInitializer ? [SStatic] : [],
-				functionSpecifiers: functionSpecifiers,
-				returnType: signature.type,
-				declarator: signature.declarator,
-				body: bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
-					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames, lowered.boundsAbortName),
-				attributes: []
-			});
-			if (nonReturningFunctionIds.exists(fn.ir.id)) {
-				final sourcePath = nonReturningSourcePath(nonReturningOrdinal++);
-				final unit = sourceUnit();
-				unit.declarations.push(definition);
-				sources.push({path: sourcePath, unit: unit});
-				functionDefinitions.push({functionId: fn.ir.id, sourcePath: sourcePath, declaration: definition});
-			} else {
-				programUnit.declarations.push(definition);
-				functionDefinitions.push({functionId: fn.ir.id, sourcePath: SOURCE_PATH, declaration: definition});
-			}
+			functions.push(new CFunctionSemanticPlan(fn.ir.id, fn.modulePath, isNonReturning,
+				DPrototype([], functionSpecifiers, signature.type, signature.declarator, []), signature.type, signature.declarator,
+				bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
+					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames, lowered.boundsAbortName)));
 		}
+		final entryDeclarations:Array<CDecl> = [];
 		final entryStatements:Array<CStmt> = [];
 		if (orderedInitializers.length > 0) {
 			if (initializationName == null) {
@@ -268,7 +374,7 @@ class CStaticFunctionProjectEmitter {
 			for (initializer in orderedInitializers) {
 				initializationStatements.push(SExpr(ECall(EIdentifier(initializer.cName), [])));
 			}
-			programUnit.declarations.push(DFunction({
+			entryDeclarations.push(DFunction({
 				storage: [SStatic],
 				functionSpecifiers: [],
 				returnType: new CType(TVoid),
@@ -280,7 +386,7 @@ class CStaticFunctionProjectEmitter {
 		}
 		entryStatements.push(SExpr(ECall(EIdentifier(entry.cName), [])));
 		entryStatements.push(SReturn(EInt(CIntegerLiteral.decimal("0"))));
-		programUnit.declarations.push(DFunction({
+		entryDeclarations.push(DFunction({
 			storage: [],
 			functionSpecifiers: [],
 			returnType: new CType(TNativeInt(IRInt, true)),
@@ -288,10 +394,13 @@ class CStaticFunctionProjectEmitter {
 			body: SBlock(entryStatements),
 			attributes: []
 		}));
-		sources.push({path: SOURCE_PATH, unit: programUnit});
-		sources.sort((left, right) -> compareStrings(left.path, right.path));
-		functionDefinitions.sort((left, right) -> compareStrings(left.functionId, right.functionId));
-		return new CStaticFunctionDeclarationPlan(HEADER_PATH, new CHeaderUnit(headerGuard, headerUnit), sources, functionDefinitions);
+		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, enumForwards, enumTypes, virtualForwards,
+			classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies, support, supportGlobalSplit, globalDeclarations,
+			globalDefinitions, functions, entryDeclarations);
+		return switch layout.layout {
+			case Unity: assignUnity(semantic, layout, headerGuards);
+			case Split: assignSplit(semantic, layout, headerGuards);
+		};
 	}
 
 	public function emit(lowered:CBodyLoweringResult, entryFunctionId:String, entryName:CIdentifier, headerGuard:CIdentifier,
@@ -302,19 +411,429 @@ class CStaticFunctionProjectEmitter {
 
 	public function emitPlan(declarationPlan:CStaticFunctionDeclarationPlan):Array<GeneratedFile> {
 		final printer = new CASTPrinter();
-		final files = [
-			new GeneratedFile(declarationPlan.headerPath, printer.printHeader(declarationPlan.header), GeneratedFileKind.PrivateHeader)
-		];
+		final files:Array<GeneratedFile> = [];
+		for (header in declarationPlan.headers)
+			files.push(new GeneratedFile(header.path, printer.printHeader(header.unit), GeneratedFileKind.PrivateHeader));
 		for (source in declarationPlan.sources) {
 			files.push(new GeneratedFile(source.path, printer.printTranslationUnit(source.unit), GeneratedFileKind.Source));
 		}
+		files.sort((left, right) -> compareStrings(left.relativePath, right.relativePath));
 		return files;
 	}
 
-	static function sourceUnit():CTranslationUnit {
+	static function sourceUnit(?headerInclude:String):CTranslationUnit {
 		final unit = new CTranslationUnit();
-		unit.includes.push({path: HEADER_INCLUDE, kind: Local});
+		unit.includes.push({path: headerInclude == null ? HEADER_INCLUDE : headerInclude, kind: Local});
 		return unit;
+	}
+
+	static function assignUnity(semantic:CStaticFunctionSemanticPlan, layout:CProjectLayoutPlan,
+			headerGuards:Map<String, CIdentifier>):CStaticFunctionDeclarationPlan {
+		final headerUnit = copyUnit(semantic.common);
+		appendTypeDeclarations(headerUnit, semantic.aggregateTypes);
+		appendDeclarations(headerUnit, semantic.enumForwards);
+		appendTypeDeclarations(headerUnit, semantic.enumTypes);
+		appendDeclarations(headerUnit, semantic.virtualForwards);
+		appendDeclarations(headerUnit, semantic.classForwards);
+		appendTypeDeclarations(headerUnit, semantic.classTypes);
+		appendDeclarations(headerUnit, semantic.virtualDefinitions);
+		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
+		for (global in semantic.globalDeclarations)
+			headerUnit.declarations.push(global.declaration);
+		for (fn in semantic.functions)
+			headerUnit.declarations.push(fn.prototype);
+
+		final programUnit = sourceUnit();
+		for (index in 0...semantic.supportGlobalSplit)
+			programUnit.declarations.push(semantic.support[index]);
+		for (global in semantic.globalDefinitions)
+			programUnit.declarations.push(global.declaration);
+		for (index in semantic.supportGlobalSplit...semantic.support.length)
+			programUnit.declarations.push(semantic.support[index]);
+
+		final sources:Array<CStaticFunctionSourcePlan> = [];
+		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];
+		var nonReturningOrdinal = 0;
+		for (fn in semantic.functions) {
+			final definition = fn.definition();
+			if (fn.isNonReturning) {
+				final sourcePath = nonReturningSourcePath(nonReturningOrdinal++);
+				final unit = sourceUnit();
+				unit.declarations.push(definition);
+				sources.push({path: sourcePath, unit: unit});
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: sourcePath, declaration: definition});
+			} else {
+				programUnit.declarations.push(definition);
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: SOURCE_PATH, declaration: definition});
+			}
+		}
+		for (declaration in semantic.entry)
+			programUnit.declarations.push(declaration);
+		sources.push({path: SOURCE_PATH, unit: programUnit});
+		sources.sort((left, right) -> compareStrings(left.path, right.path));
+		functionDefinitions.sort((left, right) -> compareStrings(left.functionId, right.functionId));
+		return new CStaticFunctionDeclarationPlan([
+			{path: HEADER_PATH, unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), headerUnit)}
+		], sources, functionDefinitions);
+	}
+
+	static function assignSplit(semantic:CStaticFunctionSemanticPlan, layout:CProjectLayoutPlan,
+			headerGuards:Map<String, CIdentifier>):CStaticFunctionDeclarationPlan {
+		final headers:Array<CStaticFunctionHeaderPlan> = [];
+		final typesUnit = copyUnit(semantic.common);
+		appendDeclarations(typesUnit, semantic.aggregateForwards);
+		appendDeclarations(typesUnit, semantic.enumForwards);
+		appendDeclarations(typesUnit, semantic.virtualForwards);
+		appendDeclarations(typesUnit, semantic.classForwards);
+		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
+		headers.push({
+			path: CProjectLayoutPlan.TYPES_HEADER_PATH,
+			unit: new CHeaderUnit(requireGuard(layout, headerGuards, CProjectLayoutPlan.TYPES_HEADER_PATH), typesUnit)
+		});
+
+		final moduleHeaderUnits:Map<String, CTranslationUnit> = [];
+		for (module in layout.modules) {
+			final unit = new CTranslationUnit();
+			unit.includes.push({path: CProjectLayoutPlan.TYPES_HEADER_INCLUDE, kind: Local});
+			final dependencies = semantic.moduleDependencies.get(module.modulePath);
+			if (dependencies == null)
+				throw new ProjectEmissionError('split project lost complete-type dependencies for `${module.modulePath}`');
+			for (dependency in dependencies)
+				unit.includes.push({path: layout.module(dependency).headerInclude, kind: Local});
+			moduleHeaderUnits.set(module.modulePath, unit);
+		}
+		appendModuleTypes(moduleHeaderUnits, semantic.aggregateTypes);
+		appendModuleTypes(moduleHeaderUnits, semantic.enumTypes);
+		appendModuleTypes(moduleHeaderUnits, semantic.classTypes);
+		for (global in semantic.globalDeclarations)
+			requireModuleUnit(moduleHeaderUnits, global.modulePath).declarations.push(global.declaration);
+		for (fn in semantic.functions)
+			requireModuleUnit(moduleHeaderUnits, fn.modulePath).declarations.push(fn.prototype);
+
+		final umbrella = new CTranslationUnit();
+		for (module in layout.modules) {
+			final unit = requireModuleUnit(moduleHeaderUnits, module.modulePath);
+			headers.push({path: module.headerPath, unit: new CHeaderUnit(requireGuard(layout, headerGuards, module.headerPath), unit)});
+		}
+		for (module in dependencyOrderedModules(layout, semantic.moduleDependencies)) {
+			umbrella.includes.push({path: module.headerInclude, kind: Local});
+		}
+		appendDeclarations(umbrella, semantic.virtualDefinitions);
+		headers.push({
+			path: HEADER_PATH,
+			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
+		});
+
+		final moduleSources:Map<String, CTranslationUnit> = [];
+		for (global in semantic.globalDefinitions) {
+			moduleSource(moduleSources, layout.module(global.modulePath)).declarations.push(global.declaration);
+		}
+		final sources:Array<CStaticFunctionSourcePlan> = [];
+		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];
+		final nonReturningOrdinals:Map<String, Int> = [];
+		for (fn in semantic.functions) {
+			final definition = fn.definition();
+			if (fn.isNonReturning) {
+				final module = layout.module(fn.modulePath);
+				final ordinal = nonReturningOrdinals.exists(fn.modulePath) ? nonReturningOrdinals.get(fn.modulePath) : 0;
+				if (ordinal == null)
+					throw new ProjectEmissionError('split project lost non-returning ordinal for `${fn.modulePath}`');
+				nonReturningOrdinals.set(fn.modulePath, ordinal + 1);
+				final sourcePath = module.nonReturningSourcePath(ordinal);
+				final unit = sourceUnit();
+				unit.declarations.push(definition);
+				sources.push({path: sourcePath, unit: unit});
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: sourcePath, declaration: definition});
+			} else {
+				final module = layout.module(fn.modulePath);
+				moduleSource(moduleSources, module).declarations.push(definition);
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: module.sourcePath, declaration: definition});
+			}
+		}
+		for (module in layout.modules) {
+			final unit = moduleSources.get(module.modulePath);
+			if (unit != null && unit.declarations.length > 0)
+				sources.push({path: module.sourcePath, unit: unit});
+		}
+		if (semantic.support.length > 0) {
+			final supportUnit = sourceUnit();
+			for (declaration in semantic.support)
+				supportUnit.declarations.push(declaration);
+			sources.push({path: CProjectLayoutPlan.SUPPORT_SOURCE_PATH, unit: supportUnit});
+		}
+		final entryUnit = sourceUnit();
+		for (declaration in semantic.entry)
+			entryUnit.declarations.push(declaration);
+		sources.push({path: CProjectLayoutPlan.ENTRY_SOURCE_PATH, unit: entryUnit});
+
+		headers.sort((left, right) -> {
+			if (left.path == right.path)
+				return 0;
+			if (left.path == HEADER_PATH)
+				return -1;
+			if (right.path == HEADER_PATH)
+				return 1;
+			return compareStrings(left.path, right.path);
+		});
+		sources.sort((left, right) -> compareStrings(left.path, right.path));
+		functionDefinitions.sort((left, right) -> compareStrings(left.functionId, right.functionId));
+		return new CStaticFunctionDeclarationPlan(headers, sources, functionDefinitions);
+	}
+
+	static function moduleSource(units:Map<String, CTranslationUnit>, module:CProjectModuleLayout):CTranslationUnit {
+		var unit = units.get(module.modulePath);
+		if (unit == null) {
+			unit = sourceUnit();
+			units.set(module.modulePath, unit);
+		}
+		return unit;
+	}
+
+	static function requireModuleUnit(units:Map<String, CTranslationUnit>, modulePath:String):CTranslationUnit {
+		final unit = units.get(modulePath);
+		if (unit == null)
+			throw new ProjectEmissionError('split project cannot resolve header unit for Haxe module `$modulePath`');
+		return unit;
+	}
+
+	static function requireGuard(layout:CProjectLayoutPlan, guards:Map<String, CIdentifier>, path:String):CIdentifier {
+		if (layout.headerPaths.indexOf(path) == -1)
+			throw new ProjectEmissionError('project layout does not own header guard path `$path`');
+		final guard = guards.get(path);
+		if (guard == null)
+			throw new ProjectEmissionError('project layout has no finalized header guard for `$path`');
+		return guard;
+	}
+
+	static function copyUnit(source:CTranslationUnit):CTranslationUnit {
+		final copy = new CTranslationUnit();
+		for (include in source.includes)
+			copy.includes.push(include);
+		for (declaration in source.declarations)
+			copy.declarations.push(declaration);
+		return copy;
+	}
+
+	static function appendDeclarations(unit:CTranslationUnit, declarations:Array<CDecl>):Void {
+		for (declaration in declarations)
+			unit.declarations.push(declaration);
+	}
+
+	static function appendTypeDeclarations(unit:CTranslationUnit, plans:Array<CTypeSemanticPlan>):Void {
+		for (plan in plans)
+			appendDeclarations(unit, plan.declarations);
+	}
+
+	static function appendModuleTypes(units:Map<String, CTranslationUnit>, plans:Array<CTypeSemanticPlan>):Void {
+		for (plan in plans)
+			appendDeclarations(requireModuleUnit(units, plan.modulePath), plan.declarations);
+	}
+
+	static function typeOwnerModules(lowered:CBodyLoweringResult):Map<String, String> {
+		final result:Map<String, String> = [];
+		for (aggregate in lowered.aggregates)
+			addTypeOwner(result, aggregate.prepared.instanceId, aggregate.prepared.ownerModule);
+		for (value in lowered.enums)
+			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
+		for (value in lowered.classes)
+			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
+		return result;
+	}
+
+	static function addTypeOwner(owners:Map<String, String>, instanceId:String, modulePath:String):Void {
+		final previous = owners.get(instanceId);
+		if (previous != null && previous != modulePath)
+			throw new ProjectEmissionError('type instance `$instanceId` has conflicting module owners `$previous` and `$modulePath`');
+		owners.set(instanceId, modulePath);
+	}
+
+	static function aggregateTypePlans(lowered:CBodyLoweringResult, emitter:CBodyEmitter):Array<CTypeSemanticPlan> {
+		final byId:Map<String, CLoweredBodyAggregate> = [];
+		for (aggregate in lowered.aggregates)
+			byId.set(aggregate.prepared.instanceId, aggregate);
+		final result:Array<CTypeSemanticPlan> = [];
+		for (instanceId in emitter.orderedAggregateInstanceIds()) {
+			final aggregate = byId.get(instanceId);
+			if (aggregate == null)
+				throw new ProjectEmissionError('aggregate definition order contains unknown instance `$instanceId`');
+			final dependencies:Array<String> = [];
+			for (field in aggregate.fields)
+				addDefinitionTypeDependencies(field.type.irType, dependencies, emitter);
+			dependencies.sort(compareStrings);
+			result.push(new CTypeSemanticPlan(instanceId, aggregate.prepared.ownerModule, [emitter.aggregateDefinition(instanceId)], dependencies));
+		}
+		return result;
+	}
+
+	static function enumTypePlans(lowered:CBodyLoweringResult, emitter:CBodyEmitter):Array<CTypeSemanticPlan> {
+		final byId:Map<String, CLoweredBodyEnum> = [];
+		for (value in lowered.enums)
+			byId.set(value.prepared.instanceId, value);
+		final result:Array<CTypeSemanticPlan> = [];
+		for (instanceId in emitter.orderedEnumInstanceIds()) {
+			final value = byId.get(instanceId);
+			if (value == null)
+				throw new ProjectEmissionError('enum definition order contains unknown instance `$instanceId`');
+			final dependencies:Array<String> = [];
+			for (tagCase in value.cases)
+				for (payload in tagCase.payload)
+					addDefinitionTypeDependencies(payload.prepared.storageType(), dependencies, emitter);
+			dependencies.sort(compareStrings);
+			result.push(new CTypeSemanticPlan(instanceId, value.prepared.ownerModule, emitter.enumDefinitionsFor(instanceId), dependencies));
+		}
+		return result;
+	}
+
+	static function classTypePlans(lowered:CBodyLoweringResult, emitter:CBodyEmitter):Array<CTypeSemanticPlan> {
+		final byId:Map<String, CLoweredBodyClass> = [];
+		for (value in lowered.classes)
+			byId.set(value.prepared.instanceId, value);
+		final result:Array<CTypeSemanticPlan> = [];
+		for (instanceId in emitter.orderedClassInstanceIds()) {
+			final value = byId.get(instanceId);
+			if (value == null)
+				throw new ProjectEmissionError('class definition order contains unknown instance `$instanceId`');
+			final dependencies:Array<String> = [];
+			if (value.prepared.base != null)
+				addDefinitionTypeDependencies(IRTInstance(value.prepared.base.instanceId), dependencies, emitter);
+			for (field in value.fields)
+				addDefinitionTypeDependencies(field.prepared.type.irType, dependencies, emitter);
+			dependencies.sort(compareStrings);
+			result.push(new CTypeSemanticPlan(instanceId, value.prepared.ownerModule, [emitter.classDefinition(instanceId)], dependencies));
+		}
+		return result;
+	}
+
+	/** Types that must be complete while laying out an owning definition. */
+	static function addDefinitionTypeDependencies(type:HxcIRTypeRef, dependencies:Array<String>, emitter:CBodyEmitter):Void {
+		switch type {
+			case IRTInstance(instanceId):
+				if (dependencies.indexOf(instanceId) == -1)
+					dependencies.push(instanceId);
+			case IRTNullable(value, IRNTagged):
+				addDefinitionTypeDependencies(value, dependencies, emitter);
+			case IRTFixedArray(element, _, _):
+				addDefinitionTypeDependencies(element, dependencies, emitter);
+			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
+				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
+			case IRTFunction(parameters, result):
+				for (parameter in parameters)
+					addDeclarationHeaderDependencies(parameter, dependencies, emitter);
+				addDeclarationHeaderDependencies(result, dependencies, emitter);
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTDynamic:
+		}
+	}
+
+	static function completeModuleDependencies(lowered:CBodyLoweringResult, typePlans:Array<CTypeSemanticPlan>, typeOwners:Map<String, String>,
+			emitter:CBodyEmitter):Map<String, Array<String>> {
+		final result:Map<String, Array<String>> = [];
+		for (module in lowered.program.modules)
+			result.set(module.id, []);
+		for (plan in typePlans) {
+			requireModuleDependencyList(result, plan.modulePath);
+			for (instanceId in plan.completeDependencies)
+				addModuleDependencyForInstance(result, plan.modulePath, instanceId, typeOwners);
+		}
+		for (fn in lowered.functions) {
+			addModuleDeclarationTypeDependency(result, fn.modulePath, fn.ir.returnType, typeOwners, emitter);
+			for (parameter in fn.ir.parameters)
+				addModuleDeclarationTypeDependency(result, fn.modulePath, parameter.type, typeOwners, emitter);
+		}
+		for (global in lowered.globals)
+			addModuleDeclarationTypeDependency(result, global.modulePath, global.ir.type, typeOwners, emitter);
+		for (dependencies in result)
+			dependencies.sort(compareStrings);
+		return result;
+	}
+
+	/**
+		Header declarations only need defining headers for types that strict C11
+		cannot forward-declare. Forward-declarable structs remain soft edges; every
+		module source includes the umbrella after all complete definitions exist.
+	**/
+	static function addModuleDeclarationTypeDependency(result:Map<String, Array<String>>, modulePath:String, type:HxcIRTypeRef,
+			typeOwners:Map<String, String>, emitter:CBodyEmitter):Void {
+		final instances:Array<String> = [];
+		addDeclarationHeaderDependencies(type, instances, emitter);
+		for (instanceId in instances)
+			addModuleDependencyForInstance(result, modulePath, instanceId, typeOwners);
+	}
+
+	static function addDeclarationHeaderDependencies(type:HxcIRTypeRef, dependencies:Array<String>, emitter:CBodyEmitter):Void {
+		switch type {
+			case IRTInstance(instanceId):
+				if (!emitter.typeInstanceIsForwardDeclarable(instanceId) && dependencies.indexOf(instanceId) == -1)
+					dependencies.push(instanceId);
+			case IRTNullable(value, IRNTagged) | IRTFixedArray(value, _, _):
+				addDeclarationHeaderDependencies(value, dependencies, emitter);
+			case IRTFunction(parameters, result):
+				for (parameter in parameters)
+					addDeclarationHeaderDependencies(parameter, dependencies, emitter);
+				addDeclarationHeaderDependencies(result, dependencies, emitter);
+			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
+				// Struct tags remain soft; native enums still need their owner header.
+				addDeclarationHeaderDependencies(pointee, dependencies, emitter);
+			case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTVoid | IRTDynamic:
+		}
+	}
+
+	static function addModuleDependencyForInstance(result:Map<String, Array<String>>, modulePath:String, instanceId:String,
+			typeOwners:Map<String, String>):Void {
+		final owner = typeOwners.get(instanceId);
+		if (owner == null || owner == modulePath)
+			return;
+		final dependencies = requireModuleDependencyList(result, modulePath);
+		if (dependencies.indexOf(owner) == -1)
+			dependencies.push(owner);
+	}
+
+	static function requireModuleDependencyList(result:Map<String, Array<String>>, modulePath:String):Array<String> {
+		var dependencies = result.get(modulePath);
+		if (dependencies == null) {
+			dependencies = [];
+			result.set(modulePath, dependencies);
+		}
+		return dependencies;
+	}
+
+	static function dependencyOrderedModules(layout:CProjectLayoutPlan, dependencies:Map<String, Array<String>>):Array<CProjectModuleLayout> {
+		final result:Array<CProjectModuleLayout> = [];
+		final state:Map<String, Int> = [];
+		for (module in layout.modules)
+			visitModule(module.modulePath, layout, dependencies, state, result);
+		return result;
+	}
+
+	static function visitModule(modulePath:String, layout:CProjectLayoutPlan, dependencies:Map<String, Array<String>>, state:Map<String, Int>,
+			result:Array<CProjectModuleLayout>):Void {
+		final current = state.get(modulePath);
+		if (current == 2)
+			return;
+		if (current == 1)
+			throw new ProjectEmissionError('complete-type header dependency cycle reaches `$modulePath`');
+		state.set(modulePath, 1);
+		final direct = dependencies.get(modulePath);
+		if (direct == null)
+			throw new ProjectEmissionError('complete-type dependency plan omitted module `$modulePath`');
+		for (dependency in direct)
+			visitModule(dependency, layout, dependencies, state, result);
+		state.set(modulePath, 2);
+		result.push(layout.module(modulePath));
+	}
+
+	static function modulePaths(lowered:CBodyLoweringResult):Array<String> {
+		final paths:Array<String> = [];
+		for (module in lowered.program.modules)
+			if (paths.indexOf(module.id) == -1)
+				paths.push(module.id);
+		for (fn in lowered.functions)
+			if (paths.indexOf(fn.modulePath) == -1)
+				paths.push(fn.modulePath);
+		for (global in lowered.globals)
+			if (paths.indexOf(global.modulePath) == -1)
+				paths.push(global.modulePath);
+		paths.sort(compareStrings);
+		return paths;
 	}
 
 	static function nonReturningSourcePath(index:Int):String {

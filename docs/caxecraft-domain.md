@@ -246,26 +246,49 @@ The production compiler output is compared byte-for-byte across isolated
 roots, repeated cold requests, reversed typed-module discovery, another
 available locale, and repeated warm compiler-server requests. Reflaxe's
 `_GeneratedFiles.json` activity metadata is excluded; every normal compiler
-artifact is included. Centrally owned snapshots retain the private header,
-translation unit, runtime plan, compact method-symbol projection, and Eval
-oracle.
+artifact is included. Centrally owned snapshots retain the default
+source-shaped tree: the common types header, package/module headers and
+translation units, umbrella header, small entry and support sources, runtime
+plan, compact method-symbol projection, and Eval oracle.
+
+The default `split` tree mirrors the Haxe module ownership under
+`include/hxc/modules/` and `src/modules/`. It exists so generated C is
+navigable, diffable, incrementally compilable, and easier to inspect beside
+the Haxe modules that own it. This is file-ownership infrastructure, not yet a
+claim that a C programmer can comfortably take over the generated program:
+`haxe_c-xge.18.2` owns structured control flow in place of blanket gotos,
+`haxe_c-xge.18.3` owns human-oriented names and temporary cleanup, and the
+`haxe_c-xge.18.4` rubric must pass before final handoff readability is claimed.
+The optional `unity` layout puts the same declaration/function plan in
+`src/program.c` for single-file inspection or simple build systems. The runner
+compares HxcIR, runtime intent, externally visible symbols, and behavior across
+both layouts. Layout selection is therefore not allowed to become a second
+semantic pipeline.
 
 Native evidence uses the shared argument-array C fixture harness. Available
 identity-matched GCC and Clang compile and execute at O0, O2, and combined
 ASan/UBSan settings. The reports retain compiler identity, normalized argument
 arrays, input hashes, exits, stdout, and stderr. The test also inspects undefined
-symbols in the generated translation unit's object file and rejects
-`malloc`, `calloc`, `realloc`, `free`, or any `hxrt_` symbol. Inspecting that
-object rather than a sanitizer-linked executable keeps the proof scoped to code
-the compiler emitted; sanitizer support libraries legitimately allocate. The
+symbols in every generated module/support object and rejects `malloc`,
+`calloc`, `realloc`, `free`, or any `hxrt_` symbol. Inspecting compiler-emitted
+objects rather than a sanitizer-linked executable keeps the proof scoped to
+code the compiler emitted; sanitizer support libraries legitimately allocate. The
 compiler runtime plan must be the complete `hxc_runtime=none`
 proof, the stdlib report must stay empty, and HxcIR must contain no runtime,
 allocation, or cleanup instruction.
 
-Run the complete contract with:
+Run the fast edit-time contract with:
 
 ```sh
 npm run test:caxecraft-domain
+```
+
+It runs Eval, both layouts, exact split snapshots, semantic-layout parity, and
+one strict optimized native differential for each layout. Run the exhaustive
+determinism and native matrix used by CI with:
+
+```sh
+npm run test:caxecraft-domain:full
 ```
 
 Regenerate reviewable evidence only after inspecting a semantic change:
