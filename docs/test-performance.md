@@ -23,6 +23,28 @@ This was neither a compiler hang nor a reason to remove a gate. It exposed two
 separate problems: unrelated suites were serialized on one runner, and the
 central snapshot check repeated render work already performed by owning suites.
 
+### First hosted result
+
+The first post-partition Governance run,
+[29698408759](https://github.com/fullofcaffeine/reflaxe.c/actions/runs/29698408759),
+passed all 17 jobs in 8 minutes 7 seconds from creation through the aggregate
+result. It is one cold hosted sample, not yet a `p95` baseline:
+
+| Job | Duration |
+| --- | ---: |
+| `lowering-objects` | 4m48s |
+| `caxecraft` | 6m14s |
+| `contracts` | 6m35s |
+| `snapshots` | 7m17s |
+| `lowering-semantics` | 7m59s |
+| `pinned-toolchain` aggregate | 3s |
+
+The required result arrived more than 22 minutes earlier than the old
+cancellation point while retaining every gate. The slowest current shard is
+`lowering-semantics`, with the span suite as its previously measured long pole;
+snapshot de-duplication remains a compute-efficiency task even though snapshot
+rendering is no longer serialized behind Caxecraft.
+
 ## Current lane topology
 
 `npm run test:toolchain` remains the canonical, serial, cold reference command.
