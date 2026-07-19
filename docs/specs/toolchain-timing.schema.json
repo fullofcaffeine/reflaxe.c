@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/toolchain-timing.schema.json",
+  "title": "reflaxe.c toolchain timing evidence",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/shardReport"
+    },
+    {
+      "$ref": "#/$defs/parallelReport"
+    }
+  ],
+  "$defs": {
+    "outcome": {
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "script",
+        "outcome",
+        "exitCode",
+        "durationMs"
+      ],
+      "properties": {
+        "script": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "exitCode": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "shardReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "shard",
+        "outcome",
+        "durationMs",
+        "commands"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "shard": {
+          "type": "string",
+          "minLength": 1
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "commands": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/command"
+          }
+        }
+      }
+    },
+    "parallelReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "outcome",
+        "durationMs",
+        "jobs",
+        "shards"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 1
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "durationMs": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "jobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "shards": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/shardReport"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1026,6 +1026,7 @@
   ],
   "snapshotPolicy": {
     "checkCommand": "npm run snapshots:check",
+    "integratedCheckCommand": "npm run snapshots:catalog",
     "updateCommand": "npm run snapshots:update -- --suite <suite-id>",
     "ciMayUpdate": false,
     "diffFormat": "unified-semantic",

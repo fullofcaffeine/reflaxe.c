@@ -8,6 +8,7 @@ import difflib
 import importlib.util
 import json
 import os
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -19,6 +20,7 @@ from typing import Any, Callable, Iterable
 
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "docs/specs/fixture-taxonomy.json"
+PACKAGE = ROOT / "package.json"
 
 
 class SnapshotFailure(RuntimeError):
@@ -1019,6 +1021,20 @@ def read_catalog() -> dict[str, Any]:
     return value
 
 
+def read_package_scripts() -> dict[str, str]:
+    try:
+        value = json.loads(PACKAGE.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise SnapshotFailure(f"cannot read package scripts: {error}") from error
+    scripts = value.get("scripts") if isinstance(value, dict) else None
+    if not isinstance(scripts, dict) or not all(
+        isinstance(name, str) and isinstance(command, str)
+        for name, command in scripts.items()
+    ):
+        raise SnapshotFailure("package.json scripts must map strings to strings")
+    return scripts
+
+
 def managed_entries(catalog: dict[str, Any]) -> dict[str, dict[str, Any]]:
     policy = catalog.get("snapshotPolicy")
     entries = policy.get("managedSuites") if isinstance(policy, dict) else None
@@ -1038,6 +1054,152 @@ def managed_entries(catalog: dict[str, Any]) -> dict[str, dict[str, Any]]:
             f"catalog={sorted(result)!r}, runner={sorted(GENERATORS)!r}"
         )
     return result
+
+
+def canonical_toolchain_scripts(scripts: dict[str, str]) -> tuple[str, ...]:
+    command = scripts.get("test:toolchain")
+    if not isinstance(command, str) or not command:
+        raise SnapshotFailure("package.json has no canonical test:toolchain command")
+    result: list[str] = []
+    for position, part in enumerate(command.split(" && "), start=1):
+        prefix = "npm run "
+        if not part.startswith(prefix):
+            raise SnapshotFailure(
+                f"canonical toolchain command {position} is not an npm script: {part!r}"
+            )
+        script = part[len(prefix) :]
+        if not script or any(character.isspace() for character in script):
+            raise SnapshotFailure(
+                f"canonical toolchain command {position} has arguments: {part!r}"
+            )
+        result.append(script)
+    return tuple(result)
+
+
+def validate_catalog_contract(catalog: dict[str, Any]) -> dict[str, str]:
+    """Prove the fast integrated lane has one exact focused owner per suite.
+
+    This intentionally does not render artifacts. Each catalog runner is the
+    normal focused suite, which already compares its generated values with the
+    checked-in bytes while running its semantic and native assertions. The
+    standalone --check path below remains the independent cold re-render.
+    """
+
+    entries = managed_entries(catalog)
+    policy = catalog.get("snapshotPolicy")
+    if not isinstance(policy, dict):
+        raise SnapshotFailure("fixture catalog omitted snapshotPolicy")
+    if policy.get("integratedCheckCommand") != "npm run snapshots:catalog":
+        raise SnapshotFailure("snapshot integrated check command drifted")
+
+    raw_suites = catalog.get("suites")
+    if not isinstance(raw_suites, list):
+        raise SnapshotFailure("fixture catalog omitted suite runners")
+    suites: dict[str, dict[str, Any]] = {}
+    for raw_suite in raw_suites:
+        if not isinstance(raw_suite, dict) or not isinstance(raw_suite.get("id"), str):
+            raise SnapshotFailure(f"invalid fixture suite: {raw_suite!r}")
+        identifier = raw_suite["id"]
+        if identifier in suites:
+            raise SnapshotFailure(f"duplicate fixture suite: {identifier}")
+        suites[identifier] = raw_suite
+
+    scripts = read_package_scripts()
+    if scripts.get("snapshots:catalog") != "python3 scripts/test/snapshots.py --catalog-check":
+        raise SnapshotFailure("package.json snapshots:catalog command drifted")
+    canonical = canonical_toolchain_scripts(scripts)
+    if canonical.count("snapshots:catalog") != 1 or canonical[-1] != "snapshots:catalog":
+        raise SnapshotFailure(
+            "canonical test:toolchain must end with exactly one snapshots:catalog"
+        )
+    if "snapshots:check" in canonical:
+        raise SnapshotFailure(
+            "canonical test:toolchain must not repeat the standalone cold snapshot render"
+        )
+
+    owners: dict[str, str] = {}
+    owned_roots: list[tuple[str, Path]] = []
+    managed_files: set[Path] = set()
+    for identifier, entry in entries.items():
+        suite = suites.get(identifier)
+        if suite is None or "snapshot" not in suite.get("types", []):
+            raise SnapshotFailure(
+                f"managed snapshot suite {identifier} is not a catalog snapshot suite"
+            )
+        runner = suite.get("runner")
+        if not isinstance(runner, list) or not runner or not all(
+            isinstance(part, str) and part for part in runner
+        ):
+            raise SnapshotFailure(f"snapshot suite {identifier} has no validation runner")
+
+        matches: list[str] = []
+        for script, command in scripts.items():
+            try:
+                arguments = shlex.split(command)
+            except ValueError as error:
+                raise SnapshotFailure(
+                    f"package script {script} cannot be parsed: {error}"
+                ) from error
+            if arguments == runner:
+                matches.append(script)
+        if len(matches) != 1:
+            raise SnapshotFailure(
+                f"snapshot suite {identifier} must have exactly one focused package owner; "
+                f"found {matches!r}"
+            )
+        owner = matches[0]
+        if canonical.count(owner) != 1:
+            raise SnapshotFailure(
+                f"snapshot owner {owner} for {identifier} must run exactly once in "
+                "test:toolchain"
+            )
+        owners[identifier] = owner
+
+        formats = entry.get("formats")
+        if not isinstance(formats, list) or not formats or not all(
+            isinstance(format_name, str) and format_name for format_name in formats
+        ):
+            raise SnapshotFailure(f"snapshot suite {identifier} has no declared formats")
+        for root in entry_roots(entry):
+            if not root.exists():
+                raise SnapshotFailure(
+                    f"snapshot suite {identifier} expected root is missing: "
+                    f"{root.relative_to(ROOT)}"
+                )
+            for previous_identifier, previous_root in owned_roots:
+                root_resolved = root.resolve(strict=False)
+                previous_resolved = previous_root.resolve(strict=False)
+                overlap = root_resolved == previous_resolved
+                if previous_root.is_dir():
+                    try:
+                        root_resolved.relative_to(previous_resolved)
+                        overlap = True
+                    except ValueError:
+                        pass
+                if root.is_dir():
+                    try:
+                        previous_resolved.relative_to(root_resolved)
+                        overlap = True
+                    except ValueError:
+                        pass
+                if overlap:
+                    raise SnapshotFailure(
+                        "snapshot expected roots overlap across owners: "
+                        f"{previous_identifier}:{previous_root.relative_to(ROOT)} and "
+                        f"{identifier}:{root.relative_to(ROOT)}"
+                    )
+            owned_roots.append((identifier, root))
+            managed_files.update(expected_files([root]))
+    unowned = sorted(
+        repository_expected_files() - managed_files,
+        key=lambda path: path.relative_to(ROOT).as_posix(),
+    )
+    if unowned:
+        raise SnapshotFailure(
+            "expected output files have no snapshot owner: "
+            + ", ".join(path.relative_to(ROOT).as_posix() for path in unowned)
+        )
+    return owners
 
 
 def safe_repo_path(value: str) -> Path:
@@ -1088,6 +1250,29 @@ def expected_files(roots: list[Path]) -> set[Path]:
             files.add(root)
         elif root.is_dir():
             files.update(path for path in root.rglob("*") if path.is_file())
+    return files
+
+
+def repository_expected_files() -> set[Path]:
+    files: set[Path] = set()
+    for tree_name in ("test", "examples"):
+        tree_root = ROOT / tree_name
+        if not tree_root.is_dir():
+            continue
+        for path in tree_root.rglob("*"):
+            if not path.is_file():
+                continue
+            relative = path.relative_to(tree_root)
+            parents = relative.parts[:-1]
+            if (
+                any(
+                    part == "expected" or part.startswith("expected_")
+                    for part in parents
+                )
+                or relative.name.startswith("expected.")
+                or relative.name.startswith("expected_")
+            ):
+                files.add(path)
     return files
 
 
@@ -1251,6 +1436,11 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check", action="store_true", help="compare without writing (default)")
     mode.add_argument("--update", action="store_true", help="print diffs, then update expected files")
+    mode.add_argument(
+        "--catalog-check",
+        action="store_true",
+        help="validate integrated focused-suite ownership without rendering",
+    )
     mode.add_argument("--list", action="store_true", help="list registered snapshot suites")
     mode.add_argument("--list-json", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--suite", action="append", default=[], help="select one suite; repeatable")
@@ -1263,8 +1453,17 @@ def main(argv: Iterable[str] = ()) -> int:
     try:
         catalog = read_catalog()
         entries = managed_entries(catalog)
+        if args.catalog_check:
+            if args.suite or args.all:
+                raise SnapshotFailure("--catalog-check cannot be combined with suite selection")
+            owners = validate_catalog_contract(catalog)
+            print(
+                "snapshots: CATALOG OK: "
+                f"{len(owners)} suite(s), exact focused owners, disjoint expected roots"
+            )
+            return 0
         if args.list or args.list_json:
-            if args.suite or args.all or args.update or args.check:
+            if args.suite or args.all or args.update or args.check or args.catalog_check:
                 raise SnapshotFailure("--list cannot be combined with selection or check/update")
             if args.list_json:
                 print(json.dumps({"suites": list(entries)}, separators=(",", ":")))

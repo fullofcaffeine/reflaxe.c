@@ -124,7 +124,16 @@ runtime or differential behavior requires its own lane assertion as well.
 
 ## Snapshot workflow
 
-Check every registered expected tree without writing:
+The normal exhaustive toolchain runs each focused owner once, then validates
+the complete registry/package/canonical-sequence relationship without another
+compiler render:
+
+```sh
+npm run snapshots:catalog
+```
+
+Independently re-render and check every registered expected tree without
+writing:
 
 ```sh
 npm run snapshots:check
@@ -155,9 +164,19 @@ printed semantic change, update through the command, inspect `git diff`, and run
 the owning suite plus every required native/oracle gate. CI only checks; it
 never blesses output.
 
+The required Governance lane uses the first path because every focused suite
+has already generated and compared its own bytes. The full cold path runs when
+snapshot infrastructure or a focused runner changes, weekly, and by manual
+GitHub dispatch. The catalog guard fails on a
+missing or duplicate focused owner, absent or overlapping expected roots,
+catalog/generator drift, or a canonical sequence that omits an owner. See
+[test feedback-loop and CI performance](test-performance.md) for the executable
+de-duplication and timing contract.
+
 The registered snapshot selectors are:
 
 - `bootstrap`
+- `hxc-configuration`
 - `typed-c`
 - `c-import`
 - `raylib-provisioning`
@@ -178,6 +197,7 @@ The registered snapshot selectors are:
 - `enum-lowering`
 - `generic-specialization`
 - `evaluation-order`
+- `static-initialization`
 - `arithmetic-semantics`
 - `primitive-differential`
 - `runtime-feature-graph`
@@ -564,9 +584,10 @@ npm run test:fixture-policy
 
 The guard validates the catalog/schema shape, all canonical directories,
 registered runners and expected roots, complete ownership of existing test and
-example expected files, snapshot-registry parity, package/pre-commit/CI wiring,
-and the example manifest rule. It is part of `npm test` and the pre-commit path
-for relevant changes.
+example expected files, snapshot-registry parity, the exact one-to-one focused
+package owners in `test:toolchain`, the scheduled independent cold audit,
+package/pre-commit/CI wiring, and the example manifest rule. It is part of
+`npm test` and the pre-commit path for relevant changes.
 
 `test/symbol_registry` is the focused positive/negative/snapshot suite for the
 schema-1 `hxc.symbols.json` shape. It renders twice, reverses request and typed

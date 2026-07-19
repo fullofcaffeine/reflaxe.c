@@ -173,6 +173,7 @@
       "additionalProperties": false,
       "required": [
         "checkCommand",
+        "integratedCheckCommand",
         "updateCommand",
         "ciMayUpdate",
         "diffFormat",
@@ -181,6 +182,9 @@
       "properties": {
         "checkCommand": {
           "type": "string"
+        },
+        "integratedCheckCommand": {
+          "const": "npm run snapshots:catalog"
         },
         "updateCommand": {
           "type": "string"

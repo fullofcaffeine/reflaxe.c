@@ -1,0 +1,54 @@
+name: Cold snapshot audit
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/snapshot-audit.yml"
+      - "docs/specs/fixture-taxonomy.json"
+      - "docs/specs/fixture-taxonomy.schema.json"
+      - "examples/*/run.py"
+      - "package.json"
+      - "scripts/test/snapshots.py"
+      - "test/**/run.py"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/snapshot-audit.yml"
+      - "docs/specs/fixture-taxonomy.json"
+      - "docs/specs/fixture-taxonomy.schema.json"
+      - "examples/*/run.py"
+      - "package.json"
+      - "scripts/test/snapshots.py"
+      - "test/**/run.py"
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: snapshot-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cold-snapshots:
+    name: Re-render every registered snapshot
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Resolve exact Haxe and Lix tools
+        run: npm ci
+
+      - name: Independently re-render every registered snapshot
+        run: npm run snapshots:check

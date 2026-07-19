@@ -11,6 +11,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = ROOT / ".github/workflows/governance.yml"
+SNAPSHOT_AUDIT = ROOT / ".github/workflows/snapshot-audit.yml"
 PACKAGE = ROOT / "package.json"
 AGENT_POLICY = ROOT / "AGENTS.md"
 TEST_PERFORMANCE = ROOT / "docs/test-performance.md"
@@ -43,6 +44,9 @@ REQUIRED_GATE_FILES = (
     "scripts/ci/install-gitleaks.sh",
     "scripts/ci/check_security_tooling.py",
     "scripts/ci/run_toolchain_shard.py",
+    ".github/workflows/snapshot-audit.yml",
+    "test/governance/test_toolchain_shard.py",
+    "docs/specs/toolchain-timing.schema.json",
     "docs/test-performance.md",
     "CONTRIBUTING.md",
     "SECURITY.md",
@@ -703,13 +707,14 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  secret-scan:\n",
     "  haxe-format:\n",
     "  toolchain-shards:\n    name: Pinned toolchain (${{ matrix.shard }})\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n",
-    "      max-parallel: 5\n",
+    "      max-parallel: 4\n",
     "          - contracts\n",
     "          - lowering-objects\n",
     "          - lowering-semantics\n",
     "          - caxecraft\n",
-    "          - snapshots\n",
-    '        run: npm run test:toolchain:shard -- "${{ matrix.shard }}"\n',
+    '          --timing-report "$RUNNER_TEMP/toolchain-${{ matrix.shard }}-timing.json"\n',
+    "      - name: Preserve toolchain suite timings\n",
+    "          name: toolchain-${{ matrix.shard }}-timings\n",
     "  pinned-toolchain:\n    runs-on: ubuntu-latest\n    timeout-minutes: 5\n    needs:\n      - toolchain-shards\n    if: ${{ always() }}\n",
     "          TOOLCHAIN_SHARDS_RESULT: ${{ needs['toolchain-shards'].result }}\n",
     "  native-smoke:\n",
@@ -766,6 +771,23 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "python3 scripts/ci/check_capability_manifest.py",
     "python3 scripts/ci/check_typed_boundaries.py",
     "python3 scripts/ci/check_ci_policy.py",
+)
+
+REQUIRED_SNAPSHOT_AUDIT_SNIPPETS = (
+    "name: Cold snapshot audit\n",
+    "  pull_request:\n",
+    "  push:\n",
+    '      - "scripts/test/snapshots.py"\n',
+    '      - "test/**/run.py"\n',
+    "  schedule:\n",
+    '    - cron: "17 6 * * 1"\n',
+    "  workflow_dispatch:\n",
+    "  cold-snapshots:\n",
+    "    timeout-minutes: 30\n",
+    "actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
+    "actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38",
+    "        run: npm ci\n",
+    "        run: npm run snapshots:check\n",
 )
 
 
@@ -938,6 +960,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the governance policy entry point")
     if scripts.get("snapshots:check") != "python3 scripts/test/snapshots.py --check":
         errors.append("package.json must retain the snapshots:check entry point")
+    if (
+        scripts.get("snapshots:catalog")
+        != "python3 scripts/test/snapshots.py --catalog-check"
+    ):
+        errors.append("package.json must retain the snapshots:catalog entry point")
     if scripts.get("snapshots:update") != "python3 scripts/test/snapshots.py --update":
         errors.append("package.json must retain the explicit snapshots:update entry point")
     if (
@@ -950,6 +977,11 @@ def validate() -> list[str]:
         != "python3 scripts/ci/run_toolchain_shard.py --run"
     ):
         errors.append("package.json must retain the focused toolchain-shard runner")
+    if (
+        scripts.get("test:toolchain:parallel")
+        != "python3 scripts/ci/run_toolchain_shard.py --run-all"
+    ):
+        errors.append("package.json must retain the bounded parallel toolchain runner")
     if "npm run test:c-ast" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:c-ast")
     if "npm run test:diagnostics" not in str(scripts.get("test:toolchain", "")):
@@ -1022,8 +1054,10 @@ def validate() -> list[str]:
         )
     if "npm run test:beads-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:beads-plan")
-    if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
-        errors.append("package.json test:toolchain must execute snapshots:check")
+    if "npm run snapshots:catalog" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute snapshots:catalog")
+    if "npm run snapshots:check" in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must not repeat cold snapshot renders")
     if "npm run test:native" not in str(scripts.get("test", "")):
         errors.append("package.json test must execute test:native")
     if "python3 scripts/ci/check_ci_policy.py" not in str(
@@ -1081,10 +1115,12 @@ def validate() -> list[str]:
     performance_policy = read_text(TEST_PERFORMANCE, errors)
     for contract in (
         "## Current lane topology",
+        "## Snapshot de-duplication contract",
         "## Parallelization safety rule",
         "## Budgets and observability",
         "## Optimization sequence",
         "haxe_c-xge.25",
+        "npm run test:toolchain:parallel",
     ):
         if contract not in performance_policy:
             errors.append(
@@ -1095,6 +1131,14 @@ def validate() -> list[str]:
     for snippet in REQUIRED_WORKFLOW_SNIPPETS:
         if snippet not in workflow:
             errors.append(f"governance workflow is missing required CI contract: {snippet.strip()}")
+
+    snapshot_audit = read_text(SNAPSHOT_AUDIT, errors)
+    for snippet in REQUIRED_SNAPSHOT_AUDIT_SNIPPETS:
+        if snippet not in snapshot_audit:
+            errors.append(
+                "snapshot audit workflow is missing required CI contract: "
+                + snippet.strip()
+            )
 
     if read_text(BUILD_ADAPTER_REQUIREMENTS, errors) != EXPECTED_BUILD_ADAPTER_REQUIREMENTS:
         errors.append("build-adapter Meson version and wheel SHA-256 pin drifted")
@@ -1180,6 +1224,14 @@ def validate() -> list[str]:
         errors.append("pre-commit must reject unreviewed untyped Haxe boundaries")
     if "scripts/test/snapshots.py" not in pre_commit:
         errors.append("pre-commit must check registered snapshot ownership and drift")
+    if (
+        "npm run test:toolchain:parallel" not in pre_commit
+        or "cross-cutting test infrastructure" not in pre_commit
+    ):
+        errors.append(
+            "pre-commit must de-duplicate cross-cutting focused gates through "
+            "the bounded parallel toolchain runner"
+        )
     if "npm run test:beads-plan" not in pre_commit:
         errors.append("pre-commit must validate the reproducible Beads graph")
     if "npm run test:governance-policy" not in pre_commit:

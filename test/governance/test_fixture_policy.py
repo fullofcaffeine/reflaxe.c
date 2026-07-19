@@ -89,6 +89,80 @@ class FixturePolicyTests(unittest.TestCase):
         self.assertEqual(stdout, "")
         self.assertIn("update mode requires --suite <id> or explicit --all", stderr)
 
+    def test_catalog_check_never_renders_generators(self) -> None:
+        generators = {
+            name: mock.Mock(side_effect=AssertionError("catalog check must not render"))
+            for name in self.runner.GENERATORS
+        }
+        with mock.patch.object(self.runner, "GENERATORS", generators):
+            result, stdout, stderr = self.invoke(["--catalog-check"])
+        self.assertEqual(result, 0, stderr)
+        self.assertEqual(stderr, "")
+        self.assertIn("snapshots: CATALOG OK: 30 suite(s)", stdout)
+        for generator in generators.values():
+            generator.assert_not_called()
+
+    def test_catalog_check_rejects_a_missing_focused_owner(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            expected = root / "expected/result.json"
+            expected.parent.mkdir(parents=True)
+            expected.write_text('{"value": 1}\n', encoding="utf-8")
+            catalog = root / "fixture-taxonomy.json"
+            catalog.write_text(
+                json.dumps(
+                    {
+                        "snapshotPolicy": {
+                            "integratedCheckCommand": "npm run snapshots:catalog",
+                            "managedSuites": [
+                                {
+                                    "id": "sample",
+                                    "expectedRoots": ["expected/result.json"],
+                                    "formats": ["json"],
+                                }
+                            ],
+                        },
+                        "suites": [
+                            {
+                                "id": "sample",
+                                "runner": [sys.executable, "sample.py"],
+                                "types": ["snapshot"],
+                            }
+                        ],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            package = root / "package.json"
+            package.write_text(
+                json.dumps(
+                    {
+                        "scripts": {
+                            "snapshots:catalog": (
+                                "python3 scripts/test/snapshots.py --catalog-check"
+                            ),
+                            "unrelated": "python3 unrelated.py",
+                            "test:toolchain": (
+                                "npm run unrelated && npm run snapshots:catalog"
+                            ),
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            generator = mock.Mock(return_value=[])
+            with (
+                mock.patch.object(self.runner, "ROOT", root),
+                mock.patch.object(self.runner, "CATALOG", catalog),
+                mock.patch.object(self.runner, "PACKAGE", package),
+                mock.patch.object(self.runner, "GENERATORS", {"sample": generator}),
+            ):
+                result, stdout, stderr = self.invoke(["--catalog-check"])
+        self.assertEqual(result, 1)
+        self.assertEqual(stdout, "")
+        self.assertIn("must have exactly one focused package owner", stderr)
+        generator.assert_not_called()
+
     def test_ci_rejects_update_before_rendering(self) -> None:
         generators = {
             name: mock.Mock(side_effect=AssertionError("must not render in CI update"))
@@ -166,6 +240,48 @@ class FixturePolicyTests(unittest.TestCase):
             self.assertEqual(
                 json.loads(expected.read_text(encoding="utf-8")), {"value": 2}
             )
+
+    def test_check_rejects_drift_without_writing(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            expected = root / "expected/result.json"
+            expected.parent.mkdir(parents=True)
+            original = '{"value": 1}\n'
+            expected.write_text(original, encoding="utf-8")
+            catalog = root / "fixture-taxonomy.json"
+            catalog.write_text(
+                json.dumps(
+                    {
+                        "snapshotPolicy": {
+                            "managedSuites": [
+                                {
+                                    "id": "sample",
+                                    "expectedRoots": ["expected/result.json"],
+                                    "formats": ["json"],
+                                }
+                            ]
+                        }
+                    }
+                ),
+                encoding="utf-8",
+            )
+            generator = lambda: [
+                self.runner.Artifact(
+                    Path("expected/result.json"), "json", {"value": 2}
+                )
+            ]
+            with (
+                mock.patch.object(self.runner, "ROOT", root),
+                mock.patch.object(self.runner, "CATALOG", catalog),
+                mock.patch.object(self.runner, "GENERATORS", {"sample": generator}),
+            ):
+                result, stdout, stderr = self.invoke(
+                    ["--check", "--suite", "sample"]
+                )
+            self.assertEqual(expected.read_text(encoding="utf-8"), original)
+        self.assertEqual(result, 1)
+        self.assertIn("snapshot-diff: sample: expected/result.json", stdout)
+        self.assertIn("semantic drift detected", stderr)
 
     def test_snapshot_paths_cannot_escape_the_repository(self) -> None:
         with self.assertRaisesRegex(

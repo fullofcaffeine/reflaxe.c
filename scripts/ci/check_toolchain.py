@@ -245,6 +245,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
+    expected_snapshot_catalog_script = (
+        "python3 scripts/test/snapshots.py --catalog-check"
+    )
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
         "npm run test:hxc-config && npm run test:all-sources && "
@@ -254,7 +257,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-domain:full && npm run snapshots:check"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -444,6 +447,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("snapshots:check") != expected_snapshot_script
     ):
         errors.append("package.json must retain the central snapshot check gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("snapshots:catalog") != expected_snapshot_catalog_script
+    ):
+        errors.append("package.json must retain the integrated snapshot catalog gate")
 
     root_package = package_lock.get("packages", {}).get("", {}) if isinstance(package_lock.get("packages"), dict) else {}
     locked_lix = package_lock.get("packages", {}).get("node_modules/lix", {}) if isinstance(package_lock.get("packages"), dict) else {}

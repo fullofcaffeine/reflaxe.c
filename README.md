@@ -381,10 +381,17 @@ python3 scripts/ci/runtime_smoke.py
 python3 scripts/ci/check_fixture_policy.py
 python3 scripts/ci/check_capability_manifest.py
 python3 scripts/ci/check_typed_boundaries.py
+python3 scripts/test/snapshots.py --catalog-check
 python3 scripts/test/snapshots.py --check
 python3 scripts/ci/check_license_policy.py
 python3 scripts/ci/check_governance_policy.py
 ```
+
+The catalog check is the fast integrated ownership proof after focused suites;
+the full check independently re-renders all registered artifacts when snapshot
+infrastructure changes and in the scheduled/manual cold workflow. For bounded
+local concurrency with ordered logs, use `npm run test:toolchain:parallel`
+(two workers by default).
 
 Expected artifacts are never refreshed implicitly. For an intentional change,
 review the semantic diff produced by a targeted update, then inspect the Git

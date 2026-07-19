@@ -18,6 +18,7 @@ CASE_SCHEMA = ROOT / "docs/specs/fixture-case.schema.json"
 PACKAGE = ROOT / "package.json"
 PRE_COMMIT = ROOT / "scripts/hooks/pre-commit"
 WORKFLOW = ROOT / ".github/workflows/governance.yml"
+SNAPSHOT_WORKFLOW = ROOT / ".github/workflows/snapshot-audit.yml"
 EXPECTED_TYPES = {
     "positive",
     "negative",
@@ -336,6 +337,8 @@ def validate() -> list[str]:
     else:
         if policy.get("checkCommand") != "npm run snapshots:check":
             errors.append("snapshot check command drifted")
+        if policy.get("integratedCheckCommand") != "npm run snapshots:catalog":
+            errors.append("snapshot integrated check command drifted")
         if policy.get("updateCommand") != "npm run snapshots:update -- --suite <suite-id>":
             errors.append("snapshot update command drifted")
         if policy.get("ciMayUpdate") is not False:
@@ -376,6 +379,10 @@ def validate() -> list[str]:
             errors.append(
                 f"snapshot catalog/runner mismatch: catalog={sorted(managed_ids)!r}, runner={sorted(runner_ids)!r}"
             )
+        try:
+            snapshot_module.validate_catalog_contract(catalog)
+        except Exception as error:
+            errors.append(f"snapshot integrated ownership contract failed: {error}")
 
     unowned_expected = sorted(
         expected_output_files() - managed_files,
@@ -423,13 +430,17 @@ def validate() -> list[str]:
     expected_scripts = {
         "test:fixture-policy": "python3 scripts/ci/check_fixture_policy.py",
         "snapshots:check": "python3 scripts/test/snapshots.py --check",
+        "snapshots:catalog": "python3 scripts/test/snapshots.py --catalog-check",
         "snapshots:update": "python3 scripts/test/snapshots.py --update",
     }
     for name, command in expected_scripts.items():
         if scripts.get(name) != command:
             errors.append(f"package.json {name} must equal {command!r}")
-    if "npm run snapshots:check" not in str(scripts.get("test:toolchain", "")):
-        errors.append("package.json test:toolchain must check the central snapshot registry")
+    toolchain = str(scripts.get("test:toolchain", ""))
+    if "npm run snapshots:catalog" not in toolchain:
+        errors.append("package.json test:toolchain must validate integrated snapshot ownership")
+    if "npm run snapshots:check" in toolchain:
+        errors.append("package.json test:toolchain must not duplicate cold snapshot renders")
     if "npm run test:fixture-policy" not in str(scripts.get("test:governance", "")):
         errors.append("package.json test:governance must validate fixture policy")
 
@@ -447,6 +458,11 @@ def validate() -> list[str]:
             "CI workflow must retain the isolated toolchain shards and "
             "fail-closed pinned-toolchain aggregate"
         )
+    snapshot_workflow = read_text(SNAPSHOT_WORKFLOW, errors)
+    if "npm run snapshots:check" not in snapshot_workflow:
+        errors.append("scheduled snapshot workflow must retain the independent cold render")
+    if "snapshots:update" in snapshot_workflow:
+        errors.append("scheduled snapshot workflow must never update snapshots")
     if not (ROOT / "docs/testing.md").is_file():
         errors.append("human-readable fixture policy is missing: docs/testing.md")
 

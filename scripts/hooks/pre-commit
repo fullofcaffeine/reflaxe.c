@@ -82,6 +82,20 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^docs/specs/.*\.json$'; then
   done < <(printf '%s\n' "$STAGED_FILES" | grep -E '^docs/specs/.*\.json$' || true)
 fi
 
+# Cross-cutting harness and registry changes would match nearly every focused
+# condition below. Run the same exact-coverage shards once with bounded local
+# concurrency, plus governance and native smoke, instead of serializing and
+# repeating those owners. Ordinary compiler changes still use the narrower
+# focused conditions below.
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.github/workflows/|package(-lock)?\.json|docs/specs/fixture-taxonomy(\.schema)?\.json|scripts/ci/(check_ci_policy|check_toolchain|run_toolchain_shard)\.py|scripts/hooks/pre-commit|scripts/test/snapshots\.py|test/governance/test_(fixture_policy|toolchain_shard)\.py)'; then
+  echo "[pre-commit] Running one bounded parallel exhaustive gate for cross-cutting test infrastructure..."
+  npm run test:governance
+  npm run test:toolchain:parallel
+  npm run test:native
+  echo "[pre-commit] OK"
+  exit 0
+fi
+
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(AGENTS\.md|README\.md|CONTRIBUTING\.md|SECURITY\.md|docs/|package\.json|\.github/workflows/governance\.yml|scripts/(beads/|ci/|test/)|src/|std/c/|runtime/hxrt/|test/)'; then
   echo "[pre-commit] Validating bootstrap capability and limitation claims..."
   python3 "$ROOT_DIR/scripts/ci/check_capability_manifest.py"
@@ -277,9 +291,9 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/caxecraft/|docs/caxecraf
   python3 "$ROOT_DIR/examples/caxecraft/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/features\.json|test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/expected/|test/runtime/runtime-feature-graph/expected/|test/(primitive_semantics|stdlib_ledger|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/|docs/specs/(primitive-divergences|primitive-semantics|stdlib-ledger)\.(json|csv)|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy\.json|package\.json)'; then
-  echo "[pre-commit] Checking registered snapshots without updating them..."
-  python3 "$ROOT_DIR/scripts/test/snapshots.py" --check
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/features\.json|test/(bootstrap|typed_c|typed_ast|c_ast|declaration_plan|symbol_registry|project_emitter|hxc_ir|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/expected/|test/runtime/runtime-feature-graph/expected/|test/(primitive_semantics|stdlib_ledger|aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|primitive_differential|body_lowering|function_lowering|evaluation_order|raylib_provisioning|span_lowering|static_initialization|string_output)/|docs/specs/(primitive-divergences|primitive-semantics|stdlib-ledger)\.(json|csv)|scripts/test/snapshots\.py|docs/specs/fixture-taxonomy(\.schema)?\.json|package\.json)'; then
+  echo "[pre-commit] Checking registered snapshot ownership after focused suites..."
+  python3 "$ROOT_DIR/scripts/test/snapshots.py" --catalog-check
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|differential/array-runtime|primitive_differential|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization|string_output)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
