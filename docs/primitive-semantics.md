@@ -20,7 +20,8 @@ The current HxcIR model keeps five primitive facts structural:
 
 - ABI-sized integer identity (`size`, `ptrdiff`, `intptr`, or `uintptr`);
 - tagged-scalar versus pointer nullability;
-- exact, wrapping, checked, and saturating numeric conversion intent;
+- exact, wrapping, checked, saturating, binary32-rounding, and
+  binary64-widening numeric conversion intent;
 - typed unary/binary operation identity plus direct or program-local
   implementation intent;
 - an optional failure edge on conversion, required for checked numeric and
@@ -35,6 +36,22 @@ The contract fixes ordinary Haxe representations to `bool`, `int32_t`,
 `uint32_t`, binary64 `double`, and `void`. Exact `c.Int*`/`c.UInt*` surfaces use
 the corresponding `<stdint.h>` typedef. ABI integers retain `size_t`,
 `ptrdiff_t`, `intptr_t`, or `uintptr_t` identity and never use a guessed `long`.
+
+`c.Float32` is a distinct exact C `float` carrier. It does not change Haxe
+`Float`, which remains binary64 `double`, and it has no implicit conversion.
+`c.Float32.fromFloat(value)` performs explicit narrowing; `value.toFloat()`
+performs exact widening. Narrowing uses round-to-nearest, ties-to-even;
+preserves infinity and zero signs; keeps NaN as NaN without a payload promise;
+preserves representable subnormals; rounds smaller values to a subnormal or
+same-signed zero; and maps finite overflow to same-signed infinity. Widening is
+exact for finite binary32 values and preserves value class and zero sign.
+
+Every reachable Float32 program emits target-compiled structural assertions for
+32-bit binary32 `float` storage, precision, exponent range, radix, and
+subnormals. The qualified native probe validates default-rounding conversion
+behavior because those facts cannot be inferred from the compiler host.
+Foreign unsafe code must restore any changed floating rounding environment.
+Neither conversion selects a helper or `hxrt`.
 
 Conversions are admitted by operation, not by a generic target cast. Widening
 requires a range subset. Unsigned narrowing uses modulo arithmetic. Signed
@@ -83,7 +100,7 @@ npm run test:arithmetic-semantics
 ```
 
 The primitive suite maps real typed Haxe declarations in both profiles, renders
-the schema-2 machine contract twice, checks the centrally owned snapshot, and
+the schema-3 machine contract twice, checks the centrally owned snapshot, and
 compiles the independent native semantic probe as strict C11 with GCC and
 Clang at `-O0` and `-O2`. That probe demonstrates accepted algorithms and
 platform facts; it is not generated C.
@@ -95,6 +112,12 @@ production projects, an Eval oracle, boundary execution, UBSan where supported,
 and optimized-shape inspection. Invalid or helper-requiring signed-target
 conversions and other unsupported signatures or body nodes report exact
 `HXC1001` without output.
+
+`test/c_import` supplies complementary generated-Haxe evidence for
+`c.Float32`: exact foreign constants, struct fields, parameters, and returns,
+explicit narrowing/widening, generated ABI assertions, boundary execution, and
+complete runtime absence under strict C11. That bounded hand-authored import
+proof is not broad bindgen, public ABI, or platform-support evidence.
 E2.T11 owns broader generated-program differential and sanitizer proof. See
 [primitive function-body lowering](body-lowering.md), [static function
 lowering](function-lowering.md), and [explicit evaluation

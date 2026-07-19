@@ -3,7 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-15
 - Decision owners: project owner and compiler maintainers
-- Related requirements: HXC-SEM-001, HXC-SEM-002, HXC-SEM-003, HXC-SEM-005
+- Related requirements: HXC-SEM-001, HXC-SEM-002, HXC-SEM-003, HXC-SEM-005, HXC-FFI-005
 
 ## Context
 
@@ -37,6 +37,7 @@ The compiler maps source types as follows in both `portable` and `metal`:
 | `Int` | `int32_t` | `<stdint.h>` |
 | `UInt` | `uint32_t` | `<stdint.h>` |
 | `Float` | `double`, with binary64 required by the resolved target | none |
+| `c.Float32` | `float`, with binary32 required by the resolved target | none |
 | `c.Int8/16/32/64` | `int8_t/int16_t/int32_t/int64_t` | `<stdint.h>` |
 | `c.UInt8/16/32/64` | `uint8_t/uint16_t/uint32_t/uint64_t` | `<stdint.h>` |
 | `c.Size` | `size_t` | `<stddef.h>` |
@@ -50,6 +51,16 @@ rewrites one to `int`, `long`, `long long`, or a guessed bit width. A target
 without the required exact-width typedefs, binary64 `double`, eight-bit bytes,
 or pointer-round-trip integer typedefs is rejected for this contract instead
 of receiving a host-derived fallback.
+
+The `c.Float32` row is an explicit C-facing carrier, not a change to ordinary
+Haxe `Float`. Whenever a reachable generated declaration or body uses it, the
+private generated header includes `<float.h>` and `<limits.h>` and emits
+structural `_Static_assert` checks for 32-bit `float` storage, radix 2, a 24-bit
+significand, the binary32 exponent bounds, and subnormal support. These checks
+use the selected C compiler and target, never the Haxe compiler host. The
+qualified native matrix separately verifies conversion behavior and the
+default rounding environment because `FLT_ROUNDS` is not a portable integer
+constant expression on every admitted compiler.
 
 These are internal semantic representations. E7 still owns stable exported ABI
 policy, where `Bool` or another internal scalar may require an explicitly
@@ -164,6 +175,42 @@ zero yields NaN through the helper, and the compiler records the exact `m` link
 requirement with source-module provenance. That build fact is not a runtime
 feature.
 
+### The C binary32 carrier converts explicitly
+
+`c.Float32` exists for exact foreign declarations such as Raylib fields,
+parameters, returns, arrays, and constants whose C type is `float`. It is a
+`@:coreType extern abstract` compiler contract with two intentional operations:
+
+```haxe
+final nativeScale:c.Float32 = c.Float32.fromFloat(scale);
+final scaleForHaxe:Float = nativeScale.toFloat();
+```
+
+There is no `@:from`, `@:to`, or general implicit coercion. Ordinary Haxe
+arithmetic therefore remains binary64 unless a later API deliberately defines
+Float32 arithmetic. `fromFloat` lowers as the distinct
+`IRCNumericRoundBinary32` operation and rounds binary64 to binary32 using
+round-to-nearest, ties-to-even. `toFloat` lowers as
+`IRCNumericWidenBinary64`; every finite binary32 value widens exactly.
+
+Both operations preserve infinity sign and the sign of zero. NaN remains NaN,
+but payload bits and signaling state are deliberately not portable promises.
+Representable binary32 subnormals survive; smaller finite magnitudes round to
+a subnormal or same-signed zero. Finite overflow rounds to same-signed
+infinity. Generated safe code assumes the qualified default round-to-nearest,
+ties-to-even environment. Unsafe foreign code that changes the floating-point
+rounding environment must restore it before returning across the boundary.
+Fast-math and flush-to-zero modes that break these rules are not semantic
+lowering options.
+
+Narrowing and widening emit direct structural C casts and select no helper or
+`hxrt` feature. The direct-import corpus proves header-owned `float` constants,
+struct fields, arguments, and returns in generated Haxe-to-C code, while the
+independent primitive probe covers ties, subnormals, underflow, finite
+overflow, NaN, infinities, and signed zero under GCC and Clang lanes. This is a
+qualified compiler/target contract, not a claim that every C implementation or
+platform tuple is supported.
+
 ### Nullability is representation-explicit
 
 `Null<T>` for a non-null scalar uses a tagged optional containing a presence
@@ -202,7 +249,7 @@ failure edge.
 ## Evidence boundary
 
 The primitive-contract fixture compiles real Haxe fields through the pinned
-typed-AST macro API, compares portable and metal decisions, renders the schema-2
+typed-AST macro API, compares portable and metal decisions, renders the schema-3
 machine contract twice, and exercises representation and conversion algorithms
 in independent strict C11 at `-O0` and `-O2`.
 
@@ -218,6 +265,12 @@ output. Portable, metal, and explicit `hxc_runtime=none` projects remain
 runtime-free. E2.T11 still owns
 broader generated-program differential and sanitizer coverage beyond this
 primitive slice.
+
+The direct-import fixture provides the generated `c.Float32` proof. It retains
+binary32 in header-owned constants, struct layout, native prototypes, and local
+storage; narrows and widens through the two explicit HxcIR operations; and
+executes boundary checks against the independent C library without selecting
+`hxrt`.
 
 ## Consequences
 

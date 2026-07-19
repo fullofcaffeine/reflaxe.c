@@ -311,7 +311,7 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-9 HxcIR. A recursive local uses an
+plus exhaustive tag-switch edges in schema-10 HxcIR. A recursive local uses an
 explicit finite pointer edge, while recursive signatures, reference/aggregate
 payloads, and non-exhaustive source patterns fail closed without artifacts.
 Generated private layout assertions compile under strict C11; independent C
@@ -404,7 +404,7 @@ a 32 × 16 × 32 `UInt8` volume; mutable and const local borrows; direct indexin
 ordinary-Haxe three-dimensional linearization; and exact-width span `for`
 iteration. Repeated and reversed renders cover both profiles and all three
 build modes. The suite keeps zero initialization and checked/static/loop bounds
-policies visible in schema-9 HxcIR, executes mutation and iteration at O0/O2,
+policies visible in schema-10 HxcIR, executes mutation and iteration at O0/O2,
 and runs dynamic negative and upper fail-stop paths across the six-way
 configuration matrix. Exact-span negatives reject zero/negative/nonconstant/
 overflowing/over-budget lengths, unsupported element storage, static out-of-
@@ -506,7 +506,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-9 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-10 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

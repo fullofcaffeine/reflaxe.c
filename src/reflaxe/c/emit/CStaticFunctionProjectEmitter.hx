@@ -88,6 +88,7 @@ class CStaticFunctionProjectEmitter {
 		}
 		final headerUnit = new CTranslationUnit();
 		final headers:Array<String> = [];
+		final usesFloat32 = programUsesFloat32(lowered.program);
 		for (fn in lowered.functions) {
 			for (header in fn.requiredHeaders) {
 				if (headers.indexOf(header) == -1) {
@@ -105,6 +106,13 @@ class CStaticFunctionProjectEmitter {
 		for (header in helperEmitter.requiredHeaders(lowered.helpers)) {
 			if (headers.indexOf(header) == -1) {
 				headers.push(header);
+			}
+		}
+		if (usesFloat32) {
+			for (header in ["float.h", "limits.h"]) {
+				if (headers.indexOf(header) == -1) {
+					headers.push(header);
+				}
 			}
 		}
 		if ((lowered.aggregates.length > 0 || lowered.enums.length > 0 || lowered.classes.length > 0)
@@ -142,6 +150,11 @@ class CStaticFunctionProjectEmitter {
 			headerUnit.declarations.push(DStaticAssert(EBinary(Equal, EIdentifier(new CIdentifier(RuntimeAbiContract.MAJOR_MACRO)),
 				EInt(CIntegerLiteral.decimal(Std.string(runtimeAbiMajor), ISUnsigned))),
 				'incompatible hxrt ABI major: generated code requires $runtimeAbiMajor'));
+		}
+		if (usesFloat32) {
+			for (assertion in float32AbiAssertions()) {
+				headerUnit.declarations.push(assertion);
+			}
 		}
 		for (definition in helperEmitter.definitions(lowered.helpers)) {
 			headerUnit.declarations.push(definition);
@@ -318,6 +331,138 @@ class CStaticFunctionProjectEmitter {
 			}
 		}
 		throw new ProjectEmissionError('static function project cannot resolve executable entry `$id`');
+	}
+
+	static function float32AbiAssertions():Array<CDecl> {
+		final integer = (value:String) -> EInt(CIntegerLiteral.decimal(value));
+		final macroValue = (value:String) -> EIdentifier(new CIdentifier(value));
+		final equals = (left:CExpr, right:CExpr, message:String) -> DStaticAssert(EBinary(Equal, left, right), message);
+		return [
+			equals(macroValue("CHAR_BIT"), integer("8"), "hxc c.Float32 requires 8-bit C bytes"),
+			equals(EBinary(Multiply, ESizeOfType(new CType(TFloat), DName(null)), macroValue("CHAR_BIT")), integer("32"),
+				"hxc c.Float32 requires 32-bit C float storage"),
+			equals(macroValue("FLT_RADIX"), integer("2"), "hxc c.Float32 requires radix-2 C floating point"),
+			equals(macroValue("FLT_MANT_DIG"), integer("24"), "hxc c.Float32 requires a 24-bit binary32 significand"),
+			equals(macroValue("FLT_MAX_EXP"), integer("128"), "hxc c.Float32 requires the binary32 maximum exponent"),
+			equals(macroValue("FLT_MIN_EXP"), EUnary(Minus, integer("125")), "hxc c.Float32 requires the binary32 minimum exponent"),
+			equals(macroValue("FLT_HAS_SUBNORM"), integer("1"), "hxc c.Float32 requires binary32 subnormal support")
+		];
+	}
+
+	static function programUsesFloat32(program:HxcIRProgram):Bool {
+		for (slot in program.dispatch.slots) {
+			if (typesUseFloat32(slot.parameterTypes) || typeUsesFloat32(slot.returnType)) {
+				return true;
+			}
+		}
+		for (module in program.modules) {
+			for (declaration in module.types) {
+				if (typeKindUsesFloat32(declaration.kind)) {
+					return true;
+				}
+			}
+			for (instance in module.typeInstances) {
+				if (typesUseFloat32(instance.arguments)) {
+					return true;
+				}
+			}
+			for (global in module.globals) {
+				if (typeUsesFloat32(global.type)) {
+					return true;
+				}
+			}
+			for (fn in module.functions) {
+				if (functionUsesFloat32(fn)) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	static function functionUsesFloat32(fn:HxcIRFunction):Bool {
+		if (typeUsesFloat32(fn.returnType)) {
+			return true;
+		}
+		for (parameter in fn.parameters) {
+			if (typeUsesFloat32(parameter.type)) {
+				return true;
+			}
+		}
+		for (local in fn.locals) {
+			if (typeUsesFloat32(local.type)) {
+				return true;
+			}
+		}
+		for (block in fn.blocks) {
+			for (parameter in block.parameters) {
+				if (typeUsesFloat32(parameter.type)) {
+					return true;
+				}
+			}
+			for (instruction in block.instructions) {
+				if (instruction.result != null && typeUsesFloat32(instruction.result.type)) {
+					return true;
+				}
+				switch instruction.kind {
+					case IRIOConvert(_, _, targetType, _, _) | IRIOAllocate(targetType, _, _, _):
+						if (typeUsesFloat32(targetType))
+							return true;
+					case IRIOCall(call):
+						if (typeUsesFloat32(call.returnType))
+							return true;
+					case _:
+				}
+			}
+		}
+		return false;
+	}
+
+	static function typeKindUsesFloat32(kind:HxcIRTypeKind):Bool {
+		return switch kind {
+			case IRTKAggregate(fields): fieldsUseFloat32(fields);
+			case IRTKTaggedUnion(cases):
+				var found = false;
+				for (tagCase in cases) {
+					for (payload in tagCase.payload) {
+						if (typeUsesFloat32(payload.type)) {
+							found = true;
+							break;
+						}
+					}
+					if (found)
+						break;
+				}
+				found;
+			case IRTKClass(layout): fieldsUseFloat32(layout.fields);
+			case IRTKPrimitive | IRTKReference | IRTKFunction | IRTKExtern: false;
+		}
+	}
+
+	static function fieldsUseFloat32(fields:Array<HxcIRTypeField>):Bool {
+		for (field in fields) {
+			if (typeUsesFloat32(field.type))
+				return true;
+		}
+		return false;
+	}
+
+	static function typesUseFloat32(types:Array<HxcIRTypeRef>):Bool {
+		for (type in types) {
+			if (typeUsesFloat32(type))
+				return true;
+		}
+		return false;
+	}
+
+	static function typeUsesFloat32(type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTFloat(32): true;
+			case IRTPointer(pointee, _) | IRTNullable(pointee, _) | IRTFixedArray(pointee, _, _) | IRTSpan(pointee, _):
+				typeUsesFloat32(pointee);
+			case IRTFunction(parameters, result): typesUseFloat32(parameters) || typeUsesFloat32(result);
+			case _: false;
+		}
 	}
 
 	/**

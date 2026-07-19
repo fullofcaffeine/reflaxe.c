@@ -85,6 +85,19 @@ typedef CPrimitiveFloatContract = {
 	final stdIntExceptionalPolicy:Array<String>;
 }
 
+typedef CPrimitiveFloat32Contract = {
+	final sourceType:String;
+	final cType:String;
+	final format:String;
+	final admissionChecks:Array<String>;
+	final narrowing:String;
+	final widening:String;
+	final exceptionalValues:Array<String>;
+	final roundingEnvironment:String;
+	final fastMath:String;
+	final runtimeFeatures:Array<String>;
+}
+
 typedef CPrimitiveConstraintRecord = {
 	final cDialect:String;
 	final requiredCharacteristics:Array<String>;
@@ -104,6 +117,7 @@ typedef CPrimitiveContractSnapshot = {
 	final conversions:Array<CPrimitiveConversionRecord>;
 	final operations:Array<CPrimitiveOperationRecord>;
 	final floatContract:CPrimitiveFloatContract;
+	final float32Contract:CPrimitiveFloat32Contract;
 	final constraints:CPrimitiveConstraintRecord;
 }
 
@@ -121,10 +135,10 @@ class CPrimitiveContract {
 		}
 
 		return {
-			schemaVersion: 2,
-			algorithm: "hxc-primitive-semantics-v2",
+			schemaVersion: 3,
+			algorithm: "hxc-primitive-semantics-v3",
 			status: "production-primitive-arithmetic-slice",
-			requirements: ["HXC-SEM-001", "HXC-SEM-002", "HXC-SEM-003", "HXC-SEM-005"],
+			requirements: ["HXC-SEM-001", "HXC-SEM-002", "HXC-SEM-003", "HXC-SEM-005", "HXC-FFI-005"],
 			haxeBaseline: "5.0.0-preview.1",
 			profiles: ["portable", "metal"],
 			representations: representations,
@@ -167,17 +181,44 @@ class CPrimitiveContract {
 					"negative infinity and finite negative overflow convert to -2147483648"
 				]
 			},
+			float32Contract: {
+				sourceType: "c.Float32",
+				cType: "float",
+				format: "IEC 60559 / IEEE 754 binary32 required by the resolved target tuple",
+				admissionChecks: [
+					"CHAR_BIT == 8 and sizeof(float) * CHAR_BIT == 32",
+					"FLT_RADIX == 2, FLT_MANT_DIG == 24, FLT_MAX_EXP == 128, and FLT_MIN_EXP == -125",
+					"FLT_HAS_SUBNORM == 1",
+					"qualified compiler/target conversion probe passes under the admitted build flags"
+				],
+				narrowing: "explicit Float-to-c.Float32 conversion rounds binary64 to binary32 using round-to-nearest, ties-to-even",
+				widening: "explicit c.Float32-to-Float conversion is exact for every binary32 finite value and preserves value class and zero sign",
+				exceptionalValues: [
+					"NaN remains NaN; payload and signaling state are not portable promises",
+					"positive and negative infinity retain their sign",
+					"positive and negative zero retain their sign",
+					"representable binary32 subnormals are preserved; smaller finite magnitudes round to a subnormal or signed zero",
+					"finite magnitude above the binary32 overflow threshold rounds to signed infinity"
+				],
+				roundingEnvironment: "generated safe code assumes the admitted default round-to-nearest, ties-to-even environment; unsafe foreign code that changes it must restore it before returning",
+				fastMath: "forbidden for Float32 conversion lowering because it can erase NaN, infinity, subnormal, and signed-zero behavior",
+				runtimeFeatures: []
+			},
 			constraints: {
 				cDialect: "strict ISO C11",
 				requiredCharacteristics: [
 					"CHAR_BIT == 8",
 					"exact int8_t/uint8_t/int16_t/uint16_t/int32_t/uint32_t/int64_t/uint64_t typedefs",
 					"double is 64-bit binary64",
+					"float is 32-bit binary32 with subnormal support",
+					"the qualified Float-to-float conversion uses round-to-nearest, ties-to-even",
 					"intptr_t and uintptr_t exist for pointer round trips"
 				],
 				forbiddenAssumptions: [
 					"C int has Haxe Int width",
 					"C long has any fixed width",
+					"host float facts describe the selected target ABI",
+					"foreign code may leave a non-default floating rounding environment active",
 					"out-of-range unsigned-to-signed C casts preserve bits",
 					"out-of-range or non-finite floating-to-integer C casts are valid"
 				],
@@ -328,13 +369,25 @@ class CPrimitiveContract {
 			conversionRecord("haxe-uint-to-float", CPHaxeUInt, CPNonNullable, CPHaxeFloat, CPNonNullable, CPUImplicit, []),
 			conversionRecord("haxe-int-to-uint-bits", CPHaxeInt, CPNonNullable, CPHaxeUInt, CPNonNullable, CPUImplicit, []),
 			conversionRecord("haxe-uint-to-int-bits", CPHaxeUInt, CPNonNullable, CPHaxeInt, CPNonNullable, CPUImplicit, []),
-			conversionRecord("haxe-std-int", CPHaxeFloat, CPNonNullable, CPHaxeInt, CPNonNullable, CPUStdInt,
+			conversionRecord("haxe-std-int", CPHaxeFloat, CPNonNullable, CPHaxeInt, CPNonNullable, CPUStdInt, [
+				"NaN->0",
+				"+infinity->2147483647",
+				"-infinity->-2147483648",
+				"positive-overflow->2147483647",
+				"negative-overflow->-2147483648"
+			]),
+			conversionRecord("haxe-float-to-c-float32", CPHaxeFloat, CPNonNullable, CPCFloat32, CPNonNullable, CPUFloat32Narrow, [
+				"NaN->NaN-without-payload-promise",
+				"infinity->same-signed-infinity",
+				"negative-zero->negative-zero",
+				"finite-overflow->same-signed-infinity",
+				"finite-underflow->rounded-subnormal-or-same-signed-zero"
+			]),
+			conversionRecord("c-float32-to-haxe-float", CPCFloat32, CPNonNullable, CPHaxeFloat, CPNonNullable, CPUFloat32Widen,
 				[
-					"NaN->0",
-					"+infinity->2147483647",
-					"-infinity->-2147483648",
-					"positive-overflow->2147483647",
-					"negative-overflow->-2147483648"
+					"NaN->NaN-without-payload-promise",
+					"infinity->same-signed-infinity",
+					"negative-zero->negative-zero"
 				]),
 			conversionRecord("haxe-int-to-exact-u8", CPHaxeInt, CPNonNullable, CPCExactInteger(8, false), CPNonNullable, CPUWrapping,
 				["negative-or-oversized->modulo-2^8"]),
@@ -465,6 +518,8 @@ class CPrimitiveContract {
 			case CPUStdInt: "Std.int-or-typed-numeric-cast";
 			case CPUWrapping: "explicit-wrapping";
 			case CPUChecked: "explicit-checked";
+			case CPUFloat32Narrow: "explicit-binary32-narrow";
+			case CPUFloat32Widen: "explicit-binary64-widen";
 			case CPUNullableInject: "nullable-inject";
 			case CPUNullableUnwrap: "nullable-unwrap";
 		}
@@ -477,6 +532,8 @@ class CPrimitiveContract {
 			case CPTwosComplementBits(targetWidth): 'low-$targetWidth-bits-as-twos-complement';
 			case CPSaturatingTruncate: "truncate-toward-zero-with-defined-saturation";
 			case CPCheckedRange: "range-check-then-exact";
+			case CPRoundToBinary32: "round-to-nearest-ties-to-even-binary32";
+			case CPWidenToBinary64: "exact-binary32-to-binary64";
 			case CPInjectPresent: "construct-present-nullable";
 			case CPUnwrapPresent: "check-present-then-extract";
 		}
@@ -485,6 +542,8 @@ class CPrimitiveContract {
 	static function conversionKind(value:HxcIRConversionKind):String {
 		return switch value {
 			case IRCNumericExact: "numeric-exact";
+			case IRCNumericRoundBinary32: "numeric-round-binary32";
+			case IRCNumericWidenBinary64: "numeric-widen-binary64";
 			case IRCNumericWrapping: "numeric-wrapping";
 			case IRCNumericSaturating: "numeric-saturating";
 			case IRCNumericChecked: "numeric-checked";

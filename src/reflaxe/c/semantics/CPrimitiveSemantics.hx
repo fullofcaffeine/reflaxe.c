@@ -85,6 +85,16 @@ class CPrimitiveSemantics {
 			}
 			return CPConversionRejected("Std.int is defined only from Haxe Float to Haxe Int");
 		}
+		if (use == CPUFloat32Narrow) {
+			return source.sourceType == CPHaxeFloat
+				&& target.sourceType == CPCFloat32 ? allowed(source, target, use, CPRoundToBinary32, IRCNumericRoundBinary32, IRIStatic,
+					false) : CPConversionRejected("Float32 narrowing requires Haxe Float input and c.Float32 output");
+		}
+		if (use == CPUFloat32Widen) {
+			return source.sourceType == CPCFloat32
+				&& target.sourceType == CPHaxeFloat ? allowed(source, target, use, CPWidenToBinary64, IRCNumericWidenBinary64, IRIStatic,
+					false) : CPConversionRejected("Float32 widening requires c.Float32 input and Haxe Float output");
+		}
 
 		final sourceInteger = integerFacts(source.sourceType);
 		final targetInteger = integerFacts(target.sourceType);
@@ -226,6 +236,7 @@ class CPrimitiveSemantics {
 			case CPHaxeInt: "Int";
 			case CPHaxeUInt: "UInt";
 			case CPHaxeFloat: "Float";
+			case CPCFloat32: "c.Float32";
 			case CPCExactInteger(width, signed): 'c.${signed ? "Int" : "UInt"}$width';
 			case CPCSize: "c.Size";
 			case CPCPtrDiff: "c.PtrDiff";
@@ -241,6 +252,7 @@ class CPrimitiveSemantics {
 			CPHaxeInt,
 			CPHaxeUInt,
 			CPHaxeFloat,
+			CPCFloat32,
 			CPCExactInteger(8, true),
 			CPCExactInteger(16, true),
 			CPCExactInteger(32, true),
@@ -467,6 +479,8 @@ class CPrimitiveSemantics {
 				fixedIntegerMapping(sourceType, 32, false);
 			case CPHaxeFloat:
 				new CPrimitiveTypeMapping(sourceType, CPNonNullable, "double", null, CPWidthExact(64), CPSignNone, CPStorageScalar, IRTFloat(64));
+			case CPCFloat32:
+				new CPrimitiveTypeMapping(sourceType, CPNonNullable, "float", null, CPWidthExact(32), CPSignNone, CPStorageScalar, IRTFloat(32));
 			case CPCExactInteger(width, signed):
 				fixedIntegerMapping(sourceType, width, signed);
 			case CPCSize:
@@ -498,7 +512,7 @@ class CPrimitiveSemantics {
 			case CPHaxeInt: {width: 32, signed: true};
 			case CPHaxeUInt: {width: 32, signed: false};
 			case CPCExactInteger(width, signed): {width: width, signed: signed};
-			case CPHaxeVoid | CPHaxeBool | CPHaxeFloat | CPCSize | CPCPtrDiff | CPCIntPtr | CPCUIntPtr: null;
+			case CPHaxeVoid | CPHaxeBool | CPHaxeFloat | CPCFloat32 | CPCSize | CPCPtrDiff | CPCIntPtr | CPCUIntPtr: null;
 		}
 	}
 

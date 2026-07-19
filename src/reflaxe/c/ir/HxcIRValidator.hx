@@ -11,7 +11,7 @@ private typedef HxcIRInstructionSite = {
 
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
-	public static inline final SCHEMA_VERSION = 9;
+	public static inline final SCHEMA_VERSION = 10;
 
 	public function new() {}
 
@@ -955,7 +955,7 @@ private class HxcIRValidationState {
 							case IRFASInvalidLength(_):
 								add(path, "zero-initialized fixed-array length must be positive", instruction.source);
 							case IRFASUnsupportedElement:
-								add(path, "zero-initialized fixed arrays require an exact-size integer or binary64 element", instruction.source);
+								add(path, "zero-initialized fixed arrays require an exact-size integer, binary32, or binary64 element", instruction.source);
 							case IRFASSizeOverflow(elementBytes, invalidLength):
 								add(path, 'zero-initialized fixed-array size overflows the compiler policy: $invalidLength * $elementBytes bytes',
 									instruction.source);
@@ -1753,6 +1753,14 @@ private class HxcIRValidationState {
 				if (!isNumeric(sourceType) || !isNumeric(targetType)) {
 					add(path, "numeric-exact conversion requires numeric source and target types", source);
 				}
+			case IRCNumericRoundBinary32:
+				if (!isFloatWidth(sourceType, 64) || !isFloatWidth(targetType, 32) || implementation != IRIStatic) {
+					add(path, "binary32 rounding requires a direct f64 source to f32 target conversion", source);
+				}
+			case IRCNumericWidenBinary64:
+				if (!isFloatWidth(sourceType, 32) || !isFloatWidth(targetType, 64) || implementation != IRIStatic) {
+					add(path, "binary64 widening requires a direct f32 source to f64 target conversion", source);
+				}
 			case IRCNumericWrapping:
 				if (!isInteger(sourceType) || !isInteger(targetType)) {
 					add(path, "numeric-wrapping conversion requires integer source and target types", source);
@@ -1783,10 +1791,18 @@ private class HxcIRValidationState {
 
 	static function isPrimitiveConversion(kind:HxcIRConversionKind):Bool {
 		return switch kind {
-			case IRCNumericExact | IRCNumericWrapping | IRCNumericSaturating | IRCNumericChecked | IRCNullableInject | IRCNullableUnwrap:
+			case IRCNumericExact | IRCNumericRoundBinary32 | IRCNumericWidenBinary64 | IRCNumericWrapping | IRCNumericSaturating | IRCNumericChecked |
+				IRCNullableInject | IRCNullableUnwrap:
 				true;
 			case IRCPointer | IRCBox | IRCUnbox | IRCRepresentation:
 				false;
+		}
+	}
+
+	static function isFloatWidth(type:HxcIRTypeRef, width:Int):Bool {
+		return switch type {
+			case IRTFloat(actual): actual == width;
+			case _: false;
 		}
 	}
 

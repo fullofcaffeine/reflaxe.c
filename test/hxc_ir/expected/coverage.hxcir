@@ -1,4 +1,4 @@
-hxcir schema=9
+hxcir schema=10
 dispatch
   layout "vtable.layout.coverage.Object" root="instance.object" slots=["slot.render"] @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
   slot "slot.render" owner="instance.object" parameters=[i32] returns=i32 @"test/hxc_ir/fixtures/IRCoverage.hx":8:1-8:2
@@ -51,6 +51,8 @@ module "coverage.IR" @"test/hxc_ir/fixtures/IRCoverage.hx":1:1-80:2
       instruction "c00.virtual-bind" result=- bind-virtual-table place=local("local.virtual-object") table="vtable.coverage.Object" @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c00.bounds-checked" result=- bounds-check collection=local("local.span") index="value.argument" policy=checked-abort(profile="portable",build="debug") @"test/hxc_ir/fixtures/IRCoverage.hx":18:1-18:2
       instruction "c01.convert" result="value.float":f64 convert value="value.one" kind=numeric-exact target=f64 implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.float32-narrow" result="value.float32":f32 convert value="value.float-input" kind=numeric-round-binary32 target=f32 implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
+      instruction "c01.float32-widen" result="value.float32-widened":f64 convert value="value.float32" kind=numeric-widen-binary64 target=f64 implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.saturating" result="value.saturated":i32 convert value="value.float-input" kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.checked" result="value.checked-i8":i8 convert value="value.argument" kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error,target=block("result-error"),arguments=[],cleanup=[]) @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2
       instruction "c01.nullable-inject" result="value.nullable-one":nullable(tagged,i32) convert value="value.one" kind=nullable-inject target=nullable(tagged,i32) implementation=static failure=none @"test/hxc_ir/fixtures/IRCoverage.hx":19:1-19:2

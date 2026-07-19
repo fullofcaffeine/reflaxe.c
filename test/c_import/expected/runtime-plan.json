@@ -6,6 +6,7 @@
     "explicit-evaluation-order",
     "primitive-static-storage",
     "primitive-values",
+    "selected-program-local-helpers",
     "static-functions",
     "typed-header-owned-c-imports",
     "ub-safe-primitive-operations"
@@ -21,21 +22,24 @@
       "explicit-evaluation-order",
       "primitive-static-storage",
       "primitive-values",
+      "selected-program-local-helpers",
       "static-functions",
       "typed-header-owned-c-imports",
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 3,
+      "typeInstances": 4,
       "functions": 1,
-      "blocks": 4,
-      "modules": 4,
+      "blocks": 6,
+      "modules": 5,
       "runtimeIntents": 0,
-      "instructions": 36,
+      "instructions": 91,
       "cleanupActions": 0
     },
-    "programLocalHelpers": [],
-    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation",
+    "programLocalHelpers": [
+      "hxc.f64.divide.zero-safe"
+    ],
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation",
     "scope": "reachable-whole-program",
     "status": "eligible",
     "schemaVersion": 1,

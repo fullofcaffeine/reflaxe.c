@@ -93,6 +93,7 @@ class CPrimitiveTypeMapper {
 			case "Int": CPHaxeInt;
 			case "UInt": CPHaxeUInt;
 			case "Float": CPHaxeFloat;
+			case "c.Float32": CPCFloat32;
 			case "c.Int8": CPCExactInteger(8, true);
 			case "c.Int16": CPCExactInteger(16, true);
 			case "c.Int32": CPCExactInteger(32, true);

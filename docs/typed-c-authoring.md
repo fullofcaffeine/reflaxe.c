@@ -31,8 +31,8 @@ indexing, and iteration. The exact-width storage extension also admits the
 direct, non-failing subset of `c.IntConvert.exact` and
 `c.IntConvert.modulo`. The first E6 vertical slice admits reached hand-authored
 extern C declarations with exact names and headers for scalars, typedefs,
-fieldless enums/constants, by-value
-structs, and literal borrowed `CString` arguments. Other `c.*` operations remain
+fieldless enums/constants, by-value structs, explicit binary32 `c.Float32`
+values, and literal borrowed `CString` arguments. Other `c.*` operations remain
 fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
 until their owning safety and inspection work is complete.
 
@@ -121,6 +121,26 @@ import has these properties:
   deduplicated with declaration provenance in the neutral build plan. Merely
   declaring an unused extern selects no fact and no runtime feature.
 
+### Exact C `float` values
+
+Haxe `Float` deliberately remains binary64 `double`, so a foreign C `float`
+must use the distinct `c.Float32` carrier in constants, fields, parameters, and
+results. Conversion is explicit at the Haxe/C seam:
+
+```haxe
+final nativeScale:c.Float32 = c.Float32.fromFloat(scale);
+final scaleForHaxe:Float = nativeScale.toFloat();
+```
+
+Narrowing is round-to-nearest, ties-to-even; widening is exact. NaN stays NaN
+without a payload guarantee, infinities and signed zero preserve their sign,
+subnormals are supported, and finite overflow narrows to same-signed infinity.
+No implicit `Float`/`c.Float32` coercion exists, so ordinary Haxe arithmetic
+does not silently become single precision. Reachable Float32 projects emit
+structural target-side binary32 assertions and select no helper or `hxrt`.
+See [ADR 0008](adr/0008-primitive-representations-and-conversions.md) for the
+full rounding and foreign floating-environment contract.
+
 For example, the executable point-library fixture uses ordinary Haxe declarations:
 
 ```haxe
@@ -152,6 +172,7 @@ escape hatch.
 | --- | --- | --- |
 | Functions, modules, enums, constants | Ordinary typed Haxe declarations | Haxe already models them and supplies IDE/type-checker support. |
 | Exact integer widths and `size_t`-class types | `c.Int8` through `c.UInt64`, `c.Size`, `c.PtrDiff`, `c.IntPtr`, `c.UIntPtr` | They must not inherit Haxe `Int` semantics or an assumed host width. |
+| Exact C binary32 value | `c.Float32`, with explicit `fromFloat`/`toFloat` | Haxe `Float` remains binary64; a lossy foreign narrowing must be visible and target-qualified. |
 | Integer value conversion | `c.IntConvert.exact(value)`, `c.IntConvert.modulo(value)` | Conversion intent stays distinct from an unchecked type assertion; the inferred target is admitted only when the compiler proves the named direct semantics. |
 | Pointers and qualifiers | `c.Ptr<T>`, `ConstPtr<T>`, `NullablePtr<T>`, `Ref<T>`, `ConstRef<T>`, `RestrictPtr<T>`, `VolatilePtr<T>` | Nullability, borrow shape, mutability, and aliasing obligations stay visible in types. |
 | Function pointers, arrays, and views | `c.FunctionPtr<T>`, `CArray<T, N>`, `Span<T>`, `ConstSpan<T>`, `CString`, `StringView` | Application code does not reconstruct declarators or pointer/length pairs as strings. The admitted fixed-array slice preserves `N` for direct nonempty literals and bounded compiler-known `CArray.zero` storage, then lowers local span views without runtime objects; broader forms remain reserved. |

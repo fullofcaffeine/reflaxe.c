@@ -172,6 +172,7 @@ class CGenericTypeCanonicalizer {
 					case CPHaxeInt: {key: "i32", display: "Int"};
 					case CPHaxeUInt: {key: "u32", display: "UInt"};
 					case CPHaxeFloat: {key: "f64", display: "Float"};
+					case CPCFloat32: {key: "c-f32", display: "c.Float32"};
 					case _: return rejected(fail, position, '$node:unsupported-primitive-type-argument:${mapping.cSpelling}');
 				};
 				new CGenericTypeArgument(type, identity.key, identity.display, DirectPrimitive);

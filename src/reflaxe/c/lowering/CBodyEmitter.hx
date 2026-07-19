@@ -379,7 +379,7 @@ class CBodyEmitter {
 					case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 						final result = requireResult(instruction, fn.id);
 						final expression = switch kind {
-							case IRCNumericExact | IRCNumericWrapping:
+							case IRCNumericExact | IRCNumericRoundBinary32 | IRCNumericWidenBinary64 | IRCNumericWrapping:
 								ECast(cType(targetType), DName(null), requireValue(values, valueId, fn.id));
 							case _:
 								fail('conversion `${instruction.id}` in `${fn.id}` is outside the admitted direct primitive conversion subset');

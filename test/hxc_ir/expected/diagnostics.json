@@ -18,7 +18,7 @@
     "HXC9000 error [profile=portable] test/negative/DirectPayloadRepresentation.hx:1:1-1:2 [module:invalid.DirectPayloadRepresentation.instance:instance.option] Invalid HxcIR: direct native-enum instance `instance.option` cannot contain payload case `Some` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uncheckedVirtualCall": [
-    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:23:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:25:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unknownVirtualImplementation": [
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:8:1-8:2 [dispatch.table:vtable.coverage.Object.entry:0:slot.render] Invalid HxcIR: virtual table refers to unknown implementation `fn.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -31,6 +31,9 @@
   ],
   "defaultInitializationType": [
     "HXC9000 error [profile=portable] test/negative/DefaultInitializationType.hx:2:1-2:2 [module:invalid.DefaultInitializationType.function:invalid.DefaultInitializationType.main.block:entry.instruction:0:bad.default] Invalid HxcIR: default object initialization requires a direct concrete-class place Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "invalidFloat32Narrow": [
+    "HXC9000 error [profile=portable] test/negative/InvalidFloat32Narrow.hx:3:1-3:2 [module:invalid.InvalidFloat32Narrow.function:invalid.InvalidFloat32Narrow.main.block:entry.instruction:1:bad.convert] Invalid HxcIR: binary32 rounding requires a direct f64 source to f32 target conversion Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "constantTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/ConstantTypeMismatch.hx:2:1-2:2 [module:invalid.ConstantTypeMismatch.function:invalid.ConstantTypeMismatch.main.block:entry.instruction:0:bad.constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -52,6 +55,9 @@
   ],
   "statusConventionReturnType": [
     "HXC9000 error [profile=portable] test/negative/StatusConventionReturnType.hx:1:1-8:2 [module:invalid.StatusConventionReturnType.function:invalid.StatusConventionReturnType.main] Invalid HxcIR: the admitted status convention requires a Void semantic result Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "invalidFloat32Widen": [
+    "HXC9000 error [profile=portable] test/negative/InvalidFloat32Widen.hx:3:1-3:2 [module:invalid.InvalidFloat32Widen.function:invalid.InvalidFloat32Widen.main.block:entry.instruction:1:bad.convert] Invalid HxcIR: binary64 widening requires a direct f32 source to f64 target conversion Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "missingTerminator": [
     "HXC9000 error [profile=portable] test/negative/MissingTerminator.hx:1:1-8:2 [module:invalid.MissingTerminator.function:invalid.MissingTerminator.main.block:entry] Invalid HxcIR: basic block `entry` has no terminator Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."

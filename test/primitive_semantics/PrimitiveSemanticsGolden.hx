@@ -1,5 +1,6 @@
 import haxe.Json;
 import reflaxe.c.CProfile;
+import reflaxe.c.ir.HxcIR.HxcIRConversionKind;
 import reflaxe.c.semantics.CPrimitiveContract;
 import reflaxe.c.semantics.CPrimitiveSemantics;
 import reflaxe.c.semantics.CPrimitiveTypes.CPrimitiveConversionResult;
@@ -15,6 +16,7 @@ class PrimitiveSemanticsGolden {
 		requireElidedIdentity();
 		requireRejectedImplicitBoolConversion();
 		requireRejectedAbiWrappingConversion();
+		requireExplicitFloat32Conversions();
 		Sys.println(CONTRACT_PREFIX + Json.stringify(CPrimitiveContract.snapshot()));
 	}
 
@@ -44,6 +46,32 @@ class PrimitiveSemanticsGolden {
 			case CPConversionRejected(_):
 			case CPConversionElided | CPConversionAllowed(_):
 				throw "target-ABI integer conversion bypassed ABI fact resolution";
+		}
+	}
+
+	static function requireExplicitFloat32Conversions():Void {
+		final float64Type = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, CPHaxeFloat));
+		final float32Type = requireMapping(CPrimitiveSemantics.mapping(CProfile.Portable, CPCFloat32));
+		switch CPrimitiveSemantics.conversion(float64Type, float32Type, CPUImplicit) {
+			case CPConversionRejected(_):
+			case CPConversionElided | CPConversionAllowed(_):
+				throw "Float-to-Float32 unexpectedly became implicit";
+		}
+		switch CPrimitiveSemantics.conversion(float64Type, float32Type, CPUFloat32Narrow) {
+			case CPConversionAllowed(decision):
+				if (decision.irKind != IRCNumericRoundBinary32 || decision.failureRequired) {
+					throw "Float32 narrowing lost its explicit infallible HxcIR operation";
+				}
+			case CPConversionElided | CPConversionRejected(_):
+				throw "Float32 narrowing contract was rejected";
+		}
+		switch CPrimitiveSemantics.conversion(float32Type, float64Type, CPUFloat32Widen) {
+			case CPConversionAllowed(decision):
+				if (decision.irKind != IRCNumericWidenBinary64 || decision.failureRequired) {
+					throw "Float32 widening lost its explicit infallible HxcIR operation";
+				}
+			case CPConversionElided | CPConversionRejected(_):
+				throw "Float32 widening contract was rejected";
 		}
 	}
 

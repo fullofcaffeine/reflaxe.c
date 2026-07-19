@@ -1,4 +1,4 @@
-hxcir schema=9
+hxcir schema=10
 dispatch
   layout "vtable.layout.BaseWorker" root="instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" slots=["slot.BaseWorker.value"] @"BaseWorker.hx":1:1-24:2
   slot "slot.BaseWorker.value" owner="instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" parameters=[i32] returns=i32 @"BaseWorker.hx":8:2-10:3

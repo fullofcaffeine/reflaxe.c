@@ -285,14 +285,14 @@ This inventory combines product capability boundaries with repository infrastruc
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |
-| `hxc-ir` | `implemented` | Schema-9 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent. |
+| `hxc-ir` | `implemented` | Schema-10 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, explicit binary32 rounding/binary64 widening, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent. |
 | `literal-string-output` | `implemented` | Compiler-known String literals support hosted Sys.println and default trace with exact UTF-8/NUL bytes and explicit output failure handling. |
 | `native-interop-fixtures` | `scaffold-only` | Independent C-library and C++ extern-C shim inputs validate interop boundary shapes. |
 | `native-smoke` | `implemented` | Strict GCC/G++ and Clang/Clang++ CI lanes compile and run the declared structural, generated, runtime, import, aggregate/class/constructor/dispatch/enum-layout, generic-specialization, hello, and Caxecraft-domain corpus. |
 | `performance-evidence` | `unsupported` | No compiler-time, C-compile-time, runtime, size, allocation, FFI, or agent benchmark claim is validated. |
 | `platform-support-matrix` | `unsupported` | No operating-system, architecture, environment, runtime, and compiler tuple is currently a supported release lane. |
 | `primitive-executable-lowering` | `implemented` | A bounded primitive static-function graph with deterministic initialization, typed direct exact/modulo integer conversions, and literal or bounded zero-initialized local fixed-array/span storage plus nonescaping internal span parameters emits and runs runtime-free strict C11. |
-| `primitive-semantics` | `implemented` | A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence. |
+| `primitive-semantics` | `implemented` | A typed schema-3 primitive representation, nullability, conversion, and operation contract has independent and generated C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
@@ -305,7 +305,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `symbol-registry` | `implemented` | Per-compilation C namespace ownership and deterministic exact/generated symbol finalization are implemented. |
 | `tagged-enum-lowering` | `implemented` | A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11. |
 | `target-activation` | `implemented` | The pinned Haxe 5 CustomTarget(c) carrier configures scalar Unicode facts and exactly-once target registration. |
-| `target-c-api` | `scaffold-only` | Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check. |
+| `target-c-api` | `scaffold-only` | Typed c.* pointer, span, ownership, integer, Float32, layout, linkage, and metadata contracts type-check. |
 | `threading-and-atomics` | `unsupported` | No Haxe threading, synchronization, TLS, or atomic capability is advertised or implemented. |
 | `toolchain-metadata` | `implemented` | Haxe 5.0.0-preview.1, Reflaxe, Lix, package metadata, checksums, and provenance are pinned and verified. |
 | `typed-ast-input` | `implemented` | Complete typed-module capture and deterministic normalized ownership survive order changes and compiler-server reuse. |

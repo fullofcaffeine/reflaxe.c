@@ -11,6 +11,8 @@
   ],
   "sources": [
     "test/native/pointlib/include/pointlib.h",
+    "test/native/pointlib/src/pointlib.c",
+    "std/c/Float32.hx",
     "test/c_import/native/abi_probe.c",
     "test/c_import/expected/program.h",
     "test/c_import/expected/program.c",

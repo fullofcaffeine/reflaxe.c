@@ -73,7 +73,7 @@ The probes cover:
 - two byte-identical declaration plans and planned-header renders, matched
   against `test/declaration_plan/expected/**`, including actionable complete
   cycle/source-placement diagnostics and no runtime selection;
-- two byte-identical schema-9 HxcIR reports, including reversed unordered
+- two byte-identical schema-10 HxcIR reports, including reversed unordered
   inputs, source-aware semantic/coverage goldens, exact UTF-8 String constants,
   explicit side-effect and cleanup order, every call dispatch form, named
   runtime intent, and stable negative diagnostics, plus Eval oracles;

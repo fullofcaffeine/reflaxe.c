@@ -77,6 +77,44 @@
       "sourceType": "Float"
     },
     {
+      "use": "explicit-binary32-narrow",
+      "targetType": "c.Float32",
+      "meaning": "round-to-nearest-ties-to-even-binary32",
+      "id": "haxe-float-to-c-float32",
+      "exceptionalInputs": [
+        "NaN->NaN-without-payload-promise",
+        "infinity->same-signed-infinity",
+        "negative-zero->negative-zero",
+        "finite-overflow->same-signed-infinity",
+        "finite-underflow->rounded-subnormal-or-same-signed-zero"
+      ],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-round-binary32",
+      "implementation": "direct-c",
+      "sourceType": "Float"
+    },
+    {
+      "use": "explicit-binary64-widen",
+      "targetType": "Float",
+      "meaning": "exact-binary32-to-binary64",
+      "id": "c-float32-to-haxe-float",
+      "exceptionalInputs": [
+        "NaN->NaN-without-payload-promise",
+        "infinity->same-signed-infinity",
+        "negative-zero->negative-zero"
+      ],
+      "sourceNullability": "non-null",
+      "failureEdgeRequired": false,
+      "runtimeFeatures": [],
+      "targetNullability": "non-null",
+      "hxcIrKind": "numeric-widen-binary64",
+      "implementation": "direct-c",
+      "sourceType": "c.Float32"
+    },
+    {
       "use": "explicit-wrapping",
       "targetType": "c.UInt8",
       "meaning": "modulo-2^8",
@@ -227,7 +265,8 @@
     "HXC-SEM-001",
     "HXC-SEM-002",
     "HXC-SEM-003",
-    "HXC-SEM-005"
+    "HXC-SEM-005",
+    "HXC-FFI-005"
   ],
   "profiles": [
     "portable",
@@ -284,11 +323,15 @@
       "CHAR_BIT == 8",
       "exact int8_t/uint8_t/int16_t/uint16_t/int32_t/uint32_t/int64_t/uint64_t typedefs",
       "double is 64-bit binary64",
+      "float is 32-bit binary32 with subnormal support",
+      "the qualified Float-to-float conversion uses round-to-nearest, ties-to-even",
       "intptr_t and uintptr_t exist for pointer round trips"
     ],
     "forbiddenAssumptions": [
       "C int has Haxe Int width",
       "C long has any fixed width",
+      "host float facts describe the selected target ABI",
+      "foreign code may leave a non-default floating rounding environment active",
       "out-of-range unsigned-to-signed C casts preserve bits",
       "out-of-range or non-finite floating-to-integer C casts are valid"
     ],
@@ -296,7 +339,7 @@
     "cDialect": "strict ISO C11"
   },
   "status": "production-primitive-arithmetic-slice",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "representations": [
     {
       "storage": "no-value",
@@ -393,6 +436,24 @@
       "requiredHeaders": [],
       "profileDifference": "none",
       "sourceType": "Float"
+    },
+    {
+      "storage": "direct-scalar",
+      "cType": "float",
+      "hxcIrType": "f32",
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "width": {
+        "kind": "exact",
+        "bits": 32
+      },
+      "signedness": "not-applicable",
+      "runtimeFeatures": [],
+      "requiredHeaders": [],
+      "profileDifference": "none",
+      "sourceType": "c.Float32"
     },
     {
       "storage": "direct-scalar",
@@ -636,7 +697,30 @@
     }
   ],
   "haxeBaseline": "5.0.0-preview.1",
-  "algorithm": "hxc-primitive-semantics-v2",
+  "float32Contract": {
+    "widening": "explicit c.Float32-to-Float conversion is exact for every binary32 finite value and preserves value class and zero sign",
+    "cType": "float",
+    "fastMath": "forbidden for Float32 conversion lowering because it can erase NaN, infinity, subnormal, and signed-zero behavior",
+    "runtimeFeatures": [],
+    "admissionChecks": [
+      "CHAR_BIT == 8 and sizeof(float) * CHAR_BIT == 32",
+      "FLT_RADIX == 2, FLT_MANT_DIG == 24, FLT_MAX_EXP == 128, and FLT_MIN_EXP == -125",
+      "FLT_HAS_SUBNORM == 1",
+      "qualified compiler/target conversion probe passes under the admitted build flags"
+    ],
+    "exceptionalValues": [
+      "NaN remains NaN; payload and signaling state are not portable promises",
+      "positive and negative infinity retain their sign",
+      "positive and negative zero retain their sign",
+      "representable binary32 subnormals are preserved; smaller finite magnitudes round to a subnormal or signed zero",
+      "finite magnitude above the binary32 overflow threshold rounds to signed infinity"
+    ],
+    "format": "IEC 60559 / IEEE 754 binary32 required by the resolved target tuple",
+    "narrowing": "explicit Float-to-c.Float32 conversion rounds binary64 to binary32 using round-to-nearest, ties-to-even",
+    "roundingEnvironment": "generated safe code assumes the admitted default round-to-nearest, ties-to-even environment; unsafe foreign code that changes it must restore it before returning",
+    "sourceType": "c.Float32"
+  },
+  "algorithm": "hxc-primitive-semantics-v3",
   "operations": [
     {
       "edgeCases": [

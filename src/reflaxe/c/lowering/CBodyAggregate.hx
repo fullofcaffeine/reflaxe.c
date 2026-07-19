@@ -324,7 +324,7 @@ class CBodyAggregateRegistry {
 	function admittedSpanElement(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CPrimitiveTypeMapping {
 		final mapping = admittedPrimitive(type, position, fail, '$node.element');
 		return switch mapping.irType {
-			case IRTBool | IRTInt(_, _) | IRTFloat(64): mapping;
+			case IRTBool | IRTInt(_, _) | IRTFloat(32) | IRTFloat(64): mapping;
 			case _: rejected(fail, position, '$node:span-element:${mapping.cSpelling}');
 		};
 	}

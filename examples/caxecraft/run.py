@@ -312,7 +312,7 @@ def validate_method_symbols(projection: dict[str, object]) -> None:
 
 def validate_hxcir(hxcir: str) -> None:
     for marker in (
-        "hxcir schema=9",
+        "hxcir schema=10",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         'function "function.caxecraft.domain.PlayerPhysics.step"',

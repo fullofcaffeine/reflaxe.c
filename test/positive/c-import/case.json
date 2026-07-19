@@ -6,6 +6,7 @@
   "status": "active",
   "requirements": [
     "HXC-FFI-001",
+    "HXC-FFI-005",
     "HXC-MAC-001",
     "HXC-MAC-002",
     "HXC-MAC-003"
@@ -14,11 +15,13 @@
     "src/reflaxe/c/interop/CImportRegistry.hx",
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
+    "std/c/Float32.hx",
     "test/c_import/fixtures/build_facts/BuildFactApi.hx",
     "test/c_import/fixtures/build_facts/Main.hx",
     "test/c_import/fixtures/build_facts/build.hxml",
     "test/c_import/fixtures/positive/Axis.hx",
     "test/c_import/fixtures/positive/Coord.hx",
+    "test/c_import/fixtures/positive/FloatPoint.hx",
     "test/c_import/fixtures/positive/Main.hx",
     "test/c_import/fixtures/positive/Point.hx",
     "test/c_import/fixtures/positive/PointLib.hx",

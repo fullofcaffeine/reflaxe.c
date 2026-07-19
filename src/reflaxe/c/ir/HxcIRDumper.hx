@@ -333,6 +333,8 @@ class HxcIRDumper {
 	function conversion(value:HxcIRConversionKind):String {
 		return switch value {
 			case IRCNumericExact: "numeric-exact";
+			case IRCNumericRoundBinary32: "numeric-round-binary32";
+			case IRCNumericWidenBinary64: "numeric-widen-binary64";
 			case IRCNumericWrapping: "numeric-wrapping";
 			case IRCNumericSaturating: "numeric-saturating";
 			case IRCNumericChecked: "numeric-checked";

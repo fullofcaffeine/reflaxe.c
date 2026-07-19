@@ -16,11 +16,12 @@
     "conversions",
     "operations",
     "floatContract",
+    "float32Contract",
     "constraints"
   ],
   "properties": {
-    "schemaVersion": { "const": 2 },
-    "algorithm": { "const": "hxc-primitive-semantics-v2" },
+    "schemaVersion": { "const": 3 },
+    "algorithm": { "const": "hxc-primitive-semantics-v3" },
     "status": { "const": "production-primitive-arithmetic-slice" },
     "requirements": {
       "type": "array",
@@ -28,7 +29,8 @@
         { "const": "HXC-SEM-001" },
         { "const": "HXC-SEM-002" },
         { "const": "HXC-SEM-003" },
-        { "const": "HXC-SEM-005" }
+        { "const": "HXC-SEM-005" },
+        { "const": "HXC-FFI-005" }
       ],
       "items": false
     },
@@ -36,8 +38,8 @@
     "profiles": { "$ref": "#/$defs/profiles" },
     "representations": {
       "type": "array",
-      "minItems": 17,
-      "maxItems": 17,
+      "minItems": 18,
+      "maxItems": 18,
       "items": { "$ref": "#/$defs/representation" }
     },
     "nullability": {
@@ -47,7 +49,7 @@
     },
     "conversions": {
       "type": "array",
-      "minItems": 15,
+      "minItems": 17,
       "items": { "$ref": "#/$defs/conversion" }
     },
     "operations": {
@@ -57,6 +59,7 @@
       "items": { "$ref": "#/$defs/operation" }
     },
     "floatContract": { "$ref": "#/$defs/floatContract" },
+    "float32Contract": { "$ref": "#/$defs/float32Contract" },
     "constraints": { "$ref": "#/$defs/constraints" }
   },
   "$defs": {
@@ -96,7 +99,7 @@
       "properties": {
         "sourceType": {
           "enum": [
-            "Void", "Bool", "Int", "UInt", "Float",
+            "Void", "Bool", "Int", "UInt", "Float", "c.Float32",
             "c.Int8", "c.Int16", "c.Int32", "c.Int64",
             "c.UInt8", "c.UInt16", "c.UInt32", "c.UInt64",
             "c.Size", "c.PtrDiff", "c.IntPtr", "c.UIntPtr"
@@ -107,7 +110,7 @@
         "cType": {
           "enum": [
             "void", "bool", "int8_t", "int16_t", "int32_t", "int64_t",
-            "uint8_t", "uint16_t", "uint32_t", "uint64_t", "double",
+            "uint8_t", "uint16_t", "uint32_t", "uint64_t", "float", "double",
             "size_t", "ptrdiff_t", "intptr_t", "uintptr_t"
           ]
         },
@@ -164,6 +167,8 @@
             "Std.int-or-typed-numeric-cast",
             "explicit-wrapping",
             "explicit-checked",
+            "explicit-binary32-narrow",
+            "explicit-binary64-widen",
             "nullable-inject",
             "nullable-unwrap"
           ]
@@ -172,6 +177,8 @@
         "hxcIrKind": {
           "enum": [
             "numeric-exact",
+            "numeric-round-binary32",
+            "numeric-widen-binary64",
             "numeric-wrapping",
             "numeric-saturating",
             "numeric-checked",
@@ -249,6 +256,44 @@
           "minItems": 5,
           "items": { "type": "string", "minLength": 1 }
         }
+      }
+    },
+    "float32Contract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sourceType",
+        "cType",
+        "format",
+        "admissionChecks",
+        "narrowing",
+        "widening",
+        "exceptionalValues",
+        "roundingEnvironment",
+        "fastMath",
+        "runtimeFeatures"
+      ],
+      "properties": {
+        "sourceType": { "const": "c.Float32" },
+        "cType": { "const": "float" },
+        "format": { "type": "string", "minLength": 1 },
+        "admissionChecks": {
+          "type": "array",
+          "minItems": 4,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "narrowing": { "type": "string", "minLength": 1 },
+        "widening": { "type": "string", "minLength": 1 },
+        "exceptionalValues": {
+          "type": "array",
+          "minItems": 5,
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "roundingEnvironment": { "type": "string", "minLength": 1 },
+        "fastMath": { "type": "string", "minLength": 1 },
+        "runtimeFeatures": { "$ref": "#/$defs/emptyRuntimeFeatures" }
       }
     },
     "constraints": {

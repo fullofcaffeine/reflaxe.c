@@ -106,9 +106,9 @@ def object_list(value: object, label: str) -> list[object]:
 
 
 def validate_contract(contract: dict[str, object]) -> None:
-    if contract.get("schemaVersion") != 2:
+    if contract.get("schemaVersion") != 3:
         raise PrimitiveSemanticsFailure("primitive contract schema version drifted")
-    if contract.get("algorithm") != "hxc-primitive-semantics-v2":
+    if contract.get("algorithm") != "hxc-primitive-semantics-v3":
         raise PrimitiveSemanticsFailure("primitive contract algorithm drifted")
     if contract.get("status") != "production-primitive-arithmetic-slice":
         raise PrimitiveSemanticsFailure("primitive contract overstated production capability")
@@ -117,6 +117,7 @@ def validate_contract(contract: dict[str, object]) -> None:
         "HXC-SEM-002",
         "HXC-SEM-003",
         "HXC-SEM-005",
+        "HXC-FFI-005",
     ]:
         raise PrimitiveSemanticsFailure("primitive contract requirement ownership drifted")
     if contract.get("profiles") != ["portable", "metal"]:
@@ -128,6 +129,7 @@ def validate_contract(contract: dict[str, object]) -> None:
         "Int": "int32_t",
         "UInt": "uint32_t",
         "Float": "double",
+        "c.Float32": "float",
         "c.Int8": "int8_t",
         "c.Int16": "int16_t",
         "c.Int32": "int32_t",
@@ -181,6 +183,8 @@ def validate_contract(contract: dict[str, object]) -> None:
         "haxe-int-to-float": ("exact", False),
         "haxe-uint-to-int-bits": ("low-32-bits-as-twos-complement", False),
         "haxe-std-int": ("truncate-toward-zero-with-defined-saturation", False),
+        "haxe-float-to-c-float32": ("round-to-nearest-ties-to-even-binary32", False),
+        "c-float32-to-haxe-float": ("exact-binary32-to-binary64", False),
         "haxe-int-to-exact-u8": ("modulo-2^8", False),
         "exact-u8-to-haxe-int": ("exact", False),
         "exact-signed-narrow-wrapping": ("low-8-bits-as-twos-complement", False),
@@ -270,6 +274,24 @@ def validate_contract(contract: dict[str, object]) -> None:
     if "forbidden" not in str(float_contract.get("fastMath")):
         raise PrimitiveSemanticsFailure("Float contract no longer rejects unsafe fast-math")
 
+    float32_contract = object_record(contract.get("float32Contract"), "float32Contract")
+    if (
+        float32_contract.get("sourceType") != "c.Float32"
+        or float32_contract.get("cType") != "float"
+        or "binary32" not in str(float32_contract.get("format"))
+        or "ties-to-even" not in str(float32_contract.get("narrowing"))
+        or "exact" not in str(float32_contract.get("widening"))
+        or float32_contract.get("runtimeFeatures") != []
+    ):
+        raise PrimitiveSemanticsFailure("c.Float32 lost its exact runtime-free contract")
+    admission_checks = object_list(
+        float32_contract.get("admissionChecks"), "float32Contract.admissionChecks"
+    )
+    if not any("FLT_MANT_DIG == 24" in str(value) for value in admission_checks):
+        raise PrimitiveSemanticsFailure("c.Float32 omitted its binary32 ABI check")
+    if "restore" not in str(float32_contract.get("roundingEnvironment")):
+        raise PrimitiveSemanticsFailure("c.Float32 omitted foreign rounding restoration")
+
     serialized = json.dumps(contract, ensure_ascii=False, sort_keys=True)
     if str(ROOT) in serialized or "/Users/" in serialized or "\\" in serialized:
         raise PrimitiveSemanticsFailure("primitive contract leaked a host path")
@@ -295,8 +317,10 @@ def validate_type_probe(type_probe: list[object]) -> None:
         "intValue": ("primitive", "Int", False, "direct-scalar", "int32_t"),
         "uintValue": ("primitive", "UInt", False, "direct-scalar", "uint32_t"),
         "floatValue": ("primitive", "Float", False, "direct-scalar", "double"),
+        "float32Value": ("primitive", "c.Float32", False, "direct-scalar", "float"),
         "nullableInt": ("primitive", "Int", True, "tagged-optional", "int32_t"),
         "nullableFloat": ("primitive", "Float", True, "tagged-optional", "double"),
+        "nullableFloat32": ("primitive", "c.Float32", True, "tagged-optional", "float"),
         "pointerValue": ("native-pointer", None, False, "pointer", None),
         "nullablePointer": ("native-pointer", None, True, "pointer", None),
         "nullWrappedPointer": ("native-pointer", None, True, "pointer", None),
@@ -335,7 +359,15 @@ def validate_schema_document() -> None:
     if schema.get("$schema") != "https://json-schema.org/draft/2020-12/schema":
         raise PrimitiveSemanticsFailure("primitive schema must use JSON Schema 2020-12")
     properties = object_record(schema.get("properties"), "primitive schema properties")
-    for required in ("representations", "nullability", "conversions", "operations", "floatContract", "constraints"):
+    for required in (
+        "representations",
+        "nullability",
+        "conversions",
+        "operations",
+        "floatContract",
+        "float32Contract",
+        "constraints",
+    ):
         if required not in properties:
             raise PrimitiveSemanticsFailure(f"primitive schema omitted {required}")
 
@@ -511,8 +543,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"primitive-semantics: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "primitive-semantics: OK: typed Haxe mappings, profile-invariant fixed/ABI scalars, "
-        "defined conversions/nullability, zero-runtime policy, and strict C11 O0/O2 probes passed"
+        "primitive-semantics: OK: typed Haxe mappings, profile-invariant fixed/ABI/Float32 scalars, "
+        "defined conversions/nullability including binary32 boundaries, zero-runtime policy, and strict C11 O0/O2 probes passed"
     )
     return 0
 

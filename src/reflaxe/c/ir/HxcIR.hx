@@ -256,6 +256,13 @@ enum HxcIRTagCheckPolicy {
 
 enum HxcIRConversionKind {
 	IRCNumericExact;
+
+	/** Explicit binary64 -> binary32 round-to-nearest, ties-to-even. */
+	IRCNumericRoundBinary32;
+
+	/** Exact binary32 -> binary64 widening, preserving signed zero and class. */
+	IRCNumericWidenBinary64;
+
 	IRCNumericWrapping;
 	IRCNumericSaturating;
 	IRCNumericChecked;

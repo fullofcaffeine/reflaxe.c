@@ -7,6 +7,7 @@ extern class PrimitiveFixture {
 	var intValue:Int;
 	var uintValue:UInt;
 	var floatValue:Float;
+	var float32Value:c.Float32;
 	var int8Value:c.Int8;
 	var int16Value:c.Int16;
 	var int32Value:c.Int32;
@@ -23,6 +24,7 @@ extern class PrimitiveFixture {
 	var nullableInt:Null<Int>;
 	var nullableUInt:Null<UInt>;
 	var nullableFloat:Null<Float>;
+	var nullableFloat32:Null<c.Float32>;
 	var nullableInt8:Null<c.Int8>;
 	var referenceValue:PrimitiveReference;
 	var nullableReference:Null<PrimitiveReference>;

@@ -7,13 +7,15 @@
   "requirements": [
     "HXC-SEM-001",
     "HXC-SEM-003",
-    "HXC-SEM-005"
+    "HXC-SEM-005",
+    "HXC-FFI-005"
   ],
   "sources": [
     "src/reflaxe/c/semantics/CPrimitiveContract.hx",
     "src/reflaxe/c/semantics/CPrimitiveSemantics.hx",
     "src/reflaxe/c/semantics/CPrimitiveTypeMapper.hx",
     "src/reflaxe/c/semantics/CPrimitiveTypes.hx",
+    "std/c/Float32.hx",
     "test/primitive_semantics/PrimitiveFixture.hx",
     "test/primitive_semantics/PrimitiveSemanticsGolden.hx",
     "test/primitive_semantics/PrimitiveTypeProbe.hx",

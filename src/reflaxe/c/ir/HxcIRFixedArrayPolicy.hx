@@ -28,6 +28,7 @@ class HxcIRFixedArrayPolicy {
 		}
 		final elementBytes = switch element {
 			case IRTInt(width, _) if (width == 8 || width == 16 || width == 32 || width == 64): Std.int(width / 8);
+			case IRTFloat(32): 4;
 			case IRTFloat(64): 8;
 			case _: return IRFASUnsupportedElement;
 		};

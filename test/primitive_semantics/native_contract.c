@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 _Static_assert(CHAR_BIT == 8, "hxc requires 8-bit bytes");
 _Static_assert(sizeof(int8_t) * CHAR_BIT == 8, "int8_t width");
@@ -24,6 +25,11 @@ _Static_assert(UINT16_MAX == UINT16_C(65535), "uint16_t range");
 _Static_assert(UINT32_MAX == UINT32_C(4294967295), "uint32_t range");
 _Static_assert(UINT64_MAX == UINT64_C(18446744073709551615), "uint64_t range");
 _Static_assert(FLT_RADIX == 2, "binary floating radix");
+_Static_assert(sizeof(float) * CHAR_BIT == 32, "float storage width");
+_Static_assert(FLT_MANT_DIG == 24, "binary32 significand");
+_Static_assert(FLT_MAX_EXP == 128, "binary32 maximum exponent");
+_Static_assert(FLT_MIN_EXP == -125, "binary32 minimum exponent");
+_Static_assert(FLT_HAS_SUBNORM == 1, "binary32 subnormal support");
 _Static_assert(sizeof(double) * CHAR_BIT == 64, "double storage width");
 _Static_assert(DBL_MANT_DIG == 53, "binary64 significand");
 _Static_assert(DBL_MAX_EXP == 1024, "binary64 maximum exponent");
@@ -78,6 +84,20 @@ static int32_t hxc_test_f64_to_i32_saturating(double value) {
   return (int32_t)value;
 }
 
+static float hxc_test_f64_to_f32(double value) {
+  return (float)value;
+}
+
+static double hxc_test_f32_to_f64(float value) {
+  return (double)value;
+}
+
+static uint32_t hxc_test_f32_bits(float value) {
+  uint32_t bits = UINT32_C(0);
+  (void)memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
 static hxc_test_optional_i32 hxc_test_optional_i32_present(int32_t value) {
   hxc_test_optional_i32 result;
   result.has_value = true;
@@ -127,6 +147,24 @@ int main(void) {
   HXC_CHECK(!(nan_value < 0.0) && !(nan_value > 0.0));
   HXC_CHECK(INFINITY > DBL_MAX && -INFINITY < -DBL_MAX);
   HXC_CHECK(negative_zero == 0.0 && signbit(negative_zero));
+
+  /* FLT_ROUNDS is a runtime expression on some admitted compilers. */
+  HXC_CHECK(FLT_ROUNDS == 1);
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(0x1.000001p+0)) == UINT32_C(0x3F800000));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(0x1.000003p+0)) == UINT32_C(0x3F800002));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(0x1p-149)) == UINT32_C(0x00000001));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(0x1.8p-150)) == UINT32_C(0x00000001));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(0x1p-150)) == UINT32_C(0x00000000));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(-0x1p-150)) == UINT32_C(0x80000000));
+  HXC_CHECK(isinf(hxc_test_f64_to_f32(DBL_MAX)) && !signbit(hxc_test_f64_to_f32(DBL_MAX)));
+  HXC_CHECK(isinf(hxc_test_f64_to_f32(-DBL_MAX)) && signbit(hxc_test_f64_to_f32(-DBL_MAX)));
+  HXC_CHECK(isnan(hxc_test_f64_to_f32(NAN)));
+  HXC_CHECK(isinf(hxc_test_f64_to_f32(INFINITY)));
+  HXC_CHECK(hxc_test_f32_bits(hxc_test_f64_to_f32(-0.0)) == UINT32_C(0x80000000));
+  HXC_CHECK(hxc_test_f32_to_f64(hxc_test_f64_to_f32(0x1p-149)) == 0x1p-149);
+  HXC_CHECK(signbit(hxc_test_f32_to_f64(hxc_test_f64_to_f32(-0.0))));
+  HXC_CHECK(isnan(hxc_test_f32_to_f64(hxc_test_f64_to_f32(NAN))));
+  HXC_CHECK(isinf(hxc_test_f32_to_f64(hxc_test_f64_to_f32(-INFINITY))));
 
   HXC_CHECK(present.has_value && present.value == INT32_C(42));
   HXC_CHECK(!absent.has_value);

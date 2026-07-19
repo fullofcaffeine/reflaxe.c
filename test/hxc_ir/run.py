@@ -159,6 +159,8 @@ def check_semantics(semantic: str, coverage: str) -> None:
         'type=abi-int(size)',
         'type=nullable(pointer,instance("instance.object"))',
         'kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none',
+        'kind=numeric-round-binary32 target=f32 implementation=static failure=none',
+        'kind=numeric-widen-binary64 target=f64 implementation=static failure=none',
         'kind=numeric-checked target=i8 implementation=program-local("hxc.i32.to.i8.checked") failure=failure(kind=result-error',
         'kind=nullable-inject target=nullable(tagged,i32) implementation=static failure=none',
         'kind=nullable-unwrap target=i32 implementation=static failure=failure(kind=result-error',
@@ -190,6 +192,8 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "unsafeClassUpcast",
         "mismatchedClassEquality",
         "primitiveRuntimeConversion",
+        "invalidFloat32Narrow",
+        "invalidFloat32Widen",
         "nullableUnwrapWithoutFailure",
         "switchCaseTypeMismatch",
     ):
@@ -219,7 +223,7 @@ def main() -> int:
 
     print(
         "hxc-ir: OK: deterministic source-aware dumps, explicit side effects/cleanup, "
-        "typed dispatch/runtime intent, switch validation, and stable negative diagnostics"
+        "typed dispatch/runtime intent, Float32 conversions, switch validation, and stable negative diagnostics"
     )
     return 0
 

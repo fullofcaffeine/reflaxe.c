@@ -6,6 +6,7 @@
   "status": "active",
   "requirements": [
     "HXC-SEM-006",
+    "HXC-FFI-005",
     "HXC-FFI-007",
     "HXC-FFI-008",
     "HXC-FFI-009"
@@ -14,6 +15,8 @@
     "src/reflaxe/c/interop/CImportRegistry.hx",
     "test/c_import/fixtures/callback_return/CallbackApi.hx",
     "test/c_import/fixtures/embedded_nul/Main.hx",
+    "test/c_import/fixtures/implicit_float32/Main.hx",
+    "test/c_import/fixtures/implicit_float32/build.hxml",
     "test/c_import/fixtures/missing_name/MissingNameApi.hx",
     "test/c_import/fixtures/nonliteral_cstring/Main.hx",
     "test/c_import/fixtures/pointer_return/PointerApi.hx",

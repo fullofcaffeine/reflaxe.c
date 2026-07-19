@@ -1,4 +1,4 @@
-hxcir schema=9
+hxcir schema=10
 module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-126:3
   global "global.EvaluationFixture.callFlag" type=bool mutable=true initialization=constant(bool(false)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-2:35
   global "global.EvaluationFixture.counter" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":5:2-5:30

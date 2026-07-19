@@ -270,7 +270,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes emit private base-prefix structs with checked nullable-reference operations and safe upcasts.",
-      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-9 HxcIR and run as runtime-free strict C11.",
+      "scope": "Source-order own fields, embedded base storage, empty-root anchors, inherited reads/writes, identity, explicit null proofs, and null-preserving derived-to-base conversions lower through schema-10 HxcIR and run as runtime-free strict C11.",
       "evidence": [
         "docs/class-layout.md",
         "src/reflaxe/c/lowering/CBodyClass.hx",
@@ -335,7 +335,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Concrete non-generic Haxe classes support bounded nonescaping stack construction with exact constructor order and explicit failure cleanup.",
-      "scope": "Unconditional entry-block local new expressions lower through schema-9 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
+      "scope": "Unconditional entry-block local new expressions lower through schema-10 HxcIR to default-initialized automatic storage and ordinary private C constructor functions; super calls, pinned-Haxe field/body order, trivial-chain elision, typed status propagation, and reverse partial-initialization cleanup are runtime-free and native-verified.",
       "evidence": [
         "docs/constructor-lowering.md",
         "src/reflaxe/c/lowering/CBodyConstructor.hx",
@@ -394,7 +394,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, scalars, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-9 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts.",
+      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-10 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "src/reflaxe/c/interop/CImportRegistry.hx",
@@ -592,8 +592,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Schema-9 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
-      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, fixed-array/span, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, and direct-C-import lowering slices.",
+      "summary": "Schema-10 HxcIR structurally records values, tagged cases, concrete and header-owned nominal types, reachable virtual layouts/slots/tables, table binding, exact native dispatch/constants, explicit binary32 rounding/binary64 widening, distinct Haxe and borrowed C string literals, ordering, control flow, failures, cleanup, and runtime intent.",
+      "scope": "The validator and deterministic dumper cover the semantic core consumed by the admitted primitive, Float32, fixed-array/span, aggregate, concrete class-reference, bounded constructor, closed-world virtual-dispatch, bounded enum, literal-output, and direct-C-import lowering slices.",
       "evidence": [
         "docs/hxc-ir.md",
         "src/reflaxe/c/ir/HxcIRValidator.hx",
@@ -774,15 +774,17 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "A typed schema-2 primitive representation, nullability, conversion, and operation contract has independent C evidence.",
-      "scope": "Void, Bool, Int, UInt, Float, exact and ABI integers, and the registered operation slice preserve explicit semantics without hxrt.",
+      "summary": "A typed schema-3 primitive representation, nullability, conversion, and operation contract has independent and generated C evidence.",
+      "scope": "Void, Bool, Int, UInt, binary64 Float, exact binary32 c.Float32, exact and ABI integers, and the registered operation slice preserve explicit semantics without hxrt. Float32 conversion is explicit, target-guarded, and boundary-tested through direct imports.",
       "evidence": [
         "docs/specs/primitive-semantics.json",
-        "test/primitive_semantics/run.py"
+        "test/primitive_semantics/run.py",
+        "test/c_import/run.py"
       ],
       "owners": [
         "E2.T01",
-        "E2.T05"
+        "E2.T05",
+        "E6.T03"
       ],
       "limitations": [
         "The contract does not cover strings, objects, general arrays, dynamic values, or arbitrary native ABI layout facts."
@@ -1042,7 +1044,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded Haxe enum graph emits private native enums or tagged unions and runs as runtime-free strict C11.",
-      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-9 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
+      "scope": "Fieldless enums, primitive payloads, closed primitive generic instances, checked exhaustive matching, and function-local finite recursive values lower through schema-10 HxcIR; generic instances enter the shared specialization key, reason, limit, and report contract.",
       "evidence": [
         "docs/enum-lowering.md",
         "src/reflaxe/c/lowering/CBodyEnum.hx",
@@ -1079,12 +1081,13 @@
       "area": "target-api",
       "status": "scaffold-only",
       "disposition": "reserved",
-      "summary": "Typed c.* pointer, span, ownership, integer, layout, linkage, and metadata contracts type-check.",
-      "scope": "The contract macro validates the current declaration/build surface; literal and bounded compile-time-sized zero-initialized CArray/local Span operations, nonescaping Span or ConstSpan parameters on reached direct static implementation calls, and exact reached direct imports have separate admitted lowering slices.",
+      "summary": "Typed c.* pointer, span, ownership, integer, Float32, layout, linkage, and metadata contracts type-check.",
+      "scope": "The contract macro validates the current declaration/build surface; explicit Float/c.Float32 conversion, literal and bounded compile-time-sized zero-initialized CArray/local Span operations, nonescaping Span or ConstSpan parameters on reached direct static implementation calls, and exact reached direct imports have separate admitted lowering slices.",
       "evidence": [
         "std/c/CArray.hx",
         "std/c/Ptr.hx",
         "std/c/CString.hx",
+        "std/c/Float32.hx",
         "std/c/Span.hx",
         "test/c_import/run.py",
         "test/typed_c/run.py"
@@ -1199,7 +1202,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reachable ordinary class methods support deterministic minimal closed-world virtual dispatch while statically known calls remain direct.",
-      "scope": "Non-generic infallible class methods lower through schema-9 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
+      "scope": "Non-generic infallible class methods lower through schema-10 HxcIR with explicit self, root-only reachable slots, constructed-class tables, typed receiver adapters, exact override representation validation, and a conditional explanatory dispatch report; the generated strict C11 remains runtime-free and has no public exports.",
       "evidence": [
         "docs/virtual-dispatch.md",
         "docs/specs/dispatch-report.schema.json",

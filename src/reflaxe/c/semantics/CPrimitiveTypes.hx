@@ -11,6 +11,7 @@ enum CPrimitiveSourceType {
 	CPHaxeInt;
 	CPHaxeUInt;
 	CPHaxeFloat;
+	CPCFloat32;
 	CPCExactInteger(width:Int, signed:Bool);
 	CPCSize;
 	CPCPtrDiff;
@@ -48,6 +49,8 @@ enum CPrimitiveConversionUse {
 	CPUStdInt;
 	CPUWrapping;
 	CPUChecked;
+	CPUFloat32Narrow;
+	CPUFloat32Widen;
 	CPUNullableInject;
 	CPUNullableUnwrap;
 }
@@ -58,6 +61,8 @@ enum CPrimitiveConversionMeaning {
 	CPTwosComplementBits(targetWidth:Int);
 	CPSaturatingTruncate;
 	CPCheckedRange;
+	CPRoundToBinary32;
+	CPWidenToBinary64;
 	CPInjectPresent;
 	CPUnwrapPresent;
 }

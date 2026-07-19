@@ -64,12 +64,20 @@ NEGATIVE_CASES = {
         "Variadic functions are outside the admitted direct slice.",
     ),
 }
+TYPING_NEGATIVE_CASES = {
+    "implicit_float32": (
+        "Main.hx:3",
+        "Float should be c.Float32",
+    ),
+}
 REQUIRED_COVERAGE = frozenset(
     {
         "allocation-free-cstring",
         "compiled-abi-layout",
         "compiled-constant-values",
         "direct-native-calls",
+        "float32-abi",
+        "float32-conversions",
         "generated-haxe-program",
         "header-owned-structs",
         "runtime-free",
@@ -272,12 +280,29 @@ def validate_positive(project: RenderedProject) -> None:
     if header.count('#include "pointlib.h"') != 1:
         raise CImportFailure("generated header did not include pointlib.h exactly once")
     for spelling in (
+        "#include <float.h>",
+        "#include <limits.h>",
+        "CHAR_BIT == 8",
+        "sizeof(float) * CHAR_BIT == 32",
+        "FLT_MANT_DIG == 24",
+        "FLT_HAS_SUBNORM == 1",
+    ):
+        if spelling not in header:
+            raise CImportFailure(
+                f"generated Float32 carrier omitted target guard {spelling!r}"
+            )
+    for spelling in (
         "pointlib_point_make(",
         "pointlib_point_translate(",
         "pointlib_point_dot(",
         "pointlib_point_component(",
         "pointlib_point_verify(",
+        "pointlib_float_point_make(",
+        "pointlib_float_point_scale(",
+        "pointlib_float_point_dot(",
+        "pointlib_float32_verify(",
         "struct pointlib_point",
+        "struct pointlib_float_point",
         "pointlib_coord",
         "pointlib_axis",
         "POINTLIB_AXIS_Y",
@@ -308,6 +333,8 @@ def validate_positive(project: RenderedProject) -> None:
         " = &hxc_local_Main_main_left_n0.x;",
         " = *hxc_temp_Main_main_importedzx2Dfieldzx2Daddress",
         "pointlib_axis hxc_local_Main_main_axis",
+        "float hxc_local_Main_main_floatDot",
+        "double hxc_local_Main_main_widened",
     ):
         if spelling not in source:
             raise CImportFailure(
@@ -324,7 +351,7 @@ def validate_positive(project: RenderedProject) -> None:
     if build.get("requiredHeaders") != [
         {
             "path": "pointlib.h",
-            "ownerModulePaths": ["Axis", "Coord", "Point", "PointLib"],
+            "ownerModulePaths": ["Axis", "Coord", "FloatPoint", "Point", "PointLib"],
             "kind": "local",
         }
     ] or build.get("libraries") != [
@@ -370,6 +397,11 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_point_dot",
         "pointlib_point_component",
         "pointlib_point_verify",
+        "pointlib_float_point",
+        "pointlib_float_point_make",
+        "pointlib_float_point_scale",
+        "pointlib_float_point_dot",
+        "pointlib_float32_verify",
     ):
         if spelling not in external:
             raise CImportFailure(f"symbol table omitted exact external name {spelling!r}")
@@ -428,6 +460,17 @@ def check_reached_build_facts(root: Path) -> None:
         raise CImportFailure("reached build facts did not remain runtime-free")
     if "hxrt" in (project.header + project.source).lower():
         raise CImportFailure("build-only import facts selected hxrt output")
+    for unexpected_float32_fact in (
+        "#include <float.h>",
+        "#include <limits.h>",
+        "FLT_MANT_DIG",
+        "FLT_HAS_SUBNORM",
+    ):
+        if unexpected_float32_fact in project.header + project.source:
+            raise CImportFailure(
+                "a project without c.Float32 reachability emitted the conditional "
+                f"binary32 fact {unexpected_float32_fact!r}"
+            )
 
 
 def check_negative_cases(root: Path) -> None:
@@ -445,6 +488,21 @@ def check_negative_cases(root: Path) -> None:
         ):
             raise CImportFailure(
                 f"{case_name} did not fail closed at its Haxe ABI span\n"
+                f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
+            )
+    for case_name in sorted(TYPING_NEGATIVE_CASES, key=lambda value: value.encode("utf-8")):
+        source_marker, detail = TYPING_NEGATIVE_CASES[case_name]
+        output = root / case_name
+        result = compile_fixture(FIXTURES / case_name, output)
+        combined = result.stdout + result.stderr
+        if (
+            result.returncode == 0
+            or source_marker not in combined
+            or detail not in combined
+            or generated_files(output)
+        ):
+            raise CImportFailure(
+                f"{case_name} did not reject an implicit lossy Float32 conversion during Haxe typing\n"
                 f"stdout:\n{result.stdout}stderr:\n{result.stderr}"
             )
 
@@ -482,7 +540,7 @@ def check_native(
             ("native/include/pointlib.h",),
             ("native/include",),
             "pointlib-abi: OK\n",
-            ("compiled-abi-layout", "compiled-constant-values", "strict-c11"),
+            ("compiled-abi-layout", "compiled-constant-values", "float32-abi", "strict-c11"),
         ),
         CFixtureProject(
             "generated-program",
@@ -496,6 +554,7 @@ def check_native(
             (
                 "allocation-free-cstring",
                 "direct-native-calls",
+                "float32-conversions",
                 "generated-haxe-program",
                 "header-owned-structs",
                 "runtime-free",
@@ -597,7 +656,7 @@ def main(argv: list[str]) -> int:
         return 1
     print(
         "c-import: OK: direct scalar/enum/typedef/by-value struct calls, compiled ABI "
-        "probes, static CString borrowing, deterministic build facts, runtime absence, "
+        "probes, explicit Float32 narrowing/widening, static CString borrowing, deterministic build facts, runtime absence, "
         "and fail-closed ABI edges passed"
     )
     return 0

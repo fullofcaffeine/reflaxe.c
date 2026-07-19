@@ -70,6 +70,8 @@ class HxcIRGolden {
 				cleanupOrder: invalidDiagnostics(cleanupOrderProgram()),
 				absoluteSource: invalidDiagnostics(absoluteSourceProgram()),
 				primitiveRuntimeConversion: invalidDiagnostics(primitiveRuntimeConversionProgram()),
+				invalidFloat32Narrow: invalidDiagnostics(invalidFloat32NarrowProgram()),
+				invalidFloat32Widen: invalidDiagnostics(invalidFloat32WidenProgram()),
 				nullableUnwrapWithoutFailure: invalidDiagnostics(nullableUnwrapWithoutFailureProgram()),
 				stringByteLengthMismatch: invalidDiagnostics(stringByteLengthMismatchProgram()),
 				cstringByteLengthMismatch: invalidDiagnostics(cstringByteLengthMismatchProgram()),
@@ -570,6 +572,10 @@ class HxcIRGolden {
 							IRIOBoundsCheck(IRPLocal("local.span"), "value.argument", IRBPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 18),
 						instruction("c01.convert", result("value.float", IRTFloat(64)),
 							IRIOConvert("value.one", IRCNumericExact, IRTFloat(64), IRIStatic, null), COVERAGE_SOURCE, 19),
+						instruction("c01.float32-narrow", result("value.float32", IRTFloat(32)),
+							IRIOConvert("value.float-input", IRCNumericRoundBinary32, IRTFloat(32), IRIStatic, null), COVERAGE_SOURCE, 19),
+						instruction("c01.float32-widen", result("value.float32-widened", IRTFloat(64)),
+							IRIOConvert("value.float32", IRCNumericWidenBinary64, IRTFloat(64), IRIStatic, null), COVERAGE_SOURCE, 19),
 						instruction("c01.saturating", result("value.saturated", IRTInt(32, true)),
 							IRIOConvert("value.float-input", IRCNumericSaturating, IRTInt(32, true), IRIProgramLocal("hxc.f64.to.i32.saturating"), null),
 							COVERAGE_SOURCE, 19),
@@ -1247,6 +1253,24 @@ class HxcIRGolden {
 			instruction("bad.source", result("value.source", IRTInt(32, true)), IRIOConstant(IRCInt("1")), file, 2),
 			instruction("bad.convert", result("value.target", IRTFloat(64)),
 				IRIOConvert("value.source", IRCNumericExact, IRTFloat(64), IRIRuntime("primitive-conversion"), null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	static function invalidFloat32NarrowProgram():HxcIRProgram {
+		final file = "test/negative/InvalidFloat32Narrow.hx";
+		return minimalProgram("invalid.InvalidFloat32Narrow", [
+			instruction("bad.source", result("value.source", IRTFloat(64)), IRIOConstant(IRCFloat("1.0")), file, 2),
+			instruction("bad.convert", result("value.target", IRTFloat(64)),
+				IRIOConvert("value.source", IRCNumericRoundBinary32, IRTFloat(64), IRIStatic, null), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	static function invalidFloat32WidenProgram():HxcIRProgram {
+		final file = "test/negative/InvalidFloat32Widen.hx";
+		return minimalProgram("invalid.InvalidFloat32Widen", [
+			instruction("bad.source", result("value.source", IRTFloat(32)), IRIOConstant(IRCFloat("1.0")), file, 2),
+			instruction("bad.convert", result("value.target", IRTFloat(32)),
+				IRIOConvert("value.source", IRCNumericWidenBinary64, IRTFloat(32), IRIStatic, null), file, 3)
 		], terminator(IRTReturn(null, []), file, 4), [], [], file);
 	}
 

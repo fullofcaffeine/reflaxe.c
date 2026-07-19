@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 9
+the structural C AST. Its schema is internal to the compiler: schema version 10
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -31,6 +31,9 @@ advancing the schema to version 8.
 The bounded zero-initialized fixed-array extension adds a distinct structural
 storage operation and shared automatic-storage validation, advancing the schema
 to version 9.
+The reusable C-facing binary32 carrier adds distinct, validated
+binary64-to-binary32 rounding and binary32-to-binary64 widening operations,
+advancing the schema to version 10.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -266,6 +269,10 @@ AST node. Exact-width integers retain width and signedness, while `size_t`,
 `ptrdiff_t`, `intptr_t`, and `uintptr_t` retain distinct unresolved target-ABI
 identities. Nullability records either a tagged scalar payload or a pointer
 representation rather than being inferred from the eventual C spelling.
+`IRTFloat(64)` is ordinary Haxe `Float`; `IRTFloat(32)` is the explicit
+`c.Float32` foreign carrier. `IRCNumericRoundBinary32` and
+`IRCNumericWidenBinary64` retain the lossy-versus-exact distinction rather than
+collapsing both operations into a generic C cast.
 `IRTFixedArray` retains the element type, validated compile-time length, and
 phantom Haxe witness identity. `IRTSpan` retains element type and mutability without
 pretending a borrowed view is an owned aggregate or runtime object.
@@ -335,7 +342,7 @@ slot and receiver separately from the explicit source arguments.
   string literal also has an exact byte length and rejects embedded NUL;
 - element-list fixed-array initialization supplies exactly the declared number
   and element type of values; zero initialization targets exact-size integer or
-  binary64 storage, has a positive length, cannot overflow its byte count, and
+  binary32 or binary64 storage, has a positive length, cannot overflow its byte count, and
   remains within the shared 65,536-byte per-array automatic-storage ceiling;
   span initialization borrows compatible fixed storage; index places resolve
   to the collection element type; and every admitted collection access has a
@@ -380,8 +387,10 @@ slot and receiver separately from the explicit source arguments.
 - calls, conversions, allocation, deallocation, retain, and trace operations
   identify their implementation as static/direct, program-local specialized,
   or a named runtime feature;
-- primitive conversions identify exact, wrapping, checked, saturating,
-  nullable-inject, or nullable-unwrap intent. Checked numeric and nullable
+- primitive conversions identify exact, binary32 rounding, binary64 widening,
+  wrapping, checked, saturating, nullable-inject, or nullable-unwrap intent.
+  Binary32 rounding is exactly `f64 -> f32` with direct static intent;
+  binary64 widening is exactly `f32 -> f64` with direct static intent. Checked numeric and nullable
   unwrap forms require an explicit failure edge; the remaining primitive forms
   reject one;
 - exact, wrapping, checked, saturating, and nullable primitive operations may
@@ -420,7 +429,7 @@ strategy selection. For the admitted primitive slice, E2.T05 now consumes the
 implementation intent with UB-safe structural C and request-local helpers;
 E2.T06 consumes branch/jump/switch terminators for primitive statement and
 value control flow. E2.T08 consumes array/span initialization and bounds intent.
-Schema 9 distinguishes ordered element-list initialization from
+Schema 10 retains the earlier distinction between ordered element-list initialization and
 `IRIOZeroInitializeFixedArray`; the latter carries an explicit storage-state
 transition and must pass `HxcIRFixedArrayPolicy` before either validation or C
 emission. A static proof retains its literal length/index, a loop proof names
@@ -480,6 +489,13 @@ their layout and definition. Literal `String -> c.CString` borrowing is static,
 allocation-free storage local to the generated translation unit. Callbacks,
 variadics, pointer lifetimes, retained strings, opaque ownership, and inferred
 ABI facts remain fail-closed with `HXC3000`.
+
+The `c.Float32` extension uses that same import path. Header-owned C `float`
+fields, constants, arguments, and returns remain `IRTFloat(32)`. Explicit
+source conversions become the two dedicated operations above and emit direct
+structural casts only after validation. The generated project layer separately
+adds target-side binary32 `_Static_assert` checks; HxcIR does not guess ABI
+facts from the Haxe host and does not select `hxrt` for either conversion.
 
 ## Runtime and profile policy
 

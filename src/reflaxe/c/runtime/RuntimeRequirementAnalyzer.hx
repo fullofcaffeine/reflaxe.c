@@ -142,6 +142,8 @@ class RuntimeRequirementAnalyzer {
 	static function conversionOperation(kind:HxcIRConversionKind):String {
 		return switch kind {
 			case IRCNumericExact: "conversion-numeric-exact";
+			case IRCNumericRoundBinary32: "conversion-numeric-round-binary32";
+			case IRCNumericWidenBinary64: "conversion-numeric-widen-binary64";
 			case IRCNumericWrapping: "conversion-numeric-wrapping";
 			case IRCNumericSaturating: "conversion-numeric-saturating";
 			case IRCNumericChecked: "conversion-numeric-checked";

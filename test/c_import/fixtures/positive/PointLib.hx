@@ -2,6 +2,14 @@
 @:c.link("pointlib")
 extern class PointLib {
 	@:c.constant
+	@:c.name("POINTLIB_FLOAT_ONE_POINT_FIVE")
+	public static var floatOnePointFive(default, never):c.Float32;
+
+	@:c.constant
+	@:c.name("POINTLIB_FLOAT_NEGATIVE_TWO")
+	public static var floatNegativeTwo(default, never):c.Float32;
+
+	@:c.constant
 	@:c.name("POINTLIB_COORD_ZERO")
 	public static var zero(default, never):Coord;
 
@@ -39,4 +47,17 @@ extern class PointLib {
 
 	@:c.name("pointlib_point_verify")
 	public static function verify(left:Point, right:Point, dot:c.Int64, component:Coord, axis:Axis, label:c.CString):Bool;
+
+	@:c.name("pointlib_float_point_make")
+	public static function makeFloatPoint(x:c.Float32, y:c.Float32):FloatPoint;
+
+	@:c.name("pointlib_float_point_scale")
+	public static function scaleFloatPoint(point:FloatPoint, scale:c.Float32):FloatPoint;
+
+	@:c.name("pointlib_float_point_dot")
+	public static function dotFloatPoint(left:FloatPoint, right:FloatPoint):c.Float32;
+
+	@:c.name("pointlib_float32_verify")
+	public static function verifyFloat32(point:FloatPoint, dot:c.Float32, widened:Float, tie:c.Float32, subnormal:c.Float32, positiveInfinity:c.Float32,
+		nan:c.Float32, negativeZero:c.Float32, finiteOverflow:c.Float32):Bool;
 }

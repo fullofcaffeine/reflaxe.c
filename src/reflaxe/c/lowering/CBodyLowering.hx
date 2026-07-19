@@ -678,6 +678,11 @@ private enum IntegerConversionMode {
 	ICModulo;
 }
 
+private enum Float32ConversionMode {
+	FCNarrow;
+	FCWiden;
+}
+
 private typedef MutableBodyBlock = {
 	final id:String;
 	final source:HxcSourceSpan;
@@ -3520,6 +3525,10 @@ private class FunctionBuilder {
 		if (integerConversion != null) {
 			return lowerIntegerConversion(expression, call.arguments, integerConversion);
 		}
+		final float32Conversion = float32ConversionMode(call.callee);
+		if (float32Conversion != null) {
+			return lowerFloat32Conversion(expression, call.arguments, float32Conversion);
+		}
 		if (isStdInt(call.callee)) {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
@@ -3652,6 +3661,35 @@ private class FunctionBuilder {
 				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null),
 					HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), mode == ICExact ? "integer-conversion-exact" : "integer-conversion-modulo");
 				{id: result.id, type: result.type, mapping: target};
+			case CPConversionRejected(reason):
+				unsupported(expression, 'TCall($surface:unsupported:$reason)');
+		};
+	}
+
+	function lowerFloat32Conversion(expression:TypedExpr, arguments:Array<TypedExpr>, mode:Float32ConversionMode):LoweredValue {
+		final surface = mode == FCNarrow ? "c.Float32.fromFloat" : "c.Float32.toFloat";
+		if (arguments.length != 1) {
+			return unsupported(expression, 'TCall($surface:argument-count=${arguments.length})');
+		}
+		final source = lowerValue(arguments[0]);
+		final target = bodyValueType(expression.t, expression.pos, 'TCall($surface:result-type)');
+		final sourcePrimitive = source.mapping.primitiveMapping();
+		final targetPrimitive = target.primitiveMapping();
+		if (sourcePrimitive == null || targetPrimitive == null) {
+			return unsupported(expression, 'TCall($surface:requires-direct-floating-carriers)');
+		}
+		final use = mode == FCNarrow ? CPUFloat32Narrow : CPUFloat32Widen;
+		return switch CPrimitiveSemantics.conversion(sourcePrimitive, targetPrimitive, use) {
+			case CPConversionAllowed(decision):
+				if (decision.failureRequired || decision.implementation != IRIStatic) {
+					unsupported(expression, 'TCall($surface:must-be-direct-and-infallible)');
+				}
+				final result:HxcIRResult = {id: nextValueId(), type: target.irType};
+				appendInstruction(result, IRIOConvert(source.id, decision.irKind, target.irType, IRIStatic, null),
+					HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), mode == FCNarrow ? "float32-narrow" : "float32-widen");
+				{id: result.id, type: result.type, mapping: target};
+			case CPConversionElided:
+				unsupported(expression, 'TCall($surface:unexpected-elided-conversion)');
 			case CPConversionRejected(reason):
 				unsupported(expression, 'TCall($surface:unsupported:$reason)');
 		};
@@ -3929,6 +3967,13 @@ private class FunctionBuilder {
 		return isStaticMethod(callee, "c", "IntConvert", "modulo") ? ICModulo : null;
 	}
 
+	static function float32ConversionMode(callee:TypedExpr):Null<Float32ConversionMode> {
+		if (isAbstractMethod(callee, "c.Float32", "fromFloat")) {
+			return FCNarrow;
+		}
+		return isAbstractMethod(callee, "c.Float32", "toFloat") ? FCWiden : null;
+	}
+
 	static function isStaticMethod(callee:TypedExpr, ownerPackage:String, ownerName:String, fieldName:String):Bool {
 		return switch callee.expr {
 			case TField(_, FStatic(classReference, fieldReference)): final owner = classReference.get(); owner.pack.join(".") == ownerPackage && owner.name == ownerName && fieldReference.get()
@@ -4058,7 +4103,7 @@ private class FunctionBuilder {
 		return switch type {
 			case IRTBool: IRCBool(false);
 			case IRTInt(_, _): IRCInt("0");
-			case IRTFloat(64): IRCFloat("0.0");
+			case IRTFloat(32) | IRTFloat(64): IRCFloat("0.0");
 			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case _: unsupported(expression, '$owner(result-type-without-direct-default)');
 		};
@@ -4068,7 +4113,7 @@ private class FunctionBuilder {
 		return switch type {
 			case IRTBool: IRCBool(false);
 			case IRTInt(_, _): IRCInt("0");
-			case IRTFloat(64): IRCFloat("0.0");
+			case IRTFloat(32) | IRTFloat(64): IRCFloat("0.0");
 			case IRTPointer(IRTInstance(_), true): IRCNull;
 			case _: unsupportedAt(position, '$owner(result-type-without-direct-default)');
 		};
@@ -4276,7 +4321,7 @@ private class FunctionBuilder {
 		return switch CPrimitiveTypeMapper.map(applyCurrentSpecialization(type), context.profile) {
 			case CTPrimitive(mapping):
 				final admitted = mapping.nullability == CPNonNullable && switch mapping.irType {
-					case IRTBool | IRTInt(_, _) | IRTFloat(64): true;
+					case IRTBool | IRTInt(_, _) | IRTFloat(32) | IRTFloat(64): true;
 					case _: false;
 				};
 				if (!admitted) {
