@@ -42,8 +42,33 @@ result. It is one cold hosted sample, not yet a `p95` baseline:
 The required result arrived more than 22 minutes earlier than the old
 cancellation point while retaining every gate. The slowest current shard is
 `lowering-semantics`, with the span suite as its previously measured long pole;
-snapshot de-duplication remains a compute-efficiency task even though snapshot
-rendering is no longer serialized behind Caxecraft.
+at this stage, snapshot de-duplication remained a compute-efficiency task even
+though snapshot rendering was no longer serialized behind Caxecraft.
+
+### Snapshot de-duplication hosted result
+
+Governance run
+[29702208826](https://github.com/fullofcaffeine/reflaxe.c/actions/runs/29702208826)
+passed all 16 jobs in 8 minutes 25 seconds after the integrated cold snapshot
+shard was replaced by the focused-owner catalog proof. Its uploaded timing
+records provide the comparable after-sample:
+
+| Shard | Command wall time | Longest command |
+| --- | ---: | --- |
+| `contracts` | 6m32s | `project-emitter`, 2m32s |
+| `lowering-objects` | 6m11s | `constructor-lowering`, 1m04s |
+| `lowering-semantics` | 7m42s | `span-lowering`, 4m50s |
+| `caxecraft` | 6m41s | full Caxecraft QA, 6m40s |
+
+The catalog proof took 0.614s. The independent
+[cold snapshot audit](https://github.com/fullofcaffeine/reflaxe.c/actions/runs/29702208854)
+also passed, re-rendering all 30 suites in 7m14s. The change therefore removed
+roughly seven minutes of known duplicate rendering from the required workflow
+without pretending that the independent cold work became free. Aggregate wall
+time remains controlled by `lowering-semantics`; ordinary hosted variation made
+this run 18 seconds longer than the first post-partition sample despite doing
+substantially less total work. Beads issue `haxe_c-xge.26` owns the measured
+span-runner bottleneck.
 
 ## Current lane topology
 
