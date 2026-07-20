@@ -97,12 +97,14 @@ node_modules/.bin/haxe \
 
 The default is the source-shaped `split` layout. It mirrors Haxe package/module
 ownership under `include/hxc/modules/` and `src/modules/`, with a common private
-types header and small `src/hxc/main.c` entry wrapper. This makes ownership and
-navigation reviewable, but it does not yet claim takeover-ready C: structured
-control flow (`haxe_c-xge.18.2`), human-oriented names and temporaries
-(`haxe_c-xge.18.3`), and the final generated-code rubric
-(`haxe_c-xge.18.4`) remain explicit follow-up work. To request the compact
-single-implementation form, add:
+types header and small `src/hxc/main.c` entry wrapper. The checked-in split and
+unity forms now pass the [generated-C maintainability
+rubric](../../docs/generated-c-maintainability.md): every function has a stable
+ownership/identity record, source spans cover the source-backed domain methods,
+ordinary names stay bounded, temporary pressure is measured per function, and
+this reducible game-domain output contains no `goto`. This is a bounded
+Caxecraft result, not a promise that arbitrary Haxe already looks handwritten.
+To request the compact single-implementation form, add:
 
 ```sh
 -D hxc_project_layout=unity
@@ -110,7 +112,8 @@ single-implementation form, add:
 
 Unity and split are file assignments over the same validated semantic and
 declaration plan, so choosing a layout does not change names, runtime policy,
-or game behavior. Reviewable snapshots use the default split tree.
+or game behavior. Reviewable snapshots retain both layouts byte-for-byte and a
+schema-validated maintainability report for each.
 
 `_build/` is scratch output. Reviewable generated evidence lives in
 [`expected/`](expected/) and is updated only through:

@@ -1,0 +1,287 @@
+{
+  "$schema": "generated-c-maintainability-policy.schema.json",
+  "schemaVersion": 1,
+  "policyId": "hxc-generated-c-maintainability-v1",
+  "correctnessPrecondition": "semantic-native-eval-gates-are-independent-and-overriding",
+  "gotoCategories": [
+    "irreducible-cfg",
+    "loop-break-through-switch"
+  ],
+  "corpora": [
+    {
+      "corpusId": "body-lowering",
+      "layout": "canonical",
+      "limits": {
+        "maxIdentifierBytes": 80,
+        "maxFileLines": 120,
+        "maxFunctionLines": 48,
+        "maxBranchCount": 8,
+        "maxNestingDepth": 6,
+        "maxTemporaryDeclarations": 16,
+        "maxTemporaryReferences": 16,
+        "maxTemporaryDeclarationsPerKFunctionLines": 500,
+        "maxFunctionTemporaryDeclarationsPerKLines": 650,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 10000,
+        "minLineDirectiveCount": 1
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [],
+      "functionOverrides": []
+    },
+    {
+      "corpusId": "caxecraft-domain",
+      "layout": "split",
+      "limits": {
+        "maxIdentifierBytes": 64,
+        "maxFileLines": 400,
+        "maxFunctionLines": 400,
+        "maxBranchCount": 40,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 514,
+        "maxTemporaryReferences": 800,
+        "maxTemporaryDeclarationsPerKFunctionLines": 300,
+        "maxFunctionTemporaryDeclarationsPerKLines": 500,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 7500,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [
+        {
+          "path": "src/modules/caxecraft/qa/DomainProbe.c",
+          "maxFileLines": 617,
+          "reason": "The QA probe intentionally keeps the complete end-to-end domain oracle in one source-owned module; the corresponding function override remains separately bounded."
+        }
+      ],
+      "functionOverrides": [
+        {
+          "functionId": "caxecraft.qa.DomainProbe.selfCheck",
+          "maxFunctionLines": 571,
+          "maxBranchCount": 81,
+          "maxNestingDepth": 8,
+          "maxFunctionTemporaryDeclarationsPerKLines": 500,
+          "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
+        }
+      ]
+    },
+    {
+      "corpusId": "caxecraft-domain",
+      "layout": "unity",
+      "limits": {
+        "maxIdentifierBytes": 64,
+        "maxFileLines": 400,
+        "maxFunctionLines": 400,
+        "maxBranchCount": 40,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 514,
+        "maxTemporaryReferences": 800,
+        "maxTemporaryDeclarationsPerKFunctionLines": 300,
+        "maxFunctionTemporaryDeclarationsPerKLines": 500,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 7500,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [
+        {
+          "path": "src/program.c",
+          "maxFileLines": 2076,
+          "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit; per-function limits remain unchanged."
+        }
+      ],
+      "functionOverrides": [
+        {
+          "functionId": "caxecraft.qa.DomainProbe.selfCheck",
+          "maxFunctionLines": 571,
+          "maxBranchCount": 81,
+          "maxNestingDepth": 8,
+          "maxFunctionTemporaryDeclarationsPerKLines": 500,
+          "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
+        }
+      ]
+    },
+    {
+      "corpusId": "evaluation-order-program",
+      "layout": "canonical",
+      "limits": {
+        "maxIdentifierBytes": 96,
+        "maxFileLines": 360,
+        "maxFunctionLines": 320,
+        "maxBranchCount": 48,
+        "maxNestingDepth": 14,
+        "maxTemporaryDeclarations": 120,
+        "maxTemporaryReferences": 100,
+        "maxTemporaryDeclarationsPerKFunctionLines": 500,
+        "maxFunctionTemporaryDeclarationsPerKLines": 650,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 9000,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [],
+      "functionOverrides": []
+    },
+    {
+      "corpusId": "evaluation-order-synthetic",
+      "layout": "synthetic",
+      "limits": {
+        "maxIdentifierBytes": 96,
+        "maxFileLines": 80,
+        "maxFunctionLines": 48,
+        "maxBranchCount": 12,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 4,
+        "maxTemporaryReferences": 4,
+        "maxTemporaryDeclarationsPerKFunctionLines": 200,
+        "maxFunctionTemporaryDeclarationsPerKLines": 300,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 0,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 6
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 1
+        }
+      ],
+      "fileOverrides": [],
+      "functionOverrides": []
+    },
+    {
+      "corpusId": "handwritten-ordered-calls-baseline",
+      "layout": "handwritten",
+      "limits": {
+        "maxIdentifierBytes": 48,
+        "maxFileLines": 100,
+        "maxFunctionLines": 64,
+        "maxBranchCount": 16,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 0,
+        "maxTemporaryReferences": 0,
+        "maxTemporaryDeclarationsPerKFunctionLines": 0,
+        "maxFunctionTemporaryDeclarationsPerKLines": 0,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 0,
+        "minSourceSpanMappedFunctionsBasisPoints": 0,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [],
+      "functionOverrides": []
+    },
+    {
+      "corpusId": "handwritten-structured-control-flow-baseline",
+      "layout": "handwritten",
+      "limits": {
+        "maxIdentifierBytes": 48,
+        "maxFileLines": 100,
+        "maxFunctionLines": 64,
+        "maxBranchCount": 16,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 0,
+        "maxTemporaryReferences": 0,
+        "maxTemporaryDeclarationsPerKFunctionLines": 0,
+        "maxFunctionTemporaryDeclarationsPerKLines": 0,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 0,
+        "minSourceSpanMappedFunctionsBasisPoints": 0,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [],
+      "functionOverrides": []
+    }
+  ]
+}

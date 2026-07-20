@@ -402,11 +402,13 @@ def body_lowering_artifacts() -> list[Artifact]:
     c_source = report.get("cSource")
     line_mapped = report.get("lineMappedCSource")
     symbols = report.get("symbols")
+    maintainability = module.body_maintainability_report(report)
     if (
         not isinstance(hxcir, str)
         or not isinstance(c_source, str)
         or not isinstance(line_mapped, str)
         or not isinstance(symbols, dict)
+        or not isinstance(maintainability, dict)
     ):
         raise SnapshotFailure("body-lowering report omitted a managed artifact")
     return [
@@ -416,6 +418,11 @@ def body_lowering_artifacts() -> list[Artifact]:
             Path("test/body_lowering/expected/body-lines.c"), "c", line_mapped
         ),
         Artifact(Path("test/body_lowering/expected/symbols.json"), "json", symbols),
+        Artifact(
+            Path("test/body_lowering/expected/maintainability.json"),
+            "json",
+            maintainability,
+        ),
     ]
 
 
@@ -707,6 +714,8 @@ def evaluation_order_artifacts() -> list[Artifact]:
         ("program.c", "c"),
         ("synthetic-control-flow.c", "c"),
         ("symbols.json", "json"),
+        ("maintainability-program.json", "json"),
+        ("maintainability-synthetic.json", "json"),
     ):
         value = values.get(name)
         if format_name == "json":

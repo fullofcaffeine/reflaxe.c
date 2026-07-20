@@ -494,14 +494,13 @@ The generated C goal is stronger than native compilation: split mode should
 make source ownership recognizable, control flow should use structured C where
 semantics allow it, temporary names should be concise and stable, and the
 result should be usable by a C programmer as a maintained handoff. Unity mode
-remains available for embedding, debugging, or distribution needs. Exact
-readability gates are owned by the generated-C epic. Reducible control flow is
-now structurally emitted without blanket CFG labels/gotos. The next readability
-slice gives ordinary types, members, locals, helpers, and guards source-shaped
-names and removes only temporaries proven safe to coalesce. Exact metrics keep
-that improvement from silently regressing. Declaration cleanup and the formal
-handoff rubric remain separate gates, so this slice alone must not be described
-as a complete C-programmer handoff.
+remains available for embedding, debugging, or distribution needs. The current
+domain corpus now has structured reducible control flow, source-shaped ordinary
+names, conservative temporary coalescing, exact split/unity snapshots, and a
+[schema-validated maintainability report](generated-c-maintainability.md).
+Those fixed-corpus gates prevent silent regression, but declaration cleanup and
+broad arbitrary-program handoff evidence remain separate; this slice alone is
+not a universal C-programmer handoff claim.
 
 The implementation sequence is first playable and RaylibHx, visual integration,
 inventory/entities, CaxeMap plus editor/CaxeFlow, authored Adventure, measured

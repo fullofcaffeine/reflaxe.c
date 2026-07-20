@@ -606,6 +606,14 @@ native C11 probe includes standard headers and proves `hxc_`-prefixed readable
 locals/members cannot be rewritten by common `bool`, `NULL`, or `NAN` macros.
 The focused suite proves naming analysis; production symbol emission and
 generated-C readability are exercised by the lowering and Caxecraft suites.
+Their shared [generated-C maintainability check](generated-c-maintainability.md)
+uses a comment/string-safe C lexer rather than printer logic. It emits closed,
+schema-validated reports for body lowering, evaluation order, and both
+Caxecraft layouts; records the first offending file/function coordinate; and
+fails on unreviewed name, temporary, jump, file, or function growth. Every
+admitted synthetic jump is reconciled with its typed control-flow-plan reason.
+Two independent handwritten C kernels calibrate ordered calls and structured
+control flow without being presented as generated-output equivalence evidence.
 
 `test/project_emitter` is the negative/AST/snapshot/runtime suite for typed
 schema-1 project packaging, neutral build planning, optional adapters, and the

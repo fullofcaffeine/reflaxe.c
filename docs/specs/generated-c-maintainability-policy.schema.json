@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/generated-c-maintainability-policy.schema.json",
+  "title": "Generated C maintainability policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "policyId",
+    "correctnessPrecondition",
+    "gotoCategories",
+    "corpora"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "const": "generated-c-maintainability-policy.schema.json" },
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "policyId": { "type": "string", "const": "hxc-generated-c-maintainability-v1" },
+    "correctnessPrecondition": {
+      "type": "string",
+      "const": "semantic-native-eval-gates-are-independent-and-overriding"
+    },
+    "gotoCategories": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "irreducible-cfg" },
+        { "const": "loop-break-through-switch" }
+      ],
+      "items": false,
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "corpora": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/corpus" }
+    }
+  },
+  "$defs": {
+    "nonNegativeInteger": { "type": "integer", "minimum": 0 },
+    "basisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxIdentifierBytes",
+        "maxFileLines",
+        "maxFunctionLines",
+        "maxBranchCount",
+        "maxNestingDepth",
+        "maxTemporaryDeclarations",
+        "maxTemporaryReferences",
+        "maxTemporaryDeclarationsPerKFunctionLines",
+        "maxFunctionTemporaryDeclarationsPerKLines",
+        "maxUnexplainedRoleEncodedIdentifiers",
+        "maxUnexplainedByteEscapedIdentifiers",
+        "maxUnexplainedDigestIdentifiers",
+        "maxUnexplainedHashSuffixIdentifiers",
+        "minOwnerMappedArtifactsBasisPoints",
+        "minFunctionIdentityMappedBasisPoints",
+        "minSourceSpanMappedFunctionsBasisPoints",
+        "minLineDirectiveCount"
+      ],
+      "properties": {
+        "maxIdentifierBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFileLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFunctionLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxBranchCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxNestingDepth": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryDeclarations": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryReferences": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryDeclarationsPerKFunctionLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFunctionTemporaryDeclarationsPerKLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedRoleEncodedIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedByteEscapedIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedDigestIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedHashSuffixIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "minOwnerMappedArtifactsBasisPoints": { "$ref": "#/$defs/basisPoints" },
+        "minFunctionIdentityMappedBasisPoints": { "$ref": "#/$defs/basisPoints" },
+        "minSourceSpanMappedFunctionsBasisPoints": { "$ref": "#/$defs/basisPoints" },
+        "minLineDirectiveCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "gotoLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "maxOccurrences"],
+      "properties": {
+        "category": { "enum": ["irreducible-cfg", "loop-break-through-switch"] },
+        "maxOccurrences": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "fileOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "maxFileLines", "reason"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "maxFileLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "functionOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "functionId",
+        "maxFunctionLines",
+        "maxBranchCount",
+        "maxNestingDepth",
+        "maxFunctionTemporaryDeclarationsPerKLines",
+        "reason"
+      ],
+      "properties": {
+        "functionId": { "type": "string", "minLength": 1 },
+        "maxFunctionLines": { "oneOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }] },
+        "maxBranchCount": { "oneOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }] },
+        "maxNestingDepth": { "oneOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }] },
+        "maxFunctionTemporaryDeclarationsPerKLines": {
+          "oneOf": [{ "$ref": "#/$defs/nonNegativeInteger" }, { "type": "null" }]
+        },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "corpus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["corpusId", "layout", "limits", "gotoLimits", "fileOverrides", "functionOverrides"],
+      "properties": {
+        "corpusId": { "type": "string", "minLength": 1 },
+        "layout": { "type": "string", "minLength": 1 },
+        "limits": { "$ref": "#/$defs/limits" },
+        "gotoLimits": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["category", "maxOccurrences"],
+              "properties": {
+                "category": { "const": "irreducible-cfg" },
+                "maxOccurrences": { "$ref": "#/$defs/nonNegativeInteger" }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["category", "maxOccurrences"],
+              "properties": {
+                "category": { "const": "loop-break-through-switch" },
+                "maxOccurrences": { "$ref": "#/$defs/nonNegativeInteger" }
+              }
+            }
+          ],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "fileOverrides": { "type": "array", "items": { "$ref": "#/$defs/fileOverride" } },
+        "functionOverrides": { "type": "array", "items": { "$ref": "#/$defs/functionOverride" } }
+      }
+    }
+  }
+}

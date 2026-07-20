@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "hxc-generated-c-maintainability-v1",
+  "corpusId": "evaluation-order-synthetic",
+  "layout": "synthetic",
+  "correctnessAuthority": "semantic-native-eval-gates-are-independent-and-overriding",
+  "status": "within-reviewed-budgets",
+  "policy": {
+    "policyId": "hxc-generated-c-maintainability-v1",
+    "corpusId": "evaluation-order-synthetic",
+    "layout": "synthetic",
+    "limits": {
+      "maxIdentifierBytes": 96,
+      "maxFileLines": 80,
+      "maxFunctionLines": 48,
+      "maxBranchCount": 12,
+      "maxNestingDepth": 8,
+      "maxTemporaryDeclarations": 4,
+      "maxTemporaryReferences": 4,
+      "maxTemporaryDeclarationsPerKFunctionLines": 200,
+      "maxFunctionTemporaryDeclarationsPerKLines": 300,
+      "maxUnexplainedRoleEncodedIdentifiers": 0,
+      "maxUnexplainedByteEscapedIdentifiers": 0,
+      "maxUnexplainedDigestIdentifiers": 0,
+      "maxUnexplainedHashSuffixIdentifiers": 0,
+      "minOwnerMappedArtifactsBasisPoints": 10000,
+      "minFunctionIdentityMappedBasisPoints": 10000,
+      "minSourceSpanMappedFunctionsBasisPoints": 0,
+      "minLineDirectiveCount": 0
+    },
+    "gotoLimits": [
+      {
+        "category": "irreducible-cfg",
+        "maxOccurrences": 6
+      },
+      {
+        "category": "loop-break-through-switch",
+        "maxOccurrences": 1
+      }
+    ],
+    "fileOverrides": [],
+    "functionOverrides": [],
+    "sha256": "8b2156a64951f4429760a86e6b29fd0d692e5250af26371a3d0ab89ba80ee632"
+  },
+  "inputs": [
+    {
+      "path": "synthetic-control-flow.c",
+      "sha256": "e53bd511cb392a80390db14e8b8da335b6e838b0d2c70524eaa1d73056fa0813"
+    }
+  ],
+  "summary": {
+    "artifactCount": 1,
+    "physicalLineCount": 70,
+    "codeLineCount": 67,
+    "lineDirectiveCount": 0,
+    "mappedPathCount": 0,
+    "mappedPaths": [],
+    "functionCount": 3,
+    "functionIdentityMappedCount": 3,
+    "functionIdentityMappedBasisPoints": 10000,
+    "sourceSpanMappedFunctionCount": 0,
+    "sourceSpanMappedFunctionBasisPoints": 0,
+    "lineMappedFunctionCount": 0,
+    "lineMappedFunctionBasisPoints": 0,
+    "ownerMappedArtifactCount": 1,
+    "ownerMappedArtifactBasisPoints": 10000,
+    "branchCount": 10,
+    "temporaryDeclarationCount": 0,
+    "temporaryReferenceCount": 0,
+    "temporaryDeclarationsPerKFunctionCodeLines": 0,
+    "maxIdentifier": {
+      "name": "hxc_bounded_control_flow",
+      "bytes": 24,
+      "coordinate": {
+        "path": "synthetic-control-flow.c",
+        "line": 4,
+        "column": 13,
+        "functionId": null
+      }
+    },
+    "roleEncodedIdentifierCount": 0,
+    "explainedRoleEncodedIdentifierCount": 0,
+    "unexplainedRoleEncodedIdentifierCount": 0,
+    "byteEscapedIdentifierCount": 0,
+    "explainedByteEscapedIdentifierCount": 0,
+    "unexplainedByteEscapedIdentifierCount": 0,
+    "digestIdentifierCount": 0,
+    "explainedDigestIdentifierCount": 0,
+    "unexplainedDigestIdentifierCount": 0,
+    "hashSuffixIdentifierCount": 0,
+    "explainedHashSuffixIdentifierCount": 0,
+    "unexplainedHashSuffixIdentifierCount": 0,
+    "gotoCount": 7,
+    "unauthorizedGotoCount": 0,
+    "gotoCategoryCounts": [
+      {
+        "category": "irreducible-cfg",
+        "occurrences": 6
+      },
+      {
+        "category": "loop-break-through-switch",
+        "occurrences": 1
+      }
+    ],
+    "violationCount": 0
+  },
+  "identifierFindings": [],
+  "gotoOccurrences": [
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 15,
+      "column": 11,
+      "functionId": "synthetic.loop-switch-break",
+      "targetLabel": "hxc_bounded_label_3",
+      "occurrence": 1,
+      "category": "loop-break-through-switch",
+      "labelLine": 23,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 57,
+      "column": 5,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_0",
+      "occurrence": 1,
+      "category": "irreducible-cfg",
+      "labelLine": 30,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 35,
+      "column": 9,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_1",
+      "occurrence": 1,
+      "category": "irreducible-cfg",
+      "labelLine": 46,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 53,
+      "column": 5,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_1",
+      "occurrence": 2,
+      "category": "irreducible-cfg",
+      "labelLine": 46,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 39,
+      "column": 9,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_2",
+      "occurrence": 1,
+      "category": "irreducible-cfg",
+      "labelLine": 49,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 48,
+      "column": 3,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_2",
+      "occurrence": 2,
+      "category": "irreducible-cfg",
+      "labelLine": 49,
+      "labelColumn": 1
+    },
+    {
+      "path": "synthetic-control-flow.c",
+      "line": 43,
+      "column": 9,
+      "functionId": "synthetic.nested-irreducible",
+      "targetLabel": "hxc_legacy_label_3",
+      "occurrence": 1,
+      "category": "irreducible-cfg",
+      "labelLine": 59,
+      "labelColumn": 1
+    }
+  ],
+  "files": [
+    {
+      "path": "synthetic-control-flow.c",
+      "sha256": "e53bd511cb392a80390db14e8b8da335b6e838b0d2c70524eaa1d73056fa0813",
+      "owner": {
+        "kind": "synthetic-fixture",
+        "modulePath": null,
+        "source": null
+      },
+      "physicalLineCount": 70,
+      "codeLineCount": 67,
+      "lineDirectiveCount": 0,
+      "mappedPathCount": 0,
+      "mappedPaths": [],
+      "lineDirectives": [],
+      "identifierCount": 68,
+      "maxIdentifier": {
+        "name": "hxc_bounded_control_flow",
+        "bytes": 24,
+        "line": 4,
+        "column": 13
+      },
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
+      "functions": [
+        {
+          "functionId": "synthetic.loop-switch-break",
+          "cName": "hxc_bounded_control_flow",
+          "identityMapped": true,
+          "owner": {
+            "kind": "synthetic-fixture",
+            "modulePath": null,
+            "source": null
+          },
+          "source": null,
+          "startLine": 4,
+          "endLine": 26,
+          "physicalLineCount": 23,
+          "codeLineCount": 23,
+          "bodyCodeLineCount": 20,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 5,
+          "maxNestingDepth": 3,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "synthetic.nested-irreducible",
+          "cName": "hxc_legacy_control_flow",
+          "identityMapped": true,
+          "owner": {
+            "kind": "synthetic-fixture",
+            "modulePath": null,
+            "source": null
+          },
+          "source": null,
+          "startLine": 28,
+          "endLine": 62,
+          "physicalLineCount": 35,
+          "codeLineCount": 35,
+          "bodyCodeLineCount": 32,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 5,
+          "maxNestingDepth": 2,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "synthetic.control-flow.main",
+          "cName": "main",
+          "identityMapped": true,
+          "owner": {
+            "kind": "synthetic-fixture",
+            "modulePath": null,
+            "source": null
+          },
+          "source": null,
+          "startLine": 64,
+          "endLine": 70,
+          "physicalLineCount": 7,
+          "codeLineCount": 7,
+          "bodyCodeLineCount": 4,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        }
+      ]
+    }
+  ],
+  "firstViolation": null,
+  "violations": []
+}

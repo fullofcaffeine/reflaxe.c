@@ -1,0 +1,530 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe-c.dev/schemas/generated-c-maintainability.schema.json",
+  "title": "Generated C maintainability report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "algorithm",
+    "corpusId",
+    "layout",
+    "correctnessAuthority",
+    "status",
+    "policy",
+    "inputs",
+    "summary",
+    "identifierFindings",
+    "gotoOccurrences",
+    "files",
+    "firstViolation",
+    "violations"
+  ],
+  "properties": {
+    "schemaVersion": { "type": "integer", "const": 1 },
+    "algorithm": { "type": "string", "const": "hxc-generated-c-maintainability-v1" },
+    "corpusId": { "type": "string", "minLength": 1 },
+    "layout": { "type": "string", "minLength": 1 },
+    "correctnessAuthority": {
+      "type": "string",
+      "const": "semantic-native-eval-gates-are-independent-and-overriding"
+    },
+    "status": { "enum": ["violations-found", "within-reviewed-budgets"] },
+    "policy": { "$ref": "#/$defs/selectedPolicy" },
+    "inputs": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/input" }
+    },
+    "summary": { "$ref": "#/$defs/summary" },
+    "identifierFindings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/identifierFinding" }
+    },
+    "gotoOccurrences": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/gotoOccurrence" }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/file" }
+    },
+    "firstViolation": {
+      "oneOf": [
+        { "type": "null" },
+        { "$ref": "#/$defs/violation" }
+      ]
+    },
+    "violations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/violation" }
+    }
+  },
+  "$defs": {
+    "nonNegativeInteger": { "type": "integer", "minimum": 0 },
+    "positiveInteger": { "type": "integer", "minimum": 1 },
+    "nullableNonNegativeInteger": {
+      "oneOf": [
+        { "$ref": "#/$defs/nonNegativeInteger" },
+        { "type": "null" }
+      ]
+    },
+    "nullablePositiveInteger": {
+      "oneOf": [
+        { "$ref": "#/$defs/positiveInteger" },
+        { "type": "null" }
+      ]
+    },
+    "nullableString": {
+      "oneOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "path": { "type": "string", "minLength": 1 },
+    "stringArray": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "coordinate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "line", "column", "functionId"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "line": { "$ref": "#/$defs/positiveInteger" },
+        "column": { "$ref": "#/$defs/positiveInteger" },
+        "functionId": { "$ref": "#/$defs/nullableString" }
+      }
+    },
+    "sourceSpan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "startLine", "startColumn", "endLine", "endColumn"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "startLine": { "$ref": "#/$defs/positiveInteger" },
+        "startColumn": { "$ref": "#/$defs/positiveInteger" },
+        "endLine": { "$ref": "#/$defs/positiveInteger" },
+        "endColumn": { "$ref": "#/$defs/positiveInteger" }
+      }
+    },
+    "nullableSourceSpan": {
+      "oneOf": [
+        { "$ref": "#/$defs/sourceSpan" },
+        { "type": "null" }
+      ]
+    },
+    "owner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "modulePath", "source"],
+      "properties": {
+        "kind": {
+          "enum": [
+            "amalgamation",
+            "compiler-entry",
+            "compiler-support",
+            "handwritten-baseline",
+            "source-module",
+            "synthetic-fixture"
+          ]
+        },
+        "modulePath": { "$ref": "#/$defs/nullableString" },
+        "source": { "$ref": "#/$defs/nullableSourceSpan" }
+      }
+    },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxIdentifierBytes",
+        "maxFileLines",
+        "maxFunctionLines",
+        "maxBranchCount",
+        "maxNestingDepth",
+        "maxTemporaryDeclarations",
+        "maxTemporaryReferences",
+        "maxTemporaryDeclarationsPerKFunctionLines",
+        "maxFunctionTemporaryDeclarationsPerKLines",
+        "maxUnexplainedRoleEncodedIdentifiers",
+        "maxUnexplainedByteEscapedIdentifiers",
+        "maxUnexplainedDigestIdentifiers",
+        "maxUnexplainedHashSuffixIdentifiers",
+        "minOwnerMappedArtifactsBasisPoints",
+        "minFunctionIdentityMappedBasisPoints",
+        "minSourceSpanMappedFunctionsBasisPoints",
+        "minLineDirectiveCount"
+      ],
+      "properties": {
+        "maxIdentifierBytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFileLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFunctionLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxBranchCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxNestingDepth": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryDeclarations": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryReferences": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxTemporaryDeclarationsPerKFunctionLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxFunctionTemporaryDeclarationsPerKLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedRoleEncodedIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedByteEscapedIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedDigestIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxUnexplainedHashSuffixIdentifiers": { "$ref": "#/$defs/nonNegativeInteger" },
+        "minOwnerMappedArtifactsBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "minFunctionIdentityMappedBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "minSourceSpanMappedFunctionsBasisPoints": { "type": "integer", "minimum": 0, "maximum": 10000 },
+        "minLineDirectiveCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "gotoLimit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "maxOccurrences"],
+      "properties": {
+        "category": { "enum": ["irreducible-cfg", "loop-break-through-switch"] },
+        "maxOccurrences": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "fileOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "maxFileLines", "reason"],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "maxFileLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "functionOverride": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "functionId",
+        "maxFunctionLines",
+        "maxBranchCount",
+        "maxNestingDepth",
+        "maxFunctionTemporaryDeclarationsPerKLines",
+        "reason"
+      ],
+      "properties": {
+        "functionId": { "type": "string", "minLength": 1 },
+        "maxFunctionLines": { "$ref": "#/$defs/nullableNonNegativeInteger" },
+        "maxBranchCount": { "$ref": "#/$defs/nullableNonNegativeInteger" },
+        "maxNestingDepth": { "$ref": "#/$defs/nullableNonNegativeInteger" },
+        "maxFunctionTemporaryDeclarationsPerKLines": { "$ref": "#/$defs/nullableNonNegativeInteger" },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "selectedPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "policyId",
+        "corpusId",
+        "layout",
+        "limits",
+        "gotoLimits",
+        "fileOverrides",
+        "functionOverrides",
+        "sha256"
+      ],
+      "properties": {
+        "policyId": { "type": "string", "minLength": 1 },
+        "corpusId": { "type": "string", "minLength": 1 },
+        "layout": { "type": "string", "minLength": 1 },
+        "limits": { "$ref": "#/$defs/limits" },
+        "gotoLimits": { "type": "array", "items": { "$ref": "#/$defs/gotoLimit" } },
+        "fileOverrides": { "type": "array", "items": { "$ref": "#/$defs/fileOverride" } },
+        "functionOverrides": { "type": "array", "items": { "$ref": "#/$defs/functionOverride" } },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "maximumIdentifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bytes", "coordinate"],
+      "properties": {
+        "name": { "type": "string" },
+        "bytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "coordinate": { "$ref": "#/$defs/coordinate" }
+      }
+    },
+    "fileMaximumIdentifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "bytes", "line", "column"],
+      "properties": {
+        "name": { "type": "string" },
+        "bytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "line": { "$ref": "#/$defs/positiveInteger" },
+        "column": { "$ref": "#/$defs/positiveInteger" }
+      }
+    },
+    "gotoCategoryCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "occurrences"],
+      "properties": {
+        "category": { "enum": ["irreducible-cfg", "loop-break-through-switch"] },
+        "occurrences": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifactCount",
+        "physicalLineCount",
+        "codeLineCount",
+        "lineDirectiveCount",
+        "mappedPathCount",
+        "mappedPaths",
+        "functionCount",
+        "functionIdentityMappedCount",
+        "functionIdentityMappedBasisPoints",
+        "sourceSpanMappedFunctionCount",
+        "sourceSpanMappedFunctionBasisPoints",
+        "lineMappedFunctionCount",
+        "lineMappedFunctionBasisPoints",
+        "ownerMappedArtifactCount",
+        "ownerMappedArtifactBasisPoints",
+        "branchCount",
+        "temporaryDeclarationCount",
+        "temporaryReferenceCount",
+        "temporaryDeclarationsPerKFunctionCodeLines",
+        "maxIdentifier",
+        "roleEncodedIdentifierCount",
+        "explainedRoleEncodedIdentifierCount",
+        "unexplainedRoleEncodedIdentifierCount",
+        "byteEscapedIdentifierCount",
+        "explainedByteEscapedIdentifierCount",
+        "unexplainedByteEscapedIdentifierCount",
+        "digestIdentifierCount",
+        "explainedDigestIdentifierCount",
+        "unexplainedDigestIdentifierCount",
+        "hashSuffixIdentifierCount",
+        "explainedHashSuffixIdentifierCount",
+        "unexplainedHashSuffixIdentifierCount",
+        "gotoCount",
+        "unauthorizedGotoCount",
+        "gotoCategoryCounts",
+        "violationCount"
+      ],
+      "properties": {
+        "artifactCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "physicalLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "codeLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "lineDirectiveCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedPathCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedPaths": { "$ref": "#/$defs/stringArray" },
+        "functionCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "functionIdentityMappedCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "functionIdentityMappedBasisPoints": { "$ref": "#/$defs/nonNegativeInteger" },
+        "sourceSpanMappedFunctionCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "sourceSpanMappedFunctionBasisPoints": { "$ref": "#/$defs/nonNegativeInteger" },
+        "lineMappedFunctionCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "lineMappedFunctionBasisPoints": { "$ref": "#/$defs/nonNegativeInteger" },
+        "ownerMappedArtifactCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "ownerMappedArtifactBasisPoints": { "$ref": "#/$defs/nonNegativeInteger" },
+        "branchCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryDeclarationCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryReferenceCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryDeclarationsPerKFunctionCodeLines": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxIdentifier": {
+          "oneOf": [{ "$ref": "#/$defs/maximumIdentifier" }, { "type": "null" }]
+        },
+        "roleEncodedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "explainedRoleEncodedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "unexplainedRoleEncodedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "byteEscapedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "explainedByteEscapedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "unexplainedByteEscapedIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "digestIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "explainedDigestIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "unexplainedDigestIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "hashSuffixIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "explainedHashSuffixIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "unexplainedHashSuffixIdentifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "gotoCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "unauthorizedGotoCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "gotoCategoryCounts": { "type": "array", "items": { "$ref": "#/$defs/gotoCategoryCount" } },
+        "violationCount": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "identifierFinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "category",
+        "identifier",
+        "bytes",
+        "explained",
+        "sourceSymbols",
+        "escapeReasons",
+        "collisionResolved",
+        "coordinate"
+      ],
+      "properties": {
+        "category": { "enum": ["byte-escape", "compiler-role", "hash-suffix", "semantic-digest"] },
+        "identifier": { "type": "string", "minLength": 1 },
+        "bytes": { "$ref": "#/$defs/nonNegativeInteger" },
+        "explained": { "type": "boolean" },
+        "sourceSymbols": { "$ref": "#/$defs/stringArray" },
+        "escapeReasons": { "$ref": "#/$defs/stringArray" },
+        "collisionResolved": { "type": "boolean" },
+        "coordinate": { "$ref": "#/$defs/coordinate" }
+      }
+    },
+    "gotoOccurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "line",
+        "column",
+        "functionId",
+        "targetLabel",
+        "occurrence",
+        "category",
+        "labelLine",
+        "labelColumn"
+      ],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "line": { "$ref": "#/$defs/positiveInteger" },
+        "column": { "$ref": "#/$defs/positiveInteger" },
+        "functionId": { "type": "string", "minLength": 1 },
+        "targetLabel": { "type": "string", "minLength": 1 },
+        "occurrence": { "$ref": "#/$defs/positiveInteger" },
+        "category": {
+          "oneOf": [
+            { "enum": ["irreducible-cfg", "loop-break-through-switch"] },
+            { "type": "null" }
+          ]
+        },
+        "labelLine": { "$ref": "#/$defs/nullablePositiveInteger" },
+        "labelColumn": { "$ref": "#/$defs/nullablePositiveInteger" }
+      }
+    },
+    "lineDirective": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["physicalLine", "mappedLine", "mappedPath"],
+      "properties": {
+        "physicalLine": { "$ref": "#/$defs/positiveInteger" },
+        "mappedLine": { "$ref": "#/$defs/positiveInteger" },
+        "mappedPath": { "$ref": "#/$defs/path" }
+      }
+    },
+    "function": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "functionId",
+        "cName",
+        "identityMapped",
+        "owner",
+        "source",
+        "startLine",
+        "endLine",
+        "physicalLineCount",
+        "codeLineCount",
+        "bodyCodeLineCount",
+        "mappedBodyLineCount",
+        "mappedPaths",
+        "branchCount",
+        "maxNestingDepth",
+        "temporaryDeclarationCount",
+        "temporaryReferenceCount",
+        "temporaryDeclarationsPerKCodeLines"
+      ],
+      "properties": {
+        "functionId": { "type": "string", "minLength": 1 },
+        "cName": { "type": "string", "minLength": 1 },
+        "identityMapped": { "type": "boolean" },
+        "owner": { "$ref": "#/$defs/owner" },
+        "source": { "$ref": "#/$defs/nullableSourceSpan" },
+        "startLine": { "$ref": "#/$defs/positiveInteger" },
+        "endLine": { "$ref": "#/$defs/positiveInteger" },
+        "physicalLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "codeLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "bodyCodeLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedBodyLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedPaths": { "$ref": "#/$defs/stringArray" },
+        "branchCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxNestingDepth": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryDeclarationCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryReferenceCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryDeclarationsPerKCodeLines": { "$ref": "#/$defs/nonNegativeInteger" }
+      }
+    },
+    "file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256",
+        "owner",
+        "physicalLineCount",
+        "codeLineCount",
+        "lineDirectiveCount",
+        "mappedPathCount",
+        "mappedPaths",
+        "lineDirectives",
+        "identifierCount",
+        "maxIdentifier",
+        "temporaryDeclarationCount",
+        "temporaryReferenceCount",
+        "functions"
+      ],
+      "properties": {
+        "path": { "$ref": "#/$defs/path" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "owner": { "$ref": "#/$defs/owner" },
+        "physicalLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "codeLineCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "lineDirectiveCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedPathCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "mappedPaths": { "$ref": "#/$defs/stringArray" },
+        "lineDirectives": { "type": "array", "items": { "$ref": "#/$defs/lineDirective" } },
+        "identifierCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "maxIdentifier": {
+          "oneOf": [{ "$ref": "#/$defs/fileMaximumIdentifier" }, { "type": "null" }]
+        },
+        "temporaryDeclarationCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "temporaryReferenceCount": { "$ref": "#/$defs/nonNegativeInteger" },
+        "functions": { "type": "array", "items": { "$ref": "#/$defs/function" } }
+      }
+    },
+    "violationValue": {
+      "oneOf": [
+        { "type": "integer" },
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    },
+    "violation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "message", "actual", "limit", "coordinate"],
+      "properties": {
+        "rule": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "actual": { "$ref": "#/$defs/violationValue" },
+        "limit": { "$ref": "#/$defs/violationValue" },
+        "coordinate": { "$ref": "#/$defs/coordinate" }
+      }
+    }
+  }
+}

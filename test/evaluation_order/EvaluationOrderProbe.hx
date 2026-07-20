@@ -49,9 +49,31 @@ typedef EvaluationSourceRecord = {
 	final content:String;
 }
 
+enum abstract EvaluationGotoCategory(String) to String {
+	var EGCLoopBreakThroughSwitch = "loop-break-through-switch";
+	var EGCIrreducibleCfg = "irreducible-cfg";
+}
+
+typedef EvaluationGotoProvenance = {
+	final category:EvaluationGotoCategory;
+	final path:String;
+	final functionId:String;
+	final cFunctionName:String;
+	final ownerBlockId:String;
+	final targetBlockId:String;
+	final targetLabel:String;
+	final occurrence:Int;
+}
+
 typedef EvaluationControlFlowProof = {
 	final summary:String;
 	final emissionC:String;
+	final gotoProvenance:Array<EvaluationGotoProvenance>;
+}
+
+typedef EvaluationControlFlowEmission = {
+	final source:String;
+	final gotoProvenance:Array<EvaluationGotoProvenance>;
 }
 
 typedef EvaluationOrderReport = {
@@ -69,12 +91,14 @@ typedef EvaluationOrderReport = {
 	final valueCoalescingProof:String;
 	final controlFlowPlanProof:String;
 	final controlFlowEmissionC:String;
+	final controlFlowGotoProvenance:Array<EvaluationGotoProvenance>;
 }
 #end
 
 class EvaluationOrderProbe {
 	#if macro
 	public static inline final REPORT_PREFIX = "HXC_EVALUATION_ORDER=";
+	static inline final CONTROL_FLOW_ARTIFACT_PATH = "synthetic-control-flow.c";
 
 	public static function install():Void {
 		Context.onAfterInitMacros(run);
@@ -164,7 +188,7 @@ class EvaluationOrderProbe {
 			content: printer.printTranslationUnit(source.unit)
 		});
 		final report:EvaluationOrderReport = {
-			schemaVersion: 2,
+			schemaVersion: 3,
 			status: "typed-evaluation-order-runtime-free",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),
@@ -177,7 +201,8 @@ class EvaluationOrderProbe {
 			temporaryElisionProof: "constants, parameters, proven-total pure conversions/operators, single-use compiler-owned aggregate values, and barrier-free single-use private-local loads may remain inline; calls and observable/cross-block/barrier loads stay materialized",
 			valueCoalescingProof: proveValueCoalescing(),
 			controlFlowPlanProof: controlFlowProof.summary,
-			controlFlowEmissionC: controlFlowProof.emissionC
+			controlFlowEmissionC: controlFlowProof.emissionC,
+			controlFlowGotoProvenance: controlFlowProof.gotoProvenance
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(report));
 	}
@@ -652,9 +677,11 @@ class EvaluationOrderProbe {
 			() -> verifier.requireValid(sequence,
 				CCFStructured(new CBodyControlFlowRegion([CFNBlock("middle"), CFNBlock("entry"), CFNBlock("exit")], CFCReturn("exit")), [])));
 
+		final emission = syntheticControlFlowEmission(loopSwitchBreak, loopSwitchPlan, nestedIrreducible, nestedIrreduciblePlan);
 		return {
 			summary: "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-escapes-inverted-pre-post-and-bounded-switch-escape-structured;maximal-and-nested-irreducible-fallback;overlapping-normal-join-malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected",
-			emissionC: syntheticControlFlowEmission(loopSwitchBreak, nestedIrreducible)
+			emissionC: emission.source,
+			gotoProvenance: emission.gotoProvenance
 		};
 	}
 
@@ -667,15 +694,29 @@ class EvaluationOrderProbe {
 		}
 	}
 
-	static function syntheticControlFlowEmission(bounded:HxcIRFunction, irreducible:HxcIRFunction):String {
+	static function syntheticControlFlowEmission(bounded:HxcIRFunction, boundedPlan:CBodyControlFlowPlan, irreducible:HxcIRFunction,
+			irreduciblePlan:CBodyControlFlowPlan):EvaluationControlFlowEmission {
 		final unit = new CTranslationUnit();
 		unit.includes.push({path: "stdbool.h", kind: System});
 		unit.includes.push({path: "stdint.h", kind: System});
 		final emitter = new CBodyEmitter();
 		final boundedName = new CIdentifier("hxc_bounded_control_flow");
 		final irreducibleName = new CIdentifier("hxc_legacy_control_flow");
-		addSyntheticControlFlowFunction(unit, emitter, bounded, boundedName, "hxc_bounded_label");
-		addSyntheticControlFlowFunction(unit, emitter, irreducible, irreducibleName, "hxc_legacy_label");
+		final gotoProvenance:Array<EvaluationGotoProvenance> = [];
+		addSyntheticControlFlowFunction(unit, emitter, bounded, boundedPlan, boundedName, "hxc_bounded_label", gotoProvenance);
+		addSyntheticControlFlowFunction(unit, emitter, irreducible, irreduciblePlan, irreducibleName, "hxc_legacy_label", gotoProvenance);
+		var boundedGotoCount = 0;
+		var irreducibleGotoCount = 0;
+		for (item in gotoProvenance) {
+			switch item.category {
+				case EGCLoopBreakThroughSwitch:
+					boundedGotoCount++;
+				case EGCIrreducibleCfg:
+					irreducibleGotoCount++;
+			}
+		}
+		if (boundedGotoCount != 1 || irreducibleGotoCount != 6)
+			throw new haxe.Exception('synthetic goto provenance expected 1 bounded and 6 irreducible gotos, received $boundedGotoCount and $irreducibleGotoCount');
 		unit.declarations.push(DFunction({
 			storage: [],
 			functionSpecifiers: [],
@@ -689,16 +730,22 @@ class EvaluationOrderProbe {
 			]),
 			attributes: []
 		}));
-		return new CASTPrinter().printTranslationUnit(unit);
+		return {
+			source: new CASTPrinter().printTranslationUnit(unit),
+			gotoProvenance: gotoProvenance
+		};
 	}
 
-	static function addSyntheticControlFlowFunction(unit:CTranslationUnit, emitter:CBodyEmitter, fn:HxcIRFunction, cName:CIdentifier, labelPrefix:String):Void {
+	static function addSyntheticControlFlowFunction(unit:CTranslationUnit, emitter:CBodyEmitter, fn:HxcIRFunction, plan:CBodyControlFlowPlan,
+			cName:CIdentifier, labelPrefix:String, gotoProvenance:Array<EvaluationGotoProvenance>):Void {
 		final parameterNames:Map<String, CIdentifier> = [];
 		for (parameter in fn.parameters)
 			parameterNames.set(parameter.id, new CIdentifier(parameter.id));
 		final labelNames:Map<String, CIdentifier> = [];
 		for (index => block in fn.blocks)
 			labelNames.set(block.id, new CIdentifier('${labelPrefix}_$index'));
+		new CBodyControlFlowPlanVerifier().requireValid(fn, plan);
+		appendPlanGotoProvenance(gotoProvenance, fn, plan, cName, labelNames);
 		final localNames:Map<String, CIdentifier> = [];
 		final temporaryNames:Map<String, CIdentifier> = [];
 		final functionNames:Map<String, CIdentifier> = [];
@@ -714,6 +761,86 @@ class EvaluationOrderProbe {
 				labelNames),
 			attributes: []
 		}));
+	}
+
+	static function appendPlanGotoProvenance(result:Array<EvaluationGotoProvenance>, fn:HxcIRFunction, plan:CBodyControlFlowPlan, cName:CIdentifier,
+			labelNames:Map<String, CIdentifier>):Void {
+		switch plan {
+			case CCFStructured(root, _):
+				appendStructuredGotoProvenance(result, fn, root, cName, labelNames);
+			case CCFLegacyIrreducible(_):
+				for (block in fn.blocks) {
+					final terminator = switch block.terminator {
+						case null: throw new haxe.Exception('synthetic irreducible function `${fn.id}` lost terminator `${block.id}`');
+						case value: value;
+					};
+					final targets:Array<String> = switch terminator.kind {
+						case IRTJump(edge): [edge.targetBlockId];
+						case IRTBranch(_, whenTrue, whenFalse): [whenTrue.targetBlockId, whenFalse.targetBlockId];
+						case IRTSwitch(_, cases, defaultEdge): cases.map(item -> item.edge.targetBlockId).concat([defaultEdge.targetBlockId]);
+						case IRTTagSwitch(_, cases, defaultEdge):
+							final values = cases.map(item -> item.edge.targetBlockId);
+							if (defaultEdge != null)
+								values.push(defaultEdge.targetBlockId);
+							values;
+						case IRTReturn(_, _) | IRTThrow(_, _): [];
+						case IRTUnreachable:
+							throw new haxe.Exception('synthetic irreducible function `${fn.id}` cannot emit unreachable block `${block.id}`');
+					};
+					for (targetBlockId in targets)
+						appendGotoProvenance(result, EGCIrreducibleCfg, fn, cName, block.id, targetBlockId, labelNames);
+				}
+		}
+	}
+
+	static function appendStructuredGotoProvenance(result:Array<EvaluationGotoProvenance>, fn:HxcIRFunction, region:CBodyControlFlowRegion, cName:CIdentifier,
+			labelNames:Map<String, CIdentifier>):Void {
+		for (node in region.nodes) {
+			switch node {
+				case CFNBlock(_):
+				case CFNIf(_, _, whenTrue, whenFalse, _):
+					appendStructuredGotoProvenance(result, fn, whenTrue, cName, labelNames);
+					appendStructuredGotoProvenance(result, fn, whenFalse, cName, labelNames);
+				case CFNWhile(_, _, _, _, condition, body, _):
+					appendStructuredGotoProvenance(result, fn, condition, cName, labelNames);
+					appendStructuredGotoProvenance(result, fn, body, cName, labelNames);
+				case CFNDoWhile(_, _, _, _, body, condition, _):
+					appendStructuredGotoProvenance(result, fn, body, cName, labelNames);
+					appendStructuredGotoProvenance(result, fn, condition, cName, labelNames);
+				case CFNSwitch(_, _, arms, _) | CFNTagSwitch(_, _, arms, _):
+					for (arm in arms)
+						appendStructuredGotoProvenance(result, fn, arm.body, cName, labelNames);
+			}
+		}
+		switch region.completion {
+			case CFCGoto(ownerBlockId, targetBlockId, reason):
+				final category = switch reason {
+					case CBGRLoopBreakThroughSwitch: EGCLoopBreakThroughSwitch;
+				};
+				appendGotoProvenance(result, category, fn, cName, ownerBlockId, targetBlockId, labelNames);
+			case CFCFallthrough | CFCClosed | CFCReturn(_) | CFCThrow(_) | CFCUnreachable(_) | CFCBreak(_, _) | CFCContinue(_, _):
+		}
+	}
+
+	static function appendGotoProvenance(result:Array<EvaluationGotoProvenance>, category:EvaluationGotoCategory, fn:HxcIRFunction, cName:CIdentifier,
+			ownerBlockId:String, targetBlockId:String, labelNames:Map<String, CIdentifier>):Void {
+		final targetLabel = labelNames.get(targetBlockId);
+		if (targetLabel == null)
+			throw new haxe.Exception('synthetic goto provenance for `${fn.id}` cannot resolve target block `$targetBlockId`');
+		var occurrence = 1;
+		for (item in result)
+			if (item.path == CONTROL_FLOW_ARTIFACT_PATH && item.cFunctionName == cName.value && item.targetLabel == targetLabel.value)
+				occurrence++;
+		result.push({
+			category: category,
+			path: CONTROL_FLOW_ARTIFACT_PATH,
+			functionId: fn.id,
+			cFunctionName: cName.value,
+			ownerBlockId: ownerBlockId,
+			targetBlockId: targetBlockId,
+			targetLabel: targetLabel.value,
+			occurrence: occurrence
+		});
 	}
 
 	static function requireInvertedLoop(label:String, fn:HxcIRFunction, plan:CBodyControlFlowPlan, postTest:Bool, verifier:CBodyControlFlowPlanVerifier):Void {

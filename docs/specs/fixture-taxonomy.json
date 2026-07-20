@@ -568,7 +568,8 @@
         "real pinned-compiler TypedExpr constants, locals, primitive blocks, and returns lower through validated HxcIR before structural C",
         "local names are deterministic and shadowing-safe across discovery order while unsupported and synthetic unreachable nodes emit exact source-positioned HXC1001",
         "portable and metal produce identical runtime-free strict C11 bodies with optional structured #line directives",
-        "available local and separately required GCC/Clang CI lanes compile and execute both mapped and unmapped generated-body fixtures at O0 and O2 without warnings"
+        "available local and separately required GCC/Clang CI lanes compile and execute both mapped and unmapped generated-body fixtures at O0 and O2 without warnings",
+        "the schema-validated maintainability snapshot covers both C variants, all function identities and source spans, structural #line directives, name budgets, temporary pressure, and zero generated gotos"
       ]
     },
     {
@@ -745,7 +746,8 @@
         "the indexed compound-assignment fixture proves receiver/index/address/load/right/store order before fixed-array representation is admitted",
         "statement and value switch subjects execute once and every emitted C case/default immediately jumps to a typed target without user-observable fallthrough",
         "every effectful load and consumed call is materialized; only total pure expressions over stable values remain inline",
-        "portable, metal, and runtime-none production C is byte-stable, warning-clean at O0/O2, runtime-free, and matches the pinned Eval oracle under GCC and Clang"
+        "portable, metal, and runtime-none production C is byte-stable, warning-clean at O0/O2, runtime-free, and matches the pinned Eval oracle under GCC and Clang",
+        "schema-validated maintainability snapshots bound the production program and synthetic control-flow corpus, and every synthetic goto reconciles exactly with one typed plan reason: six irreducible CFG edges and one loop-break-through-switch edge"
       ]
     },
     {
@@ -1001,7 +1003,8 @@
         "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, and fixed-step AABB player collision over a narrow fixed-array storage seam",
         "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
         "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
-        "the generated program matches centrally owned private-header, C-source, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
+        "the generated program matches centrally owned split and unity header/C snapshots, schema-validated maintainability reports, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
+        "split and unity reports preserve identical 53-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named QA/unity overrides",
         "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2 and under address and undefined-behavior sanitizers"
       ]
     },
@@ -1297,7 +1300,9 @@
           "test/evaluation_order/expected/program.h",
           "test/evaluation_order/expected/program.c",
           "test/evaluation_order/expected/synthetic-control-flow.c",
-          "test/evaluation_order/expected/symbols.json"
+          "test/evaluation_order/expected/symbols.json",
+          "test/evaluation_order/expected/maintainability-program.json",
+          "test/evaluation_order/expected/maintainability-synthetic.json"
         ],
         "formats": [
           "c",

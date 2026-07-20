@@ -80,11 +80,12 @@ The closed `projectLayout` setting has two variants:
 | `split` (default) | `include/hxc/detail/program_types.h`, `include/hxc/modules/<package>/<Module>.h`, `src/modules/<package>/<Module>.c`, stable `include/hxc/program.h`, small `src/hxc/main.c`, and conditional `src/hxc/support.c` | Source-shaped navigation, review, debugging, and incremental native builds. |
 | `unity` | Stable `include/hxc/program.h` plus ordinary `src/program.c` | Tiny programs, embedding, archival inspection, and build systems that prefer amalgamation. |
 
-This task makes file ownership source-shaped; it does not by itself make the C
-takeover-ready. Structured control flow is owned by `haxe_c-xge.18.2`, readable
-names and temporary cleanup by `haxe_c-xge.18.3`, and the generated-code rubric
-by `haxe_c-xge.18.4`. Final human-maintainable handoff claims wait for those
-gates.
+File ownership alone does not make generated C takeover-ready. The later
+structured-control-flow, readable-name/temporary-cleanup, and
+[maintainability-rubric](generated-c-maintainability.md) gates now pass for the
+fixed body, evaluation-order, and Caxecraft corpora. That is intentionally a
+bounded result; broader arbitrary-program handoff claims still require their
+own evidence.
 
 Normalized Haxe ownership determines module paths. Portable ASCII components
 remain readable; short non-portable UTF-8 components are encoded losslessly for

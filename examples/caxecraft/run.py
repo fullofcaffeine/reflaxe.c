@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import hashlib
 import json
 import os
 import re
@@ -14,7 +15,6 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -80,11 +80,13 @@ SNAPSHOT_FORMATS = {
     **{path: "c" for path in SPLIT_SOURCES},
     "hxc.runtime-plan.json": "json",
     "method-symbols.json": "json",
-    "readability-metrics.json": "json",
+    "maintainability-split.json": "json",
+    "maintainability-unity.json": "json",
+    "unity/include/hxc/program.h": "header",
+    "unity/src/program.c": "c",
     "oracle.txt": "text",
 }
-LEGACY_TEMPORARY_IDENTIFIER_BASELINE = 971
-MAX_CURRENT_DOMAIN_TEMPORARY_IDENTIFIERS = 400
+MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -118,6 +120,19 @@ COVERAGE = frozenset(
 )
 
 sys.path.insert(0, str(ROOT / "scripts/test"))
+from generated_c_maintainability import (  # noqa: E402
+    ArtifactOwner,
+    FunctionSourceMapping,
+    GeneratedCArtifact,
+    MaintainabilityError,
+    OwnerKind,
+    SourceSpan,
+    SymbolLedgerEntry,
+    analyze_generated_c,
+    load_corpus_policy,
+    replay_report_from_c,
+    validate_report as validate_maintainability_report,
+)
 from c_fixture_harness import (  # noqa: E402
     CFixtureFailure,
     CFixtureProject,
@@ -138,7 +153,7 @@ class RenderedProject:
     hxcir: str
     runtime_plan: dict[str, object]
     method_symbols: dict[str, object]
-    readability_metrics: dict[str, object]
+    maintainability_report: dict[str, object]
 
 
 def development_tool(name: str) -> str:
@@ -501,91 +516,328 @@ def validate_block_coord_header(content: str) -> None:
             )
 
 
-def generated_readability_metrics(header: bytes, source: bytes) -> dict[str, object]:
-    text = (header + b"\n" + source).decode("utf-8")
-    identifier_references = re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", text)
-    identifier_counts = Counter(identifier_references)
-    identifiers = set(identifier_counts)
-    temporaries = {name for name in identifiers if name.startswith("hxc_tmp_")}
-    old_role_names = {
-        name
-        for name in identifiers
-        if re.match(r"hxc_(?:type|field|method|local|temp|spec)_", name)
+HXCIR_FUNCTION_SOURCE = re.compile(
+    r'^  function "[^"]+" name="(?P<name>[^"]+)"[^\n]* '
+    r'@"(?P<path>[^"]+)":(?P<start_line>[0-9]+):(?P<start_column>[0-9]+)-'
+    r'(?P<end_line>[0-9]+):(?P<end_column>[0-9]+)$',
+    re.MULTILINE,
+)
+
+
+def hxcir_function_sources(hxcir: str) -> dict[str, SourceSpan]:
+    result: dict[str, SourceSpan] = {}
+    for match in HXCIR_FUNCTION_SOURCE.finditer(hxcir):
+        name = match.group("name")
+        if name in result:
+            raise CaxecraftFailure(
+                f"Caxecraft HxcIR has overloaded function identity {name!r}; "
+                "the maintainability mapping needs an overload-aware key"
+            )
+        result[name] = SourceSpan(
+            match.group("path"),
+            int(match.group("start_line")),
+            int(match.group("start_column")),
+            int(match.group("end_line")),
+            int(match.group("end_column")),
+        )
+    if not result:
+        raise CaxecraftFailure("Caxecraft HxcIR omitted function source spans")
+    return result
+
+
+def maintainability_owner(path: str, layout: str) -> ArtifactOwner:
+    for prefix in ("include/hxc/modules/", "src/modules/"):
+        if path.startswith(prefix):
+            suffix = path[len(prefix) :]
+            module_path = suffix.rsplit(".", 1)[0].replace("/", ".")
+            return ArtifactOwner(OwnerKind.SOURCE_MODULE, module_path)
+    if path == "src/hxc/main.c":
+        return ArtifactOwner(OwnerKind.COMPILER_ENTRY)
+    if layout == "unity" and path == "src/program.c":
+        return ArtifactOwner(OwnerKind.AMALGAMATION)
+    return ArtifactOwner(OwnerKind.COMPILER_SUPPORT)
+
+
+def function_definition_present(content: str, c_name: str) -> bool:
+    return re.search(
+        rf"(?m)^[^;{{}}\n]*\b{re.escape(c_name)}\([^;{{}}\n]*\)\n\{{",
+        content,
+    ) is not None
+
+
+FUNCTION_DEFINITION_NAME = re.compile(
+    r"(?m)^[^;{}\n]*\b(?P<name>[A-Za-z_][A-Za-z0-9_]*)"
+    r"\([^;{}\n]*\)\n\{"
+)
+
+
+def maintainability_function_mappings(
+    contents: dict[str, bytes],
+    method_symbols: dict[str, object],
+    hxcir: str,
+    layout: str,
+) -> dict[str, tuple[FunctionSourceMapping, ...]]:
+    methods = method_symbols.get("methods")
+    if not isinstance(methods, list):
+        raise CaxecraftFailure("Caxecraft method projection omitted methods")
+    spans = hxcir_function_sources(hxcir)
+    decoded = {path: content.decode("utf-8") for path, content in contents.items()}
+    sources = {path: content for path, content in decoded.items() if path.endswith(".c")}
+    mappings: dict[str, list[FunctionSourceMapping]] = {
+        path: [] for path in contents
     }
-    byte_escaped_names = {
-        name for name in identifiers if re.search(r"zx[0-9A-Fa-f]{2}", name)
-    }
-    digest_names = {
-        name for name in identifiers if re.search(r"[0-9a-f]{32,}", name)
-    }
-    hashed_names = {
-        name for name in identifiers if re.search(r"_h[0-9a-f]{12,64}$", name)
-    }
-    guards = set(re.findall(r"(?m)^#ifndef ([A-Za-z_][A-Za-z0-9_]*)$", text))
-    digest_guards = {
-        guard
-        for guard in guards
-        if re.search(r"_H[0-9A-F]{16,64}_INCLUDED$", guard)
-    }
-    record_address_temporaries = {
-        name
-        for name in temporaries
-        if name.startswith("hxc_tmp_record_field_address_")
-    }
-    compiler_labels = set(
-        re.findall(r"(?m)^\s*(hxc_[A-Za-z0-9_]+):\s*$", text)
-    )
-    goto_statements = re.findall(
-        r"(?m)^\s*goto\s+[A-Za-z_][A-Za-z0-9_]*\s*;$", text
-    )
-    maximum_identifier = max(identifiers, key=lambda value: (len(value), value))
-    temporary_count = len(temporaries)
+    for method in methods:
+        if not isinstance(method, dict):
+            raise CaxecraftFailure("Caxecraft method projection contains a malformed entry")
+        source_symbol = method.get("sourceSymbol")
+        c_name = method.get("cName")
+        if not isinstance(source_symbol, str) or not isinstance(c_name, str):
+            raise CaxecraftFailure("Caxecraft method projection contains an incomplete entry")
+        function_id = source_symbol.split("(", 1)[0]
+        module_path = function_id.rsplit(".", 1)[0]
+        source = spans.get(function_id)
+        if source is None:
+            raise CaxecraftFailure(
+                f"Caxecraft HxcIR omitted source span for {function_id!r}"
+            )
+        owners = [
+            path
+            for path, content in sources.items()
+            if function_definition_present(content, c_name)
+        ]
+        if len(owners) != 1:
+            raise CaxecraftFailure(
+                f"Caxecraft method {source_symbol!r} matched {owners!r}, expected one C definition"
+            )
+        mappings[owners[0]].append(
+            FunctionSourceMapping(
+                function_id,
+                c_name,
+                ArtifactOwner(OwnerKind.SOURCE_MODULE, module_path, source),
+                source,
+            )
+        )
+    for path, content in decoded.items():
+        mapped_names = {mapping.c_name for mapping in mappings[path]}
+        for match in FUNCTION_DEFINITION_NAME.finditer(content):
+            c_name = match.group("name")
+            if c_name in mapped_names:
+                continue
+            mappings[path].append(
+                FunctionSourceMapping(
+                    f"compiler.{path}:{c_name}",
+                    c_name,
+                    maintainability_owner(path, layout),
+                )
+            )
+            mapped_names.add(c_name)
     return {
-        "schemaVersion": 1,
-        "status": "bounded-readable-generated-c",
-        "generatedLineCount": len(text.splitlines()),
-        "uniqueIdentifierCount": len(identifiers),
-        "maximumIdentifierLength": len(maximum_identifier),
-        "maximumIdentifier": maximum_identifier,
-        "temporaryIdentifierCount": temporary_count,
-        "temporaryReferences": sum(identifier_counts[name] for name in temporaries),
-        "temporaryIdentifiersRemovedFromLegacyBaseline": (
-            LEGACY_TEMPORARY_IDENTIFIER_BASELINE - temporary_count
-        ),
-        "recordFieldAddressTemporaryCount": len(record_address_temporaries),
-        "oldRoleEncodedIdentifierCount": len(old_role_names),
-        "oldByteEscapeIdentifierCount": len(byte_escaped_names),
-        "semanticDigestIdentifierCount": len(digest_names),
-        "hashSuffixedIdentifierCount": len(hashed_names),
-        "headerGuardCount": len(guards),
-        "hashedHeaderGuardCount": len(digest_guards),
-        "gotoStatementCount": len(goto_statements),
-        "compilerLabelCount": len(compiler_labels),
+        path: tuple(sorted(values, key=lambda value: value.function_id.encode("utf-8")))
+        for path, values in mappings.items()
     }
 
 
-def validate_readability_metrics(metrics: dict[str, object]) -> None:
+def maintainability_symbol_ledger(symbols: dict[str, object]) -> tuple[SymbolLedgerEntry, ...]:
+    entries = symbols.get("symbols")
+    if not isinstance(entries, list):
+        raise CaxecraftFailure("Caxecraft symbol table omitted entries")
+    result: list[SymbolLedgerEntry] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            raise CaxecraftFailure("Caxecraft symbol table contains a malformed entry")
+        c_name = entry.get("cName")
+        source_symbol = entry.get("sourceSymbol")
+        reasons = entry.get("escapeReasons")
+        if not isinstance(c_name, str) or not isinstance(source_symbol, str):
+            continue
+        if not isinstance(reasons, list) or not all(isinstance(item, str) for item in reasons):
+            raise CaxecraftFailure(f"Caxecraft symbol {source_symbol!r} has malformed reasons")
+        result.append(
+            SymbolLedgerEntry(
+                c_name,
+                source_symbol,
+                entry.get("collisionResolved") is True,
+                tuple(sorted(reasons, key=lambda value: value.encode("utf-8"))),
+            )
+        )
+    return tuple(
+        sorted(result, key=lambda value: (value.c_name.encode("utf-8"), value.source_symbol.encode("utf-8")))
+    )
+
+
+def generated_maintainability_report(
+    output: Path,
+    layout: str,
+    method_symbols: dict[str, object],
+    symbols: dict[str, object],
+    hxcir: str,
+) -> dict[str, object]:
+    paths = (*SPLIT_HEADERS, *SPLIT_SOURCES) if layout == "split" else (
+        "include/hxc/program.h",
+        "src/program.c",
+    )
+    contents = {path: (output / path).read_bytes() for path in paths}
+    mappings = maintainability_function_mappings(
+        contents, method_symbols, hxcir, layout
+    )
+    artifacts = tuple(
+        GeneratedCArtifact(
+            path,
+            contents[path],
+            maintainability_owner(path, layout),
+            mappings[path],
+        )
+        for path in paths
+    )
+    policy = load_corpus_policy(
+        MAINTAINABILITY_POLICY,
+        corpus_id="caxecraft-domain",
+        layout=layout,
+    )
+    report = analyze_generated_c(
+        corpus_id="caxecraft-domain",
+        layout=layout,
+        artifacts=artifacts,
+        symbols=maintainability_symbol_ledger(symbols),
+        policy=policy,
+    )
+    if report.get("status") != "within-reviewed-budgets":
+        raise CaxecraftFailure(
+            f"generated Caxecraft {layout} C exceeded its maintainability policy: "
+            f"{report.get('firstViolation')!r}"
+        )
+    return report
+
+
+def validate_maintainability_inputs(
+    report: dict[str, object], layout: str, contents: dict[str, bytes]
+) -> None:
+    validate_maintainability_report(report)
+    inputs = report.get("inputs")
+    expected = [
+        {"path": path, "sha256": hashlib.sha256(content).hexdigest()}
+        for path, content in sorted(contents.items(), key=lambda item: item[0].encode("utf-8"))
+    ]
     if (
-        metrics.get("schemaVersion") != 1
-        or metrics.get("status") != "bounded-readable-generated-c"
-        or not isinstance(metrics.get("generatedLineCount"), int)
-        or metrics.get("generatedLineCount", 0) <= 0
-        or not isinstance(metrics.get("maximumIdentifierLength"), int)
-        or metrics.get("maximumIdentifierLength", 121) > 120
-        or not isinstance(metrics.get("temporaryIdentifierCount"), int)
-        or metrics.get("temporaryIdentifierCount", 526)
-        > MAX_CURRENT_DOMAIN_TEMPORARY_IDENTIFIERS
-        or metrics.get("temporaryIdentifiersRemovedFromLegacyBaseline", 0) <= 0
-        or metrics.get("recordFieldAddressTemporaryCount") != 0
-        or metrics.get("oldRoleEncodedIdentifierCount") != 0
-        or metrics.get("oldByteEscapeIdentifierCount") != 0
-        or metrics.get("semanticDigestIdentifierCount") != 0
-        or metrics.get("hashedHeaderGuardCount") != 0
-        or metrics.get("gotoStatementCount") != 0
-        or metrics.get("compilerLabelCount") != 0
+        report.get("corpusId") != "caxecraft-domain"
+        or report.get("layout") != layout
+        or report.get("status") != "within-reviewed-budgets"
+        or inputs != expected
     ):
         raise CaxecraftFailure(
-            f"generated-C readability budget drifted: {metrics!r}"
+            f"checked-in Caxecraft {layout} maintainability report does not describe its C inputs"
+        )
+    policy = load_corpus_policy(
+        MAINTAINABILITY_POLICY,
+        corpus_id="caxecraft-domain",
+        layout=layout,
+    )
+    replayed = replay_report_from_c(report, contents, policy)
+    if replayed != report:
+        raise CaxecraftFailure(
+            f"checked-in Caxecraft {layout} maintainability report does not reproduce from its exact C bytes"
+        )
+
+
+MAINTAINABILITY_LAYOUT_SUMMARY_FIELDS = (
+    "functionCount",
+    "functionIdentityMappedCount",
+    "functionIdentityMappedBasisPoints",
+    "sourceSpanMappedFunctionCount",
+    "sourceSpanMappedFunctionBasisPoints",
+    "lineDirectiveCount",
+    "branchCount",
+    "temporaryDeclarationCount",
+    "temporaryReferenceCount",
+    "temporaryDeclarationsPerKFunctionCodeLines",
+    "roleEncodedIdentifierCount",
+    "unexplainedRoleEncodedIdentifierCount",
+    "byteEscapedIdentifierCount",
+    "unexplainedByteEscapedIdentifierCount",
+    "digestIdentifierCount",
+    "unexplainedDigestIdentifierCount",
+    "hashSuffixIdentifierCount",
+    "unexplainedHashSuffixIdentifierCount",
+    "gotoCount",
+    "unauthorizedGotoCount",
+    "gotoCategoryCounts",
+)
+
+MAINTAINABILITY_LAYOUT_FUNCTION_FIELDS = (
+    "functionId",
+    "cName",
+    "identityMapped",
+    "source",
+    "physicalLineCount",
+    "codeLineCount",
+    "bodyCodeLineCount",
+    "branchCount",
+    "maxNestingDepth",
+    "temporaryDeclarationCount",
+    "temporaryReferenceCount",
+    "temporaryDeclarationsPerKCodeLines",
+)
+
+
+def maintainability_layout_projection(report: dict[str, object]) -> dict[str, object]:
+    summary = report.get("summary")
+    files = report.get("files")
+    if not isinstance(summary, dict) or not isinstance(files, list):
+        raise CaxecraftFailure("Caxecraft maintainability layout report is incomplete")
+    maximum = summary.get("maxIdentifier")
+    if not isinstance(maximum, dict):
+        raise CaxecraftFailure(
+            "Caxecraft maintainability layout report omitted its maximum identifier"
+        )
+    source_functions: list[dict[str, object]] = []
+    for file_record in files:
+        if not isinstance(file_record, dict) or not isinstance(
+            file_record.get("functions"), list
+        ):
+            raise CaxecraftFailure(
+                "Caxecraft maintainability layout report has a malformed file"
+            )
+        for function in file_record["functions"]:
+            if not isinstance(function, dict):
+                raise CaxecraftFailure(
+                    "Caxecraft maintainability layout report has a malformed function"
+                )
+            if function.get("source") is None:
+                continue
+            source_functions.append(
+                {field: function.get(field) for field in MAINTAINABILITY_LAYOUT_FUNCTION_FIELDS}
+            )
+    source_functions.sort(key=lambda item: str(item["functionId"]).encode("utf-8"))
+    return {
+        "summary": {
+            field: summary.get(field)
+            for field in MAINTAINABILITY_LAYOUT_SUMMARY_FIELDS
+        },
+        "maxIdentifier": {
+            "name": maximum.get("name"),
+            "bytes": maximum.get("bytes"),
+        },
+        "sourceFunctions": source_functions,
+        "identifierFindings": [
+            {
+                key: value
+                for key, value in finding.items()
+                if key != "coordinate"
+            }
+            for finding in report.get("identifierFindings", [])
+            if isinstance(finding, dict)
+        ],
+    }
+
+
+def require_maintainability_layout_parity(
+    split: dict[str, object], unity: dict[str, object]
+) -> None:
+    if maintainability_layout_projection(split) != maintainability_layout_projection(
+        unity
+    ):
+        raise CaxecraftFailure(
+            "split and unity maintainability reports disagree on semantic function metrics"
         )
 
 
@@ -665,7 +917,6 @@ def render_project(
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
-    report: bool = False,
 ) -> RenderedProject:
     result = compile_target(
         output,
@@ -673,16 +924,15 @@ def render_project(
         reverse=reverse,
         locale=locale,
         connect=connect,
-        report=report,
+        report=True,
     )
-    allowed_stdout = result.stdout if report else ""
-    if result.returncode != 0 or result.stderr or (not report and result.stdout):
+    if result.returncode != 0 or result.stderr:
         raise CaxecraftFailure(
             f"{label} failed or emitted diagnostics\nexit={result.returncode}\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
-    if report and not any(
-        line.startswith(REPORT_PREFIX) for line in allowed_stdout.splitlines()
+    if not any(
+        line.startswith(REPORT_PREFIX) for line in result.stdout.splitlines()
     ):
         raise CaxecraftFailure(f"{label} omitted its requested HxcIR report")
     actual_files = generated_files(output)
@@ -718,26 +968,26 @@ def render_project(
     validate_symbol_readability(symbols)
     projection = method_symbol_projection(symbols)
     validate_method_symbols(projection)
+    hxcir = extract_hxcir(result, label)
+    validate_hxcir(hxcir)
     header, source = generated_c_bytes(output, layout)
     validate_generated_text(header, source, projection)
-    readability_metrics = generated_readability_metrics(header, source)
-    validate_readability_metrics(readability_metrics)
+    maintainability_report = generated_maintainability_report(
+        output, layout, projection, symbols, hxcir
+    )
     if layout == "split":
         validate_block_coord_header(
             (output / "include/hxc/modules/caxecraft/domain/BlockCoord.h").read_text(
                 encoding="utf-8"
             )
         )
-    hxcir = extract_hxcir(result, label) if report else ""
-    if report:
-        validate_hxcir(hxcir)
     return RenderedProject(
         output,
         normal_artifacts(output),
         hxcir,
         runtime_plan,
         projection,
-        readability_metrics,
+        maintainability_report,
     )
 
 
@@ -883,20 +1133,44 @@ def check_determinism(first: RenderedProject, root: Path) -> None:
 
 def snapshot_values() -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-snapshot-") as temporary:
-        project = render_project(
-            Path(temporary) / "generated",
-            label="Caxecraft snapshot render",
-            report=True,
+        root = Path(temporary)
+        split = render_project(
+            root / "split",
+            label="Caxecraft split snapshot render",
+        )
+        unity = render_project(
+            root / "unity",
+            label="Caxecraft unity snapshot render",
+            layout="unity",
+        )
+        if (
+            split.hxcir != unity.hxcir
+            or split.runtime_plan != unity.runtime_plan
+            or split.method_symbols != unity.method_symbols
+        ):
+            raise CaxecraftFailure(
+                "split/unity snapshot renders changed semantic plans or names"
+            )
+        require_maintainability_layout_parity(
+            split.maintainability_report,
+            unity.maintainability_report,
         )
         oracle = run_oracle().decode("ascii")
         return {
             **{
-                path: (project.output / path).read_text(encoding="utf-8")
+                path: (split.output / path).read_text(encoding="utf-8")
                 for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
             },
-            "hxc.runtime-plan.json": project.runtime_plan,
-            "method-symbols.json": project.method_symbols,
-            "readability-metrics.json": project.readability_metrics,
+            "hxc.runtime-plan.json": split.runtime_plan,
+            "method-symbols.json": split.method_symbols,
+            "maintainability-split.json": split.maintainability_report,
+            "maintainability-unity.json": unity.maintainability_report,
+            "unity/include/hxc/program.h": (
+                unity.output / "include/hxc/program.h"
+            ).read_text(encoding="utf-8"),
+            "unity/src/program.c": (unity.output / "src/program.c").read_text(
+                encoding="utf-8"
+            ),
             "oracle.txt": oracle,
         }
 
@@ -921,43 +1195,53 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
     oracle = values.get("oracle.txt")
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
-    readability_metrics = values.get("readability-metrics.json")
-    generated = {
+    split_report = values.get("maintainability-split.json")
+    unity_report = values.get("maintainability-unity.json")
+    split_text = {
         path: values.get(path) for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
     }
+    unity_text = {
+        "include/hxc/program.h": values.get("unity/include/hxc/program.h"),
+        "src/program.c": values.get("unity/src/program.c"),
+    }
     if not isinstance(oracle, str) or not all(
-        isinstance(value, str) for value in generated.values()
+        isinstance(value, str) for value in (*split_text.values(), *unity_text.values())
     ):
         raise CaxecraftFailure("Caxecraft text baseline is malformed")
     if (
         not isinstance(runtime_plan, dict)
         or not isinstance(method_symbols, dict)
-        or not isinstance(readability_metrics, dict)
+        or not isinstance(split_report, dict)
+        or not isinstance(unity_report, dict)
     ):
         raise CaxecraftFailure("Caxecraft JSON baseline is malformed")
     validate_runtime_plan(runtime_plan)
     validate_method_symbols(method_symbols)
-    generated_bytes = {
+    split_bytes = {
         path: value.encode("utf-8")
-        for path, value in generated.items()
+        for path, value in split_text.items()
+        if isinstance(value, str)
+    }
+    unity_bytes = {
+        path: value.encode("utf-8")
+        for path, value in unity_text.items()
         if isinstance(value, str)
     }
     oracle_bytes = oracle.encode("ascii")
     validate_generated_text(
-        b"\n".join(generated_bytes[path] for path in SPLIT_HEADERS),
-        b"\n".join(generated_bytes[path] for path in SPLIT_SOURCES),
+        b"\n".join(split_bytes[path] for path in SPLIT_HEADERS),
+        b"\n".join(split_bytes[path] for path in SPLIT_SOURCES),
         method_symbols,
     )
-    computed_metrics = generated_readability_metrics(
-        b"\n".join(generated_bytes[path] for path in SPLIT_HEADERS),
-        b"\n".join(generated_bytes[path] for path in SPLIT_SOURCES),
+    validate_generated_text(
+        unity_bytes["include/hxc/program.h"],
+        unity_bytes["src/program.c"],
+        method_symbols,
     )
-    if readability_metrics != computed_metrics:
-        raise CaxecraftFailure(
-            "checked-in readability metrics do not describe the checked-in C"
-        )
-    validate_readability_metrics(readability_metrics)
-    block_coord = generated.get(
+    validate_maintainability_inputs(split_report, "split", split_bytes)
+    validate_maintainability_inputs(unity_report, "unity", unity_bytes)
+    require_maintainability_layout_parity(split_report, unity_report)
+    block_coord = split_text.get(
         "include/hxc/modules/caxecraft/domain/BlockCoord.h"
     )
     if not isinstance(block_coord, str):
@@ -966,19 +1250,28 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
     lines = oracle_bytes.splitlines()
     if len(lines) != 38 or lines[0] != b"0" or not oracle_bytes.endswith(b"\n"):
         raise CaxecraftFailure("checked-in Caxecraft oracle baseline drifted")
-    return generated_bytes, oracle_bytes
+    return split_bytes, oracle_bytes
 
 
-def validate_snapshots(project: RenderedProject, oracle: bytes) -> None:
+def validate_snapshots(
+    split: RenderedProject, unity: RenderedProject, oracle: bytes
+) -> None:
     expected = expected_values()
     actual: dict[str, object] = {
         **{
-            path: (project.output / path).read_text(encoding="utf-8")
+            path: (split.output / path).read_text(encoding="utf-8")
             for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
         },
-        "hxc.runtime-plan.json": project.runtime_plan,
-        "method-symbols.json": project.method_symbols,
-        "readability-metrics.json": project.readability_metrics,
+        "hxc.runtime-plan.json": split.runtime_plan,
+        "method-symbols.json": split.method_symbols,
+        "maintainability-split.json": split.maintainability_report,
+        "maintainability-unity.json": unity.maintainability_report,
+        "unity/include/hxc/program.h": (
+            unity.output / "include/hxc/program.h"
+        ).read_text(encoding="utf-8"),
+        "unity/src/program.c": (unity.output / "src/program.c").read_text(
+            encoding="utf-8"
+        ),
         "oracle.txt": oracle.decode("ascii"),
     }
     if actual == expected:
@@ -1219,11 +1512,11 @@ def checked_in_split_project(root: Path, values: dict[str, object]) -> tuple[Ren
         destination.write_bytes(content)
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
-    readability_metrics = values.get("readability-metrics.json")
+    maintainability_report = values.get("maintainability-split.json")
     if (
         not isinstance(runtime_plan, dict)
         or not isinstance(method_symbols, dict)
-        or not isinstance(readability_metrics, dict)
+        or not isinstance(maintainability_report, dict)
     ):
         raise CaxecraftFailure("checked-in Caxecraft JSON baseline is malformed")
     return (
@@ -1233,7 +1526,7 @@ def checked_in_split_project(root: Path, values: dict[str, object]) -> tuple[Ren
             "",
             runtime_plan,
             method_symbols,
-            readability_metrics,
+            maintainability_report,
         ),
         oracle,
     )
@@ -1260,14 +1553,12 @@ def main(argv: Iterable[str] = ()) -> int:
                 first = render_project(
                     root / "first",
                     label="first cold Caxecraft render",
-                    report=True,
                 )
                 progress("unity render + semantic parity")
                 unity = render_project(
                     root / "unity",
                     label="unity Caxecraft render",
                     layout="unity",
-                    report=True,
                 )
                 if (
                     first.hxcir != unity.hxcir
@@ -1277,11 +1568,15 @@ def main(argv: Iterable[str] = ()) -> int:
                     raise CaxecraftFailure(
                         "split and unity layouts changed HxcIR, runtime, or method symbols"
                     )
+                require_maintainability_layout_parity(
+                    first.maintainability_report,
+                    unity.maintainability_report,
+                )
                 if args.full:
                     progress("cold/reversed/locale/warm determinism")
                     check_determinism(first, root / "determinism")
-                progress("checked-in split snapshots")
-                validate_snapshots(first, oracle)
+                progress("checked-in split/unity snapshots")
+                validate_snapshots(first, unity, oracle)
                 split = first
             progress("split native differential")
             run_native(
@@ -1306,6 +1601,7 @@ def main(argv: Iterable[str] = ()) -> int:
         AssetValidationError,
         CFixtureFailure,
         CaxecraftFailure,
+        MaintainabilityError,
         OSError,
         UnicodeError,
         ValueError,
@@ -1325,7 +1621,7 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "caxecraft-domain: OK: "
         f"{mode}, 32 seeded properties, exact traces, {matrix}, "
-        f"zero hxrt/allocation symbols, bounded readable C metrics, and {parity} passed"
+        f"zero hxrt/allocation symbols, schema-checked C maintainability, and {parity} passed"
     )
     return 0
 

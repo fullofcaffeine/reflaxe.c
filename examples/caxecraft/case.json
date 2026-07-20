@@ -68,7 +68,16 @@
     "examples/caxecraft/expected/src/modules/caxecraft/qa/DomainProbe.c",
     "examples/caxecraft/expected/hxc.runtime-plan.json",
     "examples/caxecraft/expected/method-symbols.json",
+    "examples/caxecraft/expected/maintainability-split.json",
+    "examples/caxecraft/expected/maintainability-unity.json",
+    "examples/caxecraft/expected/unity/include/hxc/program.h",
+    "examples/caxecraft/expected/unity/src/program.c",
     "examples/caxecraft/expected/oracle.txt",
+    "scripts/test/generated_c_maintainability.py",
+    "docs/specs/generated-c-maintainability.schema.json",
+    "docs/specs/generated-c-maintainability-policy.schema.json",
+    "docs/specs/generated-c-maintainability-policy.json",
+    "docs/generated-c-maintainability.md",
     "docs/caxecraft-domain.md",
     "docs/caxecraft-game-design.md"
   ],
@@ -110,12 +119,33 @@
         "comparison": "semantic-json"
       },
       {
+        "path": "examples/caxecraft/expected/maintainability-split.json",
+        "format": "metrics",
+        "comparison": "budget"
+      },
+      {
+        "path": "examples/caxecraft/expected/maintainability-unity.json",
+        "format": "metrics",
+        "comparison": "budget"
+      },
+      {
+        "path": "examples/caxecraft/expected/unity/include/hxc/program.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/caxecraft/expected/unity/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
         "path": "examples/caxecraft/expected/oracle.txt",
         "format": "text",
         "comparison": "exact"
       }
     ],
     "runtimePlan": "examples/caxecraft/expected/hxc.runtime-plan.json",
+    "metrics": "examples/caxecraft/expected/maintainability-split.json",
     "oracle": "examples/caxecraft/expected/oracle.txt"
   }
 }

@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,8 +24,15 @@ ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 INDEX_ORACLE_HXML = ROOT / "test/hxc_ir/oracle.hxml"
 FIXTURE = Path(__file__).with_name("fixtures")
 EXPECTED = Path(__file__).with_name("expected")
+MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 REPORT_PREFIX = "HXC_EVALUATION_ORDER="
 SOURCE_SNAPSHOTS = {"program.c": "src/program.c"}
+HXCIR_FUNCTION_SOURCE = re.compile(
+    r'^  function "(?P<function_id>[^"]+)" name="[^"]+"[^\n]* '
+    r'@"(?P<path>[^"]+)":(?P<start_line>[0-9]+):(?P<start_column>[0-9]+)-'
+    r'(?P<end_line>[0-9]+):(?P<end_column>[0-9]+)$',
+    re.MULTILINE,
+)
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -43,6 +51,22 @@ STRICT_FLAGS = (
     "-Wcast-qual",
 )
 
+sys.path.insert(0, str(ROOT / "scripts/test"))
+from generated_c_maintainability import (  # noqa: E402
+    ArtifactOwner,
+    FunctionSourceMapping,
+    GeneratedCArtifact,
+    GotoAuthority,
+    GotoCategory,
+    MaintainabilityError,
+    OwnerKind,
+    SourceSpan,
+    SymbolLedgerEntry,
+    analyze_generated_c,
+    load_corpus_policy,
+    validate_report as validate_maintainability_report,
+)
+
 
 class EvaluationOrderFailure(RuntimeError):
     pass
@@ -53,6 +77,93 @@ class NativeToolchain:
     family: str
     compiler: str
     version: str
+
+
+@dataclass(frozen=True)
+class GotoProvenance:
+    category: str
+    function_id: str
+    c_function_name: str
+    owner_block_id: str
+    target_block_id: str
+    target_label: str
+    path: str
+    occurrence: int
+
+
+CONTROL_FLOW_ARTIFACT_PATH = "synthetic-control-flow.c"
+EXPECTED_CONTROL_FLOW_GOTO_PROVENANCE = (
+    GotoProvenance(
+        "loop-break-through-switch",
+        "synthetic.loop-switch-break",
+        "hxc_bounded_control_flow",
+        "dispatch",
+        "exit",
+        "hxc_bounded_label_3",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        1,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "entry",
+        "left-entry",
+        "hxc_legacy_label_1",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        1,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "entry",
+        "right-entry",
+        "hxc_legacy_label_2",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        1,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "entry",
+        "exit",
+        "hxc_legacy_label_3",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        1,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "left-entry",
+        "right-entry",
+        "hxc_legacy_label_2",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        2,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "right-entry",
+        "left-entry",
+        "hxc_legacy_label_1",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        2,
+    ),
+    GotoProvenance(
+        "irreducible-cfg",
+        "synthetic.nested-irreducible",
+        "hxc_legacy_control_flow",
+        "right-entry",
+        "entry",
+        "hxc_legacy_label_0",
+        CONTROL_FLOW_ARTIFACT_PATH,
+        1,
+    ),
+)
 
 
 def development_tool(name: str) -> str:
@@ -151,7 +262,89 @@ def symbol_name(symbols: dict[str, object], source: str) -> str:
     return matches[0]
 
 
-def validate_control_flow_emission(source: str) -> None:
+def control_flow_goto_provenance(
+    report: dict[str, object],
+) -> tuple[GotoProvenance, ...]:
+    value = report.get("controlFlowGotoProvenance")
+    if not isinstance(value, list):
+        raise EvaluationOrderFailure("control-flow goto provenance must be an array")
+    fields = {
+        "category",
+        "functionId",
+        "cFunctionName",
+        "ownerBlockId",
+        "targetBlockId",
+        "targetLabel",
+        "path",
+        "occurrence",
+    }
+    result: list[GotoProvenance] = []
+    for item in value:
+        if not isinstance(item, dict) or set(item) != fields:
+            raise EvaluationOrderFailure(f"invalid control-flow goto provenance: {item!r}")
+        text_fields = fields - {"occurrence"}
+        if not all(isinstance(item[field], str) for field in text_fields):
+            raise EvaluationOrderFailure(
+                f"control-flow goto provenance fields must be text: {item!r}"
+            )
+        occurrence = item["occurrence"]
+        if (
+            not isinstance(occurrence, int)
+            or isinstance(occurrence, bool)
+            or occurrence < 1
+        ):
+            raise EvaluationOrderFailure(
+                f"control-flow goto occurrence must be a positive integer: {item!r}"
+            )
+        category = item["category"]
+        if category not in {"loop-break-through-switch", "irreducible-cfg"}:
+            raise EvaluationOrderFailure(f"unknown typed goto category {category!r}")
+        result.append(
+            GotoProvenance(
+                category=category,
+                function_id=item["functionId"],
+                c_function_name=item["cFunctionName"],
+                owner_block_id=item["ownerBlockId"],
+                target_block_id=item["targetBlockId"],
+                target_label=item["targetLabel"],
+                path=item["path"],
+                occurrence=occurrence,
+            )
+        )
+    provenance = tuple(result)
+    if provenance != EXPECTED_CONTROL_FLOW_GOTO_PROVENANCE:
+        raise EvaluationOrderFailure(
+            "validated control-flow plan goto provenance drifted: "
+            f"{provenance!r}"
+        )
+    category_counts = Counter(item.category for item in provenance)
+    if category_counts != Counter(
+        {"loop-break-through-switch": 1, "irreducible-cfg": 6}
+    ):
+        raise EvaluationOrderFailure(
+            f"control-flow goto category counts drifted: {category_counts!r}"
+        )
+    return provenance
+
+
+def synthetic_function_source(source: str, c_name: str) -> str:
+    marker = f"static void {c_name}("
+    if source.count(marker) != 1:
+        raise EvaluationOrderFailure(
+            f"synthetic control-flow C lost unique function {c_name!r}"
+        )
+    start = source.find(marker)
+    end = source.find("\n}\n", start)
+    if end < 0:
+        raise EvaluationOrderFailure(
+            f"synthetic control-flow C lost the end of function {c_name!r}"
+        )
+    return source[start : end + 3]
+
+
+def validate_control_flow_emission(
+    source: str, provenance: tuple[GotoProvenance, ...]
+) -> None:
     bounded_start = source.find("static void hxc_bounded_control_flow")
     legacy_start = source.find("static void hxc_legacy_control_flow")
     main_start = source.find("int main(void)")
@@ -174,12 +367,50 @@ def validate_control_flow_emission(source: str) -> None:
         raise EvaluationOrderFailure(
             "bounded structural escape lost its single owned exit label"
         )
+    if legacy.count("goto ") != 6:
+        raise EvaluationOrderFailure(
+            "irreducible CFG fallback did not emit exactly six gotos"
+        )
     if (
         "goto hxc_legacy_label_0;" not in legacy
         or legacy.count("hxc_legacy_label_0:") != 1
     ):
         raise EvaluationOrderFailure(
             "irreducible fallback lost the label for its targeted entry block"
+        )
+    actual_gotos: Counter[tuple[str, str, str, int]] = Counter()
+    target_occurrences: Counter[tuple[str, str, str]] = Counter()
+    for c_function_name in sorted({item.c_function_name for item in provenance}):
+        function_source = synthetic_function_source(source, c_function_name)
+        for target_label in re.findall(
+            r"(?m)^\s*goto\s+([A-Za-z_][A-Za-z0-9_]*)\s*;$",
+            function_source,
+        ):
+            occurrence_key = (
+                CONTROL_FLOW_ARTIFACT_PATH,
+                c_function_name,
+                target_label,
+            )
+            target_occurrences[occurrence_key] += 1
+            actual_gotos[
+                (*occurrence_key, target_occurrences[occurrence_key])
+            ] += 1
+    expected_gotos = Counter(
+        (item.path, item.c_function_name, item.target_label, item.occurrence)
+        for item in provenance
+    )
+    all_emitted_gotos = re.findall(
+        r"(?m)^\s*goto\s+[A-Za-z_][A-Za-z0-9_]*\s*;$", source
+    )
+    if (
+        actual_gotos != expected_gotos
+        or sum(actual_gotos.values()) != len(all_emitted_gotos)
+        or len(all_emitted_gotos) != 7
+    ):
+        raise EvaluationOrderFailure(
+            "emitted gotos are not covered exactly by typed plan provenance: "
+            f"actual={actual_gotos!r} expected={expected_gotos!r} "
+            f"total={len(all_emitted_gotos)}"
         )
     if str(ROOT) in source or "\\" in source or "hxrt" in source.lower():
         raise EvaluationOrderFailure(
@@ -189,7 +420,7 @@ def validate_control_flow_emission(source: str) -> None:
 
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
-        report.get("schemaVersion") != 2
+        report.get("schemaVersion") != 3
         or report.get("status") != "typed-evaluation-order-runtime-free"
         or report.get("profile") != profile
         or report.get("runtimeFeatures") != []
@@ -212,7 +443,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "overlapping-normal-join-malformed-unreachable-cleanup-and-instruction-failure-region-edge-mapping-and-sequence-order-rejected"
     ):
         raise EvaluationOrderFailure("control-flow plan proof contract drifted")
-    validate_control_flow_emission(required_text(report, "controlFlowEmissionC"))
+    goto_provenance = control_flow_goto_provenance(report)
+    validate_control_flow_emission(
+        required_text(report, "controlFlowEmissionC"), goto_provenance
+    )
     hxcir = required_text(report, "hxcir")
     header = required_text(report, "header")
     sources = source_records(report)
@@ -464,6 +698,288 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
 
+def hxcir_function_sources(hxcir: str) -> dict[str, SourceSpan]:
+    result: dict[str, SourceSpan] = {}
+    for match in HXCIR_FUNCTION_SOURCE.finditer(hxcir):
+        function_id = match.group("function_id")
+        if function_id in result:
+            raise EvaluationOrderFailure(
+                f"evaluation HxcIR duplicates function identity {function_id!r}"
+            )
+        result[function_id] = SourceSpan(
+            match.group("path"),
+            int(match.group("start_line")),
+            int(match.group("start_column")),
+            int(match.group("end_line")),
+            int(match.group("end_column")),
+        )
+    if not result:
+        raise EvaluationOrderFailure("evaluation HxcIR omitted function source spans")
+    return result
+
+
+def maintainability_symbol_ledger(
+    symbols: object,
+) -> tuple[SymbolLedgerEntry, ...]:
+    if not isinstance(symbols, dict) or not isinstance(symbols.get("symbols"), list):
+        raise EvaluationOrderFailure(
+            "evaluation maintainability input omitted hxc.symbols entries"
+        )
+    entries = symbols["symbols"]
+    result: list[SymbolLedgerEntry] = []
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("cName"), str)
+            or not isinstance(entry.get("sourceSymbol"), str)
+            or not isinstance(entry.get("collisionResolved"), bool)
+            or not isinstance(entry.get("escapeReasons"), list)
+            or not all(isinstance(reason, str) for reason in entry["escapeReasons"])
+        ):
+            raise EvaluationOrderFailure(
+                f"evaluation maintainability symbol entry is malformed: {entry!r}"
+            )
+        result.append(
+            SymbolLedgerEntry(
+                entry["cName"],
+                entry["sourceSymbol"],
+                entry["collisionResolved"],
+                tuple(
+                    sorted(
+                        entry["escapeReasons"],
+                        key=lambda value: value.encode("utf-8"),
+                    )
+                ),
+            )
+        )
+    return tuple(
+        sorted(
+            result,
+            key=lambda item: (
+                item.c_name.encode("utf-8"),
+                item.source_symbol.encode("utf-8"),
+            ),
+        )
+    )
+
+
+def evaluation_program_function_mappings(
+    report: dict[str, object],
+) -> tuple[FunctionSourceMapping, ...]:
+    functions = report.get("functions")
+    if not isinstance(functions, list):
+        raise EvaluationOrderFailure(
+            "evaluation maintainability input omitted function records"
+        )
+    spans = hxcir_function_sources(required_text(report, "hxcir"))
+    mappings: list[FunctionSourceMapping] = []
+    seen_ids: set[str] = set()
+    for entry in functions:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("field"), str)
+            or not isinstance(entry.get("cName"), str)
+        ):
+            raise EvaluationOrderFailure(
+                f"evaluation maintainability function mapping is malformed: {entry!r}"
+            )
+        function_id = f'function.EvaluationFixture.{entry["field"]}'
+        source = spans.get(function_id)
+        if function_id in seen_ids or source is None:
+            raise EvaluationOrderFailure(
+                f"evaluation maintainability cannot map {function_id!r} to one Haxe span"
+            )
+        seen_ids.add(function_id)
+        owner = ArtifactOwner(OwnerKind.SOURCE_MODULE, "EvaluationFixture", source)
+        mappings.append(
+            FunctionSourceMapping(function_id, entry["cName"], owner, source)
+        )
+    if seen_ids != set(spans):
+        raise EvaluationOrderFailure(
+            "evaluation maintainability function records and HxcIR spans differ: "
+            f"records={sorted(seen_ids)!r} spans={sorted(spans)!r}"
+        )
+    mappings.append(
+        FunctionSourceMapping(
+            "compiler.entry.main",
+            "main",
+            ArtifactOwner(OwnerKind.COMPILER_ENTRY),
+        )
+    )
+    return tuple(
+        sorted(mappings, key=lambda item: item.function_id.encode("utf-8"))
+    )
+
+
+def synthetic_function_mappings(
+    provenance: tuple[GotoProvenance, ...],
+) -> tuple[FunctionSourceMapping, ...]:
+    owner = ArtifactOwner(OwnerKind.SYNTHETIC_FIXTURE)
+    identities: dict[str, str] = {}
+    for item in provenance:
+        existing = identities.get(item.c_function_name)
+        if existing is not None and existing != item.function_id:
+            raise EvaluationOrderFailure(
+                f"synthetic C function {item.c_function_name!r} has conflicting plan identities"
+            )
+        identities[item.c_function_name] = item.function_id
+    if identities != {
+        "hxc_bounded_control_flow": "synthetic.loop-switch-break",
+        "hxc_legacy_control_flow": "synthetic.nested-irreducible",
+    }:
+        raise EvaluationOrderFailure(
+            f"synthetic control-flow identities drifted: {identities!r}"
+        )
+    mappings = [
+        FunctionSourceMapping(function_id, c_name, owner)
+        for c_name, function_id in identities.items()
+    ]
+    mappings.append(
+        FunctionSourceMapping("synthetic.control-flow.main", "main", owner)
+    )
+    return tuple(
+        sorted(mappings, key=lambda item: item.function_id.encode("utf-8"))
+    )
+
+
+def validate_evaluation_maintainability_report(
+    report: dict[str, object], *, corpus_id: str, layout: str
+) -> None:
+    validate_maintainability_report(report)
+    summary = report.get("summary")
+    if not isinstance(summary, dict):
+        raise EvaluationOrderFailure(
+            f"{corpus_id} maintainability report omitted its summary"
+        )
+    if (
+        report.get("corpusId") != corpus_id
+        or report.get("layout") != layout
+        or report.get("status") != "within-reviewed-budgets"
+        or summary.get("artifactCount") != 1
+        or summary.get("functionIdentityMappedBasisPoints") != 10000
+        or summary.get("unauthorizedGotoCount") != 0
+    ):
+        raise EvaluationOrderFailure(
+            f"{corpus_id}/{layout} maintainability policy evidence drifted"
+        )
+    if corpus_id == "evaluation-order-program":
+        if summary.get("gotoCount") != 0:
+            raise EvaluationOrderFailure(
+                "evaluation program maintainability report admitted a goto"
+            )
+        return
+    expected_gotos = sorted(
+        (
+            item.path,
+            item.function_id,
+            item.target_label,
+            item.occurrence,
+            item.category,
+        )
+        for item in EXPECTED_CONTROL_FLOW_GOTO_PROVENANCE
+    )
+    gotos = report.get("gotoOccurrences")
+    if not isinstance(gotos, list):
+        raise EvaluationOrderFailure(
+            "synthetic maintainability report omitted goto occurrences"
+        )
+    actual_gotos = [
+        (
+            item.get("path"),
+            item.get("functionId"),
+            item.get("targetLabel"),
+            item.get("occurrence"),
+            item.get("category"),
+        )
+        for item in gotos
+        if isinstance(item, dict)
+    ]
+    if (
+        len(actual_gotos) != len(gotos)
+        or actual_gotos != expected_gotos
+        or summary.get("gotoCount") != 7
+        or summary.get("gotoCategoryCounts")
+        != [
+            {"category": "irreducible-cfg", "occurrences": 6},
+            {"category": "loop-break-through-switch", "occurrences": 1},
+        ]
+    ):
+        raise EvaluationOrderFailure(
+            "synthetic maintainability report does not exactly consume plan-derived goto authorities"
+        )
+
+
+def evaluation_program_maintainability_report(
+    report: dict[str, object],
+) -> dict[str, object]:
+    source = source_records(report)["src/program.c"].encode("utf-8")
+    policy = load_corpus_policy(
+        MAINTAINABILITY_POLICY,
+        corpus_id="evaluation-order-program",
+        layout="canonical",
+    )
+    maintainability = analyze_generated_c(
+        corpus_id="evaluation-order-program",
+        layout="canonical",
+        artifacts=(
+            GeneratedCArtifact(
+                "program.c",
+                source,
+                ArtifactOwner(OwnerKind.AMALGAMATION),
+                evaluation_program_function_mappings(report),
+            ),
+        ),
+        symbols=maintainability_symbol_ledger(report.get("symbols")),
+        policy=policy,
+    )
+    validate_evaluation_maintainability_report(
+        maintainability,
+        corpus_id="evaluation-order-program",
+        layout="canonical",
+    )
+    return maintainability
+
+
+def evaluation_synthetic_maintainability_report(
+    report: dict[str, object],
+) -> dict[str, object]:
+    provenance = control_flow_goto_provenance(report)
+    policy = load_corpus_policy(
+        MAINTAINABILITY_POLICY,
+        corpus_id="evaluation-order-synthetic",
+        layout="synthetic",
+    )
+    maintainability = analyze_generated_c(
+        corpus_id="evaluation-order-synthetic",
+        layout="synthetic",
+        artifacts=(
+            GeneratedCArtifact(
+                CONTROL_FLOW_ARTIFACT_PATH,
+                required_text(report, "controlFlowEmissionC").encode("utf-8"),
+                ArtifactOwner(OwnerKind.SYNTHETIC_FIXTURE),
+                synthetic_function_mappings(provenance),
+            ),
+        ),
+        goto_authorities=tuple(
+            GotoAuthority(
+                item.path,
+                item.function_id,
+                item.target_label,
+                item.occurrence,
+                GotoCategory(item.category),
+            )
+            for item in provenance
+        ),
+        policy=policy,
+    )
+    validate_evaluation_maintainability_report(
+        maintainability,
+        corpus_id="evaluation-order-synthetic",
+        layout="synthetic",
+    )
+    return maintainability
+
+
 def snapshot_values(report: dict[str, object]) -> dict[str, object]:
     return {
         "evaluation.hxcir": required_text(report, "hxcir"),
@@ -471,6 +987,12 @@ def snapshot_values(report: dict[str, object]) -> dict[str, object]:
         "program.c": source_records(report)["src/program.c"],
         "synthetic-control-flow.c": required_text(report, "controlFlowEmissionC"),
         "symbols.json": report.get("symbols"),
+        "maintainability-program.json": evaluation_program_maintainability_report(
+            report
+        ),
+        "maintainability-synthetic.json": evaluation_synthetic_maintainability_report(
+            report
+        ),
     }
 
 
@@ -489,7 +1011,38 @@ def check_snapshots(report: dict[str, object]) -> None:
     for name, actual in snapshot_values(report).items():
         path = EXPECTED / name
         if name.endswith(".json"):
-            if actual != json.loads(path.read_text(encoding="utf-8")):
+            expected_value = json.loads(path.read_text(encoding="utf-8"))
+            if name == "maintainability-program.json":
+                if not isinstance(actual, dict) or not isinstance(expected_value, dict):
+                    raise EvaluationOrderFailure(
+                        "evaluation program maintainability snapshot is not an object"
+                    )
+                validate_evaluation_maintainability_report(
+                    actual,
+                    corpus_id="evaluation-order-program",
+                    layout="canonical",
+                )
+                validate_evaluation_maintainability_report(
+                    expected_value,
+                    corpus_id="evaluation-order-program",
+                    layout="canonical",
+                )
+            elif name == "maintainability-synthetic.json":
+                if not isinstance(actual, dict) or not isinstance(expected_value, dict):
+                    raise EvaluationOrderFailure(
+                        "evaluation synthetic maintainability snapshot is not an object"
+                    )
+                validate_evaluation_maintainability_report(
+                    actual,
+                    corpus_id="evaluation-order-synthetic",
+                    layout="synthetic",
+                )
+                validate_evaluation_maintainability_report(
+                    expected_value,
+                    corpus_id="evaluation-order-synthetic",
+                    layout="synthetic",
+                )
+            if actual != expected_value:
                 raise EvaluationOrderFailure(f"{name} semantic snapshot drifted")
         else:
             if not isinstance(actual, str):
@@ -820,7 +1373,9 @@ def check_synthetic_control_flow_native(
     report: dict[str, object], selected: str | None = None
 ) -> None:
     source_text = required_text(report, "controlFlowEmissionC")
-    validate_control_flow_emission(source_text)
+    validate_control_flow_emission(
+        source_text, control_flow_goto_provenance(report)
+    )
     with tempfile.TemporaryDirectory(prefix="hxc-control-flow-native-") as temporary:
         root = Path(temporary)
         source = root / "synthetic-control-flow.c"
@@ -871,6 +1426,19 @@ def snapshot_native_report() -> dict[str, object]:
         "controlFlowEmissionC": (EXPECTED / "synthetic-control-flow.c").read_text(
             encoding="utf-8"
         ),
+        "controlFlowGotoProvenance": [
+            {
+                "category": item.category,
+                "functionId": item.function_id,
+                "cFunctionName": item.c_function_name,
+                "ownerBlockId": item.owner_block_id,
+                "targetBlockId": item.target_block_id,
+                "targetLabel": item.target_label,
+                "path": item.path,
+                "occurrence": item.occurrence,
+            }
+            for item in EXPECTED_CONTROL_FLOW_GOTO_PROVENANCE
+        ],
     }
 
 
@@ -913,6 +1481,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_production(args.toolchain)
     except (
         EvaluationOrderFailure,
+        MaintainabilityError,
         OSError,
         UnicodeError,
         json.JSONDecodeError,

@@ -219,7 +219,9 @@ npm run test:caxecraft-domain:full
 npm run snapshots:check
 ```
 
-Human-oriented temporary names, redundant Boolean cleanup, declaration
-coalescing, and the final maintainability rubric remain separate generated-C
-work. Structural control flow is a prerequisite for those improvements, not a
-claim that every generated identifier already resembles handwritten C.
+Human-oriented names and conservative temporary coalescing are covered by their
+own lowering work, and the [maintainability rubric](generated-c-maintainability.md)
+now guards the fixed body, evaluation-order, and Caxecraft corpora. Declaration
+cleanup and broad arbitrary-program handoff evidence remain separate work.
+Structural control flow is a prerequisite for those improvements, not proof
+that every generated program already resembles handwritten C.

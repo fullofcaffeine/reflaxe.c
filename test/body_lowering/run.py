@@ -22,6 +22,7 @@ HXML = Path(__file__).with_name("body_lowering.hxml")
 POSITIVE = Path(__file__).with_name("fixtures") / "positive"
 UNSUPPORTED = Path(__file__).with_name("fixtures") / "unsupported"
 EXPECTED = Path(__file__).with_name("expected")
+MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 REPORT_PREFIX = "HXC_BODY_LOWERING="
 FIELDS = {
     "booleanValue",
@@ -33,6 +34,26 @@ FIELDS = {
     "unsignedValue",
 }
 IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+HXCIR_FUNCTION_SOURCE = re.compile(
+    r'^  function "(?P<function_id>[^"]+)" name="[^"]+"[^\n]* '
+    r'@"(?P<path>[^"]+)":(?P<start_line>[0-9]+):(?P<start_column>[0-9]+)-'
+    r'(?P<end_line>[0-9]+):(?P<end_column>[0-9]+)$',
+    re.MULTILINE,
+)
+
+sys.path.insert(0, str(ROOT / "scripts/test"))
+from generated_c_maintainability import (  # noqa: E402
+    ArtifactOwner,
+    FunctionSourceMapping,
+    GeneratedCArtifact,
+    MaintainabilityError,
+    OwnerKind,
+    SourceSpan,
+    SymbolLedgerEntry,
+    analyze_generated_c,
+    load_corpus_policy,
+    validate_report as validate_maintainability_report,
+)
 
 
 class BodyLoweringFailure(RuntimeError):
@@ -226,6 +247,180 @@ def required_text(report: dict[str, object], key: str) -> str:
     return value
 
 
+def hxcir_function_sources(hxcir: str) -> dict[str, SourceSpan]:
+    result: dict[str, SourceSpan] = {}
+    for match in HXCIR_FUNCTION_SOURCE.finditer(hxcir):
+        function_id = match.group("function_id")
+        if function_id in result:
+            raise BodyLoweringFailure(
+                f"body-lowering HxcIR duplicates function identity {function_id!r}"
+            )
+        result[function_id] = SourceSpan(
+            match.group("path"),
+            int(match.group("start_line")),
+            int(match.group("start_column")),
+            int(match.group("end_line")),
+            int(match.group("end_column")),
+        )
+    if not result:
+        raise BodyLoweringFailure("body-lowering HxcIR omitted function source spans")
+    return result
+
+
+def body_function_mappings(
+    report: dict[str, object], artifact_path: str
+) -> tuple[FunctionSourceMapping, ...]:
+    functions = report.get("functions")
+    if not isinstance(functions, list):
+        raise BodyLoweringFailure("body maintainability input omitted functions")
+    spans = hxcir_function_sources(required_text(report, "hxcir"))
+    mappings: list[FunctionSourceMapping] = []
+    seen_ids: set[str] = set()
+    for entry in functions:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("irId"), str)
+            or not isinstance(entry.get("cName"), str)
+        ):
+            raise BodyLoweringFailure(
+                f"body maintainability function mapping is malformed: {entry!r}"
+            )
+        haxe_function_id = entry["irId"]
+        c_name = entry["cName"]
+        source = spans.get(haxe_function_id)
+        if haxe_function_id in seen_ids or source is None:
+            raise BodyLoweringFailure(
+                f"body maintainability cannot map {haxe_function_id!r} to one Haxe span"
+            )
+        seen_ids.add(haxe_function_id)
+        owner = ArtifactOwner(OwnerKind.SOURCE_MODULE, "BodyFixture", source)
+        mappings.append(
+            FunctionSourceMapping(
+                f"{artifact_path}:{haxe_function_id}", c_name, owner, source
+            )
+        )
+    if seen_ids != set(spans):
+        raise BodyLoweringFailure(
+            "body maintainability function records and HxcIR spans differ: "
+            f"records={sorted(seen_ids)!r} spans={sorted(spans)!r}"
+        )
+    return tuple(
+        sorted(mappings, key=lambda item: item.function_id.encode("utf-8"))
+    )
+
+
+def maintainability_symbol_ledger(
+    symbols: object,
+) -> tuple[SymbolLedgerEntry, ...]:
+    if not isinstance(symbols, dict) or not isinstance(symbols.get("symbols"), list):
+        raise BodyLoweringFailure("body maintainability input omitted hxc.symbols entries")
+    entries = symbols["symbols"]
+    result: list[SymbolLedgerEntry] = []
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("cName"), str)
+            or not isinstance(entry.get("sourceSymbol"), str)
+            or not isinstance(entry.get("collisionResolved"), bool)
+            or not isinstance(entry.get("escapeReasons"), list)
+            or not all(isinstance(reason, str) for reason in entry["escapeReasons"])
+        ):
+            raise BodyLoweringFailure(
+                f"body maintainability symbol entry is malformed: {entry!r}"
+            )
+        result.append(
+            SymbolLedgerEntry(
+                entry["cName"],
+                entry["sourceSymbol"],
+                entry["collisionResolved"],
+                tuple(
+                    sorted(
+                        entry["escapeReasons"],
+                        key=lambda value: value.encode("utf-8"),
+                    )
+                ),
+            )
+        )
+    return tuple(
+        sorted(
+            result,
+            key=lambda item: (
+                item.c_name.encode("utf-8"),
+                item.source_symbol.encode("utf-8"),
+            ),
+        )
+    )
+
+
+def validate_body_maintainability_report(report: dict[str, object]) -> None:
+    validate_maintainability_report(report)
+    summary = report.get("summary")
+    policy = report.get("policy")
+    files = report.get("files")
+    if not isinstance(summary, dict) or not isinstance(policy, dict) or not isinstance(files, list):
+        raise BodyLoweringFailure("body maintainability report omitted policy evidence")
+    limits = policy.get("limits")
+    if not isinstance(limits, dict):
+        raise BodyLoweringFailure("body maintainability report omitted policy limits")
+    line_floor = limits.get("minLineDirectiveCount")
+    line_count = summary.get("lineDirectiveCount")
+    file_lines = {
+        item.get("path"): item.get("lineDirectiveCount")
+        for item in files
+        if isinstance(item, dict)
+    }
+    if (
+        report.get("corpusId") != "body-lowering"
+        or report.get("layout") != "canonical"
+        or report.get("status") != "within-reviewed-budgets"
+        or summary.get("artifactCount") != 2
+        or summary.get("functionIdentityMappedBasisPoints") != 10000
+        or summary.get("sourceSpanMappedFunctionBasisPoints") != 10000
+        or not isinstance(line_floor, int)
+        or line_floor < 1
+        or not isinstance(line_count, int)
+        or line_count < line_floor
+        or file_lines.get("body.c") != 0
+        or not isinstance(file_lines.get("body-lines.c"), int)
+        or file_lines["body-lines.c"] < line_floor
+    ):
+        raise BodyLoweringFailure(
+            "body maintainability report lost its two-artifact ownership, function/span mapping, or #line floor"
+        )
+
+
+def body_maintainability_report(report: dict[str, object]) -> dict[str, object]:
+    owner = ArtifactOwner(OwnerKind.SOURCE_MODULE, "BodyFixture")
+    artifacts = (
+        GeneratedCArtifact(
+            "body.c",
+            required_text(report, "cSource").encode("utf-8"),
+            owner,
+            body_function_mappings(report, "body.c"),
+        ),
+        GeneratedCArtifact(
+            "body-lines.c",
+            required_text(report, "lineMappedCSource").encode("utf-8"),
+            owner,
+            body_function_mappings(report, "body-lines.c"),
+        ),
+    )
+    policy = load_corpus_policy(
+        MAINTAINABILITY_POLICY,
+        corpus_id="body-lowering",
+        layout="canonical",
+    )
+    maintainability = analyze_generated_c(
+        corpus_id="body-lowering",
+        layout="canonical",
+        artifacts=artifacts,
+        symbols=maintainability_symbol_ledger(report.get("symbols")),
+        policy=policy,
+    )
+    validate_body_maintainability_report(maintainability)
+    return maintainability
+
+
 def difference(expected: str, actual: str, name: str) -> str:
     return "".join(
         difflib.unified_diff(
@@ -256,6 +451,18 @@ def check_snapshots(report: dict[str, object]) -> None:
             + json.dumps(expected_symbols, indent=2, sort_keys=True)
             + "\nactual:\n"
             + json.dumps(report.get("symbols"), indent=2, sort_keys=True)
+        )
+    actual_maintainability = body_maintainability_report(report)
+    expected_maintainability = json.loads(expected_text("maintainability.json"))
+    if not isinstance(expected_maintainability, dict):
+        raise BodyLoweringFailure("body maintainability snapshot is not an object")
+    validate_body_maintainability_report(expected_maintainability)
+    if actual_maintainability != expected_maintainability:
+        raise BodyLoweringFailure(
+            "body maintainability snapshot drifted\nexpected:\n"
+            + json.dumps(expected_maintainability, indent=2, sort_keys=True)
+            + "\nactual:\n"
+            + json.dumps(actual_maintainability, indent=2, sort_keys=True)
         )
 
 
@@ -667,6 +874,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_production_boundaries()
     except (
         BodyLoweringFailure,
+        MaintainabilityError,
         OSError,
         UnicodeError,
         json.JSONDecodeError,

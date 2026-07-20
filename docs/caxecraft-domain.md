@@ -249,11 +249,13 @@ available locale, and repeated warm compiler-server requests. Reflaxe's
 artifact is included. Centrally owned snapshots retain the default
 source-shaped tree: the common types header, package/module headers and
 translation units, umbrella header, small entry and support sources, runtime
-plan, compact method-symbol projection, generated-C readability metrics, and
-Eval oracle. The metrics are computed again from the checked-in C rather than
-trusted as a hand-written claim. They bound identifier length and temporary
-count and reject old role-encoded names, byte-escaped names, semantic digests,
-hashed ordinary guards, compiler labels, and `goto` statements.
+plan, compact method-symbol projection, a schema-validated maintainability
+report, and the Eval oracle. Unity keeps its complete header, implementation,
+and report as separate exact snapshots. The reports are computed again from the
+checked-in C rather than trusted as prose. They bound file/function complexity,
+identifier length, and compiler-temporary pressure; require declared ownership
+and source identity; and reject unexplained encoded names, digests, labels, and
+`goto` statements.
 
 Generated locals and record members retain the short compiler prefix while
 keeping the source word: `x` becomes `hxc_x`, for example. This is intentionally
@@ -262,22 +264,28 @@ macros before it understands local or member scope, so bare generated names can
 be corrupted by current or future macros from raylib or another included header.
 The prefix makes that impossible without returning to digest-heavy names.
 
-The pre-readability checked-in domain used 971 unique generated temporary
-identifiers. The current snapshot uses 356, a reduction of 615, and the
-executable budget rejects any return above 400. Its longest identifier is 50
-characters. These numbers describe this bounded domain corpus, not a claim that
-all Haxe programs will have the same ratio.
+The old counter reported 356 globally unique temporary spellings. That number
+was retired because the same spelling can be declared in several functions and
+because a text search can mistake comments or string contents for C syntax. The
+lexer-backed report instead sees 53 functions, 514 actual `hxc_tmp_`
+declarations, 757 non-declaration references, and 262 declarations per 1,000
+function code lines. The longest identifier is 50 bytes and the generated
+domain has no `goto`. Split mode owns 22 analyzed C/header artifacts and 2,410
+physical lines; unity owns two artifacts and 2,303 physical lines while
+retaining the same 53 function metrics. The QA-only `DomainProbe.selfCheck`
+function and the unity implementation have exact, named size overrides rather
+than wildcard exemptions. These measurements describe this fixed corpus, not a
+claim that every Haxe program has the same readability.
 
 The default `split` tree mirrors the Haxe module ownership under
 `include/hxc/modules/` and `src/modules/`. It exists so generated C is
 navigable, diffable, incrementally compilable, and easier to inspect beside
-the Haxe modules that own it. This is file-ownership infrastructure, not yet a
-claim that a C programmer can comfortably take over the generated program:
-the `haxe_c-xge.18.2` structuralization boundary now removes blanket CFG
-labels/gotos from the reducible checked-in domain sources,
-`haxe_c-xge.18.3` owns human-oriented names and conservative temporary cleanup,
-and the `haxe_c-xge.18.4` rubric must pass before final handoff readability is
-claimed. “Conservative” matters here: a temporary is removed only when the
+the Haxe modules that own it. The bounded domain now passes the structural
+control-flow, human-oriented naming, conservative temporary-cleanup, and
+[generated-C maintainability](generated-c-maintainability.md) gates. This is
+strong evidence that this particular generated tree remains navigable; it is
+not a claim that arbitrary Haxe output is already a comfortable handwritten-C
+handoff. “Conservative” matters here: a temporary is removed only when the
 compiler can prove that moving its expression to the use site cannot change
 evaluation order, aliasing, failure, or lifetime behavior.
 The optional `unity` layout puts the same declaration/function plan in

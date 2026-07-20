@@ -1,0 +1,608 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "hxc-generated-c-maintainability-v1",
+  "corpusId": "evaluation-order-program",
+  "layout": "canonical",
+  "correctnessAuthority": "semantic-native-eval-gates-are-independent-and-overriding",
+  "status": "within-reviewed-budgets",
+  "policy": {
+    "policyId": "hxc-generated-c-maintainability-v1",
+    "corpusId": "evaluation-order-program",
+    "layout": "canonical",
+    "limits": {
+      "maxIdentifierBytes": 96,
+      "maxFileLines": 360,
+      "maxFunctionLines": 320,
+      "maxBranchCount": 48,
+      "maxNestingDepth": 14,
+      "maxTemporaryDeclarations": 120,
+      "maxTemporaryReferences": 100,
+      "maxTemporaryDeclarationsPerKFunctionLines": 500,
+      "maxFunctionTemporaryDeclarationsPerKLines": 650,
+      "maxUnexplainedRoleEncodedIdentifiers": 0,
+      "maxUnexplainedByteEscapedIdentifiers": 0,
+      "maxUnexplainedDigestIdentifiers": 0,
+      "maxUnexplainedHashSuffixIdentifiers": 0,
+      "minOwnerMappedArtifactsBasisPoints": 10000,
+      "minFunctionIdentityMappedBasisPoints": 10000,
+      "minSourceSpanMappedFunctionsBasisPoints": 9000,
+      "minLineDirectiveCount": 0
+    },
+    "gotoLimits": [
+      {
+        "category": "irreducible-cfg",
+        "maxOccurrences": 0
+      },
+      {
+        "category": "loop-break-through-switch",
+        "maxOccurrences": 0
+      }
+    ],
+    "fileOverrides": [],
+    "functionOverrides": [],
+    "sha256": "ce36fb35712739030209e70aa74e31575b237a9fde50358820e1e1c866681598"
+  },
+  "inputs": [
+    {
+      "path": "program.c",
+      "sha256": "628f5bdf4d7ec57f44074514794df4b7c5fe630170efad0c80a73245d255f8c4"
+    }
+  ],
+  "summary": {
+    "artifactCount": 1,
+    "physicalLineCount": 320,
+    "codeLineCount": 302,
+    "lineDirectiveCount": 0,
+    "mappedPathCount": 0,
+    "mappedPaths": [],
+    "functionCount": 12,
+    "functionIdentityMappedCount": 12,
+    "functionIdentityMappedBasisPoints": 10000,
+    "sourceSpanMappedFunctionCount": 11,
+    "sourceSpanMappedFunctionBasisPoints": 9166,
+    "lineMappedFunctionCount": 0,
+    "lineMappedFunctionBasisPoints": 0,
+    "ownerMappedArtifactCount": 1,
+    "ownerMappedArtifactBasisPoints": 10000,
+    "branchCount": 34,
+    "temporaryDeclarationCount": 47,
+    "temporaryReferenceCount": 67,
+    "temporaryDeclarationsPerKFunctionCodeLines": 160,
+    "maxIdentifier": {
+      "name": "hxc_EvaluationFixture_overwriteBarrierValue",
+      "bytes": 43,
+      "coordinate": {
+        "path": "program.c",
+        "line": 38,
+        "column": 9,
+        "functionId": null
+      }
+    },
+    "roleEncodedIdentifierCount": 0,
+    "explainedRoleEncodedIdentifierCount": 0,
+    "unexplainedRoleEncodedIdentifierCount": 0,
+    "byteEscapedIdentifierCount": 0,
+    "explainedByteEscapedIdentifierCount": 0,
+    "unexplainedByteEscapedIdentifierCount": 0,
+    "digestIdentifierCount": 0,
+    "explainedDigestIdentifierCount": 0,
+    "unexplainedDigestIdentifierCount": 0,
+    "hashSuffixIdentifierCount": 3,
+    "explainedHashSuffixIdentifierCount": 3,
+    "unexplainedHashSuffixIdentifierCount": 0,
+    "gotoCount": 0,
+    "unauthorizedGotoCount": 0,
+    "gotoCategoryCounts": [
+      {
+        "category": "irreducible-cfg",
+        "occurrences": 0
+      },
+      {
+        "category": "loop-break-through-switch",
+        "occurrences": 0
+      }
+    ],
+    "violationCount": 0
+  },
+  "identifierFindings": [
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_symbol_h0c443bac736a",
+      "bytes": 24,
+      "explained": true,
+      "sourceSymbols": [
+        "EvaluationFixture.run.`#23"
+      ],
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "program.c",
+        "line": 239,
+        "column": 11,
+        "functionId": null
+      }
+    },
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_symbol_h9dc820c6c711",
+      "bytes": 24,
+      "explained": true,
+      "sourceSymbols": [
+        "EvaluationFixture.run.`#19"
+      ],
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "program.c",
+        "line": 222,
+        "column": 11,
+        "functionId": null
+      }
+    },
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_symbol_hff91343ee89b",
+      "bytes": 24,
+      "explained": true,
+      "sourceSymbols": [
+        "EvaluationFixture.run.`#20"
+      ],
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "program.c",
+        "line": 223,
+        "column": 11,
+        "functionId": null
+      }
+    }
+  ],
+  "gotoOccurrences": [],
+  "files": [
+    {
+      "path": "program.c",
+      "sha256": "628f5bdf4d7ec57f44074514794df4b7c5fe630170efad0c80a73245d255f8c4",
+      "owner": {
+        "kind": "amalgamation",
+        "modulePath": null,
+        "source": null
+      },
+      "physicalLineCount": 320,
+      "codeLineCount": 302,
+      "lineDirectiveCount": 0,
+      "mappedPathCount": 0,
+      "mappedPaths": [],
+      "lineDirectives": [],
+      "identifierCount": 471,
+      "maxIdentifier": {
+        "name": "hxc_EvaluationFixture_overwriteBarrierValue",
+        "bytes": 43,
+        "line": 38,
+        "column": 9
+      },
+      "temporaryDeclarationCount": 47,
+      "temporaryReferenceCount": 67,
+      "functions": [
+        {
+          "functionId": "function.EvaluationFixture.consumePair",
+          "cName": "hxc_EvaluationFixture_consumePair",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 14,
+              "startColumn": 60,
+              "endLine": 17,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 14,
+            "startColumn": 60,
+            "endLine": 17,
+            "endColumn": 3
+          },
+          "startLine": 15,
+          "endLine": 20,
+          "physicalLineCount": 6,
+          "codeLineCount": 6,
+          "bodyCodeLineCount": 3,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.finish",
+          "cName": "hxc_EvaluationFixture_finish",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 33,
+              "startColumn": 42,
+              "endLine": 35,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 33,
+            "startColumn": 42,
+            "endLine": 35,
+            "endColumn": 3
+          },
+          "startLine": 22,
+          "endLine": 25,
+          "physicalLineCount": 4,
+          "codeLineCount": 4,
+          "bodyCodeLineCount": 1,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.keepTernary",
+          "cName": "hxc_EvaluationFixture_keepTernary",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 24,
+              "startColumn": 37,
+              "endLine": 26,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 24,
+            "startColumn": 37,
+            "endLine": 26,
+            "endColumn": 3
+          },
+          "startLine": 27,
+          "endLine": 30,
+          "physicalLineCount": 4,
+          "codeLineCount": 4,
+          "bodyCodeLineCount": 1,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.main",
+          "cName": "hxc_EvaluationFixture_main",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 135,
+              "startColumn": 30,
+              "endLine": 141,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 135,
+            "startColumn": 30,
+            "endLine": 141,
+            "endColumn": 3
+          },
+          "startLine": 32,
+          "endLine": 36,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.overwriteBarrierValue",
+          "cName": "hxc_EvaluationFixture_overwriteBarrierValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 42,
+              "startColumn": 46,
+              "endLine": 45,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 42,
+            "startColumn": 46,
+            "endLine": 45,
+            "endColumn": 3
+          },
+          "startLine": 38,
+          "endLine": 42,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.readGlobalBeforeCall",
+          "cName": "hxc_EvaluationFixture_readGlobalBeforeCall",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 47,
+              "startColumn": 45,
+              "endLine": 52,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 47,
+            "startColumn": 45,
+            "endLine": 52,
+            "endColumn": 3
+          },
+          "startLine": 44,
+          "endLine": 51,
+          "physicalLineCount": 8,
+          "codeLineCount": 8,
+          "bodyCodeLineCount": 5,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 125
+        },
+        {
+          "functionId": "function.EvaluationFixture.run",
+          "cName": "hxc_EvaluationFixture_run",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 54,
+              "startColumn": 29,
+              "endLine": 134,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 54,
+            "startColumn": 29,
+            "endLine": 134,
+            "endColumn": 3
+          },
+          "startLine": 53,
+          "endLine": 289,
+          "physicalLineCount": 237,
+          "codeLineCount": 237,
+          "bodyCodeLineCount": 234,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 34,
+          "maxNestingDepth": 5,
+          "temporaryDeclarationCount": 45,
+          "temporaryReferenceCount": 65,
+          "temporaryDeclarationsPerKCodeLines": 190
+        },
+        {
+          "functionId": "function.EvaluationFixture.setCallFlag",
+          "cName": "hxc_EvaluationFixture_setCallFlag",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 9,
+              "startColumn": 47,
+              "endLine": 12,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 9,
+            "startColumn": 47,
+            "endLine": 12,
+            "endColumn": 3
+          },
+          "startLine": 291,
+          "endLine": 295,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.spoilShortCircuit",
+          "cName": "hxc_EvaluationFixture_spoilShortCircuit",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 19,
+              "startColumn": 43,
+              "endLine": 22,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 19,
+            "startColumn": 43,
+            "endLine": 22,
+            "endColumn": 3
+          },
+          "startLine": 297,
+          "endLine": 301,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.spoilTernary",
+          "cName": "hxc_EvaluationFixture_spoilTernary",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 28,
+              "startColumn": 38,
+              "endLine": 31,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 28,
+            "startColumn": 38,
+            "endLine": 31,
+            "endColumn": 3
+          },
+          "startLine": 303,
+          "endLine": 307,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "function.EvaluationFixture.switchSubject",
+          "cName": "hxc_EvaluationFixture_switchSubject",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "EvaluationFixture",
+            "source": {
+              "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+              "startLine": 37,
+              "startColumn": 47,
+              "endLine": 40,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
+            "startLine": 37,
+            "startColumn": 47,
+            "endLine": 40,
+            "endColumn": 3
+          },
+          "startLine": 309,
+          "endLine": 314,
+          "physicalLineCount": 6,
+          "codeLineCount": 6,
+          "bodyCodeLineCount": 3,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 167
+        },
+        {
+          "functionId": "compiler.entry.main",
+          "cName": "main",
+          "identityMapped": true,
+          "owner": {
+            "kind": "compiler-entry",
+            "modulePath": null,
+            "source": null
+          },
+          "source": null,
+          "startLine": 316,
+          "endLine": 320,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        }
+      ]
+    }
+  ],
+  "firstViolation": null,
+  "violations": []
+}

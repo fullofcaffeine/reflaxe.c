@@ -1,0 +1,843 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "hxc-generated-c-maintainability-v1",
+  "corpusId": "body-lowering",
+  "layout": "canonical",
+  "correctnessAuthority": "semantic-native-eval-gates-are-independent-and-overriding",
+  "status": "within-reviewed-budgets",
+  "policy": {
+    "policyId": "hxc-generated-c-maintainability-v1",
+    "corpusId": "body-lowering",
+    "layout": "canonical",
+    "limits": {
+      "maxIdentifierBytes": 80,
+      "maxFileLines": 120,
+      "maxFunctionLines": 48,
+      "maxBranchCount": 8,
+      "maxNestingDepth": 6,
+      "maxTemporaryDeclarations": 16,
+      "maxTemporaryReferences": 16,
+      "maxTemporaryDeclarationsPerKFunctionLines": 500,
+      "maxFunctionTemporaryDeclarationsPerKLines": 650,
+      "maxUnexplainedRoleEncodedIdentifiers": 0,
+      "maxUnexplainedByteEscapedIdentifiers": 0,
+      "maxUnexplainedDigestIdentifiers": 0,
+      "maxUnexplainedHashSuffixIdentifiers": 0,
+      "minOwnerMappedArtifactsBasisPoints": 10000,
+      "minFunctionIdentityMappedBasisPoints": 10000,
+      "minSourceSpanMappedFunctionsBasisPoints": 10000,
+      "minLineDirectiveCount": 1
+    },
+    "gotoLimits": [
+      {
+        "category": "irreducible-cfg",
+        "maxOccurrences": 0
+      },
+      {
+        "category": "loop-break-through-switch",
+        "maxOccurrences": 0
+      }
+    ],
+    "fileOverrides": [],
+    "functionOverrides": [],
+    "sha256": "fad49a1fa2e418f31ec6ad412e52c362d4aeaff0976d378d96219939f8a27513"
+  },
+  "inputs": [
+    {
+      "path": "body-lines.c",
+      "sha256": "a64bc53136243a4961aed99fa6d8cfe6eaa014985599b18cd348b3142d8974bf"
+    },
+    {
+      "path": "body.c",
+      "sha256": "aa2856a9986db516e98490c62a328fdc78e34d850985ed79cb00831184546984"
+    }
+  ],
+  "summary": {
+    "artifactCount": 2,
+    "physicalLineCount": 132,
+    "codeLineCount": 118,
+    "lineDirectiveCount": 26,
+    "mappedPathCount": 1,
+    "mappedPaths": [
+      "test/body_lowering/fixtures/positive/BodyFixture.hx"
+    ],
+    "functionCount": 14,
+    "functionIdentityMappedCount": 14,
+    "functionIdentityMappedBasisPoints": 10000,
+    "sourceSpanMappedFunctionCount": 14,
+    "sourceSpanMappedFunctionBasisPoints": 10000,
+    "lineMappedFunctionCount": 7,
+    "lineMappedFunctionBasisPoints": 5000,
+    "ownerMappedArtifactCount": 2,
+    "ownerMappedArtifactBasisPoints": 10000,
+    "branchCount": 0,
+    "temporaryDeclarationCount": 8,
+    "temporaryReferenceCount": 8,
+    "temporaryDeclarationsPerKFunctionCodeLines": 75,
+    "maxIdentifier": {
+      "name": "hxc_BodyFixture_directInteger",
+      "bytes": 29,
+      "coordinate": {
+        "path": "body-lines.c",
+        "line": 14,
+        "column": 16,
+        "functionId": null
+      }
+    },
+    "roleEncodedIdentifierCount": 0,
+    "explainedRoleEncodedIdentifierCount": 0,
+    "unexplainedRoleEncodedIdentifierCount": 0,
+    "byteEscapedIdentifierCount": 0,
+    "explainedByteEscapedIdentifierCount": 0,
+    "unexplainedByteEscapedIdentifierCount": 0,
+    "digestIdentifierCount": 0,
+    "explainedDigestIdentifierCount": 0,
+    "unexplainedDigestIdentifierCount": 0,
+    "hashSuffixIdentifierCount": 2,
+    "explainedHashSuffixIdentifierCount": 2,
+    "unexplainedHashSuffixIdentifierCount": 0,
+    "gotoCount": 0,
+    "unauthorizedGotoCount": 0,
+    "gotoCategoryCounts": [
+      {
+        "category": "irreducible-cfg",
+        "occurrences": 0
+      },
+      {
+        "category": "loop-break-through-switch",
+        "occurrences": 0
+      }
+    ],
+    "violationCount": 0
+  },
+  "identifierFindings": [
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_value_h276946f7ce4a",
+      "bytes": 23,
+      "explained": true,
+      "sourceSymbols": [
+        "BodyFixture.integerValue.value#0"
+      ],
+      "escapeReasons": [],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "body-lines.c",
+        "line": 62,
+        "column": 11,
+        "functionId": null
+      }
+    },
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_value_h95f4913cd08b",
+      "bytes": 23,
+      "explained": true,
+      "sourceSymbols": [
+        "BodyFixture.integerValue.value#1"
+      ],
+      "escapeReasons": [],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "body-lines.c",
+        "line": 67,
+        "column": 11,
+        "functionId": null
+      }
+    }
+  ],
+  "gotoOccurrences": [],
+  "files": [
+    {
+      "path": "body-lines.c",
+      "sha256": "a64bc53136243a4961aed99fa6d8cfe6eaa014985599b18cd348b3142d8974bf",
+      "owner": {
+        "kind": "source-module",
+        "modulePath": "BodyFixture",
+        "source": null
+      },
+      "physicalLineCount": 79,
+      "codeLineCount": 72,
+      "lineDirectiveCount": 26,
+      "mappedPathCount": 1,
+      "mappedPaths": [
+        "test/body_lowering/fixtures/positive/BodyFixture.hx"
+      ],
+      "lineDirectives": [
+        {
+          "physicalLine": 4,
+          "mappedLine": 20,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 7,
+          "mappedLine": 21,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 9,
+          "mappedLine": 22,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 13,
+          "mappedLine": 11,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 16,
+          "mappedLine": 12,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 20,
+          "mappedLine": 25,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 23,
+          "mappedLine": 26,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 25,
+          "mappedLine": 27,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 28,
+          "mappedLine": 29,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 30,
+          "mappedLine": 30,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 33,
+          "mappedLine": 32,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 37,
+          "mappedLine": 15,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 40,
+          "mappedLine": 16,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 42,
+          "mappedLine": 17,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 46,
+          "mappedLine": 35,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 49,
+          "mappedLine": 36,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 51,
+          "mappedLine": 37,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 54,
+          "mappedLine": 35,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 58,
+          "mappedLine": 2,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 61,
+          "mappedLine": 3,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 63,
+          "mappedLine": 4,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 66,
+          "mappedLine": 6,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 68,
+          "mappedLine": 7,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 72,
+          "mappedLine": 40,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 75,
+          "mappedLine": 41,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        },
+        {
+          "physicalLine": 77,
+          "mappedLine": 42,
+          "mappedPath": "test/body_lowering/fixtures/positive/BodyFixture.hx"
+        }
+      ],
+      "identifierCount": 109,
+      "maxIdentifier": {
+        "name": "hxc_BodyFixture_directInteger",
+        "bytes": 29,
+        "line": 14,
+        "column": 16
+      },
+      "temporaryDeclarationCount": 4,
+      "temporaryReferenceCount": 4,
+      "functions": [
+        {
+          "functionId": "body-lines.c:function.BodyFixture.booleanValue",
+          "cName": "hxc_BodyFixture_booleanValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 20,
+              "startColumn": 38,
+              "endLine": 23,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 20,
+            "startColumn": 38,
+            "endLine": 23,
+            "endColumn": 3
+          },
+          "startLine": 5,
+          "endLine": 11,
+          "physicalLineCount": 7,
+          "codeLineCount": 7,
+          "bodyCodeLineCount": 4,
+          "mappedBodyLineCount": 2,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.directInteger",
+          "cName": "hxc_BodyFixture_directInteger",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 11,
+              "startColumn": 38,
+              "endLine": 13,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 11,
+            "startColumn": 38,
+            "endLine": 13,
+            "endColumn": 3
+          },
+          "startLine": 14,
+          "endLine": 18,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 2,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.explicitVoid",
+          "cName": "hxc_BodyFixture_explicitVoid",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 25,
+              "startColumn": 38,
+              "endLine": 33,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 25,
+            "startColumn": 38,
+            "endLine": 33,
+            "endColumn": 3
+          },
+          "startLine": 21,
+          "endLine": 35,
+          "physicalLineCount": 15,
+          "codeLineCount": 15,
+          "bodyCodeLineCount": 12,
+          "mappedBodyLineCount": 7,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 2,
+          "temporaryReferenceCount": 2,
+          "temporaryDeclarationsPerKCodeLines": 134
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.floatingValue",
+          "cName": "hxc_BodyFixture_floatingValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 15,
+              "startColumn": 40,
+              "endLine": 18,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 15,
+            "startColumn": 40,
+            "endLine": 18,
+            "endColumn": 3
+          },
+          "startLine": 38,
+          "endLine": 44,
+          "physicalLineCount": 7,
+          "codeLineCount": 7,
+          "bodyCodeLineCount": 4,
+          "mappedBodyLineCount": 2,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.implicitVoid",
+          "cName": "hxc_BodyFixture_implicitVoid",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 35,
+              "startColumn": 38,
+              "endLine": 38,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 35,
+            "startColumn": 38,
+            "endLine": 38,
+            "endColumn": 3
+          },
+          "startLine": 47,
+          "endLine": 56,
+          "physicalLineCount": 10,
+          "codeLineCount": 10,
+          "bodyCodeLineCount": 7,
+          "mappedBodyLineCount": 5,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 100
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.integerValue",
+          "cName": "hxc_BodyFixture_integerValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 2,
+              "startColumn": 37,
+              "endLine": 9,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 2,
+            "startColumn": 37,
+            "endLine": 9,
+            "endColumn": 3
+          },
+          "startLine": 59,
+          "endLine": 70,
+          "physicalLineCount": 12,
+          "codeLineCount": 12,
+          "bodyCodeLineCount": 9,
+          "mappedBodyLineCount": 5,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 84
+        },
+        {
+          "functionId": "body-lines.c:function.BodyFixture.unsignedValue",
+          "cName": "hxc_BodyFixture_unsignedValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 40,
+              "startColumn": 39,
+              "endLine": 43,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 40,
+            "startColumn": 39,
+            "endLine": 43,
+            "endColumn": 3
+          },
+          "startLine": 73,
+          "endLine": 79,
+          "physicalLineCount": 7,
+          "codeLineCount": 7,
+          "bodyCodeLineCount": 4,
+          "mappedBodyLineCount": 2,
+          "mappedPaths": [
+            "test/body_lowering/fixtures/positive/BodyFixture.hx"
+          ],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        }
+      ]
+    },
+    {
+      "path": "body.c",
+      "sha256": "aa2856a9986db516e98490c62a328fdc78e34d850985ed79cb00831184546984",
+      "owner": {
+        "kind": "source-module",
+        "modulePath": "BodyFixture",
+        "source": null
+      },
+      "physicalLineCount": 53,
+      "codeLineCount": 46,
+      "lineDirectiveCount": 0,
+      "mappedPathCount": 0,
+      "mappedPaths": [],
+      "lineDirectives": [],
+      "identifierCount": 83,
+      "maxIdentifier": {
+        "name": "hxc_BodyFixture_directInteger",
+        "bytes": 29,
+        "line": 10,
+        "column": 16
+      },
+      "temporaryDeclarationCount": 4,
+      "temporaryReferenceCount": 4,
+      "functions": [
+        {
+          "functionId": "body.c:function.BodyFixture.booleanValue",
+          "cName": "hxc_BodyFixture_booleanValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 20,
+              "startColumn": 38,
+              "endLine": 23,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 20,
+            "startColumn": 38,
+            "endLine": 23,
+            "endColumn": 3
+          },
+          "startLine": 4,
+          "endLine": 8,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.directInteger",
+          "cName": "hxc_BodyFixture_directInteger",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 11,
+              "startColumn": 38,
+              "endLine": 13,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 11,
+            "startColumn": 38,
+            "endLine": 13,
+            "endColumn": 3
+          },
+          "startLine": 10,
+          "endLine": 13,
+          "physicalLineCount": 4,
+          "codeLineCount": 4,
+          "bodyCodeLineCount": 1,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.explicitVoid",
+          "cName": "hxc_BodyFixture_explicitVoid",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 25,
+              "startColumn": 38,
+              "endLine": 33,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 25,
+            "startColumn": 38,
+            "endLine": 33,
+            "endColumn": 3
+          },
+          "startLine": 15,
+          "endLine": 24,
+          "physicalLineCount": 10,
+          "codeLineCount": 10,
+          "bodyCodeLineCount": 7,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 2,
+          "temporaryReferenceCount": 2,
+          "temporaryDeclarationsPerKCodeLines": 200
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.floatingValue",
+          "cName": "hxc_BodyFixture_floatingValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 15,
+              "startColumn": 40,
+              "endLine": 18,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 15,
+            "startColumn": 40,
+            "endLine": 18,
+            "endColumn": 3
+          },
+          "startLine": 26,
+          "endLine": 30,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.implicitVoid",
+          "cName": "hxc_BodyFixture_implicitVoid",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 35,
+              "startColumn": 38,
+              "endLine": 38,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 35,
+            "startColumn": 38,
+            "endLine": 38,
+            "endColumn": 3
+          },
+          "startLine": 32,
+          "endLine": 38,
+          "physicalLineCount": 7,
+          "codeLineCount": 7,
+          "bodyCodeLineCount": 4,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 143
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.integerValue",
+          "cName": "hxc_BodyFixture_integerValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 2,
+              "startColumn": 37,
+              "endLine": 9,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 2,
+            "startColumn": 37,
+            "endLine": 9,
+            "endColumn": 3
+          },
+          "startLine": 40,
+          "endLine": 47,
+          "physicalLineCount": 8,
+          "codeLineCount": 8,
+          "bodyCodeLineCount": 5,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 1,
+          "temporaryDeclarationsPerKCodeLines": 125
+        },
+        {
+          "functionId": "body.c:function.BodyFixture.unsignedValue",
+          "cName": "hxc_BodyFixture_unsignedValue",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "BodyFixture",
+            "source": {
+              "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+              "startLine": 40,
+              "startColumn": 39,
+              "endLine": 43,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "test/body_lowering/fixtures/positive/BodyFixture.hx",
+            "startLine": 40,
+            "startColumn": 39,
+            "endLine": 43,
+            "endColumn": 3
+          },
+          "startLine": 49,
+          "endLine": 53,
+          "physicalLineCount": 5,
+          "codeLineCount": 5,
+          "bodyCodeLineCount": 2,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 0,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        }
+      ]
+    }
+  ],
+  "firstViolation": null,
+  "violations": []
+}
