@@ -2,6 +2,62 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
+`AGENTS.md` is the canonical complete project contract. Read and follow it
+before changing compiler, runtime, target API, ABI, build, examples, tests, or
+documentation. The flagship rule below is mirrored here because it directly
+governs application-driven compiler work.
+
+## Flagship End-to-End Feedback Loop
+
+Treat realistic applications as active compiler-development instruments, not
+as demos that are polished only after the compiler is finished. Caxecraft is
+the current flagship application and primary product-level end-to-end (E2E)
+quality-assurance workload for haxe.c. It should continually exercise ordinary
+Haxe, typed `c.*` interop, generated-C quality, runtime selection, native tools,
+performance, packaging, and developer experience together.
+
+- When a flagship workload breaks or exposes weak output, first reproduce and
+  classify the problem: application design, binding, compiler semantics,
+  generated-C structure/readability, runtime/ABI, build tooling, or test cost.
+  Do not hide a compiler defect with example-only raw C, copied logic, a looser
+  assertion, or a Caxecraft name/path special case.
+- Reduce each compiler defect to the smallest reusable positive, negative,
+  semantic, structural, or native fixture that explains it. Fix it in the
+  narrowest owning compiler/runtime/tooling layer, then retain both that fast
+  focused regression and the flagship E2E path that originally exposed it.
+  The focused test diagnoses the rule; the flagship proves the layers work
+  together.
+- Apply the same loop to improvements, not only failures. Measure readability,
+  output shape, compile time, runtime cost, allocations, code size, diagnostics,
+  and workflow friction where relevant. Turn a broadly useful improvement into
+  a compiler capability rather than local game scaffolding.
+- Preserve the accepted architecture and policy hierarchy while improving the
+  workload: typed source and plans, HxcIR where C semantic gaps require it,
+  structural CAST, explicit ownership/runtime decisions, formatting-only
+  printing, fail-closed unsupported behavior, and ordinary Haxe plus narrow
+  typed C adapters at the application edge.
+- A bounded discovery that is required for the active issue's acceptance may
+  be fixed with that issue. A material scope expansion gets a durable Beads
+  owner and dependency instead of silently turning the active task into a
+  rewrite. Prioritize discoveries that block correctness, safety, the playable
+  path, or trustworthy QA.
+- If a critical correctness or safety issue appears to require violating an
+  accepted architectural decision, stop before implementing the deviation.
+  Record the minimal reproducer, observed evidence, affected invariants,
+  plausible options, migration cost, and regression gates; check the governing
+  PRD/ADR; and ask the maintainer for an explicit decision. When the decision is
+  unusually broad, irreversible, or uncertain, prepare that evidence as a
+  focused deep-research brief for the designated Oracle model rather than
+  improvising a new architecture.
+- Keep claims evidence-bounded. Caxecraft is the primary integrated proof, not
+  permission to infer general language support from one game. Conversely, a
+  focused compiler fixture passing is not enough to claim the flagship is
+  playable, attractive, fast, or portable.
+
+The long-term intent is a constructive flywheel: Caxecraft finds real pressure,
+haxe.c gains a reusable principled capability, focused tests make the fix fast
+to maintain, and Caxecraft keeps the complete user journey honest.
+
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
 

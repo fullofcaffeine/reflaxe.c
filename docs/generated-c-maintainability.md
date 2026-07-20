@@ -30,8 +30,10 @@ cannot manufacture its expected answer from the code generator it is checking.
 The report records normalized input paths and SHA-256 hashes, then measures each
 file and function separately:
 
-- **ownership** says which Haxe module, generated entry point, or compiler
-  support component owns the file and each source-backed function;
+- **ownership** says which Haxe module, Haxe package, generated entry point, or
+  compiler support component owns the file and each source-backed function. A
+  package-coalesced file belongs to its package, while its individual functions
+  retain their original module identities;
 - **source mapping** records source-backed function identity and any structural
   `#line` mapping. `#line` is a C directive that tells native diagnostics which
   Haxe file and line produced the following C line;
@@ -84,6 +86,7 @@ The initial corpus is intentionally small but varied:
 | Body lowering | Small functions, shadowed-name collision proof, ordinary temporary density, and optional structural `#line` mapping. |
 | Evaluation order | Legitimate temporaries required by Haxe sequencing, structured loops and switches, and the complete admitted-`goto` taxonomy. |
 | Caxecraft domain, split | A real multi-module program whose C files mirror Haxe ownership. |
+| Caxecraft domain, package | The same semantic plan coalesced by Haxe package, while function-level ownership remains traceable to source modules. |
 | Caxecraft domain, unity | The same semantic plan in one implementation file, with a layout-specific file-size limit rather than pretending it is a split tree. |
 | Handwritten kernels | Small independently authored C files under `test/governance/fixtures/generated_c_maintainability/` that preserve call order and structured control flow. Governance generates and schema-validates their reports directly; they calibrate readability only and are never presented as generated-output or runtime-equivalence evidence. |
 

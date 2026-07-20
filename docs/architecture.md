@@ -276,17 +276,17 @@ edges; forward-declarable prototypes and `extern` objects remain soft, so a
 mixed hard/soft module cycle does not become a false include cycle. Anonymous-
 record typedef ownership is captured before alias unwrapping,
 while structural shape identity remains the representation key. Function/global
-definitions follow deterministic package-shaped
-module sources; compiler support and the host entry have small dedicated
-sources. `unity` assigns the same finalized declarations and function bodies
-to one implementation file. Both layouts use the same names, HxcIR, runtime
-decisions, and structural CAST; printers neither rediscover module ownership
-nor choose layout. `CProjectEmitter` receives the complete typed artifact set
+definitions follow deterministic package-shaped module sources; compiler
+support and the host entry have small dedicated sources. `package` coalesces
+those module-owned definitions into one header/source pair per Haxe package,
+while retaining hard complete-type dependency order and soft forward-declarable
+edges. `unity` assigns the same finalized declarations and function bodies to
+one implementation file. All layouts use the same names, HxcIR, runtime
+decisions, and structural CAST; printers neither rediscover ownership nor
+choose layout. `CProjectEmitter` receives the complete typed artifact set
 before any output is written, so manifest/build facts and stale-file ownership
 describe the selected tree exactly. See
-[project emission](project-emission.md#source-shaped-and-unity-generated-c).
-Package-coalesced file assignment remains separately owned by
-`haxe_c-xge.18.5`; split and unity evidence must not be used to claim it.
+[project emission](project-emission.md#split-package-and-unity-generated-c).
 
 E2.T09 adds a whole-program static-initialization graph before body lowering.
 It follows source-positioned superclass/interface/type/static/constructor
@@ -298,8 +298,8 @@ globals whose private `():Void` initializer contains exactly one
 `initialize-global`. The validator proves that link, and the C emitter assigns
 zero-initialized storage through project-private initializer functions and one
 file-local compiler-owned wrapper called once before Haxe `main`; initializer
-prototypes have identical project-private external linkage in split and unity
-layouts so the split entry unit can call module-owned definitions, and an
+prototypes have identical project-private external linkage in split, package,
+and unity layouts so a separate entry unit can call owned definitions, and an
 empty plan elides the wrapper and call. Cross-type cycles fail as `HXC1002`. See [deterministic static
 initialization](static-initialization.md).
 

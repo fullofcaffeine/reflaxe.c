@@ -6,7 +6,8 @@
   "status": "active",
   "requirements": [
     "HXC-COMP-008",
-    "HXC-COMP-010"
+    "HXC-COMP-010",
+    "HXC-COMP-011"
   ],
   "sources": [
     "scripts/test/c_fixture_harness.py",

@@ -20,6 +20,9 @@ enum abstract CProjectLayout(String) to String {
 	/** Source-shaped private headers and sources grouped by Haxe module. */
 	var Split = "split";
 
+	/** Private headers and sources coalesced by normalized Haxe package. */
+	var Package = "package";
+
 	/** One ordinary implementation unit for convenient embedding and inspection. */
 	var Unity = "unity";
 }
@@ -27,13 +30,15 @@ enum abstract CProjectLayout(String) to String {
 /** Deterministic paths assigned to one normalized Haxe module. */
 class CProjectModuleLayout {
 	public final modulePath:String;
+	public final packagePath:String;
 	public final relativeStem:String;
 	public final headerPath:String;
 	public final headerInclude:String;
 	public final sourcePath:String;
 
-	public function new(modulePath:String, relativeStem:String) {
+	public function new(modulePath:String, packagePath:String, relativeStem:String) {
 		this.modulePath = modulePath;
+		this.packagePath = packagePath;
 		this.relativeStem = relativeStem;
 		headerPath = 'include/hxc/modules/$relativeStem.h';
 		headerInclude = 'hxc/modules/$relativeStem.h';
@@ -48,13 +53,44 @@ class CProjectModuleLayout {
 	}
 }
 
+/** Deterministic package artifact shared by every module in one Haxe package. */
+class CProjectPackageLayout {
+	public final packagePath:String;
+	public final relativeStem:String;
+	public final headerPath:String;
+	public final headerInclude:String;
+	public final sourcePath:String;
+	public final modules:Array<CProjectModuleLayout>;
+
+	public function new(packagePath:String, relativeStem:String, modules:Array<CProjectModuleLayout>) {
+		if (modules.length == 0)
+			throw new ProjectEmissionError('generated package `$packagePath` requires at least one Haxe module');
+		this.packagePath = packagePath;
+		this.relativeStem = relativeStem;
+		this.modules = modules.copy();
+		final directory = relativeStem == "" ? "" : '$relativeStem/';
+		headerPath = 'include/hxc/packages/${directory}package.h';
+		headerInclude = 'hxc/packages/${directory}package.h';
+		sourcePath = 'src/packages/${directory}package.c';
+	}
+
+	public function nonReturningSourcePath(index:Int):String {
+		if (index < 0 || index > 9999) {
+			throw new ProjectEmissionError('package project cannot address non-returning source ordinal `$index` in package `$packagePath`');
+		}
+		final directory = relativeStem == "" ? "" : '$relativeStem/';
+		return 'src/packages/${directory}package.nonreturn_${StringTools.lpad(Std.string(index), "0", 4)}.c';
+	}
+}
+
 /**
 	Pure, output-root-independent file assignment used before any C is printed.
 
 	The umbrella path remains stable across layouts so native consumers and
 	build tooling have one private include. Split mode adds a common detail
 	header for program-wide representation declarations and one module header
-	per normalized Haxe module.
+	per normalized Haxe module; package mode reuses the detail header and assigns
+	one header/source pair to every normalized Haxe package.
 **/
 class CProjectLayoutPlan {
 	public static inline final UMBRELLA_HEADER_PATH = "include/hxc/program.h";
@@ -67,19 +103,42 @@ class CProjectLayoutPlan {
 
 	public final layout:CProjectLayout;
 	public final modules:Array<CProjectModuleLayout>;
+	public final packages:Array<CProjectPackageLayout>;
 	public final headerPaths:Array<String>;
 
 	final modulesByPath:Map<String, CProjectModuleLayout> = [];
+	final packagesByPath:Map<String, CProjectPackageLayout> = [];
+	final packagesByModulePath:Map<String, CProjectPackageLayout> = [];
 	final headerGuardsByPath:Map<String, String>;
 
-	public function new(layout:CProjectLayout, modules:Array<CProjectModuleLayout>) {
+	public function new(layout:CProjectLayout, modules:Array<CProjectModuleLayout>, packages:Array<CProjectPackageLayout>) {
 		this.layout = layout;
 		this.modules = modules.copy();
+		this.packages = packages.copy();
 		for (module in modules) {
 			if (modulesByPath.exists(module.modulePath)) {
 				throw new ProjectEmissionError('project layout repeats Haxe module `${module.modulePath}`');
 			}
 			modulesByPath.set(module.modulePath, module);
+		}
+		for (pack in packages) {
+			if (packagesByPath.exists(pack.packagePath))
+				throw new ProjectEmissionError('project layout repeats Haxe package `${pack.packagePath}`');
+			packagesByPath.set(pack.packagePath, pack);
+			for (module in pack.modules) {
+				if (!modulesByPath.exists(module.modulePath))
+					throw new ProjectEmissionError('project layout package `${pack.packagePath}` references unknown Haxe module `${module.modulePath}`');
+				if (packagesByModulePath.exists(module.modulePath))
+					throw new ProjectEmissionError('project layout assigns Haxe module `${module.modulePath}` to more than one package');
+				if (module.packagePath != pack.packagePath) {
+					throw new ProjectEmissionError('project layout assigns Haxe module `${module.modulePath}` to package `${pack.packagePath}` instead of `${module.packagePath}`');
+				}
+				packagesByModulePath.set(module.modulePath, pack);
+			}
+		}
+		for (module in modules) {
+			if (!packagesByModulePath.exists(module.modulePath))
+				throw new ProjectEmissionError('project layout omits package ownership for Haxe module `${module.modulePath}`');
 		}
 		headerPaths = switch layout {
 			case Unity: [UMBRELLA_HEADER_PATH];
@@ -87,6 +146,12 @@ class CProjectLayoutPlan {
 				final paths = [TYPES_HEADER_PATH, UMBRELLA_HEADER_PATH];
 				for (module in modules)
 					paths.push(module.headerPath);
+				paths.sort(compareUtf8);
+				paths;
+			case Package:
+				final paths = [TYPES_HEADER_PATH, UMBRELLA_HEADER_PATH];
+				for (pack in packages)
+					paths.push(pack.headerPath);
 				paths.sort(compareUtf8);
 				paths;
 		};
@@ -97,6 +162,20 @@ class CProjectLayoutPlan {
 		final result = modulesByPath.get(modulePath);
 		if (result == null)
 			throw new ProjectEmissionError('project layout cannot resolve Haxe module `$modulePath`');
+		return result;
+	}
+
+	public function packageLayout(packagePath:String):CProjectPackageLayout {
+		final result = packagesByPath.get(packagePath);
+		if (result == null)
+			throw new ProjectEmissionError('project layout cannot resolve Haxe package `$packagePath`');
+		return result;
+	}
+
+	public function packageForModule(modulePath:String):CProjectPackageLayout {
+		final result = packagesByModulePath.get(modulePath);
+		if (result == null)
+			throw new ProjectEmissionError('project layout cannot resolve package ownership for Haxe module `$modulePath`');
 		return result;
 	}
 
@@ -146,7 +225,8 @@ class CProjectLayoutPlanner {
 			if (unique.exists(modulePath))
 				continue;
 			unique.set(modulePath, true);
-			final module = new CProjectModuleLayout(modulePath, moduleStem(modulePath));
+			final packagePath = packagePathForModule(modulePath);
+			final module = new CProjectModuleLayout(modulePath, packagePath, moduleStem(modulePath));
 			final folded = module.headerPath.toLowerCase();
 			final previous = caseFoldedPaths.get(folded);
 			if (previous != null) {
@@ -157,7 +237,44 @@ class CProjectLayoutPlanner {
 		}
 		if (modules.length == 0)
 			throw new ProjectEmissionError("project layout requires at least one normalized Haxe module");
-		return new CProjectLayoutPlan(layout, modules);
+		final packageModules:Map<String, Array<CProjectModuleLayout>> = [];
+		final packagePaths:Array<String> = [];
+		for (module in modules) {
+			var grouped = packageModules.get(module.packagePath);
+			if (grouped == null) {
+				grouped = [];
+				packageModules.set(module.packagePath, grouped);
+				packagePaths.push(module.packagePath);
+			}
+			grouped.push(module);
+		}
+		packagePaths.sort(compareUtf8);
+		final packages:Array<CProjectPackageLayout> = [];
+		final caseFoldedPackagePaths:Map<String, String> = [];
+		for (packagePath in packagePaths) {
+			final grouped = packageModules.get(packagePath);
+			if (grouped == null)
+				throw new ProjectEmissionError('project layout lost modules for Haxe package `$packagePath`');
+			final pack = new CProjectPackageLayout(packagePath, packageStem(packagePath), grouped);
+			// Package paths become artifact paths only in package mode. Split uses
+			// complete module paths, while unity has no package-shaped files, so a
+			// package-only collision must not change those established layouts.
+			if (layout == CProjectLayout.Package) {
+				final folded = pack.headerPath.toLowerCase();
+				final previous = caseFoldedPackagePaths.get(folded);
+				if (previous != null) {
+					throw new ProjectEmissionError('Haxe packages `$previous` and `$packagePath` map to the same case-insensitive generated path `${pack.headerPath}`');
+				}
+				caseFoldedPackagePaths.set(folded, packagePath);
+			}
+			packages.push(pack);
+		}
+		return new CProjectLayoutPlan(layout, modules, packages);
+	}
+
+	static function packagePathForModule(modulePath:String):String {
+		final split = modulePath.lastIndexOf(".");
+		return split == -1 ? "" : modulePath.substr(0, split);
 	}
 
 	static function moduleStem(modulePath:String):String {
@@ -168,6 +285,20 @@ class CProjectLayoutPlanner {
 		for (component in modulePath.split(".")) {
 			if (component == "" || component == "." || component == "..")
 				throw new ProjectEmissionError('invalid normalized Haxe module path `$modulePath`');
+			output.push(safeComponent(component));
+		}
+		return output.join("/");
+	}
+
+	static function packageStem(packagePath:String):String {
+		if (packagePath == "")
+			return "";
+		if (packagePath.indexOf("/") != -1 || packagePath.indexOf("\\") != -1)
+			throw new ProjectEmissionError('invalid normalized Haxe package path `$packagePath`');
+		final output:Array<String> = [];
+		for (component in packagePath.split(".")) {
+			if (component == "" || component == "." || component == "..")
+				throw new ProjectEmissionError('invalid normalized Haxe package path `$packagePath`');
 			output.push(safeComponent(component));
 		}
 		return output.join("/");
@@ -233,6 +364,7 @@ class CProjectLayoutPlanner {
 #else
 enum abstract CProjectLayout(String) to String {
 	var Split = "split";
+	var Package = "package";
 	var Unity = "unity";
 }
 #end

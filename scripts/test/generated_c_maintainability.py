@@ -35,6 +35,7 @@ class MaintainabilityError(ValueError):
 
 class OwnerKind(str, Enum):
     SOURCE_MODULE = "source-module"
+    SOURCE_PACKAGE = "source-package"
     COMPILER_SUPPORT = "compiler-support"
     COMPILER_ENTRY = "compiler-entry"
     AMALGAMATION = "amalgamation"
@@ -61,6 +62,7 @@ class ArtifactOwner:
     kind: OwnerKind
     module_path: str | None = None
     source: SourceSpan | None = None
+    package_path: str | None = None
 
 
 @dataclass(frozen=True)
@@ -259,10 +261,18 @@ def _validate_owner(owner: ArtifactOwner, field_name: str) -> None:
         raise MaintainabilityError(f"{field_name}.kind must be OwnerKind")
     if owner.module_path is not None:
         _normalize_relative_path(owner.module_path, f"{field_name}.module_path")
+    if owner.package_path is not None:
+        _normalize_relative_path(owner.package_path, f"{field_name}.package_path")
     if owner.source is not None:
         _validate_source_span(owner.source, f"{field_name}.source")
     if owner.kind is OwnerKind.SOURCE_MODULE and owner.module_path is None:
         raise MaintainabilityError(f"{field_name} source-module owner needs module_path")
+    if owner.kind is OwnerKind.SOURCE_PACKAGE and owner.package_path is None:
+        raise MaintainabilityError(f"{field_name} source-package owner needs package_path")
+    if owner.kind is not OwnerKind.SOURCE_PACKAGE and owner.package_path is not None:
+        raise MaintainabilityError(f"{field_name} non-package owner cannot name package_path")
+    if owner.kind is OwnerKind.SOURCE_PACKAGE and owner.module_path is not None:
+        raise MaintainabilityError(f"{field_name} source-package owner cannot name module_path")
 
 
 def _validate_c_identifier(value: str, field_name: str) -> None:
@@ -613,11 +623,14 @@ def _source_span_json(span: SourceSpan | None) -> dict[str, object] | None:
 
 
 def _owner_json(owner: ArtifactOwner) -> dict[str, object]:
-    return {
+    result: dict[str, object] = {
         "kind": owner.kind.value,
         "modulePath": owner.module_path,
         "source": _source_span_json(owner.source),
     }
+    if owner.package_path is not None:
+        result["packagePath"] = owner.package_path
+    return result
 
 
 def _limits_json(limits: MetricLimits) -> dict[str, int]:
@@ -1667,9 +1680,18 @@ def _check_owner_paths(value: object, context: str) -> None:
     assert isinstance(value, Mapping)
     if value["modulePath"] is not None:
         _checked_path(value["modulePath"], f"{context}.modulePath")
+    package_path = value.get("packagePath")
+    if package_path is not None:
+        _checked_path(package_path, f"{context}.packagePath")
     _check_source_paths(value["source"], f"{context}.source")
     if value["kind"] == OwnerKind.SOURCE_MODULE.value and value["modulePath"] is None:
         raise MaintainabilityError(f"{context} source-module needs modulePath")
+    if value["kind"] == OwnerKind.SOURCE_PACKAGE.value and package_path is None:
+        raise MaintainabilityError(f"{context} source-package needs packagePath")
+    if value["kind"] != OwnerKind.SOURCE_PACKAGE.value and package_path is not None:
+        raise MaintainabilityError(f"{context} non-package owner cannot name packagePath")
+    if value["kind"] == OwnerKind.SOURCE_PACKAGE.value and value["modulePath"] is not None:
+        raise MaintainabilityError(f"{context} source-package cannot name modulePath")
 
 
 def _check_coordinate_path(value: object, context: str) -> None:
@@ -1894,10 +1916,12 @@ def _owner_from_report(value: object, context: str) -> ArtifactOwner:
     if not isinstance(value, Mapping):
         raise MaintainabilityError(f"{context} must be an owner object")
     module_path = value["modulePath"]
+    package_path = value.get("packagePath")
     return ArtifactOwner(
         OwnerKind(str(value["kind"])),
         None if module_path is None else str(module_path),
         _source_span_from_report(value["source"], f"{context}.source"),
+        None if package_path is None else str(package_path),
     )
 
 

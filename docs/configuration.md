@@ -172,7 +172,7 @@ The canonical expert/debug defines are:
 -D hxc_runtime_diagnostics=off|summary|warn
 -D hxc_environment=hosted|freestanding|wasi|emscripten
 -D hxc_c_standard=c11|c17|c23
--D hxc_project_layout=split|unity
+-D hxc_project_layout=split|package|unity
 -D hxc_c_extensions=none|gnu|msvc
 -D hxc_build=debug|release|minsizerel
 ```
@@ -187,16 +187,25 @@ representation, symbol, and declaration planning are finalized:
   `src/modules/<package>/<Module>.c`, and a small hosted entry unit at
   `src/hxc/main.c`. A support unit appears only when layout assertions or
   virtual-dispatch objects require one.
+- `package` keeps the same common types header, umbrella, entry, and optional
+  support unit, but combines reached modules under each normalized Haxe package
+  into `include/hxc/packages/<package>/package.h` and
+  `src/packages/<package>/package.c`. The root package uses
+  `include/hxc/packages/package.h` and `src/packages/package.c`. Complete types
+  are ordered inside a package header; only hard cross-package layout edges add
+  another package header include. Pointer and prototype edges continue to use
+  the common forward declarations.
 - `unity` emits the same planned declarations and functions through one
   `src/program.c` and the same stable private umbrella. It is useful for
   embedding, quick inspection, tiny programs, and build systems that prefer an
   amalgamation; it does not select different Haxe or C semantics.
 
-There is no package-coalesced value yet. HXC-COMP-011's package strategy is
-tracked by `haxe_c-xge.18.5`; an unknown value fails closed rather than being
-silently interpreted as split or unity.
+An unknown value fails closed rather than being silently interpreted as one of
+the three layouts. Package coalescing is an artifact-assignment choice, not a
+semantic fallback: it reuses the same HxcIR, representation, finalized names,
+runtime plan, and structural C declarations as split, package, and unity output.
 
-Both modes are strict, deterministic compiler output. The neutral build plan
+All three modes are strict, deterministic compiler output. The neutral build plan
 lists the exact selected sources/headers, and switching modes uses the normal
 Reflaxe ownership transaction so stale generated files are removed without
 claiming neighboring user files. Compiler-proven closed recursive cycles may

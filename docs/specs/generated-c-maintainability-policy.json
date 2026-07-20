@@ -45,6 +45,61 @@
     },
     {
       "corpusId": "caxecraft-domain",
+      "layout": "package",
+      "limits": {
+        "maxIdentifierBytes": 64,
+        "maxFileLines": 400,
+        "maxFunctionLines": 400,
+        "maxBranchCount": 40,
+        "maxNestingDepth": 8,
+        "maxTemporaryDeclarations": 514,
+        "maxTemporaryReferences": 800,
+        "maxTemporaryDeclarationsPerKFunctionLines": 300,
+        "maxFunctionTemporaryDeclarationsPerKLines": 500,
+        "maxUnexplainedRoleEncodedIdentifiers": 0,
+        "maxUnexplainedByteEscapedIdentifiers": 0,
+        "maxUnexplainedDigestIdentifiers": 0,
+        "maxUnexplainedHashSuffixIdentifiers": 0,
+        "minOwnerMappedArtifactsBasisPoints": 10000,
+        "minFunctionIdentityMappedBasisPoints": 10000,
+        "minSourceSpanMappedFunctionsBasisPoints": 7500,
+        "minLineDirectiveCount": 0
+      },
+      "gotoLimits": [
+        {
+          "category": "irreducible-cfg",
+          "maxOccurrences": 0
+        },
+        {
+          "category": "loop-break-through-switch",
+          "maxOccurrences": 0
+        }
+      ],
+      "fileOverrides": [
+        {
+          "path": "src/packages/caxecraft/domain/package.c",
+          "maxFileLines": 1318,
+          "reason": "Package layout intentionally groups the reviewed production domain modules into one package source; per-function limits remain unchanged."
+        },
+        {
+          "path": "src/packages/caxecraft/qa/package.c",
+          "maxFileLines": 617,
+          "reason": "The QA package intentionally keeps the complete end-to-end domain oracle together; the corresponding function override remains separately bounded."
+        }
+      ],
+      "functionOverrides": [
+        {
+          "functionId": "caxecraft.qa.DomainProbe.selfCheck",
+          "maxFunctionLines": 571,
+          "maxBranchCount": 81,
+          "maxNestingDepth": 8,
+          "maxFunctionTemporaryDeclarationsPerKLines": 500,
+          "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
+        }
+      ]
+    },
+    {
+      "corpusId": "caxecraft-domain",
       "layout": "split",
       "limits": {
         "maxIdentifierBytes": 64,

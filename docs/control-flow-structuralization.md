@@ -207,7 +207,7 @@ The focused evaluation-order probe covers:
 The native matrix executes strict C11 under available identity-checked GCC and
 Clang at O0/O2, compares an Eval oracle, exercises sanitizer/UB gates, and
 checks repeated/reversed/profile determinism. Caxecraft additionally exercises
-deep nested domain control flow in split and unity layouts with exact Eval/C
+deep nested domain control flow in split, package, and unity layouts with exact Eval/C
 traces, O0/O2, ASan/UBSan, zero-runtime evidence, and a source-wide rejection
 of compiler `goto` statements or labels in its reducible showcase output.
 

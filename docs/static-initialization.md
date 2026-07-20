@@ -70,9 +70,9 @@ Every successful primitive executable includes
 that prints the same plan with the validated HxcIR dump. It is not application
 configuration. The production C emitter turns each initializer into a
 project-private externally linked C function declared in the compiler-owned
-private header tree. That linkage is identical in split and unity layouts; it
-lets the small split entry unit call module-owned initializer definitions and
-does not create a public export or ABI promise. The emitter turns the ordered
+private header tree. That linkage is identical in split, package, and unity
+layouts; it lets a separate entry unit call module- or package-owned initializer
+definitions and does not create a public export or ABI promise. The emitter turns the ordered
 IDs into one file-local `static void` bootstrap function for a non-empty plan.
 Hosted `int main(void)` calls that function once, then calls Haxe `main`, then
 returns zero. Empty plans are compile-time-elided. The HxcIR validator requires a
@@ -97,7 +97,7 @@ outside the admitted project-emission slice.
 - class-before-field phase behavior against the pinned Haxe JavaScript
   generator oracle;
 - deferred globals and exact-once `initialize-global` HxcIR;
-- project-private initializer declarations with identical split/unity linkage
+- project-private initializer declarations with identical split/package/unity linkage
   and no public-export/ABI claim;
 - byte-identical repeated and reversed-input production roots;
 - deterministic source-positioned `HXC1002` with no output;

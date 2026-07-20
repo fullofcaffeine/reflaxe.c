@@ -61,13 +61,12 @@ declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel
 world, deterministic terrain/edits/DDA/fixed-step collision, a shared Eval
 oracle, 32 seeded properties, cold/reversed/locale/warm-server determinism, and
 allocation-free strict/sanitized generated C. The dedicated `project-layout`
-suite proves that default source-shaped split output and optional unity output
-come from one semantic/declaration plan, have exact manifests, remain
-deterministic across request variants, compile with GCC/Clang, and clean stale
-owned files without deleting a user file. It also distinguishes embedded/native
-hard header edges from forward-declarable prototype/`extern` soft edges with a
-C-valid mixed cycle. Package-coalesced output remains unimplemented under
-`haxe_c-xge.18.5`. None proves broader language,
+suite proves that default source-shaped split output, package-coalesced output,
+and optional unity output come from one semantic/declaration plan, have exact
+manifests, remain deterministic across request variants, compile with
+GCC/Clang, and clean stale owned files without deleting a user file. It also
+distinguishes embedded/native hard header edges from forward-declarable
+prototype/`extern` soft edges with a C-valid mixed cycle. None proves broader language,
 standard-library, public ABI, general String, or general `hxrt` support.
 
 ## Canonical lanes
@@ -608,7 +607,7 @@ The focused suite proves naming analysis; production symbol emission and
 generated-C readability are exercised by the lowering and Caxecraft suites.
 Their shared [generated-C maintainability check](generated-c-maintainability.md)
 uses a comment/string-safe C lexer rather than printer logic. It emits closed,
-schema-validated reports for body lowering, evaluation order, and both
+schema-validated reports for body lowering, evaluation order, and all three
 Caxecraft layouts; records the first offending file/function coordinate; and
 fails on unreviewed name, temporary, jump, file, or function growth. Every
 admitted synthetic jump is reconciled with its typed control-flow-plan reason.

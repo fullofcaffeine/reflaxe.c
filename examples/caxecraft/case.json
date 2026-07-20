@@ -6,6 +6,7 @@
   "status": "active",
   "requirements": [
     "HXC-PROD-001",
+    "HXC-COMP-011",
     "HXC-EX-001",
     "HXC-QA-002",
     "HXC-QA-005"
@@ -66,8 +67,17 @@
     "examples/caxecraft/expected/src/modules/caxecraft/domain/World.c",
     "examples/caxecraft/expected/src/modules/caxecraft/domain/WorldStorage.c",
     "examples/caxecraft/expected/src/modules/caxecraft/qa/DomainProbe.c",
+    "examples/caxecraft/expected/package/include/hxc/detail/program_types.h",
+    "examples/caxecraft/expected/package/include/hxc/packages/caxecraft/domain/package.h",
+    "examples/caxecraft/expected/package/include/hxc/packages/caxecraft/qa/package.h",
+    "examples/caxecraft/expected/package/include/hxc/program.h",
+    "examples/caxecraft/expected/package/src/hxc/main.c",
+    "examples/caxecraft/expected/package/src/hxc/support.c",
+    "examples/caxecraft/expected/package/src/packages/caxecraft/domain/package.c",
+    "examples/caxecraft/expected/package/src/packages/caxecraft/qa/package.c",
     "examples/caxecraft/expected/hxc.runtime-plan.json",
     "examples/caxecraft/expected/method-symbols.json",
+    "examples/caxecraft/expected/maintainability-package.json",
     "examples/caxecraft/expected/maintainability-split.json",
     "examples/caxecraft/expected/maintainability-unity.json",
     "examples/caxecraft/expected/unity/include/hxc/program.h",
@@ -109,6 +119,16 @@
         "comparison": "exact"
       },
       {
+        "path": "examples/caxecraft/expected/package/include/hxc/packages/caxecraft/domain/package.h",
+        "format": "header",
+        "comparison": "exact"
+      },
+      {
+        "path": "examples/caxecraft/expected/package/src/packages/caxecraft/domain/package.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
         "path": "examples/caxecraft/expected/hxc.runtime-plan.json",
         "format": "json",
         "comparison": "semantic-json"
@@ -117,6 +137,11 @@
         "path": "examples/caxecraft/expected/method-symbols.json",
         "format": "json",
         "comparison": "semantic-json"
+      },
+      {
+        "path": "examples/caxecraft/expected/maintainability-package.json",
+        "format": "metrics",
+        "comparison": "budget"
       },
       {
         "path": "examples/caxecraft/expected/maintainability-split.json",

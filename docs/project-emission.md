@@ -63,7 +63,7 @@ Payload kinds have fixed locations:
 | Runtime header | `runtime/include/**/*.h` |
 | Runtime source | `runtime/src/**/*.c` |
 
-### Source-shaped and unity generated C
+### Split, package, and unity generated C
 
 The executable emitter first builds one target-owned semantic declaration plan:
 program-wide includes and representation declarations, module-owned globals,
@@ -73,11 +73,12 @@ finalized symbol/representation decisions. Only then does the pure
 `CProjectLayoutPlan` assign declarations to files; `CASTPrinter` receives the
 result and remains unaware of Haxe modules or layout policy.
 
-The closed `projectLayout` setting has two variants:
+The closed `projectLayout` setting has three variants:
 
 | Layout | Compiler-owned shape | Intended use |
 | --- | --- | --- |
 | `split` (default) | `include/hxc/detail/program_types.h`, `include/hxc/modules/<package>/<Module>.h`, `src/modules/<package>/<Module>.c`, stable `include/hxc/program.h`, small `src/hxc/main.c`, and conditional `src/hxc/support.c` | Source-shaped navigation, review, debugging, and incremental native builds. |
+| `package` | `include/hxc/detail/program_types.h`, one `include/hxc/packages/<package>/package.h` and `src/packages/<package>/package.c` per reached Haxe package, the stable umbrella, entry, and conditional support unit | A middle ground with recognizable package ownership and fewer native translation units. |
 | `unity` | Stable `include/hxc/program.h` plus ordinary `src/program.c` | Tiny programs, embedding, archival inspection, and build systems that prefer amalgamation. |
 
 File ownership alone does not make generated C takeover-ready. The later
@@ -121,9 +122,17 @@ and C tag. The umbrella includes module headers in
 dependency-first order and owns whole-program dispatch declarations. Sources
 include that stable private umbrella so every reached linkage dependency is
 declared before use. Generated initializer functions and virtual-table objects
-use the same project-private external declarations and definitions in both
-layouts; split merely assigns their definitions to the module/support unit
-that needs cross-file linkage. Neither choice creates a public ABI.
+use the same project-private external declarations and definitions in every
+layout; only their file assignment changes.
+
+Package mode applies the same dependency rules one level higher. Complete
+types from every module in a package are ordered inside that package's header.
+Only a hard by-value or native-enum dependency on another package adds a
+package-header include; forward-declarable pointer, prototype, and `extern`
+edges remain soft. The root Haxe package uses
+`include/hxc/packages/package.h` and `src/packages/package.c`. A package source
+then receives the globals and functions owned by every reached module in that
+package. None of the three layouts creates a public ABI.
 
 `hxc.manifest.json.configuration.projectLayout` records the choice, while its
 neutral build plan enumerates the exact source and private-header set consumed
@@ -135,12 +144,9 @@ validated before the first write, stale owned paths are deleted by
 isolated-root/order/locale/warm-server determinism, exact manifests,
 standalone headers, hard/soft mixed-cycle classification, bidirectional stale
 cleanup, and GCC/Clang O0/O2 Eval parity. Caxecraft provides the larger
-source-tree snapshot and both-layout E2E proof.
-
-The implemented split is per Haxe module and preserves package directories;
-it is not a third package-coalesced layout. A distinct mode that groups several
-modules into one package translation unit remains future HXC-COMP-011 scope,
-owned by `haxe_c-xge.18.5`.
+source-tree snapshots and split/package/unity E2E proof. All three outputs use
+the same HxcIR, declarations, names, runtime plan, and entry semantics; layout
+selection is only deterministic artifact assignment.
 
 The emitter owns these independently versioned sidecars:
 

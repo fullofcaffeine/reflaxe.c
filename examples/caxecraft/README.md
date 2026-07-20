@@ -1,7 +1,10 @@
 # Caxecraft
 
-Caxecraft is the repository's small original voxel-sandbox Raylib showcase.
-This first slice is deliberately the renderer-independent game core: a finite
+Caxecraft is the repository's small original voxel-sandbox Raylib showcase and
+haxe.c's current flagship product-level E2E/QA workload. It is expected to find
+reusable compiler and tooling improvements, not hide their absence behind
+game-only workarounds. This first slice is deliberately the
+renderer-independent game core: a finite
 voxel world, seeded terrain, block edits, voxel raycasting, and a fixed-step
 first-person collision controller. The interactive Raylib shell follows in the
 next task. The complete Creative/Adventure/editor/Ivvy direction and its honest
@@ -53,11 +56,10 @@ npm ci
 npm run test:caxecraft-domain
 ```
 
-It compares the same 38-line semantic trace under pinned Haxe Eval and both
-generated-C layouts, checks the registered split snapshots, and compiles and
-runs one strict optimized native lane for each layout. On this workstation that
-reduced the common edit/test cycle from about 128 seconds to about 20 seconds.
-The generated program has an empty `hxrt` plan and imports no allocation symbol.
+It compares the same 38-line semantic trace under pinned Haxe Eval and all three
+generated-C layouts, checks the registered split/package/unity snapshots, and
+compiles and runs one strict optimized native lane for each layout. The
+generated program has an empty `hxrt` plan and imports no allocation symbol.
 
 The exhaustive lane retains cold/reversed/locale/warm-server determinism,
 standalone-header checks, GCC/Clang coverage where available, O0/O2, and
@@ -97,22 +99,35 @@ node_modules/.bin/haxe \
 
 The default is the source-shaped `split` layout. It mirrors Haxe package/module
 ownership under `include/hxc/modules/` and `src/modules/`, with a common private
-types header and small `src/hxc/main.c` entry wrapper. The checked-in split and
-unity forms now pass the [generated-C maintainability
+types header and small `src/hxc/main.c` entry wrapper. The checked-in split,
+package, and unity forms now pass the [generated-C maintainability
 rubric](../../docs/generated-c-maintainability.md): every function has a stable
 ownership/identity record, source spans cover the source-backed domain methods,
 ordinary names stay bounded, temporary pressure is measured per function, and
 this reducible game-domain output contains no `goto`. This is a bounded
 Caxecraft result, not a promise that arbitrary Haxe already looks handwritten.
+
+To group modules into one header/source pair per Haxe package, add:
+
+```sh
+-D hxc_project_layout=package
+```
+
+For Caxecraft this produces `caxecraft/domain/package.h` plus `package.c` and a
+smaller `caxecraft/qa` pair. It is the middle ground between per-module files
+and amalgamation: package ownership stays visible while the native build sees
+fewer translation units.
+
 To request the compact single-implementation form, add:
 
 ```sh
 -D hxc_project_layout=unity
 ```
 
-Unity and split are file assignments over the same validated semantic and
-declaration plan, so choosing a layout does not change names, runtime policy,
-or game behavior. Reviewable snapshots retain both layouts byte-for-byte and a
+Unity deliberately retains the single `src/program.c` mode. Split, package,
+and unity are file assignments over the same validated semantic and declaration
+plan, so choosing a layout does not change names, runtime policy, or game
+behavior. Reviewable snapshots retain all three layouts byte-for-byte and a
 schema-validated maintainability report for each.
 
 `_build/` is scratch output. Reviewable generated evidence lives in

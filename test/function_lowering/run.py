@@ -561,8 +561,8 @@ def custom_target(
         command.extend(["-D", f"hxc_runtime={runtime}"])
     if environment is not None:
         command.extend(["-D", f"hxc_environment={environment}"])
-    if layout == "unity":
-        command.extend(["-D", "hxc_project_layout=unity"])
+    if layout in ("package", "unity"):
+        command.extend(["-D", f"hxc_project_layout={layout}"])
     elif layout != "split":
         raise FunctionLoweringFailure(f"unknown function project layout {layout!r}")
     command.extend(["--custom-target", f"c={output}"])
@@ -694,37 +694,51 @@ def check_production() -> None:
             raise FunctionLoweringFailure("production executable did not exit silently with 0")
 
 
-def check_split_recursive(selected: str | None) -> None:
-    expected_sources = (
-        "src/hxc/main.c",
-        "src/modules/RecursiveFixture.c",
-        "src/modules/RecursiveFixture.nonreturn_0000.c",
-    )
-    expected_headers = (
-        "include/hxc/detail/program_types.h",
-        "include/hxc/modules/RecursiveFixture.h",
-        "include/hxc/program.h",
-    )
+def check_recursive_partition(selected: str | None, layout: str) -> None:
+    if layout == "split":
+        expected_sources = (
+            "src/hxc/main.c",
+            "src/modules/RecursiveFixture.c",
+            "src/modules/RecursiveFixture.nonreturn_0000.c",
+        )
+        expected_headers = (
+            "include/hxc/detail/program_types.h",
+            "include/hxc/modules/RecursiveFixture.h",
+            "include/hxc/program.h",
+        )
+    elif layout == "package":
+        expected_sources = (
+            "src/hxc/main.c",
+            "src/packages/package.c",
+            "src/packages/package.nonreturn_0000.c",
+        )
+        expected_headers = (
+            "include/hxc/detail/program_types.h",
+            "include/hxc/packages/package.h",
+            "include/hxc/program.h",
+        )
+    else:
+        raise FunctionLoweringFailure(f"unsupported recursive partition layout {layout!r}")
     coverage = frozenset(
         {
             "closed-recursive-cycle",
-            "split-nonreturn-partition",
-            "split-project-layout",
+            f"{layout}-nonreturn-partition",
+            f"{layout}-project-layout",
             "strict-c11",
         }
     )
-    with tempfile.TemporaryDirectory(prefix="hxc-function-split-recursive-") as temporary:
+    with tempfile.TemporaryDirectory(prefix=f"hxc-function-{layout}-recursive-") as temporary:
         root = Path(temporary)
         output = root / "output"
         compiled = custom_target(
             SPLIT_RECURSIVE,
             output,
-            layout="split",
+            layout=layout,
             main="RecursiveFixture",
         )
         if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
             raise FunctionLoweringFailure(
-                "split recursive production compile failed\n"
+                f"{layout} recursive production compile failed\n"
                 f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
             )
         manifest = json.loads((output / "hxc.manifest.json").read_text())
@@ -732,13 +746,13 @@ def check_split_recursive(selected: str | None) -> None:
         build = manifest.get("build")
         if (
             not isinstance(configuration, dict)
-            or configuration.get("projectLayout") != "split"
+            or configuration.get("projectLayout") != layout
             or not isinstance(build, dict)
             or build.get("sources") != list(expected_sources)
             or build.get("privateHeaders") != list(expected_headers)
         ):
             raise FunctionLoweringFailure(
-                "split recursive manifest lost its exact source/header partition"
+                f"{layout} recursive manifest lost its exact source/header partition"
             )
         recursive_source = (output / expected_sources[2]).read_text(encoding="utf-8")
         module_source = (output / expected_sources[1]).read_text(encoding="utf-8")
@@ -750,7 +764,7 @@ def check_split_recursive(selected: str | None) -> None:
             or "_Noreturn void hxc_RecursiveFixture_recursive(" in module_source
         ):
             raise FunctionLoweringFailure(
-                "split recursive function lost its isolated non-returning definition"
+                f"{layout} recursive function lost its isolated non-returning definition"
             )
 
         fixture = root / "fixture"
@@ -759,7 +773,7 @@ def check_split_recursive(selected: str | None) -> None:
         for name in ("recursive_split_entry.h", "recursive_split_harness.c"):
             shutil.copy2(NATIVE / name, fixture / "native" / name)
         project = CFixtureProject(
-            "function-split-recursive",
+            f"function-{layout}-recursive",
             (
                 *(f"generated/{path}" for path in expected_sources),
                 "native/recursive_split_harness.c",
@@ -774,7 +788,7 @@ def check_split_recursive(selected: str | None) -> None:
         )
         for optimization in ("-O0", "-O2"):
             report = run_c_fixture_corpus(
-                suite=f"function-split-recursive-{optimization[1:].lower()}",
+                suite=f"function-{layout}-recursive-{optimization[1:].lower()}",
                 projects=(project,),
                 fixture_root=fixture,
                 build_root=root / f"build-{optimization[1:].lower()}",
@@ -793,8 +807,13 @@ def check_split_recursive(selected: str | None) -> None:
             serialized = json.dumps(report, ensure_ascii=False, sort_keys=True)
             if any(str(path) in serialized for path in (ROOT, root, fixture)):
                 raise FunctionLoweringFailure(
-                    "split recursive native report leaked an absolute path"
+                    f"{layout} recursive native report leaked an absolute path"
                 )
+
+
+def check_nonreturn_partitions(selected: str | None) -> None:
+    for layout in ("split", "package"):
+        check_recursive_partition(selected, layout)
 
 
 def check_argument_diagnostics() -> None:
@@ -869,7 +888,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_snapshots(first)
         check_native(first, args.toolchain)
         check_production()
-        check_split_recursive(args.toolchain)
+        check_nonreturn_partitions(args.toolchain)
         check_argument_diagnostics()
     except (
         CFixtureFailure,
@@ -883,7 +902,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed parameters/calls/conversions, recursive private "
-        "prototypes/unity+split source partitions, exact argument diagnostics, strict int main(void), "
+        "prototypes/unity+split+package source partitions, exact argument diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )
     return 0

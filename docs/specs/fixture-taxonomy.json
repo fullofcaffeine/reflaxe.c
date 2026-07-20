@@ -972,11 +972,12 @@
       "assertions": [
         "split is the compiler default and maps normalized multi-package Haxe module ownership to deterministic private module headers and sources, with a common representation header and small entry unit",
         "native enum and embedded by-value definitions retain hard owner-header edges, while forward-declarable struct prototypes and extern declarations use common forwards; a mixed hard/soft cycle and mutually referential class pointers compile without false dependency cycles",
+        "package mode coalesces reached modules into deterministic per-package headers and sources, orders complete types within each package, and adds only hard cross-package header dependencies",
         "unity consumes the same HxcIR, finalized non-preprocessor symbols, runtime plan, and declaration/function plan while emitting one ordinary implementation source",
-        "both layouts record exact sources and private headers in hxc.manifest.json and remain byte-stable across roots, reversed discovery, locale, cold repetition, and warm compiler-server reuse",
+        "all three layouts record exact sources and private headers in hxc.manifest.json and remain byte-stable across roots, reversed discovery, locale, cold repetition, and warm compiler-server reuse",
         "an invalid hxc_project_layout define emits source-anchored HXC0003 and leaves no output",
         "switching layouts through Reflaxe output ownership deletes only stale compiler-owned files and preserves a user-owned neighbor",
-        "all generated headers compile independently and GCC/Clang O0/O2 traces from both layouts equal the Eval oracle"
+        "all generated headers compile independently and GCC/Clang O0/O2 traces from all three layouts equal the Eval oracle"
       ]
     },
     {
@@ -1003,8 +1004,8 @@
         "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, and fixed-step AABB player collision over a narrow fixed-array storage seam",
         "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
         "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
-        "the generated program matches centrally owned split and unity header/C snapshots, schema-validated maintainability reports, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
-        "split and unity reports preserve identical 53-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named QA/unity overrides",
+        "the generated program matches centrally owned split, package, and unity header/C snapshots, schema-validated maintainability reports, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
+        "split, package, and unity reports preserve identical 53-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named package/QA/unity overrides",
         "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2 and under address and undefined-behavior sanitizers"
       ]
     },

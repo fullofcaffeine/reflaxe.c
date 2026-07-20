@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prove split/default and unity generated-C layouts from one semantic plan."""
+"""Prove module, package, and unity generated-C layouts from one semantic plan."""
 
 from __future__ import annotations
 
@@ -71,9 +71,36 @@ SPLIT_SOURCES = (
     "src/modules/layout/model/State.c",
     "src/modules/layout/platform/Device.c",
 )
+PACKAGE_HEADERS = (
+    "include/hxc/detail/program_types.h",
+    "include/hxc/packages/layout/math/package.h",
+    "include/hxc/packages/layout/model/package.h",
+    "include/hxc/packages/layout/package.h",
+    "include/hxc/packages/layout/platform/package.h",
+    "include/hxc/program.h",
+)
+PACKAGE_SOURCES = (
+    "src/hxc/main.c",
+    "src/hxc/support.c",
+    "src/packages/layout/math/package.c",
+    "src/packages/layout/model/package.c",
+    "src/packages/layout/package.c",
+    "src/packages/layout/platform/package.c",
+)
+LAYOUTS = ("split", "package", "unity")
+HEADERS_BY_LAYOUT = {
+    "split": SPLIT_HEADERS,
+    "package": PACKAGE_HEADERS,
+    "unity": ("include/hxc/program.h",),
+}
+SOURCES_BY_LAYOUT = {
+    "split": SPLIT_SOURCES,
+    "package": PACKAGE_SOURCES,
+    "unity": ("src/program.c",),
+}
 EXPECTED_FILES = {
-    "split": COMMON_FILES | set(SPLIT_HEADERS) | set(SPLIT_SOURCES),
-    "unity": COMMON_FILES | {"include/hxc/program.h", "src/program.c"},
+    layout: COMMON_FILES | set(HEADERS_BY_LAYOUT[layout]) | set(SOURCES_BY_LAYOUT[layout])
+    for layout in LAYOUTS
 }
 STRICT_FLAGS = (
     "-std=c11",
@@ -145,8 +172,8 @@ def compile_target(
             "hxc_runtime_diagnostics=off",
         ]
     )
-    if layout == "unity":
-        command.extend(["-D", "hxc_project_layout=unity"])
+    if layout != "split" and layout in LAYOUTS:
+        command.extend(["-D", f"hxc_project_layout={layout}"])
     elif layout != "split":
         raise LayoutFailure(f"unknown layout {layout!r}")
     if reverse:
@@ -245,10 +272,8 @@ def render(
     manifest = load_object(output / "hxc.manifest.json", f"{label} manifest")
     configuration = manifest.get("configuration")
     build = manifest.get("build")
-    expected_sources = list(SPLIT_SOURCES if layout == "split" else ("src/program.c",))
-    expected_headers = list(
-        SPLIT_HEADERS if layout == "split" else ("include/hxc/program.h",)
-    )
+    expected_sources = list(SOURCES_BY_LAYOUT[layout])
+    expected_headers = list(HEADERS_BY_LAYOUT[layout])
     if (
         not isinstance(configuration, dict)
         or configuration.get("projectLayout") != layout
@@ -260,8 +285,8 @@ def render(
     runtime_plan = load_object(output / "hxc.runtime-plan.json", f"{label} runtime")
     if runtime_plan.get("status") != "analyzed-runtime-free":
         raise LayoutFailure(f"{label} unexpectedly selected runtime support")
-    if layout == "split":
-        check_type_dependencies(output, label)
+    if layout in ("split", "package"):
+        check_type_dependencies(output, label, layout)
     return Rendered(
         layout,
         output,
@@ -272,7 +297,10 @@ def render(
     )
 
 
-def check_type_dependencies(output: Path, label: str) -> None:
+def check_type_dependencies(output: Path, label: str, layout: str) -> None:
+    if layout == "package":
+        check_package_type_dependencies(output, label)
+        return
     module_root = output / "include/hxc/modules/layout"
     phase_include = '#include "hxc/modules/layout/model/Phase.h"'
     numbers = (module_root / "math/Numbers.h").read_text(encoding="utf-8")
@@ -319,6 +347,45 @@ def check_type_dependencies(output: Path, label: str) -> None:
         )
 
 
+def check_package_type_dependencies(output: Path, label: str) -> None:
+    package_root = output / "include/hxc/packages/layout"
+    model_include = '#include "hxc/packages/layout/model/package.h"'
+    numbers = (package_root / "math/package.h").read_text(encoding="utf-8")
+    model = (package_root / "model/package.h").read_text(encoding="utf-8")
+    common = (output / "include/hxc/detail/program_types.h").read_text(
+        encoding="utf-8"
+    )
+    point_tag = "hxc_layout_model_Point"
+    hard_record_tag = "hxc_layout_model_HardRecord"
+    soft_record_tag = "hxc_layout_model_SoftRecord"
+    left_tag = "hxc_layout_model_Left"
+    right_tag = "hxc_layout_model_Right"
+    soft_definition = model.find(f"struct {soft_record_tag} {{")
+    hard_definition = model.find(f"struct {hard_record_tag} {{")
+    if (
+        model_include not in numbers
+        or f"struct {point_tag} {{" in numbers
+        or f"struct {point_tag} {{" not in model
+        or "hxc_layout_model_Phase_Ready" not in model
+        or "hxc_layout_model_Phase_Ready" in common
+        or model_include in model
+        or soft_definition == -1
+        or hard_definition == -1
+        or soft_definition >= hard_definition
+        or f"struct {right_tag} *" not in model
+        or f"struct {left_tag} *" not in model
+        or f"struct {point_tag};" not in common
+        or f"struct {hard_record_tag};" not in common
+        or f"struct {left_tag};" not in common
+        or f"struct {right_tag};" not in common
+        or "zx" in "\n".join((numbers, model, common))
+    ):
+        raise LayoutFailure(
+            f"{label} lost package-local type order, cross-package hard edges, "
+            "or soft declaration forwards"
+        )
+
+
 def assert_equal(left: Rendered, right: Rendered, label: str) -> None:
     if left.artifacts.keys() != right.artifacts.keys():
         raise LayoutFailure(f"{label} artifact paths differ")
@@ -359,7 +426,7 @@ def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
 
 def determinism(first: dict[str, Rendered], root: Path) -> None:
     locale = alternate_locale()
-    for layout in ("split", "unity"):
+    for layout in LAYOUTS:
         repeated = render(
             root / f"{layout}-reversed",
             layout,
@@ -380,7 +447,7 @@ def determinism(first: dict[str, Rendered], root: Path) -> None:
     )
     try:
         wait_for_server(server, port)
-        for layout in ("split", "unity"):
+        for layout in LAYOUTS:
             warm = render(
                 root / f"{layout}-warm",
                 layout,
@@ -398,31 +465,24 @@ def determinism(first: dict[str, Rendered], root: Path) -> None:
 
 
 def check_stale_switch(root: Path) -> None:
-    split = compile_target(root, "split", report=False)
-    if split.returncode != 0 or split.stderr:
+    initial = compile_target(root, "split", report=False)
+    if initial.returncode != 0 or initial.stderr:
         raise LayoutFailure("initial stale-output split render failed")
     user = root / "user-note.txt"
     user.write_text("preserve me\n", encoding="utf-8")
-    unity = compile_target(root, "unity", report=False)
-    if unity.returncode != 0 or unity.stderr:
-        raise LayoutFailure("split-to-unity stale-output switch failed")
-    expected_unity = EXPECTED_FILES["unity"] | {"user-note.txt"}
-    actual_unity = generated_files(root)
-    if actual_unity != expected_unity:
-        raise LayoutFailure(
-            "unity switch did not replace the complete owned split file set: "
-            f"{sorted(actual_unity)!r}"
-        )
-    back = compile_target(root, "split", report=False)
-    if back.returncode != 0 or back.stderr:
-        raise LayoutFailure("unity-to-split stale-output switch failed")
-    expected_split = EXPECTED_FILES["split"] | {"user-note.txt"}
-    actual_split = generated_files(root)
-    if actual_split != expected_split:
-        raise LayoutFailure(
-            "split switch did not replace the complete owned unity file set: "
-            f"{sorted(actual_split)!r}"
-        )
+    previous = "split"
+    for layout in ("package", "unity", "split"):
+        switched = compile_target(root, layout, report=False)
+        if switched.returncode != 0 or switched.stderr:
+            raise LayoutFailure(f"{previous}-to-{layout} stale-output switch failed")
+        expected = EXPECTED_FILES[layout] | {"user-note.txt"}
+        actual = generated_files(root)
+        if actual != expected:
+            raise LayoutFailure(
+                f"{layout} switch did not replace the complete owned {previous} "
+                f"file set: {sorted(actual)!r}"
+            )
+        previous = layout
 
 
 def check_report_paths(report: dict[str, object], *roots: Path) -> None:
@@ -459,26 +519,14 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
         newline="\n",
     )
     sources = tuple(
-        f"generated/{path}"
-        for path in (
-            SPLIT_SOURCES if rendered.layout == "split" else ("src/program.c",)
-        )
+        f"generated/{path}" for path in SOURCES_BY_LAYOUT[rendered.layout]
     )
     headers = tuple(
-        f"generated/{path}"
-        for path in (
-            SPLIT_HEADERS
-            if rendered.layout == "split"
-            else ("include/hxc/program.h",)
-        )
+        f"generated/{path}" for path in HEADERS_BY_LAYOUT[rendered.layout]
     )
     include = fixture / "generated/include"
     for toolchain in resolve_toolchains(requested, repository_root=ROOT):
-        for header in (
-            SPLIT_HEADERS
-            if rendered.layout == "split"
-            else ("include/hxc/program.h",)
-        ):
+        for header in HEADERS_BY_LAYOUT[rendered.layout]:
             check = subprocess.run(
                 [
                     toolchain.compiler,
@@ -616,7 +664,8 @@ def check_invalid_layout(output: Path) -> None:
     if (
         result.returncode != 1
         or "HXC0003" not in combined
-        or "invalid hxc_project_layout `invalid`; expected split or unity" not in combined
+        or "invalid hxc_project_layout `invalid`; expected split, package, or unity"
+        not in combined
         or list(output.rglob("*"))
     ):
         raise LayoutFailure(
@@ -637,15 +686,19 @@ def main() -> int:
             expected = oracle()
             first = {
                 layout: render(root / layout, layout, f"first {layout} render")
-                for layout in ("split", "unity")
+                for layout in LAYOUTS
             }
-            if (
-                first["split"].hxcir != first["unity"].hxcir
-                or first["split"].semantic_symbols
-                != first["unity"].semantic_symbols
-                or first["split"].runtime_plan != first["unity"].runtime_plan
-            ):
-                raise LayoutFailure("file layout changed semantic plans or finalized names")
+            baseline = first["split"]
+            for layout in LAYOUTS[1:]:
+                candidate = first[layout]
+                if (
+                    baseline.hxcir != candidate.hxcir
+                    or baseline.semantic_symbols != candidate.semantic_symbols
+                    or baseline.runtime_plan != candidate.runtime_plan
+                ):
+                    raise LayoutFailure(
+                        f"{layout} file assignment changed semantic plans or finalized names"
+                    )
             determinism(first, root / "determinism")
             check_stale_switch(root / "switch")
             for rendered in first.values():
@@ -662,7 +715,7 @@ def main() -> int:
         print(f"project-layout: ERROR: {error}", file=sys.stderr)
         return 1
     print(
-        "project-layout: OK: split-default/unity semantic parity, exact manifests, "
+        "project-layout: OK: split-default/package/unity semantic parity, exact manifests, "
         "hard/soft dependency classification, cold/reverse/locale/warm determinism, "
         "stale ownership, standalone headers, "
         "and requested/available native toolchain O0/O2 Eval parity passed"

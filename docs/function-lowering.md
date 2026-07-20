@@ -71,12 +71,14 @@ All admitted signatures and symbol requests are prepared before the registry is
 finalized or any body is emitted. In unity mode the private
 `include/hxc/program.h` header contains every prototype before `src/program.c`
 defines a function. In the default split mode the stable umbrella includes
-deterministic module-private headers, and each such header owns its module's
-globals and prototypes, including initializer prototypes needed by the small
-entry unit. Recursive and mutually recursive
-call graphs therefore compile without discovery-order dependencies in either
-layout. Both file assignments consume the same finalized HxcIR, C names,
-representations, and function bodies.
+deterministic module-private headers. Package mode instead groups those
+declarations into one private header per normalized Haxe package. In both
+multi-file modes, each generated header owns its group's globals and
+prototypes, including initializer prototypes needed by the small entry unit.
+Recursive and mutually recursive call graphs therefore compile without
+discovery-order dependencies in all three layouts. Every file assignment
+consumes the same finalized HxcIR, C names, representations, and function
+bodies.
 
 Only a one-block admitted body is eligible for the unconditional-call proof.
 Multi-block evaluation-order bodies are excluded conservatively. When the
@@ -92,7 +94,8 @@ Every remaining member of a closed multi-function cycle receives its own
 deterministically ordered safety translation unit and continues to call the
 next member directly through the shared private headers. Unity names these
 `src/nonreturn_NNNN.c`; split keeps the partition beside its source-shaped
-module as `<Module>.nonreturn_NNNN.c`. That narrow exception prevents one
+module as `<Module>.nonreturn_NNNN.c`; package mode similarly uses
+`<Package>/package.nonreturn_NNNN.c`. That narrow exception prevents one
 optimizing C compilation from diagnosing the whole proven closed cycle while
 preserving ordinary direct calls, strict C11, and zero runtime support. A
 cycle-free unity program is exactly one implementation unit, as the layout

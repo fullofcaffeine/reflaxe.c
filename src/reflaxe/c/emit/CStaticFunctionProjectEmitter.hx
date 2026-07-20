@@ -5,6 +5,7 @@ import reflaxe.c.ast.CAST;
 import reflaxe.c.ast.CASTPrinter;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlan;
 import reflaxe.c.emit.CProjectLayout.CProjectModuleLayout;
+import reflaxe.c.emit.CProjectLayout.CProjectPackageLayout;
 import reflaxe.c.emit.CProjectLayout.CProjectLayoutPlanner;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.ir.HxcIR;
@@ -400,6 +401,7 @@ class CStaticFunctionProjectEmitter {
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
+			case Package: assignPackage(semantic, layout, headerGuards);
 		};
 	}
 
@@ -580,6 +582,109 @@ class CStaticFunctionProjectEmitter {
 		return new CStaticFunctionDeclarationPlan(headers, sources, functionDefinitions);
 	}
 
+	/**
+		Assigns declarations and definitions by Haxe package after semantic
+		lowering is complete. A package is only a file-ownership boundary: the
+		validated HxcIR, finalized C names, runtime plan, and declaration facts are
+		the same values consumed by all three output layouts.
+	**/
+	static function assignPackage(semantic:CStaticFunctionSemanticPlan, layout:CProjectLayoutPlan,
+			headerGuards:Map<String, CIdentifier>):CStaticFunctionDeclarationPlan {
+		final headers:Array<CStaticFunctionHeaderPlan> = [];
+		final typesUnit = copyUnit(semantic.common);
+		appendDeclarations(typesUnit, semantic.aggregateForwards);
+		appendDeclarations(typesUnit, semantic.enumForwards);
+		appendDeclarations(typesUnit, semantic.virtualForwards);
+		appendDeclarations(typesUnit, semantic.classForwards);
+		appendDeclarations(typesUnit, semantic.virtualObjectDeclarations);
+		headers.push({
+			path: CProjectLayoutPlan.TYPES_HEADER_PATH,
+			unit: new CHeaderUnit(requireGuard(layout, headerGuards, CProjectLayoutPlan.TYPES_HEADER_PATH), typesUnit)
+		});
+
+		final packageDependencies = completePackageDependencies(layout, semantic.moduleDependencies);
+		final packageHeaderUnits:Map<String, CTranslationUnit> = [];
+		for (pack in layout.packages) {
+			final unit = new CTranslationUnit();
+			unit.includes.push({path: CProjectLayoutPlan.TYPES_HEADER_INCLUDE, kind: Local});
+			final dependencies = packageDependencies.get(pack.packagePath);
+			if (dependencies == null)
+				throw new ProjectEmissionError('package project lost complete-type dependencies for `${pack.packagePath}`');
+			for (dependency in dependencies)
+				unit.includes.push({path: layout.packageLayout(dependency).headerInclude, kind: Local});
+			packageHeaderUnits.set(pack.packagePath, unit);
+		}
+		appendPackageTypes(packageHeaderUnits, layout, semantic.aggregateTypes.concat(semantic.enumTypes).concat(semantic.classTypes));
+		for (global in semantic.globalDeclarations) {
+			requirePackageUnit(packageHeaderUnits, layout.packageForModule(global.modulePath).packagePath).declarations.push(global.declaration);
+		}
+		for (fn in semantic.functions) {
+			requirePackageUnit(packageHeaderUnits, layout.packageForModule(fn.modulePath).packagePath).declarations.push(fn.prototype);
+		}
+
+		final umbrella = new CTranslationUnit();
+		for (pack in layout.packages) {
+			final unit = requirePackageUnit(packageHeaderUnits, pack.packagePath);
+			headers.push({path: pack.headerPath, unit: new CHeaderUnit(requireGuard(layout, headerGuards, pack.headerPath), unit)});
+		}
+		for (pack in dependencyOrderedPackages(layout, packageDependencies))
+			umbrella.includes.push({path: pack.headerInclude, kind: Local});
+		appendDeclarations(umbrella, semantic.virtualDefinitions);
+		headers.push({
+			path: HEADER_PATH,
+			unit: new CHeaderUnit(requireGuard(layout, headerGuards, HEADER_PATH), umbrella)
+		});
+
+		final packageSources:Map<String, CTranslationUnit> = [];
+		for (pack in layout.packages)
+			packageSources.set(pack.packagePath, sourceUnit());
+		for (global in semantic.globalDefinitions) {
+			packageSource(packageSources, layout.packageForModule(global.modulePath)).declarations.push(global.declaration);
+		}
+		final sources:Array<CStaticFunctionSourcePlan> = [];
+		final functionDefinitions:Array<CStaticFunctionDefinitionPlan> = [];
+		final nonReturningOrdinals:Map<String, Int> = [];
+		for (fn in semantic.functions) {
+			final definition = fn.definition();
+			final pack = layout.packageForModule(fn.modulePath);
+			if (fn.isNonReturning) {
+				final ordinal = nonReturningOrdinals.exists(pack.packagePath) ? nonReturningOrdinals.get(pack.packagePath) : 0;
+				if (ordinal == null)
+					throw new ProjectEmissionError('package project lost non-returning ordinal for `${pack.packagePath}`');
+				nonReturningOrdinals.set(pack.packagePath, ordinal + 1);
+				final sourcePath = pack.nonReturningSourcePath(ordinal);
+				final unit = sourceUnit();
+				unit.declarations.push(definition);
+				sources.push({path: sourcePath, unit: unit});
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: sourcePath, declaration: definition});
+			} else {
+				packageSource(packageSources, pack).declarations.push(definition);
+				functionDefinitions.push({functionId: fn.functionId, sourcePath: pack.sourcePath, declaration: definition});
+			}
+		}
+		for (pack in layout.packages) {
+			final unit = packageSources.get(pack.packagePath);
+			if (unit == null)
+				throw new ProjectEmissionError('package project lost source unit for `${pack.packagePath}`');
+			sources.push({path: pack.sourcePath, unit: unit});
+		}
+		if (semantic.support.length > 0) {
+			final supportUnit = sourceUnit();
+			for (declaration in semantic.support)
+				supportUnit.declarations.push(declaration);
+			sources.push({path: CProjectLayoutPlan.SUPPORT_SOURCE_PATH, unit: supportUnit});
+		}
+		final entryUnit = sourceUnit();
+		for (declaration in semantic.entry)
+			entryUnit.declarations.push(declaration);
+		sources.push({path: CProjectLayoutPlan.ENTRY_SOURCE_PATH, unit: entryUnit});
+
+		headers.sort(compareHeaderPlans);
+		sources.sort((left, right) -> compareStrings(left.path, right.path));
+		functionDefinitions.sort((left, right) -> compareStrings(left.functionId, right.functionId));
+		return new CStaticFunctionDeclarationPlan(headers, sources, functionDefinitions);
+	}
+
 	static function moduleSource(units:Map<String, CTranslationUnit>, module:CProjectModuleLayout):CTranslationUnit {
 		var unit = units.get(module.modulePath);
 		if (unit == null) {
@@ -589,10 +694,24 @@ class CStaticFunctionProjectEmitter {
 		return unit;
 	}
 
+	static function packageSource(units:Map<String, CTranslationUnit>, pack:CProjectPackageLayout):CTranslationUnit {
+		final unit = units.get(pack.packagePath);
+		if (unit == null)
+			throw new ProjectEmissionError('package project cannot resolve source unit for `${pack.packagePath}`');
+		return unit;
+	}
+
 	static function requireModuleUnit(units:Map<String, CTranslationUnit>, modulePath:String):CTranslationUnit {
 		final unit = units.get(modulePath);
 		if (unit == null)
 			throw new ProjectEmissionError('split project cannot resolve header unit for Haxe module `$modulePath`');
+		return unit;
+	}
+
+	static function requirePackageUnit(units:Map<String, CTranslationUnit>, packagePath:String):CTranslationUnit {
+		final unit = units.get(packagePath);
+		if (unit == null)
+			throw new ProjectEmissionError('package project cannot resolve header unit for Haxe package `$packagePath`');
 		return unit;
 	}
 
@@ -627,6 +746,58 @@ class CStaticFunctionProjectEmitter {
 	static function appendModuleTypes(units:Map<String, CTranslationUnit>, plans:Array<CTypeSemanticPlan>):Void {
 		for (plan in plans)
 			appendDeclarations(requireModuleUnit(units, plan.modulePath), plan.declarations);
+	}
+
+	/**
+		Orders complete type definitions inside each package. Cross-package hard
+		edges are header includes; dependencies inside one package must instead
+		appear earlier in that same header.
+	**/
+	static function appendPackageTypes(units:Map<String, CTranslationUnit>, layout:CProjectLayoutPlan, plans:Array<CTypeSemanticPlan>):Void {
+		final byId:Map<String, CTypeSemanticPlan> = [];
+		final byPackage:Map<String, Array<CTypeSemanticPlan>> = [];
+		for (plan in plans) {
+			if (byId.exists(plan.instanceId))
+				throw new ProjectEmissionError('package project repeats complete type `${plan.instanceId}`');
+			byId.set(plan.instanceId, plan);
+			final packagePath = layout.packageForModule(plan.modulePath).packagePath;
+			var grouped = byPackage.get(packagePath);
+			if (grouped == null) {
+				grouped = [];
+				byPackage.set(packagePath, grouped);
+			}
+			grouped.push(plan);
+		}
+		for (pack in layout.packages) {
+			final grouped = byPackage.get(pack.packagePath);
+			if (grouped == null)
+				continue;
+			grouped.sort((left, right) -> compareStrings(left.instanceId, right.instanceId));
+			final ordered:Array<CTypeSemanticPlan> = [];
+			final state:Map<String, Int> = [];
+			for (plan in grouped)
+				visitPackageType(plan, pack.packagePath, layout, byId, state, ordered);
+			final unit = requirePackageUnit(units, pack.packagePath);
+			for (plan in ordered)
+				appendDeclarations(unit, plan.declarations);
+		}
+	}
+
+	static function visitPackageType(plan:CTypeSemanticPlan, packagePath:String, layout:CProjectLayoutPlan, byId:Map<String, CTypeSemanticPlan>,
+			state:Map<String, Int>, result:Array<CTypeSemanticPlan>):Void {
+		final current = state.get(plan.instanceId);
+		if (current == 2)
+			return;
+		if (current == 1)
+			throw new ProjectEmissionError('complete-type dependency cycle reaches `${plan.instanceId}` inside Haxe package `$packagePath`');
+		state.set(plan.instanceId, 1);
+		for (dependencyId in plan.completeDependencies) {
+			final dependency = byId.get(dependencyId);
+			if (dependency != null && layout.packageForModule(dependency.modulePath).packagePath == packagePath)
+				visitPackageType(dependency, packagePath, layout, byId, state, result);
+		}
+		state.set(plan.instanceId, 2);
+		result.push(plan);
 	}
 
 	static function typeOwnerModules(lowered:CBodyLoweringResult):Map<String, String> {
@@ -819,6 +990,54 @@ class CStaticFunctionProjectEmitter {
 			visitModule(dependency, layout, dependencies, state, result);
 		state.set(modulePath, 2);
 		result.push(layout.module(modulePath));
+	}
+
+	static function completePackageDependencies(layout:CProjectLayoutPlan, moduleDependencies:Map<String, Array<String>>):Map<String, Array<String>> {
+		final result:Map<String, Array<String>> = [];
+		for (pack in layout.packages)
+			result.set(pack.packagePath, []);
+		for (module in layout.modules) {
+			final direct = moduleDependencies.get(module.modulePath);
+			if (direct == null)
+				throw new ProjectEmissionError('package project lost complete-type dependencies for Haxe module `${module.modulePath}`');
+			final owner = layout.packageForModule(module.modulePath);
+			final grouped = result.get(owner.packagePath);
+			if (grouped == null)
+				throw new ProjectEmissionError('package project lost dependency set for Haxe package `${owner.packagePath}`');
+			for (dependencyModulePath in direct) {
+				final dependency = layout.packageForModule(dependencyModulePath);
+				if (dependency.packagePath != owner.packagePath && grouped.indexOf(dependency.packagePath) == -1)
+					grouped.push(dependency.packagePath);
+			}
+		}
+		for (dependencies in result)
+			dependencies.sort(compareStrings);
+		return result;
+	}
+
+	static function dependencyOrderedPackages(layout:CProjectLayoutPlan, dependencies:Map<String, Array<String>>):Array<CProjectPackageLayout> {
+		final result:Array<CProjectPackageLayout> = [];
+		final state:Map<String, Int> = [];
+		for (pack in layout.packages)
+			visitPackage(pack.packagePath, layout, dependencies, state, result);
+		return result;
+	}
+
+	static function visitPackage(packagePath:String, layout:CProjectLayoutPlan, dependencies:Map<String, Array<String>>, state:Map<String, Int>,
+			result:Array<CProjectPackageLayout>):Void {
+		final current = state.get(packagePath);
+		if (current == 2)
+			return;
+		if (current == 1)
+			throw new ProjectEmissionError('complete-type package dependency cycle reaches `$packagePath`');
+		state.set(packagePath, 1);
+		final direct = dependencies.get(packagePath);
+		if (direct == null)
+			throw new ProjectEmissionError('complete-type dependency plan omitted Haxe package `$packagePath`');
+		for (dependency in direct)
+			visitPackage(dependency, layout, dependencies, state, result);
+		state.set(packagePath, 2);
+		result.push(layout.packageLayout(packagePath));
 	}
 
 	static function modulePaths(lowered:CBodyLoweringResult):Array<String> {
@@ -1051,6 +1270,16 @@ class CStaticFunctionProjectEmitter {
 			}
 		}
 		return false;
+	}
+
+	static function compareHeaderPlans(left:CStaticFunctionHeaderPlan, right:CStaticFunctionHeaderPlan):Int {
+		if (left.path == right.path)
+			return 0;
+		if (left.path == HEADER_PATH)
+			return -1;
+		if (right.path == HEADER_PATH)
+			return 1;
+		return compareStrings(left.path, right.path);
 	}
 
 	static function compareStrings(left:String, right:String):Int

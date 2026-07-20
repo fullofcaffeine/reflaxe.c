@@ -70,16 +70,43 @@ SPLIT_SOURCES = (
     "src/modules/caxecraft/domain/WorldStorage.c",
     "src/modules/caxecraft/qa/DomainProbe.c",
 )
+PACKAGE_HEADERS = (
+    "include/hxc/detail/program_types.h",
+    "include/hxc/packages/caxecraft/domain/package.h",
+    "include/hxc/packages/caxecraft/qa/package.h",
+    "include/hxc/program.h",
+)
+PACKAGE_SOURCES = (
+    "src/hxc/main.c",
+    "src/hxc/support.c",
+    "src/packages/caxecraft/domain/package.c",
+    "src/packages/caxecraft/qa/package.c",
+)
+UNITY_HEADERS = ("include/hxc/program.h",)
+UNITY_SOURCES = ("src/program.c",)
+LAYOUTS = ("split", "package", "unity")
+HEADERS_BY_LAYOUT = {
+    "split": SPLIT_HEADERS,
+    "package": PACKAGE_HEADERS,
+    "unity": UNITY_HEADERS,
+}
+SOURCES_BY_LAYOUT = {
+    "split": SPLIT_SOURCES,
+    "package": PACKAGE_SOURCES,
+    "unity": UNITY_SOURCES,
+}
 PRODUCTION_FILES = {
-    "split": COMMON_PRODUCTION_FILES | set(SPLIT_HEADERS) | set(SPLIT_SOURCES),
-    "unity": COMMON_PRODUCTION_FILES
-    | {"include/hxc/program.h", "src/program.c"},
+    layout: COMMON_PRODUCTION_FILES | set(HEADERS_BY_LAYOUT[layout]) | set(SOURCES_BY_LAYOUT[layout])
+    for layout in LAYOUTS
 }
 SNAPSHOT_FORMATS = {
     **{path: "header" for path in SPLIT_HEADERS},
     **{path: "c" for path in SPLIT_SOURCES},
+    **{f"package/{path}": "header" for path in PACKAGE_HEADERS},
+    **{f"package/{path}": "c" for path in PACKAGE_SOURCES},
     "hxc.runtime-plan.json": "json",
     "method-symbols.json": "json",
+    "maintainability-package.json": "json",
     "maintainability-split.json": "json",
     "maintainability-unity.json": "json",
     "unity/include/hxc/program.h": "header",
@@ -196,8 +223,8 @@ def compile_target(
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if report:
         command.extend(["-D", "reflaxe_c_static_initialization_report"])
-    if layout == "unity":
-        command.extend(["-D", "hxc_project_layout=unity"])
+    if layout in ("package", "unity"):
+        command.extend(["-D", f"hxc_project_layout={layout}"])
     elif layout != "split":
         raise CaxecraftFailure(f"unknown Caxecraft project layout {layout!r}")
     command.extend(["--custom-target", f"c={output}"])
@@ -492,8 +519,7 @@ def validate_generated_text(
             raise CaxecraftFailure(f"generated Caxecraft C omitted {marker!r}")
 
 
-def validate_block_coord_header(content: str) -> None:
-    guard = "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED"
+def validate_block_coord_declaration(content: str) -> None:
     expected_record = (
         "struct hxc_caxecraft_domain_BlockCoord {\n"
         "  int32_t hxc_x;\n"
@@ -501,19 +527,24 @@ def validate_block_coord_header(content: str) -> None:
         "  int32_t hxc_z;\n"
         "};"
     )
-    if (
-        not content.startswith(f"#ifndef {guard}\n#define {guard}\n")
-        or expected_record not in content
-        or not content.endswith(f"#endif /* {guard} */\n")
-    ):
+    if expected_record not in content:
         raise CaxecraftFailure(
-            "BlockCoord.h lost its readable guard, source-shaped tag, or hxc_x/y/z members"
+            "BlockCoord lost its source-shaped tag or readable hxc_x/y/z members"
         )
     for forbidden in ("HXC_GENERATED_PATH_", "closedzx", "_h4aec2e39", "zx2D"):
         if forbidden in content:
             raise CaxecraftFailure(
                 f"BlockCoord.h leaked machine identity {forbidden!r} into ordinary C"
             )
+
+
+def validate_block_coord_header(content: str) -> None:
+    guard = "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED"
+    validate_block_coord_declaration(content)
+    if not content.startswith(f"#ifndef {guard}\n#define {guard}\n") or not content.endswith(
+        f"#endif /* {guard} */\n"
+    ):
+        raise CaxecraftFailure("BlockCoord.h lost its readable standalone guard")
 
 
 HXCIR_FUNCTION_SOURCE = re.compile(
@@ -551,6 +582,21 @@ def maintainability_owner(path: str, layout: str) -> ArtifactOwner:
             suffix = path[len(prefix) :]
             module_path = suffix.rsplit(".", 1)[0].replace("/", ".")
             return ArtifactOwner(OwnerKind.SOURCE_MODULE, module_path)
+    for prefix in ("include/hxc/packages/", "src/packages/"):
+        if path.startswith(prefix):
+            suffix = path[len(prefix) :]
+            if suffix in ("package.h", "package.c"):
+                return ArtifactOwner(
+                    OwnerKind.SOURCE_PACKAGE,
+                    package_path="<root>",
+                )
+            for ending in ("/package.h", "/package.c"):
+                if suffix.endswith(ending):
+                    package_path = suffix[: -len(ending)]
+                    return ArtifactOwner(
+                        OwnerKind.SOURCE_PACKAGE,
+                        package_path=package_path or "<root>",
+                    )
     if path == "src/hxc/main.c":
         return ArtifactOwner(OwnerKind.COMPILER_ENTRY)
     if layout == "unity" and path == "src/program.c":
@@ -672,10 +718,9 @@ def generated_maintainability_report(
     symbols: dict[str, object],
     hxcir: str,
 ) -> dict[str, object]:
-    paths = (*SPLIT_HEADERS, *SPLIT_SOURCES) if layout == "split" else (
-        "include/hxc/program.h",
-        "src/program.c",
-    )
+    if layout not in HEADERS_BY_LAYOUT or layout not in SOURCES_BY_LAYOUT:
+        raise CaxecraftFailure(f"unknown maintainability layout {layout!r}")
+    paths = (*HEADERS_BY_LAYOUT[layout], *SOURCES_BY_LAYOUT[layout])
     contents = {path: (output / path).read_bytes() for path in paths}
     mappings = maintainability_function_mappings(
         contents, method_symbols, hxcir, layout
@@ -831,13 +876,15 @@ def maintainability_layout_projection(report: dict[str, object]) -> dict[str, ob
 
 
 def require_maintainability_layout_parity(
-    split: dict[str, object], unity: dict[str, object]
+    baseline: dict[str, object], *candidates: dict[str, object]
 ) -> None:
-    if maintainability_layout_projection(split) != maintainability_layout_projection(
-        unity
+    baseline_projection = maintainability_layout_projection(baseline)
+    if any(
+        maintainability_layout_projection(candidate) != baseline_projection
+        for candidate in candidates
     ):
         raise CaxecraftFailure(
-            "split and unity maintainability reports disagree on semantic function metrics"
+            "split, package, and unity maintainability reports disagree on semantic function metrics"
         )
 
 
@@ -897,16 +944,14 @@ def validate_symbol_readability(symbols: dict[str, object]) -> None:
 
 
 def generated_c_bytes(output: Path, layout: str) -> tuple[bytes, bytes]:
-    if layout == "split":
-        headers = b"\n".join((output / path).read_bytes() for path in SPLIT_HEADERS)
-        sources = b"\n".join((output / path).read_bytes() for path in SPLIT_SOURCES)
-        return headers, sources
-    if layout == "unity":
-        return (
-            (output / "include/hxc/program.h").read_bytes(),
-            (output / "src/program.c").read_bytes(),
-        )
-    raise CaxecraftFailure(f"unknown generated-C layout {layout!r}")
+    headers = HEADERS_BY_LAYOUT.get(layout)
+    sources = SOURCES_BY_LAYOUT.get(layout)
+    if headers is None or sources is None:
+        raise CaxecraftFailure(f"unknown generated-C layout {layout!r}")
+    return (
+        b"\n".join((output / path).read_bytes() for path in headers),
+        b"\n".join((output / path).read_bytes() for path in sources),
+    )
 
 
 def render_project(
@@ -948,10 +993,8 @@ def render_project(
         not isinstance(configuration, dict)
         or configuration.get("projectLayout") != layout
         or not isinstance(build, dict)
-        or build.get("sources")
-        != list(SPLIT_SOURCES if layout == "split" else ("src/program.c",))
-        or build.get("privateHeaders")
-        != list(SPLIT_HEADERS if layout == "split" else ("include/hxc/program.h",))
+        or build.get("sources") != list(SOURCES_BY_LAYOUT[layout])
+        or build.get("privateHeaders") != list(HEADERS_BY_LAYOUT[layout])
     ):
         raise CaxecraftFailure(f"{label} layout/build manifest drifted")
     runtime_plan = load_json(output / "hxc.runtime-plan.json", f"{label} runtime plan")
@@ -978,6 +1021,12 @@ def render_project(
     if layout == "split":
         validate_block_coord_header(
             (output / "include/hxc/modules/caxecraft/domain/BlockCoord.h").read_text(
+                encoding="utf-8"
+            )
+        )
+    elif layout == "package":
+        validate_block_coord_declaration(
+            (output / "include/hxc/packages/caxecraft/domain/package.h").read_text(
                 encoding="utf-8"
             )
         )
@@ -1081,18 +1130,30 @@ def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
     raise CaxecraftFailure("Haxe server did not accept connections")
 
 
-def check_determinism(first: RenderedProject, root: Path) -> None:
-    repeated = render_project(root / "repeated", label="repeated cold Caxecraft render")
-    reversed_project = render_project(
-        root / "reversed",
-        label="reverse-order/locale Caxecraft render",
-        reverse=True,
-        locale=alternate_locale(),
-    )
-    assert_artifacts_equal(first.artifacts, repeated.artifacts, "repeated cold render")
-    assert_artifacts_equal(
-        first.artifacts, reversed_project.artifacts, "reverse-order/locale render"
-    )
+def check_determinism(
+    projects: tuple[tuple[str, RenderedProject], ...], root: Path
+) -> None:
+    for layout, first in projects:
+        repeated = render_project(
+            root / layout / "repeated",
+            label=f"repeated cold {layout} Caxecraft render",
+            layout=layout,
+        )
+        reversed_project = render_project(
+            root / layout / "reversed",
+            label=f"reverse-order/locale {layout} Caxecraft render",
+            layout=layout,
+            reverse=True,
+            locale=alternate_locale(),
+        )
+        assert_artifacts_equal(
+            first.artifacts, repeated.artifacts, f"repeated cold {layout} render"
+        )
+        assert_artifacts_equal(
+            first.artifacts,
+            reversed_project.artifacts,
+            f"reverse-order/locale {layout} render",
+        )
 
     port = available_port()
     endpoint = str(port)
@@ -1108,20 +1169,27 @@ def check_determinism(first: RenderedProject, root: Path) -> None:
     )
     try:
         wait_for_server(server, port)
-        warm_first = render_project(
-            root / "warm-first",
-            label="first warm-server Caxecraft render",
-            connect=endpoint,
-        )
-        warm_repeated = render_project(
-            root / "warm-repeated",
-            label="repeated warm-server Caxecraft render",
-            connect=endpoint,
-        )
-        assert_artifacts_equal(first.artifacts, warm_first.artifacts, "cold/warm render")
-        assert_artifacts_equal(
-            warm_first.artifacts, warm_repeated.artifacts, "warm-server repeated render"
-        )
+        for layout, first in projects:
+            warm_first = render_project(
+                root / layout / "warm-first",
+                label=f"first warm-server {layout} Caxecraft render",
+                layout=layout,
+                connect=endpoint,
+            )
+            warm_repeated = render_project(
+                root / layout / "warm-repeated",
+                label=f"repeated warm-server {layout} Caxecraft render",
+                layout=layout,
+                connect=endpoint,
+            )
+            assert_artifacts_equal(
+                first.artifacts, warm_first.artifacts, f"cold/warm {layout} render"
+            )
+            assert_artifacts_equal(
+                warm_first.artifacts,
+                warm_repeated.artifacts,
+                f"warm-server repeated {layout} render",
+            )
     finally:
         server.terminate()
         try:
@@ -1138,21 +1206,33 @@ def snapshot_values() -> dict[str, object]:
             root / "split",
             label="Caxecraft split snapshot render",
         )
+        package = render_project(
+            root / "package",
+            label="Caxecraft package snapshot render",
+            layout="package",
+        )
         unity = render_project(
             root / "unity",
             label="Caxecraft unity snapshot render",
             layout="unity",
         )
         if (
-            split.hxcir != unity.hxcir
-            or split.runtime_plan != unity.runtime_plan
-            or split.method_symbols != unity.method_symbols
+            any(project.hxcir != split.hxcir for project in (package, unity))
+            or any(
+                project.runtime_plan != split.runtime_plan
+                for project in (package, unity)
+            )
+            or any(
+                project.method_symbols != split.method_symbols
+                for project in (package, unity)
+            )
         ):
             raise CaxecraftFailure(
-                "split/unity snapshot renders changed semantic plans or names"
+                "split/package/unity snapshot renders changed semantic plans or names"
             )
         require_maintainability_layout_parity(
             split.maintainability_report,
+            package.maintainability_report,
             unity.maintainability_report,
         )
         oracle = run_oracle().decode("ascii")
@@ -1161,8 +1241,15 @@ def snapshot_values() -> dict[str, object]:
                 path: (split.output / path).read_text(encoding="utf-8")
                 for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
             },
+            **{
+                f"package/{path}": (package.output / path).read_text(
+                    encoding="utf-8"
+                )
+                for path in (*PACKAGE_HEADERS, *PACKAGE_SOURCES)
+            },
             "hxc.runtime-plan.json": split.runtime_plan,
             "method-symbols.json": split.method_symbols,
+            "maintainability-package.json": package.maintainability_report,
             "maintainability-split.json": split.maintainability_report,
             "maintainability-unity.json": unity.maintainability_report,
             "unity/include/hxc/program.h": (
@@ -1191,26 +1278,39 @@ def expected_values() -> dict[str, object]:
     }
 
 
-def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], bytes]:
+def validate_expected(
+    values: dict[str, object],
+) -> tuple[dict[str, dict[str, bytes]], bytes]:
     oracle = values.get("oracle.txt")
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
+    package_report = values.get("maintainability-package.json")
     split_report = values.get("maintainability-split.json")
     unity_report = values.get("maintainability-unity.json")
     split_text = {
         path: values.get(path) for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
+    }
+    package_text = {
+        path: values.get(f"package/{path}")
+        for path in (*PACKAGE_HEADERS, *PACKAGE_SOURCES)
     }
     unity_text = {
         "include/hxc/program.h": values.get("unity/include/hxc/program.h"),
         "src/program.c": values.get("unity/src/program.c"),
     }
     if not isinstance(oracle, str) or not all(
-        isinstance(value, str) for value in (*split_text.values(), *unity_text.values())
+        isinstance(value, str)
+        for value in (
+            *split_text.values(),
+            *package_text.values(),
+            *unity_text.values(),
+        )
     ):
         raise CaxecraftFailure("Caxecraft text baseline is malformed")
     if (
         not isinstance(runtime_plan, dict)
         or not isinstance(method_symbols, dict)
+        or not isinstance(package_report, dict)
         or not isinstance(split_report, dict)
         or not isinstance(unity_report, dict)
     ):
@@ -1220,6 +1320,11 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
     split_bytes = {
         path: value.encode("utf-8")
         for path, value in split_text.items()
+        if isinstance(value, str)
+    }
+    package_bytes = {
+        path: value.encode("utf-8")
+        for path, value in package_text.items()
         if isinstance(value, str)
     }
     unity_bytes = {
@@ -1234,27 +1339,48 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
         method_symbols,
     )
     validate_generated_text(
+        b"\n".join(package_bytes[path] for path in PACKAGE_HEADERS),
+        b"\n".join(package_bytes[path] for path in PACKAGE_SOURCES),
+        method_symbols,
+    )
+    validate_generated_text(
         unity_bytes["include/hxc/program.h"],
         unity_bytes["src/program.c"],
         method_symbols,
     )
     validate_maintainability_inputs(split_report, "split", split_bytes)
+    validate_maintainability_inputs(package_report, "package", package_bytes)
     validate_maintainability_inputs(unity_report, "unity", unity_bytes)
-    require_maintainability_layout_parity(split_report, unity_report)
+    require_maintainability_layout_parity(split_report, package_report, unity_report)
     block_coord = split_text.get(
         "include/hxc/modules/caxecraft/domain/BlockCoord.h"
     )
     if not isinstance(block_coord, str):
         raise CaxecraftFailure("checked-in Caxecraft baseline omitted BlockCoord.h")
     validate_block_coord_header(block_coord)
+    package_domain = package_text.get(
+        "include/hxc/packages/caxecraft/domain/package.h"
+    )
+    if not isinstance(package_domain, str):
+        raise CaxecraftFailure(
+            "checked-in Caxecraft package baseline omitted its domain header"
+        )
+    validate_block_coord_declaration(package_domain)
     lines = oracle_bytes.splitlines()
     if len(lines) != 38 or lines[0] != b"0" or not oracle_bytes.endswith(b"\n"):
         raise CaxecraftFailure("checked-in Caxecraft oracle baseline drifted")
-    return split_bytes, oracle_bytes
+    return {
+        "split": split_bytes,
+        "package": package_bytes,
+        "unity": unity_bytes,
+    }, oracle_bytes
 
 
 def validate_snapshots(
-    split: RenderedProject, unity: RenderedProject, oracle: bytes
+    split: RenderedProject,
+    package: RenderedProject,
+    unity: RenderedProject,
+    oracle: bytes,
 ) -> None:
     expected = expected_values()
     actual: dict[str, object] = {
@@ -1262,8 +1388,13 @@ def validate_snapshots(
             path: (split.output / path).read_text(encoding="utf-8")
             for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
         },
+        **{
+            f"package/{path}": (package.output / path).read_text(encoding="utf-8")
+            for path in (*PACKAGE_HEADERS, *PACKAGE_SOURCES)
+        },
         "hxc.runtime-plan.json": split.runtime_plan,
         "method-symbols.json": split.method_symbols,
+        "maintainability-package.json": package.maintainability_report,
         "maintainability-split.json": split.maintainability_report,
         "maintainability-unity.json": unity.maintainability_report,
         "unity/include/hxc/program.h": (
@@ -1315,8 +1446,8 @@ def prepare_native_fixture(
         shutil.copy2(
             NATIVE / "generated_program.c", fixture / "native/generated_program.c"
         )
-    elif layout == "split":
-        for relative in SPLIT_SOURCES:
+    elif layout in ("split", "package"):
+        for relative in SOURCES_BY_LAYOUT[layout]:
             if relative == "src/hxc/main.c":
                 continue
             destination = fixture / "generated" / relative
@@ -1327,18 +1458,18 @@ def prepare_native_fixture(
 
 
 def native_project(layout: str, oracle: bytes, *, sanitizer: bool) -> CFixtureProject:
-    if layout == "split":
+    if layout in ("split", "package"):
         sources = (
             "native/domain_harness.c",
             *(
                 f"generated/{path}"
-                for path in SPLIT_SOURCES
+                for path in SOURCES_BY_LAYOUT[layout]
                 if path != "src/hxc/main.c"
             ),
         )
         headers = (
             "native/method_symbols.h",
-            *(f"generated/{path}" for path in SPLIT_HEADERS),
+            *(f"generated/{path}" for path in HEADERS_BY_LAYOUT[layout]),
         )
     elif layout == "unity":
         sources = ("native/domain_harness.c", "native/generated_program.c")
@@ -1412,9 +1543,9 @@ def inspect_generated_object_symbols(
 def check_standalone_headers(
     project: RenderedProject, layout: str, requested_toolchain: str
 ) -> None:
-    headers = (
-        SPLIT_HEADERS if layout == "split" else ("include/hxc/program.h",)
-    )
+    headers = HEADERS_BY_LAYOUT.get(layout)
+    if headers is None:
+        raise CaxecraftFailure(f"unknown standalone-header layout {layout!r}")
     include_root = project.output / "include"
     for toolchain in resolve_toolchains(
         requested_toolchain, repository_root=ROOT
@@ -1504,32 +1635,38 @@ def progress(stage: str) -> None:
     print(f"caxecraft-domain: [{stage}]", flush=True)
 
 
-def checked_in_split_project(root: Path, values: dict[str, object]) -> tuple[RenderedProject, bytes]:
-    generated, oracle = validate_expected(values)
-    for relative, content in generated.items():
-        destination = root / relative
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        destination.write_bytes(content)
+def checked_in_projects(
+    root: Path, values: dict[str, object]
+) -> tuple[dict[str, RenderedProject], bytes]:
+    generated_by_layout, oracle = validate_expected(values)
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
-    maintainability_report = values.get("maintainability-split.json")
     if (
         not isinstance(runtime_plan, dict)
         or not isinstance(method_symbols, dict)
-        or not isinstance(maintainability_report, dict)
     ):
         raise CaxecraftFailure("checked-in Caxecraft JSON baseline is malformed")
-    return (
-        RenderedProject(
-            root,
+    projects: dict[str, RenderedProject] = {}
+    for layout in LAYOUTS:
+        output = root / layout
+        for relative, content in generated_by_layout[layout].items():
+            destination = output / relative
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(content)
+        maintainability_report = values.get(f"maintainability-{layout}.json")
+        if not isinstance(maintainability_report, dict):
+            raise CaxecraftFailure(
+                f"checked-in Caxecraft {layout} maintainability baseline is malformed"
+            )
+        projects[layout] = RenderedProject(
+            output,
             {},
             "",
             runtime_plan,
             method_symbols,
             maintainability_report,
-        ),
-        oracle,
-    )
+        )
+    return projects, oracle
 
 
 def main(argv: Iterable[str] = ()) -> int:
@@ -1541,11 +1678,13 @@ def main(argv: Iterable[str] = ()) -> int:
         with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-domain-") as temporary:
             root = Path(temporary)
             if args.native_only:
-                progress("load checked-in split baseline")
-                split, oracle = checked_in_split_project(
-                    root / "checked-in-split", expected_values()
+                progress("load checked-in split/package/unity baselines")
+                checked_in, oracle = checked_in_projects(
+                    root / "checked-in", expected_values()
                 )
-                unity = None
+                split = checked_in["split"]
+                package = checked_in["package"]
+                unity = checked_in["unity"]
             else:
                 progress("Eval oracle")
                 oracle = run_oracle()
@@ -1554,6 +1693,12 @@ def main(argv: Iterable[str] = ()) -> int:
                     root / "first",
                     label="first cold Caxecraft render",
                 )
+                progress("package render + semantic parity")
+                package = render_project(
+                    root / "package",
+                    label="package Caxecraft render",
+                    layout="package",
+                )
                 progress("unity render + semantic parity")
                 unity = render_project(
                     root / "unity",
@@ -1561,22 +1706,35 @@ def main(argv: Iterable[str] = ()) -> int:
                     layout="unity",
                 )
                 if (
-                    first.hxcir != unity.hxcir
-                    or first.runtime_plan != unity.runtime_plan
-                    or first.method_symbols != unity.method_symbols
+                    any(
+                        project.hxcir != first.hxcir
+                        for project in (package, unity)
+                    )
+                    or any(
+                        project.runtime_plan != first.runtime_plan
+                        for project in (package, unity)
+                    )
+                    or any(
+                        project.method_symbols != first.method_symbols
+                        for project in (package, unity)
+                    )
                 ):
                     raise CaxecraftFailure(
-                        "split and unity layouts changed HxcIR, runtime, or method symbols"
+                        "split, package, and unity layouts changed HxcIR, runtime, or method symbols"
                     )
                 require_maintainability_layout_parity(
                     first.maintainability_report,
+                    package.maintainability_report,
                     unity.maintainability_report,
                 )
                 if args.full:
-                    progress("cold/reversed/locale/warm determinism")
-                    check_determinism(first, root / "determinism")
-                progress("checked-in split/unity snapshots")
-                validate_snapshots(first, unity, oracle)
+                    progress("split/package cold/reversed/locale/warm determinism")
+                    check_determinism(
+                        (("split", first), ("package", package)),
+                        root / "determinism",
+                    )
+                progress("checked-in split/package/unity snapshots")
+                validate_snapshots(first, package, unity, oracle)
                 split = first
             progress("split native differential")
             run_native(
@@ -1587,6 +1745,16 @@ def main(argv: Iterable[str] = ()) -> int:
                 root=root / "native-split",
                 full=args.full or args.native_only,
             )
+            if package is not None:
+                progress("package native differential")
+                run_native(
+                    package,
+                    "package",
+                    oracle,
+                    requested_toolchain=args.toolchain,
+                    root=root / "native-package",
+                    full=args.full or args.native_only,
+                )
             if unity is not None:
                 progress("unity native differential")
                 run_native(
@@ -1611,12 +1779,16 @@ def main(argv: Iterable[str] = ()) -> int:
         print(f"caxecraft-domain: ERROR: {error}", file=sys.stderr)
         return 1
 
-    mode = "checked-in split C baseline" if args.native_only else "Eval/split+unity generated-C differential"
+    mode = (
+        "checked-in split/package/unity C baselines"
+        if args.native_only
+        else "Eval/split+package+unity generated-C differential"
+    )
     matrix = "full O0/O2/ASan+UBSan" if args.full or args.native_only else "quick O2"
     parity = (
-        "checked-in split layout validation"
+        "checked-in split/package/unity layout validation"
         if args.native_only
-        else "split/unity layout semantic parity"
+        else "split/package/unity layout semantic parity"
     )
     print(
         "caxecraft-domain: OK: "

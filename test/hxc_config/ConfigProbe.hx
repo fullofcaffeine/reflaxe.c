@@ -109,6 +109,7 @@ class ConfigProbe {
 		require(Std.string(defaults.runtimeDiagnostics.value) == "summary", "portable diagnostic preset");
 		require(Std.string(defaults.artifact.value) == "executable", "default artifact");
 		require(defaults.projectLayout.value == HxcProjectLayout.Split, "default split project layout");
+		require(HxcConfigParser.projectLayout("package") == HxcProjectLayout.Package, "explicit package project layout");
 
 		final metal = HxcConfigResolver.resolve(new HxcConfigResolutionRequest(null, null, null, null, new HxcConfigPatch({profile: CProfile.Metal})));
 		require(Std.string(metal.runtime.value) == "minimal", "metal runtime preset");

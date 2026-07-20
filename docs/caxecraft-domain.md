@@ -1,6 +1,9 @@
 # Caxecraft deterministic domain
 
-Caxecraft is both a future Raylib game and a compiler end-to-end workload. Its
+Caxecraft is both a future Raylib game and haxe.c's current flagship
+product-level end-to-end workload. It is the main integrated QA path used to
+find reusable compiler, generated-C, runtime, interop, and tooling
+improvements—not an example that may paper over those problems locally. Its
 domain is kept independent of Raylib so renderer/input integration cannot make
 world, ray, or collision semantics depend on frame rate, window state, native
 handles, or platform facts. This document fixes the contract implemented by
@@ -290,9 +293,11 @@ compiler can prove that moving its expression to the use site cannot change
 evaluation order, aliasing, failure, or lifetime behavior.
 The optional `unity` layout puts the same declaration/function plan in
 `src/program.c` for single-file inspection or simple build systems. The runner
-compares HxcIR, runtime intent, externally visible symbols, and behavior across
-both layouts. Layout selection is therefore not allowed to become a second
-semantic pipeline.
+also checks `package`, which combines the domain and QA modules into one
+header/source pair per Haxe package while preserving function-level source
+ownership. It compares HxcIR, runtime intent, externally visible symbols, and
+behavior across all three layouts. Layout selection is therefore not allowed
+to become a second semantic pipeline.
 
 Native evidence uses the shared argument-array C fixture harness. Available
 identity-matched GCC and Clang compile and execute at O0, O2, and combined
@@ -312,9 +317,11 @@ Run the fast edit-time contract with:
 npm run test:caxecraft-domain
 ```
 
-It runs Eval, both layouts, exact split snapshots, semantic-layout parity, and
-one strict optimized native differential for each layout. Run the exhaustive
-determinism and native matrix used by CI with:
+It runs Eval, all three layouts, exact split/package/unity snapshots,
+semantic-layout parity, and one strict optimized native differential for each
+layout. The exhaustive lane additionally repeats the real split and package
+outputs across cold builds, reversed discovery order, an alternate locale, and
+warm compiler-server reuse, then runs the complete native matrix used by CI:
 
 ```sh
 npm run test:caxecraft-domain:full

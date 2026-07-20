@@ -289,7 +289,7 @@ class CProjectEmitter {
 				fail('unknown project C standard `${Std.string(plan.cStandard)}`');
 		}
 		switch plan.projectLayout {
-			case CProjectLayout.Split | CProjectLayout.Unity:
+			case CProjectLayout.Split | CProjectLayout.Package | CProjectLayout.Unity:
 			case _:
 				fail('unknown project layout `${Std.string(plan.projectLayout)}`');
 		}
@@ -447,6 +447,9 @@ class CProjectEmitter {
 			case CProjectLayout.Split:
 				if (privateHeaders < 3)
 					fail('split direct executable emission requires an umbrella, representation detail, and at least one module header; found $privateHeaders');
+			case CProjectLayout.Package:
+				if (privateHeaders < 3)
+					fail('package direct executable emission requires an umbrella, representation detail, and at least one package header; found $privateHeaders');
 		}
 		var entryPoints = 0;
 		for (symbol in plan.symbolTable.symbols) {

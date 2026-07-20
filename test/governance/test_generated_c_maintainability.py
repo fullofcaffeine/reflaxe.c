@@ -348,6 +348,36 @@ hxc_label:
         with self.assertRaises(gcm.MaintainabilityError):
             gcm.replay_report_from_c(report, {}, _policy())
 
+    def test_package_artifact_owner_round_trips_without_losing_module_functions(self):
+        report = gcm.analyze_generated_c(
+            corpus_id="focused",
+            layout="canonical",
+            artifacts=(
+                _artifact(
+                    SAMPLE,
+                    owner=gcm.ArtifactOwner(
+                        gcm.OwnerKind.SOURCE_PACKAGE,
+                        package_path="fixtures/domain",
+                    ),
+                ),
+            ),
+            policy=_policy(),
+            symbols=(gcm.SymbolLedgerEntry("hxc_method_demo", "fixtures.Main.demo"),),
+        )
+        owner = report["files"][0]["owner"]
+        self.assertEqual(owner["kind"], "source-package")
+        self.assertEqual(owner["packagePath"], "fixtures/domain")
+        self.assertIsNone(owner["modulePath"])
+        self.assertEqual(report["files"][0]["functions"][0]["owner"]["kind"], "source-module")
+        self.assertEqual(
+            gcm.replay_report_from_c(
+                report,
+                {"src/main.c": SAMPLE.encode("utf-8")},
+                _policy(),
+            ),
+            report,
+        )
+
     def test_identity_span_and_line_mapping_coverage_are_not_conflated(self):
         content = "int hxc_method_demo(void) { return 0; }\n"
         artifact = _artifact(content, mappings=(_mapping(source=False),), owner=_owner(source=False))
@@ -440,6 +470,7 @@ hxc_label:
             pairs,
             [
                 ("body-lowering", "canonical"),
+                ("caxecraft-domain", "package"),
                 ("caxecraft-domain", "split"),
                 ("caxecraft-domain", "unity"),
                 ("evaluation-order-program", "canonical"),
@@ -449,6 +480,7 @@ hxc_label:
             ],
         )
         body = gcm.load_corpus_policy(POLICY_PATH, corpus_id="body-lowering", layout="canonical")
+        package = gcm.load_corpus_policy(POLICY_PATH, corpus_id="caxecraft-domain", layout="package")
         split = gcm.load_corpus_policy(POLICY_PATH, corpus_id="caxecraft-domain", layout="split")
         unity = gcm.load_corpus_policy(POLICY_PATH, corpus_id="caxecraft-domain", layout="unity")
         evaluation = gcm.load_corpus_policy(
@@ -462,6 +494,8 @@ hxc_label:
             9000,
         )
         self.assertEqual(split.file_overrides[0].path, "src/modules/caxecraft/qa/DomainProbe.c")
+        self.assertEqual(package.file_overrides[0].path, "src/packages/caxecraft/domain/package.c")
+        self.assertEqual(package.file_overrides[1].path, "src/packages/caxecraft/qa/package.c")
         self.assertEqual(unity.file_overrides[0].path, "src/program.c")
         self.assertEqual(split.function_overrides[0].function_id, "caxecraft.qa.DomainProbe.selfCheck")
 

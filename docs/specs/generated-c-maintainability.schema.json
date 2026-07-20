@@ -129,10 +129,12 @@
             "compiler-support",
             "handwritten-baseline",
             "source-module",
+            "source-package",
             "synthetic-fixture"
           ]
         },
         "modulePath": { "$ref": "#/$defs/nullableString" },
+        "packagePath": { "$ref": "#/$defs/path" },
         "source": { "$ref": "#/$defs/nullableSourceSpan" }
       }
     },

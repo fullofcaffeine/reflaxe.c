@@ -489,9 +489,10 @@ class CCompiler {
 	static function resolveProjectLayout(profile:CProfile):CProjectLayout {
 		return switch Context.definedValue("hxc_project_layout") {
 			case null | "" | "split": CProjectLayout.Split;
+			case "package": CProjectLayout.Package;
 			case "unity": CProjectLayout.Unity;
 			case invalid:
-				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_project_layout `$invalid`; expected split or unity.',
+				CDiagnostic.fatal(CDiagnosticId.InvalidConfiguration, 'invalid hxc_project_layout `$invalid`; expected split, package, or unity.',
 					compilationPosition(), profile);
 		};
 	}

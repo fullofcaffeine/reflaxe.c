@@ -6,7 +6,8 @@
   "status": "active",
   "requirements": [
     "HXC-COMP-002",
-    "HXC-COMP-009"
+    "HXC-COMP-009",
+    "HXC-COMP-011"
   ],
   "sources": [
     "test/project_layout/fixtures/src/layout/Oracle.hx",
@@ -28,7 +29,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "split-default/unity semantic parity.*Eval parity passed$"
+      "value": "split-default/package/unity semantic parity.*Eval parity passed$"
     }
   }
 }

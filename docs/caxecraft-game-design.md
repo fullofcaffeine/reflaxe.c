@@ -24,11 +24,14 @@ The durable work owners are:
 
 ## Product promise
 
-Caxecraft should be a small, attractive voxel game and a demanding compiler
-workload. It demonstrates that ordinary typed Haxe can express readable game
-logic, compile through Reflaxe.C to direct, inspectable C, and call raylib
-without an engine-shaped runtime hiding the boundary. It should be enjoyable
-to play and useful to inspect.
+Caxecraft should be a small, attractive voxel game and haxe.c's current
+flagship product-level E2E/QA workload. It demonstrates that ordinary typed
+Haxe can express readable game logic, compile through Reflaxe.C to direct,
+inspectable C, and call raylib without an engine-shaped runtime hiding the
+boundary. It should be enjoyable to play and useful to inspect. When it exposes
+a compiler weakness, the project reduces that weakness to a focused reusable
+test, fixes the owning compiler layer, and retains the game path as integrated
+regression evidence; game-only compiler workarounds are not acceptable.
 
 The primary audience is a child or family who wants to explore, build, follow
 a short adventure, or create a small scenario. The secondary audience is a
@@ -496,8 +499,9 @@ semantics allow it, temporary names should be concise and stable, and the
 result should be usable by a C programmer as a maintained handoff. Unity mode
 remains available for embedding, debugging, or distribution needs. The current
 domain corpus now has structured reducible control flow, source-shaped ordinary
-names, conservative temporary coalescing, exact split/unity snapshots, and a
-[schema-validated maintainability report](generated-c-maintainability.md).
+names, conservative temporary coalescing, exact split/package/unity snapshots,
+and a [schema-validated maintainability
+report](generated-c-maintainability.md).
 Those fixed-corpus gates prevent silent regression, but declaration cleanup and
 broad arbitrary-program handoff evidence remain separate; this slice alone is
 not a universal C-programmer handoff claim.

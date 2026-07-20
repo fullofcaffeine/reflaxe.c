@@ -77,7 +77,7 @@ class HxcConfigParser {
 				build: ["debug", "minsizerel", "release"],
 				cExtensions: ["gnu", "msvc", "none"],
 				cStandard: ["c11", "c17", "c23"],
-				projectLayout: ["split", "unity"],
+				projectLayout: ["package", "split", "unity"],
 				environment: ["emscripten", "freestanding", "hosted", "wasi"],
 				profile: ["metal", "portable"],
 				runtime: ["auto", "minimal", "none"],
@@ -135,8 +135,9 @@ class HxcConfigParser {
 	public static function projectLayout(raw:String, source:String = "command-line", line:Int = 1, column:Int = 1):HxcProjectLayout {
 		return switch raw {
 			case "split": HxcProjectLayout.Split;
+			case "package": HxcProjectLayout.Package;
 			case "unity": HxcProjectLayout.Unity;
-			case _: throw new HxcConfigError('invalid project layout `$raw`; expected split or unity', source, line, column);
+			case _: throw new HxcConfigError('invalid project layout `$raw`; expected split, package, or unity', source, line, column);
 		};
 	}
 
