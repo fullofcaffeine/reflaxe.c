@@ -63,7 +63,8 @@ class PlayFailure(RuntimeError):
 
 
 def development_tool(name: str) -> str:
-    local = ROOT / "node_modules/.bin" / name
+    local_name = f"{name}.cmd" if os.name == "nt" else name
+    local = ROOT / "node_modules/.bin" / local_name
     return str(local) if local.is_file() else name
 
 
@@ -380,7 +381,10 @@ def resolve_prebuilt_raylib(*, cache_root: Path, build_root: Path, report_path: 
     lock = provision.load_lock()
     source_root = provision.pinned_source(cache_root.resolve(), lock, allow_network=False)
     library = provision.locate_raylib_library(build_root.resolve(), platform_name)
-    report = load_object(report_path, "prebuilt Raylib provisioning report")
+    integration_report = load_object(report_path, "prebuilt Raylib integration report")
+    report = integration_report.get("provision")
+    if not isinstance(report, dict):
+        raise PlayFailure("prebuilt Raylib integration report omitted its provisioning record")
     target = report.get("target")
     configuration = report.get("configuration")
     outputs = report.get("outputs")
