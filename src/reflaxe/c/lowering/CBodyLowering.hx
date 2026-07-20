@@ -10,6 +10,8 @@ import haxe.macro.Type;
 import haxe.macro.TypeTools;
 import reflaxe.c.CProfile;
 import reflaxe.c.CompilationContext;
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
@@ -100,7 +102,13 @@ typedef CBodyInitializerInput = {
 	final kind:CBodyInitializerKind;
 }
 
-/** One validated body with finalized C names and both source-mapping modes. */
+/** Choose whether a caller needs the diagnostic-only `#line` body copy. */
+enum abstract CBodySourceMappingMode(Int) {
+	var CBSMNormalOnly = 0;
+	var CBSMNormalAndLineMapped = 1;
+}
+
+/** One validated body with finalized C names and an optional mapped copy. */
 class CLoweredBodyFunction {
 	public final modulePath:String;
 	public final declarationPath:String;
@@ -115,12 +123,12 @@ class CLoweredBodyFunction {
 	public final labelNames:Map<String, CIdentifier>;
 	public final requiredHeaders:Array<String>;
 	public final body:CStmt;
-	public final lineMappedBody:CStmt;
+	public final lineMappedBody:Null<CStmt>;
 
 	public function new(modulePath:String, declarationPath:String, fieldName:String, ir:HxcIRFunction, cName:CIdentifier,
 			parameterNames:Map<String, CIdentifier>, localNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>,
 			temporaryNames:Map<String, CIdentifier>, tailArgumentNames:Map<String, Array<CIdentifier>>, labelNames:Map<String, CIdentifier>,
-			requiredHeaders:Array<String>, body:CStmt, lineMappedBody:CStmt) {
+			requiredHeaders:Array<String>, body:CStmt, lineMappedBody:Null<CStmt>) {
 		this.modulePath = modulePath;
 		this.declarationPath = declarationPath;
 		this.fieldName = fieldName;
@@ -210,9 +218,11 @@ class CBodyLoweringResult {
 /** Typed Haxe body -> HxcIR -> validated structural C body pipeline. */
 class CBodyLowering {
 	final context:CompilationContext;
+	final sourceMappingMode:CBodySourceMappingMode;
 
-	public function new(context:CompilationContext) {
+	public function new(context:CompilationContext, ?sourceMappingMode:CBodySourceMappingMode) {
 		this.context = context;
+		this.sourceMappingMode = sourceMappingMode == null ? CBSMNormalOnly : sourceMappingMode;
 	}
 
 	public function lower(inputFunctions:Array<CBodyFunctionInput>, ?inputGlobals:Array<CBodyGlobalInput>, ?inputInitializers:Array<CBodyInitializerInput>,
@@ -221,6 +231,9 @@ class CBodyLowering {
 		if (inputFunctions.length == 0) {
 			throw new CBodyEmissionError("body lowering requires at least one typed function input");
 		}
+		// The profiler enables these request-local clocks explicitly. They describe
+		// semantic boundaries rather than helper calls, so reports survive refactors.
+		final hxcIRConstructionTimer = CPhaseTiming.start(CPHxcIRConstruction);
 		final inputs = inputFunctions.copy();
 		inputs.sort(compareInputs);
 		final aggregateRegistry = new CBodyAggregateRegistry(context, typedProgram, typedContract);
@@ -286,7 +299,11 @@ class CBodyLowering {
 		final preparedClasses = aggregateRegistry.canonicalClasses();
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedImports, preparedDispatch);
+		CPhaseTiming.stop(hxcIRConstructionTimer);
+		final hxcIRValidationTimer = CPhaseTiming.start(CPHxcIRValidation);
 		new HxcIRValidator().requireValid(program, Std.string(context.profile));
+		CPhaseTiming.stop(hxcIRValidationTimer);
+		final analysisTimer = CPhaseTiming.start(CPSemanticAnalysesAndNaming);
 		final helperSelection = new CPrimitiveHelperSelection();
 		helperSelection.collect(program);
 		helperSelection.register(context.symbols);
@@ -324,6 +341,8 @@ class CBodyLowering {
 			globalNames.set(global.ir.id, cName);
 			loweredGlobals.push(new CLoweredBodyGlobal(global.modulePath, global.ir, cName));
 		}
+		CPhaseTiming.stop(analysisTimer);
+		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
 		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredDispatch, loweredImports);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
@@ -352,15 +371,16 @@ class CBodyLowering {
 				labelNames.set(blockId, context.symbols.identifierFor(request));
 			}
 			final preparedFunction = item.prepared;
+			final body = emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false,
+				tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName);
+			final lineMappedBody = sourceMappingMode == CBSMNormalAndLineMapped ? emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames,
+				functionNames, globalNames, helperNames, true, tailArgumentNames, labelNames, null, spanLengthNames, boundsAbortName) : null;
 			lowered.push(new CLoweredBodyFunction(preparedFunction.modulePath, preparedFunction.declarationPath, preparedFunction.displayName, item.ir,
 				context.symbols.identifierFor(item.prepared.functionRequest), parameterNames, localNames, spanLengthNames, temporaryNames, tailArgumentNames,
-				labelNames, emitter.requiredHeaders(item.ir),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, false, tailArgumentNames,
-					labelNames, null, spanLengthNames, boundsAbortName),
-				emitter.emitBody(item.ir, parameterNames, localNames, temporaryNames, functionNames, globalNames, helperNames, true, tailArgumentNames,
-					labelNames, null, spanLengthNames, boundsAbortName)));
+				labelNames, emitter.requiredHeaders(item.ir), body, lineMappedBody));
 		}
 		lowered.sort((left, right) -> compareUtf8(left.ir.id, right.ir.id));
+		CPhaseTiming.stop(castBodyTimer);
 		final runtimeRequirements:Array<CBodyRuntimeRequirement> = [];
 		for (item in built) {
 			for (requirement in item.runtimeRequirements) {

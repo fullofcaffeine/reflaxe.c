@@ -8,6 +8,7 @@ import haxe.macro.Type;
 import haxe.Json;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.CProjectEmitter;
 import reflaxe.c.emit.CProjectEmitter.CProjectCompilationStatus;
 import reflaxe.c.emit.CProjectEmitter.CProjectEnvironment;
@@ -141,6 +142,7 @@ class CCompiler {
 				value;
 		};
 		try {
+			final configurationTimer = CPhaseTiming.start(CPConfigurationAndContracts);
 			final configuration = resolveProjectConfiguration(context.profile);
 			final typedCContract = TypedCContractMacro.collect(program.rawModules);
 			if (configuration.environment != CProjectEnvironment.Hosted) {
@@ -148,6 +150,8 @@ class CCompiler {
 					'direct executable entry emission currently requires the hosted environment; `${configuration.environment}` remains fail-closed.',
 					input.expression.pos, context.profile);
 			}
+			CPhaseTiming.stop(configurationTimer);
+			final analysisTimer = CPhaseTiming.start(CPWholeProgramAnalysis);
 			final entryFunctionId = CBodyLowering.functionId(input.declarationPath, input.fieldName);
 			final staticInitialization = new CStaticInitializationPlanner().plan(program, entryFunctionId);
 			context.setStaticInitialization(staticInitialization.snapshot);
@@ -170,10 +174,14 @@ class CCompiler {
 			if (initializationRequest != null) {
 				context.symbols.register(initializationRequest);
 			}
+			CPhaseTiming.stop(analysisTimer);
+			final loweringTimer = CPhaseTiming.start(CPSemanticLowering);
 			final lowered = new CBodyLowering(context).lower(graph.functions, graph.globals, staticInitialization.initializerInputs, graph.constructors,
 				graph.dispatch, program, typedCContract);
+			CPhaseTiming.stop(loweringTimer);
 			final projectLayout = layoutPlanner.plan(configuration.projectLayout, loweredProjectModulePaths(lowered));
 			final dispatchReport = new CDispatchReportBuilder().build(graph.dispatch, lowered.dispatch);
+			final reportTimer = CPhaseTiming.start(CPOptionalReports);
 			if (Context.defined(STATIC_INITIALIZATION_REPORT_DEFINE)) {
 				final inspection:StaticInitializationInspection = {
 					schemaVersion: 1,
@@ -207,6 +215,8 @@ class CCompiler {
 				};
 				Sys.println(VIRTUAL_DISPATCH_REPORT_PREFIX + Json.stringify(inspection));
 			}
+			CPhaseTiming.stop(reportTimer);
+			final runtimeTimer = CPhaseTiming.start(CPRuntimePlanning);
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final directInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.directCalls;
 			final indirectInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.indirectCalls;
@@ -223,6 +233,8 @@ class CCompiler {
 			};
 			context.setRuntimePlan(runtimePlan);
 			emitRuntimeDiagnostics(configuration.runtimeDiagnostics, runtimePlan, lowered.runtimeRequirements, input.expression.pos);
+			CPhaseTiming.stop(runtimeTimer);
+			final projectPlanTimer = CPhaseTiming.start(CPCASTProjectPlanning);
 			final initializationName = initializationRequest == null ? null : context.symbols.identifierFor(initializationRequest);
 			final runtimeAbiMajor = runtimePlan.features.length == 0 ? null : RuntimeAbiContract.MAJOR;
 			final staticProjectEmitter = new CStaticFunctionProjectEmitter();
@@ -235,13 +247,17 @@ class CCompiler {
 			}
 			final staticProject = staticProjectEmitter.planWithLayout(lowered, graph.entryFunctionId, context.symbols.identifierFor(entryRequest),
 				projectLayout, headerGuards, staticInitialization.executionFunctionIds, initializationName, runtimeAbiMajor);
+			CPhaseTiming.stop(projectPlanTimer);
+			final printingTimer = CPhaseTiming.start(CPCPrinting);
 			final units = staticProjectEmitter.emitPlan(staticProject);
+			CPhaseTiming.stop(printingTimer);
+			final artifactPlanTimer = CPhaseTiming.start(CPArtifactPlanning);
 			for (runtimeFile in new RuntimeFeaturePackager(registry).packageFiles(runtimePlan, new PackageRuntimeArtifactSource())) {
 				units.push(runtimeFile);
 			}
 			final specializationReport = new CGenericSpecializationReportBuilder(context).build(graph, lowered, staticProject.functionDefinitions, units,
 				input.expression.pos, input.sourcePath);
-			return new CProjectEmitter().emit({
+			final generatedFiles = new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
 				projectName: input.declarationPath,
 				compilationStatus: lowered.aggregates.length == 0
@@ -279,6 +295,8 @@ class CCompiler {
 				runtimePlan: runtimePlan,
 				symbolTable: lowered.symbolTable
 			});
+			CPhaseTiming.stop(artifactPlanTimer);
+			return generatedFiles;
 		} catch (error:CStaticInitializationError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:CBodyLoweringError) {

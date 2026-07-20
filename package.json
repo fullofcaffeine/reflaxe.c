@@ -34,6 +34,7 @@
     "test:caxecraft-scenario-model": "python3 examples/caxecraft/check_scenario_model.py",
     "test:caxecraft-domain": "python3 examples/caxecraft/run.py",
     "test:caxecraft-domain:full": "python3 examples/caxecraft/run.py --full",
+    "profile:caxecraft-compiler": "python3 examples/caxecraft/profile_compiler.py",
     "test:caxecraft-playable": "python3 examples/caxecraft/play.py --check-snapshots",
     "caxecraft:play": "python3 examples/caxecraft/play.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",

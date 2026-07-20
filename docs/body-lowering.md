@@ -134,9 +134,15 @@ structuralization](control-flow-structuralization.md). Reducible control flow
 is source-shaped before CAST printing; the printer does not discover joins,
 loops, or switch ownership. The C body emitter has two structural modes:
 ordinary output and output with typed `#line` statement/declaration nodes. It
-never interpolates a raw directive. Both forms are strict C11 and use only the
-required standard headers. Selected arithmetic helpers may add `<math.h>` or
-`<stdint.h>`, and floating modulo adds the exact `m` build fact.
+never interpolates a raw directive. Production lowering constructs only the
+ordinary body because current project emission does not request `#line`
+output. The focused body fixture opts into a second mapped copy and compiles
+both forms; this keeps source-map evidence without doubling every normal
+function-body traversal. A future production source-map mode must request the
+mapped form explicitly and route it through project planning—it must not make
+the diagnostic copy unconditional again. Both forms are strict C11 and use
+only the required standard headers. Selected arithmetic helpers may add
+`<math.h>` or `<stdint.h>`, and floating modulo adds the exact `m` build fact.
 
 Fixed arrays use structural C array declarators; zero storage uses the C11
 aggregate initializer `{ 0 }` without allocation or `memset`. Span borrows use

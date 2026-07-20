@@ -438,6 +438,8 @@ def target_arguments(
     layout: str,
     reverse: bool,
     report: bool,
+    times: bool = False,
+    phase_timing: bool = False,
 ) -> list[str]:
     arguments = [BUILD_HXML.name, "-D", "hxc_runtime_diagnostics=off"]
     if reverse:
@@ -448,6 +450,10 @@ def target_arguments(
         arguments.extend(["-D", f"hxc_project_layout={layout}"])
     elif layout != "split":
         raise CaxecraftFailure(f"unknown Caxecraft project layout {layout!r}")
+    if phase_timing:
+        arguments.extend(["-D", "reflaxe_c_phase_timing"])
+    if times:
+        arguments.append("--times")
     arguments.extend(["--custom-target", f"c={output}"])
     return arguments
 
@@ -499,12 +505,16 @@ def compile_target(
     locale: str = "C",
     connect: HaxeServerConnection | None = None,
     report: bool = False,
+    times: bool = False,
+    phase_timing: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     arguments = target_arguments(
         output,
         layout=layout,
         reverse=reverse,
         report=report,
+        times=times,
+        phase_timing=phase_timing,
     )
     if connect is None:
         command = [development_tool("haxe"), "--cwd", str(CASE), *arguments]

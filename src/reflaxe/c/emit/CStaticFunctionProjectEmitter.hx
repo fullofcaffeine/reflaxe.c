@@ -204,6 +204,11 @@ class CStaticFunctionProjectEmitter {
 		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.dispatch, lowered.imports);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
+		var hasNonReturningFunctions = false;
+		for (_ in nonReturningFunctionIds) {
+			hasNonReturningFunctions = true;
+			break;
+		}
 		final functionNames:Map<String, CIdentifier> = [];
 		for (fn in lowered.functions) {
 			functionNames.set(fn.ir.id, fn.cName);
@@ -360,10 +365,14 @@ class CStaticFunctionProjectEmitter {
 			final functionSpecifiers = isNonReturning ? [FNoReturn] : [];
 			final signature = bodyEmitter.functionDeclarator(fn.ir,
 				DFunction(DName(fn.cName), FPPrototype(bodyEmitter.parameters(fn.ir, fn.parameterNames, fn.spanLengthNames), false)));
+			// Body lowering has already built the ordinary structural C body. Rebuild
+			// only when a closed call cycle changes call/tail-call emission; the common
+			// acyclic program must not pay for an identical third traversal.
+			final body = hasNonReturningFunctions ? bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames,
+				globalNames, helperNames, false, fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames,
+				lowered.boundsAbortName) : fn.body;
 			functions.push(new CFunctionSemanticPlan(fn.ir.id, fn.modulePath, isNonReturning,
-				DPrototype([], functionSpecifiers, signature.type, signature.declarator, []), signature.type, signature.declarator,
-				bodyEmitter.emitBody(fn.ir, fn.parameterNames, fn.localNames, fn.temporaryNames, functionNames, globalNames, helperNames, false,
-					fn.tailArgumentNames, fn.labelNames, nonReturningFunctionIds, fn.spanLengthNames, lowered.boundsAbortName)));
+				DPrototype([], functionSpecifiers, signature.type, signature.declarator, []), signature.type, signature.declarator, body));
 		}
 		final entryDeclarations:Array<CDecl> = [];
 		final entryStatements:Array<CStmt> = [];

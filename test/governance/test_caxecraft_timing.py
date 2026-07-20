@@ -28,6 +28,77 @@ def load_module(name: str, path: Path):
 
 
 class CaxecraftTimingTests(unittest.TestCase):
+    def test_compiler_profile_parses_closed_phase_and_haxe_timer_records(self) -> None:
+        profiler = load_module(
+            "caxecraft_compiler_profile_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        phase_lines = "\n".join(
+            f"HXC_PHASE_TIMING\t{phase}\t{index + 1}"
+            for index, phase in enumerate(profiler.PHASES)
+        )
+        self.assertEqual(
+            profiler.parse_phase_records(phase_lines),
+            {phase: index + 1 for index, phase in enumerate(profiler.PHASES)},
+        )
+        with self.assertRaisesRegex(
+            profiler.CompilerProfileFailure, "unknown or repeated"
+        ):
+            profiler.parse_phase_records(
+                phase_lines + "\nHXC_PHASE_TIMING\ttarget pipeline\t1"
+            )
+
+        table = "\n".join(
+            (
+                "name                 | time(s) |   % |  p% |     # | info",
+                "--------------------------------------------------------",
+                "macro                |   0.100 |  90 |  90 |  1000 | ",
+                "  hxc target pipeline |   0.050 |  45 |  50 |     1 | ",
+                "--------------------------------------------------------",
+                "total                |   0.120 | 100 | 100 | 12000 | ",
+            )
+        )
+        rows = profiler.parse_haxe_timer_rows(
+            table, profiler.TimerClock(2.0, "test", None, None)
+        )
+        self.assertEqual(
+            [(row.path, row.depth, row.adjusted_duration_ms) for row in rows],
+            [
+                ("macro", 0, 200.0),
+                ("macro/hxc target pipeline", 1, 100.0),
+                ("total", 0, 240.0),
+            ],
+        )
+
+    def test_compiler_profile_accounting_does_not_double_count_parents(self) -> None:
+        profiler = load_module(
+            "caxecraft_compiler_accounting_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        phases = {phase: 100 for phase in profiler.PHASES}
+        phases["semantic lowering"] = 500
+        phases["target pipeline"] = 1200
+        accounting = profiler.accounting_durations(1700, phases)
+
+        self.assertEqual(tuple(accounting), profiler.ACCOUNTING_PHASES)
+        self.assertEqual(accounting["semantic lowering remainder"], 100)
+        self.assertEqual(accounting["target pipeline remainder"], 0)
+        self.assertEqual(accounting["host/frontend/setup remainder"], 300)
+        self.assertEqual(sum(accounting.values()), 1700)
+
+    def test_compiler_profile_uses_the_reviewed_haxe_source_revision(self) -> None:
+        profiler = load_module(
+            "caxecraft_compiler_pin_subject",
+            ROOT / "examples/caxecraft/profile_compiler.py",
+        )
+        lock = json.loads(
+            (ROOT / "docs/specs/toolchain-lock.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            profiler.PINNED_HAXE_SOURCE_REVISION,
+            lock["haxe"]["sourceRevision"],
+        )
+
     def test_pinned_haxe_resolution_uses_the_haxerc_version(self) -> None:
         caxecraft = load_module(
             "caxecraft_pin_subject", ROOT / "examples/caxecraft/run.py"

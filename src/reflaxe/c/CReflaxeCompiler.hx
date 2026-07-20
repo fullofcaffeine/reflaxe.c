@@ -10,6 +10,7 @@ import reflaxe.data.EnumOptionData;
 import reflaxe.output.DataAndFileInfo;
 import reflaxe.output.StringOrBytes;
 import reflaxe.c.CDiagnostic.CDiagnosticId;
+import reflaxe.c.CPhaseTiming.CPhaseTimingId;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.ProjectEmissionError;
 import reflaxe.c.emit.ReflaxeOutputWriter;
@@ -36,7 +37,9 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 		if (Context.defined("reflaxe_c_test_reverse_typed_modules")) {
 			capturedModules.reverse();
 		}
+		final captureTimer = CPhaseTiming.start(CPTypedInputCapture);
 		pendingProgram = TypedAstNormalizer.normalize(capturedModules, getMainModule(), getMainExpr());
+		CPhaseTiming.stop(captureTimer);
 		return moduleTypes;
 	}
 
@@ -59,7 +62,9 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			return;
 		}
 		context.setTypedProgram(program);
+		final targetTimer = CPhaseTiming.start(CPTargetPipeline);
 		generatedFiles = new CCompiler(context).compileModules(program);
+		CPhaseTiming.stop(targetTimer);
 	}
 
 	override public function generateFilesManually():Void {
@@ -68,9 +73,12 @@ class CReflaxeCompiler extends GenericCompiler<Bool, Bool, Bool, Bool, Bool> {
 			return;
 		}
 
+		final outputTimer = CPhaseTiming.start(CPOutputOwnership);
 		try {
 			new ReflaxeOutputWriter().write(output, generatedFiles);
+			CPhaseTiming.stop(outputTimer);
 		} catch (error:ProjectEmissionError) {
+			CPhaseTiming.stop(outputTimer);
 			CDiagnostic.fatal(error.diagnosticId, error.detail, Context.currentPos());
 		}
 	}

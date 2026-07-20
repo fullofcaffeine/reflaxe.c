@@ -419,6 +419,89 @@ next optimization must add phase timing around typing and target compilation,
 then reduce demonstrated repeated target work without caching mutable
 `CompilationContext` state or weakening stale-file ownership checks.
 
+### Caxecraft target-phase profile and duplicate-body removal
+
+Beads issue `haxe_c-fbq` added an opt-in compiler profiler rather than guessing
+from whole-suite wall time. A *phase* here means one named portion of the build,
+such as “turn validated HxcIR into structural C bodies.” The compiler records
+each target phase with a request-local wall clock only when
+`reflaxe_c_phase_timing` is enabled. Haxe's `--times` report supplies the
+surrounding parse/type/macro context. The command is:
+
+```sh
+npm run profile:caxecraft-compiler
+```
+
+It uses the exact Haxe pin, one runtime-free split Caxecraft workload, three
+fresh compiler processes, one unmeasured server-prime request, and three
+same-context warm requests. All seven requests must produce the same 30 normal
+artifacts byte-for-byte. `_GeneratedFiles.json` remains separately owned
+Reflaxe activity metadata. The profiler records no command, checkout path,
+temporary path, timestamp, or environment secret.
+
+The measured boundary is Haxe source through generated C files. It includes
+Reflaxe.C lowering, printing, and output ownership, but excludes Clang/GCC
+compilation, native linking, Raylib, and game execution. Native compile/run
+timing belongs to the separate Caxecraft differential lane, so a slow target
+compiler pass is not confused with native-toolchain work.
+
+There is an important pinned-toolchain detail on macOS. Haxe
+`5.0.0-preview.1` revision `2c1e544` computes the Mach timer's nanosecond value
+but returns the unconverted counter in `libs/extc/extc_stubs.c`. On this host,
+the Mach numerator/denominator is `125/3`: a deliberate one-second macro sleep
+is reported by `--times` as about `0.025s`. The profiler preserves those raw
+Haxe values and records the exact `125/3` adjustment, but bottleneck decisions
+use the compiler's independent `Sys.time()` phase records. This is why an
+uncorrected `--times` table must not be read as seconds on this pin/host.
+
+The code audit found that an ordinary function body was structurally emitted
+three times:
+
+1. once for normal C;
+2. once for the focused fixture's optional `#line` form; and
+3. once again during project layout in case a closed call cycle required
+   `_Noreturn`/tail-call changes.
+
+Production now constructs only the normal body. The body fixture explicitly
+requests its mapped copy, and project planning re-emits only when the call-graph
+proof actually finds a non-returning cycle. This is not a cache: no mutable
+Haxe tree or compiler context survives a request, and recursive-cycle output
+keeps its existing specialized path.
+
+The first three-plus-three post-change sample began at one-minute load `9.88`
+on 12 logical CPUs and ended at `9.649`, so it is deliberately labeled
+**contended diagnostic evidence**, not a p50/p95 budget:
+
+| Transport | Wall samples | Median | Dominant non-overlapping phase |
+| --- | --- | ---: | --- |
+| fresh process | 18.326s, 18.408s, 19.887s | 18.408s | CAST body construction, 11.441s |
+| owned server, after one prime | 16.243s, 16.486s, 16.766s | 16.486s | CAST body construction, 11.652s |
+
+The cold median's other useful values were 2.715s for the combined
+host/frontend/setup remainder, 1.603s for artifact planning, 1.497s for output
+ownership, 675ms for semantic analyses/naming, 225ms for HxcIR construction,
+58ms for HxcIR validation, 140ms for printing, and 2ms for project planning.
+Warm reuse reduced the host/frontend/setup remainder to 350ms, but it did not
+remove the 11.652s body traversal. The server therefore now has a measurable
+same-context benefit of about 1.9s in this sample, useful for future `hxc dev`,
+while algorithmic target work remains the larger opportunity.
+
+An earlier instrumented source count and corrected timer sample attributed
+roughly 26s to the redundant project-planning body traversal and roughly 50s
+to the two eager body copies under heavier contention. Those numbers are not
+compared as a stable ratio; the durable result is the executable traversal
+policy plus the post-change repeated sample. The next optimization should
+profile the remaining single `CBodyEmitter` walk before adding memoization.
+Only immutable facts with complete semantic keys and explicit invalidation may
+be cached. Haxe's official
+[compilation-server guidance](https://haxe.org/manual/cr-completion-server.html)
+supports frontend reuse, while Rust's
+[incremental-compilation model](https://rustc-dev-guide.rust-lang.org/queries/incremental-compilation-in-detail.html)
+and [Salsa's tracked dependency model](https://salsa-rs.github.io/salsa/reference/algorithm.html)
+illustrate why a reusable result also needs stable fingerprints and dependency
+tracking. None of those sources justifies persisting raw mutable `TypedExpr` or
+skipping output-ownership validation.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

@@ -50,6 +50,31 @@ Build adapter seeds (E1.T08)
   -> executable-only; full toolchain/export orchestration remains E7/E8
 ```
 
+## Performance-observation boundary
+
+Compiler profiling is opt-in and must not become hidden process-global state.
+`reflaxe_c_phase_timing` creates request-local clocks around typed-input
+capture, HxcIR construction and validation, semantic analyses and naming,
+structural CAST construction, project planning, printing, artifact planning,
+and output ownership. Each clock has a closed `CPhaseTimingId`; adding or
+renaming a phase therefore requires an intentional compiler and profiler
+change rather than a new free-form string in a hot path. Normal builds create
+no phase objects and emit no timing records.
+
+The Caxecraft profiler combines those exact target wall times with Haxe's
+opt-in `--times` table. Parent durations are not added to their children: the
+report derives non-overlapping “remainder” records so its bottleneck ranking
+does not count the same time twice. Durations are diagnostic observations, not
+compiler artifacts, and live under ignored `_build/`; normal generated files
+remain byte-deterministic. The profiler starts a fresh process for cold samples
+and owns an ephemeral loopback compiler server for post-prime warm samples. It
+never caches `TypedExpr`, `CompilationContext`, symbols, output ownership, or
+other mutable request state.
+
+See [test feedback-loop and CI performance](test-performance.md) for the
+measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft
+results.
+
 ## Why `Manual` Reflaxe output
 
 A compilation produces multiple file categories and sidecar reports. `Manual`

@@ -12,6 +12,7 @@ import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
+import reflaxe.c.lowering.CBodyLowering.CBodySourceMappingMode;
 import reflaxe.c.lowering.CBodyLoweringError;
 
 typedef BodyLoweringFunctionRecord = {
@@ -90,7 +91,7 @@ class BodyLoweringProbe {
 		}
 		final profile = Context.definedValue("body_lowering_profile") == "metal" ? CProfile.Metal : CProfile.Portable;
 		final unreachableDiagnostic = renderUnreachableDiagnostic(inputs, profile);
-		final result = new CBodyLowering(new CompilationContext(profile)).lower(inputs);
+		final result = new CBodyLowering(new CompilationContext(profile), CBSMNormalAndLineMapped).lower(inputs);
 		final printer = new CASTPrinter();
 		final functionRecords:Array<BodyLoweringFunctionRecord> = [];
 		for (fn in result.functions) {
@@ -203,6 +204,14 @@ class BodyLoweringProbe {
 		}
 		final emitter = new CBodyEmitter();
 		for (fn in result.functions) {
+			final body = if (lineDirectives) {
+				switch fn.lineMappedBody {
+					case null: fatal('body fixture `${fn.ir.id}` omitted its requested line-mapped body', Context.currentPos());
+					case value: value;
+				}
+			} else {
+				fn.body;
+			};
 			if (lineDirectives) {
 				unit.declarations.push(DLineDirective({line: fn.ir.source.startLine, file: fn.ir.source.file}));
 			}
@@ -211,7 +220,7 @@ class BodyLoweringProbe {
 				functionSpecifiers: [],
 				returnType: emitter.cType(fn.ir.returnType),
 				declarator: DFunction(DName(fn.cName), FPPrototype(emitter.parameters(fn.ir, fn.parameterNames), false)),
-				body: lineDirectives ? fn.lineMappedBody : fn.body,
+				body: body,
 				attributes: []
 			}));
 		}
