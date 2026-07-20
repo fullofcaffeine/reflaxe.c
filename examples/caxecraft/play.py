@@ -196,16 +196,26 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str) -> dict[st
         raise PlayFailure("generated Caxecraft manifest does not describe a direct executable")
     if runtime_plan.get("selectedFeatures") != [] or runtime_plan.get("artifacts") != []:
         raise PlayFailure("Caxecraft unexpectedly selected hxrt")
-    validate_generated_playable(generated)
+    validate_generated_playable(generated, layout=layout)
     return manifest
 
 
-def validate_generated_playable(generated: Path) -> None:
+def validate_generated_playable(generated: Path, *, layout: str) -> None:
     sources = sorted(generated.glob("src/**/*.c"), key=lambda path: path.as_posix().encode("utf-8"))
     if not sources:
         raise PlayFailure("Caxecraft emitted no C sources")
     combined = "\n".join(path.read_text(encoding="utf-8") for path in sources)
-    app = (generated / "src/modules/caxecraft/app/Main.c").read_text(encoding="utf-8")
+    app_relative = {
+        "split": "src/modules/caxecraft/app/Main.c",
+        "package": "src/packages/caxecraft/app/package.c",
+        "unity": "src/program.c",
+    }.get(layout)
+    if app_relative is None:
+        raise PlayFailure(f"unknown generated Caxecraft layout {layout!r}")
+    app_path = generated / app_relative
+    if not app_path.is_file():
+        raise PlayFailure(f"generated Caxecraft {layout} app source is missing: {app_relative}")
+    app = app_path.read_text(encoding="utf-8")
     for required in (
         "InitWindow(",
         "WindowShouldClose(",

@@ -59,8 +59,8 @@ npm run test:caxecraft-domain
 
 ## Build and play
 
-The first run may download the exact 52 MiB Raylib 6.0 source archive recorded
-in the repository lock. Network use is never implicit:
+The first run may download the exact 52,562,578-byte Raylib 6.0 source archive
+recorded in the repository lock. Network use is never implicit:
 
 ```sh
 npm run caxecraft:play -- --allow-network
