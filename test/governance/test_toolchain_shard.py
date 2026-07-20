@@ -494,15 +494,23 @@ class ToolchainShardTests(unittest.TestCase):
 
     def test_evidence_tool_resolution_matches_npm_local_precedence(self) -> None:
         self.assertIn("cc", self.runner.EVIDENCE_TOOLS)
-        expected = ROOT / "node_modules/.bin/haxe"
-        self.assertTrue(expected.is_file())
-        with mock.patch.object(
-            self.runner.shutil, "which", return_value="/unrelated/global/haxe"
-        ):
-            self.assertEqual(
-                self.runner.resolve_evidence_tool("haxe"),
-                str(expected),
-            )
+        with tempfile.TemporaryDirectory() as temporary:
+            isolated_root = Path(temporary)
+            expected = isolated_root / "node_modules/.bin/haxe"
+            expected.parent.mkdir(parents=True)
+            expected.write_text("local shim", encoding="utf-8")
+            with (
+                mock.patch.object(self.runner, "ROOT", isolated_root),
+                mock.patch.object(
+                    self.runner.shutil,
+                    "which",
+                    return_value="/unrelated/global/haxe",
+                ),
+            ):
+                self.assertEqual(
+                    self.runner.resolve_evidence_tool("haxe"),
+                    str(expected),
+                )
 
     def test_input_drift_during_execution_fails_without_writing_evidence(self) -> None:
         scripts = self.runner.load_scripts()
