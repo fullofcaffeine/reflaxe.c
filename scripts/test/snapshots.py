@@ -736,6 +736,7 @@ def static_initialization_artifacts() -> list[Artifact]:
         ("initialization.hxcir", "hxcir"),
         ("program.h", "header"),
         ("program.c", "c"),
+        ("native-symbols.json", "json"),
     ):
         value = first.get(name)
         if format_name == "json":

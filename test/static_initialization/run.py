@@ -40,6 +40,8 @@ EXPECTED_EXECUTION_ORDER = [
     "initializer.AStaticInitDependent.field.second",
     "initializer.AStaticInitDependent.field.value",
 ]
+NATIVE_OUTCOME_SOURCE_SYMBOL = "StaticInitializationFixture.outcome"
+NATIVE_SOURCE_SYMBOLS = (NATIVE_OUTCOME_SOURCE_SYMBOL,)
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -332,6 +334,53 @@ def source_symbol_c_name(symbols: dict[str, object], source_symbol: str) -> str:
     return matches[0]
 
 
+def native_symbol_projection(symbols: dict[str, object]) -> dict[str, object]:
+    return {
+        "schemaVersion": 1,
+        "algorithm": "static-initialization-native-symbol-projection-v1",
+        "symbols": [
+            {
+                "sourceSymbol": source_symbol,
+                "cName": source_symbol_c_name(symbols, source_symbol),
+            }
+            for source_symbol in NATIVE_SOURCE_SYMBOLS
+        ],
+    }
+
+
+def validate_native_symbol_projection(projection: dict[str, object]) -> None:
+    entries = projection.get("symbols")
+    if (
+        projection.get("schemaVersion") != 1
+        or projection.get("algorithm")
+        != "static-initialization-native-symbol-projection-v1"
+        or not isinstance(entries, list)
+    ):
+        raise StaticInitializationFailure("native symbol projection drifted")
+    sources: list[str] = []
+    c_names: list[str] = []
+    for entry in entries:
+        if (
+            not isinstance(entry, dict)
+            or set(entry) != {"sourceSymbol", "cName"}
+            or not isinstance(entry.get("sourceSymbol"), str)
+            or not isinstance(entry.get("cName"), str)
+        ):
+            raise StaticInitializationFailure("native symbol projection is malformed")
+        source_symbol = entry["sourceSymbol"]
+        c_name = entry["cName"]
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", c_name) is None:
+            raise StaticInitializationFailure(
+                f"native symbol projection contains an invalid C name: {c_name!r}"
+            )
+        sources.append(source_symbol)
+        c_names.append(c_name)
+    if sources != list(NATIVE_SOURCE_SYMBOLS) or len(c_names) != len(set(c_names)):
+        raise StaticInitializationFailure(
+            "native symbol projection does not match the required source symbols"
+        )
+
+
 def validate_render(render: ProductionRender) -> None:
     report = render.report
     if report.get("schemaVersion") != 1:
@@ -520,15 +569,16 @@ def available_compilers(selected: str | None = None) -> list[NativeToolchain]:
     return result
 
 
-def compile_and_run(root: Path, toolchain: NativeToolchain, optimization: str) -> None:
+def compile_and_run(
+    root: Path,
+    symbols: dict[str, object],
+    toolchain: NativeToolchain,
+    optimization: str,
+) -> None:
     sources = sorted((root / "src").glob("*.c"))
     header_text = (root / "include/hxc/program.h").read_text(encoding="utf-8")
-    symbol_table = json.loads(
-        (root / "hxc.symbols.json").read_text(encoding="utf-8")
-    )
-    outcome_name = source_symbol_c_name(
-        symbol_table, "StaticInitializationFixture.outcome"
-    )
+    validate_native_symbol_projection(symbols)
+    outcome_name = source_symbol_c_name(symbols, NATIVE_OUTCOME_SOURCE_SYMBOL)
     if re.search(
         rf"^int32_t {re.escape(outcome_name)}\(void\);$",
         header_text,
@@ -639,6 +689,12 @@ def snapshot_values() -> dict[str, object]:
     with tempfile.TemporaryDirectory(prefix="hxc-static-initialization-snapshot-") as temporary:
         render = render_production(Path(temporary) / "output")
         validate_render(render)
+        symbols = required_object(
+            json.loads(
+                (render.output / "hxc.symbols.json").read_text(encoding="utf-8")
+            ),
+            "snapshot symbol table",
+        )
         return {
             "initialization-plan.json": required_object(
                 render.report.get("plan"), "snapshot plan"
@@ -652,6 +708,7 @@ def snapshot_values() -> dict[str, object]:
             "program.c": (render.output / "src/program.c").read_text(
                 encoding="utf-8"
             ),
+            "native-symbols.json": native_symbol_projection(symbols),
         }
 
 
@@ -682,7 +739,7 @@ def check_snapshots(values: dict[str, object]) -> None:
                 )
 
 
-def write_snapshot_project(root: Path) -> None:
+def write_snapshot_project(root: Path) -> dict[str, object]:
     header = root / "include/hxc/program.h"
     header.parent.mkdir(parents=True, exist_ok=True)
     header.write_text((EXPECTED / "program.h").read_text(), encoding="utf-8", newline="\n")
@@ -692,6 +749,12 @@ def write_snapshot_project(root: Path) -> None:
     (root / "hxc.runtime-plan.json").write_text(
         json.dumps({"libraries": []}), encoding="utf-8", newline="\n"
     )
+    projection = required_object(
+        json.loads((EXPECTED / "native-symbols.json").read_text(encoding="utf-8")),
+        "checked-in native symbol projection",
+    )
+    validate_native_symbol_projection(projection)
+    return projection
 
 
 def check_full(selected: str | None = None) -> None:
@@ -741,11 +804,26 @@ def check_full(selected: str | None = None) -> None:
             "program.c": (portable.output / "src/program.c").read_text(
                 encoding="utf-8"
             ),
+            "native-symbols.json": native_symbol_projection(
+                required_object(
+                    json.loads(
+                        (portable.output / "hxc.symbols.json").read_text(
+                            encoding="utf-8"
+                        )
+                    ),
+                    "production symbol table",
+                )
+            ),
         }
         check_snapshots(values)
+        native_symbols = required_object(
+            values["native-symbols.json"], "native symbol projection"
+        )
         for toolchain in available_compilers(selected):
             for optimization in ("-O0", "-O2"):
-                compile_and_run(portable.output, toolchain, optimization)
+                compile_and_run(
+                    portable.output, native_symbols, toolchain, optimization
+                )
 
 
 def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
@@ -763,10 +841,10 @@ def main(arguments: Iterable[str] = ()) -> int:
                 prefix="hxc-static-initialization-native-"
             ) as temporary:
                 root = Path(temporary)
-                write_snapshot_project(root)
+                native_symbols = write_snapshot_project(root)
                 for toolchain in available_compilers(args.toolchain):
                     for optimization in ("-O0", "-O2"):
-                        compile_and_run(root, toolchain, optimization)
+                        compile_and_run(root, native_symbols, toolchain, optimization)
             print(
                 "static-initialization: OK: required strict-C initialization native matrix passed"
             )

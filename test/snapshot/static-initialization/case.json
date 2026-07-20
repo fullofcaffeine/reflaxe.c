@@ -39,6 +39,11 @@
         "path": "test/static_initialization/expected/program.c",
         "format": "c",
         "comparison": "exact"
+      },
+      {
+        "path": "test/static_initialization/expected/native-symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
       }
     ]
   }

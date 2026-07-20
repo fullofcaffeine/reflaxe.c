@@ -106,6 +106,12 @@ outside the admitted project-emission slice.
   and Clang CI lanes, using an independent harness that checks the initialized
   result.
 
+The native-only CI lane replays the checked-in generated C without invoking
+Haxe. Its small `native-symbols.json` snapshot maps the stable Haxe source
+identity used by that harness to the compiler-selected C name. This avoids
+guessing an internal spelling from generated text while also avoiding a copy of
+the complete symbol report when the harness needs only one function.
+
 Run:
 
 ```bash

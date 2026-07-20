@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "static-initialization-native-symbol-projection-v1",
+  "symbols": [
+    {
+      "sourceSymbol": "StaticInitializationFixture.outcome",
+      "cName": "hxc_StaticInitializationFixture_outcome"
+    }
+  ]
+}

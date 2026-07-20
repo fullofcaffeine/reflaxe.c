@@ -439,6 +439,7 @@ REQUIRED_GATE_FILES = (
     "test/static_initialization/expected/initialization.hxcir",
     "test/static_initialization/expected/program.h",
     "test/static_initialization/expected/program.c",
+    "test/static_initialization/expected/native-symbols.json",
     "test/static_initialization/run.py",
     "test/positive/static-initialization/case.json",
     "test/negative/static-initialization/case.json",

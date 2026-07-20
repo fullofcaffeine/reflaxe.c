@@ -12,6 +12,7 @@
   "sources": [
     "test/static_initialization/expected/program.h",
     "test/static_initialization/expected/program.c",
+    "test/static_initialization/expected/native-symbols.json",
     "test/static_initialization/run.py"
   ],
   "runner": {
@@ -34,6 +35,11 @@
         "path": "test/static_initialization/expected/program.c",
         "format": "c",
         "comparison": "exact"
+      },
+      {
+        "path": "test/static_initialization/expected/native-symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
       }
     ]
   }
