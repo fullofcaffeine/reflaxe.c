@@ -26,6 +26,7 @@ class HxcIRGolden {
 
 		final coverage = coverageProgram();
 		validator.requireValid(coverage, PROFILE);
+		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
 		final coverageDump = dumper.dump(coverage);
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
@@ -34,7 +35,6 @@ class HxcIRGolden {
 			diagnostics: {
 				missingTerminator: invalidDiagnostics(missingTerminatorProgram()),
 				constantTypeMismatch: invalidDiagnostics(constantTypeMismatchProgram()),
-				nativeConstantAggregate: invalidDiagnostics(nativeConstantAggregateProgram()),
 				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
 				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
 				aggregateConstructionMismatch: invalidDiagnostics(aggregateConstructionMismatchProgram()),

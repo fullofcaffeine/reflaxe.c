@@ -19,6 +19,7 @@ from typing import Iterable, Mapping, Sequence
 ROOT = Path(__file__).resolve().parents[2]
 SUITE = ROOT / "test/raylib_provisioning"
 FIXTURE = SUITE / "fixtures/smoke"
+SEMANTIC_FIXTURE = SUITE / "fixtures/semantic"
 SUPPORT_INCLUDE = SUITE / "support/include"
 ABI_PROBE = SUITE / "native/core_abi_probe.c"
 EXPECTED = SUITE / "expected"
@@ -142,11 +143,12 @@ def haxe_command(
     platform_name: str,
     configuration: str,
     system: bool,
+    fixture: Path = FIXTURE,
 ) -> list[str]:
     command = [
         development_tool("haxe"),
         "--cwd",
-        str(FIXTURE),
+        str(fixture),
         "build.hxml",
         "-D",
         "hxc_runtime_diagnostics=off",
@@ -163,6 +165,7 @@ def compile_fixture(
     platform_name: str,
     configuration: str,
     system: bool = False,
+    fixture: Path = FIXTURE,
 ) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         haxe_command(
@@ -170,6 +173,7 @@ def compile_fixture(
             platform_name=platform_name,
             configuration=configuration,
             system=system,
+            fixture=fixture,
         ),
         cwd=ROOT,
         env=haxe_environment(),
@@ -319,6 +323,59 @@ def validate_runtime_free(project: RenderedProject) -> None:
             raise RaylibTestFailure(f"generated raylib artifact mentions hxrt: {path}")
 
 
+def validate_semantic_facade(project: RenderedProject) -> None:
+    validate_runtime_free(project)
+    source = project.artifacts["src/program.c"].decode("utf-8")
+    header = project.artifacts["include/hxc/program.h"].decode("utf-8")
+    for spelling in (
+        "InitWindow(",
+        "GetScreenToWorldRay(",
+        "IsKeyDown(",
+        "IsMouseButtonDown(",
+        "BeginDrawing(",
+        "BeginMode3D(",
+        "DrawCube(",
+        "DrawText(",
+        "RAYWHITE",
+        "DARKGRAY",
+        "(struct Vector3){ .x =",
+        "(struct Camera3D){ .position =",
+        "(struct Color){ .r = 245, .g = 166, .b = 35, .a = 255 }",
+    ):
+        if spelling not in source:
+            raise RaylibTestFailure(f"semantic facade omitted direct C evidence {spelling!r}")
+    for forbidden in (
+        "StructInit",
+        "raylib.raw",
+        "malloc(",
+        "calloc(",
+        "realloc(",
+        "free(",
+        "Reflect",
+        "__c__",
+    ):
+        if forbidden.lower() in (header + source).lower():
+            raise RaylibTestFailure(f"semantic facade leaked non-zero-cost spelling {forbidden!r}")
+    build = project.manifest.get("build")
+    if not isinstance(build, dict) or build.get("requiredHeaders") != [
+        {
+            "path": "raylib.h",
+            "ownerModulePaths": [
+                "raylib.Colors",
+                "raylib.raw.Camera",
+                "raylib.raw.Camera3D",
+                "raylib.raw.Color",
+                "raylib.raw.Ray",
+                "raylib.raw.Raylib",
+                "raylib.raw.Vector2",
+                "raylib.raw.Vector3",
+            ],
+            "kind": "system",
+        }
+    ]:
+        raise RaylibTestFailure("semantic facade lost precise header provenance")
+
+
 def snapshot_values() -> dict[str, object]:
     lock = load_lock()
     with tempfile.TemporaryDirectory(prefix="hxc-raylib-snapshot-a-") as first_raw, tempfile.TemporaryDirectory(
@@ -356,6 +413,29 @@ def snapshot_values() -> dict[str, object]:
             "hxc.runtime-plan.json": first.runtime_plan,
             "build-linux-memory.json": first.manifest["build"],
         }
+
+        semantic_first_root = Path(first_raw) / "semantic-first"
+        semantic_second_root = Path(second_raw) / "semantic-second"
+        for label, output in (("first", semantic_first_root), ("second", semantic_second_root)):
+            result = compile_fixture(
+                output,
+                platform_name="linux",
+                configuration="memory-software",
+                fixture=SEMANTIC_FIXTURE,
+            )
+            require_success(result, f"{label} generated raylib semantic facade")
+        semantic_first = rendered_project(semantic_first_root)
+        semantic_second = rendered_project(semantic_second_root)
+        if semantic_first.artifacts != semantic_second.artifacts:
+            raise RaylibTestFailure("semantic facade changed across unrelated output roots")
+        validate_semantic_facade(semantic_first)
+        values.update(
+            {
+                "semantic/include/hxc/program.h": semantic_first.artifacts["include/hxc/program.h"].decode("utf-8"),
+                "semantic/src/program.c": semantic_first.artifacts["src/program.c"].decode("utf-8"),
+                "semantic/hxc.runtime-plan.json": semantic_first.runtime_plan,
+            }
+        )
 
         for identifier, platform_name, configuration, system in VARIANTS[1:]:
             output = Path(first_raw) / identifier
@@ -397,6 +477,9 @@ def validate_expected(values: Mapping[str, object]) -> None:
         "build-macos-desktop.json": "json",
         "build-windows-desktop.json": "json",
         "build-system-desktop.json": "json",
+        "semantic/include/hxc/program.h": "text",
+        "semantic/src/program.c": "text",
+        "semantic/hxc.runtime-plan.json": "json",
     }
     actual_names = set(values)
     if actual_names != set(formats):
@@ -418,6 +501,31 @@ def run_unit_tests() -> None:
     result = unittest.TextTestRunner(verbosity=1).run(suite)
     if not result.wasSuccessful():
         raise RaylibTestFailure("raylib provisioning negative/unit tests failed")
+
+
+def check_semantic_negative_cases() -> None:
+    cases = {
+        "semantic_color_range": ("HXC1001", "integer-out-of-range:256"),
+        "semantic_enum_misuse": ("raylib.MouseButton should be raylib.KeyboardKey", "Main.hx:3"),
+        "semantic_nul": ("HXC3000", "contains an embedded NUL byte"),
+        "semantic_resource_omitted": ("Class<raylib.Raylib> has no field LoadTexture", "Main.hx:3"),
+        "semantic_dimension_type": ("Float should be Int", "Main.hx:3"),
+    }
+    with tempfile.TemporaryDirectory(prefix="hxc-raylib-semantic-negative-") as raw:
+        root = Path(raw)
+        for name in sorted(cases, key=lambda value: value.encode("utf-8")):
+            result = compile_fixture(
+                root / name,
+                platform_name="linux",
+                configuration="memory-software",
+                fixture=SUITE / "fixtures" / name,
+            )
+            output = result.stdout + result.stderr
+            required = cases[name]
+            if result.returncode == 0 or any(marker not in output for marker in required) or (root / name).exists():
+                raise RaylibTestFailure(
+                    f"{name} did not fail closed at the semantic source boundary\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
 
 
 def artifact_hashes(root: Path) -> list[dict[str, object]]:
@@ -1004,11 +1112,12 @@ def main(argv: Iterable[str] = ()) -> int:
             raise RaylibTestFailure("integration-only options require --integration")
         load_lock()
         run_unit_tests()
+        check_semantic_negative_cases()
         values = snapshot_values()
         validate_expected(values)
         print(
             "raylib-provisioning: OK: provisioning/raw locks, fail-closed authorities, "
-            "deterministic raw Haxe and generated C, five neutral plans, ABI fixtures, "
+            "deterministic raw and semantic Haxe/C, five neutral plans, ABI fixtures, "
             "and zero-hxrt evidence"
         )
         return 0

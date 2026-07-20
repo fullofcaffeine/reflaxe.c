@@ -14,6 +14,7 @@
   "sources": [
     "src/reflaxe/c/interop/CImportRegistry.hx",
     "src/reflaxe/c/macros/TypedCContractMacro.hx",
+    "std/c/StructInit.hx",
     "test/c_import/fixtures/callback_return/CallbackApi.hx",
     "test/c_import/fixtures/embedded_nul/Main.hx",
     "test/c_import/fixtures/implicit_float32/Main.hx",
@@ -22,6 +23,10 @@
     "test/c_import/fixtures/nonliteral_cstring/Main.hx",
     "test/c_import/fixtures/pointer_return/PointerApi.hx",
     "test/c_import/fixtures/preprocessor_define/DefineApi.hx",
+    "test/c_import/fixtures/struct_init_missing/Main.hx",
+    "test/c_import/fixtures/struct_init_missing/build.hxml",
+    "test/c_import/fixtures/struct_init_nonliteral/Main.hx",
+    "test/c_import/fixtures/struct_init_nonliteral/build.hxml",
     "test/c_import/fixtures/variadic/VariadicApi.hx",
     "test/c_import/run.py"
   ],

@@ -3,10 +3,14 @@ class Main {
 		return UnusedLib.value;
 	}
 
+	static function localPoint(x:Coord, y:Coord):Point {
+		return c.StructInit.make({x: x, y: y});
+	}
+
 	static function main():Void {
 		PointLib.pointlib_build_fact_probe();
 		var left = PointLib.make(PointLib.one, PointLib.negativeThree);
-		var right = PointLib.make(PointLib.five, PointLib.seven);
+		var right = localPoint(PointLib.five, PointLib.seven);
 		left.x = PointLib.one;
 		var delta = left.x;
 		left = PointLib.translate(left, delta, PointLib.five);

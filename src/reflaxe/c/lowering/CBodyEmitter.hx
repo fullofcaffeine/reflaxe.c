@@ -150,6 +150,18 @@ class CBodyEmitter {
 				aggregateFieldOrder.set(instanceId, order);
 			}
 		}
+		for (imported in this.imports.types) {
+			if (imported.prepared.kind != CITStruct)
+				continue;
+			final instanceId = imported.prepared.instanceId;
+			final order:Array<String> = [];
+			for (field in imported.fields) {
+				order.push(field.prepared.name);
+				aggregateFieldNames.set(aggregateFieldKey(instanceId, field.prepared.name), field.cName);
+				aggregateFieldTypes.set(aggregateFieldKey(instanceId, field.prepared.name), field.prepared.type.irType);
+			}
+			aggregateFieldOrder.set(instanceId, order);
+		}
 		if (enums != null) {
 			for (value in enums) {
 				final instanceId = value.prepared.instanceId;
@@ -902,7 +914,7 @@ class CBodyEmitter {
 			}
 			initializers.push({
 				designators: [
-					DField(requireAggregateFieldName(instanceId, field.name, instruction.id, functionId))
+					DField(requireDirectFieldName(instanceId, field.name, instruction.id, functionId))
 				],
 				value: IExpr(requireValue(values, field.valueId, functionId))
 			});

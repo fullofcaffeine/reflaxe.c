@@ -2149,7 +2149,10 @@ private class HxcIRValidationState {
 			case IRCCStringLiteral(_, _): type == IRTCString;
 			case IRCNativeConstant(_): switch type {
 					case IRTBool | IRTInt(_, _) | IRTAbiInteger(_) | IRTFloat(_): true;
-					case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId); declaration != null && declaration.kind == IRTKExtern;
+					case IRTInstance(instanceId): final instance = typeInstances.get(instanceId); final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId); instance != null && instance.representation == IRRDirect && declaration != null && switch declaration.kind {
+							case IRTKExtern | IRTKAggregate(_): true;
+							case _: false;
+						};
 					case _: false;
 				};
 			case IRCNull:

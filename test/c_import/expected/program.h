@@ -37,6 +37,8 @@ static inline double hxc_f64_divide_zero_safe(double hxc_left, double hxc_right)
   return signbit(hxc_left) != signbit(hxc_right) ? -INFINITY : INFINITY;
 }
 
+struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_x, pointlib_coord hxc_y);
+
 void hxc_Main_main(void);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

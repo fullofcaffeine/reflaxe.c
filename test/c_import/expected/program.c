@@ -1,12 +1,17 @@
 #include "hxc/program.h"
 
+struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_x, pointlib_coord hxc_y)
+{
+  return (struct pointlib_point){ .x = hxc_x, .y = hxc_y };
+}
+
 void hxc_Main_main(void)
 {
   pointlib_build_fact_probe();
   struct pointlib_point hxc_tmp_native_call_result_n0 = pointlib_point_make(POINTLIB_COORD_ONE, POINTLIB_COORD_NEGATIVE_THREE);
   struct pointlib_point hxc_left = hxc_tmp_native_call_result_n0;
-  struct pointlib_point hxc_tmp_native_call_result_n1 = pointlib_point_make(POINTLIB_COORD_FIVE, POINTLIB_COORD_SEVEN);
-  struct pointlib_point hxc_right = hxc_tmp_native_call_result_n1;
+  struct pointlib_point hxc_tmp_call_result_n1 = hxc_Main_localPoint(POINTLIB_COORD_FIVE, POINTLIB_COORD_SEVEN);
+  struct pointlib_point hxc_right = hxc_tmp_call_result_n1;
   hxc_left.x = POINTLIB_COORD_ONE;
   pointlib_coord *hxc_tmp_imported_field_address_n2 = &hxc_left.x;
   pointlib_coord hxc_tmp_imported_field_load_result_n3 = *hxc_tmp_imported_field_address_n2;

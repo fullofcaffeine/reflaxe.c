@@ -16,8 +16,8 @@ HXML = Path(__file__).with_name("all_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_DETAIL = (
-    "Unsupported typed Haxe node `TFunction(return-type):abstract "
-    "`reflaxe.c.CProfile` is not an admitted primitive or native pointer contract`"
+    "Unsupported typed Haxe node `TFunction(return-type).abstract-representation:"
+    "reference-String-non-null`"
 )
 LOWERING_SOURCE = "ProfileResolver.hx:10: lines 10-25"
 MACRO_BRANCH_MARKERS = (

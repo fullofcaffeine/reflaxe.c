@@ -256,7 +256,7 @@ This inventory combines product capability boundaries with repository infrastruc
 
 | Status | Count | Meaning |
 | --- | ---: | --- |
-| `implemented` | 35 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
+| `implemented` | 36 | The exact bounded scope has executable repository evidence. This does not confer support on adjacent Haxe semantics or make a release promise. |
 | `scaffold-only` | 3 | A typed contract, seed, fixture, or plan exists, but it is not evidence of an available user-program capability. |
 | `experimental` | 1 | The surface is explicit and opt-in, remains unstable, and has not passed a supported-release capability gate. |
 | `unsupported` | 11 | The surface is absent, deliberately fails closed, or lacks the evidence needed for a product claim. |
@@ -295,6 +295,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `primitive-semantics` | `implemented` | A typed schema-3 primitive representation, nullability, conversion, and operation contract has independent and generated C evidence. |
 | `public-c-abi` | `unsupported` | No generated public C header, stable export symbol set, ownership boundary, or ABI compatibility promise exists. |
 | `raylib-raw-core` | `implemented` | A version-locked public raylib.raw core is generated from Clang declaration facts and consumed directly by generated Haxe/C. |
+| `raylib-semantic-core` | `implemented` | A curated raylib facade adds typed domains, direct value constructors, named colors, and inline forwarding with zero runtime cost. |
 | `reflaxe-adapter` | `implemented` | The Reflaxe adapter captures complete typed modules and routes admitted output through request-local compiler state. |
 | `release-artifacts` | `unsupported` | No publishable compiler package, signed reproducible archive, supported version, or release automation exists. |
 | `runtime-array-contract` | `implemented` | The bounded native array slice provides checked contiguous growth and typed primitive/reference lifecycle operations. |

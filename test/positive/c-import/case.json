@@ -16,6 +16,7 @@
     "src/reflaxe/c/lowering/CBodyLowering.hx",
     "src/reflaxe/c/lowering/CBodyEmitter.hx",
     "std/c/Float32.hx",
+    "std/c/StructInit.hx",
     "test/c_import/fixtures/build_facts/BuildFactApi.hx",
     "test/c_import/fixtures/build_facts/Main.hx",
     "test/c_import/fixtures/build_facts/build.hxml",

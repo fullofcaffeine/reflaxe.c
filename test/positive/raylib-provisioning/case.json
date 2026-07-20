@@ -14,10 +14,15 @@
     "docs/specs/raylib-provisioning-lock.json",
     "docs/specs/raylib-core-binding-lock.json",
     "src/raylib/raw/Raylib.hx",
+    "src/raylib/Raylib.hx",
+    "src/raylib/Color.hx",
+    "std/c/StructInit.hx",
     "test/raylib_provisioning/fixtures/smoke/Main.hx",
     "test/raylib_provisioning/fixtures/smoke/SmokeConstants.hx",
     "test/raylib_provisioning/fixtures/smoke/SmokeValues.hx",
     "test/raylib_provisioning/fixtures/smoke/build.hxml",
+    "test/raylib_provisioning/fixtures/semantic/Main.hx",
+    "test/raylib_provisioning/fixtures/semantic/build.hxml",
     "test/raylib_provisioning/run.py"
   ],
   "runner": {
@@ -45,6 +50,11 @@
         "path": "test/raylib_provisioning/expected/build-linux-memory.json",
         "format": "json",
         "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/semantic/src/program.c",
+        "format": "c",
+        "comparison": "exact"
       }
     ]
   }

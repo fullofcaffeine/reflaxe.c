@@ -170,7 +170,7 @@ class CPreparedImportFunction {
 	}
 }
 
-/** One header-owned enum value or object-like scalar macro. */
+/** One typed header-owned enum, scalar, or direct by-value aggregate macro. */
 class CPreparedImportConstant {
 	public final id:String;
 	public final ownerModule:String;
@@ -573,9 +573,8 @@ class CImportRegistry {
 		validateBoundaryType(field.type, field.pos, declaration.sourcePath, '$ownerPath.${field.name} constant', false);
 		final type = expected == null ? resolveValueType(field.type, field.pos, declaration.ownerModulePath, declaration.sourcePath,
 			abiRejectFor(declaration.sourcePath), 'imported-constant:$ownerPath.${field.name}') : expected;
-		if (type.irType == IRTVoid || type.isCString() || type.importedStructValue() != null)
-			abiFailure(field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`',
-				"Constants must be scalar, typedef, or closed-enum values.");
+		if (type.irType == IRTVoid || type.isCString())
+			abiFailure(field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`', "Constants must be direct by-value C values.");
 		final cName = externalName(contractField.cName, field.name, field.pos, declaration.sourcePath, 'imported constant `$ownerPath.${field.name}`');
 		final request = new CSymbolRequest(CSKField, ownerPath.split(".").concat([field.name]), CNSOrdinary("translation-unit"), CSVExternal, cName);
 		context.symbols.register(request);

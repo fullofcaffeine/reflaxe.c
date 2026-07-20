@@ -306,6 +306,15 @@ class CBodyAggregateRegistry {
 			return imported;
 		final aliasOwner = anonymousTypedefOwner(type);
 		final resolved = unwrapAliases(type, position, fail, node);
+		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (resolvedImport != null)
+			return resolvedImport;
+		final primitive = switch CPrimitiveTypeMapper.map(resolved, context.profile) {
+			case CTPrimitive(mapping) if (mapping.nullability == CPNonNullable): mapping;
+			case _: null;
+		};
+		if (primitive != null)
+			return CBodyValueType.primitive(primitive);
 		return switch resolved {
 			case TAbstract(reference, parameters) if (isSpan(reference.get(), parameters)):
 				final span = reference.get();
@@ -318,6 +327,10 @@ class CBodyAggregateRegistry {
 			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null" && parameters.length == 1):
 				final nullable = valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node.nullable');
 				nullable.classValue() == null ? CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node)) : nullable;
+			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
+				final definition = reference.get();
+				valueType(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, ownerModule, sourcePath, fail,
+					'$node.abstract-representation');
 			case TAnonymous(reference):
 				final shape = anonymousShape(reference, [], position, fail, node);
 				var aggregate = byShape.get(shape);

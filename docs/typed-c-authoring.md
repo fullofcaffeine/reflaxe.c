@@ -182,6 +182,20 @@ typedef or an adapter because the authoritative header already owns both.
 Raylib's `Camera` alias uses this same reusable path; see
 [the raw core binding](raylib-raw-core.md).
 
+### Header-owned struct values
+
+Use `c.StructInit.make` when ordinary Haxe code must construct a struct whose
+definition belongs to an imported C header. The result type comes from the
+surrounding assignment or return, while the argument must be one direct closed
+object literal. The compiler checks every imported field and type, preserves
+Haxe evaluation order, and emits a designated C compound literal. It is not a
+general cast, allocation, wrapper, or raw-C escape hatch.
+
+This intrinsic exists because Haxe cannot otherwise express “this object
+literal has the exact nominal layout owned by that C header” without an
+unchecked cast or duplicated ABI declaration. See the runtime-free use in
+[the Raylib semantic core](raylib-semantic-core.md).
+
 The identity default is still an exact ABI fact, not a generated-name
 heuristic. `CSymbolRegistry` validates it against C spelling, reserved names,
 and namespace collisions and records it as the requested external name. A

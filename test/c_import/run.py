@@ -65,6 +65,16 @@ NEGATIVE_CASES = {
         "DefineApi.hx:",
         "Preprocessor definitions require an exact configuration/ABI identity",
     ),
+    "struct_init_missing": (
+        "HXC1001",
+        "Main.hx:3",
+        "TCall(c.StructInit.make:missing-field:y)",
+    ),
+    "struct_init_nonliteral": (
+        "HXC1001",
+        "Main.hx:4",
+        "TCall(c.StructInit.make:requires-direct-object-literal)",
+    ),
     "variadic": (
         "HXC3000",
         "VariadicApi.hx:4",
@@ -87,6 +97,7 @@ REQUIRED_COVERAGE = frozenset(
         "float32-conversions",
         "generated-haxe-program",
         "header-owned-structs",
+        "imported-struct-construction",
         "runtime-free",
         "strict-c11",
     }
@@ -345,11 +356,14 @@ def validate_positive(project: RenderedProject) -> None:
         "float hxc_floatDot",
         "struct pointlib_point hxc_pointAlias",
         "double hxc_widened",
+        "return (struct pointlib_point){ .x = hxc_x, .y = hxc_y };",
     ):
         if spelling not in source:
             raise CImportFailure(
                 f"generated C omitted structural imported-field/enum evidence {spelling!r}"
             )
+    if "StructInit" in header + source:
+        raise CImportFailure("typed imported-struct construction leaked an intrinsic symbol")
 
     manifest = project.manifest
     if (
@@ -577,6 +591,7 @@ def check_native(
                 "float32-conversions",
                 "generated-haxe-program",
                 "header-owned-structs",
+                "imported-struct-construction",
                 "runtime-free",
             ),
         ),

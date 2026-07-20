@@ -22,6 +22,9 @@
     "test/raylib_provisioning/expected/build-macos-desktop.json",
     "test/raylib_provisioning/expected/build-windows-desktop.json",
     "test/raylib_provisioning/expected/build-system-desktop.json",
+    "test/raylib_provisioning/expected/semantic/include/hxc/program.h",
+    "test/raylib_provisioning/expected/semantic/src/program.c",
+    "test/raylib_provisioning/expected/semantic/hxc.runtime-plan.json",
     "test/raylib_provisioning/run.py"
   ],
   "runner": {
@@ -71,6 +74,16 @@
       },
       {
         "path": "test/raylib_provisioning/expected/build-system-desktop.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/semantic/src/program.c",
+        "format": "c",
+        "comparison": "exact"
+      },
+      {
+        "path": "test/raylib_provisioning/expected/semantic/hxc.runtime-plan.json",
         "format": "json",
         "comparison": "semantic-json"
       }

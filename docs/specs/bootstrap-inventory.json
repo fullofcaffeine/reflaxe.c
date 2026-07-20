@@ -394,7 +394,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C.",
-      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields, and borrowed literal CString arguments lower through schema-10 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
+      "scope": "Exact fixed-arity C functions, scalars including target-qualified binary32 float, typedef identity, direct one-level imported struct aliases, fieldless enum/constants, by-value imported structs and fields, typed aggregate constants, direct closed-literal struct construction through c.StructInit, and borrowed literal CString arguments lower through schema-10 HxcIR to runtime-free strict C11 with provenance-preserving include, link, pkg-config, and framework facts. Float32 narrowing/widening is explicit and generated headers assert the selected target format.",
       "evidence": [
         "docs/typed-c-authoring.md",
         "src/reflaxe/c/interop/CImportRegistry.hx",
@@ -832,8 +832,34 @@
       ],
       "limitations": [
         "This is a precise coherent subset, not complete raylib.h coverage or a general bindgen claim.",
-        "Callbacks, variadics, borrowed or retained pointers, resource ownership, compound-literal color macros, and the remaining header families are explicitly omitted with owners.",
-        "The semantic raylib facade, other Haxe targets, public package extraction, stable ABI, and playable Caxecraft shell remain later work."
+        "Callbacks, variadics, borrowed or retained pointers, resource ownership, and the remaining header families are explicitly omitted with owners.",
+        "Other Haxe targets, public package extraction, stable ABI, and the playable Caxecraft shell remain later work."
+      ]
+    },
+    {
+      "id": "raylib-semantic-core",
+      "area": "interop",
+      "status": "implemented",
+      "disposition": "available",
+      "summary": "A curated raylib facade adds typed domains, direct value constructors, named colors, and inline forwarding with zero runtime cost.",
+      "scope": "The C-only semantic core wraps the locked raw slice with transparent value abstracts, five distinct integer domains, 26 named color macros, and direct PascalCase forwarding. Deterministic emitted-C snapshots prove imported struct compound literals and the same raylib calls with no allocation, reflection, virtual dispatch, or hxrt selection; negative fixtures reject mixed domains, embedded NUL, invalid color literals, invalid dimension types, and use of deliberately omitted resource-loading APIs.",
+      "evidence": [
+        "docs/raylib-semantic-core.md",
+        "src/raylib/Raylib.hx",
+        "src/raylib/Color.hx",
+        "src/raylib/Colors.hx",
+        "std/c/StructInit.hx",
+        "test/raylib_provisioning/expected/semantic/src/program.c",
+        "test/raylib_provisioning/run.py"
+      ],
+      "owners": [
+        "E6.T06",
+        "E6.T08"
+      ],
+      "limitations": [
+        "The semantic facade is currently available only under the C custom target; target-neutral Caxecraft logic must stay above the rendering/input adapter.",
+        "Callbacks, variadics, pointers, native handles, resource ownership, and RAII-style scope helpers remain raw-only or omitted until their lifetime and cleanup contracts are proven.",
+        "Dynamic color-channel conversion is not guessed; Color.rgba currently requires compiler-visible values that fit c.UInt8."
       ]
     },
     {

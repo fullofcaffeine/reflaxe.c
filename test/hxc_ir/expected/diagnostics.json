@@ -81,9 +81,6 @@
     "HXC9000 error [profile=portable] test/negative/AggregateProjectionMismatch.hx:5:1-5:2 [module:invalid.AggregateProjectionMismatch.function:invalid.AggregateProjectionMismatch.main.block:entry.instruction:3:bad.project-type] Invalid HxcIR: aggregate projection result type does not match field `x` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
     "HXC9000 error [profile=portable] test/negative/AggregateProjectionMismatch.hx:6:1-6:2 [module:invalid.AggregateProjectionMismatch.function:invalid.AggregateProjectionMismatch.main.block:entry.instruction:4:bad.project-name] Invalid HxcIR: aggregate projection names unknown field `z` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
-  "nativeConstantAggregate": [
-    "HXC9000 error [profile=portable] test/negative/NativeConstantAggregate.hx:2:1-2:2 [module:invalid.NativeConstantAggregate.function:invalid.NativeConstantAggregate.main.block:entry.instruction:0:bad.native-constant] Invalid HxcIR: constant result type does not match its literal family Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
-  ],
   "nullableUnwrapWithoutFailure": [
     "HXC9000 error [profile=portable] test/negative/NullableUnwrapWithoutFailure.hx:3:1-3:2 [module:invalid.NullableUnwrapWithoutFailure.function:invalid.NullableUnwrapWithoutFailure.main.block:entry.instruction:1:bad.unwrap] Invalid HxcIR: checked or nullable-unwrapping conversion requires an explicit failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

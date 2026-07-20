@@ -180,6 +180,9 @@ def raylib_provisioning_artifacts() -> list[Artifact]:
         "build-macos-desktop.json": "json",
         "build-windows-desktop.json": "json",
         "build-system-desktop.json": "json",
+        "semantic/include/hxc/program.h": "header",
+        "semantic/src/program.c": "c",
+        "semantic/hxc.runtime-plan.json": "json",
     }
     artifacts: list[Artifact] = []
     for name, format_name in formats.items():

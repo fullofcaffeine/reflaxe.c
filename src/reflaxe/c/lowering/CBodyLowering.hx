@@ -2971,6 +2971,8 @@ private class FunctionBuilder {
 					case IRTInt(_, _): true;
 					case _: false;
 				});
+				if (!integerConstantFits(value, type))
+					unsupported(expression, 'TConst(integer-out-of-range:$value:${mapping.cSpelling})');
 				IRCInt(Std.string(value));
 			case TFloat(value):
 				requireConstantType(type, expression, "floating", valueType -> switch valueType {
@@ -2987,6 +2989,23 @@ private class FunctionBuilder {
 		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
 		appendInstruction(result, IRIOConstant(value), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "constant");
 		return {id: result.id, type: result.type, mapping: CBodyValueType.primitive(mapping)};
+	}
+
+	static function integerConstantFits(value:Int, type:HxcIRTypeRef):Bool {
+		return switch type {
+			case IRTInt(width, signed):
+				if (width >= 32) {
+					signed
+					|| value >= 0;
+				} else if (signed) {
+					final limit = 1 << (width - 1);
+					value >= -limit && value < limit;
+				} else {
+					value >= 0 && value < (1 << width)
+					;
+				}
+			case _: false;
+		};
 	}
 
 	static function contextualConstantMapping(constant:TConstant, inferred:CPrimitiveTypeMapping, expected:Null<CPrimitiveTypeMapping>):CPrimitiveTypeMapping {
@@ -3542,6 +3561,9 @@ private class FunctionBuilder {
 		if (float32Conversion != null) {
 			return lowerFloat32Conversion(expression, call.arguments, float32Conversion);
 		}
+		if (isAbstractMethod(call.callee, "c.StructInit", "make")) {
+			return lowerImportedStructInit(expression, call.arguments);
+		}
 		if (isStdInt(call.callee)) {
 			if (call.arguments.length != 1) {
 				return unsupported(expression, 'TCall(Std.int:argument-count=${call.arguments.length})');
@@ -3627,6 +3649,47 @@ private class FunctionBuilder {
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
+	}
+
+	function lowerImportedStructInit(expression:TypedExpr, arguments:Array<TypedExpr>):LoweredValue {
+		if (arguments.length != 1) {
+			return unsupported(expression, 'TCall(c.StructInit.make:argument-count=${arguments.length})');
+		}
+		final mapping = bodyValueType(expression.t, expression.pos, "TCall(c.StructInit.make:result-type)");
+		final imported = mapping.importedStructValue();
+		if (imported == null) {
+			return unsupported(expression, "TCall(c.StructInit.make:result-must-be-imported-struct)");
+		}
+		final fields = switch unwrapExpression(arguments[0]).expr {
+			case TObjectDecl(value): value;
+			case _: return unsupported(arguments[0], "TCall(c.StructInit.make:requires-direct-object-literal)");
+		};
+		final valuesByName:Map<String, String> = [];
+		for (field in fields) {
+			if (valuesByName.exists(field.name)) {
+				return unsupported(field.expr, 'TCall(c.StructInit.make:duplicate-field:${field.name})');
+			}
+			final expectedField = imported.field(field.name);
+			if (expectedField == null) {
+				return unsupported(field.expr, 'TCall(c.StructInit.make:unknown-field:${field.name})');
+			}
+			final value = coerce(lowerValue(field.expr, expectedField.type), expectedField.type, field.expr.pos,
+				'TCall(c.StructInit.make:field:${field.name})');
+			valuesByName.set(field.name, value.id);
+		}
+		final namedValues:Array<HxcIRNamedValue> = [];
+		for (field in imported.fields) {
+			final valueId = valuesByName.get(field.name);
+			if (valueId == null) {
+				return unsupported(arguments[0], 'TCall(c.StructInit.make:missing-field:${field.name})');
+			}
+			namedValues.push({name: field.name, valueId: valueId});
+		}
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		appendInstruction(result, IRIOConstructAggregate(imported.instanceId, namedValues), HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath),
+			"construct-imported-struct");
+		registerValueTemporary(result.id, "imported-struct-result");
+		return {id: result.id, type: result.type, mapping: mapping};
 	}
 
 	function lowerIntegerConversion(expression:TypedExpr, arguments:Array<TypedExpr>, mode:IntegerConversionMode):LoweredValue {

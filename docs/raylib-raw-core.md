@@ -105,9 +105,10 @@ semantic family remain fail-closed.
 
 `raylib.raw.Raylib` owns the header and platform-specific logical link facts.
 Selecting a platform/configuration define changes only the neutral build plan;
-it must not change the generated call semantics or select `hxrt`. The semantic
-`raylib.*` facade will add reviewed zero-cost ergonomics later without removing
-this exact escape hatch.
+it must not change the generated call semantics or select `hxrt`. The reviewed
+[`raylib.*` semantic core](raylib-semantic-core.md) adds zero-cost constructors,
+typed domains, named colors, and inline forwarding without removing this exact
+escape hatch.
 
 ## Executable evidence
 

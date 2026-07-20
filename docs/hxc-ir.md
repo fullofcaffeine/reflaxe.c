@@ -313,7 +313,9 @@ constructor is `IRCCStringLiteral`: immutable literal storage with a validated
 UTF-8 byte count and no embedded NUL. `IRCNativeConstant` retains the exact
 header-owned constant identity and a nominal imported value retains its Haxe
 type identity through `IRTInstance`; neither is guessed from a host value or
-redeclared as generated C.
+redeclared as generated C. A native constant may use a scalar, imported extern,
+or direct aggregate result. The import contract supplies its type; HxcIR never
+parses a C macro body.
 
 Calls have one of seven exhaustive dispatch forms: direct, virtual, interface,
 closure, native, runtime, or intrinsic. Direct and native calls therefore
@@ -359,7 +361,8 @@ slot and receiver separately from the explicit source arguments.
   to the collection element type; and every admitted collection access has a
   preceding checked-abort, compile-time static, or compiler loop-guard proof
   for the same collection and immutable index;
-- aggregate construction names every declared field exactly once, in canonical
+- aggregate construction—including `c.StructInit.make` for a header-owned
+  struct—names every declared field exactly once, in canonical
   declaration order, with a matching value type; projection names a real field
   and returns its exact type; and a field place resolves only from a compatible
   aggregate base;

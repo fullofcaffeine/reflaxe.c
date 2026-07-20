@@ -365,6 +365,7 @@
         "literal CString arguments borrow static C literal storage while embedded NUL and non-direct expressions fail with source-positioned HXC3000 and no artifact",
         "compiled C11 probes verify imported size, alignment, offsets, constants, Float32 field mutation, arguments, returns, and conversion boundaries under identity-verified GCC and Clang at O0 and O2",
         "headers and libraries appear once in the neutral build plan with source owners, generated artifacts are order/root/locale deterministic, and the runtime plan proves complete hxrt absence",
+        "c.StructInit constructs header-owned structs from exact closed literals without casts, wrappers, allocation, or intrinsic symbols in emitted C",
         "callbacks, variadics, retained pointer returns, and declarations without exact C names fail closed as deliberately deferred ABI contracts"
       ]
     },
@@ -389,6 +390,8 @@
         "generated Haxe emits deterministic strict C and five reviewable neutral build plans with exact argument-array libraries, frameworks, headers, and pkg-config facts",
         "the checked Clang-derived raw core lock renders 7 records, 1 struct alias, 5 enum domains with 143 constants, and 54 functions byte-identically from the pinned header",
         "an independent native probe verifies every selected layout, alias, constant, and function signature while the generated smoke consumes the public raylib.raw package",
+        "a separate semantic smoke proves typed enum domains, imported struct constructors, aggregate color macros, and inline forwarding emit the same direct raylib calls with no allocation, reflection, virtual dispatch, or hxrt",
+        "semantic negative fixtures reject mixed input domains, embedded-NUL strings, out-of-range color literals, invalid dimension types, and deliberately omitted resource APIs, and leave no output",
         "Linux, macOS, and Windows source lanes compile and link generated C against real raylib while the Linux PLATFORM_MEMORY/software lane also runs with exact output",
         "normal compilation and post-provision builds are network-free, select no hxrt feature, and serialize no checkout, cache, or temporary path"
       ]
@@ -1091,6 +1094,9 @@
           "test/raylib_provisioning/expected/build-macos-desktop.json",
           "test/raylib_provisioning/expected/build-windows-desktop.json",
           "test/raylib_provisioning/expected/build-system-desktop.json",
+          "test/raylib_provisioning/expected/semantic/include/hxc/program.h",
+          "test/raylib_provisioning/expected/semantic/src/program.c",
+          "test/raylib_provisioning/expected/semantic/hxc.runtime-plan.json",
           "src/raylib/raw",
           "test/raylib_provisioning/native/core_abi_probe.c"
         ],

@@ -669,6 +669,19 @@ pointer lifetimes, ownership, and broader bindgen remain fail-closed. See
 [typed C authoring](typed-c-authoring.md) and [project
 emission](project-emission.md).
 
+Imported by-value structs remain nominal HxcIR instances whose layout authority
+is the C header. `c.StructInit.make` lowers a checked closed object literal to
+`IRIOConstructAggregate`; validation uses the same ordered field contract as an
+owned aggregate, while C emission uses the import registry's exact member and
+tag names. Header-owned aggregate macros are direct `IRCNativeConstant` values.
+Neither path creates a second layout or runtime object.
+
+Transparent non-core Haxe abstracts may preserve an already admitted underlying
+representation. This lets a semantic binding add compile-time domain safety and
+inline helpers without changing the C ABI. Core target carriers retain their
+dedicated rules, and an abstract never makes an unsupported underlying
+representation legal.
+
 ## ABI boundary
 
 The internal object representation is not the public ABI. Export lowering maps Haxe values to a separate ABI model with:
