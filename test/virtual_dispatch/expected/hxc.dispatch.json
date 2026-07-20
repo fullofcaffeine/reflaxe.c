@@ -1,7 +1,7 @@
 {
   "slots": [
     {
-      "cMember": "hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0",
+      "cMember": "hxc_slot_BaseWorker_value",
       "id": "slot.BaseWorker.value",
       "ownerInstanceId": "instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4",
       "returnRepresentation": "i32",
@@ -16,27 +16,27 @@
     {
       "entries": [
         {
-          "adapterCName": "hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2ELeafWorkerzx2Evalue",
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_slot_BaseWorker_value_method_LeafWorker_value",
           "implementationFunctionId": "method.LeafWorker.value",
           "slotId": "slot.BaseWorker.value"
         }
       ],
       "layoutId": "vtable.layout.BaseWorker",
       "classInstanceId": "instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a",
-      "cName": "hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker",
+      "cName": "hxc_vtable_compiler_virtual_dispatch_LeafWorker",
       "id": "vtable.LeafWorker"
     },
     {
       "entries": [
         {
-          "adapterCName": "hxc_method_compiler_virtualzx2Ddispatch_thunk_slotzx2EBaseWorkerzx2Evalue_methodzx2EMiddleWorkerzx2Evalue",
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_slot_BaseWorker_value_method_MiddleWorker_value",
           "implementationFunctionId": "method.MiddleWorker.value",
           "slotId": "slot.BaseWorker.value"
         }
       ],
       "layoutId": "vtable.layout.BaseWorker",
       "classInstanceId": "instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216",
-      "cName": "hxc_vtable_compiler_virtualzx2Ddispatch_MiddleWorker",
+      "cName": "hxc_vtable_compiler_virtual_dispatch_MiddleWorker",
       "id": "vtable.MiddleWorker"
     }
   ],
@@ -200,7 +200,7 @@
   ],
   "layouts": [
     {
-      "cTag": "hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout",
+      "cTag": "hxc_compiler_virtual_dispatch_BaseWorker_table_layout",
       "id": "vtable.layout.BaseWorker",
       "slotIds": [
         "slot.BaseWorker.value"

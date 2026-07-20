@@ -58,8 +58,9 @@ process, locale, runtime, or compiler-server state. It applies these rules:
   local includes and both groups sorted by UTF-8 bytes;
 - public headers cannot acquire complete private definitions, while an opaque
   pointer may intentionally hide a private implementation; and
-- public guards use an injective uppercase hexadecimal encoding of the UTF-8
-  header path under `HXC_GENERATED_PATH_*_INCLUDED`.
+- generated guards use a readable uppercase path such as
+  `HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED`; only two paths that normalize
+  to the same guard base receive distinct compact hash suffixes.
 
 Impossible complete-type cycles, complete source-only dependencies from a
 header, missing finalized forward names, mixed header visibility, and conflicting

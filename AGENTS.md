@@ -604,16 +604,31 @@ missing-metadata or missing-adapter assumptions.
   finalize only after collecting the complete semantic request set. Stable keys
   contain qualified Haxe identity, normalized overload/specialization facts,
   real C namespace/scope, and source ordinals—never filesystem paths, discovery
-  counters, object addresses, or map order. Keep `hxc-c-symbol-v1` changes
+  counters, object addresses, or map order. Preserve source display identities
+  separately from semantic keys: collision-free generated C should use
+  recognizable source words, while full structural digests stay in reports.
+  Add compact hashes only for real namespace collisions, anonymous identity, or
+  length limits; never expose encoded compiler roles merely because they are
+  convenient internally. Keep `hxc-c-symbol-v2` changes
   explicit and update `docs/symbol-naming.md` plus the owned snapshot together.
 - Exact `@:c.name` values are ABI/interop facts: preserve them byte-for-byte or
   reject them with `HXC5002`; never silently sanitize or hash them. Generated
-  internal/public defaults use the registry's `hxc_` and `hxc_api_` namespaces.
+  translation-unit internal/public defaults use the registry's `hxc_` and
+  `hxc_api_` namespaces. Generated locals and aggregate members also keep the
+  short `hxc_` ownership prefix while preserving the source word, for example
+  `value` becomes `hxc_value`: C preprocessing happens before C scope lookup,
+  so a bare local/member spelling could still be replaced by a macro from an
+  included header. Do not trade that collision-proof boundary for bare names.
   A header-owned `extern` declaration without `@:c.name` uses its exact Haxe
   declaration/field spelling as a validated external identity default; add
   `@:c.name` only when the native spelling differs. `hxc_` and `hxrt_` remain
   unavailable to authored or inferred external names, and public C/C++ spellings
   may not begin with underscore or contain double underscore.
+- Do not add metadata that merely repeats a safe compiler default. If a Haxe
+  declaration and its C declaration are both named `position`, write that fact
+  once and let the binding/compiler preserve it. Use `@:c.name` or another
+  override only to express a real semantic or ABI difference, and improve the
+  general inference/generator when repeated redundant annotations appear.
 - Respect C namespaces. Ordinary identifiers, tags, per-aggregate members, and
   per-function labels do not share one flat collision map. A generated collision
   is resolved from canonical semantic identity and recorded with both source and

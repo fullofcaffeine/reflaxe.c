@@ -231,13 +231,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     mutual_right_source = sources["src/nonreturn_0001.c"]
     recursive_source = sources["src/nonreturn_0002.c"]
     if (
-        not header.startswith("#ifndef HXC_GENERATED_PATH_")
-        or "_Noreturn void hxc_method_FunctionFixture_recursive(" not in header
-        or "_Noreturn void hxc_method_FunctionFixture_mutualLeft(" not in header
-        or "_Noreturn void hxc_method_FunctionFixture_mutualRight(" not in header
+        not header.startswith("#ifndef HXC_PROGRAM_H_INCLUDED\n")
+        or "_Noreturn void hxc_FunctionFixture_recursive(" not in header
+        or "_Noreturn void hxc_FunctionFixture_mutualLeft(" not in header
+        or "_Noreturn void hxc_FunctionFixture_mutualRight(" not in header
         or "recursiveStep" in header
         or "int main(void)" not in program_source
-        or "hxc_method_FunctionFixture_main();" not in program_source
+        or "hxc_FunctionFixture_main();" not in program_source
         or "return 0;" not in program_source
     ):
         raise FunctionLoweringFailure("prototype plan or executable entry shape drifted")
@@ -248,7 +248,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     }
     for field, source in cycle_sources.items():
         definition_start = source.find(
-            f"_Noreturn void hxc_method_FunctionFixture_{field}("
+            f"_Noreturn void hxc_FunctionFixture_{field}("
         )
         definition_end = source.find("\n}\n", definition_start)
         definition = source[definition_start:definition_end]
@@ -264,7 +264,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             other
             for other in cycle_sources
             if other != field
-            and f"_Noreturn void hxc_method_FunctionFixture_{other}(" in source
+            and f"_Noreturn void hxc_FunctionFixture_{other}(" in source
         ]
         if other_definitions:
             raise FunctionLoweringFailure(
@@ -272,12 +272,12 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
                 f"{field}, {other_definitions!r}"
             )
     if (
-        "hxc_method_FunctionFixture_mutualRight(" not in mutual_left_source
-        or "hxc_method_FunctionFixture_mutualLeft(" not in mutual_right_source
+        "hxc_FunctionFixture_mutualRight(" not in mutual_left_source
+        or "hxc_FunctionFixture_mutualLeft(" not in mutual_right_source
         or "while (1)" not in recursive_source
         or "continue;" not in recursive_source
-        or "tailzx2Dargument" not in recursive_source
-        or recursive_source.count("hxc_method_FunctionFixture_recursive(") != 1
+        or "hxc_tmp_tail_argument" not in recursive_source
+        or recursive_source.count("hxc_FunctionFixture_recursive(") != 1
     ):
         raise FunctionLoweringFailure(
             "direct/mutual recursion did not retain calls or typed self-tail lowering"
@@ -285,31 +285,27 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     tail_steps = [
         recursive_source.find(marker)
         for marker in (
-            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0 = "
-            "hxc_local_FunctionFixture_recursive_right_n1;",
-            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1 = "
-            "hxc_local_FunctionFixture_recursive_left_n0;",
-            "hxc_local_FunctionFixture_recursive_left_n0 = "
-            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0;",
-            "hxc_local_FunctionFixture_recursive_right_n1 = "
-            "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1;",
+            "hxc_tmp_tail_argument_n0 = hxc_right;",
+            "hxc_tmp_tail_argument_n1 = hxc_left;",
+            "hxc_left = hxc_tmp_tail_argument_n0;",
+            "hxc_right = hxc_tmp_tail_argument_n1;",
         )
     ]
     if any(index == -1 for index in tail_steps) or tail_steps != sorted(tail_steps):
         raise FunctionLoweringFailure(
             "self-tail parameter swap was not materialized before ordered assignment"
         )
-    left_prototype = header.find("hxc_method_FunctionFixture_mutualLeft")
-    right_prototype = header.find("hxc_method_FunctionFixture_mutualRight")
-    left_definition = mutual_left_source.find("hxc_method_FunctionFixture_mutualLeft")
-    right_definition = mutual_right_source.find("hxc_method_FunctionFixture_mutualRight")
+    left_prototype = header.find("hxc_FunctionFixture_mutualLeft")
+    right_prototype = header.find("hxc_FunctionFixture_mutualRight")
+    left_definition = mutual_left_source.find("hxc_FunctionFixture_mutualLeft")
+    right_definition = mutual_right_source.find("hxc_FunctionFixture_mutualRight")
     if min(left_prototype, right_prototype, left_definition, right_definition) < 0:
         raise FunctionLoweringFailure("recursive prototype/definition evidence is incomplete")
-    ordered_source_start = program_source.find("int32_t hxc_method_FunctionFixture_ordered(")
+    ordered_source_start = program_source.find("int32_t hxc_FunctionFixture_ordered(")
     ordered_source_end = program_source.find("\n}\n", ordered_source_start)
     ordered_source = program_source[ordered_source_start:ordered_source_end]
     ordered_c_calls = [
-        ordered_source.find(f"hxc_method_FunctionFixture_{target}(")
+        ordered_source.find(f"hxc_FunctionFixture_{target}(")
         for target in ("passthrough", "chain", "first")
     ]
     if (
@@ -341,7 +337,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise FunctionLoweringFailure("direct call result was not materialized as a C temporary")
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise FunctionLoweringFailure("function lowering omitted its finalized symbol table")
     entries = symbols.get("symbols")
     if not isinstance(entries, list):
@@ -747,11 +743,11 @@ def check_split_recursive(selected: str | None) -> None:
         recursive_source = (output / expected_sources[2]).read_text(encoding="utf-8")
         module_source = (output / expected_sources[1]).read_text(encoding="utf-8")
         if (
-            "_Noreturn void hxc_method_RecursiveFixture_recursive(" not in recursive_source
+            "_Noreturn void hxc_RecursiveFixture_recursive(" not in recursive_source
             or "while (1)" not in recursive_source
             or "continue;" not in recursive_source
-            or "hxc_method_RecursiveFixture_recursive(1, 2);" not in module_source
-            or "_Noreturn void hxc_method_RecursiveFixture_recursive(" in module_source
+            or "hxc_RecursiveFixture_recursive(1, 2);" not in module_source
+            or "_Noreturn void hxc_RecursiveFixture_recursive(" in module_source
         ):
             raise FunctionLoweringFailure(
                 "split recursive function lost its isolated non-returning definition"

@@ -334,7 +334,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     header = required_text(report.get("header"), "header")
     source = required_text(report.get("source"), "source")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise ConstructorLoweringFailure("constructor report omitted finalized symbols")
     for label, text in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():

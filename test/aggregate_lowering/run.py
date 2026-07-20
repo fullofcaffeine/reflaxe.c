@@ -262,14 +262,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             "object-literal evaluation order or canonical named construction drifted"
         )
     local_sum = function_section(hxcir, "localSum")
-    address_a = local_sum.find('address place=field(local("local.2"),"a")')
-    load_a = local_sum.find('load place=dereference("value.1")')
-    address_z = local_sum.find('address place=field(local("local.2"),"z")')
-    load_z = local_sum.find('load place=dereference("value.3")')
-    if min(address_a, load_a, address_z, load_z) < 0 or not (
-        address_a < load_a < address_z < load_z
+    load_a = local_sum.find('load place=field(local("local.2"),"a")')
+    load_z = local_sum.find('load place=field(local("local.2"),"z")')
+    if (
+        min(load_a, load_z) < 0
+        or load_a > load_z
+        or "record-field-address" in local_sum
+        or "load place=dereference" in local_sum
     ):
-        raise AggregateLoweringFailure("local field reads lost explicit address/dereference order")
+        raise AggregateLoweringFailure(
+            "compiler-owned local field reads lost their direct ordered places"
+        )
     copy_section = function_section(hxcir, "copy")
     if (
         "initialize place=local" not in copy_section
@@ -303,7 +306,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise AggregateLoweringFailure("structural CAST construction/layout assertions drifted")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise AggregateLoweringFailure("aggregate report omitted its finalized symbol table")
 
 

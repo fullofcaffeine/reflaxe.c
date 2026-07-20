@@ -309,7 +309,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ArithmeticSemanticsFailure(f"helper header lost {marker!r}")
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise ArithmeticSemanticsFailure("finalized symbol table is missing")
     helper_symbols = [item for item in symbol_entries(symbols) if item.get("kind") == "specialization"]
     if len(helper_symbols) != len(EXPECTED_HELPERS):

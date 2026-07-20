@@ -1,4 +1,5 @@
 #include "hxc/program.h"
+#include "method_symbols.h"
 
 #include <inttypes.h>
 #include <stdint.h>
@@ -11,14 +12,14 @@ static void print_trace(int32_t value)
 
 int main(void)
 {
-	print_trace(hxc_method_caxecraft_qa_DomainProbe_selfCheck());
-	print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_terrainTrace());
-	print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_editTrace());
-	print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_rayTrace());
-	print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_collisionTrace());
-	print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_runTrace());
+	print_trace(CAXECRAFT_SELF_CHECK());
+	print_trace(CAXECRAFT_TERRAIN_TRACE());
+	print_trace(CAXECRAFT_EDIT_TRACE());
+	print_trace(CAXECRAFT_RAY_TRACE());
+	print_trace(CAXECRAFT_COLLISION_TRACE());
+	print_trace(CAXECRAFT_RUN_TRACE());
 	for (int32_t seed = INT32_C(0); seed < INT32_C(32); ++seed) {
-		print_trace(hxc_method_caxecraft_domain_CaxecraftTrace_propertyTrace(seed));
+		print_trace(CAXECRAFT_PROPERTY_TRACE(seed));
 	}
 	return 0;
 }

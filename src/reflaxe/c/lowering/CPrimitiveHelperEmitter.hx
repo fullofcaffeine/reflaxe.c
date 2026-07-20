@@ -69,15 +69,16 @@ class CPrimitiveHelperSelection {
 	public function register(symbols:CSymbolRegistry):Void {
 		for (kind in orderedKinds()) {
 			final helperId = CPrimitiveSemantics.helperId(kind);
+			final readableName = helperId.split(".").slice(1);
 			final request = new CSymbolRequest(CSKSpecialization, ["compiler", "primitive-helper"], CNSOrdinary("translation-unit"), CSVInternal, null, [],
-				[helperId]);
+				[helperId], null, readableName);
 			symbols.register(request);
 			helperRequests.set(helperId, request);
 			final parameters:Array<CSymbolRequest> = [];
 			for (index in 0...parameterCount(kind)) {
 				final role = parameterRole(kind, index);
 				final parameter = new CSymbolRequest(CSKLocal, ["compiler", "primitive-helper", helperId, role], CNSOrdinary(request.stableKey()),
-					CSVInternal, null, [], [], index);
+					CSVInternal, null, [], [], index, [role]);
 				symbols.register(parameter);
 				parameters.push(parameter);
 			}

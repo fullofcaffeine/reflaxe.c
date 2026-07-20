@@ -1,67 +1,67 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <stdint.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0 * (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
 }
 
-extern int32_t hxc_field_AStaticInitDependent_first;
+extern int32_t hxc_AStaticInitDependent_first;
 
-extern int32_t hxc_field_AStaticInitDependent_second;
+extern int32_t hxc_AStaticInitDependent_second;
 
-extern int32_t hxc_field_AStaticInitDependent_value;
+extern int32_t hxc_AStaticInitDependent_value;
 
-extern int32_t hxc_field_MStaticInitTrace_classOrder;
+extern int32_t hxc_MStaticInitTrace_classOrder;
 
-extern int32_t hxc_field_MStaticInitTrace_phaseValue;
+extern int32_t hxc_MStaticInitTrace_phaseValue;
 
-extern int32_t hxc_field_MStaticInitTrace_trace;
+extern int32_t hxc_MStaticInitTrace_trace;
 
-extern int32_t hxc_field_zZStaticInitPrerequisite_value;
+extern int32_t hxc_ZStaticInitPrerequisite_value;
 
-int32_t hxc_method_MStaticInitTrace_mark(int32_t hxc_local_MStaticInitTrace_mark_digit_n0);
+int32_t hxc_MStaticInitTrace_mark(int32_t hxc_digit);
 
-int32_t hxc_method_MStaticInitTrace_seed(void);
+int32_t hxc_MStaticInitTrace_seed(void);
 
-void hxc_method_StaticInitializzationFixture_main(void);
+void hxc_StaticInitializationFixture_main(void);
 
-int32_t hxc_method_StaticInitializzationFixture_outcome(void);
+int32_t hxc_StaticInitializationFixture_outcome(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_AStaticInitDependent_classzx2Dinit_n0(void);
+void hxc_init_compiler_static_initialization_AStaticInitDependent_class_init(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_AStaticInitDependent_staticzx2Dfieldzx2Dfirst_n1(void);
+void hxc_init_compiler_static_initialization_AStaticInitDependent_static_field_first(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_AStaticInitDependent_staticzx2Dfieldzx2Dsecond_n2(void);
+void hxc_init_compiler_static_initialization_AStaticInitDependent_static_field_second(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_AStaticInitDependent_staticzx2Dfieldzx2Dvalue_n3(void);
+void hxc_init_compiler_static_initialization_AStaticInitDependent_static_field_value(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_MStaticInitTrace_classzx2Dinit_n0(void);
+void hxc_init_compiler_static_initialization_MStaticInitTrace_class_init(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_MStaticInitTrace_staticzx2Dfieldzx2DclassOrder_n1(void);
+void hxc_init_compiler_static_initialization_MStaticInitTrace_static_field_classOrder(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_MStaticInitTrace_staticzx2Dfieldzx2DphaseValue_n2(void);
+void hxc_init_compiler_static_initialization_MStaticInitTrace_static_field_phaseValue(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_MStaticInitTrace_staticzx2Dfieldzx2Dtrace_n3(void);
+void hxc_init_compiler_static_initialization_MStaticInitTrace_static_field_trace(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_zZStaticInitPrerequisite_classzx2Dinit_n0(void);
+void hxc_init_compiler_static_initialization_ZStaticInitPrerequisite_class_init(void);
 
-void hxc_init_compiler_staticzx2Dinitializzation_zZStaticInitPrerequisite_staticzx2Dfieldzx2Dvalue_n1(void);
+void hxc_init_compiler_static_initialization_ZStaticInitPrerequisite_static_field_value(void);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

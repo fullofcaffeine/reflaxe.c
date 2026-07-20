@@ -30,11 +30,11 @@
           "displayName": "Float"
         }
       ],
-      "cName": "hxc_method_Main_choose_of_i32_f64",
+      "cName": "hxc_Main_choose",
       "displayName": "choose<Int, Float>",
       "codeSize": {
-        "definitionSha256": "e52b861a1c211af4da177f6c2658d30982889ccd4e82b5e45ab7bd048ad2dbe4",
-        "definitionBytes": 234,
+        "definitionSha256": "121b85e7776a53d392cb4c64f2cdebefbddd8934e373b586c465eb5f4d04840d",
+        "definitionBytes": 132,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -66,11 +66,11 @@
           "displayName": "Int"
         }
       ],
-      "cName": "hxc_method_Main_forward_of_i32",
+      "cName": "hxc_Main_forward",
       "displayName": "forward<Int>",
       "codeSize": {
-        "definitionSha256": "939546b5745b1c3eee896d15a068ebcacaaa6f2287984b11088c88be697520ed",
-        "definitionBytes": 251,
+        "definitionSha256": "911d1960eeeaabee8b7bb6a6d0affd04db8a2985baa70d59ebc599ef698e8bb9",
+        "definitionBytes": 159,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -102,11 +102,11 @@
           "displayName": "Int"
         }
       ],
-      "cName": "hxc_method_Main_guarded_of_i32",
+      "cName": "hxc_Main_guarded",
       "displayName": "guarded<Int>",
       "codeSize": {
-        "definitionSha256": "5b6b8ea13e1b9c4d9242c8928316f7c90505726dc2a4ea0855d51e085c7e53f2",
-        "definitionBytes": 425,
+        "definitionSha256": "73f97b29601ad50f1b614e98c7f718832cb958f6b29190be71d319f2a70bb965",
+        "definitionBytes": 239,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 2,
         "irBlocks": 3
@@ -138,11 +138,11 @@
           "displayName": "GenericBox<Int>"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_enumzx2810zx3AGenericBox1zx3A3zx3Ai32zx29",
+      "cName": "hxc_Main_identity_h769597c6fca5",
       "displayName": "identity<GenericBox<Int>>",
       "codeSize": {
-        "definitionSha256": "8f6bbba481b8e9b63315f6696b2a134d022fef8a3e8553ea0e413070e9605a10",
-        "definitionBytes": 382,
+        "definitionSha256": "7de683e387aa9cc6e36d2f20b1880a8d72b69fdb38e9ddef8153f3302653c8e8",
+        "definitionBytes": 138,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -194,11 +194,11 @@
           "displayName": "Float"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_f64",
+      "cName": "hxc_Main_identity_h1296fdd09874",
       "displayName": "identity<Float>",
       "codeSize": {
-        "definitionSha256": "4885e18ec57b24537e6f4aaa2d258e12aaded5da9cd18bbe42b306b5a3138c40",
-        "definitionBytes": 126,
+        "definitionSha256": "c1c24d5e69b280107ba9571552951cfb9ef42e7156f74652d70fd461a55fb2f8",
+        "definitionBytes": 80,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -250,11 +250,11 @@
           "displayName": "Int"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_i32",
+      "cName": "hxc_Main_identity_he5684aaf2cae",
       "displayName": "identity<Int>",
       "codeSize": {
-        "definitionSha256": "4279b18b2db26b5aa81d694dbd8701e847982e0d57c4eadedd2e950943afacee",
-        "definitionBytes": 128,
+        "definitionSha256": "03ece65137e7aaf016d9963767b62455d5470f85cf3d975ac1c1c97bd4079259",
+        "definitionBytes": 82,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -296,11 +296,11 @@
           "displayName": "UInt"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_u32",
+      "cName": "hxc_Main_identity_h37d46ac9dd5d",
       "displayName": "identity<UInt>",
       "codeSize": {
-        "definitionSha256": "fd9a523aab777a24e56904e1d6ac639a98315b1d05052e051d85bb35792e8668",
-        "definitionBytes": 130,
+        "definitionSha256": "8007d753a8542c4edd56253df3b1ab98555e90c573b6037c6b4c76e6ef92ba5b",
+        "definitionBytes": 84,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -332,11 +332,11 @@
           "displayName": "Bool"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_bool",
+      "cName": "hxc_Main_identity_ha2f2aee34deb",
       "displayName": "identity<Bool>",
       "codeSize": {
-        "definitionSha256": "2940b00443b2325c277c61d7ef77bb0ccf443f378a22654e4106d3f29cc1a2eb",
-        "definitionBytes": 123,
+        "definitionSha256": "1b25412b8830fe75e15bc975c54e525053780cc80ce87413686ef7ef4187a439",
+        "definitionBytes": 76,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -368,11 +368,11 @@
           "displayName": "GenericBox<GenericBox<Int>>"
         }
       ],
-      "cName": "hxc_method_Main_identity_of_enumzx2810zx3AGenericBox1zx3A26zx3Aenumzx2810zx3AGenericBox1zx3A3zx3Ai32zx29zx29",
+      "cName": "hxc_Main_identity_hf2cfc11a476b",
       "displayName": "identity<GenericBox<GenericBox<Int>>>",
       "codeSize": {
-        "definitionSha256": "011f54240615ce1738d590bf9dac20fb7325160e2e8e574b1f012c51160b62ee",
-        "definitionBytes": 445,
+        "definitionSha256": "e09cac46f8da5d9aed29879583a74c2e278e8807429bdb162239a5b6d2432f7a",
+        "definitionBytes": 138,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 0,
         "irBlocks": 1
@@ -414,11 +414,11 @@
           "displayName": "Int"
         }
       ],
-      "cName": "hxc_method_Main_recursive_of_i32",
+      "cName": "hxc_Main_recursive",
       "displayName": "recursive<Int>",
       "codeSize": {
-        "definitionSha256": "cba5e1acc8b613ca0b364a48930c3a144a7c4b2f974a08500dd13b96f9209545",
-        "definitionBytes": 309,
+        "definitionSha256": "377159b2172ec6ee47dfce6a483cacaf65bfe66f9a87d4cb6caa12f6acb5ae98",
+        "definitionBytes": 185,
         "metric": "strict-c11-utf8-function-definition-bytes",
         "irInstructions": 1,
         "irBlocks": 1
@@ -470,7 +470,7 @@
           "displayName": "GenericBox<Int>"
         }
       ],
-      "cName": "hxc_type_compiler_haxezx2Denum_05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86_value_zh280de7392de0cd86",
+      "cName": "hxc_GenericBox_h280de7392de0",
       "declarationId": "type.enum.05ad2ddb427eac20ba432aac33d6e575f7bb4485d6a4f922c2665a451e82ad86",
       "displayName": "GenericBox<enum(10:GenericBox1:3:i32)>",
       "codeSize": {
@@ -553,7 +553,7 @@
           "displayName": "Int"
         }
       ],
-      "cName": "hxc_type_compiler_haxezx2Denum_a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8_value_of_i32",
+      "cName": "hxc_GenericBox_hb8a0653572a9",
       "declarationId": "type.enum.a0ac7cdc6d9a1b71ad85fe9e837cfc50e900cd00aef86fb4d2c75cf8480789e8",
       "displayName": "GenericBox<i32>",
       "codeSize": {
@@ -575,12 +575,12 @@
     "functionSpecializations": 10,
     "typeSpecializations": 2,
     "generatedPayloadArtifacts": 3,
-    "specializedFunctionDefinitionBytes": 2553,
+    "specializedFunctionDefinitionBytes": 1313,
     "mergedTypeReasons": 11,
-    "generatedPayloadBytes": 25103,
-    "dependencyClosedEnumDefinitionBytes": 10793,
+    "generatedPayloadBytes": 9400,
+    "dependencyClosedEnumDefinitionBytes": 3867,
     "mergedFunctionReasons": 16,
-    "estimatedSpecializationCBytes": 13346
+    "estimatedSpecializationCBytes": 5180
   },
   "algorithm": "hxc-generic-specialization-v1"
 }

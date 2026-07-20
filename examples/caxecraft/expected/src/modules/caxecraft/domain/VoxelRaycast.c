@@ -1,448 +1,379 @@
 #include "hxc/program.h"
 
-double hxc_method_caxecraft_domain_VoxelRaycast_abs(double hxc_local_caxecraft_domain_VoxelRaycast_abs_value_n0)
+double hxc_caxecraft_domain_VoxelRaycast_abs(double hxc_value)
 {
-  if (!(hxc_local_caxecraft_domain_VoxelRaycast_abs_value_n0 < 0.0))
+  if (!(hxc_value < 0.0))
   {
-    return hxc_local_caxecraft_domain_VoxelRaycast_abs_value_n0;
+    return hxc_value;
   }
-  return -hxc_local_caxecraft_domain_VoxelRaycast_abs_value_n0;
+  return -hxc_value;
 }
 
-int32_t hxc_method_caxecraft_domain_VoxelRaycast_floorToInt(double hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_value_n0)
+int32_t hxc_caxecraft_domain_VoxelRaycast_floorToInt(double hxc_value)
 {
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_truncated_n1 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating(hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_value_n0);
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n0 = hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_truncated_n1;
-  if (!(hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_value_n0 < (double)hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n0))
+  int32_t hxc_truncated = hxc_f64_to_i32_saturating(hxc_value);
+  if (!(hxc_value < (double)hxc_truncated))
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n2 = hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_truncated_n1;
-    return hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n2;
+    return hxc_truncated;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_VoxelRaycast_floorToInt_truncated_n1;
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_floorToInt_loadzx2Dresult_n1, 1);
+  return hxc_i32_subtract_wrapping(hxc_truncated, 1);
 }
 
-struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_method_caxecraft_domain_VoxelRaycast_hit(int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_cellX_n0, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_cellY_n1, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_cellzZ_n2, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_previousX_n3, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_previousY_n4, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_previouszZ_n5, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_normalX_n6, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_normalY_n7, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_normalzZ_n8, double hxc_local_caxecraft_domain_VoxelRaycast_hit_distance_n9, int32_t hxc_local_caxecraft_domain_VoxelRaycast_hit_visited_n10)
+struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_hit(int32_t hxc_cellX, int32_t hxc_cellY, int32_t hxc_cellZ, int32_t hxc_previousX, int32_t hxc_previousY, int32_t hxc_previousZ, int32_t hxc_normalX, int32_t hxc_normalY, int32_t hxc_normalZ, double hxc_distance, int32_t hxc_visited)
 {
-  struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_hit_recordzx2Dresult_n0 = (struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd){ .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellX_n0 = hxc_local_caxecraft_domain_VoxelRaycast_hit_cellX_n0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellY_n1 = hxc_local_caxecraft_domain_VoxelRaycast_hit_cellY_n1, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellzZ_n2 = hxc_local_caxecraft_domain_VoxelRaycast_hit_cellzZ_n2, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_distance_n3 = hxc_local_caxecraft_domain_VoxelRaycast_hit_distance_n9, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_hit_n4 = true, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalX_n5 = hxc_local_caxecraft_domain_VoxelRaycast_hit_normalX_n6, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalY_n6 = hxc_local_caxecraft_domain_VoxelRaycast_hit_normalY_n7, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalzZ_n7 = hxc_local_caxecraft_domain_VoxelRaycast_hit_normalzZ_n8, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previousX_n8 = hxc_local_caxecraft_domain_VoxelRaycast_hit_previousX_n3, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previousY_n9 = hxc_local_caxecraft_domain_VoxelRaycast_hit_previousY_n4, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previouszZ_n10 = hxc_local_caxecraft_domain_VoxelRaycast_hit_previouszZ_n5, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_visited_n11 = hxc_local_caxecraft_domain_VoxelRaycast_hit_visited_n10 };
-  return hxc_temp_caxecraft_domain_VoxelRaycast_hit_recordzx2Dresult_n0;
+  return (struct hxc_caxecraft_domain_RaycastHit){ .hxc_cellX = hxc_cellX, .hxc_cellY = hxc_cellY, .hxc_cellZ = hxc_cellZ, .hxc_distance = hxc_distance, .hxc_hit = true, .hxc_normalX = hxc_normalX, .hxc_normalY = hxc_normalY, .hxc_normalZ = hxc_normalZ, .hxc_previousX = hxc_previousX, .hxc_previousY = hxc_previousY, .hxc_previousZ = hxc_previousZ, .hxc_visited = hxc_visited };
 }
 
-struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_method_caxecraft_domain_VoxelRaycast_miss(int32_t hxc_local_caxecraft_domain_VoxelRaycast_miss_previousX_n0, int32_t hxc_local_caxecraft_domain_VoxelRaycast_miss_previousY_n1, int32_t hxc_local_caxecraft_domain_VoxelRaycast_miss_previouszZ_n2, double hxc_local_caxecraft_domain_VoxelRaycast_miss_distance_n3, int32_t hxc_local_caxecraft_domain_VoxelRaycast_miss_visited_n4)
+struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_miss(int32_t hxc_previousX, int32_t hxc_previousY, int32_t hxc_previousZ, double hxc_distance, int32_t hxc_visited)
 {
-  struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_miss_recordzx2Dresult_n0 = (struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd){ .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellX_n0 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellY_n1 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_cellzZ_n2 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_distance_n3 = hxc_local_caxecraft_domain_VoxelRaycast_miss_distance_n3, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_hit_n4 = false, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalX_n5 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalY_n6 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_normalzZ_n7 = 0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previousX_n8 = hxc_local_caxecraft_domain_VoxelRaycast_miss_previousX_n0, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previousY_n9 = hxc_local_caxecraft_domain_VoxelRaycast_miss_previousY_n1, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_previouszZ_n10 = hxc_local_caxecraft_domain_VoxelRaycast_miss_previouszZ_n2, .hxc_field_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd_visited_n11 = hxc_local_caxecraft_domain_VoxelRaycast_miss_visited_n4 };
-  return hxc_temp_caxecraft_domain_VoxelRaycast_miss_recordzx2Dresult_n0;
+  return (struct hxc_caxecraft_domain_RaycastHit){ .hxc_cellX = 0, .hxc_cellY = 0, .hxc_cellZ = 0, .hxc_distance = hxc_distance, .hxc_hit = false, .hxc_normalX = 0, .hxc_normalY = 0, .hxc_normalZ = 0, .hxc_previousX = hxc_previousX, .hxc_previousY = hxc_previousY, .hxc_previousZ = hxc_previousZ, .hxc_visited = hxc_visited };
 }
 
-struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_method_caxecraft_domain_VoxelRaycast_trace(uint8_t *hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_n0, size_t hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_length_n0, double hxc_local_caxecraft_domain_VoxelRaycast_trace_originX_n1, double hxc_local_caxecraft_domain_VoxelRaycast_trace_originY_n2, double hxc_local_caxecraft_domain_VoxelRaycast_trace_originzZ_n3, double hxc_local_caxecraft_domain_VoxelRaycast_trace_directionX_n4, double hxc_local_caxecraft_domain_VoxelRaycast_trace_directionY_n5, double hxc_local_caxecraft_domain_VoxelRaycast_trace_directionzZ_n6, double hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumDistance_n7)
+struct hxc_caxecraft_domain_RaycastHit hxc_caxecraft_domain_VoxelRaycast_trace(uint8_t *hxc_cells, size_t hxc_length, double hxc_originX, double hxc_originY, double hxc_originZ, double hxc_directionX, double hxc_directionY, double hxc_directionZ, double hxc_maximumDistance)
 {
-  uint8_t *hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_borrow_n8 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_n0;
-  size_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_cells_borrow_length_n8 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_borrow_n8;
-  (void)hxc_temp_caxecraft_domain_VoxelRaycast_trace_cells_borrow_length_n8;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n0 = hxc_method_caxecraft_domain_VoxelRaycast_floorToInt(hxc_local_caxecraft_domain_VoxelRaycast_trace_originX_n1);
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n0;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n1 = hxc_method_caxecraft_domain_VoxelRaycast_floorToInt(hxc_local_caxecraft_domain_VoxelRaycast_trace_originY_n2);
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n1;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n2 = hxc_method_caxecraft_domain_VoxelRaycast_floorToInt(hxc_local_caxecraft_domain_VoxelRaycast_trace_originzZ_n3);
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n2;
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n12 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumDistance_n7 < 0.0;
-  if (!(hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumDistance_n7 < 0.0))
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n8 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n8;
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_VoxelRaycast_floorToInt(hxc_originX);
+  int32_t hxc_cellX = hxc_tmp_call_result_n0;
+  int32_t hxc_tmp_call_result_n1 = hxc_caxecraft_domain_VoxelRaycast_floorToInt(hxc_originY);
+  int32_t hxc_cellY = hxc_tmp_call_result_n1;
+  int32_t hxc_tmp_call_result_n2 = hxc_caxecraft_domain_VoxelRaycast_floorToInt(hxc_originZ);
+  int32_t hxc_cellZ = hxc_tmp_call_result_n2;
+  bool hxc_tmp_short_circuit_result_n12 = hxc_maximumDistance < 0.0;
+  if (!(hxc_maximumDistance < 0.0))
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n3 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n4 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n5 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n6 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n3, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n4, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n5);
-    bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n7 = hxc_method_caxecraft_domain_World_contains(hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n6);
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n12 = !hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n7;
+    int32_t hxc_tmp_load_result_n3 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n4 = hxc_cellY;
+    struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n6 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n3, hxc_tmp_load_result_n4, hxc_cellZ);
+    bool hxc_tmp_call_result_n7 = hxc_caxecraft_domain_World_contains(hxc_tmp_call_result_n6);
+    hxc_tmp_short_circuit_result_n12 = !hxc_tmp_call_result_n7;
   }
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n12;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
+  if (hxc_tmp_short_circuit_result_n12)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n9 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n10 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n11 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n12 = hxc_method_caxecraft_domain_VoxelRaycast_miss(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n9, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n10, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n11, 0.0, 0);
-    return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n12;
+    int32_t hxc_tmp_load_result_n9 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n10 = hxc_cellY;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n12 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n9, hxc_tmp_load_result_n10, hxc_cellZ, 0.0, 0);
+    return hxc_tmp_call_result_n12;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n13 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n14 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n15 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-  struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n16 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n13, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n14, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n15);
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n17 = hxc_method_caxecraft_domain_World_query(hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_n0, hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_length_n0, hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n16);
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n18 = hxc_method_caxecraft_domain_World_isSolid(hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n17);
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n18)
+  int32_t hxc_tmp_load_result_n13 = hxc_cellX;
+  int32_t hxc_tmp_load_result_n14 = hxc_cellY;
+  struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n16 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n13, hxc_tmp_load_result_n14, hxc_cellZ);
+  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n17 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n16);
+  bool hxc_tmp_call_result_n18 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n17);
+  if (hxc_tmp_call_result_n18)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n19 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n20 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n21 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n22 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n23 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n24 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n25 = hxc_method_caxecraft_domain_VoxelRaycast_hit(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n19, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n20, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n21, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n22, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n23, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n24, 0, 0, 0, 0.0, 1);
-    return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n25;
+    int32_t hxc_tmp_load_result_n19 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n20 = hxc_cellY;
+    int32_t hxc_tmp_load_result_n21 = hxc_cellZ;
+    int32_t hxc_tmp_load_result_n22 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n23 = hxc_cellY;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n25 = hxc_caxecraft_domain_VoxelRaycast_hit(hxc_tmp_load_result_n19, hxc_tmp_load_result_n20, hxc_tmp_load_result_n21, hxc_tmp_load_result_n22, hxc_tmp_load_result_n23, hxc_cellZ, 0, 0, 0, 0.0, 1);
+    return hxc_tmp_call_result_n25;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n14 = 0;
-  if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionX_n4 > 0.0)
+  int32_t hxc_tmp_conditional_result_n14 = 0;
+  if (hxc_directionX > 0.0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n14 = 1;
+    hxc_tmp_conditional_result_n14 = 1;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n15 = 0;
-    if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionX_n4 < 0.0)
+    int32_t hxc_tmp_conditional_result_n15 = 0;
+    if (hxc_directionX < 0.0)
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n15 = -1;
+      hxc_tmp_conditional_result_n15 = -1;
     }
     else
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n15 = 0;
+      hxc_tmp_conditional_result_n15 = 0;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n26 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n15;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n14 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n26;
+    hxc_tmp_conditional_result_n14 = hxc_tmp_conditional_result_n15;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n27 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n14;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n27;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n17 = 0;
-  if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionY_n5 > 0.0)
+  int32_t hxc_stepX = hxc_tmp_conditional_result_n14;
+  int32_t hxc_tmp_conditional_result_n17 = 0;
+  if (hxc_directionY > 0.0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n17 = 1;
+    hxc_tmp_conditional_result_n17 = 1;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n18 = 0;
-    if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionY_n5 < 0.0)
+    int32_t hxc_tmp_conditional_result_n18 = 0;
+    if (hxc_directionY < 0.0)
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n18 = -1;
+      hxc_tmp_conditional_result_n18 = -1;
     }
     else
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n18 = 0;
+      hxc_tmp_conditional_result_n18 = 0;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n28 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n18;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n17 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n28;
+    hxc_tmp_conditional_result_n17 = hxc_tmp_conditional_result_n18;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n29 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n17;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n29;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n20 = 0;
-  if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionzZ_n6 > 0.0)
+  int32_t hxc_stepY = hxc_tmp_conditional_result_n17;
+  int32_t hxc_tmp_conditional_result_n20 = 0;
+  if (hxc_directionZ > 0.0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n20 = 1;
+    hxc_tmp_conditional_result_n20 = 1;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n21 = 0;
-    if (hxc_local_caxecraft_domain_VoxelRaycast_trace_directionzZ_n6 < 0.0)
+    int32_t hxc_tmp_conditional_result_n21 = 0;
+    if (hxc_directionZ < 0.0)
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n21 = -1;
+      hxc_tmp_conditional_result_n21 = -1;
     }
     else
     {
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n21 = 0;
+      hxc_tmp_conditional_result_n21 = 0;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n30 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n21;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n20 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n30;
+    hxc_tmp_conditional_result_n20 = hxc_tmp_conditional_result_n21;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n31 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n20;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n31;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n32 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n22 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n32 == 0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n32 == 0)
+  int32_t hxc_stepZ = hxc_tmp_conditional_result_n20;
+  int32_t hxc_tmp_load_result_n32 = hxc_stepX;
+  bool hxc_tmp_short_circuit_result_n22 = hxc_tmp_load_result_n32 == 0;
+  if (hxc_tmp_load_result_n32 == 0)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n33 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n22 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n33 == 0;
+    hxc_tmp_short_circuit_result_n22 = hxc_stepY == 0;
   }
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n34 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n22;
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n23 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n34;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n34)
+  bool hxc_tmp_short_circuit_load_result_n34 = hxc_tmp_short_circuit_result_n22;
+  bool hxc_tmp_short_circuit_result_n23 = hxc_tmp_short_circuit_load_result_n34;
+  if (hxc_tmp_short_circuit_load_result_n34)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n35 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n23 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n35 == 0;
+    hxc_tmp_short_circuit_result_n23 = hxc_stepZ == 0;
   }
-  bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n36 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n23;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n36)
+  if (hxc_tmp_short_circuit_result_n23)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n37 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n38 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n39 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n40 = hxc_method_caxecraft_domain_VoxelRaycast_miss(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n37, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n38, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n39, 0.0, 1);
-    return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n40;
+    int32_t hxc_tmp_load_result_n37 = hxc_cellX;
+    int32_t hxc_tmp_load_result_n38 = hxc_cellY;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n40 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n37, hxc_tmp_load_result_n38, hxc_cellZ, 0.0, 1);
+    return hxc_tmp_call_result_n40;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n41 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n25 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n41 == 0)
+  int32_t hxc_tmp_load_result_n41 = hxc_stepX;
+  double hxc_tmp_conditional_result_n25 = 0.0;
+  if (hxc_tmp_load_result_n41 == 0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n25 = 0.0;
+    hxc_tmp_conditional_result_n25 = 0.0;
   }
   else
   {
-    double hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n42 = hxc_method_caxecraft_domain_VoxelRaycast_abs(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(1.0, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionX_n4));
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n25 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n42;
+    double hxc_tmp_call_result_n42 = hxc_caxecraft_domain_VoxelRaycast_abs(hxc_f64_divide_zero_safe(1.0, hxc_directionX));
+    hxc_tmp_conditional_result_n25 = hxc_tmp_call_result_n42;
   }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n43 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n25;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_deltaX_n24 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n43;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n44 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n27 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n44 == 0)
+  double hxc_deltaX = hxc_tmp_conditional_result_n25;
+  int32_t hxc_tmp_load_result_n44 = hxc_stepY;
+  double hxc_tmp_conditional_result_n27 = 0.0;
+  if (hxc_tmp_load_result_n44 == 0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n27 = 0.0;
-  }
-  else
-  {
-    double hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n45 = hxc_method_caxecraft_domain_VoxelRaycast_abs(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(1.0, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionY_n5));
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n27 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n45;
-  }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n46 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n27;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_deltaY_n26 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n46;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n47 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n29 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n47 == 0)
-  {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n29 = 0.0;
+    hxc_tmp_conditional_result_n27 = 0.0;
   }
   else
   {
-    double hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n48 = hxc_method_caxecraft_domain_VoxelRaycast_abs(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(1.0, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionzZ_n6));
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n29 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n48;
+    double hxc_tmp_call_result_n45 = hxc_caxecraft_domain_VoxelRaycast_abs(hxc_f64_divide_zero_safe(1.0, hxc_directionY));
+    hxc_tmp_conditional_result_n27 = hxc_tmp_call_result_n45;
   }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n49 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n29;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_deltazZ_n28 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n49;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n50 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n31 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n50 == 0)
+  double hxc_deltaY = hxc_tmp_conditional_result_n27;
+  int32_t hxc_tmp_load_result_n47 = hxc_stepZ;
+  double hxc_tmp_conditional_result_n29 = 0.0;
+  if (hxc_tmp_load_result_n47 == 0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n31 = 0.0;
+    hxc_tmp_conditional_result_n29 = 0.0;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n51 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n32 = 0;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n51 > 0)
+    double hxc_tmp_call_result_n48 = hxc_caxecraft_domain_VoxelRaycast_abs(hxc_f64_divide_zero_safe(1.0, hxc_directionZ));
+    hxc_tmp_conditional_result_n29 = hxc_tmp_call_result_n48;
+  }
+  double hxc_deltaZ = hxc_tmp_conditional_result_n29;
+  int32_t hxc_tmp_load_result_n50 = hxc_stepX;
+  double hxc_tmp_conditional_result_n31 = 0.0;
+  if (hxc_tmp_load_result_n50 == 0)
+  {
+    hxc_tmp_conditional_result_n31 = 0.0;
+  }
+  else
+  {
+    int32_t hxc_tmp_load_result_n51 = hxc_stepX;
+    int32_t hxc_tmp_conditional_result_n32 = 0;
+    if (hxc_tmp_load_result_n51 > 0)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n52 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n32 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n52, 1);
+      hxc_tmp_conditional_result_n32 = hxc_i32_add_wrapping(hxc_cellX, 1);
     }
     else
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n53 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n32 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n53;
+      hxc_tmp_conditional_result_n32 = hxc_cellX;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n54 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n32;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n31 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe((double)hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n54 - hxc_local_caxecraft_domain_VoxelRaycast_trace_originX_n1, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionX_n4);
+    hxc_tmp_conditional_result_n31 = hxc_f64_divide_zero_safe((double)hxc_tmp_conditional_result_n32 - hxc_originX, hxc_directionX);
   }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n55 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n31;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n55;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n56 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n34 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n56 == 0)
+  double hxc_maximumX = hxc_tmp_conditional_result_n31;
+  int32_t hxc_tmp_load_result_n56 = hxc_stepY;
+  double hxc_tmp_conditional_result_n34 = 0.0;
+  if (hxc_tmp_load_result_n56 == 0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n34 = 0.0;
+    hxc_tmp_conditional_result_n34 = 0.0;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n57 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n35 = 0;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n57 > 0)
+    int32_t hxc_tmp_load_result_n57 = hxc_stepY;
+    int32_t hxc_tmp_conditional_result_n35 = 0;
+    if (hxc_tmp_load_result_n57 > 0)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n58 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n35 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n58, 1);
+      hxc_tmp_conditional_result_n35 = hxc_i32_add_wrapping(hxc_cellY, 1);
     }
     else
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n59 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n35 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n59;
+      hxc_tmp_conditional_result_n35 = hxc_cellY;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n60 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n35;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n34 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe((double)hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n60 - hxc_local_caxecraft_domain_VoxelRaycast_trace_originY_n2, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionY_n5);
+    hxc_tmp_conditional_result_n34 = hxc_f64_divide_zero_safe((double)hxc_tmp_conditional_result_n35 - hxc_originY, hxc_directionY);
   }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n61 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n34;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n61;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n62 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n37 = 0.0;
-  if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n62 == 0)
+  double hxc_maximumY = hxc_tmp_conditional_result_n34;
+  int32_t hxc_tmp_load_result_n62 = hxc_stepZ;
+  double hxc_tmp_conditional_result_n37 = 0.0;
+  if (hxc_tmp_load_result_n62 == 0)
   {
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n37 = 0.0;
+    hxc_tmp_conditional_result_n37 = 0.0;
   }
   else
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n63 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n38 = 0;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n63 > 0)
+    int32_t hxc_tmp_load_result_n63 = hxc_stepZ;
+    int32_t hxc_tmp_conditional_result_n38 = 0;
+    if (hxc_tmp_load_result_n63 > 0)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n64 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n38 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n64, 1);
+      hxc_tmp_conditional_result_n38 = hxc_i32_add_wrapping(hxc_cellZ, 1);
     }
     else
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n65 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n38 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n65;
+      hxc_tmp_conditional_result_n38 = hxc_cellZ;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n66 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n38;
-    hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n37 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe((double)hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n66 - hxc_local_caxecraft_domain_VoxelRaycast_trace_originzZ_n3, hxc_local_caxecraft_domain_VoxelRaycast_trace_directionzZ_n6);
+    hxc_tmp_conditional_result_n37 = hxc_f64_divide_zero_safe((double)hxc_tmp_conditional_result_n38 - hxc_originZ, hxc_directionZ);
   }
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n67 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dresult_n37;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_conditionalzx2Dloadzx2Dresult_n67;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n68 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n68;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n69 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n69;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n70 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n70;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_normalX_n42 = 0;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_normalY_n43 = 0;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_normalzZ_n44 = 0;
-  double hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45 = 0.0;
-  int32_t hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46 = 1;
+  double hxc_maximumZ = hxc_tmp_conditional_result_n37;
+  int32_t hxc_previousX = hxc_cellX;
+  int32_t hxc_previousY = hxc_cellY;
+  int32_t hxc_previousZ = hxc_cellZ;
+  int32_t hxc_normalX = 0;
+  int32_t hxc_normalY = 0;
+  int32_t hxc_normalZ = 0;
+  double hxc_distance = 0.0;
+  int32_t hxc_visited = 1;
   while (1)
   {
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n71 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-    if (!(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n71 < 88))
+    if (!(hxc_visited < 88))
     {
       break;
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n72 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-    hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n72;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n73 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-    hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n73;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n74 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-    hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n74;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n75 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-    bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n47 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n75 != 0;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n75 != 0)
+    hxc_previousX = hxc_cellX;
+    hxc_previousY = hxc_cellY;
+    hxc_previousZ = hxc_cellZ;
+    int32_t hxc_tmp_load_result_n75 = hxc_stepX;
+    bool hxc_tmp_short_circuit_result_n47 = hxc_tmp_load_result_n75 != 0;
+    if (hxc_tmp_load_result_n75 != 0)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n76 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n48 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n76 == 0;
-      if (!(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n76 == 0))
+      int32_t hxc_tmp_load_result_n76 = hxc_stepY;
+      bool hxc_tmp_short_circuit_result_n48 = hxc_tmp_load_result_n76 == 0;
+      if (!(hxc_tmp_load_result_n76 == 0))
       {
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n77 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n78 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33;
-        hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n48 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n77 <= hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n78;
+        double hxc_tmp_load_result_n77 = hxc_maximumX;
+        hxc_tmp_short_circuit_result_n48 = hxc_tmp_load_result_n77 <= hxc_maximumY;
       }
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n79 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n48;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n47 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n79;
+      hxc_tmp_short_circuit_result_n47 = hxc_tmp_short_circuit_result_n48;
     }
-    bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n80 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n47;
-    bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n49 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n80;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n80)
+    bool hxc_tmp_short_circuit_load_result_n80 = hxc_tmp_short_circuit_result_n47;
+    bool hxc_tmp_short_circuit_result_n49 = hxc_tmp_short_circuit_load_result_n80;
+    if (hxc_tmp_short_circuit_load_result_n80)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n81 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n50 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n81 == 0;
-      if (!(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n81 == 0))
+      int32_t hxc_tmp_load_result_n81 = hxc_stepZ;
+      bool hxc_tmp_short_circuit_result_n50 = hxc_tmp_load_result_n81 == 0;
+      if (!(hxc_tmp_load_result_n81 == 0))
       {
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n82 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n83 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36;
-        hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n50 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n82 <= hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n83;
+        double hxc_tmp_load_result_n82 = hxc_maximumX;
+        hxc_tmp_short_circuit_result_n50 = hxc_tmp_load_result_n82 <= hxc_maximumZ;
       }
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n84 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n50;
-      hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n49 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n84;
+      hxc_tmp_short_circuit_result_n49 = hxc_tmp_short_circuit_result_n50;
     }
-    bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n85 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n49;
-    if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n85)
+    if (hxc_tmp_short_circuit_result_n49)
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n86 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n87 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n86, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n87);
-      double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n88 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30;
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n88;
-      double hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n89 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30;
-      double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n90 = hxc_local_caxecraft_domain_VoxelRaycast_trace_deltaX_n24;
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumX_n30 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n89 + hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n90;
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n91 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepX_n13;
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_normalX_n42 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n91);
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_normalY_n43 = 0;
-      hxc_local_caxecraft_domain_VoxelRaycast_trace_normalzZ_n44 = 0;
+      int32_t hxc_tmp_compound_load_result_n86 = hxc_cellX;
+      hxc_cellX = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n86, hxc_stepX);
+      hxc_distance = hxc_maximumX;
+      double hxc_tmp_compound_load_result_n89 = hxc_maximumX;
+      hxc_maximumX = hxc_tmp_compound_load_result_n89 + hxc_deltaX;
+      hxc_normalX = hxc_i32_negate_wrapping(hxc_stepX);
+      hxc_normalY = 0;
+      hxc_normalZ = 0;
     }
     else
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n92 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n51 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n92 != 0;
-      if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n92 != 0)
+      int32_t hxc_tmp_load_result_n92 = hxc_stepY;
+      bool hxc_tmp_short_circuit_result_n51 = hxc_tmp_load_result_n92 != 0;
+      if (hxc_tmp_load_result_n92 != 0)
       {
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n93 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-        bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n52 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n93 == 0;
-        if (!(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n93 == 0))
+        int32_t hxc_tmp_load_result_n93 = hxc_stepZ;
+        bool hxc_tmp_short_circuit_result_n52 = hxc_tmp_load_result_n93 == 0;
+        if (!(hxc_tmp_load_result_n93 == 0))
         {
-          double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n94 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33;
-          double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n95 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36;
-          hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n52 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n94 <= hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n95;
+          double hxc_tmp_load_result_n94 = hxc_maximumY;
+          hxc_tmp_short_circuit_result_n52 = hxc_tmp_load_result_n94 <= hxc_maximumZ;
         }
-        bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n96 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n52;
-        hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n51 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n96;
+        hxc_tmp_short_circuit_result_n51 = hxc_tmp_short_circuit_result_n52;
       }
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n97 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dresult_n51;
-      if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_shortzx2Dcircuitzx2Dloadzx2Dresult_n97)
+      if (hxc_tmp_short_circuit_result_n51)
       {
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n98 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n99 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n98, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n99);
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n100 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n100;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n101 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n102 = hxc_local_caxecraft_domain_VoxelRaycast_trace_deltaY_n26;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumY_n33 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n101 + hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n102;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalX_n42 = 0;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n103 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepY_n16;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalY_n43 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n103);
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalzZ_n44 = 0;
+        int32_t hxc_tmp_compound_load_result_n98 = hxc_cellY;
+        hxc_cellY = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n98, hxc_stepY);
+        hxc_distance = hxc_maximumY;
+        double hxc_tmp_compound_load_result_n101 = hxc_maximumY;
+        hxc_maximumY = hxc_tmp_compound_load_result_n101 + hxc_deltaY;
+        hxc_normalX = 0;
+        hxc_normalY = hxc_i32_negate_wrapping(hxc_stepY);
+        hxc_normalZ = 0;
       }
       else
       {
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n104 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n105 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n104, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n105);
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n106 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n106;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n107 = hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n108 = hxc_local_caxecraft_domain_VoxelRaycast_trace_deltazZ_n28;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumzZ_n36 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_compoundzx2Dloadzx2Dresult_n107 + hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n108;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalX_n42 = 0;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalY_n43 = 0;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n109 = hxc_local_caxecraft_domain_VoxelRaycast_trace_stepzZ_n19;
-        hxc_local_caxecraft_domain_VoxelRaycast_trace_normalzZ_n44 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n109);
+        int32_t hxc_tmp_compound_load_result_n104 = hxc_cellZ;
+        hxc_cellZ = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n104, hxc_stepZ);
+        hxc_distance = hxc_maximumZ;
+        double hxc_tmp_compound_load_result_n107 = hxc_maximumZ;
+        hxc_maximumZ = hxc_tmp_compound_load_result_n107 + hxc_deltaZ;
+        hxc_normalX = 0;
+        hxc_normalY = 0;
+        hxc_normalZ = hxc_i32_negate_wrapping(hxc_stepZ);
       }
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_incrementzx2Dloadzx2Dresult_n110 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-    hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_VoxelRaycast_trace_incrementzx2Dloadzx2Dresult_n110, 1);
-    double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n111 = hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45;
-    if (!(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n111 > hxc_local_caxecraft_domain_VoxelRaycast_trace_maximumDistance_n7))
+    hxc_visited = hxc_i32_add_wrapping(hxc_visited, 1);
+    if (!(hxc_distance > hxc_maximumDistance))
     {
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n118 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n119 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-      int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n120 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-      struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n121 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n118, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n119, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n120);
-      struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_VoxelRaycast_trace_coord_n53 = hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n121;
-      struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n122 = hxc_local_caxecraft_domain_VoxelRaycast_trace_coord_n53;
-      bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n123 = hxc_method_caxecraft_domain_World_contains(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n122);
-      if (!hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n123)
+      int32_t hxc_tmp_load_result_n118 = hxc_cellX;
+      int32_t hxc_tmp_load_result_n119 = hxc_cellY;
+      struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n121 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n118, hxc_tmp_load_result_n119, hxc_cellZ);
+      struct hxc_caxecraft_domain_BlockCoord hxc_coord = hxc_tmp_call_result_n121;
+      bool hxc_tmp_call_result_n123 = hxc_caxecraft_domain_World_contains(hxc_coord);
+      if (!hxc_tmp_call_result_n123)
       {
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n124 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n125 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n126 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41;
-        double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n127 = hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45;
-        int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n128 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-        struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n129 = hxc_method_caxecraft_domain_VoxelRaycast_miss(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n124, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n125, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n126, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n127, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n128);
-        return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n129;
+        int32_t hxc_tmp_load_result_n124 = hxc_previousX;
+        int32_t hxc_tmp_load_result_n125 = hxc_previousY;
+        int32_t hxc_tmp_load_result_n126 = hxc_previousZ;
+        double hxc_tmp_load_result_n127 = hxc_distance;
+        struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n129 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n124, hxc_tmp_load_result_n125, hxc_tmp_load_result_n126, hxc_tmp_load_result_n127, hxc_visited);
+        return hxc_tmp_call_result_n129;
       }
       else
       {
-        struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n130 = hxc_local_caxecraft_domain_VoxelRaycast_trace_coord_n53;
-        enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n131 = hxc_method_caxecraft_domain_World_query(hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_n0, hxc_local_caxecraft_domain_VoxelRaycast_trace_cells_length_n0, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n130);
-        bool hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n132 = hxc_method_caxecraft_domain_World_isSolid(hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n131);
-        if (hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n132)
+        enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n131 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+        bool hxc_tmp_call_result_n132 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n131);
+        if (hxc_tmp_call_result_n132)
         {
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n133 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellX_n9;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n134 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellY_n10;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n135 = hxc_local_caxecraft_domain_VoxelRaycast_trace_cellzZ_n11;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n136 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n137 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n138 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n139 = hxc_local_caxecraft_domain_VoxelRaycast_trace_normalX_n42;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n140 = hxc_local_caxecraft_domain_VoxelRaycast_trace_normalY_n43;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n141 = hxc_local_caxecraft_domain_VoxelRaycast_trace_normalzZ_n44;
-          double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n142 = hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45;
-          int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n143 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-          struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n144 = hxc_method_caxecraft_domain_VoxelRaycast_hit(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n133, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n134, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n135, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n136, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n137, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n138, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n139, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n140, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n141, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n142, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n143);
-          return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n144;
+          int32_t hxc_tmp_load_result_n133 = hxc_cellX;
+          int32_t hxc_tmp_load_result_n134 = hxc_cellY;
+          int32_t hxc_tmp_load_result_n135 = hxc_cellZ;
+          int32_t hxc_tmp_load_result_n136 = hxc_previousX;
+          int32_t hxc_tmp_load_result_n137 = hxc_previousY;
+          int32_t hxc_tmp_load_result_n138 = hxc_previousZ;
+          int32_t hxc_tmp_load_result_n139 = hxc_normalX;
+          int32_t hxc_tmp_load_result_n140 = hxc_normalY;
+          int32_t hxc_tmp_load_result_n141 = hxc_normalZ;
+          double hxc_tmp_load_result_n142 = hxc_distance;
+          struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n144 = hxc_caxecraft_domain_VoxelRaycast_hit(hxc_tmp_load_result_n133, hxc_tmp_load_result_n134, hxc_tmp_load_result_n135, hxc_tmp_load_result_n136, hxc_tmp_load_result_n137, hxc_tmp_load_result_n138, hxc_tmp_load_result_n139, hxc_tmp_load_result_n140, hxc_tmp_load_result_n141, hxc_tmp_load_result_n142, hxc_visited);
+          return hxc_tmp_call_result_n144;
         }
         else
         {
@@ -450,19 +381,17 @@ struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df1947734413
         }
       }
     }
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n112 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n113 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n114 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41;
-    double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n115 = hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45;
-    int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n116 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-    struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n117 = hxc_method_caxecraft_domain_VoxelRaycast_miss(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n112, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n113, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n114, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n115, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n116);
-    return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n117;
+    int32_t hxc_tmp_load_result_n112 = hxc_previousX;
+    int32_t hxc_tmp_load_result_n113 = hxc_previousY;
+    int32_t hxc_tmp_load_result_n114 = hxc_previousZ;
+    double hxc_tmp_load_result_n115 = hxc_distance;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n117 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n112, hxc_tmp_load_result_n113, hxc_tmp_load_result_n114, hxc_tmp_load_result_n115, hxc_visited);
+    return hxc_tmp_call_result_n117;
   }
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n145 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousX_n39;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n146 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previousY_n40;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n147 = hxc_local_caxecraft_domain_VoxelRaycast_trace_previouszZ_n41;
-  double hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n148 = hxc_local_caxecraft_domain_VoxelRaycast_trace_distance_n45;
-  int32_t hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n149 = hxc_local_caxecraft_domain_VoxelRaycast_trace_visited_n46;
-  struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n150 = hxc_method_caxecraft_domain_VoxelRaycast_miss(hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n145, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n146, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n147, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n148, hxc_temp_caxecraft_domain_VoxelRaycast_trace_loadzx2Dresult_n149);
-  return hxc_temp_caxecraft_domain_VoxelRaycast_trace_callzx2Dresult_n150;
+  int32_t hxc_tmp_load_result_n145 = hxc_previousX;
+  int32_t hxc_tmp_load_result_n146 = hxc_previousY;
+  int32_t hxc_tmp_load_result_n147 = hxc_previousZ;
+  double hxc_tmp_load_result_n148 = hxc_distance;
+  struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n150 = hxc_caxecraft_domain_VoxelRaycast_miss(hxc_tmp_load_result_n145, hxc_tmp_load_result_n146, hxc_tmp_load_result_n147, hxc_tmp_load_result_n148, hxc_visited);
+  return hxc_tmp_call_result_n150;
 }

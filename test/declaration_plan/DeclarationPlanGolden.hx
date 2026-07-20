@@ -39,6 +39,7 @@ class DeclarationPlanGolden {
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
 			plan: forwardDump,
+			guardProof: guardProof(),
 			diagnostics: {
 				byValueCycle: cycleDiagnostic(),
 				sourceOnlyComplete: sourceOnlyDiagnostic(),
@@ -49,6 +50,33 @@ class DeclarationPlanGolden {
 			},
 			files: files
 		}));
+	}
+
+	static function guardProof():HeaderGuardProof {
+		final ordinaryPath = "include/hxc/modules/caxecraft/domain/BlockCoord.h";
+		final ordinaryGuard = CDeclarationPlanner.headerGuardFor(ordinaryPath);
+		if (ordinaryGuard != "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED")
+			throw 'readable BlockCoord header guard drifted to `$ordinaryGuard`';
+
+		final paths = ["include/hxc/modules/demo/FooBar.h", "include/hxc/modules/demo/foo-bar.h"];
+		final forward = CDeclarationPlanner.headerGuardsFor(paths);
+		final reversedPaths = paths.copy();
+		reversedPaths.reverse();
+		final reversed = CDeclarationPlanner.headerGuardsFor(reversedPaths);
+		final collisions:Array<HeaderGuardEntry> = [];
+		for (path in paths) {
+			final guard = forward.get(path);
+			if (guard == null || reversed.get(path) != guard)
+				throw 'header guard for `$path` changed with discovery order';
+			collisions.push({path: path, guard: guard});
+		}
+		if (collisions[0].guard == collisions[1].guard)
+			throw "normalized header-guard collision remained unresolved";
+		return {
+			ordinaryPath: ordinaryPath,
+			ordinaryGuard: ordinaryGuard,
+			collisions: collisions
+		};
 	}
 
 	static function snapshot(reverse:Bool):TypedCContractSnapshot {
@@ -386,6 +414,17 @@ class DeclarationPlanGolden {
 			attributes: []
 		};
 	}
+}
+
+private typedef HeaderGuardEntry = {
+	final path:String;
+	final guard:String;
+}
+
+private typedef HeaderGuardProof = {
+	final ordinaryPath:String;
+	final ordinaryGuard:String;
+	final collisions:Array<HeaderGuardEntry>;
 }
 
 private typedef PreambleEntry = {

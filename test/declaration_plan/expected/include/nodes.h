@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_6E6F6465732E68_INCLUDED
-#define HXC_GENERATED_PATH_6E6F6465732E68_INCLUDED
+#ifndef HXC_NODES_H_INCLUDED
+#define HXC_NODES_H_INCLUDED
 
 #include <stdint.h>
 
@@ -21,4 +21,4 @@ struct node_b {
   int32_t value;
 };
 
-#endif /* HXC_GENERATED_PATH_6E6F6465732E68_INCLUDED */
+#endif /* HXC_NODES_H_INCLUDED */

@@ -43,6 +43,7 @@ import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchPreparer;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyDispatch.CPreparedBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumCase;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
@@ -1414,6 +1415,17 @@ private class FunctionBuilder {
 			],
 			source: functionSpan
 		};
+		final coalescing = new CBodyValueCoalescingPlanner().plan(ir);
+		final inlinedValueIds:Array<String> = [];
+		for (valueId => request in temporaryRequests) {
+			if (coalescing.shouldInline(valueId)) {
+				inlinedValueIds.push(valueId);
+			} else {
+				context.symbols.register(request);
+			}
+		}
+		for (valueId in inlinedValueIds)
+			temporaryRequests.remove(valueId);
 		return {
 			prepared: prepared,
 			ir: ir,
@@ -2446,10 +2458,11 @@ private class FunctionBuilder {
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final addressableBase = aggregateReadPlace(receiver);
 		if (addressableBase != null) {
-			final pointer:HxcIRResult = {id: nextValueId(), type: IRTPointer(field.type.irType, false)};
-			appendInstruction(pointer, IRIOAddress(IRPField(addressableBase, fieldName)), source, "record-field-address");
-			registerValueTemporary(pointer.id, "record-field-address");
-			return loadPlace({place: IRPDereference(pointer.id), mapping: field.type, mutable: false}, expression.pos, "record-field-load");
+			// A compiler-owned record local is already a stable C place. Reading its
+			// field does not require manufacturing `&record.field` and then loading
+			// through that pointer. Keeping the field place structural also lets the
+			// value-coalescing proof emit `record.field` at one safe use.
+			return loadPlace({place: IRPField(addressableBase, fieldName), mapping: field.type, mutable: false}, expression.pos, "record-field-load");
 		}
 		final receiverValue = coerce(lowerValue(receiver, receiverType), receiverType, receiver.pos, 'TField($fieldName:receiver)');
 		final result:HxcIRResult = {id: nextValueId(), type: field.type.irType};
@@ -3611,7 +3624,6 @@ private class FunctionBuilder {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "call-result"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
-			context.symbols.register(request);
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: target.returnMapping};
@@ -3841,7 +3853,6 @@ private class FunctionBuilder {
 			final ordinal = temporaryOrdinal++;
 			final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, "instance-call-result"]),
 				CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
-			context.symbols.register(request);
 			temporaryRequests.set(result.id, request);
 		}
 		return {id: result.id, type: result.type, mapping: returnMapping};
@@ -4014,7 +4025,6 @@ private class FunctionBuilder {
 		final ordinal = temporaryOrdinal++;
 		final request = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role]),
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
-		context.symbols.register(request);
 		temporaryRequests.set(valueId, request);
 	}
 

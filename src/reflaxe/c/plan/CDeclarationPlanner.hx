@@ -1,5 +1,6 @@
 package reflaxe.c.plan;
 
+import haxe.crypto.Sha256;
 import haxe.io.Bytes;
 import reflaxe.c.contract.TypedCContract.TypedCBuildFact;
 import reflaxe.c.contract.TypedCContract.TypedCContractSnapshot;
@@ -15,21 +16,147 @@ import reflaxe.c.plan.CDeclarationPlan.CPlannedDeclaration;
 import reflaxe.c.plan.CDeclarationPlan.CPlannedForwardDeclaration;
 import reflaxe.c.plan.CDeclarationPlan.CPlannedInclude;
 
+private typedef CHeaderGuardState = {
+	final path:String;
+	final base:String;
+	final hash:String;
+	var hashLength:Int;
+}
+
 /** Pure front end for complete-type, forward-declaration, and include planning. */
 class CDeclarationPlanner {
+	public static inline final MAX_HEADER_GUARD_LENGTH = 120;
+
 	public function new() {}
 
 	public function plan(snapshot:TypedCContractSnapshot):CDeclarationPlan
 		return new PlanningState(snapshot).build();
 
-	/** Collision-free C identifier derived from the normalized logical header path. */
-	public static function headerGuardFor(path:String):String {
-		final bytes = Bytes.ofString(path);
-		final encoded = new StringBuf();
-		for (index in 0...bytes.length) {
-			encoded.add(StringTools.hex(bytes.get(index), 2));
+	/** Readable C identifier derived from one normalized logical header path. */
+	public static function headerGuardFor(path:String):String
+		return headerGuardsFor([path]).get(path) ?? throw new CDeclarationPlanningError('could not allocate header guard for `$path`');
+
+	/**
+		Allocate guards as a set so ordinary paths stay readable and only actual
+		collisions receive a digest suffix. This mirrors how human-authored projects
+		tend to name guards while retaining deterministic whole-project safety.
+	**/
+	public static function headerGuardsFor(paths:Array<String>):Map<String, String> {
+		final unique:Map<String, Bool> = [];
+		final states:Array<CHeaderGuardState> = [];
+		for (path in paths) {
+			if (unique.exists(path))
+				continue;
+			unique.set(path, true);
+			final base = readableHeaderGuard(path);
+			states.push({
+				path: path,
+				base: base,
+				hash: Sha256.encode(path).toUpperCase(),
+				hashLength: base.length > MAX_HEADER_GUARD_LENGTH ? 16 : 0
+			});
 		}
-		return 'HXC_GENERATED_PATH_${encoded.toString()}_INCLUDED';
+		states.sort((left, right) -> compareUtf8Static(left.path, right.path));
+
+		var rounds = 0;
+		while (true) {
+			final byName:Map<String, Array<CHeaderGuardState>> = [];
+			for (state in states) {
+				final name = headerGuardName(state);
+				var group = byName.get(name);
+				if (group == null) {
+					group = [];
+					byName.set(name, group);
+				}
+				group.push(state);
+			}
+			var collided = false;
+			for (group in byName) {
+				if (group.length < 2)
+					continue;
+				collided = true;
+				for (state in group) {
+					state.hashLength = state.hashLength == 0 ? 16 : state.hashLength + 8;
+					if (state.hashLength > 64) {
+						throw new CDeclarationPlanningError("SHA-256 could not distinguish generated header guards");
+					}
+				}
+			}
+			if (!collided)
+				break;
+			rounds++;
+			if (rounds > states.length * 8 + 1)
+				throw new CDeclarationPlanningError("generated header guard allocation did not converge");
+		}
+
+		final result:Map<String, String> = [];
+		for (state in states)
+			result.set(state.path, headerGuardName(state));
+		return result;
+	}
+
+	static function readableHeaderGuard(path:String):String {
+		var readablePath = path;
+		for (prefix in ["include/hxc/modules/", "include/hxc/", "modules/"]) {
+			if (StringTools.startsWith(readablePath, prefix)) {
+				readablePath = readablePath.substr(prefix.length);
+				break;
+			}
+		}
+		final bytes = Bytes.ofString(readablePath);
+		final encoded = new StringBuf();
+		var separatorPending = false;
+		var previousWasLowerOrDigit = false;
+		for (index in 0...bytes.length) {
+			final byte = bytes.get(index);
+			final lower = byte >= 0x61 && byte <= 0x7A;
+			final upper = byte >= 0x41 && byte <= 0x5A;
+			final digit = byte >= 0x30 && byte <= 0x39;
+			if (lower || upper || digit) {
+				if ((separatorPending || upper && previousWasLowerOrDigit) && encoded.length > 0)
+					encoded.add("_");
+				encoded.addChar(lower ? byte - 0x20 : byte);
+				separatorPending = false;
+				previousWasLowerOrDigit = lower || digit;
+			} else if (byte < 0x80) {
+				separatorPending = encoded.length > 0;
+				previousWasLowerOrDigit = false;
+			} else {
+				if (encoded.length > 0)
+					encoded.add("_");
+				encoded.add("X" + StringTools.hex(byte, 2));
+				separatorPending = true;
+				previousWasLowerOrDigit = false;
+			}
+		}
+		final body = encoded.toString();
+		return 'HXC_${body == "" ? "HEADER" : body}_INCLUDED';
+	}
+
+	static function headerGuardName(state:CHeaderGuardState):String {
+		if (state.hashLength == 0)
+			return state.base;
+		final suffix = '_H${state.hash.substr(0, state.hashLength)}_INCLUDED';
+		final marker = "_INCLUDED";
+		var root = StringTools.endsWith(state.base, marker) ? state.base.substr(0, state.base.length - marker.length) : state.base;
+		final keep = MAX_HEADER_GUARD_LENGTH - suffix.length;
+		if (root.length > keep)
+			root = root.substr(0, keep);
+		while (StringTools.endsWith(root, "_"))
+			root = root.substr(0, root.length - 1);
+		return root + suffix;
+	}
+
+	static function compareUtf8Static(left:String, right:String):Int {
+		final leftBytes = Bytes.ofString(left);
+		final rightBytes = Bytes.ofString(right);
+		final common = leftBytes.length < rightBytes.length ? leftBytes.length : rightBytes.length;
+		for (index in 0...common) {
+			final difference = leftBytes.get(index) - rightBytes.get(index);
+			if (difference != 0)
+				return difference;
+		}
+		return leftBytes.length - rightBytes.length;
 	}
 }
 
@@ -57,8 +184,13 @@ private class PlanningState {
 
 	public function build():CDeclarationPlan {
 		final headers:Array<CHeaderPlan> = [];
-		for (path in headerPaths()) {
-			headers.push(planHeader(path));
+		final paths = headerPaths();
+		final guards = CDeclarationPlanner.headerGuardsFor(paths);
+		for (path in paths) {
+			final guard = guards.get(path);
+			if (guard == null)
+				throw "unreachable missing generated header guard";
+			headers.push(planHeader(path, guard));
 		}
 
 		final sourceDeclarations = declarations.filter(declaration -> declaration.headerPath == null);
@@ -210,7 +342,7 @@ private class PlanningState {
 		return paths;
 	}
 
-	function planHeader(path:String):CHeaderPlan {
+	function planHeader(path:String, guard:String):CHeaderPlan {
 		final group = declarations.filter(declaration -> declaration.headerPath == path);
 		final visibility = headerVisibility(group[0]);
 		for (declaration in group) {
@@ -235,7 +367,7 @@ private class PlanningState {
 		return {
 			path: path,
 			visibility: visibility,
-			guard: guardFor(path),
+			guard: guard,
 			includes: includes,
 			forwardDeclarations: forwards,
 			declarations: orderedDeclarations(group).map(plannedDeclaration)
@@ -470,10 +602,6 @@ private class PlanningState {
 
 	function headerVisibility(declaration:TypedCDeclaration):CPlanHeaderVisibility
 		return declaration.headerVisibility == "public" ? PHVPublic : PHVPrivate;
-
-	function guardFor(path:String):String {
-		return CDeclarationPlanner.headerGuardFor(path);
-	}
 
 	function validatePath(path:String, requireHeaderSuffix:Bool, label:String):Void {
 		if (path == "" || StringTools.startsWith(path, "/") || path.indexOf("\\") != -1 || path.indexOf("\"") != -1 || path.indexOf("<") != -1

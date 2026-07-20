@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include "hxc/modules/caxecraft/domain/AxisMove.h"
 #include "hxc/modules/caxecraft/domain/BlockCoord.h"
@@ -14,4 +14,4 @@
 #include "hxc/modules/caxecraft/domain/WorldStorage.h"
 #include "hxc/modules/caxecraft/qa/DomainProbe.h"
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

@@ -1,185 +1,152 @@
 #include "hxc/program.h"
 
-bool hxc_method_caxecraft_domain_World_contains(struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_contains_coord_n0)
+bool hxc_caxecraft_domain_World_contains(struct hxc_caxecraft_domain_BlockCoord hxc_coord)
 {
-  int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n0 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_x_n0;
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n1 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n0 >= 0;
-  if (hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n0 >= 0)
+  bool hxc_tmp_short_circuit_result_n1 = hxc_coord.hxc_x >= 0;
+  if (hxc_coord.hxc_x >= 0)
   {
-    int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n1 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_x_n0;
-    hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n1 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n1 < 32;
+    hxc_tmp_short_circuit_result_n1 = hxc_coord.hxc_x < 32;
   }
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n2 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n1;
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n2 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n2;
-  if (hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n2)
+  bool hxc_tmp_short_circuit_load_result_n2 = hxc_tmp_short_circuit_result_n1;
+  bool hxc_tmp_short_circuit_result_n2 = hxc_tmp_short_circuit_load_result_n2;
+  if (hxc_tmp_short_circuit_load_result_n2)
   {
-    int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n3 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_y_n1;
-    hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n2 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n3 >= 0;
+    hxc_tmp_short_circuit_result_n2 = hxc_coord.hxc_y >= 0;
   }
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n4 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n2;
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n3 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n4;
-  if (hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n4)
+  bool hxc_tmp_short_circuit_load_result_n4 = hxc_tmp_short_circuit_result_n2;
+  bool hxc_tmp_short_circuit_result_n3 = hxc_tmp_short_circuit_load_result_n4;
+  if (hxc_tmp_short_circuit_load_result_n4)
   {
-    int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n5 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_y_n1;
-    hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n3 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n5 < 16;
+    hxc_tmp_short_circuit_result_n3 = hxc_coord.hxc_y < 16;
   }
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n6 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n3;
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n4 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n6;
-  if (hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n6)
+  bool hxc_tmp_short_circuit_load_result_n6 = hxc_tmp_short_circuit_result_n3;
+  bool hxc_tmp_short_circuit_result_n4 = hxc_tmp_short_circuit_load_result_n6;
+  if (hxc_tmp_short_circuit_load_result_n6)
   {
-    int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n7 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_zz_n2;
-    hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n4 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n7 >= 0;
+    hxc_tmp_short_circuit_result_n4 = hxc_coord.hxc_z >= 0;
   }
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n4;
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n8;
-  if (hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
+  bool hxc_tmp_short_circuit_load_result_n8 = hxc_tmp_short_circuit_result_n4;
+  bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_short_circuit_load_result_n8;
+  if (hxc_tmp_short_circuit_load_result_n8)
   {
-    int32_t hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n9 = hxc_local_caxecraft_domain_World_contains_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_zz_n2;
-    hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_caxecraft_domain_World_contains_recordzx2Dfieldzx2Dproject_n9 < 32;
+    hxc_tmp_short_circuit_result_n5 = hxc_coord.hxc_z < 32;
   }
-  bool hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n10 = hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dresult_n5;
-  return hxc_temp_caxecraft_domain_World_contains_shortzx2Dcircuitzx2Dloadzx2Dresult_n10;
+  return hxc_tmp_short_circuit_result_n5;
 }
 
-struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_method_caxecraft_domain_World_coord(int32_t hxc_local_caxecraft_domain_World_coord_x_n0, int32_t hxc_local_caxecraft_domain_World_coord_y_n1, int32_t hxc_local_caxecraft_domain_World_coord_zz_n2)
+struct hxc_caxecraft_domain_BlockCoord hxc_caxecraft_domain_World_coord(int32_t hxc_x, int32_t hxc_y, int32_t hxc_z)
 {
-  struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_World_coord_recordzx2Dresult_n0 = (struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793){ .hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_x_n0 = hxc_local_caxecraft_domain_World_coord_x_n0, .hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_y_n1 = hxc_local_caxecraft_domain_World_coord_y_n1, .hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_zz_n2 = hxc_local_caxecraft_domain_World_coord_zz_n2 };
-  return hxc_temp_caxecraft_domain_World_coord_recordzx2Dresult_n0;
+  return (struct hxc_caxecraft_domain_BlockCoord){ .hxc_x = hxc_x, .hxc_y = hxc_y, .hxc_z = hxc_z };
 }
 
-void hxc_method_caxecraft_domain_World_generate(uint8_t *hxc_local_caxecraft_domain_World_generate_cells_n0, size_t hxc_local_caxecraft_domain_World_generate_cells_length_n0, int32_t hxc_local_caxecraft_domain_World_generate_seed_n1)
+void hxc_caxecraft_domain_World_generate(uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_seed)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_generate_cells_borrow_n2 = hxc_local_caxecraft_domain_World_generate_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_generate_cells_borrow_length_n2 = hxc_local_caxecraft_domain_World_generate_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_generate_cells_borrow_n2;
-  (void)hxc_temp_caxecraft_domain_World_generate_cells_borrow_length_n2;
-  int32_t hxc_local_caxecraft_domain_World_generate_index_n3 = 0;
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n2 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n2;
+  int32_t hxc_index = 0;
   while (1)
   {
-    int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n0 = hxc_local_caxecraft_domain_World_generate_index_n3;
-    if (!(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n0 < 16384))
+    if (!(hxc_index < 16384))
     {
       break;
     }
-    int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_generate_index_n3;
-    hxc_method_caxecraft_domain_WorldStorage_writeCode(hxc_local_caxecraft_domain_World_generate_cells_n0, hxc_local_caxecraft_domain_World_generate_cells_length_n0, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n1, 0);
-    int32_t hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n2 = hxc_local_caxecraft_domain_World_generate_index_n3;
-    hxc_local_caxecraft_domain_World_generate_index_n3 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n2, 1);
+    hxc_caxecraft_domain_WorldStorage_writeCode(hxc_cells, hxc_length, hxc_index, 0);
+    hxc_index = hxc_i32_add_wrapping(hxc_index, 1);
   }
-  int32_t hxc_local_caxecraft_domain_World_generate_zz_n4 = 0;
+  int32_t hxc_z = 0;
   while (1)
   {
-    int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n3 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-    if (!(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n3 < 32))
+    if (!(hxc_z < 32))
     {
       break;
     }
-    int32_t hxc_local_caxecraft_domain_World_generate_x_n5 = 0;
+    int32_t hxc_x = 0;
     while (1)
     {
-      int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n4 = hxc_local_caxecraft_domain_World_generate_x_n5;
-      if (!(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n4 < 32))
+      if (!(hxc_x < 32))
       {
         break;
       }
-      int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n5 = hxc_local_caxecraft_domain_World_generate_x_n5;
-      int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n6 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-      int32_t hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n7 = hxc_method_caxecraft_domain_World_terrainNoise(hxc_local_caxecraft_domain_World_generate_seed_n1, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n5, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n6);
-      int32_t hxc_local_caxecraft_domain_World_generate_noise_n6 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dand(hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n7, 2147483647);
-      int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n8 = hxc_local_caxecraft_domain_World_generate_noise_n6;
-      int32_t hxc_local_caxecraft_domain_World_generate_surface_n7 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(3, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n8, 5));
-      int32_t hxc_local_caxecraft_domain_World_generate_y_n8 = 0;
+      int32_t hxc_tmp_load_result_n5 = hxc_x;
+      int32_t hxc_tmp_call_result_n7 = hxc_caxecraft_domain_World_terrainNoise(hxc_seed, hxc_tmp_load_result_n5, hxc_z);
+      int32_t hxc_noise = hxc_i32_bit_and(hxc_tmp_call_result_n7, 2147483647);
+      int32_t hxc_surface = hxc_i32_add_wrapping(3, hxc_i32_modulo_zero_safe(hxc_noise, 5));
+      int32_t hxc_y = 0;
       while (1)
       {
-        int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n9 = hxc_local_caxecraft_domain_World_generate_y_n8;
-        int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n10 = hxc_local_caxecraft_domain_World_generate_surface_n7;
-        if (!(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n9 <= hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n10))
+        int32_t hxc_tmp_load_result_n9 = hxc_y;
+        if (!(hxc_tmp_load_result_n9 <= hxc_surface))
         {
           break;
         }
-        int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n11 = hxc_local_caxecraft_domain_World_generate_y_n8;
-        if (hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n11 == 0)
+        if (hxc_y == 0)
         {
-          int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n12 = hxc_local_caxecraft_domain_World_generate_x_n5;
-          int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n13 = hxc_local_caxecraft_domain_World_generate_y_n8;
-          int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n14 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-          struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n15 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n12, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n13, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n14);
-          enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n16 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4;
-          hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_generate_cells_n0, hxc_local_caxecraft_domain_World_generate_cells_length_n0, hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n15, hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n16);
+          int32_t hxc_tmp_load_result_n12 = hxc_x;
+          int32_t hxc_tmp_load_result_n13 = hxc_y;
+          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n15 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n12, hxc_tmp_load_result_n13, hxc_z);
+          hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_tmp_call_result_n15, hxc_caxecraft_domain_BlockKind_Bedrock);
         }
         else
         {
-          int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n17 = hxc_local_caxecraft_domain_World_generate_y_n8;
-          int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n18 = hxc_local_caxecraft_domain_World_generate_surface_n7;
-          if (hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n17 == hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n18)
+          int32_t hxc_tmp_load_result_n17 = hxc_y;
+          if (hxc_tmp_load_result_n17 == hxc_surface)
           {
-            int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n19 = hxc_local_caxecraft_domain_World_generate_x_n5;
-            int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n20 = hxc_local_caxecraft_domain_World_generate_y_n8;
-            int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n21 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-            struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n22 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n19, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n20, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n21);
-            enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n23 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1;
-            hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_generate_cells_n0, hxc_local_caxecraft_domain_World_generate_cells_length_n0, hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n22, hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n23);
+            int32_t hxc_tmp_load_result_n19 = hxc_x;
+            int32_t hxc_tmp_load_result_n20 = hxc_y;
+            struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n22 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n19, hxc_tmp_load_result_n20, hxc_z);
+            hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_tmp_call_result_n22, hxc_caxecraft_domain_BlockKind_Grass);
           }
           else
           {
-            int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n24 = hxc_local_caxecraft_domain_World_generate_y_n8;
-            int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n25 = hxc_local_caxecraft_domain_World_generate_surface_n7;
-            if (hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n24, 2) >= hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n25)
+            int32_t hxc_tmp_load_result_n24 = hxc_y;
+            if (hxc_i32_add_wrapping(hxc_tmp_load_result_n24, 2) >= hxc_surface)
             {
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n26 = hxc_local_caxecraft_domain_World_generate_x_n5;
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n27 = hxc_local_caxecraft_domain_World_generate_y_n8;
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n28 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-              struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n29 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n26, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n27, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n28);
-              enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n30 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2;
-              hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_generate_cells_n0, hxc_local_caxecraft_domain_World_generate_cells_length_n0, hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n29, hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n30);
+              int32_t hxc_tmp_load_result_n26 = hxc_x;
+              int32_t hxc_tmp_load_result_n27 = hxc_y;
+              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n29 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n26, hxc_tmp_load_result_n27, hxc_z);
+              hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_tmp_call_result_n29, hxc_caxecraft_domain_BlockKind_Dirt);
             }
             else
             {
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n31 = hxc_local_caxecraft_domain_World_generate_x_n5;
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n32 = hxc_local_caxecraft_domain_World_generate_y_n8;
-              int32_t hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n33 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-              struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n34 = hxc_method_caxecraft_domain_World_coord(hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n31, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n32, hxc_temp_caxecraft_domain_World_generate_loadzx2Dresult_n33);
-              enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n35 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3;
-              hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_generate_cells_n0, hxc_local_caxecraft_domain_World_generate_cells_length_n0, hxc_temp_caxecraft_domain_World_generate_callzx2Dresult_n34, hxc_temp_caxecraft_domain_World_generate_enumzx2Dresult_n35);
+              int32_t hxc_tmp_load_result_n31 = hxc_x;
+              int32_t hxc_tmp_load_result_n32 = hxc_y;
+              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n34 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n31, hxc_tmp_load_result_n32, hxc_z);
+              hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_tmp_call_result_n34, hxc_caxecraft_domain_BlockKind_Stone);
             }
           }
         }
-        int32_t hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n36 = hxc_local_caxecraft_domain_World_generate_y_n8;
-        hxc_local_caxecraft_domain_World_generate_y_n8 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n36, 1);
+        hxc_y = hxc_i32_add_wrapping(hxc_y, 1);
       }
-      int32_t hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n37 = hxc_local_caxecraft_domain_World_generate_x_n5;
-      hxc_local_caxecraft_domain_World_generate_x_n5 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n37, 1);
+      hxc_x = hxc_i32_add_wrapping(hxc_x, 1);
     }
-    int32_t hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n38 = hxc_local_caxecraft_domain_World_generate_zz_n4;
-    hxc_local_caxecraft_domain_World_generate_zz_n4 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_generate_incrementzx2Dloadzx2Dresult_n38, 1);
+    hxc_z = hxc_i32_add_wrapping(hxc_z, 1);
   }
   return;
 }
 
-int32_t hxc_method_caxecraft_domain_World_indexOf(struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_indexOf_coord_n0)
+int32_t hxc_caxecraft_domain_World_indexOf(struct hxc_caxecraft_domain_BlockCoord hxc_coord)
 {
-  bool hxc_temp_caxecraft_domain_World_indexOf_callzx2Dresult_n0 = hxc_method_caxecraft_domain_World_contains(hxc_local_caxecraft_domain_World_indexOf_coord_n0);
-  if (!!hxc_temp_caxecraft_domain_World_indexOf_callzx2Dresult_n0)
+  bool hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_contains(hxc_coord);
+  if (!!hxc_tmp_call_result_n0)
   {
-    int32_t hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n1 = hxc_local_caxecraft_domain_World_indexOf_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_x_n0;
-    int32_t hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n2 = hxc_local_caxecraft_domain_World_indexOf_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_y_n1;
-    int32_t hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n3 = hxc_local_caxecraft_domain_World_indexOf_coord_n0.hxc_field_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793_zz_n2;
-    return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n1, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(32, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n2, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(16, hxc_temp_caxecraft_domain_World_indexOf_recordzx2Dfieldzx2Dproject_n3))));
+    return hxc_i32_add_wrapping(hxc_coord.hxc_x, hxc_i32_multiply_wrapping(32, hxc_i32_add_wrapping(hxc_coord.hxc_y, hxc_i32_multiply_wrapping(16, hxc_coord.hxc_z))));
   }
   return -1;
 }
 
-bool hxc_method_caxecraft_domain_World_isPlaceable(enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_isPlaceable_kind_n0)
+bool hxc_caxecraft_domain_World_isPlaceable(enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
-  switch (hxc_local_caxecraft_domain_World_isPlaceable_kind_n0) {
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3:
+  switch (hxc_kind) {
+    case hxc_caxecraft_domain_BlockKind_Grass:
+    case hxc_caxecraft_domain_BlockKind_Dirt:
+    case hxc_caxecraft_domain_BlockKind_Stone:
       {
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4:
+    case hxc_caxecraft_domain_BlockKind_Air:
+    case hxc_caxecraft_domain_BlockKind_Bedrock:
       {
         return false;
       }
@@ -187,17 +154,17 @@ bool hxc_method_caxecraft_domain_World_isPlaceable(enum hxc_type_compiler_haxezx
   return true;
 }
 
-bool hxc_method_caxecraft_domain_World_isSolid(enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_isSolid_kind_n0)
+bool hxc_caxecraft_domain_World_isSolid(enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
-  switch (hxc_local_caxecraft_domain_World_isSolid_kind_n0) {
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0:
+  switch (hxc_kind) {
+    case hxc_caxecraft_domain_BlockKind_Air:
       {
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4:
+    case hxc_caxecraft_domain_BlockKind_Grass:
+    case hxc_caxecraft_domain_BlockKind_Dirt:
+    case hxc_caxecraft_domain_BlockKind_Stone:
+    case hxc_caxecraft_domain_BlockKind_Bedrock:
       {
         return true;
       }
@@ -205,26 +172,26 @@ bool hxc_method_caxecraft_domain_World_isSolid(enum hxc_type_compiler_haxezx2Den
   return false;
 }
 
-int32_t hxc_method_caxecraft_domain_World_kindCode(enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_kindCode_kind_n0)
+int32_t hxc_caxecraft_domain_World_kindCode(enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
-  switch (hxc_local_caxecraft_domain_World_kindCode_kind_n0) {
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0:
+  switch (hxc_kind) {
+    case hxc_caxecraft_domain_BlockKind_Air:
       {
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1:
+    case hxc_caxecraft_domain_BlockKind_Grass:
       {
         return 1;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2:
+    case hxc_caxecraft_domain_BlockKind_Dirt:
       {
         return 2;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3:
+    case hxc_caxecraft_domain_BlockKind_Stone:
       {
         return 3;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4:
+    case hxc_caxecraft_domain_BlockKind_Bedrock:
       {
         return 4;
       }
@@ -232,166 +199,149 @@ int32_t hxc_method_caxecraft_domain_World_kindCode(enum hxc_type_compiler_haxezx
   return 0;
 }
 
-enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_method_caxecraft_domain_World_kindFromCode(int32_t hxc_local_caxecraft_domain_World_kindFromCode_code_n0)
+enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_kindFromCode(int32_t hxc_code)
 {
-  switch (hxc_local_caxecraft_domain_World_kindFromCode_code_n0) {
+  switch (hxc_code) {
     case 1:
       {
         break;
       }
     case 2:
       {
-        enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n1 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2;
-        return hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n1;
+        return hxc_caxecraft_domain_BlockKind_Dirt;
       }
     case 3:
       {
-        enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n2 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3;
-        return hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n2;
+        return hxc_caxecraft_domain_BlockKind_Stone;
       }
     case 4:
       {
-        enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n3 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4;
-        return hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n3;
+        return hxc_caxecraft_domain_BlockKind_Bedrock;
       }
     default:
       {
-        enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n4 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0;
-        return hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n4;
+        return hxc_caxecraft_domain_BlockKind_Air;
       }
   }
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n0 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1;
-  return hxc_temp_caxecraft_domain_World_kindFromCode_enumzx2Dresult_n0;
+  return hxc_caxecraft_domain_BlockKind_Grass;
 }
 
-bool hxc_method_caxecraft_domain_World_place(uint8_t *hxc_local_caxecraft_domain_World_place_cells_n0, size_t hxc_local_caxecraft_domain_World_place_cells_length_n0, struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_place_coord_n1, enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_place_kind_n2)
+bool hxc_caxecraft_domain_World_place(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_BlockCoord hxc_coord, enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_place_cells_borrow_n3 = hxc_local_caxecraft_domain_World_place_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_place_cells_borrow_length_n3 = hxc_local_caxecraft_domain_World_place_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_place_cells_borrow_n3;
-  (void)hxc_temp_caxecraft_domain_World_place_cells_borrow_length_n3;
-  bool hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n0 = hxc_method_caxecraft_domain_World_isPlaceable(hxc_local_caxecraft_domain_World_place_kind_n2);
-  if (!!hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n0)
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n3 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n3;
+  bool hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_isPlaceable(hxc_kind);
+  if (!!hxc_tmp_call_result_n0)
   {
-    enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n1 = hxc_method_caxecraft_domain_World_query(hxc_local_caxecraft_domain_World_place_cells_n0, hxc_local_caxecraft_domain_World_place_cells_length_n0, hxc_local_caxecraft_domain_World_place_coord_n1);
-    switch (hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n1) {
-      case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0:
+    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n1 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+    switch (hxc_tmp_call_result_n1) {
+      case hxc_caxecraft_domain_BlockKind_Air:
         {
           break;
         }
-      case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1:
-      case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2:
-      case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3:
-      case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4:
+      case hxc_caxecraft_domain_BlockKind_Grass:
+      case hxc_caxecraft_domain_BlockKind_Dirt:
+      case hxc_caxecraft_domain_BlockKind_Stone:
+      case hxc_caxecraft_domain_BlockKind_Bedrock:
         {
           return false;
         }
     }
-    bool hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n2 = hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_place_cells_n0, hxc_local_caxecraft_domain_World_place_cells_length_n0, hxc_local_caxecraft_domain_World_place_coord_n1, hxc_local_caxecraft_domain_World_place_kind_n2);
-    return hxc_temp_caxecraft_domain_World_place_callzx2Dresult_n2;
+    bool hxc_tmp_call_result_n2 = hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_coord, hxc_kind);
+    return hxc_tmp_call_result_n2;
   }
   return false;
 }
 
-enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_method_caxecraft_domain_World_query(uint8_t *hxc_local_caxecraft_domain_World_query_cells_n0, size_t hxc_local_caxecraft_domain_World_query_cells_length_n0, struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_query_coord_n1)
+enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_query(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_BlockCoord hxc_coord)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_query_cells_borrow_n2 = hxc_local_caxecraft_domain_World_query_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_query_cells_borrow_length_n2 = hxc_local_caxecraft_domain_World_query_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_query_cells_borrow_n2;
-  (void)hxc_temp_caxecraft_domain_World_query_cells_borrow_length_n2;
-  int32_t hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n0 = hxc_method_caxecraft_domain_World_indexOf(hxc_local_caxecraft_domain_World_query_coord_n1);
-  int32_t hxc_local_caxecraft_domain_World_query_index_n3 = hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n0;
-  int32_t hxc_temp_caxecraft_domain_World_query_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_query_index_n3;
-  if (!(hxc_temp_caxecraft_domain_World_query_loadzx2Dresult_n1 < 0))
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n2 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n2;
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_indexOf(hxc_coord);
+  int32_t hxc_index = hxc_tmp_call_result_n0;
+  if (!(hxc_index < 0))
   {
-    int32_t hxc_temp_caxecraft_domain_World_query_loadzx2Dresult_n3 = hxc_local_caxecraft_domain_World_query_index_n3;
-    int32_t hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n4 = hxc_method_caxecraft_domain_WorldStorage_readCode(hxc_local_caxecraft_domain_World_query_cells_n0, hxc_local_caxecraft_domain_World_query_cells_length_n0, hxc_temp_caxecraft_domain_World_query_loadzx2Dresult_n3);
-    enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n5 = hxc_method_caxecraft_domain_World_kindFromCode(hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n4);
-    return hxc_temp_caxecraft_domain_World_query_callzx2Dresult_n5;
+    int32_t hxc_tmp_call_result_n4 = hxc_caxecraft_domain_WorldStorage_readCode(hxc_cells, hxc_length, hxc_index);
+    enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n5 = hxc_caxecraft_domain_World_kindFromCode(hxc_tmp_call_result_n4);
+    return hxc_tmp_call_result_n5;
   }
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_query_enumzx2Dresult_n2 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0;
-  return hxc_temp_caxecraft_domain_World_query_enumzx2Dresult_n2;
+  return hxc_caxecraft_domain_BlockKind_Air;
 }
 
-bool hxc_method_caxecraft_domain_World_remove(uint8_t *hxc_local_caxecraft_domain_World_remove_cells_n0, size_t hxc_local_caxecraft_domain_World_remove_cells_length_n0, struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_remove_coord_n1)
+bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_BlockCoord hxc_coord)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_remove_cells_borrow_n2 = hxc_local_caxecraft_domain_World_remove_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_remove_cells_borrow_length_n2 = hxc_local_caxecraft_domain_World_remove_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_remove_cells_borrow_n2;
-  (void)hxc_temp_caxecraft_domain_World_remove_cells_borrow_length_n2;
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_remove_callzx2Dresult_n0 = hxc_method_caxecraft_domain_World_query(hxc_local_caxecraft_domain_World_remove_cells_n0, hxc_local_caxecraft_domain_World_remove_cells_length_n0, hxc_local_caxecraft_domain_World_remove_coord_n1);
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_remove_current_n3 = hxc_temp_caxecraft_domain_World_remove_callzx2Dresult_n0;
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_remove_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_remove_current_n3;
-  switch (hxc_temp_caxecraft_domain_World_remove_loadzx2Dresult_n1) {
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Grass_n1:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Dirt_n2:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Stone_n3:
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n2 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n2;
+  enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_coord);
+  enum hxc_caxecraft_domain_BlockKind hxc_current = hxc_tmp_call_result_n0;
+  switch (hxc_current) {
+    case hxc_caxecraft_domain_BlockKind_Grass:
+    case hxc_caxecraft_domain_BlockKind_Dirt:
+    case hxc_caxecraft_domain_BlockKind_Stone:
       {
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0:
-    case hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Bedrock_n4:
+    case hxc_caxecraft_domain_BlockKind_Air:
+    case hxc_caxecraft_domain_BlockKind_Bedrock:
       {
         return false;
       }
   }
-  enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_temp_caxecraft_domain_World_remove_enumzx2Dresult_n2 = hxc_field_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_case_Air_n0;
-  bool hxc_temp_caxecraft_domain_World_remove_callzx2Dresult_n3 = hxc_method_caxecraft_domain_World_replace(hxc_local_caxecraft_domain_World_remove_cells_n0, hxc_local_caxecraft_domain_World_remove_cells_length_n0, hxc_local_caxecraft_domain_World_remove_coord_n1, hxc_temp_caxecraft_domain_World_remove_enumzx2Dresult_n2);
-  return hxc_temp_caxecraft_domain_World_remove_callzx2Dresult_n3;
+  bool hxc_tmp_call_result_n3 = hxc_caxecraft_domain_World_replace(hxc_cells, hxc_length, hxc_coord, hxc_caxecraft_domain_BlockKind_Air);
+  return hxc_tmp_call_result_n3;
 }
 
-bool hxc_method_caxecraft_domain_World_replace(uint8_t *hxc_local_caxecraft_domain_World_replace_cells_n0, size_t hxc_local_caxecraft_domain_World_replace_cells_length_n0, struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793 hxc_local_caxecraft_domain_World_replace_coord_n1, enum hxc_type_compiler_haxezx2Denum_60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88_value hxc_local_caxecraft_domain_World_replace_kind_n2)
+bool hxc_caxecraft_domain_World_replace(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_BlockCoord hxc_coord, enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_replace_cells_borrow_n3 = hxc_local_caxecraft_domain_World_replace_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_replace_cells_borrow_length_n3 = hxc_local_caxecraft_domain_World_replace_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_replace_cells_borrow_n3;
-  (void)hxc_temp_caxecraft_domain_World_replace_cells_borrow_length_n3;
-  int32_t hxc_temp_caxecraft_domain_World_replace_callzx2Dresult_n0 = hxc_method_caxecraft_domain_World_indexOf(hxc_local_caxecraft_domain_World_replace_coord_n1);
-  int32_t hxc_local_caxecraft_domain_World_replace_index_n4 = hxc_temp_caxecraft_domain_World_replace_callzx2Dresult_n0;
-  int32_t hxc_temp_caxecraft_domain_World_replace_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_replace_index_n4;
-  if (!(hxc_temp_caxecraft_domain_World_replace_loadzx2Dresult_n1 < 0))
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n3 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n3;
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_World_indexOf(hxc_coord);
+  int32_t hxc_index = hxc_tmp_call_result_n0;
+  if (!(hxc_index < 0))
   {
-    int32_t hxc_temp_caxecraft_domain_World_replace_loadzx2Dresult_n2 = hxc_local_caxecraft_domain_World_replace_index_n4;
-    int32_t hxc_temp_caxecraft_domain_World_replace_callzx2Dresult_n3 = hxc_method_caxecraft_domain_World_kindCode(hxc_local_caxecraft_domain_World_replace_kind_n2);
-    hxc_method_caxecraft_domain_WorldStorage_writeCode(hxc_local_caxecraft_domain_World_replace_cells_n0, hxc_local_caxecraft_domain_World_replace_cells_length_n0, hxc_temp_caxecraft_domain_World_replace_loadzx2Dresult_n2, hxc_temp_caxecraft_domain_World_replace_callzx2Dresult_n3);
+    int32_t hxc_tmp_load_result_n2 = hxc_index;
+    int32_t hxc_tmp_call_result_n3 = hxc_caxecraft_domain_World_kindCode(hxc_kind);
+    hxc_caxecraft_domain_WorldStorage_writeCode(hxc_cells, hxc_length, hxc_tmp_load_result_n2, hxc_tmp_call_result_n3);
     return true;
   }
   return false;
 }
 
-int32_t hxc_method_caxecraft_domain_World_stateHash(uint8_t *hxc_local_caxecraft_domain_World_stateHash_cells_n0, size_t hxc_local_caxecraft_domain_World_stateHash_cells_length_n0)
+int32_t hxc_caxecraft_domain_World_stateHash(uint8_t *hxc_cells, size_t hxc_length)
 {
-  uint8_t *hxc_local_caxecraft_domain_World_stateHash_cells_borrow_n1 = hxc_local_caxecraft_domain_World_stateHash_cells_n0;
-  size_t hxc_temp_caxecraft_domain_World_stateHash_cells_borrow_length_n1 = hxc_local_caxecraft_domain_World_stateHash_cells_length_n0;
-  (void)hxc_local_caxecraft_domain_World_stateHash_cells_borrow_n1;
-  (void)hxc_temp_caxecraft_domain_World_stateHash_cells_borrow_length_n1;
-  int32_t hxc_local_caxecraft_domain_World_stateHash_hash_n2 = -2128831035;
-  int32_t hxc_local_caxecraft_domain_World_stateHash_index_n3 = 0;
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n1 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n1;
+  int32_t hxc_hash = -2128831035;
+  int32_t hxc_index = 0;
   while (1)
   {
-    int32_t hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n0 = hxc_local_caxecraft_domain_World_stateHash_index_n3;
-    if (!(hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n0 < 16384))
+    if (!(hxc_index < 16384))
     {
       break;
     }
-    int32_t hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_stateHash_hash_n2;
-    int32_t hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n2 = hxc_local_caxecraft_domain_World_stateHash_index_n3;
-    int32_t hxc_temp_caxecraft_domain_World_stateHash_callzx2Dresult_n3 = hxc_method_caxecraft_domain_WorldStorage_readCode(hxc_local_caxecraft_domain_World_stateHash_cells_n0, hxc_local_caxecraft_domain_World_stateHash_cells_length_n0, hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n2);
-    hxc_local_caxecraft_domain_World_stateHash_hash_n2 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n1, hxc_temp_caxecraft_domain_World_stateHash_callzx2Dresult_n3), 16777619);
-    int32_t hxc_temp_caxecraft_domain_World_stateHash_incrementzx2Dloadzx2Dresult_n4 = hxc_local_caxecraft_domain_World_stateHash_index_n3;
-    hxc_local_caxecraft_domain_World_stateHash_index_n3 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_caxecraft_domain_World_stateHash_incrementzx2Dloadzx2Dresult_n4, 1);
+    int32_t hxc_tmp_load_result_n1 = hxc_hash;
+    int32_t hxc_tmp_call_result_n3 = hxc_caxecraft_domain_WorldStorage_readCode(hxc_cells, hxc_length, hxc_index);
+    hxc_hash = hxc_i32_multiply_wrapping(hxc_i32_bit_xor(hxc_tmp_load_result_n1, hxc_tmp_call_result_n3), 16777619);
+    hxc_index = hxc_i32_add_wrapping(hxc_index, 1);
   }
-  int32_t hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n5 = hxc_local_caxecraft_domain_World_stateHash_hash_n2;
-  return hxc_temp_caxecraft_domain_World_stateHash_loadzx2Dresult_n5;
+  return hxc_hash;
 }
 
-int32_t hxc_method_caxecraft_domain_World_terrainNoise(int32_t hxc_local_caxecraft_domain_World_terrainNoise_seed_n0, int32_t hxc_local_caxecraft_domain_World_terrainNoise_x_n1, int32_t hxc_local_caxecraft_domain_World_terrainNoise_zz_n2)
+int32_t hxc_caxecraft_domain_World_terrainNoise(int32_t hxc_seed, int32_t hxc_x, int32_t hxc_z)
 {
-  int32_t hxc_local_caxecraft_domain_World_terrainNoise_value_n3 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_local_caxecraft_domain_World_terrainNoise_seed_n0, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_local_caxecraft_domain_World_terrainNoise_x_n1, 374761393)), hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_local_caxecraft_domain_World_terrainNoise_zz_n2, 668265263));
-  int32_t hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n0 = hxc_local_caxecraft_domain_World_terrainNoise_value_n3;
-  int32_t hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n1 = hxc_local_caxecraft_domain_World_terrainNoise_value_n3;
-  hxc_local_caxecraft_domain_World_terrainNoise_value_n3 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n0, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked(hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n1, 13)), 1274126177);
-  int32_t hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n2 = hxc_local_caxecraft_domain_World_terrainNoise_value_n3;
-  int32_t hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n3 = hxc_local_caxecraft_domain_World_terrainNoise_value_n3;
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n2, hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked(hxc_temp_caxecraft_domain_World_terrainNoise_loadzx2Dresult_n3, 16));
+  int32_t hxc_value = hxc_i32_bit_xor(hxc_i32_bit_xor(hxc_seed, hxc_i32_multiply_wrapping(hxc_x, 374761393)), hxc_i32_multiply_wrapping(hxc_z, 668265263));
+  int32_t hxc_tmp_load_result_n0 = hxc_value;
+  hxc_value = hxc_i32_multiply_wrapping(hxc_i32_bit_xor(hxc_tmp_load_result_n0, hxc_i32_unsigned_shift_right_masked(hxc_value, 13)), 1274126177);
+  int32_t hxc_tmp_load_result_n2 = hxc_value;
+  return hxc_i32_bit_xor(hxc_tmp_load_result_n2, hxc_i32_unsigned_shift_right_masked(hxc_value, 16));
 }

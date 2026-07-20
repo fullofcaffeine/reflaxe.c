@@ -316,6 +316,22 @@ def initialization_wrapper_c_name(symbols: dict[str, object]) -> str:
     return matches[0]
 
 
+def source_symbol_c_name(symbols: dict[str, object], source_symbol: str) -> str:
+    entries = symbols.get("symbols")
+    if not isinstance(entries, list):
+        raise StaticInitializationFailure("symbol table entries are missing")
+    matches = [
+        entry.get("cName")
+        for entry in entries
+        if isinstance(entry, dict) and entry.get("sourceSymbol") == source_symbol
+    ]
+    if len(matches) != 1 or not isinstance(matches[0], str):
+        raise StaticInitializationFailure(
+            f"cannot resolve one C symbol for {source_symbol}"
+        )
+    return matches[0]
+
+
 def validate_render(render: ProductionRender) -> None:
     report = render.report
     if report.get("schemaVersion") != 1:
@@ -383,11 +399,27 @@ def validate_render(render: ProductionRender) -> None:
     main = re.search(r"int main\(void\)\n\{\n(?P<body>.*?)\n\}", source, re.DOTALL)
     if main is None or main.group("body").count(f"{wrapper_name}();") != 1:
         raise StaticInitializationFailure("hosted main does not invoke initialization exactly once")
+    entry_name = source_symbol_c_name(
+        symbol_table, "StaticInitializationFixture.main"
+    )
     if main.group("body").find(f"{wrapper_name}();") > main.group("body").find(
-        "StaticInitializzationFixture_main();"
+        f"{entry_name}();"
     ):
         raise StaticInitializationFailure("hosted main invokes the Haxe entry before initialization")
-    if re.search(r"^int32_t hxc_field_[^;=]+ = ", source, re.MULTILINE):
+    entries = symbol_table.get("symbols")
+    if not isinstance(entries, list):
+        raise StaticInitializationFailure("symbol table entries are missing")
+    field_names = [
+        entry.get("cName")
+        for entry in entries
+        if isinstance(entry, dict)
+        and entry.get("kind") == "field"
+        and isinstance(entry.get("cName"), str)
+    ]
+    if any(
+        re.search(rf"^int32_t {re.escape(name)} = ", source, re.MULTILINE)
+        for name in field_names
+    ):
         raise StaticInitializationFailure("generated C relied on file-scope Haxe field initialization")
     all_bytes = b"\n".join(path.read_bytes() for path in sorted(render.output.rglob("*")) if path.is_file())
     if b"hxrt" in all_bytes.lower():
@@ -491,13 +523,18 @@ def available_compilers(selected: str | None = None) -> list[NativeToolchain]:
 def compile_and_run(root: Path, toolchain: NativeToolchain, optimization: str) -> None:
     sources = sorted((root / "src").glob("*.c"))
     header_text = (root / "include/hxc/program.h").read_text(encoding="utf-8")
-    outcome_matches = re.findall(
-        r"int32_t ([A-Za-z_][A-Za-z0-9_]*StaticInitializzationFixture_outcome)\(void\);",
-        header_text,
+    symbol_table = json.loads(
+        (root / "hxc.symbols.json").read_text(encoding="utf-8")
     )
-    if len(outcome_matches) != 1:
+    outcome_name = source_symbol_c_name(
+        symbol_table, "StaticInitializationFixture.outcome"
+    )
+    if re.search(
+        rf"^int32_t {re.escape(outcome_name)}\(void\);$",
+        header_text,
+        re.MULTILINE,
+    ) is None:
         raise StaticInitializationFailure("cannot resolve generated outcome function")
-    outcome_name = outcome_matches[0]
     renamed_header = root / "renamed-entry.h"
     renamed_header.write_text(
         "int hxc_generated_main(void);\n", encoding="utf-8", newline="\n"

@@ -352,14 +352,20 @@ computes their dependency closure, and
 registers every helper/parameter/standard symbol before sealing the
 per-compilation symbol registry. Function requests use translation-unit
 ordinary namespace; locals use the finalized function scope plus lexical source
-ordinals, so shadowing is stable without deriving C identifiers from Haxe text.
+ordinals, so shadowing remains stable even though routine C spellings preserve
+recognizable Haxe source words. Those display words are separate from the full
+semantic identity retained in `hxc.symbols.json`; a compact hash appears only
+when the whole-program namespace pass finds a real collision or length limit.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
 and builds strict structural statements plus optional typed `#line` nodes.
 Direct-call arguments remain ordered HxcIR instructions, conversions precede
-their calls, and every load plus each consumed call result becomes a typed
-stable-value temporary instead of a C subexpression with weaker evaluation
-order. Lazy/conditional expressions remain explicit HxcIR blocks and edges
-rather than C operators, then become verified structural regions before CAST.
+their calls, and each consumed call result plus every observable or aliased load
+becomes a typed stable-value temporary instead of a C subexpression with weaker
+evaluation order. A separate per-function proof may coalesce one pure,
+single-use compiler-owned value or private local/field read only inside the same
+block and across no read, effect, failure, cleanup, alias, or lifetime barrier.
+Lazy/conditional expressions remain explicit HxcIR blocks and edges rather than
+C operators, then become verified structural regions before CAST.
 `CPrimitiveHelperEmitter` builds only selected private
 `static inline` helpers through structural CAST; safe unsigned fast paths remain
 direct C, and floating modulo contributes the exact `m` build fact without a
@@ -433,7 +439,7 @@ tag, member, and label namespaces; exact `@:c.name` values are preserved or
 rejected. Header-owned extern declarations use their identical Haxe spelling as
 a validated exact external name when no override is present, while
 compiler-owned defaults use readable `hxc_` provenance and stable hash suffixes
-only for collisions or length limits. The schema-1 table
+only for collisions or length limits. The schema-2 table
 and collision ledger are the in-memory shape of `hxc.symbols.json`.
 `TypedCNameFinalizer` applies that policy structurally to schema-2 typed C
 snapshots before declaration planning. See [deterministic symbol

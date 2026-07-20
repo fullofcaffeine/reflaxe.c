@@ -1,14 +1,14 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F6D6F64756C65732F6361786563726166742F71612F446F6D61696E50726F62652E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F6D6F64756C65732F6361786563726166742F71612F446F6D61696E50726F62652E68_INCLUDED
+#ifndef HXC_CAXECRAFT_QA_DOMAIN_PROBE_H_INCLUDED
+#define HXC_CAXECRAFT_QA_DOMAIN_PROBE_H_INCLUDED
 
 #include "hxc/detail/program_types.h"
 
-void hxc_method_caxecraft_qa_DomainProbe_clear(uint8_t *hxc_local_caxecraft_qa_DomainProbe_clear_cells_n0, size_t hxc_local_caxecraft_qa_DomainProbe_clear_cells_length_n0);
+void hxc_caxecraft_qa_DomainProbe_clear(uint8_t *hxc_cells, size_t hxc_length);
 
-void hxc_method_caxecraft_qa_DomainProbe_main(void);
+void hxc_caxecraft_qa_DomainProbe_main(void);
 
-bool hxc_method_caxecraft_qa_DomainProbe_near(double hxc_local_caxecraft_qa_DomainProbe_near_left_n0, double hxc_local_caxecraft_qa_DomainProbe_near_right_n1);
+bool hxc_caxecraft_qa_DomainProbe_near(double hxc_left, double hxc_right);
 
-int32_t hxc_method_caxecraft_qa_DomainProbe_selfCheck(void);
+int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F6D6F64756C65732F6361786563726166742F71612F446F6D61696E50726F62652E68_INCLUDED */
+#endif /* HXC_CAXECRAFT_QA_DOMAIN_PROBE_H_INCLUDED */

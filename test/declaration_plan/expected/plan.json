@@ -1,98 +1,280 @@
 {
   "plan": {
-    "schemaVersion": 1,
     "inputSchemaVersion": 2,
+    "schemaVersion": 1,
+    "sourceDeclarations": [
+      {
+        "emission": "external",
+        "cName": "external_clock",
+        "modulePath": "ExternalClock",
+        "layout": "opaque"
+      },
+      {
+        "emission": "opaque",
+        "cName": "hidden_handle",
+        "modulePath": "HiddenHandle",
+        "layout": "opaque"
+      },
+      {
+        "emission": "complete",
+        "cName": null,
+        "modulePath": "Implementation",
+        "layout": null
+      }
+    ],
+    "buildIncludes": [
+      {
+        "reasons": [
+          "build:ExternalClock"
+        ],
+        "path": "clock_api.h",
+        "kind": "system"
+      },
+      {
+        "reasons": [
+          "build:ApiRequest"
+        ],
+        "path": "stddef.h",
+        "kind": "system"
+      },
+      {
+        "reasons": [
+          "build:NodeA",
+          "build:NodeB",
+          "build:Value"
+        ],
+        "path": "stdint.h",
+        "kind": "system"
+      },
+      {
+        "reasons": [
+          "build:ApiRequest",
+          "build:PrivateState"
+        ],
+        "path": "project/config.h",
+        "kind": "local"
+      },
+      {
+        "reasons": [
+          "build:ApiRequest"
+        ],
+        "path": "types/value.h",
+        "kind": "local"
+      }
+    ],
     "headers": [
       {
         "path": "api.h",
+        "guard": "HXC_API_H_INCLUDED",
         "visibility": "public",
-        "guard": "HXC_GENERATED_PATH_6170692E68_INCLUDED",
         "includes": [
-          {"path": "clock_api.h", "kind": "system", "reasons": ["external:ApiRequest->ExternalClock"]},
-          {"path": "stddef.h", "kind": "system", "reasons": ["build:ApiRequest"]},
-          {"path": "project/config.h", "kind": "local", "reasons": ["build:ApiRequest"]},
-          {"path": "types/value.h", "kind": "local", "reasons": ["build:ApiRequest", "complete:ApiRequest->Value"]}
-        ],
-        "forwardDeclarations": [
-          {"modulePath": "HiddenHandle", "cName": "hidden_handle", "kind": "opaque"},
-          {"modulePath": "NodeA", "cName": "node_a", "kind": "struct"},
-          {"modulePath": "PrivateState", "cName": "private_state", "kind": "struct"}
+          {
+            "reasons": [
+              "external:ApiRequest->ExternalClock"
+            ],
+            "path": "clock_api.h",
+            "kind": "system"
+          },
+          {
+            "reasons": [
+              "build:ApiRequest"
+            ],
+            "path": "stddef.h",
+            "kind": "system"
+          },
+          {
+            "reasons": [
+              "build:ApiRequest"
+            ],
+            "path": "project/config.h",
+            "kind": "local"
+          },
+          {
+            "reasons": [
+              "build:ApiRequest",
+              "complete:ApiRequest->Value"
+            ],
+            "path": "types/value.h",
+            "kind": "local"
+          }
         ],
         "declarations": [
-          {"modulePath": "ApiRequest", "cName": "api_request", "layout": "struct", "emission": "complete"},
-          {"modulePath": "ApiEnvelope", "cName": "api_envelope", "layout": "struct", "emission": "complete"}
+          {
+            "emission": "complete",
+            "cName": "api_request",
+            "modulePath": "ApiRequest",
+            "layout": "struct"
+          },
+          {
+            "emission": "complete",
+            "cName": "api_envelope",
+            "modulePath": "ApiEnvelope",
+            "layout": "struct"
+          }
+        ],
+        "forwardDeclarations": [
+          {
+            "cName": "hidden_handle",
+            "kind": "opaque",
+            "modulePath": "HiddenHandle"
+          },
+          {
+            "cName": "node_a",
+            "kind": "struct",
+            "modulePath": "NodeA"
+          },
+          {
+            "cName": "private_state",
+            "kind": "struct",
+            "modulePath": "PrivateState"
+          }
         ]
       },
       {
         "path": "detail/state.h",
+        "guard": "HXC_DETAIL_STATE_H_INCLUDED",
         "visibility": "private",
-        "guard": "HXC_GENERATED_PATH_64657461696C2F73746174652E68_INCLUDED",
         "includes": [
-          {"path": "project/config.h", "kind": "local", "reasons": ["build:PrivateState"]},
-          {"path": "types/value.h", "kind": "local", "reasons": ["complete:PrivateState->Value"]}
-        ],
-        "forwardDeclarations": [
-          {"modulePath": "HiddenHandle", "cName": "hidden_handle", "kind": "opaque"}
+          {
+            "reasons": [
+              "build:PrivateState"
+            ],
+            "path": "project/config.h",
+            "kind": "local"
+          },
+          {
+            "reasons": [
+              "complete:PrivateState->Value"
+            ],
+            "path": "types/value.h",
+            "kind": "local"
+          }
         ],
         "declarations": [
-          {"modulePath": "PrivateState", "cName": "private_state", "layout": "struct", "emission": "complete"}
+          {
+            "emission": "complete",
+            "cName": "private_state",
+            "modulePath": "PrivateState",
+            "layout": "struct"
+          }
+        ],
+        "forwardDeclarations": [
+          {
+            "cName": "hidden_handle",
+            "kind": "opaque",
+            "modulePath": "HiddenHandle"
+          }
         ]
       },
       {
         "path": "nodes.h",
+        "guard": "HXC_NODES_H_INCLUDED",
         "visibility": "public",
-        "guard": "HXC_GENERATED_PATH_6E6F6465732E68_INCLUDED",
         "includes": [
-          {"path": "stdint.h", "kind": "system", "reasons": ["build:NodeA", "build:NodeB"]}
-        ],
-        "forwardDeclarations": [
-          {"modulePath": "NodeA", "cName": "node_a", "kind": "struct"},
-          {"modulePath": "NodeB", "cName": "node_b", "kind": "struct"}
+          {
+            "reasons": [
+              "build:NodeA",
+              "build:NodeB"
+            ],
+            "path": "stdint.h",
+            "kind": "system"
+          }
         ],
         "declarations": [
-          {"modulePath": "NodeA", "cName": "node_a", "layout": "struct", "emission": "complete"},
-          {"modulePath": "NodeB", "cName": "node_b", "layout": "struct", "emission": "complete"}
+          {
+            "emission": "complete",
+            "cName": "node_a",
+            "modulePath": "NodeA",
+            "layout": "struct"
+          },
+          {
+            "emission": "complete",
+            "cName": "node_b",
+            "modulePath": "NodeB",
+            "layout": "struct"
+          }
+        ],
+        "forwardDeclarations": [
+          {
+            "cName": "node_a",
+            "kind": "struct",
+            "modulePath": "NodeA"
+          },
+          {
+            "cName": "node_b",
+            "kind": "struct",
+            "modulePath": "NodeB"
+          }
         ]
       },
       {
         "path": "types/value.h",
+        "guard": "HXC_TYPES_VALUE_H_INCLUDED",
         "visibility": "public",
-        "guard": "HXC_GENERATED_PATH_74797065732F76616C75652E68_INCLUDED",
         "includes": [
-          {"path": "stdint.h", "kind": "system", "reasons": ["build:Value"]}
+          {
+            "reasons": [
+              "build:Value"
+            ],
+            "path": "stdint.h",
+            "kind": "system"
+          }
         ],
-        "forwardDeclarations": [],
         "declarations": [
-          {"modulePath": "Value", "cName": "value", "layout": "struct", "emission": "complete"}
-        ]
+          {
+            "emission": "complete",
+            "cName": "value",
+            "modulePath": "Value",
+            "layout": "struct"
+          }
+        ],
+        "forwardDeclarations": []
+      }
+    ],
+    "sourceForwardDeclarations": [
+      {
+        "cName": "node_b",
+        "kind": "struct",
+        "modulePath": "NodeB"
       }
     ],
     "sourceIncludes": [
-      {"path": "clock_api.h", "kind": "system", "reasons": ["build:ExternalClock"]},
-      {"path": "types/value.h", "kind": "local", "reasons": ["complete:Implementation->Value"]}
-    ],
-    "sourceForwardDeclarations": [
-      {"modulePath": "NodeB", "cName": "node_b", "kind": "struct"}
-    ],
-    "sourceDeclarations": [
-      {"modulePath": "ExternalClock", "cName": "external_clock", "layout": "opaque", "emission": "external"},
-      {"modulePath": "HiddenHandle", "cName": "hidden_handle", "layout": "opaque", "emission": "opaque"},
-      {"modulePath": "Implementation", "cName": null, "layout": null, "emission": "complete"}
-    ],
-    "buildIncludes": [
-      {"path": "clock_api.h", "kind": "system", "reasons": ["build:ExternalClock"]},
-      {"path": "stddef.h", "kind": "system", "reasons": ["build:ApiRequest"]},
-      {"path": "stdint.h", "kind": "system", "reasons": ["build:NodeA", "build:NodeB", "build:Value"]},
-      {"path": "project/config.h", "kind": "local", "reasons": ["build:ApiRequest", "build:PrivateState"]},
-      {"path": "types/value.h", "kind": "local", "reasons": ["build:ApiRequest"]}
+      {
+        "reasons": [
+          "build:ExternalClock"
+        ],
+        "path": "clock_api.h",
+        "kind": "system"
+      },
+      {
+        "reasons": [
+          "complete:Implementation->Value"
+        ],
+        "path": "types/value.h",
+        "kind": "local"
+      }
+    ]
+  },
+  "guardProof": {
+    "ordinaryGuard": "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED",
+    "ordinaryPath": "include/hxc/modules/caxecraft/domain/BlockCoord.h",
+    "collisions": [
+      {
+        "path": "include/hxc/modules/demo/FooBar.h",
+        "guard": "HXC_DEMO_FOO_BAR_H_H67430F5446704FDA_INCLUDED"
+      },
+      {
+        "path": "include/hxc/modules/demo/foo-bar.h",
+        "guard": "HXC_DEMO_FOO_BAR_H_H01FF44CDD657662A_INCLUDED"
+      }
     ]
   },
   "diagnostics": {
-    "byValueCycle": "HXC5002: impossible complete-type declaration cycle: `CycleA` -> `CycleB` -> `CycleA`; replace at least one by-value edge with c.Ptr/c.Ref or an opaque handle",
-    "sourceOnlyComplete": "HXC5002: header `public.h` needs complete type `SourceValue`, but that declaration is source-only; move it to a generated header or use an opaque pointer",
     "privateComplete": "HXC5002: public header `public.h` needs complete private type `PrivateValue` from `private.h`; expose the type publicly or use an opaque pointer",
-    "mixedHeaderVisibility": "HXC5002: generated header `mixed.h` mixes public and private declarations; assign one visibility to the whole header",
+    "sourceOnlyComplete": "HXC5002: header `public.h` needs complete type `SourceValue`, but that declaration is source-only; move it to a generated header or use an opaque pointer",
     "missingForwardName": "HXC5002: declaration `Unnamed` needs a finalized C name before it can be forward-declared; add @:c.name or finalize names before planning",
-    "includeKindConflict": "HXC5002: include `same.h` is requested as both system and local; choose one canonical include kind"
+    "includeKindConflict": "HXC5002: include `same.h` is requested as both system and local; choose one canonical include kind",
+    "mixedHeaderVisibility": "HXC5002: generated header `mixed.h` mixes public and private declarations; assign one visibility to the whole header",
+    "byValueCycle": "HXC5002: impossible complete-type declaration cycle: `CycleA` -> `CycleB` -> `CycleA`; replace at least one by-value edge with c.Ptr/c.Ref or an opaque handle"
   }
 }

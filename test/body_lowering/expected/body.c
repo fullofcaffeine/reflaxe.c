@@ -1,57 +1,53 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-static bool hxc_method_BodyFixture_booleanValue(void)
+static bool hxc_BodyFixture_booleanValue(void)
 {
-  bool hxc_local_BodyFixture_booleanValue_value_n0 = true;
-  bool hxc_temp_BodyFixture_booleanValue_loadzx2Dresult_n0 = hxc_local_BodyFixture_booleanValue_value_n0;
-  return hxc_temp_BodyFixture_booleanValue_loadzx2Dresult_n0;
+  bool hxc_value = true;
+  return hxc_value;
 }
 
-static int32_t hxc_method_BodyFixture_directInteger(void)
+static int32_t hxc_BodyFixture_directInteger(void)
 {
   return 23;
 }
 
-static void hxc_method_BodyFixture_explicitVoid(void)
+static void hxc_BodyFixture_explicitVoid(void)
 {
-  int32_t hxc_local_BodyFixture_explicitVoid_first_n0 = 1;
-  int32_t hxc_temp_BodyFixture_explicitVoid_loadzx2Dresult_n0 = hxc_local_BodyFixture_explicitVoid_first_n0;
-  (void)hxc_temp_BodyFixture_explicitVoid_loadzx2Dresult_n0;
-  int32_t hxc_local_BodyFixture_explicitVoid_second_n1 = 2;
-  int32_t hxc_temp_BodyFixture_explicitVoid_loadzx2Dresult_n1 = hxc_local_BodyFixture_explicitVoid_second_n1;
-  (void)hxc_temp_BodyFixture_explicitVoid_loadzx2Dresult_n1;
+  int32_t hxc_first = 1;
+  int32_t hxc_tmp_load_result_n0 = hxc_first;
+  (void)hxc_tmp_load_result_n0;
+  int32_t hxc_second = 2;
+  int32_t hxc_tmp_load_result_n1 = hxc_second;
+  (void)hxc_tmp_load_result_n1;
   return;
 }
 
-static double hxc_method_BodyFixture_floatingValue(void)
+static double hxc_BodyFixture_floatingValue(void)
 {
-  double hxc_local_BodyFixture_floatingValue_value_n0 = 1.5;
-  double hxc_temp_BodyFixture_floatingValue_loadzx2Dresult_n0 = hxc_local_BodyFixture_floatingValue_value_n0;
-  return hxc_temp_BodyFixture_floatingValue_loadzx2Dresult_n0;
+  double hxc_value = 1.5;
+  return hxc_value;
 }
 
-static void hxc_method_BodyFixture_implicitVoid(void)
+static void hxc_BodyFixture_implicitVoid(void)
 {
-  bool hxc_local_BodyFixture_implicitVoid_value_n0 = false;
-  bool hxc_temp_BodyFixture_implicitVoid_loadzx2Dresult_n0 = hxc_local_BodyFixture_implicitVoid_value_n0;
-  (void)hxc_temp_BodyFixture_implicitVoid_loadzx2Dresult_n0;
+  bool hxc_value = false;
+  bool hxc_tmp_load_result_n0 = hxc_value;
+  (void)hxc_tmp_load_result_n0;
   return;
 }
 
-static int32_t hxc_method_BodyFixture_integerValue(void)
+static int32_t hxc_BodyFixture_integerValue(void)
 {
-  int32_t hxc_local_BodyFixture_integerValue_value_n0 = 17;
-  int32_t hxc_temp_BodyFixture_integerValue_loadzx2Dresult_n0 = hxc_local_BodyFixture_integerValue_value_n0;
-  (void)hxc_temp_BodyFixture_integerValue_loadzx2Dresult_n0;
-  int32_t hxc_local_BodyFixture_integerValue_value_n1 = 42;
-  int32_t hxc_temp_BodyFixture_integerValue_loadzx2Dresult_n1 = hxc_local_BodyFixture_integerValue_value_n1;
-  return hxc_temp_BodyFixture_integerValue_loadzx2Dresult_n1;
+  int32_t hxc_value_h276946f7ce4a = 17;
+  int32_t hxc_tmp_load_result_n0 = hxc_value_h276946f7ce4a;
+  (void)hxc_tmp_load_result_n0;
+  int32_t hxc_value_h95f4913cd08b = 42;
+  return hxc_value_h95f4913cd08b;
 }
 
-static uint32_t hxc_method_BodyFixture_unsignedValue(void)
+static uint32_t hxc_BodyFixture_unsignedValue(void)
 {
-  uint32_t hxc_local_BodyFixture_unsignedValue_value_n0 = 29;
-  uint32_t hxc_temp_BodyFixture_unsignedValue_loadzx2Dresult_n0 = hxc_local_BodyFixture_unsignedValue_value_n0;
-  return hxc_temp_BodyFixture_unsignedValue_loadzx2Dresult_n0;
+  uint32_t hxc_value = 29;
+  return hxc_value;
 }

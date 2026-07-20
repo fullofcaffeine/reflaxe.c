@@ -1,48 +1,48 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 {
-  int32_t hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_a_n0;
-  int32_t hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_zz_n1;
+struct hxc_OrderA {
+  int32_t hxc_a;
+  int32_t hxc_z;
 };
 
-struct hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54 {
-  bool hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_enabled_n0;
-  struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_point_n1;
+struct hxc_Envelope {
+  bool hxc_enabled;
+  struct hxc_OrderA hxc_point;
 };
 
-struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_method_AggregateFixture_copy(struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_local_AggregateFixture_copy_value_n0);
+struct hxc_OrderA hxc_AggregateFixture_copy(struct hxc_OrderA hxc_value);
 
-struct hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54 hxc_method_AggregateFixture_envelope(struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_local_AggregateFixture_envelope_value_n0);
+struct hxc_Envelope hxc_AggregateFixture_envelope(struct hxc_OrderA hxc_value);
 
-int32_t hxc_method_AggregateFixture_envelopeSum(struct hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54 hxc_local_AggregateFixture_envelopeSum_value_n0);
+int32_t hxc_AggregateFixture_envelopeSum(struct hxc_Envelope hxc_value);
 
-int32_t hxc_method_AggregateFixture_identity(int32_t hxc_local_AggregateFixture_identity_value_n0);
+int32_t hxc_AggregateFixture_identity(int32_t hxc_value);
 
-int32_t hxc_method_AggregateFixture_localSum(int32_t hxc_local_AggregateFixture_localSum_left_n0, int32_t hxc_local_AggregateFixture_localSum_right_n1);
+int32_t hxc_AggregateFixture_localSum(int32_t hxc_left, int32_t hxc_right);
 
-void hxc_method_AggregateFixture_main(void);
+void hxc_AggregateFixture_main(void);
 
-struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_method_AggregateFixture_make(int32_t hxc_local_AggregateFixture_make_left_n0, int32_t hxc_local_AggregateFixture_make_right_n1);
+struct hxc_OrderA hxc_AggregateFixture_make(int32_t hxc_left, int32_t hxc_right);
 
-int32_t hxc_method_AggregateFixture_sum(struct hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367 hxc_local_AggregateFixture_sum_value_n0);
+int32_t hxc_AggregateFixture_sum(struct hxc_OrderA hxc_value);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

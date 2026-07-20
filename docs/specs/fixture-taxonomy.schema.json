@@ -143,6 +143,15 @@
               "minLength": 1
             }
           },
+          "snapshotValidationRunner": {
+            "description": "Optional focused command used only after the registered updater has already rendered the suite twice; the ordinary runner remains the exhaustive suite authority.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
           "types": {
             "type": "array",
             "minItems": 1,

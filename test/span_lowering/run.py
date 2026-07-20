@@ -573,17 +573,24 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
         "zeroedGridCell",
     ]:
         raise SpanLoweringFailure(f"span function order drifted: {fields!r}")
-    length_names = [
-        name
-        for item in functions
-        if isinstance(item, dict)
-        for name in item.get("spanLengthNames", [])
-        if isinstance(name, str)
-    ]
-    if len(length_names) != 16 or len(set(length_names)) != 16:
-        raise SpanLoweringFailure("span length identifiers are not unique and complete")
+    length_name_count = 0
+    for item in functions:
+        if not isinstance(item, dict):
+            raise SpanLoweringFailure("span function inventory contains a malformed entry")
+        names = item.get("spanLengthNames")
+        if (
+            not isinstance(names, list)
+            or not all(isinstance(name, str) for name in names)
+            or len(names) != len(set(names))
+        ):
+            raise SpanLoweringFailure(
+                f"span length identifiers are not unique inside {item.get('field')!r}"
+            )
+        length_name_count += len(names)
+    if length_name_count != 16:
+        raise SpanLoweringFailure("span length identifier inventory is incomplete")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise SpanLoweringFailure("span report omitted its finalized symbol table")
     function_names(symbols)
     aborts = [

@@ -1,82 +1,82 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout;
+struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout;
 
-struct hxc_type_compiler_haxezx2Dclass_BaseWorker;
+struct hxc_BaseWorker;
 
-struct hxc_type_compiler_haxezx2Dclass_MiddleWorker;
+struct hxc_MiddleWorker;
 
-struct hxc_type_compiler_haxezx2Dclass_LeafWorker;
+struct hxc_LeafWorker;
 
-struct hxc_type_compiler_haxezx2Dclass_FinalWorker;
+struct hxc_FinalWorker;
 
-struct hxc_type_compiler_haxezx2Dclass_BaseWorker {
-  const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout *hxc_field_compiler_haxezx2Dclass_BaseWorker_virtualzx2Dtable_n0;
-  int32_t hxc_field_compiler_haxezx2Dclass_BaseWorker_field_seed_n0;
+struct hxc_BaseWorker {
+  const struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout *hxc_vtable;
+  int32_t hxc_seed;
 };
 
-struct hxc_type_compiler_haxezx2Dclass_MiddleWorker {
-  struct hxc_type_compiler_haxezx2Dclass_BaseWorker hxc_field_compiler_haxezx2Dclass_MiddleWorker_base_n0;
+struct hxc_MiddleWorker {
+  struct hxc_BaseWorker hxc_base;
 };
 
-struct hxc_type_compiler_haxezx2Dclass_LeafWorker {
-  struct hxc_type_compiler_haxezx2Dclass_MiddleWorker hxc_field_compiler_haxezx2Dclass_LeafWorker_base_n0;
+struct hxc_LeafWorker {
+  struct hxc_MiddleWorker hxc_base;
 };
 
-struct hxc_type_compiler_haxezx2Dclass_FinalWorker {
-  int32_t hxc_field_compiler_haxezx2Dclass_FinalWorker_field_seed_n0;
+struct hxc_FinalWorker {
+  int32_t hxc_seed;
 };
 
-struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout {
-  int32_t (*hxc_field_compiler_virtualzx2Ddispatch_vtablezx2Elayoutzx2EBaseWorker_slotzx2EBaseWorkerzx2Evalue_n0)(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *, int32_t);
+struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout {
+  int32_t (*hxc_slot_BaseWorker_value)(struct hxc_BaseWorker *, int32_t);
 };
 
-extern const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout hxc_vtable_compiler_virtualzx2Ddispatch_LeafWorker;
+extern const struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout hxc_vtable_compiler_virtual_dispatch_LeafWorker;
 
-extern const struct hxc_type_compiler_virtualzx2Ddispatch_BaseWorker_tablezx2Dlayout hxc_vtable_compiler_virtualzx2Ddispatch_MiddleWorker;
+extern const struct hxc_compiler_virtual_dispatch_BaseWorker_table_layout hxc_vtable_compiler_virtual_dispatch_MiddleWorker;
 
-void hxc_method_compiler_constructor_BaseWorker_n0(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_new_self_n0, int32_t hxc_local_BaseWorker_new_seed_n1);
+void hxc_compiler_constructor_BaseWorker(struct hxc_BaseWorker *hxc_self, int32_t hxc_seed);
 
-void hxc_method_compiler_constructor_FinalWorker_n0(struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_local_FinalWorker_new_self_n0, int32_t hxc_local_FinalWorker_new_seed_n1);
+void hxc_compiler_constructor_FinalWorker(struct hxc_FinalWorker *hxc_self, int32_t hxc_seed);
 
-void hxc_method_compiler_constructor_LeafWorker_n0(struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_LeafWorker_new_self_n0, int32_t hxc_local_LeafWorker_new_seed_n1);
+void hxc_compiler_constructor_LeafWorker(struct hxc_LeafWorker *hxc_self, int32_t hxc_seed);
 
-void hxc_method_compiler_constructor_MiddleWorker_n0(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *hxc_local_MiddleWorker_new_self_n0, int32_t hxc_local_MiddleWorker_new_seed_n1);
+void hxc_compiler_constructor_MiddleWorker(struct hxc_MiddleWorker *hxc_self, int32_t hxc_seed);
 
-void hxc_method_Main_main(void);
+void hxc_Main_main(void);
 
-int32_t hxc_method_BaseWorker_finalValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_finalValue_self_n0, int32_t hxc_local_BaseWorker_finalValue_delta_n1);
+int32_t hxc_BaseWorker_finalValue(struct hxc_BaseWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_BaseWorker_pinnedValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_pinnedValue_self_n0, int32_t hxc_local_BaseWorker_pinnedValue_delta_n1);
+int32_t hxc_BaseWorker_pinnedValue(struct hxc_BaseWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_BaseWorker_privateValue(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_privateValue_self_n0, int32_t hxc_local_BaseWorker_privateValue_delta_n1);
+int32_t hxc_BaseWorker_privateValue(struct hxc_BaseWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_BaseWorker_value(struct hxc_type_compiler_haxezx2Dclass_BaseWorker *hxc_local_BaseWorker_value_self_n0, int32_t hxc_local_BaseWorker_value_delta_n1);
+int32_t hxc_BaseWorker_value(struct hxc_BaseWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_FinalWorker_value(struct hxc_type_compiler_haxezx2Dclass_FinalWorker *hxc_local_FinalWorker_value_self_n0, int32_t hxc_local_FinalWorker_value_delta_n1);
+int32_t hxc_FinalWorker_value(struct hxc_FinalWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_LeafWorker_value(struct hxc_type_compiler_haxezx2Dclass_LeafWorker *hxc_local_LeafWorker_value_self_n0, int32_t hxc_local_LeafWorker_value_delta_n1);
+int32_t hxc_LeafWorker_value(struct hxc_LeafWorker *hxc_self, int32_t hxc_delta);
 
-int32_t hxc_method_MiddleWorker_value(struct hxc_type_compiler_haxezx2Dclass_MiddleWorker *hxc_local_MiddleWorker_value_self_n0, int32_t hxc_local_MiddleWorker_value_delta_n1);
+int32_t hxc_MiddleWorker_value(struct hxc_MiddleWorker *hxc_self, int32_t hxc_delta);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

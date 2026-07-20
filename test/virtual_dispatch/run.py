@@ -521,9 +521,9 @@ def validate_generated_c(project: RenderedProject) -> None:
             raise VirtualDispatchFailure(f"generated C omitted adapter declaration/definition {adapter}")
     if (
         project.source.count(f"->{c_member}(") != 3
-        or "hxc_method_BaseWorker_finalValue(" not in project.source
-        or "hxc_method_BaseWorker_pinnedValue(" not in project.source
-        or "hxc_method_FinalWorker_value(" not in project.source
+        or "hxc_BaseWorker_finalValue(" not in project.source
+        or "hxc_BaseWorker_pinnedValue(" not in project.source
+        or "hxc_FinalWorker_value(" not in project.source
         or "int main(void)" not in project.source
     ):
         raise VirtualDispatchFailure("generated C lost indirect or preserved direct calls")
@@ -571,7 +571,7 @@ def validate_project(project: RenderedProject, *, expected_profile: str) -> None
     validate_hxcir(project)
     validate_generated_c(project)
     validate_product_sidecars(project, expected_profile)
-    if project.symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if project.symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise VirtualDispatchFailure("dispatch project omitted finalized symbols")
     for path, content in project.artifacts.items():
         if str(ROOT).encode() in content or b"\\" in content or b"hxrt" in content.lower():

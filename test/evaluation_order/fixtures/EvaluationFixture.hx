@@ -4,6 +4,7 @@ class EvaluationFixture {
 	static var ternaryIntact:Bool = true;
 	static var counter:UInt = 0;
 	static var switchCalls:UInt = 0;
+	static var barrierValue:Int = 0;
 
 	static function setCallFlag(value:Bool):Bool {
 		callFlag = value;
@@ -36,6 +37,18 @@ class EvaluationFixture {
 	static function switchSubject(value:Int):Int {
 		switchCalls++;
 		return value;
+	}
+
+	static function overwriteBarrierValue():Int {
+		barrierValue = 41;
+		return 0;
+	}
+
+	static function readGlobalBeforeCall():Int {
+		barrierValue = 5;
+		var before = barrierValue;
+		overwriteBarrierValue();
+		return before;
 	}
 
 	static function run():UInt {
@@ -110,6 +123,8 @@ class EvaluationFixture {
 		if (rangeTotal != 3)
 			controlIntact = false;
 		if (switchCalls != 1)
+			controlIntact = false;
+		if (readGlobalBeforeCall() != 5)
 			controlIntact = false;
 		if (controlIntact)
 			result = selectedBySwitch;

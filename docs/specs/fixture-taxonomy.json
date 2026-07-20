@@ -985,6 +985,10 @@
         "examples/caxecraft/run.py",
         "--full"
       ],
+      "snapshotValidationRunner": [
+        "python3",
+        "examples/caxecraft/run.py"
+      ],
       "types": [
         "positive",
         "snapshot",

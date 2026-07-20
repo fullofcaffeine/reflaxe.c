@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "symbols": [
     {
       "overloadSignature": [
@@ -8,8 +8,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "asFloat"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_asFloat",
+      "cName": "hxc_FunctionFixture_asFloat",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:asFloat|1:3:f64|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -19,7 +23,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_asFloat",
+      "baseName": "hxc_FunctionFixture_asFloat",
       "sourceSymbol": "FunctionFixture.asFloat(f64)"
     },
     {
@@ -27,8 +31,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_asFloat_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:asFloat|1:3:f64|0:|0:|3:15:FunctionFixture7:asFloat5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -38,7 +45,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_asFloat_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.asFloat.value#0"
     },
     {
@@ -48,8 +55,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "chain"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_chain",
+      "cName": "hxc_FunctionFixture_chain",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:chain|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -59,7 +70,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_chain",
+      "baseName": "hxc_FunctionFixture_chain",
       "sourceSymbol": "FunctionFixture.chain(i32)"
     },
     {
@@ -67,11 +78,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_chain_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:chain|1:3:i32|0:|0:|3:15:FunctionFixture5:chain11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:chain|1:3:i32|0:|0:",
@@ -80,7 +96,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_chain_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "FunctionFixture.chain.call-result#0"
     },
     {
@@ -88,8 +104,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_chain_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:chain|1:3:i32|0:|0:|3:15:FunctionFixture5:chain5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -99,7 +118,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_chain_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.chain.value#0"
     },
     {
@@ -109,8 +128,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "convert"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_convert",
+      "cName": "hxc_FunctionFixture_convert",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:convert|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -120,7 +143,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_convert",
+      "baseName": "hxc_FunctionFixture_convert",
       "sourceSymbol": "FunctionFixture.convert(i32)"
     },
     {
@@ -128,11 +151,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_convert_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:convert|1:3:i32|0:|0:|3:15:FunctionFixture7:convert11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:convert|1:3:i32|0:|0:",
@@ -141,7 +169,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_convert_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "FunctionFixture.convert.call-result#0"
     },
     {
@@ -149,8 +177,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_convert_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:convert|1:3:i32|0:|0:|3:15:FunctionFixture7:convert5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -160,7 +191,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_convert_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.convert.value#0"
     },
     {
@@ -170,8 +201,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "discarded"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_discarded",
+      "cName": "hxc_FunctionFixture_discarded",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:discarded|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -181,7 +216,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_discarded",
+      "baseName": "hxc_FunctionFixture_discarded",
       "sourceSymbol": "FunctionFixture.discarded(i32)"
     },
     {
@@ -189,8 +224,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_discarded_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|98:ordinary:86:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:discarded|1:3:i32|0:|0:|3:15:FunctionFixture9:discarded5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -200,7 +238,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_discarded_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.discarded.value#0"
     },
     {
@@ -211,8 +249,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "first"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_first",
+      "cName": "hxc_FunctionFixture_first",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:first|2:3:i323:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -222,7 +264,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_first",
+      "baseName": "hxc_FunctionFixture_first",
       "sourceSymbol": "FunctionFixture.first(i32, i32)"
     },
     {
@@ -230,8 +272,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "left"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_first_left_n0",
+      "cName": "hxc_left",
       "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:first|2:3:i323:i32|0:|0:|3:15:FunctionFixture5:first4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -241,7 +286,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_first_left_n0",
+      "baseName": "hxc_left",
       "sourceSymbol": "FunctionFixture.first.left#0"
     },
     {
@@ -249,8 +294,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "right"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_first_right_n1",
+      "cName": "hxc_right",
       "semanticKey": "5:local|99:ordinary:87:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture5:first|2:3:i323:i32|0:|0:|3:15:FunctionFixture5:first5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -260,7 +308,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_first_right_n1",
+      "baseName": "hxc_right",
       "sourceSymbol": "FunctionFixture.first.right#1"
     },
     {
@@ -268,8 +316,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "main"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_main",
+      "cName": "hxc_FunctionFixture_main",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -279,7 +331,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_main",
+      "baseName": "hxc_FunctionFixture_main",
       "sourceSymbol": "FunctionFixture.main"
     },
     {
@@ -287,11 +339,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -300,7 +357,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "FunctionFixture.main.call-result#0"
     },
     {
@@ -308,11 +365,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n2",
+      "cName": "hxc_tmp_call_result_n2",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -321,7 +383,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n2",
+      "baseName": "hxc_tmp_call_result_n2",
       "sourceSymbol": "FunctionFixture.main.call-result#2"
     },
     {
@@ -329,11 +391,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n4",
+      "cName": "hxc_tmp_call_result_n4",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:call-result|0:|0:|1:4",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -342,7 +409,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_callzx2Dresult_n4",
+      "baseName": "hxc_tmp_call_result_n4",
       "sourceSymbol": "FunctionFixture.main.call-result#4"
     },
     {
@@ -350,8 +417,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "floating"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_main_floating_n1",
+      "cName": "hxc_floating",
       "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main8:floating|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -361,7 +431,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_main_floating_n1",
+      "baseName": "hxc_floating",
       "sourceSymbol": "FunctionFixture.main.floating#1"
     },
     {
@@ -369,8 +439,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "integer"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_main_integer_n0",
+      "cName": "hxc_integer",
       "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main7:integer|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -380,7 +453,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_main_integer_n0",
+      "baseName": "hxc_integer",
       "sourceSymbol": "FunctionFixture.main.integer#0"
     },
     {
@@ -388,11 +461,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n1",
+      "cName": "hxc_tmp_load_result_n1",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:load-result|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -401,7 +479,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n1",
+      "baseName": "hxc_tmp_load_result_n1",
       "sourceSymbol": "FunctionFixture.main.load-result#1"
     },
     {
@@ -409,11 +487,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n3",
+      "cName": "hxc_tmp_load_result_n3",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:load-result|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -422,7 +505,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n3",
+      "baseName": "hxc_tmp_load_result_n3",
       "sourceSymbol": "FunctionFixture.main.load-result#3"
     },
     {
@@ -430,11 +513,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n5",
+      "cName": "hxc_tmp_load_result_n5",
       "semanticKey": "9:temporary|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main11:load-result|0:|0:|1:5",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:",
@@ -443,7 +531,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_main_loadzx2Dresult_n5",
+      "baseName": "hxc_tmp_load_result_n5",
       "sourceSymbol": "FunctionFixture.main.load-result#5"
     },
     {
@@ -451,8 +539,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "orderedValue"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_main_orderedValue_n2",
+      "cName": "hxc_orderedValue",
       "semanticKey": "5:local|88:ordinary:76:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture4:main|0:|0:|0:|3:15:FunctionFixture4:main12:orderedValue|0:|0:|1:2",
       "escapeReasons": [],
       "namespace": {
@@ -462,7 +553,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_main_orderedValue_n2",
+      "baseName": "hxc_orderedValue",
       "sourceSymbol": "FunctionFixture.main.orderedValue#2"
     },
     {
@@ -472,8 +563,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "mutualLeft"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_mutualLeft",
+      "cName": "hxc_FunctionFixture_mutualLeft",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:mutualLeft|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -483,7 +578,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_mutualLeft",
+      "baseName": "hxc_FunctionFixture_mutualLeft",
       "sourceSymbol": "FunctionFixture.mutualLeft(i32)"
     },
     {
@@ -491,8 +586,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_mutualLeft_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|100:ordinary:88:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture10:mutualLeft|1:3:i32|0:|0:|3:15:FunctionFixture10:mutualLeft5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -502,7 +600,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_mutualLeft_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.mutualLeft.value#0"
     },
     {
@@ -512,8 +610,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "mutualRight"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_mutualRight",
+      "cName": "hxc_FunctionFixture_mutualRight",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:mutualRight|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -523,7 +625,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_mutualRight",
+      "baseName": "hxc_FunctionFixture_mutualRight",
       "sourceSymbol": "FunctionFixture.mutualRight(i32)"
     },
     {
@@ -531,8 +633,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_mutualRight_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:mutualRight|1:3:i32|0:|0:|3:15:FunctionFixture11:mutualRight5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -542,7 +647,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_mutualRight_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.mutualRight.value#0"
     },
     {
@@ -552,8 +657,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "ordered"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_ordered",
+      "cName": "hxc_FunctionFixture_ordered",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -563,7 +672,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_ordered",
+      "baseName": "hxc_FunctionFixture_ordered",
       "sourceSymbol": "FunctionFixture.ordered(i32)"
     },
     {
@@ -571,11 +680,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:|3:15:FunctionFixture7:ordered11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:",
@@ -584,7 +698,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "FunctionFixture.ordered.call-result#0"
     },
     {
@@ -592,11 +706,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1",
+      "cName": "hxc_tmp_call_result_n1",
       "semanticKey": "9:temporary|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:|3:15:FunctionFixture7:ordered11:call-result|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:",
@@ -605,7 +724,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1",
+      "baseName": "hxc_tmp_call_result_n1",
       "sourceSymbol": "FunctionFixture.ordered.call-result#1"
     },
     {
@@ -613,11 +732,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2",
+      "cName": "hxc_tmp_call_result_n2",
       "semanticKey": "9:temporary|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:|3:15:FunctionFixture7:ordered11:call-result|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:",
@@ -626,7 +750,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2",
+      "baseName": "hxc_tmp_call_result_n2",
       "sourceSymbol": "FunctionFixture.ordered.call-result#2"
     },
     {
@@ -634,8 +758,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_ordered_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|96:ordinary:84:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture7:ordered|1:3:i32|0:|0:|3:15:FunctionFixture7:ordered5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -645,7 +772,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_ordered_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.ordered.value#0"
     },
     {
@@ -655,8 +782,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "passthrough"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_passthrough",
+      "cName": "hxc_FunctionFixture_passthrough",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:passthrough|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -666,7 +797,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_passthrough",
+      "baseName": "hxc_FunctionFixture_passthrough",
       "sourceSymbol": "FunctionFixture.passthrough(i32)"
     },
     {
@@ -674,8 +805,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_passthrough_value_n0",
+      "cName": "hxc_value",
       "semanticKey": "5:local|101:ordinary:89:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture11:passthrough|1:3:i32|0:|0:|3:15:FunctionFixture11:passthrough5:value|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -685,7 +819,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_passthrough_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "FunctionFixture.passthrough.value#0"
     },
     {
@@ -696,8 +830,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "FunctionFixture",
+        "recursive"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_FunctionFixture_recursive",
+      "cName": "hxc_FunctionFixture_recursive",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -707,7 +845,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_FunctionFixture_recursive",
+      "baseName": "hxc_FunctionFixture_recursive",
       "sourceSymbol": "FunctionFixture.recursive(i32, i32)"
     },
     {
@@ -715,8 +853,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "left"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_recursive_left_n0",
+      "cName": "hxc_left",
       "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive4:left|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -726,7 +867,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_recursive_left_n0",
+      "baseName": "hxc_left",
       "sourceSymbol": "FunctionFixture.recursive.left#0"
     },
     {
@@ -734,8 +875,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "right"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FunctionFixture_recursive_right_n1",
+      "cName": "hxc_right",
       "semanticKey": "5:local|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive5:right|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -745,7 +889,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FunctionFixture_recursive_right_n1",
+      "baseName": "hxc_right",
       "sourceSymbol": "FunctionFixture.recursive.right#1"
     },
     {
@@ -753,11 +897,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "tail-argument"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0",
+      "cName": "hxc_tmp_tail_argument_n0",
       "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive13:tail-argument|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
@@ -766,7 +915,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n0",
+      "baseName": "hxc_tmp_tail_argument_n0",
       "sourceSymbol": "FunctionFixture.recursive.tail-argument#0"
     },
     {
@@ -774,11 +923,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "tail-argument"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1",
+      "cName": "hxc_tmp_tail_argument_n1",
       "semanticKey": "9:temporary|103:ordinary:91:6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:|3:15:FunctionFixture9:recursive13:tail-argument|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:15:FunctionFixture9:recursive|2:3:i323:i32|0:|0:",
@@ -787,7 +941,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FunctionFixture_recursive_tailzx2Dargument_n1",
+      "baseName": "hxc_tmp_tail_argument_n1",
       "sourceSymbol": "FunctionFixture.recursive.tail-argument#1"
     },
     {
@@ -795,6 +949,12 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
+      "readableName": [
+        "init",
+        "compiler",
+        "executable-entry-point",
+        "function.FunctionFixture.main"
+      ],
       "requestedName": "main",
       "cName": "main",
       "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|3:8:compiler22:executable-entry-point29:function.FunctionFixture.main|0:|0:|0:",
@@ -814,8 +974,14 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
-      "requestedName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
-      "cName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "readableName": [
+        "module",
+        "compiler",
+        "program-header",
+        "guard"
+      ],
+      "requestedName": "HXC_PROGRAM_H_INCLUDED",
+      "cName": "HXC_PROGRAM_H_INCLUDED",
       "semanticKey": "6:module|12:preprocessor|3:8:compiler14:program-header5:guard|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -825,10 +991,10 @@
       "visibility": "internal",
       "kind": "module",
       "specializationArguments": [],
-      "baseName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "baseName": "HXC_PROGRAM_H_INCLUDED",
       "sourceSymbol": "compiler.program-header.guard"
     }
   ],
   "collisions": [],
-  "algorithm": "hxc-c-symbol-v1"
+  "algorithm": "hxc-c-symbol-v2"
 }

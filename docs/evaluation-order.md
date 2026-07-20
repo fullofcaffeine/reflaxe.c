@@ -74,27 +74,57 @@ safe stable C expression.
 
 ## Stable-value and temporary proof
 
-There is no general temporary-removal optimization pass in this slice. The C
-emitter may keep only these values inline:
+“Materialize” means copying a computed value into a named C variable at the
+point where Haxe computed it. “Coalesce” means omitting that variable and
+placing the expression directly at its one later use. Coalescing makes C easier
+to read, but it can be wrong if it silently changes *when* a read or call
+happens. C does not promise left-to-right evaluation for every operator or
+function argument, while Haxe does.
 
-- constants and function parameters; and
-- proven-total pure static conversions or operators whose inputs are already
-  stable values.
+`CBodyValueCoalescingPlanner` therefore performs a small proof per HxcIR
+function. It is intentionally not a general optimizer. These values may remain
+structural CAST expressions without a temporary:
 
-Every load is copied immediately into a typed, registry-named C temporary.
-Every consumed non-`Void` call result is likewise materialized before a later
-instruction can mutate state. This prevents a local/global read from being
-silently delayed and prevents two Haxe calls from becoming operands or
-arguments whose order C leaves unspecified. The evaluation-order runner
-compares every load and consumed call result in HxcIR with the recorded
-temporary-value set, while also proving that the admitted pure values remain
-eligible for inlining.
+- constants, parameters, and proven-total pure conversions/operators;
+- a single-use compiler-owned record or enum value in the same block; and
+- one single-use direct local or local-field read when its final use is in the
+  same block and nothing observable occurs between the read and that use.
 
-Any future pass that removes another temporary must carry a semantic proof that
-the value is pure, total, non-volatile, non-failing, lifetime-safe, and
-independent of intervening writes. It also needs a focused negative/adversarial
-test and differential execution at both `-O0` and `-O2`; source-shape
-convenience alone is not authority to weaken sequencing.
+The last rule is the narrow one. The planner follows a chain of pure arithmetic
+or record operations to one final consumer. It refuses to move the read across
+another read, call, store, address operation, check/failure edge, allocation, or
+lifetime change. A terminator carrying cleanup steps is also a hard barrier:
+Haxe computes the returned/thrown value before cleanup runs, so that value must
+already be materialized. The planner also refuses when the expression fans out
+to several uses.
+
+These values remain named C storage:
+
+- global, pointer/dereference, indexed, and span reads, because they may observe
+  foreign, aliased, or volatile-like storage;
+- values used more than once or directly outside their producing block;
+- call results and other effectful or unsupported producers; and
+- any otherwise-local read separated from its consumer by an observable,
+  failing, aliasing, or lifetime-changing instruction.
+
+This keeps a Haxe read before an intervening call and keeps consumed Haxe calls
+in their original order, while removing mechanical temporaries such as a
+single-use `record.x` projection. The planner returns a closed typed reason for
+every value that stays materialized; the C emitter consumes that plan and does
+not rediscover the policy. Coalesced values are also removed before symbol-name
+finalization, so `hxc.symbols.json` does not advertise C variables that were
+never emitted.
+
+The evaluation-order probe exercises safe local and field reads, pure records,
+intervening reads and native calls, global/dereference/index places, multiple
+uses, expression fanout, cross-block misuse, checked failure, lifetime change,
+return-edge cleanup, call results, and planner reuse. It also requires the real source-backed fixture
+to coalesce at least one eligible local read. Protected loads and consumed calls
+must still appear in the generated temporary set. Native differential execution
+at `-O0` and `-O2` remains the final behavior check.
+
+Any future expansion must add the same kind of explicit proof and adversarial
+case. Readability alone is not authority to weaken sequencing.
 
 ## Boundaries
 

@@ -339,12 +339,12 @@ def validate_positive(project: RenderedProject) -> None:
             raise CImportFailure(f"generated import path leaked forbidden spelling {spelling!r}")
     for spelling in (
         ".x = POINTLIB_COORD_ONE;",
-        " = &hxc_local_Main_main_left_n0.x;",
-        " = *hxc_temp_Main_main_importedzx2Dfieldzx2Daddress",
-        "pointlib_axis hxc_local_Main_main_axis",
-        "float hxc_local_Main_main_floatDot",
-        "struct pointlib_point hxc_local_Main_main_pointAlias",
-        "double hxc_local_Main_main_widened",
+        " = &hxc_left.x;",
+        " = *hxc_tmp_imported_field_address",
+        "pointlib_axis hxc_axis",
+        "float hxc_floatDot",
+        "struct pointlib_point hxc_pointAlias",
+        "double hxc_widened",
     ):
         if spelling not in source:
             raise CImportFailure(

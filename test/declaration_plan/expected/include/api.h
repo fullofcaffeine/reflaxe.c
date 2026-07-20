@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_6170692E68_INCLUDED
-#define HXC_GENERATED_PATH_6170692E68_INCLUDED
+#ifndef HXC_API_H_INCLUDED
+#define HXC_API_H_INCLUDED
 
 #include <clock_api.h>
 #include <stddef.h>
@@ -41,4 +41,4 @@ struct api_envelope {
   api_request request;
 };
 
-#endif /* HXC_GENERATED_PATH_6170692E68_INCLUDED */
+#endif /* HXC_API_H_INCLUDED */

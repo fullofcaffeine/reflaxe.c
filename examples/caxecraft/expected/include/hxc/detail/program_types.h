@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F64657461696C2F70726F6772616D5F74797065732E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F64657461696C2F70726F6772616D5F74797065732E68_INCLUDED
+#ifndef HXC_DETAIL_PROGRAM_TYPES_H_INCLUDED
+#define HXC_DETAIL_PROGRAM_TYPES_H_INCLUDED
 
 #include <math.h>
 #include <stdbool.h>
@@ -7,97 +7,97 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline double hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(double hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0, double hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1)
+static inline double hxc_f64_divide_zero_safe(double hxc_left, double hxc_right)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1 != 0.0)
+  if (hxc_right != 0.0)
   {
-    return hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 / hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1;
+    return hxc_left / hxc_right;
   }
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 == 0.0 || hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 != hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0)
+  if (hxc_left == 0.0 || hxc_left != hxc_left)
   {
     return NAN;
   }
-  return signbit(hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0) != signbit(hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1) ? -INFINITY : INFINITY;
+  return signbit(hxc_left) != signbit(hxc_right) ? -INFINITY : INFINITY;
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating(double hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0)
+static inline int32_t hxc_f64_to_i32_saturating(double hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0 != hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0)
+  if (hxc_value != hxc_value)
   {
     return 0;
   }
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0 >= 2147483647.0)
+  if (hxc_value >= 2147483647.0)
   {
     return INT32_MAX;
   }
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0 <= -2147483648.0)
+  if (hxc_value <= -2147483648.0)
   {
     return INT32_MIN;
   }
-  return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Etozx2Ei32zx2Esaturating_value_n0;
+  return (int32_t)hxc_value;
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dand(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_right_n1)
+static inline int32_t hxc_i32_bit_and(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_left_n0 & (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dand_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left & (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Ebitzx2Dxor(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_right_n1)
+static inline int32_t hxc_i32_bit_xor(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_left_n0 ^ (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Ebitzx2Dxor_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left ^ (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1)
+static inline int32_t hxc_i32_modulo_zero_safe(int32_t hxc_left, int32_t hxc_right)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1 == 0 || (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_left_n0 == INT32_MIN && hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1 == -1))
+  if (hxc_right == 0 || (hxc_left == INT32_MIN && hxc_right == -1))
   {
     return 0;
   }
-  return hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_left_n0 % hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emodulozx2Ezzerozx2Dsafe_right_n1;
+  return hxc_left % hxc_right;
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0 * (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Enegatezx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Enegatezx2Ewrapping_value_n0)
+static inline int32_t hxc_i32_negate_wrapping(int32_t hxc_value)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)0 - (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Enegatezx2Ewrapping_value_n0));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)0 - (uint64_t)(uint32_t)hxc_value));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Esubtractzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_subtract_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_left_n0 - (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Esubtractzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left - (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_right_n1)
+static inline int32_t hxc_i32_unsigned_shift_right_masked(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_left_n0 >> ((uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eunsignedzx2Dshiftzx2Drightzx2Emasked_right_n1 & (uint32_t)31)));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left >> ((uint32_t)hxc_right & (uint32_t)31)));
 }
 
-struct hxc_type_compiler_closedzx2Drecord_4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793;
+struct hxc_caxecraft_domain_BlockCoord;
 
-struct hxc_type_compiler_closedzx2Drecord_4b64390e14c7ed11d116777a42df194773441386f376547df0b7040b6780ecdd;
+struct hxc_caxecraft_domain_RaycastHit;
 
-struct hxc_type_compiler_closedzx2Drecord_bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09;
+struct hxc_caxecraft_domain_StepInput;
 
-struct hxc_type_compiler_closedzx2Drecord_cc8444204c482819cfe6fa9c0e97a06199a6b7b09558fbf67326932221ab97e5;
+struct hxc_caxecraft_domain_AxisMove;
 
-struct hxc_type_compiler_closedzx2Drecord_e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001;
+struct hxc_caxecraft_domain_PlayerState;
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F64657461696C2F70726F6772616D5F74797065732E68_INCLUDED */
+#endif /* HXC_DETAIL_PROGRAM_TYPES_H_INCLUDED */

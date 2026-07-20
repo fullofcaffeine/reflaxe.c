@@ -22,6 +22,7 @@ typedef CSymbolRecord = {
 	final visibility:String;
 	final naming:String;
 	final requestedName:Null<String>;
+	final readableName:Array<String>;
 	final baseName:String;
 	final cName:String;
 	final collisionResolved:Bool;
@@ -83,8 +84,8 @@ private typedef AssignedDraft = {
 	hash-map iteration cannot change output names.
  */
 class CSymbolRegistry {
-	public static inline final SCHEMA_VERSION = 1;
-	public static inline final ALGORITHM = "hxc-c-symbol-v1";
+	public static inline final SCHEMA_VERSION = 2;
+	public static inline final ALGORITHM = "hxc-c-symbol-v2";
 	public static inline final MAX_GENERATED_LENGTH = 120;
 
 	static final C_KEYWORDS = [
@@ -377,7 +378,8 @@ class CSymbolRegistry {
 
 	static function generatedBase(request:CSymbolRequest):GeneratedDraft {
 		final reasons:Array<String> = [];
-		for (part in request.qualifiedName.concat(request.specializationArguments)) {
+		final readable = request.readableName.length == 0 ? defaultReadableName(request) : request.readableName;
+		for (part in readable) {
 			collectEscapeReasons(part, reasons);
 		}
 		final prefix = switch request.visibility {
@@ -385,11 +387,12 @@ class CSymbolRegistry {
 			case CSVPublic: "hxc_api_";
 			case CSVExternal: "hxc_external_";
 		};
-		var baseName = prefix + roleToken(request.kind) + "_" + encodeParts(request.qualifiedName);
-		if (request.specializationArguments.length > 0) {
-			baseName += "_of_" + encodeParts(request.specializationArguments);
+		final readableBase = encodeReadableParts(readable);
+		if (generatedNameNeedsPrefix(readableBase)) {
+			addUnique(reasons, "c-namespace-escape");
 		}
-		if (request.sourceOrdinal != null) {
+		var baseName = prefix + readableBase;
+		if (request.sourceOrdinal != null && isAnonymousKind(request.kind)) {
 			baseName += "_n" + request.sourceOrdinal;
 		}
 		if (baseName.length > MAX_GENERATED_LENGTH) {
@@ -487,7 +490,7 @@ class CSymbolRegistry {
 	}
 
 	static function appendHash(baseName:String, hash:String, hashLength:Int):String {
-		final suffix = "_zh" + hash.substr(0, hashLength);
+		final suffix = "_h" + hash.substr(0, hashLength);
 		final keep = MAX_GENERATED_LENGTH - suffix.length;
 		var readable = baseName.substr(0, keep);
 		while (StringTools.endsWith(readable, "_")) {
@@ -496,27 +499,73 @@ class CSymbolRegistry {
 		return readable + suffix;
 	}
 
-	static function encodeParts(parts:Array<String>):String
-		return parts.map(encodePart).join("_");
+	static function encodeReadableParts(parts:Array<String>):String
+		return parts.map(encodeReadablePart).join("_");
 
-	static function encodePart(value:String):String {
+	/**
+		Keep ordinary ASCII source spelling readable. Punctuation becomes a word
+		separator and non-ASCII bytes receive a compact `_xHH` spelling. Because the
+		semantic key remains separate, two source spellings that normalize to the
+		same base are safely resolved by the ordinary collision pass.
+	**/
+	static function encodeReadablePart(value:String):String {
 		final bytes = Bytes.ofString(value);
 		final output = new StringBuf();
+		var separatorPending = false;
 		for (index in 0...bytes.length) {
 			final byte = bytes.get(index);
-			if (byte >= 0x41 && byte <= 0x59 || byte >= 0x61 && byte <= 0x79 || byte >= 0x30 && byte <= 0x39) {
+			if (byte >= 0x41 && byte <= 0x5A || byte >= 0x61 && byte <= 0x7A || byte >= 0x30 && byte <= 0x39) {
+				if (separatorPending && output.length > 0)
+					output.add("_");
 				output.addChar(byte);
-			} else if (byte == 0x5A) {
-				output.add("zZ");
-			} else if (byte == 0x7A) {
-				output.add("zz");
-			} else if (byte == 0x5F) {
-				output.add("zu");
+				separatorPending = false;
+			} else if (byte == 0x5F || byte < 0x80) {
+				separatorPending = output.length > 0;
 			} else {
-				output.add("zx" + StringTools.hex(byte, 2));
+				if (output.length > 0)
+					output.add("_");
+				output.add("x" + StringTools.hex(byte, 2));
+				separatorPending = true;
 			}
 		}
-		return output.toString();
+		final encoded = output.toString();
+		return encoded == "" ? "symbol" : encoded;
+	}
+
+	static function defaultReadableName(request:CSymbolRequest):Array<String> {
+		final last = request.qualifiedName[request.qualifiedName.length - 1];
+		return switch request.kind {
+			case CSKLocal: [last];
+			case CSKTemporary: ["tmp", last];
+			case CSKField:
+				switch request.namespace {
+					case CNSMember(_): [last];
+					case _: request.qualifiedName.copy();
+				}
+			case CSKPackage | CSKModule | CSKClosure | CSKClosureEnvironment | CSKVTable | CSKInterfaceTable | CSKTypeDescriptor | CSKReflectionEntry |
+				CSKStaticInitializer | CSKRuntimePrivate:
+				[roleToken(request.kind)].concat(request.qualifiedName);
+			case CSKType | CSKMethod | CSKSpecialization | CSKExport:
+				request.qualifiedName.copy();
+		};
+	}
+
+	static function isAnonymousKind(kind:CSymbolKind):Bool {
+		return switch kind {
+			case CSKTemporary | CSKClosure | CSKClosureEnvironment: true;
+			case _: false;
+		};
+	}
+
+	static function generatedNameNeedsPrefix(name:String):Bool {
+		if (name == "" || !isIdentifierStart(name.charCodeAt(0)))
+			return true;
+		return C_KEYWORDS.indexOf(name) != -1
+			|| StringTools.startsWith(name, "_")
+			|| name.indexOf("__") != -1
+			|| StringTools.startsWith(name, "hxc_")
+			|| StringTools.startsWith(name, "hxrt_")
+			|| isLibraryReserved(name);
 	}
 
 	static function collectEscapeReasons(value:String, reasons:Array<String>):Void {
@@ -532,14 +581,16 @@ class CSymbolRegistry {
 		if (isLibraryReserved(value)) {
 			addUnique(reasons, "standard-library-reserved");
 		}
+		var normalizedSeparator = StringTools.startsWith(value, "_") || StringTools.endsWith(value, "_") || value.indexOf("__") != -1;
 		for (index in 0...value.length) {
 			final code = value.charCodeAt(index);
-			if (code == 0x5F) {
-				addUnique(reasons, "source-underscore");
-			} else if (!isIdentifierPart(code)) {
+			if (!isIdentifierPart(code)) {
 				addUnique(reasons, "non-c-identifier-byte");
+				normalizedSeparator = true;
 			}
 		}
+		if (normalizedSeparator)
+			addUnique(reasons, "separator-normalized");
 	}
 
 	static function isLibraryReserved(value:String):Bool {
@@ -599,6 +650,7 @@ class CSymbolRegistry {
 			visibility: CSymbolRequest.visibilityName(item.request.visibility),
 			naming: item.request.explicitName == null ? "generated" : "explicit",
 			requestedName: item.request.explicitName,
+			readableName: item.request.readableName.length == 0 ? defaultReadableName(item.request) : item.request.readableName.copy(),
 			baseName: item.baseName,
 			cName: item.cName,
 			collisionResolved: item.collisionResolved,

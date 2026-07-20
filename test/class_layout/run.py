@@ -367,7 +367,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise ClassLayoutFailure("structural class CAST emission/layout assertions drifted")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise ClassLayoutFailure("class-layout report omitted its finalized symbol table")
 
 

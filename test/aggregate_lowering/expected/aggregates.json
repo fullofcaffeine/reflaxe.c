@@ -1,16 +1,16 @@
 [
   {
     "instanceId": "instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
-    "cTag": "hxc_type_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
+    "cTag": "hxc_OrderA",
     "fields": [
       {
         "semanticName": "a",
-        "cName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_a_n0",
+        "cName": "hxc_a",
         "type": "i32"
       },
       {
         "semanticName": "z",
-        "cName": "hxc_field_compiler_closedzx2Drecord_9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367_zz_n1",
+        "cName": "hxc_z",
         "type": "i32"
       }
     ],
@@ -19,16 +19,16 @@
   },
   {
     "instanceId": "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
-    "cTag": "hxc_type_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
+    "cTag": "hxc_Envelope",
     "fields": [
       {
         "semanticName": "enabled",
-        "cName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_enabled_n0",
+        "cName": "hxc_enabled",
         "type": "bool"
       },
       {
         "semanticName": "point",
-        "cName": "hxc_field_compiler_closedzx2Drecord_b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54_point_n1",
+        "cName": "hxc_point",
         "type": "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
       }
     ],

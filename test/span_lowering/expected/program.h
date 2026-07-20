@@ -1,52 +1,52 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0 * (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
 }
 
-int32_t hxc_method_SpanFixture_checkedAt(int32_t hxc_local_SpanFixture_checkedAt_index_n0);
+int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index);
 
-int32_t hxc_method_SpanFixture_constSum(void);
+int32_t hxc_SpanFixture_constSum(void);
 
-uint8_t hxc_method_SpanFixture_forwardRead(const uint8_t *hxc_local_SpanFixture_forwardRead_values_n0, size_t hxc_local_SpanFixture_forwardRead_values_length_n0, int32_t hxc_local_SpanFixture_forwardRead_index_n1);
+uint8_t hxc_SpanFixture_forwardRead(const uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index);
 
-uint8_t hxc_method_SpanFixture_forwardReplace(uint8_t *hxc_local_SpanFixture_forwardReplace_values_n0, size_t hxc_local_SpanFixture_forwardReplace_values_length_n0, int32_t hxc_local_SpanFixture_forwardReplace_index_n1, uint8_t hxc_local_SpanFixture_forwardReplace_replacement_n2);
+uint8_t hxc_SpanFixture_forwardReplace(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
 
-int32_t hxc_method_SpanFixture_linearIndex(int32_t hxc_local_SpanFixture_linearIndex_x_n0, int32_t hxc_local_SpanFixture_linearIndex_y_n1, int32_t hxc_local_SpanFixture_linearIndex_zz_n2);
+int32_t hxc_SpanFixture_linearIndex(int32_t hxc_x, int32_t hxc_y, int32_t hxc_z);
 
-void hxc_method_SpanFixture_main(void);
+void hxc_SpanFixture_main(void);
 
-int32_t hxc_method_SpanFixture_mutableSum(void);
+int32_t hxc_SpanFixture_mutableSum(void);
 
-uint8_t hxc_method_SpanFixture_mutatedGridCell(uint8_t hxc_local_SpanFixture_mutatedGridCell_replacement_n0);
+uint8_t hxc_SpanFixture_mutatedGridCell(uint8_t hxc_replacement);
 
-uint8_t hxc_method_SpanFixture_parameterRoundTrip(uint8_t hxc_local_SpanFixture_parameterRoundTrip_replacement_n0);
+uint8_t hxc_SpanFixture_parameterRoundTrip(uint8_t hxc_replacement);
 
-uint8_t hxc_method_SpanFixture_readAt(const uint8_t *hxc_local_SpanFixture_readAt_values_n0, size_t hxc_local_SpanFixture_readAt_values_length_n0, int32_t hxc_local_SpanFixture_readAt_index_n1);
+uint8_t hxc_SpanFixture_readAt(const uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index);
 
-uint8_t hxc_method_SpanFixture_replaceAt(uint8_t *hxc_local_SpanFixture_replaceAt_values_n0, size_t hxc_local_SpanFixture_replaceAt_values_length_n0, int32_t hxc_local_SpanFixture_replaceAt_index_n1, uint8_t hxc_local_SpanFixture_replaceAt_replacement_n2);
+uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
 
-uint8_t hxc_method_SpanFixture_zzeroedGridCell(void);
+uint8_t hxc_SpanFixture_zeroedGridCell(void);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

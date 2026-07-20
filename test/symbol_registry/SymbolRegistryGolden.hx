@@ -48,6 +48,7 @@ class SymbolRegistryGolden {
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
 			symbolTable: forward.finalizeSymbols(),
+			readableIdentityProof: readableIdentityProof(),
 			contractFinalization: finalized,
 			plannedForwardNames: forwardNames,
 			diagnostics: {
@@ -74,6 +75,8 @@ class SymbolRegistryGolden {
 			new CSymbolRequest(CSKMethod, ["demo", "Worker", "run"], global, CSVInternal, null, ["c.Int32", "Void"]),
 			new CSymbolRequest(CSKMethod, ["demo", "Worker", "run"], global, CSVInternal, null, ["String", "Void"]),
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "value"], CNSOrdinary("demo.Worker.run(c.Int32)")),
+			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "while"], CNSOrdinary("demo.Worker.run(c.Int32)")),
+			new CSymbolRequest(CSKLocal, ["demo", "Worker", "run", "bool"], CNSOrdinary("demo.Worker.run(c.Int32)")),
 			new CSymbolRequest(CSKTemporary, ["demo", "Worker", "run", "call-result"], CNSOrdinary("demo.Worker.run(c.Int32)"), CSVInternal, null, null, null,
 				4),
 			new CSymbolRequest(CSKSpecialization, ["demo", "Box", "map"], global, CSVInternal, null, null, ["c.Int32"]),
@@ -93,6 +96,14 @@ class SymbolRegistryGolden {
 			new CSymbolRequest(CSKMethod, ["hxc_owned"], global),
 			new CSymbolRequest(CSKMethod, ["strcpy"], global),
 			new CSymbolRequest(CSKField, ["demo", "Café", "résumé"], CNSMember("demo.Café")),
+			new CSymbolRequest(CSKType, ["compiler", "closed-record", "4aec2e39ec8810b7"], CNSTag("translation-unit"), CSVInternal, null, null, null, null,
+				["caxecraft", "domain", "BlockCoord"]),
+			new CSymbolRequest(CSKField, ["compiler", "closed-record", "4aec2e39ec8810b7", "x"], CNSMember("compiler.closed-record.4aec2e39ec8810b7"),
+				CSVInternal, null, null, null, null, ["x"]),
+			new CSymbolRequest(CSKField, ["compiler", "closed-record", "4aec2e39ec8810b7", "NULL"], CNSMember("compiler.closed-record.4aec2e39ec8810b7"),
+				CSVInternal, null, null, null, null, ["NULL"]),
+			new CSymbolRequest(CSKField, ["compiler", "closed-record", "4aec2e39ec8810b7", "NAN"], CNSMember("compiler.closed-record.4aec2e39ec8810b7"),
+				CSVInternal, null, null, null, null, ["NAN"]),
 			new CSymbolRequest(CSKType, [
 				"very_long_package_component_with_repeated_provenance",
 				"another_long_module_component",
@@ -106,6 +117,17 @@ class SymbolRegistryGolden {
 			new CSymbolRequest(CSKField, ["demo", "LIMIT"], CNSPreprocessor, CSVPublic, "DEMO_LIMIT"),
 			new CSymbolRequest(CSKLocal, ["demo", "Worker", "label"], CNSLabel("demo.Worker.run(c.Int32)"))
 		];
+	}
+
+	static function readableIdentityProof():String {
+		final semantic = ["compiler", "closed-record", "semantic-digest"];
+		final first = new CSymbolRequest(CSKType, semantic, CNSTag("translation-unit"), CSVInternal, null, null, null, null, ["demo", "FirstDisplay"]);
+		final second = new CSymbolRequest(CSKType, semantic, CNSTag("translation-unit"), CSVInternal, null, null, null, null, ["demo", "SecondDisplay"]);
+		if (first.stableKey() != second.stableKey())
+			throw "readable spelling incorrectly changed semantic symbol identity";
+		if (first.namingFingerprint() == second.namingFingerprint())
+			throw "readable spelling was omitted from the conflicting-facts boundary";
+		return "readable-display-is-not-semantic-identity-but-is-a-validated-naming-fact";
 	}
 
 	static function registry(requests:Array<CSymbolRequest>):CSymbolRegistry {

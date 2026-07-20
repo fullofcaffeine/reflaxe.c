@@ -1,13 +1,13 @@
 [
   {
     "instanceId": "instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634",
-    "cTag": "hxc_type_compiler_haxezx2Dclass_RootRecord",
+    "cTag": "hxc_RootRecord",
     "baseMember": null,
     "fields": [
       {
         "semanticName": "rootValue",
         "mutable": true,
-        "cName": "hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0",
+        "cName": "hxc_rootValue",
         "type": "i32"
       }
     ],
@@ -19,13 +19,13 @@
   },
   {
     "instanceId": "instance.class.645466867fe98b7f467c7df7b91a1e41e066a6b82b1dc7d9fe75069a9fc98f53",
-    "cTag": "hxc_type_compiler_haxezx2Dclass_MiddleRecord",
-    "baseMember": "hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0",
+    "cTag": "hxc_MiddleRecord",
+    "baseMember": "hxc_base",
     "fields": [
       {
         "semanticName": "enabled",
         "mutable": true,
-        "cName": "hxc_field_compiler_haxezx2Dclass_MiddleRecord_field_enabled_n1",
+        "cName": "hxc_enabled",
         "type": "bool"
       }
     ],
@@ -37,19 +37,19 @@
   },
   {
     "instanceId": "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6",
-    "cTag": "hxc_type_compiler_haxezx2Dclass_LeafRecord",
-    "baseMember": "hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0",
+    "cTag": "hxc_LeafRecord",
+    "baseMember": "hxc_base",
     "fields": [
       {
         "semanticName": "score",
         "mutable": true,
-        "cName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_score_n1",
+        "cName": "hxc_score",
         "type": "f64"
       },
       {
         "semanticName": "peer",
         "mutable": true,
-        "cName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2",
+        "cName": "hxc_peer",
         "type": "nullable-instance:instance.class.92fcac8eab337fdbc55ff736e8ef7a0f4cc6422987a431d2828483b341138634"
       }
     ],
@@ -61,10 +61,10 @@
   },
   {
     "instanceId": "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911",
-    "cTag": "hxc_type_compiler_haxezx2Dclass_EmptyBase",
+    "cTag": "hxc_EmptyBase",
     "baseMember": null,
     "fields": [],
-    "emptyAnchor": "hxc_field_compiler_haxezx2Dclass_EmptyBase_emptyzx2Danchor_n0",
+    "emptyAnchor": "hxc_storage",
     "declarationId": "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911",
     "digest": "2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911",
     "haxePath": "EmptyBase",
@@ -72,8 +72,8 @@
   },
   {
     "instanceId": "instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a",
-    "cTag": "hxc_type_compiler_haxezx2Dclass_EmptyLeaf",
-    "baseMember": "hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0",
+    "cTag": "hxc_EmptyLeaf",
+    "baseMember": "hxc_base",
     "fields": [],
     "emptyAnchor": null,
     "declarationId": "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a",

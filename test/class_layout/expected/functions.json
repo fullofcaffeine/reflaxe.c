@@ -1,54 +1,54 @@
 [
   {
     "semanticName": "ClassLayoutFixture.asEmptyBase",
-    "cName": "hxc_method_ClassLayoutFixture_asEmptyBase"
+    "cName": "hxc_ClassLayoutFixture_asEmptyBase"
   },
   {
     "semanticName": "ClassLayoutFixture.asMiddle",
-    "cName": "hxc_method_ClassLayoutFixture_asMiddle"
+    "cName": "hxc_ClassLayoutFixture_asMiddle"
   },
   {
     "semanticName": "ClassLayoutFixture.asRoot",
-    "cName": "hxc_method_ClassLayoutFixture_asRoot"
+    "cName": "hxc_ClassLayoutFixture_asRoot"
   },
   {
     "semanticName": "ClassLayoutFixture.different",
-    "cName": "hxc_method_ClassLayoutFixture_different"
+    "cName": "hxc_ClassLayoutFixture_different"
   },
   {
     "semanticName": "ClassLayoutFixture.isNull",
-    "cName": "hxc_method_ClassLayoutFixture_isNull"
+    "cName": "hxc_ClassLayoutFixture_isNull"
   },
   {
     "semanticName": "ClassLayoutFixture.main",
-    "cName": "hxc_method_ClassLayoutFixture_main"
+    "cName": "hxc_ClassLayoutFixture_main"
   },
   {
     "semanticName": "ClassLayoutFixture.readInherited",
-    "cName": "hxc_method_ClassLayoutFixture_readInherited"
+    "cName": "hxc_ClassLayoutFixture_readInherited"
   },
   {
     "semanticName": "ClassLayoutFixture.readPeer",
-    "cName": "hxc_method_ClassLayoutFixture_readPeer"
+    "cName": "hxc_ClassLayoutFixture_readPeer"
   },
   {
     "semanticName": "ClassLayoutFixture.readRoot",
-    "cName": "hxc_method_ClassLayoutFixture_readRoot"
+    "cName": "hxc_ClassLayoutFixture_readRoot"
   },
   {
     "semanticName": "ClassLayoutFixture.readScore",
-    "cName": "hxc_method_ClassLayoutFixture_readScore"
+    "cName": "hxc_ClassLayoutFixture_readScore"
   },
   {
     "semanticName": "ClassLayoutFixture.same",
-    "cName": "hxc_method_ClassLayoutFixture_same"
+    "cName": "hxc_ClassLayoutFixture_same"
   },
   {
     "semanticName": "ClassLayoutFixture.writeInherited",
-    "cName": "hxc_method_ClassLayoutFixture_writeInherited"
+    "cName": "hxc_ClassLayoutFixture_writeInherited"
   },
   {
     "semanticName": "ClassLayoutFixture.writePeer",
-    "cName": "hxc_method_ClassLayoutFixture_writePeer"
+    "cName": "hxc_ClassLayoutFixture_writePeer"
   }
 ]

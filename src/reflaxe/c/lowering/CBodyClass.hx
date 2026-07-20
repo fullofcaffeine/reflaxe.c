@@ -200,7 +200,8 @@ class CBodyClassRegistry {
 		semanticKeysByDigest.set(digest, semanticKey);
 		final sourcePath = definition.module == ownerModule ? ownerSourcePath : moduleSourcePath(definition.module);
 		final source = HaxeSourceSpan.fromPosition(definition.pos, sourcePath);
-		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "haxe-class", path], CNSTag("translation-unit"), CSVInternal);
+		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "haxe-class", path], CNSTag("translation-unit"), CSVInternal, null, [], [], null,
+			path.split("."));
 		context.symbols.register(typeRequest);
 		final prepared = new CPreparedBodyClass(semanticKey, digest, path, definition.module, source, typeRequest);
 		byPath.set(path, prepared);
@@ -216,7 +217,7 @@ class CBodyClassRegistry {
 				return rejected(fail, definition.pos, '$node:cyclic-class-inheritance:$path->${base.haxePath}');
 			prepared.base = base;
 			prepared.baseMemberRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "base"], CNSMember(prepared.declarationId),
-				CSVInternal, null, [], [], 0);
+				CSVInternal, null, [], [], 0, ["base"]);
 			context.symbols.register(prepared.baseMemberRequest);
 		}
 
@@ -245,7 +246,7 @@ class CBodyClassRegistry {
 				case FMethod(_): false;
 			};
 			final request = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "field", field.name], CNSMember(prepared.declarationId),
-				CSVInternal, null, [], [], storageOrdinal++);
+				CSVInternal, null, [], [], storageOrdinal++, [field.name]);
 			context.symbols.register(request);
 			prepared.fields.push(new CPreparedBodyClassField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
 		}
@@ -263,7 +264,7 @@ class CBodyClassRegistry {
 		root.dispatchLayoutId = layoutId;
 		if (root.dispatchHeaderRequest == null) {
 			root.dispatchHeaderRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", root.haxePath, "virtual-table"],
-				CNSMember(root.declarationId), CSVInternal, null, [], [], 0);
+				CNSMember(root.declarationId), CSVInternal, null, [], [], 0, ["vtable"]);
 			context.symbols.register(root.dispatchHeaderRequest);
 		}
 	}
@@ -276,7 +277,7 @@ class CBodyClassRegistry {
 				&& prepared.dispatchHeaderRequest == null
 				&& prepared.emptyAnchorRequest == null) {
 				prepared.emptyAnchorRequest = new CSymbolRequest(CSKField, ["compiler", "haxe-class", prepared.haxePath, "empty-anchor"],
-					CNSMember(prepared.declarationId), CSVInternal, null, [], [], 0);
+					CNSMember(prepared.declarationId), CSVInternal, null, [], [], 0, ["storage"]);
 				context.symbols.register(prepared.emptyAnchorRequest);
 			}
 		}

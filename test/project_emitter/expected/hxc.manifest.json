@@ -98,7 +98,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "26435334fd956dddb0bc025d9bb7a92bc8d9843d112999fb7b843749e811e28f",
+      "sha256": "4a4ac6cecbb89ac6f2e2e8d052a254f62f6ac420d16d64d723464c9083326b5e",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -108,7 +108,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "adbbc66dec79c8c79ad9588b15ebd71f5b09845320f1d33a4e44e1fe7cfc51cb",
+      "sha256": "9e5fdad04603cad49ffbfbb87b0575dd185e009593e63e6c9855f3c3ba05428a",
       "path": "include/hxc/emitter_fixture.h",
       "kind": "public-header"
     },
@@ -123,12 +123,12 @@
       "kind": "meson-adapter"
     },
     {
-      "sha256": "f7def93e6a119b88beb34f9f85157a256b82779218be78d08954a4877816f072",
+      "sha256": "370a16c462196e73ba82b48d6000a0a26fef2da35ce667337c4308c7def3ee16",
       "path": "src/emitter_fixture.c",
       "kind": "source"
     },
     {
-      "sha256": "2dd640a159b5f2065cc46c4c3d541febfaf4ff7e227ed6b8d1a227063b09e6dc",
+      "sha256": "e13c00d472133dd42b4e9949cb234c57dfcb627a52bf8f7cf12c0ea5c3801fe2",
       "path": "src/hxc_boot.c",
       "kind": "source"
     }

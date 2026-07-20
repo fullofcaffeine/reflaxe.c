@@ -1,207 +1,188 @@
 #include "hxc/program.h"
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_None_of_bool_n0 == 0, "enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool case None retains its Haxe discriminant");
+_Static_assert(hxc_Option_None_h00cd578bb80f == 0, "enum hxc_Option_ha0e4b5dcc139 case None retains its Haxe discriminant");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1 == 1, "enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool case Some retains its Haxe discriminant");
+_Static_assert(hxc_Option_Some_h33493695ace2 == 1, "enum hxc_Option_ha0e4b5dcc139 case Some retains its Haxe discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool, hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool_n0) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool begins with its discriminant");
+_Static_assert(offsetof(struct hxc_Option_ha0e4b5dcc139, hxc_tag) == 0, "tagged enum hxc_Option_ha0e4b5dcc139 begins with its discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool, hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool_n1) >= sizeof(enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool), "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool payload follows its discriminant");
+_Static_assert(offsetof(struct hxc_Option_ha0e4b5dcc139, hxc_payload) >= sizeof(enum hxc_Option_tag_h4f842caea9db), "tagged enum hxc_Option_ha0e4b5dcc139 payload follows its discriminant");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool) >= offsetof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool, hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool_n1) + sizeof(union hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool), "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool contains its payload union");
+_Static_assert(sizeof(struct hxc_Option_ha0e4b5dcc139) >= offsetof(struct hxc_Option_ha0e4b5dcc139, hxc_payload) + sizeof(union hxc_Option_payload_ha68af457b79c), "tagged enum hxc_Option_ha0e4b5dcc139 contains its payload union");
 
-_Static_assert(offsetof(union hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool, hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool case Some begins at union offset zero");
+_Static_assert(offsetof(union hxc_Option_payload_ha68af457b79c, hxc_Some) == 0, "tagged enum hxc_Option_ha0e4b5dcc139 case Some begins at union offset zero");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zhc2b8e9073c59ca75, hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zh39e28353232fc7bd) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool case Some first payload begins at zero");
+_Static_assert(offsetof(struct hxc_Option_Some_payload_hc2b8e9073c59, hxc_value) == 0, "tagged enum hxc_Option_ha0e4b5dcc139 case Some first payload begins at zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zhc2b8e9073c59ca75) >= _Alignof(bool), "tagged enum hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool case Some admits payload 0 alignment");
+_Static_assert(_Alignof(struct hxc_Option_Some_payload_hc2b8e9073c59) >= _Alignof(bool), "tagged enum hxc_Option_ha0e4b5dcc139 case Some admits payload 0 alignment");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_None_of_i32_n0 == 0, "enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 case None retains its Haxe discriminant");
+_Static_assert(hxc_Option_None_h506b5e6013bd == 0, "enum hxc_Option_h95f1c4a28dac case None retains its Haxe discriminant");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1 == 1, "enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 case Some retains its Haxe discriminant");
+_Static_assert(hxc_Option_Some_ha9454146ff01 == 1, "enum hxc_Option_h95f1c4a28dac case Some retains its Haxe discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32, hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 begins with its discriminant");
+_Static_assert(offsetof(struct hxc_Option_h95f1c4a28dac, hxc_tag) == 0, "tagged enum hxc_Option_h95f1c4a28dac begins with its discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32, hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1) >= sizeof(enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32), "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 payload follows its discriminant");
+_Static_assert(offsetof(struct hxc_Option_h95f1c4a28dac, hxc_payload) >= sizeof(enum hxc_Option_tag_h51b3904815c1), "tagged enum hxc_Option_h95f1c4a28dac payload follows its discriminant");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32) >= offsetof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32, hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1) + sizeof(union hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32), "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 contains its payload union");
+_Static_assert(sizeof(struct hxc_Option_h95f1c4a28dac) >= offsetof(struct hxc_Option_h95f1c4a28dac, hxc_payload) + sizeof(union hxc_Option_payload_h331368fdb4fc), "tagged enum hxc_Option_h95f1c4a28dac contains its payload union");
 
-_Static_assert(offsetof(union hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32, hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 case Some begins at union offset zero");
+_Static_assert(offsetof(union hxc_Option_payload_h331368fdb4fc, hxc_Some) == 0, "tagged enum hxc_Option_h95f1c4a28dac case Some begins at union offset zero");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh6fa8fca385dc759a, hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh3e3567d8e3d34bf7) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 case Some first payload begins at zero");
+_Static_assert(offsetof(struct hxc_Option_Some_payload_h6fa8fca385dc, hxc_value) == 0, "tagged enum hxc_Option_h95f1c4a28dac case Some first payload begins at zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh6fa8fca385dc759a) >= _Alignof(int32_t), "tagged enum hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 case Some admits payload 0 alignment");
+_Static_assert(_Alignof(struct hxc_Option_Some_payload_h6fa8fca385dc) >= _Alignof(int32_t), "tagged enum hxc_Option_h95f1c4a28dac case Some admits payload 0 alignment");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0 == 0, "enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case End retains its Haxe discriminant");
+_Static_assert(hxc_Chain_End == 0, "enum hxc_Chain case End retains its Haxe discriminant");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1 == 1, "enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link retains its Haxe discriminant");
+_Static_assert(hxc_Chain_Link == 1, "enum hxc_Chain case Link retains its Haxe discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 begins with its discriminant");
+_Static_assert(offsetof(struct hxc_Chain, hxc_tag) == 0, "tagged enum hxc_Chain begins with its discriminant");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1) >= sizeof(enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 payload follows its discriminant");
+_Static_assert(offsetof(struct hxc_Chain, hxc_payload) >= sizeof(enum hxc_Chain_tag), "tagged enum hxc_Chain payload follows its discriminant");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32) >= offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1) + sizeof(union hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 contains its payload union");
+_Static_assert(sizeof(struct hxc_Chain) >= offsetof(struct hxc_Chain, hxc_payload) + sizeof(union hxc_Chain_payload), "tagged enum hxc_Chain contains its payload union");
 
-_Static_assert(offsetof(union hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case End begins at union offset zero");
+_Static_assert(offsetof(union hxc_Chain_payload, hxc_End) == 0, "tagged enum hxc_Chain case End begins at union offset zero");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8fd2dc36ecaa9436, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8d53a0ffeb8cc84e) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case End first payload begins at zero");
+_Static_assert(offsetof(struct hxc_Chain_End_payload, hxc_value) == 0, "tagged enum hxc_Chain case End first payload begins at zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8fd2dc36ecaa9436) >= _Alignof(int32_t), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case End admits payload 0 alignment");
+_Static_assert(_Alignof(struct hxc_Chain_End_payload) >= _Alignof(int32_t), "tagged enum hxc_Chain case End admits payload 0 alignment");
 
-_Static_assert(offsetof(union hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link begins at union offset zero");
+_Static_assert(offsetof(union hxc_Chain_payload, hxc_Link) == 0, "tagged enum hxc_Chain case Link begins at union offset zero");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh4779a74364eba1c8) == 0, "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link first payload begins at zero");
+_Static_assert(offsetof(struct hxc_Chain_Link_payload, hxc_value) == 0, "tagged enum hxc_Chain case Link first payload begins at zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8) >= _Alignof(int32_t), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link admits payload 0 alignment");
+_Static_assert(_Alignof(struct hxc_Chain_Link_payload) >= _Alignof(int32_t), "tagged enum hxc_Chain case Link admits payload 0 alignment");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhd8ec5da0e26339d3) >= offsetof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8, hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh4779a74364eba1c8) + sizeof(int32_t), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link payload 1 follows its predecessor");
+_Static_assert(offsetof(struct hxc_Chain_Link_payload, hxc_next) >= offsetof(struct hxc_Chain_Link_payload, hxc_value) + sizeof(int32_t), "tagged enum hxc_Chain case Link payload 1 follows its predecessor");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhc25b113947f0a4a8) >= _Alignof(struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 *), "tagged enum hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 case Link admits payload 1 alignment");
+_Static_assert(_Alignof(struct hxc_Chain_Link_payload) >= _Alignof(struct hxc_Chain *), "tagged enum hxc_Chain case Link admits payload 1 alignment");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_Off_n0 == 0, "enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value case Off retains its Haxe discriminant");
+_Static_assert(hxc_Mode_Off == 0, "enum hxc_Mode case Off retains its Haxe discriminant");
 
-_Static_assert(hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_On_n1 == 1, "enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value case On retains its Haxe discriminant");
+_Static_assert(hxc_Mode_On == 1, "enum hxc_Mode case On retains its Haxe discriminant");
 
-int32_t hxc_method_EnumFixture_boolOptionValue(struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool hxc_local_EnumFixture_boolOptionValue_value_n0)
+int32_t hxc_EnumFixture_boolOptionValue(struct hxc_Option_ha0e4b5dcc139 hxc_value_hb6e6538779c8)
 {
-  int32_t hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresult_n1 = 0;
-  switch (hxc_local_EnumFixture_boolOptionValue_value_n0.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool_n0) {
-    case hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_None_of_bool_n0:
+  int32_t hxc_tmp_enum_switch_result_n1 = 0;
+  switch (hxc_value_hb6e6538779c8.hxc_tag) {
+    case hxc_Option_None_h00cd578bb80f:
       {
-        hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresult_n1 = -1;
+        hxc_tmp_enum_switch_result_n1 = -1;
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1:
+    case hxc_Option_Some_h33493695ace2:
       {
-        if (hxc_local_EnumFixture_boolOptionValue_value_n0.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool_n0 != hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1)
+        if (hxc_value_hb6e6538779c8.hxc_tag != hxc_Option_Some_h33493695ace2)
         {
           abort();
         }
-        bool hxc_temp_EnumFixture_boolOptionValue_enumzx2Dpayloadzx2Dproject_n0 = hxc_local_EnumFixture_boolOptionValue_value_n0.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool_n1.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zh39e28353232fc7bd;
-        bool hxc_local_EnumFixture_boolOptionValue_zx60value_n2 = hxc_temp_EnumFixture_boolOptionValue_enumzx2Dpayloadzx2Dproject_n0;
-        bool hxc_temp_EnumFixture_boolOptionValue_loadzx2Dresult_n1 = hxc_local_EnumFixture_boolOptionValue_zx60value_n2;
-        bool hxc_local_EnumFixture_boolOptionValue_payload_n3 = hxc_temp_EnumFixture_boolOptionValue_loadzx2Dresult_n1;
-        bool hxc_temp_EnumFixture_boolOptionValue_loadzx2Dresult_n2 = hxc_local_EnumFixture_boolOptionValue_payload_n3;
-        int32_t hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dresult_n4 = 0;
-        if (hxc_temp_EnumFixture_boolOptionValue_loadzx2Dresult_n2)
+        bool hxc_tmp_enum_payload_project_n0 = hxc_value_hb6e6538779c8.hxc_payload.hxc_Some.hxc_value;
+        bool hxc_value_h85a49fca2ea0 = hxc_tmp_enum_payload_project_n0;
+        bool hxc_payload = hxc_value_h85a49fca2ea0;
+        bool hxc_tmp_load_result_n2 = hxc_payload;
+        int32_t hxc_tmp_conditional_result_n4 = 0;
+        if (hxc_tmp_load_result_n2)
         {
-          hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dresult_n4 = 1;
+          hxc_tmp_conditional_result_n4 = 1;
         }
         else
         {
-          hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dresult_n4 = 0;
+          hxc_tmp_conditional_result_n4 = 0;
         }
-        int32_t hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dloadzx2Dresult_n3 = hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dresult_n4;
-        hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresult_n1 = hxc_temp_EnumFixture_boolOptionValue_conditionalzx2Dloadzx2Dresult_n3;
+        hxc_tmp_enum_switch_result_n1 = hxc_tmp_conditional_result_n4;
         break;
       }
   }
-  int32_t hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n4 = hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresult_n1;
-  return hxc_temp_EnumFixture_boolOptionValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n4;
+  return hxc_tmp_enum_switch_result_n1;
 }
 
-int32_t hxc_method_EnumFixture_guardedValue(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_local_EnumFixture_guardedValue_value_n0)
+int32_t hxc_EnumFixture_guardedValue(struct hxc_Option_h95f1c4a28dac hxc_value_ha201421511a7)
 {
-  int32_t hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresult_n1 = 0;
-  switch (hxc_local_EnumFixture_guardedValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0) {
-    case hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_None_of_i32_n0:
+  int32_t hxc_tmp_enum_switch_result_n1 = 0;
+  switch (hxc_value_ha201421511a7.hxc_tag) {
+    case hxc_Option_None_h506b5e6013bd:
       {
-        hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresult_n1 = -1;
+        hxc_tmp_enum_switch_result_n1 = -1;
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1:
+    case hxc_Option_Some_ha9454146ff01:
       {
-        if (hxc_local_EnumFixture_guardedValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1)
+        if (hxc_value_ha201421511a7.hxc_tag != hxc_Option_Some_ha9454146ff01)
         {
           abort();
         }
-        int32_t hxc_temp_EnumFixture_guardedValue_enumzx2Dpayloadzx2Dproject_n0 = hxc_local_EnumFixture_guardedValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh3e3567d8e3d34bf7;
-        int32_t hxc_local_EnumFixture_guardedValue_zx60value_n2 = hxc_temp_EnumFixture_guardedValue_enumzx2Dpayloadzx2Dproject_n0;
-        int32_t hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n1 = hxc_local_EnumFixture_guardedValue_zx60value_n2;
-        int32_t hxc_local_EnumFixture_guardedValue_payload_n3 = hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n1;
-        int32_t hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n2 = hxc_local_EnumFixture_guardedValue_payload_n3;
-        int32_t hxc_temp_EnumFixture_guardedValue_conditionalzx2Dresult_n4 = 0;
-        if (hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n2 > 4)
+        int32_t hxc_tmp_enum_payload_project_n0 = hxc_value_ha201421511a7.hxc_payload.hxc_Some.hxc_value;
+        int32_t hxc_value_h8792d0ecd498 = hxc_tmp_enum_payload_project_n0;
+        int32_t hxc_payload_h6e5ec5c1b4a8 = hxc_value_h8792d0ecd498;
+        int32_t hxc_tmp_load_result_n2 = hxc_payload_h6e5ec5c1b4a8;
+        int32_t hxc_tmp_conditional_result_n4 = 0;
+        if (hxc_tmp_load_result_n2 > 4)
         {
-          int32_t hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n3 = hxc_local_EnumFixture_guardedValue_payload_n3;
-          hxc_temp_EnumFixture_guardedValue_conditionalzx2Dresult_n4 = hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n3;
+          hxc_tmp_conditional_result_n4 = hxc_payload_h6e5ec5c1b4a8;
         }
         else
         {
-          int32_t hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n4 = hxc_local_EnumFixture_guardedValue_zx60value_n2;
-          int32_t hxc_local_EnumFixture_guardedValue_payload_n5 = hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n4;
-          int32_t hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n5 = hxc_local_EnumFixture_guardedValue_payload_n5;
-          hxc_temp_EnumFixture_guardedValue_conditionalzx2Dresult_n4 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EnumFixture_guardedValue_loadzx2Dresult_n5, 1);
+          int32_t hxc_payload_h0b6a49bc2290 = hxc_value_h8792d0ecd498;
+          hxc_tmp_conditional_result_n4 = hxc_i32_add_wrapping(hxc_payload_h0b6a49bc2290, 1);
         }
-        int32_t hxc_temp_EnumFixture_guardedValue_conditionalzx2Dloadzx2Dresult_n6 = hxc_temp_EnumFixture_guardedValue_conditionalzx2Dresult_n4;
-        hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresult_n1 = hxc_temp_EnumFixture_guardedValue_conditionalzx2Dloadzx2Dresult_n6;
+        hxc_tmp_enum_switch_result_n1 = hxc_tmp_conditional_result_n4;
         break;
       }
   }
-  int32_t hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n7 = hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresult_n1;
-  return hxc_temp_EnumFixture_guardedValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n7;
+  return hxc_tmp_enum_switch_result_n1;
 }
 
-int32_t hxc_method_EnumFixture_identity(int32_t hxc_local_EnumFixture_identity_value_n0)
+int32_t hxc_EnumFixture_identity(int32_t hxc_value)
 {
-  return hxc_local_EnumFixture_identity_value_n0;
+  return hxc_value;
 }
 
-void hxc_method_EnumFixture_main(void)
+void hxc_EnumFixture_main(void)
 {
-  enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value hxc_temp_EnumFixture_main_enumzx2Dresult_n0 = hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_On_n1;
-  enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value hxc_local_EnumFixture_main_mode_n0 = hxc_temp_EnumFixture_main_enumzx2Dresult_n0;
-  int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n1 = hxc_method_EnumFixture_identity(7);
-  struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_temp_EnumFixture_main_enumzx2Dresult_n2 = (struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32){ .hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0 = hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1, .hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh3e3567d8e3d34bf7 = hxc_temp_EnumFixture_main_callzx2Dresult_n1 };
-  struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_local_EnumFixture_main_present_n1 = hxc_temp_EnumFixture_main_enumzx2Dresult_n2;
-  struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_temp_EnumFixture_main_enumzx2Dresult_n3 = (struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32){ .hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0 = hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_None_of_i32_n0 };
-  struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_local_EnumFixture_main_absent_n2 = hxc_temp_EnumFixture_main_enumzx2Dresult_n3;
-  struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool hxc_temp_EnumFixture_main_enumzx2Dresult_n4 = (struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool){ .hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_tag_of_bool_n0 = hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1, .hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_payload_of_bool_n1.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_Some_of_bool_n1.hxc_field_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_case_zh39e28353232fc7bd = true };
-  struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool hxc_local_EnumFixture_main_truth_n3 = hxc_temp_EnumFixture_main_enumzx2Dresult_n4;
+  enum hxc_Mode hxc_mode = hxc_Mode_On;
+  int32_t hxc_tmp_call_result_n1 = hxc_EnumFixture_identity(7);
+  struct hxc_Option_h95f1c4a28dac hxc_present = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_Some_ha9454146ff01, .hxc_payload.hxc_Some.hxc_value = hxc_tmp_call_result_n1 };
+  struct hxc_Option_h95f1c4a28dac hxc_absent = (struct hxc_Option_h95f1c4a28dac){ .hxc_tag = hxc_Option_None_h506b5e6013bd };
+  struct hxc_Option_ha0e4b5dcc139 hxc_truth = (struct hxc_Option_ha0e4b5dcc139){ .hxc_tag = hxc_Option_Some_h33493695ace2, .hxc_payload.hxc_Some.hxc_value = true };
   while (1)
   {
-    enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value hxc_temp_EnumFixture_main_loadzx2Dresult_n5 = hxc_local_EnumFixture_main_mode_n0;
-    int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n6 = hxc_method_EnumFixture_modeValue(hxc_temp_EnumFixture_main_loadzx2Dresult_n5);
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n4 = hxc_temp_EnumFixture_main_callzx2Dresult_n6 == 1;
-    if (hxc_temp_EnumFixture_main_callzx2Dresult_n6 == 1)
+    int32_t hxc_tmp_call_result_n6 = hxc_EnumFixture_modeValue(hxc_mode);
+    bool hxc_tmp_short_circuit_result_n4 = hxc_tmp_call_result_n6 == 1;
+    if (hxc_tmp_call_result_n6 == 1)
     {
-      struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_temp_EnumFixture_main_loadzx2Dresult_n7 = hxc_local_EnumFixture_main_present_n1;
-      int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n8 = hxc_method_EnumFixture_optionValue(hxc_temp_EnumFixture_main_loadzx2Dresult_n7);
-      hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n4 = hxc_temp_EnumFixture_main_callzx2Dresult_n8 == 7;
+      int32_t hxc_tmp_call_result_n8 = hxc_EnumFixture_optionValue(hxc_present);
+      hxc_tmp_short_circuit_result_n4 = hxc_tmp_call_result_n8 == 7;
     }
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n9 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n4;
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n9;
-    if (hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n9)
+    bool hxc_tmp_short_circuit_load_result_n9 = hxc_tmp_short_circuit_result_n4;
+    bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_short_circuit_load_result_n9;
+    if (hxc_tmp_short_circuit_load_result_n9)
     {
-      struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_temp_EnumFixture_main_loadzx2Dresult_n10 = hxc_local_EnumFixture_main_absent_n2;
-      int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n11 = hxc_method_EnumFixture_optionValue(hxc_temp_EnumFixture_main_loadzx2Dresult_n10);
-      hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_EnumFixture_main_callzx2Dresult_n11 == 0;
+      int32_t hxc_tmp_call_result_n11 = hxc_EnumFixture_optionValue(hxc_absent);
+      hxc_tmp_short_circuit_result_n5 = hxc_tmp_call_result_n11 == 0;
     }
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n12 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n5;
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n6 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n12;
-    if (hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n12)
+    bool hxc_tmp_short_circuit_load_result_n12 = hxc_tmp_short_circuit_result_n5;
+    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n12;
+    if (hxc_tmp_short_circuit_load_result_n12)
     {
-      struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_temp_EnumFixture_main_loadzx2Dresult_n13 = hxc_local_EnumFixture_main_present_n1;
-      int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n14 = hxc_method_EnumFixture_guardedValue(hxc_temp_EnumFixture_main_loadzx2Dresult_n13);
-      hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n6 = hxc_temp_EnumFixture_main_callzx2Dresult_n14 == 7;
+      int32_t hxc_tmp_call_result_n14 = hxc_EnumFixture_guardedValue(hxc_present);
+      hxc_tmp_short_circuit_result_n6 = hxc_tmp_call_result_n14 == 7;
     }
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n15 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n6;
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n7 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n15;
-    if (hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n15)
+    bool hxc_tmp_short_circuit_load_result_n15 = hxc_tmp_short_circuit_result_n6;
+    bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_short_circuit_load_result_n15;
+    if (hxc_tmp_short_circuit_load_result_n15)
     {
-      struct hxc_type_compiler_haxezx2Denum_13189f7feb7fe26f62e3f1e3f0902e3937e4a77ded988c08205c43c4a1d190ef_value_of_bool hxc_temp_EnumFixture_main_loadzx2Dresult_n16 = hxc_local_EnumFixture_main_truth_n3;
-      int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n17 = hxc_method_EnumFixture_boolOptionValue(hxc_temp_EnumFixture_main_loadzx2Dresult_n16);
-      hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n7 = hxc_temp_EnumFixture_main_callzx2Dresult_n17 == 1;
+      int32_t hxc_tmp_call_result_n17 = hxc_EnumFixture_boolOptionValue(hxc_truth);
+      hxc_tmp_short_circuit_result_n7 = hxc_tmp_call_result_n17 == 1;
     }
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n18 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n7;
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n18;
-    if (hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n18)
+    bool hxc_tmp_short_circuit_load_result_n18 = hxc_tmp_short_circuit_result_n7;
+    bool hxc_tmp_short_circuit_result_n8 = hxc_tmp_short_circuit_load_result_n18;
+    if (hxc_tmp_short_circuit_load_result_n18)
     {
-      int32_t hxc_temp_EnumFixture_main_callzx2Dresult_n19 = hxc_method_EnumFixture_recursiveLocal();
-      hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_EnumFixture_main_callzx2Dresult_n19 == 3;
+      int32_t hxc_tmp_call_result_n19 = hxc_EnumFixture_recursiveLocal();
+      hxc_tmp_short_circuit_result_n8 = hxc_tmp_call_result_n19 == 3;
     }
-    bool hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20 = hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dresult_n8;
-    if (!!hxc_temp_EnumFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n20)
+    if (!!hxc_tmp_short_circuit_result_n8)
     {
       break;
     }
@@ -209,137 +190,118 @@ void hxc_method_EnumFixture_main(void)
   return;
 }
 
-int32_t hxc_method_EnumFixture_modeValue(enum hxc_type_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_value hxc_local_EnumFixture_modeValue_value_n0)
+int32_t hxc_EnumFixture_modeValue(enum hxc_Mode hxc_value)
 {
-  int32_t hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresult_n1 = 0;
-  switch (hxc_local_EnumFixture_modeValue_value_n0) {
-    case hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_Off_n0:
+  int32_t hxc_tmp_enum_switch_result_n1 = 0;
+  switch (hxc_value) {
+    case hxc_Mode_Off:
       {
-        hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresult_n1 = 0;
+        hxc_tmp_enum_switch_result_n1 = 0;
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_84626bb3cf2f7c829bd4f0ac39ea3c112339283c54f493dd36664dd297caefd6_case_On_n1:
+    case hxc_Mode_On:
       {
-        hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresult_n1 = 1;
+        hxc_tmp_enum_switch_result_n1 = 1;
         break;
       }
   }
-  int32_t hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n0 = hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresult_n1;
-  return hxc_temp_EnumFixture_modeValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n0;
+  return hxc_tmp_enum_switch_result_n1;
 }
 
-int32_t hxc_method_EnumFixture_optionValue(struct hxc_type_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_value_of_i32 hxc_local_EnumFixture_optionValue_value_n0)
+int32_t hxc_EnumFixture_optionValue(struct hxc_Option_h95f1c4a28dac hxc_value_h2c5c76013588)
 {
-  int32_t hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresult_n1 = 0;
-  switch (hxc_local_EnumFixture_optionValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0) {
-    case hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_None_of_i32_n0:
+  int32_t hxc_tmp_enum_switch_result_n1 = 0;
+  switch (hxc_value_h2c5c76013588.hxc_tag) {
+    case hxc_Option_None_h506b5e6013bd:
       {
-        hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresult_n1 = 0;
+        hxc_tmp_enum_switch_result_n1 = 0;
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1:
+    case hxc_Option_Some_ha9454146ff01:
       {
-        if (hxc_local_EnumFixture_optionValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1)
+        if (hxc_value_h2c5c76013588.hxc_tag != hxc_Option_Some_ha9454146ff01)
         {
           abort();
         }
-        int32_t hxc_temp_EnumFixture_optionValue_enumzx2Dpayloadzx2Dproject_n0 = hxc_local_EnumFixture_optionValue_value_n0.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_Some_of_i32_n1.hxc_field_compiler_haxezx2Denum_34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb_case_zh3e3567d8e3d34bf7;
-        int32_t hxc_local_EnumFixture_optionValue_zx60value_n2 = hxc_temp_EnumFixture_optionValue_enumzx2Dpayloadzx2Dproject_n0;
-        int32_t hxc_temp_EnumFixture_optionValue_loadzx2Dresult_n1 = hxc_local_EnumFixture_optionValue_zx60value_n2;
-        int32_t hxc_local_EnumFixture_optionValue_payload_n3 = hxc_temp_EnumFixture_optionValue_loadzx2Dresult_n1;
-        int32_t hxc_temp_EnumFixture_optionValue_loadzx2Dresult_n2 = hxc_local_EnumFixture_optionValue_payload_n3;
-        hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresult_n1 = hxc_temp_EnumFixture_optionValue_loadzx2Dresult_n2;
+        int32_t hxc_tmp_enum_payload_project_n0 = hxc_value_h2c5c76013588.hxc_payload.hxc_Some.hxc_value;
+        int32_t hxc_value_h37075a18294f = hxc_tmp_enum_payload_project_n0;
+        int32_t hxc_payload = hxc_value_h37075a18294f;
+        hxc_tmp_enum_switch_result_n1 = hxc_payload;
         break;
       }
   }
-  int32_t hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n3 = hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresult_n1;
-  return hxc_temp_EnumFixture_optionValue_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n3;
+  return hxc_tmp_enum_switch_result_n1;
 }
 
-int32_t hxc_method_EnumFixture_recursiveLocal(void)
+int32_t hxc_EnumFixture_recursiveLocal(void)
 {
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_enumzx2Dresult_n0 = (struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32){ .hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 = hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0, .hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8d53a0ffeb8cc84e = 2 };
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_local_EnumFixture_recursiveLocal_tail_n0 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dresult_n0;
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n1 = hxc_local_EnumFixture_recursiveLocal_tail_n0;
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2D1_n2 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n1;
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 *hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2Daddress_n2 = &hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2D1_n2;
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_enumzx2Dresult_n3 = (struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32){ .hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 = hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1, .hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh4779a74364eba1c8 = 1, .hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhd8ec5da0e26339d3 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2Daddress_n2 };
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_local_EnumFixture_recursiveLocal_head_n1 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dresult_n3;
-  struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n4 = hxc_local_EnumFixture_recursiveLocal_head_n1;
-  int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n3 = 0;
-  switch (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n4.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0) {
-    case hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0:
+  struct hxc_Chain hxc_tail = (struct hxc_Chain){ .hxc_tag = hxc_Chain_End, .hxc_payload.hxc_End.hxc_value = 2 };
+  struct hxc_Chain hxc_tmp_enum_recursive_payload_1_n2 = hxc_tail;
+  struct hxc_Chain *hxc_tmp_enum_recursive_payload_address_n2 = &hxc_tmp_enum_recursive_payload_1_n2;
+  struct hxc_Chain hxc_head = (struct hxc_Chain){ .hxc_tag = hxc_Chain_Link, .hxc_payload.hxc_Link.hxc_value = 1, .hxc_payload.hxc_Link.hxc_next = hxc_tmp_enum_recursive_payload_address_n2 };
+  struct hxc_Chain hxc_tmp_load_result_n4 = hxc_head;
+  int32_t hxc_tmp_enum_switch_result_n3 = 0;
+  switch (hxc_tmp_load_result_n4.hxc_tag) {
+    case hxc_Chain_End:
       {
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n5 = hxc_local_EnumFixture_recursiveLocal_head_n1;
-        if (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n5.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0)
+        if (hxc_head.hxc_tag != hxc_Chain_End)
         {
           abort();
         }
-        int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n6 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n5.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8d53a0ffeb8cc84e;
-        int32_t hxc_local_EnumFixture_recursiveLocal_zx60value_n4 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n6;
-        int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n7 = hxc_local_EnumFixture_recursiveLocal_zx60value_n4;
-        int32_t hxc_local_EnumFixture_recursiveLocal_value_n5 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n7;
-        int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n8 = hxc_local_EnumFixture_recursiveLocal_value_n5;
-        hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n3 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n8;
+        int32_t hxc_tmp_enum_payload_project_n6 = hxc_head.hxc_payload.hxc_End.hxc_value;
+        int32_t hxc_value_h34f86739fe15 = hxc_tmp_enum_payload_project_n6;
+        int32_t hxc_value_hc78beb4810c4 = hxc_value_h34f86739fe15;
+        hxc_tmp_enum_switch_result_n3 = hxc_value_hc78beb4810c4;
         break;
       }
-    case hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1:
+    case hxc_Chain_Link:
       {
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n9 = hxc_local_EnumFixture_recursiveLocal_head_n1;
-        if (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n9.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1)
+        if (hxc_head.hxc_tag != hxc_Chain_Link)
         {
           abort();
         }
-        int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n10 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n9.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh4779a74364eba1c8;
-        int32_t hxc_local_EnumFixture_recursiveLocal_zx60value_n6 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n10;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n11 = hxc_local_EnumFixture_recursiveLocal_head_n1;
-        if (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n11.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1)
+        int32_t hxc_tmp_enum_payload_project_n10 = hxc_head.hxc_payload.hxc_Link.hxc_value;
+        int32_t hxc_value_h279cf5a91399 = hxc_tmp_enum_payload_project_n10;
+        if (hxc_head.hxc_tag != hxc_Chain_Link)
         {
           abort();
         }
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 *hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n12 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n11.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zhd8ec5da0e26339d3;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2Dloadzx2Dresult_n13 = *hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n12;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_local_EnumFixture_recursiveLocal_zx60next_n7 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Drecursivezx2Dpayloadzx2Dloadzx2Dresult_n13;
-        int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n14 = hxc_local_EnumFixture_recursiveLocal_zx60value_n6;
-        int32_t hxc_local_EnumFixture_recursiveLocal_value_n8 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n14;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n15 = hxc_local_EnumFixture_recursiveLocal_zx60next_n7;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_local_EnumFixture_recursiveLocal_next_n9 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n15;
-        struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n16 = hxc_local_EnumFixture_recursiveLocal_next_n9;
-        int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n10 = 0;
-        switch (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n16.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0) {
-          case hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0:
+        struct hxc_Chain *hxc_tmp_enum_payload_project_n12 = hxc_head.hxc_payload.hxc_Link.hxc_next;
+        struct hxc_Chain hxc_tmp_enum_recursive_payload_load_result_n13 = *hxc_tmp_enum_payload_project_n12;
+        struct hxc_Chain hxc_next_h07fb61766894 = hxc_tmp_enum_recursive_payload_load_result_n13;
+        int32_t hxc_value_hba17dd6c799c = hxc_value_h279cf5a91399;
+        struct hxc_Chain hxc_next_he440e694a9fe = hxc_next_h07fb61766894;
+        struct hxc_Chain hxc_tmp_load_result_n16 = hxc_next_he440e694a9fe;
+        int32_t hxc_tmp_enum_switch_result_n10 = 0;
+        switch (hxc_tmp_load_result_n16.hxc_tag) {
+          case hxc_Chain_End:
             {
-              struct hxc_type_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_value_of_i32 hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n17 = hxc_local_EnumFixture_recursiveLocal_next_n9;
-              if (hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n17.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_tag_of_i32_n0 != hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0)
+              if (hxc_next_he440e694a9fe.hxc_tag != hxc_Chain_End)
               {
                 abort();
               }
-              int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n18 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n17.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_payload_of_i32_n1.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_End_of_i32_n0.hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_zh8d53a0ffeb8cc84e;
-              int32_t hxc_local_EnumFixture_recursiveLocal_zx60value_n11 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dpayloadzx2Dproject_n18;
-              int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n19 = hxc_local_EnumFixture_recursiveLocal_zx60value_n11;
-              int32_t hxc_local_EnumFixture_recursiveLocal_last_n12 = hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n19;
-              int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n20 = hxc_local_EnumFixture_recursiveLocal_value_n8;
-              int32_t hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n21 = hxc_local_EnumFixture_recursiveLocal_last_n12;
-              hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n10 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n20, hxc_temp_EnumFixture_recursiveLocal_loadzx2Dresult_n21);
+              int32_t hxc_tmp_enum_payload_project_n18 = hxc_next_he440e694a9fe.hxc_payload.hxc_End.hxc_value;
+              int32_t hxc_value_h443e3a509706 = hxc_tmp_enum_payload_project_n18;
+              int32_t hxc_last = hxc_value_h443e3a509706;
+              int32_t hxc_tmp_load_result_n20 = hxc_value_hba17dd6c799c;
+              hxc_tmp_enum_switch_result_n10 = hxc_i32_add_wrapping(hxc_tmp_load_result_n20, hxc_last);
               break;
             }
-          case hxc_field_compiler_haxezx2Denum_39285fe93f6529ecc8afbfa54cf5a175d90cdeae2ad2587a5a8d63b906b46c73_case_Link_of_i32_n1:
+          case hxc_Chain_Link:
             {
-              hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n10 = 0;
+              hxc_tmp_enum_switch_result_n10 = 0;
               break;
             }
         }
-        int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n22 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n10;
-        hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n3 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n22;
+        hxc_tmp_enum_switch_result_n3 = hxc_tmp_enum_switch_result_n10;
         break;
       }
   }
-  int32_t hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n23 = hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresult_n3;
-  return hxc_temp_EnumFixture_recursiveLocal_enumzx2Dswitchzx2Dresultzx2Dloadzx2Dresult_n23;
+  return hxc_tmp_enum_switch_result_n3;
 }
 
 int main(void)
 {
-  hxc_method_EnumFixture_main();
+  hxc_EnumFixture_main();
   return 0;
 }

@@ -23,6 +23,9 @@ import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanVerifier;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyGotoReason;
 import reflaxe.c.lowering.CBodyEmitter;
 import reflaxe.c.lowering.CBodyEmissionError;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueDisposition;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueMaterializationReason;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
 
@@ -63,6 +66,7 @@ typedef EvaluationOrderReport = {
 	final symbols:reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
 	final runtimeFeatures:Array<String>;
 	final temporaryElisionProof:String;
+	final valueCoalescingProof:String;
 	final controlFlowPlanProof:String;
 	final controlFlowEmissionC:String;
 }
@@ -160,7 +164,7 @@ class EvaluationOrderProbe {
 			content: printer.printTranslationUnit(source.unit)
 		});
 		final report:EvaluationOrderReport = {
-			schemaVersion: 1,
+			schemaVersion: 2,
 			status: "typed-evaluation-order-runtime-free",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),
@@ -170,12 +174,219 @@ class EvaluationOrderProbe {
 			globals: globals,
 			symbols: lowered.symbolTable,
 			runtimeFeatures: [],
-			temporaryElisionProof: "only constants, parameters, and proven-total pure conversions/operators over stable values remain inline; every load and consumed call is materialized",
+			temporaryElisionProof: "constants, parameters, proven-total pure conversions/operators, single-use compiler-owned aggregate values, and barrier-free single-use private-local loads may remain inline; calls and observable/cross-block/barrier loads stay materialized",
+			valueCoalescingProof: proveValueCoalescing(),
 			controlFlowPlanProof: controlFlowProof.summary,
 			controlFlowEmissionC: controlFlowProof.emissionC
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(report));
 	}
+
+	static function proveValueCoalescing():String {
+		final source = new HxcSourceSpan("test/evaluation_order/synthetic-value-coalescing.hx", 1, 1, 1, 2);
+		final i32 = IRTInt(32, true);
+		final recordType = IRTInstance("synthetic.Record");
+		final pointerType = IRTPointer(i32, false);
+		final localValue = syntheticLocal("local.value", i32, source);
+		final localOther = syntheticLocal("local.other", i32, source);
+		final localRecord = syntheticLocal("local.record", recordType, source);
+		final localArray = syntheticLocal("local.items", IRTFixedArray(i32, 4, "synthetic.items.4"), source);
+		final localPointer = syntheticLocal("local.pointer", pointerType, source);
+		final candidate:HxcIRParameter = {id: "candidate", type: i32, source: source};
+		final index:HxcIRParameter = {id: "index", type: i32, source: source};
+		final pointer:HxcIRParameter = {id: "pointer", type: pointerType, source: source};
+		final planner = new CBodyValueCoalescingPlanner();
+
+		requireValueDisposition("single-use private local", planner.plan(syntheticValueFunction("synthetic.coalesce.local", i32, [], [localValue], [
+			syntheticBlock("entry", IRTReturn("value.local", []), source, [
+				valueInstruction("load-local", "value.local", i32, IRIOLoad(IRPLocal("local.value")), source)
+			])
+		], source)).disposition("value.local"), "inline-sequenced-load");
+		requireValueDisposition("single-use private field", planner.plan(syntheticValueFunction("synthetic.coalesce.field", i32, [], [localRecord], [
+			syntheticBlock("entry", IRTReturn("value.field", []), source, [
+				valueInstruction("load-field", "value.field", i32, IRIOLoad(IRPField(IRPLocal("local.record"), "x")), source)
+			])
+		], source)).disposition("value.field"), "inline-sequenced-load");
+
+		requireValueDisposition("intervening read", planner.plan(syntheticValueFunction("synthetic.coalesce.read-barrier", i32, [], [localValue, localOther], [
+			syntheticBlock("entry", IRTReturn("value.first", []), source, [
+				valueInstruction("load-first", "value.first", i32, IRIOLoad(IRPLocal("local.value")), source),
+				valueInstruction("load-other", "value.other", i32, IRIOLoad(IRPLocal("local.other")), source)
+			])
+		], source)).disposition("value.first"), "materialize:effect-or-read:load-other");
+		requireValueDisposition("intervening foreign call", planner.plan(syntheticValueFunction("synthetic.coalesce.call-barrier", i32, [], [localValue], [
+			syntheticBlock("entry", IRTReturn("value.before-call", []), source, [
+				valueInstruction("load-before-call", "value.before-call", i32, IRIOLoad(IRPLocal("local.value")), source),
+				effectInstruction("foreign-call", IRIOCall({
+					dispatch: IRCDNative("synthetic_observe"),
+					arguments: [],
+					returnType: IRTVoid,
+					failure: null
+				}), source)
+			])
+		],
+			source)).disposition("value.before-call"), "materialize:effect-or-read:foreign-call");
+		requireValueDisposition("intervening lifetime change",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.lifetime-barrier", i32, [], [localValue], [
+				syntheticBlock("entry", IRTReturn("value.before-lifetime", []), source, [
+					valueInstruction("load-before-lifetime", "value.before-lifetime", i32, IRIOLoad(IRPLocal("local.value")), source),
+					effectInstruction("end-lifetime", IRIOLifetime(IRPLocal("local.value"), IRISInitialized, IRISMoved, "synthetic move"), source)
+				])
+			],
+				source)).disposition("value.before-lifetime"), "materialize:failure-or-lifetime");
+		requireValueDisposition("return-edge cleanup", planner.plan(syntheticValueFunction("synthetic.coalesce.return-cleanup", i32, [], [localValue], [
+			syntheticBlock("entry", IRTReturn("value.before-cleanup", [
+				{
+					regionId: "cleanup.local",
+					actionId: "destroy-local"
+				}
+			]), source, [
+				valueInstruction("load-before-cleanup", "value.before-cleanup", i32, IRIOLoad(IRPLocal("local.value")), source)
+			])
+		], source, [
+			{
+				id: "cleanup.local",
+				parentId: null,
+				actions: [
+					{
+						id: "destroy-local",
+						idempotence: IRCExactlyOnce,
+						kind: IRCADestroy(IRPLocal("local.value"), IRISInitialized, IRISDestroyed),
+						source: source
+					}
+				],
+				source: source
+			}
+		])).disposition("value.before-cleanup"), "materialize:failure-or-lifetime");
+		requireValueDisposition("intervening checked failure",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.failure-barrier", i32, [candidate], [localValue], [
+				syntheticBlock("entry", IRTReturn("value.before-failure", []), source, [
+					valueInstruction("load-before-failure", "value.before-failure", i32, IRIOLoad(IRPLocal("local.value")), source),
+					valueInstruction("checked-convert", "value.checked", i32, IRIOConvert("candidate", IRCNumericChecked, i32, IRIStatic, {
+						kind: IRFResultError,
+						target: IRFTAbort,
+						arguments: [],
+						cleanup: []
+					}), source)
+				])
+			],
+				source)).disposition("value.before-failure"), "materialize:failure-or-lifetime");
+
+		requireValueDisposition("global read", planner.plan(syntheticValueFunction("synthetic.coalesce.global", i32, [], [], [
+			syntheticBlock("entry", IRTReturn("value.global", []), source, [
+				valueInstruction("load-global", "value.global", i32, IRIOLoad(IRPGlobal("global.value")), source)
+			])
+		], source)).disposition("value.global"), "materialize:mutable-or-foreign-place");
+		requireValueDisposition("foreign or volatile pointer read", planner.plan(syntheticValueFunction("synthetic.coalesce.pointer", i32, [pointer], [], [
+			syntheticBlock("entry", IRTReturn("value.pointer", []), source, [
+				valueInstruction("load-pointer", "value.pointer", i32, IRIOLoad(IRPDereference("pointer")), source)
+			])
+		], source)).disposition("value.pointer"), "materialize:mutable-or-foreign-place");
+		requireValueDisposition("indexed read", planner.plan(syntheticValueFunction("synthetic.coalesce.index", i32, [index], [localArray], [
+			syntheticBlock("entry", IRTReturn("value.indexed", []), source, [
+				valueInstruction("load-indexed", "value.indexed", i32, IRIOLoad(IRPIndex(IRPLocal("local.items"), "index")), source)
+			])
+		], source)).disposition("value.indexed"), "materialize:mutable-or-foreign-place");
+
+		requireValueDisposition("multiple reads of one value", planner.plan(syntheticValueFunction("synthetic.coalesce.multiple-use", i32, [], [localValue], [
+			syntheticBlock("entry", IRTReturn("value.sum", []), source, [
+				valueInstruction("load-twice", "value.twice", i32, IRIOLoad(IRPLocal("local.value")), source),
+				valueInstruction("add-twice", "value.sum", i32, IRIOBinary("haxe.i32.add", "value.twice", "value.twice", IRIStatic), source)
+			])
+		], source)).disposition("value.twice"), "materialize:multiple-uses:2");
+		requireValueDisposition("expression fanout", planner.plan(syntheticValueFunction("synthetic.coalesce.fanout", i32, [candidate], [localValue], [
+			syntheticBlock("entry", IRTReturn("value.negative", []), source, [
+				valueInstruction("load-for-fanout", "value.fanout-load", i32, IRIOLoad(IRPLocal("local.value")), source),
+				valueInstruction("sum-for-fanout", "value.fanout-sum", i32, IRIOBinary("haxe.i32.add", "value.fanout-load", "candidate", IRIStatic), source),
+				valueInstruction("negate-first", "value.negative", i32, IRIOUnary("haxe.i32.negate", "value.fanout-sum", IRIStatic), source),
+				valueInstruction("negate-second", "value.negative-unused", i32, IRIOUnary("haxe.i32.negate", "value.fanout-sum", IRIStatic), source)
+			])
+		], source)).disposition("value.fanout-load"), "materialize:expression-fanout");
+
+		requireValueDisposition("single-use compiler record",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.aggregate", recordType, [candidate], [], [
+				syntheticBlock("entry", IRTReturn("value.record", []), source, [
+					valueInstruction("construct-record", "value.record", recordType, IRIOConstructAggregate("synthetic.Record", [
+						{
+							name: "x",
+							valueId: "candidate"
+						}
+					]), source)
+				])
+			], source)).disposition("value.record"), "inline-pure");
+		requireValueDisposition("multiply-used compiler record",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.aggregate-multiple", i32, [candidate], [], [
+				syntheticBlock("entry", IRTReturn("value.first-field", []), source, [
+					valueInstruction("construct-shared-record", "value.shared-record", recordType, IRIOConstructAggregate("synthetic.Record",
+						[
+							{
+								name: "x",
+								valueId: "candidate"
+							}
+						]),
+						source),
+					valueInstruction("project-first", "value.first-field", i32, IRIOProject("value.shared-record", "x"), source),
+					valueInstruction("project-second", "value.second-field", i32, IRIOProject("value.shared-record", "x"), source)
+				])
+			], source)).disposition("value.shared-record"), "materialize:multiple-uses:2");
+		requireValueDisposition("cross-block compiler record",
+			planner.plan(syntheticValueFunction("synthetic.coalesce.aggregate-cross-block", i32, [candidate], [], [
+				syntheticBlock("entry", IRTJump(plainEdge("consumer")), source, [
+					valueInstruction("construct-cross-record", "value.cross-record", recordType, IRIOConstructAggregate("synthetic.Record", [
+						{
+							name: "x",
+							valueId: "candidate"
+						}
+					]), source)
+				]),
+				syntheticBlock("consumer", IRTReturn("value.cross-field", []), source, [
+					valueInstruction("project-cross-record", "value.cross-field", i32, IRIOProject("value.cross-record", "x"), source)
+				])
+			], source)).disposition("value.cross-record"), "materialize:cross-block");
+		requireValueDisposition("consumed call result", planner.plan(syntheticValueFunction("synthetic.coalesce.call-result", i32, [], [], [
+			syntheticBlock("entry", IRTReturn("value.call", []), source, [
+				valueInstruction("call-result", "value.call", i32, IRIOCall({
+					dispatch: IRCDNative("synthetic_value"),
+					arguments: [],
+					returnType: i32,
+					failure: null
+				}), source)
+			])
+		], source)).disposition("value.call"), "materialize:unsupported-producer");
+		// Reuse the same planner once more. This is a regression check that the
+		// previous functions' maps cannot influence a fresh function.
+		requireValueDisposition("planner reuse", planner.plan(syntheticValueFunction("synthetic.coalesce.reuse", i32, [], [localPointer], [
+			syntheticBlock("entry", IRTReturn("value.reused-int", []), source, [
+				valueInstruction("load-reused", "value.reused", pointerType, IRIOLoad(IRPLocal("local.pointer")), source),
+				valueInstruction("pointer-to-int", "value.reused-int", i32, IRIOConvert("value.reused", IRCPointer, i32, IRIStatic, null), source)
+			])
+		], source)).disposition("value.reused"), "inline-sequenced-load");
+
+		return "value-coalescing:single-use-private-local-and-field-and-pure-record-inline;"
+			+ "read-call-lifetime-cleanup-failure-global-pointer-index-multiuse-fanout-cross-block-and-call-result-materialized;planner-reuse-isolated";
+	}
+
+	static function requireValueDisposition(label:String, actual:CBodyValueDisposition, expected:String):Void {
+		final rendered = valueDispositionName(actual);
+		if (rendered != expected)
+			throw new haxe.Exception('value-coalescing proof `$label` expected `$expected` but received `$rendered`');
+	}
+
+	static function valueDispositionName(disposition:CBodyValueDisposition):String
+		return switch disposition {
+			case CBVDInlinePure: "inline-pure";
+			case CBVDInlineSequencedLoad: "inline-sequenced-load";
+			case CBVDMaterialize(reason):
+				switch reason {
+					case CBVMRMultipleUses(count): 'materialize:multiple-uses:$count';
+					case CBVMRCrossBlock: "materialize:cross-block";
+					case CBVMRMutableOrForeignPlace: "materialize:mutable-or-foreign-place";
+					case CBVMREffectOrReadBarrier(instructionId): 'materialize:effect-or-read:$instructionId';
+					case CBVMRExpressionFanout: "materialize:expression-fanout";
+					case CBVMRFailureOrLifetimeBoundary: "materialize:failure-or-lifetime";
+					case CBVMRUnsupportedProducer: "materialize:unsupported-producer";
+				};
+		};
 
 	static function proveControlFlowPlans():EvaluationControlFlowProof {
 		final source = new HxcSourceSpan("test/evaluation_order/synthetic-control-flow.hx", 1, 1, 1, 2);
@@ -579,6 +790,46 @@ class EvaluationOrderProbe {
 			entryBlockId: entryBlockId,
 			blocks: blocks,
 			cleanupRegions: [],
+			source: source
+		};
+
+	static function syntheticValueFunction(id:String, returnType:HxcIRTypeRef, parameters:Array<HxcIRParameter>, locals:Array<HxcIRLocal>,
+			blocks:Array<HxcIRBlock>, source:HxcSourceSpan, ?cleanupRegions:Array<HxcIRCleanupRegion>):HxcIRFunction
+		return {
+			id: id,
+			displayName: id,
+			parameters: parameters,
+			locals: locals,
+			returnType: returnType,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: blocks,
+			cleanupRegions: cleanupRegions == null ? [] : cleanupRegions,
+			source: source
+		};
+
+	static function syntheticLocal(id:String, type:HxcIRTypeRef, source:HxcSourceSpan):HxcIRLocal
+		return {
+			id: id,
+			type: type,
+			storage: IRLSAutomatic,
+			initialState: IRISInitialized,
+			source: source
+		};
+
+	static function valueInstruction(id:String, valueId:String, type:HxcIRTypeRef, kind:HxcIRInstructionKind, source:HxcSourceSpan):HxcIRInstruction
+		return {
+			id: id,
+			result: {id: valueId, type: type},
+			kind: kind,
+			source: source
+		};
+
+	static function effectInstruction(id:String, kind:HxcIRInstructionKind, source:HxcSourceSpan):HxcIRInstruction
+		return {
+			id: id,
+			result: null,
+			kind: kind,
 			source: source
 		};
 

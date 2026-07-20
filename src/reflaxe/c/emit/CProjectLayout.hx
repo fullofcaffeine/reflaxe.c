@@ -70,6 +70,7 @@ class CProjectLayoutPlan {
 	public final headerPaths:Array<String>;
 
 	final modulesByPath:Map<String, CProjectModuleLayout> = [];
+	final headerGuardsByPath:Map<String, String>;
 
 	public function new(layout:CProjectLayout, modules:Array<CProjectModuleLayout>) {
 		this.layout = layout;
@@ -89,6 +90,7 @@ class CProjectLayoutPlan {
 				paths.sort(compareUtf8);
 				paths;
 		};
+		headerGuardsByPath = CDeclarationPlanner.headerGuardsFor(headerPaths);
 	}
 
 	public function module(modulePath:String):CProjectModuleLayout {
@@ -101,7 +103,9 @@ class CProjectLayoutPlan {
 	public function guardRequest(path:String):CSymbolRequest {
 		if (headerPaths.indexOf(path) == -1)
 			throw new ProjectEmissionError('project layout does not own header `$path`');
-		final guard = CDeclarationPlanner.headerGuardFor(path);
+		final guard = headerGuardsByPath.get(path);
+		if (guard == null)
+			throw new ProjectEmissionError('project layout cannot resolve a guard for header `$path`');
 		if (path == UMBRELLA_HEADER_PATH) {
 			// This request identity predates selectable layouts. Keep it stable so
 			// adding split-only headers does not churn existing symbol manifests.

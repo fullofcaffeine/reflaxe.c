@@ -19,6 +19,7 @@ import reflaxe.c.lowering.CDispatchReport.CDispatchReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationReport.CGenericSpecializationReportSnapshot;
 import reflaxe.c.lowering.CGenericSpecializationContract;
 import reflaxe.c.naming.CSymbolRegistry.CSymbolTableSnapshot;
+import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationStrategy;
 import reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationPhase;
@@ -302,8 +303,8 @@ class CProjectEmitter {
 			case _:
 				fail('unknown project runtime diagnostic mode `${Std.string(plan.runtimeDiagnostics)}`');
 		}
-		if (plan.symbolTable.schemaVersion != 1 || plan.symbolTable.algorithm != "hxc-c-symbol-v1") {
-			fail("project emission requires the finalized schema-1 hxc-c-symbol-v1 symbol table");
+		if (plan.symbolTable.schemaVersion != CSymbolRegistry.SCHEMA_VERSION || plan.symbolTable.algorithm != CSymbolRegistry.ALGORITHM) {
+			fail('project emission requires the finalized schema-${CSymbolRegistry.SCHEMA_VERSION} ${CSymbolRegistry.ALGORITHM} symbol table');
 		}
 		final helperIds = plan.primitiveHelperIds;
 		if (helperIds != null) {

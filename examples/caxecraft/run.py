@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -79,8 +80,11 @@ SNAPSHOT_FORMATS = {
     **{path: "c" for path in SPLIT_SOURCES},
     "hxc.runtime-plan.json": "json",
     "method-symbols.json": "json",
+    "readability-metrics.json": "json",
     "oracle.txt": "text",
 }
+LEGACY_TEMPORARY_IDENTIFIER_BASELINE = 971
+MAX_CURRENT_DOMAIN_TEMPORARY_IDENTIFIERS = 400
 STRICT_FLAGS = (
     "-std=c11",
     "-Wall",
@@ -134,6 +138,7 @@ class RenderedProject:
     hxcir: str
     runtime_plan: dict[str, object]
     method_symbols: dict[str, object]
+    readability_metrics: dict[str, object]
 
 
 def development_tool(name: str) -> str:
@@ -351,6 +356,72 @@ def validate_method_symbols(projection: dict[str, object]) -> None:
         raise CaxecraftFailure("Caxecraft method symbols unexpectedly mention hxrt")
 
 
+def projected_method_name(
+    projection: dict[str, object], source_symbol: str, *, prefix: bool = False
+) -> str:
+    methods = projection.get("methods")
+    if not isinstance(methods, list):
+        raise CaxecraftFailure("Caxecraft method-symbol projection is malformed")
+    matches = [
+        item.get("cName")
+        for item in methods
+        if isinstance(item, dict)
+        and isinstance(item.get("sourceSymbol"), str)
+        and (
+            item["sourceSymbol"].startswith(source_symbol)
+            if prefix
+            else item["sourceSymbol"] == source_symbol
+        )
+        and isinstance(item.get("cName"), str)
+    ]
+    if len(matches) != 1:
+        raise CaxecraftFailure(
+            f"cannot resolve one generated C method for {source_symbol!r}: {matches!r}"
+        )
+    return matches[0]
+
+
+def native_method_symbol_header(projection: dict[str, object]) -> str:
+    aliases = (
+        ("CAXECRAFT_SELF_CHECK", "caxecraft.qa.DomainProbe.selfCheck"),
+        (
+            "CAXECRAFT_TERRAIN_TRACE",
+            "caxecraft.domain.CaxecraftTrace.terrainTrace",
+        ),
+        ("CAXECRAFT_EDIT_TRACE", "caxecraft.domain.CaxecraftTrace.editTrace"),
+        ("CAXECRAFT_RAY_TRACE", "caxecraft.domain.CaxecraftTrace.rayTrace"),
+        (
+            "CAXECRAFT_COLLISION_TRACE",
+            "caxecraft.domain.CaxecraftTrace.collisionTrace",
+        ),
+        ("CAXECRAFT_RUN_TRACE", "caxecraft.domain.CaxecraftTrace.runTrace"),
+        (
+            "CAXECRAFT_PROPERTY_TRACE",
+            "caxecraft.domain.CaxecraftTrace.propertyTrace(i32)",
+        ),
+    )
+    definitions = []
+    for alias, source_symbol in aliases:
+        c_name = projected_method_name(projection, source_symbol)
+        if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", c_name) is None:
+            raise CaxecraftFailure(
+                f"native method symbol is not a C identifier: {c_name!r}"
+            )
+        definitions.append(f"#define {alias} {c_name}")
+    return "\n".join(
+        (
+            "#ifndef CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED",
+            "#define CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED",
+            "",
+            "/* Test-only aliases projected from the compiler symbol report. */",
+            *definitions,
+            "",
+            "#endif /* CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED */",
+            "",
+        )
+    )
+
+
 def validate_hxcir(hxcir: str) -> None:
     for marker in (
         "hxcir schema=10",
@@ -370,7 +441,9 @@ def validate_hxcir(hxcir: str) -> None:
         raise CaxecraftFailure("Caxecraft HxcIR leaked a host path")
 
 
-def validate_generated_text(header: bytes, source: bytes) -> None:
+def validate_generated_text(
+    header: bytes, source: bytes, method_symbols: dict[str, object]
+) -> None:
     combined = header + b"\n" + source
     if str(ROOT).encode() in combined or b"\\" in combined or b"hxrt" in combined.lower():
         raise CaxecraftFailure("generated Caxecraft C leaked a host path or hxrt")
@@ -388,13 +461,187 @@ def validate_generated_text(header: bytes, source: bytes) -> None:
             f"generated Caxecraft C retained compiler control-flow marker {marker!r}"
         )
     for marker in (
-        "uint8_t hxc_local_caxecraft_domain_CaxecraftTrace_terrainTrace_storage",
-        "hxc_method_caxecraft_domain_VoxelRaycast_trace",
-        "hxc_method_caxecraft_domain_PlayerPhysics_step",
-        "hxc_method_caxecraft_qa_DomainProbe_selfCheck",
+        "uint8_t hxc_storage[16384]",
+        projected_method_name(
+            method_symbols,
+            "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
+        ),
+        projected_method_name(
+            method_symbols, "caxecraft.domain.PlayerPhysics.step(", prefix=True
+        ),
+        projected_method_name(
+            method_symbols, "caxecraft.qa.DomainProbe.selfCheck"
+        ),
     ):
         if marker not in text:
             raise CaxecraftFailure(f"generated Caxecraft C omitted {marker!r}")
+
+
+def validate_block_coord_header(content: str) -> None:
+    guard = "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED"
+    expected_record = (
+        "struct hxc_caxecraft_domain_BlockCoord {\n"
+        "  int32_t hxc_x;\n"
+        "  int32_t hxc_y;\n"
+        "  int32_t hxc_z;\n"
+        "};"
+    )
+    if (
+        not content.startswith(f"#ifndef {guard}\n#define {guard}\n")
+        or expected_record not in content
+        or not content.endswith(f"#endif /* {guard} */\n")
+    ):
+        raise CaxecraftFailure(
+            "BlockCoord.h lost its readable guard, source-shaped tag, or hxc_x/y/z members"
+        )
+    for forbidden in ("HXC_GENERATED_PATH_", "closedzx", "_h4aec2e39", "zx2D"):
+        if forbidden in content:
+            raise CaxecraftFailure(
+                f"BlockCoord.h leaked machine identity {forbidden!r} into ordinary C"
+            )
+
+
+def generated_readability_metrics(header: bytes, source: bytes) -> dict[str, object]:
+    text = (header + b"\n" + source).decode("utf-8")
+    identifier_references = re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", text)
+    identifier_counts = Counter(identifier_references)
+    identifiers = set(identifier_counts)
+    temporaries = {name for name in identifiers if name.startswith("hxc_tmp_")}
+    old_role_names = {
+        name
+        for name in identifiers
+        if re.match(r"hxc_(?:type|field|method|local|temp|spec)_", name)
+    }
+    byte_escaped_names = {
+        name for name in identifiers if re.search(r"zx[0-9A-Fa-f]{2}", name)
+    }
+    digest_names = {
+        name for name in identifiers if re.search(r"[0-9a-f]{32,}", name)
+    }
+    hashed_names = {
+        name for name in identifiers if re.search(r"_h[0-9a-f]{12,64}$", name)
+    }
+    guards = set(re.findall(r"(?m)^#ifndef ([A-Za-z_][A-Za-z0-9_]*)$", text))
+    digest_guards = {
+        guard
+        for guard in guards
+        if re.search(r"_H[0-9A-F]{16,64}_INCLUDED$", guard)
+    }
+    record_address_temporaries = {
+        name
+        for name in temporaries
+        if name.startswith("hxc_tmp_record_field_address_")
+    }
+    compiler_labels = set(
+        re.findall(r"(?m)^\s*(hxc_[A-Za-z0-9_]+):\s*$", text)
+    )
+    goto_statements = re.findall(
+        r"(?m)^\s*goto\s+[A-Za-z_][A-Za-z0-9_]*\s*;$", text
+    )
+    maximum_identifier = max(identifiers, key=lambda value: (len(value), value))
+    temporary_count = len(temporaries)
+    return {
+        "schemaVersion": 1,
+        "status": "bounded-readable-generated-c",
+        "generatedLineCount": len(text.splitlines()),
+        "uniqueIdentifierCount": len(identifiers),
+        "maximumIdentifierLength": len(maximum_identifier),
+        "maximumIdentifier": maximum_identifier,
+        "temporaryIdentifierCount": temporary_count,
+        "temporaryReferences": sum(identifier_counts[name] for name in temporaries),
+        "temporaryIdentifiersRemovedFromLegacyBaseline": (
+            LEGACY_TEMPORARY_IDENTIFIER_BASELINE - temporary_count
+        ),
+        "recordFieldAddressTemporaryCount": len(record_address_temporaries),
+        "oldRoleEncodedIdentifierCount": len(old_role_names),
+        "oldByteEscapeIdentifierCount": len(byte_escaped_names),
+        "semanticDigestIdentifierCount": len(digest_names),
+        "hashSuffixedIdentifierCount": len(hashed_names),
+        "headerGuardCount": len(guards),
+        "hashedHeaderGuardCount": len(digest_guards),
+        "gotoStatementCount": len(goto_statements),
+        "compilerLabelCount": len(compiler_labels),
+    }
+
+
+def validate_readability_metrics(metrics: dict[str, object]) -> None:
+    if (
+        metrics.get("schemaVersion") != 1
+        or metrics.get("status") != "bounded-readable-generated-c"
+        or not isinstance(metrics.get("generatedLineCount"), int)
+        or metrics.get("generatedLineCount", 0) <= 0
+        or not isinstance(metrics.get("maximumIdentifierLength"), int)
+        or metrics.get("maximumIdentifierLength", 121) > 120
+        or not isinstance(metrics.get("temporaryIdentifierCount"), int)
+        or metrics.get("temporaryIdentifierCount", 526)
+        > MAX_CURRENT_DOMAIN_TEMPORARY_IDENTIFIERS
+        or metrics.get("temporaryIdentifiersRemovedFromLegacyBaseline", 0) <= 0
+        or metrics.get("recordFieldAddressTemporaryCount") != 0
+        or metrics.get("oldRoleEncodedIdentifierCount") != 0
+        or metrics.get("oldByteEscapeIdentifierCount") != 0
+        or metrics.get("semanticDigestIdentifierCount") != 0
+        or metrics.get("hashedHeaderGuardCount") != 0
+        or metrics.get("gotoStatementCount") != 0
+        or metrics.get("compilerLabelCount") != 0
+    ):
+        raise CaxecraftFailure(
+            f"generated-C readability budget drifted: {metrics!r}"
+        )
+
+
+def validate_symbol_readability(symbols: dict[str, object]) -> None:
+    entries = symbols.get("symbols")
+    collisions = symbols.get("collisions")
+    if (
+        symbols.get("schemaVersion") != 2
+        or symbols.get("algorithm") != "hxc-c-symbol-v2"
+        or not isinstance(entries, list)
+        or not isinstance(collisions, list)
+    ):
+        raise CaxecraftFailure("Caxecraft readable symbol-table contract drifted")
+    collision_names: set[str] = set()
+    for collision in collisions:
+        if not isinstance(collision, dict) or not isinstance(
+            collision.get("symbols"), list
+        ):
+            raise CaxecraftFailure(
+                "Caxecraft symbol table contains a malformed collision ledger"
+            )
+        for item in collision["symbols"]:
+            if not isinstance(item, dict) or not isinstance(item.get("cName"), str):
+                raise CaxecraftFailure(
+                    "Caxecraft symbol table contains a malformed collision entry"
+                )
+            collision_names.add(item["cName"])
+    block_coord = []
+    for entry in entries:
+        if not isinstance(entry, dict) or not isinstance(entry.get("cName"), str):
+            raise CaxecraftFailure("Caxecraft symbol table contains a malformed entry")
+        c_name = entry["cName"]
+        readable = entry.get("readableName")
+        reasons = entry.get("escapeReasons")
+        if len(c_name) > 120 or re.search(r"zx[0-9A-Fa-f]{2}", c_name):
+            raise CaxecraftFailure(
+                f"Caxecraft symbol retained an encoded/overlong C name: {c_name!r}"
+            )
+        if entry.get("collisionResolved") is True and c_name not in collision_names:
+            raise CaxecraftFailure(
+                f"Caxecraft collision suffix is absent from its ledger: {c_name!r}"
+            )
+        if re.search(r"_h[0-9a-f]{12,64}$", c_name) and not (
+            entry.get("collisionResolved") is True
+            or isinstance(reasons, list)
+            and "length-limit" in reasons
+        ):
+            raise CaxecraftFailure(
+                f"Caxecraft symbol has an unexplained hash suffix: {c_name!r}"
+            )
+        if readable == ["caxecraft", "domain", "BlockCoord"]:
+            block_coord.append(c_name)
+    if block_coord != ["hxc_caxecraft_domain_BlockCoord"]:
+        raise CaxecraftFailure(
+            f"BlockCoord semantic/display identity drifted: {block_coord!r}"
+        )
 
 
 def generated_c_bytes(output: Path, layout: str) -> tuple[bytes, bytes]:
@@ -468,10 +715,19 @@ def render_project(
     ):
         raise CaxecraftFailure(f"{label} unexpectedly selected a Haxe stdlib surface")
     symbols = load_json(output / "hxc.symbols.json", f"{label} symbol table")
+    validate_symbol_readability(symbols)
     projection = method_symbol_projection(symbols)
     validate_method_symbols(projection)
     header, source = generated_c_bytes(output, layout)
-    validate_generated_text(header, source)
+    validate_generated_text(header, source, projection)
+    readability_metrics = generated_readability_metrics(header, source)
+    validate_readability_metrics(readability_metrics)
+    if layout == "split":
+        validate_block_coord_header(
+            (output / "include/hxc/modules/caxecraft/domain/BlockCoord.h").read_text(
+                encoding="utf-8"
+            )
+        )
     hxcir = extract_hxcir(result, label) if report else ""
     if report:
         validate_hxcir(hxcir)
@@ -481,6 +737,7 @@ def render_project(
         hxcir,
         runtime_plan,
         projection,
+        readability_metrics,
     )
 
 
@@ -639,6 +896,7 @@ def snapshot_values() -> dict[str, object]:
             },
             "hxc.runtime-plan.json": project.runtime_plan,
             "method-symbols.json": project.method_symbols,
+            "readability-metrics.json": project.readability_metrics,
             "oracle.txt": oracle,
         }
 
@@ -663,6 +921,7 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
     oracle = values.get("oracle.txt")
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
+    readability_metrics = values.get("readability-metrics.json")
     generated = {
         path: values.get(path) for path in (*SPLIT_HEADERS, *SPLIT_SOURCES)
     }
@@ -670,7 +929,11 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
         isinstance(value, str) for value in generated.values()
     ):
         raise CaxecraftFailure("Caxecraft text baseline is malformed")
-    if not isinstance(runtime_plan, dict) or not isinstance(method_symbols, dict):
+    if (
+        not isinstance(runtime_plan, dict)
+        or not isinstance(method_symbols, dict)
+        or not isinstance(readability_metrics, dict)
+    ):
         raise CaxecraftFailure("Caxecraft JSON baseline is malformed")
     validate_runtime_plan(runtime_plan)
     validate_method_symbols(method_symbols)
@@ -683,7 +946,23 @@ def validate_expected(values: dict[str, object]) -> tuple[dict[str, bytes], byte
     validate_generated_text(
         b"\n".join(generated_bytes[path] for path in SPLIT_HEADERS),
         b"\n".join(generated_bytes[path] for path in SPLIT_SOURCES),
+        method_symbols,
     )
+    computed_metrics = generated_readability_metrics(
+        b"\n".join(generated_bytes[path] for path in SPLIT_HEADERS),
+        b"\n".join(generated_bytes[path] for path in SPLIT_SOURCES),
+    )
+    if readability_metrics != computed_metrics:
+        raise CaxecraftFailure(
+            "checked-in readability metrics do not describe the checked-in C"
+        )
+    validate_readability_metrics(readability_metrics)
+    block_coord = generated.get(
+        "include/hxc/modules/caxecraft/domain/BlockCoord.h"
+    )
+    if not isinstance(block_coord, str):
+        raise CaxecraftFailure("checked-in Caxecraft baseline omitted BlockCoord.h")
+    validate_block_coord_header(block_coord)
     lines = oracle_bytes.splitlines()
     if len(lines) != 38 or lines[0] != b"0" or not oracle_bytes.endswith(b"\n"):
         raise CaxecraftFailure("checked-in Caxecraft oracle baseline drifted")
@@ -699,6 +978,7 @@ def validate_snapshots(project: RenderedProject, oracle: bytes) -> None:
         },
         "hxc.runtime-plan.json": project.runtime_plan,
         "method-symbols.json": project.method_symbols,
+        "readability-metrics.json": project.readability_metrics,
         "oracle.txt": oracle.decode("ascii"),
     }
     if actual == expected:
@@ -732,6 +1012,9 @@ def prepare_native_fixture(
     (fixture / "generated/src").mkdir(parents=True)
     (fixture / "native").mkdir(parents=True)
     shutil.copy2(NATIVE / "domain_harness.c", fixture / "native/domain_harness.c")
+    (fixture / "native/method_symbols.h").write_text(
+        native_method_symbol_header(project.method_symbols), encoding="utf-8"
+    )
     if layout == "unity":
         shutil.copy2(
             project.output / "src/program.c", fixture / "generated/src/program.c"
@@ -760,10 +1043,14 @@ def native_project(layout: str, oracle: bytes, *, sanitizer: bool) -> CFixturePr
                 if path != "src/hxc/main.c"
             ),
         )
-        headers = tuple(f"generated/{path}" for path in SPLIT_HEADERS)
+        headers = (
+            "native/method_symbols.h",
+            *(f"generated/{path}" for path in SPLIT_HEADERS),
+        )
     elif layout == "unity":
         sources = ("native/domain_harness.c", "native/generated_program.c")
         headers = (
+            "native/method_symbols.h",
             "generated/include/hxc/program.h",
             "generated/src/program.c",
         )
@@ -932,9 +1219,24 @@ def checked_in_split_project(root: Path, values: dict[str, object]) -> tuple[Ren
         destination.write_bytes(content)
     runtime_plan = values.get("hxc.runtime-plan.json")
     method_symbols = values.get("method-symbols.json")
-    if not isinstance(runtime_plan, dict) or not isinstance(method_symbols, dict):
+    readability_metrics = values.get("readability-metrics.json")
+    if (
+        not isinstance(runtime_plan, dict)
+        or not isinstance(method_symbols, dict)
+        or not isinstance(readability_metrics, dict)
+    ):
         raise CaxecraftFailure("checked-in Caxecraft JSON baseline is malformed")
-    return RenderedProject(root, {}, "", runtime_plan, method_symbols), oracle
+    return (
+        RenderedProject(
+            root,
+            {},
+            "",
+            runtime_plan,
+            method_symbols,
+            readability_metrics,
+        ),
+        oracle,
+    )
 
 
 def main(argv: Iterable[str] = ()) -> int:
@@ -1023,7 +1325,7 @@ def main(argv: Iterable[str] = ()) -> int:
     print(
         "caxecraft-domain: OK: "
         f"{mode}, 32 seeded properties, exact traces, {matrix}, "
-        f"zero hxrt/allocation symbols, and {parity} passed"
+        f"zero hxrt/allocation symbols, bounded readable C metrics, and {parity} passed"
     )
     return 0
 

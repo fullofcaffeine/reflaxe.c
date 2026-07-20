@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -109,7 +110,7 @@ def validate(report: dict[str, Any]) -> None:
     table = report.get("symbolTable")
     if not isinstance(table, dict):
         raise SymbolRegistryFailure("report omitted symbolTable")
-    if table.get("schemaVersion") != 1 or table.get("algorithm") != "hxc-c-symbol-v1":
+    if table.get("schemaVersion") != 2 or table.get("algorithm") != "hxc-c-symbol-v2":
         raise SymbolRegistryFailure("symbol table schema/algorithm drifted")
     symbols = table.get("symbols")
     collisions = table.get("collisions")
@@ -157,15 +158,67 @@ def validate(report: dict[str, Any]) -> None:
         "reflaxe-reserved",
         "standard-library-reserved",
         "non-c-identifier-byte",
-        "source-underscore",
+        "separator-normalized",
+        "c-namespace-escape",
         "length-limit",
     }
     if not required_reasons.issubset(escape_reasons):
         raise SymbolRegistryFailure(
             f"escape ledger is incomplete: missing {sorted(required_reasons - escape_reasons)!r}"
         )
-    if len(collisions) != 1 or len(collisions[0].get("symbols", [])) != 2:
-        raise SymbolRegistryFailure("overload collision ledger is missing or unstable")
+    collision_bases = {
+        collision.get("baseName")
+        for collision in collisions
+        if isinstance(collision, dict)
+        and isinstance(collision.get("symbols"), list)
+        and len(collision["symbols"]) == 2
+    }
+    if collision_bases != {"hxc_demo_Box_map", "hxc_demo_Worker_run"}:
+        raise SymbolRegistryFailure(
+            f"overload/specialization collision ledger is missing or unstable: {collision_bases!r}"
+        )
+
+    by_source = {
+        symbol.get("sourceSymbol"): symbol
+        for symbol in symbols
+        if isinstance(symbol, dict) and isinstance(symbol.get("sourceSymbol"), str)
+    }
+    readable_expectations = {
+        "compiler.closed-record.4aec2e39ec8810b7": (
+            "hxc_caxecraft_domain_BlockCoord",
+            ["caxecraft", "domain", "BlockCoord"],
+        ),
+        "compiler.closed-record.4aec2e39ec8810b7.x": ("hxc_x", ["x"]),
+        "compiler.closed-record.4aec2e39ec8810b7.NULL": ("hxc_NULL", ["NULL"]),
+        "compiler.closed-record.4aec2e39ec8810b7.NAN": ("hxc_NAN", ["NAN"]),
+        "demo.Worker.run.value": ("hxc_value", ["value"]),
+        "demo.Worker.run.while": ("hxc_while", ["while"]),
+        "demo.Worker.run.bool": ("hxc_bool", ["bool"]),
+    }
+    for source, (expected_name, expected_readable) in readable_expectations.items():
+        symbol = by_source.get(source)
+        if (
+            not isinstance(symbol, dict)
+            or symbol.get("cName") != expected_name
+            or symbol.get("readableName") != expected_readable
+        ):
+            raise SymbolRegistryFailure(
+                f"readable generated-name contract drifted for {source!r}: {symbol!r}"
+            )
+    block_coord = by_source["compiler.closed-record.4aec2e39ec8810b7"]
+    if block_coord.get("collisionResolved") is not False or "_h" in str(block_coord.get("cName")):
+        raise SymbolRegistryFailure("collision-free named record received an unnecessary hash")
+    for collision in collisions:
+        for entry in collision.get("symbols", []):
+            if not isinstance(entry, dict) or re.search(r"_h[0-9a-f]{12,64}$", str(entry.get("cName"))) is None:
+                raise SymbolRegistryFailure(f"genuine collision lacks a compact semantic suffix: {entry!r}")
+
+    check_macro_safe_native(by_source)
+
+    if report.get("readableIdentityProof") != (
+        "readable-display-is-not-semantic-identity-but-is-a-validated-naming-fact"
+    ):
+        raise SymbolRegistryFailure("readable-name identity separation proof drifted")
 
     diagnostics = report.get("diagnostics")
     if not isinstance(diagnostics, dict):
@@ -226,6 +279,77 @@ def validate(report: dict[str, Any]) -> None:
         raise SymbolRegistryFailure("symbol report leaked a host filesystem path")
     if "hxrt_" in serialized:
         raise SymbolRegistryFailure("symbol finalization introduced an hxrt symbol")
+
+
+def check_macro_safe_native(by_source: dict[str, dict[str, Any]]) -> None:
+    """Compile source-shaped locals/members beside common object macros."""
+
+    local_bool = by_source["demo.Worker.run.bool"]["cName"]
+    member_null = by_source["compiler.closed-record.4aec2e39ec8810b7.NULL"]["cName"]
+    member_nan = by_source["compiler.closed-record.4aec2e39ec8810b7.NAN"]["cName"]
+    source = f"""#include <stdbool.h>
+#include <stddef.h>
+#include <math.h>
+
+struct hxc_macro_probe {{
+  int {member_null};
+  int {member_nan};
+}};
+
+static int hxc_macro_probe_run(void)
+{{
+  int {local_bool} = 3;
+  struct hxc_macro_probe value = {{ .{member_null} = 4, .{member_nan} = 5 }};
+  return {local_bool} + value.{member_null} + value.{member_nan};
+}}
+
+int main(void)
+{{
+  return hxc_macro_probe_run() == 12 ? 0 : 1;
+}}
+"""
+    with tempfile.TemporaryDirectory(prefix="hxc-symbol-macro-") as temporary:
+        root = Path(temporary)
+        source_path = root / "macro_probe.c"
+        executable = root / "macro_probe"
+        source_path.write_text(source, encoding="utf-8")
+        compiler = os.environ.get("CC", "cc")
+        compiled = subprocess.run(
+            [
+                compiler,
+                "-std=c11",
+                "-Wall",
+                "-Wextra",
+                "-Werror",
+                "-pedantic",
+                str(source_path),
+                "-o",
+                str(executable),
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if compiled.returncode != 0:
+            raise SymbolRegistryFailure(
+                "macro-safe native symbol probe failed to compile\n"
+                f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+            )
+        executed = subprocess.run(
+            [str(executable)],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if executed.returncode != 0 or executed.stdout or executed.stderr:
+            raise SymbolRegistryFailure(
+                "macro-safe native symbol probe failed at runtime\n"
+                f"exit={executed.returncode}\nstdout:\n{executed.stdout}\nstderr:\n{executed.stderr}"
+            )
 
 
 def check_snapshot(report: dict[str, Any]) -> None:

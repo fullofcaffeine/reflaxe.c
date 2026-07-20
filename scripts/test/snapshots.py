@@ -255,6 +255,7 @@ def declaration_plan_artifacts() -> list[Artifact]:
             "json",
             {
                 "plan": report.get("plan"),
+                "guardProof": report.get("guardProof"),
                 "diagnostics": report.get("diagnostics"),
             },
         )
@@ -1423,7 +1424,9 @@ def validate_updated_suites(catalog: dict[str, Any], suites: list[str]) -> None:
     if not isinstance(raw_suites, list):
         raise SnapshotFailure("fixture catalog omitted suite runners")
     commands = {
-        entry.get("id"): entry.get("runner")
+        entry.get("id"): entry.get(
+            "snapshotValidationRunner", entry.get("runner")
+        )
         for entry in raw_suites
         if isinstance(entry, dict)
     }

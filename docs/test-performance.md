@@ -148,6 +148,16 @@ dispatch. Ordinary compiler changes continue to use the exact focused owners
 without paying for a second render. Snapshot updates remain a targeted,
 reviewed local transaction followed by the focused owner suite.
 
+An unusually expensive suite may declare a `snapshotValidationRunner` for the
+post-update step. This does not replace its ordinary suite runner or full CI
+lane. It is allowed only because the central updater has already rendered the
+generator twice, compared those renders, and written the transaction. The
+focused post-update command must still regenerate and compare the new snapshot
+and run the suite's edit-time semantic/native checks. Caxecraft uses this split
+so a snapshot update does not immediately repeat its full cold/warm,
+locale/order, O0/O2, and sanitizer matrix; that exhaustive matrix remains the
+cataloged runner and hosted authority.
+
 ## Parallelization safety rule
 
 Parallelize at an isolation boundary, not merely because commands look

@@ -1,49 +1,55 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <stdbool.h>
 #include <stdint.h>
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(uint32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0)
+static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 <= UINT32_C(2147483647))
+  if (hxc_value <= UINT32_C(2147483647))
   {
-    return (int32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0;
+    return (int32_t)hxc_value;
   }
-  return INT32_MIN + (int32_t)(hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0 - UINT32_C(2147483648));
+  return INT32_MIN + (int32_t)(hxc_value - UINT32_C(2147483648));
 }
 
-static inline int32_t hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0, int32_t hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1)
+static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
 {
-  return hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits((uint32_t)((uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0 + (uint64_t)(uint32_t)hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1));
+  return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
-extern bool hxc_field_EvaluationFixture_callFlag;
+extern int32_t hxc_EvaluationFixture_barrierValue;
 
-extern uint32_t hxc_field_EvaluationFixture_counter;
+extern bool hxc_EvaluationFixture_callFlag;
 
-extern bool hxc_field_EvaluationFixture_shortCircuitIntact;
+extern uint32_t hxc_EvaluationFixture_counter;
 
-extern uint32_t hxc_field_EvaluationFixture_switchCalls;
+extern bool hxc_EvaluationFixture_shortCircuitIntact;
 
-extern bool hxc_field_EvaluationFixture_ternaryIntact;
+extern uint32_t hxc_EvaluationFixture_switchCalls;
 
-void hxc_method_EvaluationFixture_consumePair(bool hxc_local_EvaluationFixture_consumePair_first_n0, bool hxc_local_EvaluationFixture_consumePair_second_n1);
+extern bool hxc_EvaluationFixture_ternaryIntact;
 
-uint32_t hxc_method_EvaluationFixture_finish(uint32_t hxc_local_EvaluationFixture_finish_value_n0);
+void hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second);
 
-uint32_t hxc_method_EvaluationFixture_keepTernary(void);
+uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value);
 
-void hxc_method_EvaluationFixture_main(void);
+uint32_t hxc_EvaluationFixture_keepTernary(void);
 
-uint32_t hxc_method_EvaluationFixture_run(void);
+void hxc_EvaluationFixture_main(void);
 
-bool hxc_method_EvaluationFixture_setCallFlag(bool hxc_local_EvaluationFixture_setCallFlag_value_n0);
+int32_t hxc_EvaluationFixture_overwriteBarrierValue(void);
 
-bool hxc_method_EvaluationFixture_spoilShortCircuit(void);
+int32_t hxc_EvaluationFixture_readGlobalBeforeCall(void);
 
-uint32_t hxc_method_EvaluationFixture_spoilTernary(void);
+uint32_t hxc_EvaluationFixture_run(void);
 
-int32_t hxc_method_EvaluationFixture_switchSubject(int32_t hxc_local_EvaluationFixture_switchSubject_value_n0);
+bool hxc_EvaluationFixture_setCallFlag(bool hxc_value);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+bool hxc_EvaluationFixture_spoilShortCircuit(void);
+
+uint32_t hxc_EvaluationFixture_spoilTernary(void);
+
+int32_t hxc_EvaluationFixture_switchSubject(int32_t hxc_value);
+
+#endif /* HXC_PROGRAM_H_INCLUDED */

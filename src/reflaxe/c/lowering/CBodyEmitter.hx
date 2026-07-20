@@ -22,6 +22,8 @@ import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlanner;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowRegion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowSwitchArm;
 import reflaxe.c.lowering.CBodyControlFlow.CBodySwitchLabel;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlan;
+import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
 
 private enum CBodyEnumCRepresentation {
 	CBECNative;
@@ -88,6 +90,7 @@ private typedef CBodyEmissionState = {
 	final boundsAbortName:Null<CIdentifier>;
 	final lineDirectives:Bool;
 	final labeledTargets:Map<String, Bool>;
+	final coalescing:CBodyValueCoalescingPlan;
 	var terminatedByTailLoop:Bool;
 }
 
@@ -281,6 +284,7 @@ class CBodyEmitter {
 		}
 		validateConstructionCleanupRegions(fn);
 		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
+		final coalescing = new CBodyValueCoalescingPlanner().plan(fn);
 		final statements:Array<CStmt> = [];
 		final state:CBodyEmissionState = {
 			values: [],
@@ -302,6 +306,7 @@ class CBodyEmitter {
 			boundsAbortName: boundsAbortName,
 			lineDirectives: lineDirectives,
 			labeledTargets: [],
+			coalescing: coalescing,
 			terminatedByTailLoop: false
 		};
 		for (parameter in fn.parameters) {
@@ -506,30 +511,31 @@ class CBodyEmitter {
 					final result = requireResult(instruction, fn.id);
 					state.values.set(result.id, constantExpression(value));
 				case IRIOLoad(place):
-					switch requireResult(instruction, fn.id).type {
+					final result = requireResult(instruction, fn.id);
+					switch result.type {
 						case IRTSpan(_, _):
 							emitSpanLoad(statements, state.values, state.spanValueLengths, state.referencedValues, instruction, place, fn, state.localNames,
 								state.globalNames, state.spanLengthNames, state.lineDirectives);
 						case _:
 							emitLoad(statements, state.values, state.referencedValues, instruction,
 								placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values), state.temporaryNames,
-								state.lineDirectives, fn.id);
+								state.lineDirectives, fn.id, state.coalescing.shouldInlineSequencedLoad(result.id));
 					}
 				case IRIOAddress(place):
 					emitAddress(statements, state.values, state.referencedValues, instruction, place, fn, state.localNames, state.globalNames,
 						state.spanLengthNames, state.temporaryNames, state.lineDirectives);
 				case IRIOConstructAggregate(instanceId, fields):
 					emitAggregateConstruction(statements, state.values, state.referencedValues, instruction, instanceId, fields, state.temporaryNames,
-						state.lineDirectives, fn.id);
+						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
 				case IRIOProject(valueId, fieldName):
 					emitAggregateProjection(statements, state.values, state.referencedValues, instruction, valueId, fieldName, fn, state.temporaryNames,
-						state.lineDirectives);
+						state.lineDirectives, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
 				case IRIOConstructTag(instanceId, tagName, payload):
 					emitEnumConstruction(statements, state.values, state.referencedValues, instruction, instanceId, tagName, payload, state.temporaryNames,
-						state.lineDirectives, fn.id);
+						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
 				case IRIOMatchTag(valueId, tagName):
 					emitEnumMatch(statements, state.values, state.referencedValues, instruction, valueId, tagName, fn, state.temporaryNames,
-						state.lineDirectives);
+						state.lineDirectives, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
 				case IRIOProjectTag(valueId, tagName, payloadIndex, IRTCPCheckedAbort(_, _)):
 					emitEnumProjection(statements, state.values, state.referencedValues, instruction, valueId, tagName, payloadIndex, fn,
 						state.temporaryNames, state.boundsAbortName, state.lineDirectives);
@@ -799,8 +805,16 @@ class CBodyEmitter {
 	}
 
 	function emitLoad(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			sourceExpression:CExpr, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+			sourceExpression:CExpr, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String, coalesce:Bool):Void {
 		final result = requireResult(instruction, functionId);
+		if (coalesce) {
+			values.set(result.id, sourceExpression);
+			if (!referencedValues.exists(result.id)) {
+				addLineDirective(statements, instruction.source, lineDirectives);
+				statements.push(SExpr(ECast(new CType(TVoid), DName(null), sourceExpression)));
+			}
+			return;
+		}
 		final temporaryName = temporaryNames.get(result.id);
 		addLineDirective(statements, instruction.source, lineDirectives);
 		if (temporaryName == null) {
@@ -873,7 +887,8 @@ class CBodyEmitter {
 	}
 
 	function emitAggregateConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			instanceId:String, fields:Array<HxcIRNamedValue>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+			instanceId:String, fields:Array<HxcIRNamedValue>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String,
+			coalesce:Bool):Void {
 		final resolvedOrder = aggregateFieldOrder.get(instanceId);
 		final expectedOrder:Array<String> = resolvedOrder == null ? fail('aggregate construction `${instruction.id}` in `$functionId` has no finalized direct-record layout') : resolvedOrder;
 		if (expectedOrder.length != fields.length) {
@@ -894,21 +909,22 @@ class CBodyEmitter {
 		}
 		final result = requireResult(instruction, functionId);
 		final expression = ECompoundLiteral(cType(result.type), DName(null), IList(initializers));
-		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, coalesce);
 	}
 
 	function emitAggregateProjection(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			valueId:String, fieldName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+			valueId:String, fieldName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, coalesce:Bool):Void {
 		final instanceId = switch valueType(fn, valueId) {
 			case IRTInstance(id): id;
 			case _: return fail('aggregate projection `${instruction.id}` in `${fn.id}` lost its validated instance value');
 		};
 		final expression = EMember(requireValue(values, valueId, fn.id), requireDirectFieldName(instanceId, fieldName, instruction.id, fn.id), false);
-		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id, coalesce);
 	}
 
 	function emitEnumConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			instanceId:String, tagName:String, payload:Array<String>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+			instanceId:String, tagName:String, payload:Array<String>, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, functionId:String,
+			coalesce:Bool):Void {
 		final discriminant = EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName));
 		final representation = requireEnumRepresentation(instanceId);
 		final expression:CExpr = switch representation {
@@ -939,15 +955,15 @@ class CBodyEmitter {
 				}
 				ECompoundLiteral(cType(IRTInstance(instanceId)), DName(null), IList(initializers));
 		};
-		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, coalesce);
 	}
 
 	function emitEnumMatch(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
-			valueId:String, tagName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+			valueId:String, tagName:String, fn:HxcIRFunction, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, coalesce:Bool):Void {
 		final instanceId = requireEnumInstanceId(valueType(fn, valueId), instruction.id, fn.id);
 		final expression = EBinary(Equal, enumTagExpression(requireValue(values, valueId, fn.id), instanceId),
 			EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName)));
-		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id, coalesce);
 	}
 
 	function emitEnumProjection(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
@@ -968,7 +984,7 @@ class CBodyEmitter {
 		}
 		final expression = EMember(EMember(EMember(value, requireEnumPayloadMember(instanceId), false), requireEnumCaseUnionMember(instanceId, tagName), false),
 			requireEnumPayloadFieldName(instanceId, tagName, payloadNames[payloadIndex]), false);
-		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id);
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, fn.id, false);
 	}
 
 	function emitDefaultInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>, instruction:HxcIRInstruction,

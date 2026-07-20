@@ -94,7 +94,11 @@ stem limit is shortened to a readable byte prefix plus its complete SHA-256;
 the remaining suffix budget accommodates recursive-cycle source suffixes below
 common 255-byte component limits. Case-insensitive path or digest collisions
 fail before printing.
-Header guards still pass through the complete symbol registry. The common
+Header guards are allocated as one deterministic project set and still pass
+through the complete symbol registry. A collision-free path such as
+`include/hxc/modules/caxecraft/domain/BlockCoord.h` becomes the readable
+`HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED`; only paths that normalize to the
+same guard (or exceed the length bound) receive a compact SHA-256 suffix. The common
 types header owns system/import includes, program-wide ABI assertions and
 inline primitive helpers, and dependency-neutral forward declarations. Each
 split module header owns that module's complete aggregate,
@@ -137,7 +141,7 @@ it is not a third package-coalesced layout. A distinct mode that groups several
 modules into one package translation unit remains future HXC-COMP-011 scope,
 owned by `haxe_c-xge.18.5`.
 
-The emitter owns these schema-1 sidecars:
+The emitter owns these independently versioned sidecars:
 
 - `hxc.initialization-plan.json`: the admitted direct executable's
   dependency-first type order, source-positioned reasons, class/field phases,
@@ -145,7 +149,9 @@ The emitter owns these schema-1 sidecars:
   feature set. Structural fixtures do not fabricate this semantic sidecar;
 - `hxc.manifest.json`: resolved logical configuration, the typed neutral build
   plan, artifact kinds, and SHA-256 digests;
-- `hxc.symbols.json`: the finalized `hxc-c-symbol-v1` table;
+- `hxc.symbols.json`: the finalized schema-2 `hxc-c-symbol-v2` table, retaining
+  full semantic keys separately from readable emitted names and explaining
+  every collision suffix;
 - `hxc.runtime-plan.json`: either the structural fixture's explicit
   `placeholder-no-runtime-analysis`, with no fabricated proof, or the admitted
   direct executable's schema-2 `hxc-runtime-plan-v2`

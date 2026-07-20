@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_64657461696C2F73746174652E68_INCLUDED
-#define HXC_GENERATED_PATH_64657461696C2F73746174652E68_INCLUDED
+#ifndef HXC_DETAIL_STATE_H_INCLUDED
+#define HXC_DETAIL_STATE_H_INCLUDED
 
 #include "project/config.h"
 #include "types/value.h"
@@ -18,4 +18,4 @@ struct private_state {
   project_config_tag config_tag;
 };
 
-#endif /* HXC_GENERATED_PATH_64657461696C2F73746174652E68_INCLUDED */
+#endif /* HXC_DETAIL_STATE_H_INCLUDED */

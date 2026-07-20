@@ -1,67 +1,67 @@
 #include "hxc/program.h"
 
-double hxc_method_FunctionFixture_asFloat(double hxc_local_FunctionFixture_asFloat_value_n0)
+double hxc_FunctionFixture_asFloat(double hxc_value)
 {
-  return hxc_local_FunctionFixture_asFloat_value_n0;
+  return hxc_value;
 }
 
-int32_t hxc_method_FunctionFixture_chain(int32_t hxc_local_FunctionFixture_chain_value_n0)
+int32_t hxc_FunctionFixture_chain(int32_t hxc_value)
 {
-  int32_t hxc_temp_FunctionFixture_chain_callzx2Dresult_n0 = hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_chain_value_n0);
-  return hxc_temp_FunctionFixture_chain_callzx2Dresult_n0;
+  int32_t hxc_tmp_call_result_n0 = hxc_FunctionFixture_passthrough(hxc_value);
+  return hxc_tmp_call_result_n0;
 }
 
-double hxc_method_FunctionFixture_convert(int32_t hxc_local_FunctionFixture_convert_value_n0)
+double hxc_FunctionFixture_convert(int32_t hxc_value)
 {
-  double hxc_temp_FunctionFixture_convert_callzx2Dresult_n0 = hxc_method_FunctionFixture_asFloat((double)hxc_local_FunctionFixture_convert_value_n0);
-  return hxc_temp_FunctionFixture_convert_callzx2Dresult_n0;
+  double hxc_tmp_call_result_n0 = hxc_FunctionFixture_asFloat((double)hxc_value);
+  return hxc_tmp_call_result_n0;
 }
 
-void hxc_method_FunctionFixture_discarded(int32_t hxc_local_FunctionFixture_discarded_value_n0)
+void hxc_FunctionFixture_discarded(int32_t hxc_value)
 {
-  hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_discarded_value_n0);
+  hxc_FunctionFixture_passthrough(hxc_value);
   return;
 }
 
-int32_t hxc_method_FunctionFixture_first(int32_t hxc_local_FunctionFixture_first_left_n0, int32_t hxc_local_FunctionFixture_first_right_n1)
+int32_t hxc_FunctionFixture_first(int32_t hxc_left, int32_t hxc_right)
 {
-  (void)hxc_local_FunctionFixture_first_right_n1;
-  return hxc_local_FunctionFixture_first_left_n0;
+  (void)hxc_right;
+  return hxc_left;
 }
 
-void hxc_method_FunctionFixture_main(void)
+void hxc_FunctionFixture_main(void)
 {
-  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n0 = hxc_method_FunctionFixture_chain(7);
-  int32_t hxc_local_FunctionFixture_main_integer_n0 = hxc_temp_FunctionFixture_main_callzx2Dresult_n0;
-  int32_t hxc_temp_FunctionFixture_main_loadzx2Dresult_n1 = hxc_local_FunctionFixture_main_integer_n0;
-  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n1;
-  double hxc_temp_FunctionFixture_main_callzx2Dresult_n2 = hxc_method_FunctionFixture_convert(9);
-  double hxc_local_FunctionFixture_main_floating_n1 = hxc_temp_FunctionFixture_main_callzx2Dresult_n2;
-  double hxc_temp_FunctionFixture_main_loadzx2Dresult_n3 = hxc_local_FunctionFixture_main_floating_n1;
-  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n3;
-  hxc_method_FunctionFixture_discarded(11);
-  int32_t hxc_temp_FunctionFixture_main_callzx2Dresult_n4 = hxc_method_FunctionFixture_ordered(13);
-  int32_t hxc_local_FunctionFixture_main_orderedValue_n2 = hxc_temp_FunctionFixture_main_callzx2Dresult_n4;
-  int32_t hxc_temp_FunctionFixture_main_loadzx2Dresult_n5 = hxc_local_FunctionFixture_main_orderedValue_n2;
-  (void)hxc_temp_FunctionFixture_main_loadzx2Dresult_n5;
+  int32_t hxc_tmp_call_result_n0 = hxc_FunctionFixture_chain(7);
+  int32_t hxc_integer = hxc_tmp_call_result_n0;
+  int32_t hxc_tmp_load_result_n1 = hxc_integer;
+  (void)hxc_tmp_load_result_n1;
+  double hxc_tmp_call_result_n2 = hxc_FunctionFixture_convert(9);
+  double hxc_floating = hxc_tmp_call_result_n2;
+  double hxc_tmp_load_result_n3 = hxc_floating;
+  (void)hxc_tmp_load_result_n3;
+  hxc_FunctionFixture_discarded(11);
+  int32_t hxc_tmp_call_result_n4 = hxc_FunctionFixture_ordered(13);
+  int32_t hxc_orderedValue = hxc_tmp_call_result_n4;
+  int32_t hxc_tmp_load_result_n5 = hxc_orderedValue;
+  (void)hxc_tmp_load_result_n5;
   return;
 }
 
-int32_t hxc_method_FunctionFixture_ordered(int32_t hxc_local_FunctionFixture_ordered_value_n0)
+int32_t hxc_FunctionFixture_ordered(int32_t hxc_value)
 {
-  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0 = hxc_method_FunctionFixture_passthrough(hxc_local_FunctionFixture_ordered_value_n0);
-  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1 = hxc_method_FunctionFixture_chain(hxc_local_FunctionFixture_ordered_value_n0);
-  int32_t hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2 = hxc_method_FunctionFixture_first(hxc_temp_FunctionFixture_ordered_callzx2Dresult_n0, hxc_temp_FunctionFixture_ordered_callzx2Dresult_n1);
-  return hxc_temp_FunctionFixture_ordered_callzx2Dresult_n2;
+  int32_t hxc_tmp_call_result_n0 = hxc_FunctionFixture_passthrough(hxc_value);
+  int32_t hxc_tmp_call_result_n1 = hxc_FunctionFixture_chain(hxc_value);
+  int32_t hxc_tmp_call_result_n2 = hxc_FunctionFixture_first(hxc_tmp_call_result_n0, hxc_tmp_call_result_n1);
+  return hxc_tmp_call_result_n2;
 }
 
-int32_t hxc_method_FunctionFixture_passthrough(int32_t hxc_local_FunctionFixture_passthrough_value_n0)
+int32_t hxc_FunctionFixture_passthrough(int32_t hxc_value)
 {
-  return hxc_local_FunctionFixture_passthrough_value_n0;
+  return hxc_value;
 }
 
 int main(void)
 {
-  hxc_method_FunctionFixture_main();
+  hxc_FunctionFixture_main();
   return 0;
 }

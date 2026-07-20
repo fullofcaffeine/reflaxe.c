@@ -65,8 +65,19 @@ class CSymbolRequest {
 	public final specializationArguments:Array<String>;
 	public final sourceOrdinal:Null<Int>;
 
+	/**
+		Optional human-facing name components for generated C.
+
+		These components never participate in semantic identity. They preserve a
+		source declaration name (or a concise compiler-owned display name) after
+		type expansion has replaced that name with a structural key. The complete
+		qualified semantic coordinates remain available through `stableKey()` and
+		`sourceSymbol()` for diagnostics and reports.
+	**/
+	public final readableName:Array<String>;
+
 	public function new(kind:CSymbolKind, qualifiedName:Array<String>, namespace:CSymbolNamespace, ?visibility:CSymbolVisibility, ?explicitName:String,
-			?overloadSignature:Array<String>, ?specializationArguments:Array<String>, ?sourceOrdinal:Int) {
+			?overloadSignature:Array<String>, ?specializationArguments:Array<String>, ?sourceOrdinal:Int, ?readableName:Array<String>) {
 		this.kind = kind;
 		this.qualifiedName = qualifiedName.copy();
 		this.namespace = namespace;
@@ -75,6 +86,7 @@ class CSymbolRequest {
 		this.overloadSignature = overloadSignature == null ? [] : overloadSignature.copy();
 		this.specializationArguments = specializationArguments == null ? [] : specializationArguments.copy();
 		this.sourceOrdinal = sourceOrdinal;
+		this.readableName = readableName == null ? [] : readableName.copy();
 		validate();
 	}
 
@@ -90,11 +102,8 @@ class CSymbolRequest {
 	}
 
 	public function namingFingerprint():String {
-		return stableKey()
-			+ "|"
-			+ canonicalPart(visibilityName(visibility))
-			+ "|"
-			+ canonicalPart(explicitName == null ? "" : explicitName);
+		return stableKey() + "|" + canonicalPart(visibilityName(visibility)) + "|" + canonicalPart(explicitName == null ? "" : explicitName) + "|"
+			+ canonicalArray(readableName);
 	}
 
 	public function sourceSymbol():String {
@@ -185,6 +194,7 @@ class CSymbolRequest {
 		validateParts(qualifiedName, "qualified-name");
 		validateParts(overloadSignature, "overload-signature");
 		validateParts(specializationArguments, "specialization-argument");
+		validateParts(readableName, "readable-name");
 		validateScope(namespaceScope(namespace));
 		if (sourceOrdinal != null && sourceOrdinal < 0) {
 			internalFailure('symbol `${qualifiedName.join(".")}` has a negative source ordinal');

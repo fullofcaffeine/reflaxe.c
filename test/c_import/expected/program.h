@@ -1,5 +1,5 @@
-#ifndef HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
-#define HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED
+#ifndef HXC_PROGRAM_H_INCLUDED
+#define HXC_PROGRAM_H_INCLUDED
 
 #include <float.h>
 #include <limits.h>
@@ -24,19 +24,19 @@ _Static_assert(FLT_MIN_EXP == -125, "hxc c.Float32 requires the binary32 minimum
 
 _Static_assert(FLT_HAS_SUBNORM == 1, "hxc c.Float32 requires binary32 subnormal support");
 
-static inline double hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe(double hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0, double hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1)
+static inline double hxc_f64_divide_zero_safe(double hxc_left, double hxc_right)
 {
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1 != 0.0)
+  if (hxc_right != 0.0)
   {
-    return hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 / hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1;
+    return hxc_left / hxc_right;
   }
-  if (hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 == 0.0 || hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0 != hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0)
+  if (hxc_left == 0.0 || hxc_left != hxc_left)
   {
     return NAN;
   }
-  return signbit(hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_left_n0) != signbit(hxc_local_compiler_primitivezx2Dhelper_hxczx2Ef64zx2Edividezx2Ezzerozx2Dsafe_right_n1) ? -INFINITY : INFINITY;
+  return signbit(hxc_left) != signbit(hxc_right) ? -INFINITY : INFINITY;
 }
 
-void hxc_method_Main_main(void);
+void hxc_Main_main(void);
 
-#endif /* HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED */
+#endif /* HXC_PROGRAM_H_INCLUDED */

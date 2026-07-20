@@ -129,6 +129,28 @@ def source_records(report: dict[str, object]) -> dict[str, str]:
     return records
 
 
+def symbol_name(symbols: dict[str, object], source: str) -> str:
+    entries = symbols.get("symbols")
+    if not isinstance(entries, list):
+        raise EvaluationOrderFailure("finalized symbol table omitted its entries")
+    matches = [
+        entry.get("cName")
+        for entry in entries
+        if isinstance(entry, dict)
+        and isinstance(entry.get("sourceSymbol"), str)
+        and (
+            entry["sourceSymbol"] == source
+            or entry["sourceSymbol"].startswith(source + "(")
+        )
+        and isinstance(entry.get("cName"), str)
+    ]
+    if len(matches) != 1:
+        raise EvaluationOrderFailure(
+            f"could not resolve exactly one finalized C name for {source!r}: {matches!r}"
+        )
+    return matches[0]
+
+
 def validate_control_flow_emission(source: str) -> None:
     bounded_start = source.find("static void hxc_bounded_control_flow")
     legacy_start = source.find("static void hxc_legacy_control_flow")
@@ -167,15 +189,22 @@ def validate_control_flow_emission(source: str) -> None:
 
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
-        report.get("schemaVersion") != 1
+        report.get("schemaVersion") != 2
         or report.get("status") != "typed-evaluation-order-runtime-free"
         or report.get("profile") != profile
         or report.get("runtimeFeatures") != []
     ):
         raise EvaluationOrderFailure("evaluation-order schema/status/profile drifted")
     proof = required_text(report, "temporaryElisionProof")
-    if "every load and consumed call is materialized" not in proof:
+    if "barrier-free single-use private-local loads may remain inline" not in proof:
         raise EvaluationOrderFailure("temporary-elision proof contract drifted")
+    value_coalescing_proof = required_text(report, "valueCoalescingProof")
+    if value_coalescing_proof != (
+        "value-coalescing:single-use-private-local-and-field-and-pure-record-inline;"
+        "read-call-lifetime-cleanup-failure-global-pointer-index-multiuse-fanout-cross-block-and-call-result-materialized;"
+        "planner-reuse-isolated"
+    ):
+        raise EvaluationOrderFailure("value-coalescing adversarial proof drifted")
     control_flow_proof = required_text(report, "controlFlowPlanProof")
     if control_flow_proof != (
         "typed-region-plan:reducible-diamond-normal-joins-loop-break-return-converging-escapes-inverted-pre-post-and-bounded-switch-escape-structured;"
@@ -190,6 +219,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if set(sources) != {"src/program.c"}:
         raise EvaluationOrderFailure(f"unexpected source partition: {sorted(sources)!r}")
     source = sources["src/program.c"]
+    # Concrete C spellings are a naming-registry decision. Tests follow the
+    # semantic source identity instead of freezing an obsolete generated prefix.
+    symbols = report.get("symbols")
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
+        raise EvaluationOrderFailure("finalized symbol table is missing")
+    run_name = symbol_name(symbols, "EvaluationFixture.run")
+    set_flag_name = symbol_name(symbols, "EvaluationFixture.setCallFlag")
+    consume_pair_name = symbol_name(symbols, "EvaluationFixture.consumePair")
+    switch_subject_name = symbol_name(symbols, "EvaluationFixture.switchSubject")
+    barrier_global_name = symbol_name(symbols, "EvaluationFixture.barrierValue")
+    barrier_read_name = symbol_name(symbols, "EvaluationFixture.readGlobalBeforeCall")
+    barrier_overwrite_name = symbol_name(symbols, "EvaluationFixture.overwriteBarrierValue")
     for text in (hxcir, header, source):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():
             raise EvaluationOrderFailure("artifact leaked a host path or runtime dependency")
@@ -272,7 +313,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if -1 in indexed_positions or indexed_positions != sorted(indexed_positions):
         raise EvaluationOrderFailure("indexed compound-assignment HxcIR evidence drifted")
 
-    run_c_start = source.find("uint32_t hxc_method_EvaluationFixture_run(void)")
+    run_c_start = source.find(f"uint32_t {run_name}(void)")
     run_c_end = source.find("\n}\n", run_c_start)
     run_c = source[run_c_start:run_c_end]
     if min(run_c_start, run_c_end) < 0:
@@ -280,17 +321,53 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if any(token in run_c for token in (" && ", " || ", "++", "--", " ? ")):
         raise EvaluationOrderFailure("generated C reintroduced an unsequenced source expression")
     c_calls = [
-        run_c.find("hxc_method_EvaluationFixture_setCallFlag(true)"),
-        run_c.find("hxc_method_EvaluationFixture_setCallFlag(false)"),
-        run_c.find("hxc_method_EvaluationFixture_consumePair("),
+        run_c.find(f"{set_flag_name}(true)"),
+        run_c.find(f"{set_flag_name}(false)"),
+        run_c.find(f"{consume_pair_name}("),
     ]
     if -1 in c_calls or c_calls != sorted(c_calls):
         raise EvaluationOrderFailure("generated C did not materialize call arguments left-to-right")
-    if run_c.count("hxc_method_EvaluationFixture_setCallFlag(") != 4:
+    if run_c.count(f"{set_flag_name}(") != 4:
         raise EvaluationOrderFailure("generated C lost a required short-circuit RHS call")
-    if "globalzx2Dloadzx2Dresult" not in run_c:
+    if "global_load_result" not in run_c:
         raise EvaluationOrderFailure("generated C lost stable loads")
-    if "goto " in run_c or re.search(r"(?m)^\s*hxc_temp_[A-Za-z0-9_]+:$", run_c):
+
+    barrier_ir_start = hxcir.find('function "function.EvaluationFixture.readGlobalBeforeCall"')
+    barrier_ir_end = hxcir.find(
+        'end function "function.EvaluationFixture.readGlobalBeforeCall"',
+        barrier_ir_start,
+    )
+    barrier_ir = hxcir[barrier_ir_start:barrier_ir_end]
+    barrier_ir_load = barrier_ir.find(
+        'load place=global("global.EvaluationFixture.barrierValue")'
+    )
+    barrier_ir_call = barrier_ir.find(
+        'direct("function.EvaluationFixture.overwriteBarrierValue")'
+    )
+    if (
+        min(barrier_ir_start, barrier_ir_end, barrier_ir_load, barrier_ir_call) < 0
+        or barrier_ir_load >= barrier_ir_call
+    ):
+        raise EvaluationOrderFailure(
+            "source-backed barrier fixture lost its load-before-call HxcIR order"
+        )
+    barrier_c_start = source.find(f"int32_t {barrier_read_name}(void)")
+    barrier_c_end = source.find("\n}\n", barrier_c_start)
+    barrier_c = source[barrier_c_start:barrier_c_end]
+    materialized_global = re.search(
+        rf"int32_t (hxc_tmp_[A-Za-z0-9_]+) = {re.escape(barrier_global_name)};",
+        barrier_c,
+    )
+    barrier_c_call = barrier_c.find(f"{barrier_overwrite_name}(")
+    if (
+        min(barrier_c_start, barrier_c_end, barrier_c_call) < 0
+        or materialized_global is None
+        or materialized_global.start() >= barrier_c_call
+    ):
+        raise EvaluationOrderFailure(
+            "generated C delayed an observable global load across a mutating call"
+        )
+    if "goto " in run_c or re.search(r"(?m)^\s*hxc_(?:temp|tmp)_[A-Za-z0-9_]+:$", run_c):
         raise EvaluationOrderFailure(
             "reducible generated C regressed to blanket labels or gotos"
         )
@@ -321,19 +398,16 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     arm_labels = re.findall(r'(?m)^\s+(?:case [^:]+|default):$', run_c)
     if len(arm_labels) != 7:
         raise EvaluationOrderFailure("generated C switch arm grouping drifted")
-    if run_c.count("hxc_method_EvaluationFixture_switchSubject(") != 1:
+    if run_c.count(f"{switch_subject_name}(") != 1:
         raise EvaluationOrderFailure("switch subject was not evaluated exactly once")
 
     globals_value = report.get("globals")
-    if not isinstance(globals_value, list) or len(globals_value) != 5:
+    if not isinstance(globals_value, list) or len(globals_value) != 6:
         raise EvaluationOrderFailure("referenced static-field registry drifted")
-    symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
-        raise EvaluationOrderFailure("finalized symbol table is missing")
-
     functions = report.get("functions")
     if not isinstance(functions, list):
         raise EvaluationOrderFailure("temporary proof function records are missing")
+    coalesced_private_loads = 0
     for function in functions:
         if not isinstance(function, dict) or not isinstance(function.get("field"), str):
             raise EvaluationOrderFailure(f"invalid temporary proof function: {function!r}")
@@ -348,9 +422,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if min(start, end) < 0:
             raise EvaluationOrderFailure(f"temporary proof lost {function_id}")
         function_ir = hxcir[start:end]
-        load_values = set(
-            re.findall(r'instruction "[^"]+" result="([^"]+)"[^\n]+ load ', function_ir)
+        load_records = re.findall(
+            r'instruction "[^"]+" result="([^"]+)"[^\n]+ load place=([^\n]+)',
+            function_ir,
         )
+        load_values = {value for value, _ in load_records}
+        protected_load_values = {
+            value
+            for value, place in load_records
+            if not (place.startswith('local("') or place.startswith('field(local("'))
+        }
+        private_load_values = load_values - protected_load_values
         call_values = set(
             re.findall(r'instruction "[^"]+" result="([^"]+)"[^\n]+ call ', function_ir)
         )
@@ -367,14 +449,19 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         consumed_calls = {
             value for value in call_values if function_ir.count(f'"{value}"') > 1
         }
-        if not load_values <= materialized or not consumed_calls <= materialized:
+        if not protected_load_values <= materialized or not consumed_calls <= materialized:
             raise EvaluationOrderFailure(
-                f"{function_id} elided a load or consumed call without proof"
+                f"{function_id} elided an observable/aliased load or consumed call without proof"
             )
+        coalesced_private_loads += len(private_load_values - materialized)
         if (constant_values | total_operator_values | total_conversion_values) & materialized:
             raise EvaluationOrderFailure(
                 f"{function_id} stopped applying the pure-value elision proof"
             )
+    if coalesced_private_loads == 0:
+        raise EvaluationOrderFailure(
+            "production integration did not coalesce any proven private-local load"
+        )
 
 
 def snapshot_values(report: dict[str, object]) -> dict[str, object]:

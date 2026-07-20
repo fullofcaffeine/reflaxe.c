@@ -4,167 +4,167 @@
   "methods": [
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.collisionTrace",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_collisionTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_collisionTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.editTrace",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_editTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_editTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.makeFloor(span:mutable<u8>)",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_makeFloor"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_makeFloor"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.mix(i32, i32)",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_mix"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_mix"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.propertyTrace(i32)",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_propertyTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_propertyTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.rayTrace",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_rayTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_rayTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.runTrace",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_runTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_runTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.CaxecraftTrace.terrainTrace",
-      "cName": "hxc_method_caxecraft_domain_CaxecraftTrace_terrainTrace"
+      "cName": "hxc_caxecraft_domain_CaxecraftTrace_terrainTrace"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.abs(f64)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_abs"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_abs"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.floorToInt(f64)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_floorToInt"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_floorToInt"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.input(f64, f64, bool)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_input"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_input"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.moveAxis(span:mutable<u8>, f64, f64, f64, f64, i32)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_moveAxis"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_moveAxis"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.overlaps(span:mutable<u8>, f64, f64, f64)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_overlaps"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_overlaps"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.player(f64, f64, f64)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_player"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_player"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.recoverSpawn(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_recoverSpawn"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_recoverSpawn"
     },
     {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.step(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09)",
-      "cName": "hxc_method_caxecraft_domain_PlayerPhysics_step"
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_step"
     },
     {
       "sourceSymbol": "caxecraft.domain.VoxelRaycast.abs(f64)",
-      "cName": "hxc_method_caxecraft_domain_VoxelRaycast_abs"
+      "cName": "hxc_caxecraft_domain_VoxelRaycast_abs"
     },
     {
       "sourceSymbol": "caxecraft.domain.VoxelRaycast.floorToInt(f64)",
-      "cName": "hxc_method_caxecraft_domain_VoxelRaycast_floorToInt"
+      "cName": "hxc_caxecraft_domain_VoxelRaycast_floorToInt"
     },
     {
       "sourceSymbol": "caxecraft.domain.VoxelRaycast.hit(i32, i32, i32, i32, i32, i32, i32, i32, i32, f64, i32)",
-      "cName": "hxc_method_caxecraft_domain_VoxelRaycast_hit"
+      "cName": "hxc_caxecraft_domain_VoxelRaycast_hit"
     },
     {
       "sourceSymbol": "caxecraft.domain.VoxelRaycast.miss(i32, i32, i32, f64, i32)",
-      "cName": "hxc_method_caxecraft_domain_VoxelRaycast_miss"
+      "cName": "hxc_caxecraft_domain_VoxelRaycast_miss"
     },
     {
       "sourceSymbol": "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
-      "cName": "hxc_method_caxecraft_domain_VoxelRaycast_trace"
+      "cName": "hxc_caxecraft_domain_VoxelRaycast_trace"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.contains(instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
-      "cName": "hxc_method_caxecraft_domain_World_contains"
+      "cName": "hxc_caxecraft_domain_World_contains"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.coord(i32, i32, i32)",
-      "cName": "hxc_method_caxecraft_domain_World_coord"
+      "cName": "hxc_caxecraft_domain_World_coord"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.generate(span:mutable<u8>, i32)",
-      "cName": "hxc_method_caxecraft_domain_World_generate"
+      "cName": "hxc_caxecraft_domain_World_generate"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.indexOf(instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
-      "cName": "hxc_method_caxecraft_domain_World_indexOf"
+      "cName": "hxc_caxecraft_domain_World_indexOf"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.isPlaceable(instance:instance.enum.60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88)",
-      "cName": "hxc_method_caxecraft_domain_World_isPlaceable"
+      "cName": "hxc_caxecraft_domain_World_isPlaceable"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.isSolid(instance:instance.enum.60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88)",
-      "cName": "hxc_method_caxecraft_domain_World_isSolid"
+      "cName": "hxc_caxecraft_domain_World_isSolid"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.kindCode(instance:instance.enum.60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88)",
-      "cName": "hxc_method_caxecraft_domain_World_kindCode"
+      "cName": "hxc_caxecraft_domain_World_kindCode"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.kindFromCode(i32)",
-      "cName": "hxc_method_caxecraft_domain_World_kindFromCode"
+      "cName": "hxc_caxecraft_domain_World_kindFromCode"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.place(span:mutable<u8>, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793, instance:instance.enum.60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88)",
-      "cName": "hxc_method_caxecraft_domain_World_place"
+      "cName": "hxc_caxecraft_domain_World_place"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.query(span:mutable<u8>, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
-      "cName": "hxc_method_caxecraft_domain_World_query"
+      "cName": "hxc_caxecraft_domain_World_query"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.remove(span:mutable<u8>, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
-      "cName": "hxc_method_caxecraft_domain_World_remove"
+      "cName": "hxc_caxecraft_domain_World_remove"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.replace(span:mutable<u8>, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793, instance:instance.enum.60d3cdd205065bf6cff636ab4b457e3916ca25d552c40826dfb12cd3899e5c88)",
-      "cName": "hxc_method_caxecraft_domain_World_replace"
+      "cName": "hxc_caxecraft_domain_World_replace"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.stateHash(span:mutable<u8>)",
-      "cName": "hxc_method_caxecraft_domain_World_stateHash"
+      "cName": "hxc_caxecraft_domain_World_stateHash"
     },
     {
       "sourceSymbol": "caxecraft.domain.World.terrainNoise(i32, i32, i32)",
-      "cName": "hxc_method_caxecraft_domain_World_terrainNoise"
+      "cName": "hxc_caxecraft_domain_World_terrainNoise"
     },
     {
       "sourceSymbol": "caxecraft.domain.WorldStorage.readCode(span:mutable<u8>, i32)",
-      "cName": "hxc_method_caxecraft_domain_WorldStorage_readCode"
+      "cName": "hxc_caxecraft_domain_WorldStorage_readCode"
     },
     {
       "sourceSymbol": "caxecraft.domain.WorldStorage.writeCode(span:mutable<u8>, i32, i32)",
-      "cName": "hxc_method_caxecraft_domain_WorldStorage_writeCode"
+      "cName": "hxc_caxecraft_domain_WorldStorage_writeCode"
     },
     {
       "sourceSymbol": "caxecraft.qa.DomainProbe.clear(span:mutable<u8>)",
-      "cName": "hxc_method_caxecraft_qa_DomainProbe_clear"
+      "cName": "hxc_caxecraft_qa_DomainProbe_clear"
     },
     {
       "sourceSymbol": "caxecraft.qa.DomainProbe.main",
-      "cName": "hxc_method_caxecraft_qa_DomainProbe_main"
+      "cName": "hxc_caxecraft_qa_DomainProbe_main"
     },
     {
       "sourceSymbol": "caxecraft.qa.DomainProbe.near(f64, f64)",
-      "cName": "hxc_method_caxecraft_qa_DomainProbe_near"
+      "cName": "hxc_caxecraft_qa_DomainProbe_near"
     },
     {
       "sourceSymbol": "caxecraft.qa.DomainProbe.selfCheck",
-      "cName": "hxc_method_caxecraft_qa_DomainProbe_selfCheck"
+      "cName": "hxc_caxecraft_qa_DomainProbe_selfCheck"
     }
   ]
 }

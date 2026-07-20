@@ -249,7 +249,24 @@ available locale, and repeated warm compiler-server requests. Reflaxe's
 artifact is included. Centrally owned snapshots retain the default
 source-shaped tree: the common types header, package/module headers and
 translation units, umbrella header, small entry and support sources, runtime
-plan, compact method-symbol projection, and Eval oracle.
+plan, compact method-symbol projection, generated-C readability metrics, and
+Eval oracle. The metrics are computed again from the checked-in C rather than
+trusted as a hand-written claim. They bound identifier length and temporary
+count and reject old role-encoded names, byte-escaped names, semantic digests,
+hashed ordinary guards, compiler labels, and `goto` statements.
+
+Generated locals and record members retain the short compiler prefix while
+keeping the source word: `x` becomes `hxc_x`, for example. This is intentionally
+slightly different from a handwritten private struct. C expands preprocessor
+macros before it understands local or member scope, so bare generated names can
+be corrupted by current or future macros from raylib or another included header.
+The prefix makes that impossible without returning to digest-heavy names.
+
+The pre-readability checked-in domain used 971 unique generated temporary
+identifiers. The current snapshot uses 356, a reduction of 615, and the
+executable budget rejects any return above 400. Its longest identifier is 50
+characters. These numbers describe this bounded domain corpus, not a claim that
+all Haxe programs will have the same ratio.
 
 The default `split` tree mirrors the Haxe module ownership under
 `include/hxc/modules/` and `src/modules/`. It exists so generated C is
@@ -258,8 +275,11 @@ the Haxe modules that own it. This is file-ownership infrastructure, not yet a
 claim that a C programmer can comfortably take over the generated program:
 the `haxe_c-xge.18.2` structuralization boundary now removes blanket CFG
 labels/gotos from the reducible checked-in domain sources,
-`haxe_c-xge.18.3` owns human-oriented names and temporary cleanup, and the
-`haxe_c-xge.18.4` rubric must pass before final handoff readability is claimed.
+`haxe_c-xge.18.3` owns human-oriented names and conservative temporary cleanup,
+and the `haxe_c-xge.18.4` rubric must pass before final handoff readability is
+claimed. “Conservative” matters here: a temporary is removed only when the
+compiler can prove that moving its expression to the use site cannot change
+evaluation order, aliasing, failure, or lifetime behavior.
 The optional `unity` layout puts the same declaration/function plan in
 `src/program.c` for single-file inspection or simple build systems. The runner
 compares HxcIR, runtime intent, externally visible symbols, and behavior across

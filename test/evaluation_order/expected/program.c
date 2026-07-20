@@ -1,324 +1,320 @@
 #include "hxc/program.h"
 
-bool hxc_field_EvaluationFixture_callFlag = false;
+int32_t hxc_EvaluationFixture_barrierValue = 0;
 
-uint32_t hxc_field_EvaluationFixture_counter = 0;
+bool hxc_EvaluationFixture_callFlag = false;
 
-bool hxc_field_EvaluationFixture_shortCircuitIntact = true;
+uint32_t hxc_EvaluationFixture_counter = 0;
 
-uint32_t hxc_field_EvaluationFixture_switchCalls = 0;
+bool hxc_EvaluationFixture_shortCircuitIntact = true;
 
-bool hxc_field_EvaluationFixture_ternaryIntact = true;
+uint32_t hxc_EvaluationFixture_switchCalls = 0;
 
-void hxc_method_EvaluationFixture_consumePair(bool hxc_local_EvaluationFixture_consumePair_first_n0, bool hxc_local_EvaluationFixture_consumePair_second_n1)
+bool hxc_EvaluationFixture_ternaryIntact = true;
+
+void hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second)
 {
-  (void)hxc_local_EvaluationFixture_consumePair_first_n0;
-  (void)hxc_local_EvaluationFixture_consumePair_second_n1;
+  (void)hxc_first;
+  (void)hxc_second;
   return;
 }
 
-uint32_t hxc_method_EvaluationFixture_finish(uint32_t hxc_local_EvaluationFixture_finish_value_n0)
+uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value)
 {
-  return hxc_local_EvaluationFixture_finish_value_n0;
+  return hxc_value;
 }
 
-uint32_t hxc_method_EvaluationFixture_keepTernary(void)
+uint32_t hxc_EvaluationFixture_keepTernary(void)
 {
   return 7;
 }
 
-void hxc_method_EvaluationFixture_main(void)
+void hxc_EvaluationFixture_main(void)
 {
-  hxc_method_EvaluationFixture_run();
+  hxc_EvaluationFixture_run();
   return;
 }
 
-uint32_t hxc_method_EvaluationFixture_run(void)
+int32_t hxc_EvaluationFixture_overwriteBarrierValue(void)
 {
-  hxc_field_EvaluationFixture_callFlag = false;
-  bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n0 = hxc_method_EvaluationFixture_setCallFlag(true);
-  bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n1 = hxc_method_EvaluationFixture_setCallFlag(false);
-  hxc_method_EvaluationFixture_consumePair(hxc_temp_EvaluationFixture_run_callzx2Dresult_n0, hxc_temp_EvaluationFixture_run_callzx2Dresult_n1);
-  hxc_field_EvaluationFixture_shortCircuitIntact = true;
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n0 = false;
+  hxc_EvaluationFixture_barrierValue = 41;
+  return 0;
+}
+
+int32_t hxc_EvaluationFixture_readGlobalBeforeCall(void)
+{
+  hxc_EvaluationFixture_barrierValue = 5;
+  int32_t hxc_tmp_global_load_result_n0 = hxc_EvaluationFixture_barrierValue;
+  int32_t hxc_before = hxc_tmp_global_load_result_n0;
+  hxc_EvaluationFixture_overwriteBarrierValue();
+  return hxc_before;
+}
+
+uint32_t hxc_EvaluationFixture_run(void)
+{
+  hxc_EvaluationFixture_callFlag = false;
+  bool hxc_tmp_call_result_n0 = hxc_EvaluationFixture_setCallFlag(true);
+  bool hxc_tmp_call_result_n1 = hxc_EvaluationFixture_setCallFlag(false);
+  hxc_EvaluationFixture_consumePair(hxc_tmp_call_result_n0, hxc_tmp_call_result_n1);
+  hxc_EvaluationFixture_shortCircuitIntact = true;
+  bool hxc_tmp_short_circuit_result_n0 = false;
   if (false)
   {
-    bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n2 = hxc_method_EvaluationFixture_spoilShortCircuit();
-    hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n0 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n2;
+    bool hxc_tmp_call_result_n2 = hxc_EvaluationFixture_spoilShortCircuit();
+    hxc_tmp_short_circuit_result_n0 = hxc_tmp_call_result_n2;
   }
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n3 = hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n0;
-  (void)hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n3;
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n1 = true;
+  bool hxc_tmp_short_circuit_load_result_n3 = hxc_tmp_short_circuit_result_n0;
+  (void)hxc_tmp_short_circuit_load_result_n3;
+  bool hxc_tmp_short_circuit_result_n1 = true;
   if (!true)
   {
-    bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n4 = hxc_method_EvaluationFixture_spoilShortCircuit();
-    hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n1 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n4;
+    bool hxc_tmp_call_result_n4 = hxc_EvaluationFixture_spoilShortCircuit();
+    hxc_tmp_short_circuit_result_n1 = hxc_tmp_call_result_n4;
   }
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n5 = hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n1;
-  (void)hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n5;
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n2 = true;
+  bool hxc_tmp_short_circuit_load_result_n5 = hxc_tmp_short_circuit_result_n1;
+  (void)hxc_tmp_short_circuit_load_result_n5;
+  bool hxc_tmp_short_circuit_result_n2 = true;
   if (true)
   {
-    bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n6 = hxc_method_EvaluationFixture_setCallFlag(true);
-    hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n2 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n6;
+    bool hxc_tmp_call_result_n6 = hxc_EvaluationFixture_setCallFlag(true);
+    hxc_tmp_short_circuit_result_n2 = hxc_tmp_call_result_n6;
   }
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n7 = hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n2;
-  (void)hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n7;
-  bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n8 = hxc_field_EvaluationFixture_callFlag;
-  if (!hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n8)
+  bool hxc_tmp_short_circuit_load_result_n7 = hxc_tmp_short_circuit_result_n2;
+  (void)hxc_tmp_short_circuit_load_result_n7;
+  bool hxc_tmp_global_load_result_n8 = hxc_EvaluationFixture_callFlag;
+  if (!hxc_tmp_global_load_result_n8)
   {
-    hxc_field_EvaluationFixture_shortCircuitIntact = false;
+    hxc_EvaluationFixture_shortCircuitIntact = false;
   }
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n3 = false;
+  bool hxc_tmp_short_circuit_result_n3 = false;
   if (!false)
   {
-    bool hxc_temp_EvaluationFixture_run_callzx2Dresult_n9 = hxc_method_EvaluationFixture_setCallFlag(false);
-    hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n3 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n9;
+    bool hxc_tmp_call_result_n9 = hxc_EvaluationFixture_setCallFlag(false);
+    hxc_tmp_short_circuit_result_n3 = hxc_tmp_call_result_n9;
   }
-  bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n10 = hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n3;
-  (void)hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n10;
-  bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n11 = hxc_field_EvaluationFixture_callFlag;
-  if (hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n11)
+  bool hxc_tmp_short_circuit_load_result_n10 = hxc_tmp_short_circuit_result_n3;
+  (void)hxc_tmp_short_circuit_load_result_n10;
+  bool hxc_tmp_global_load_result_n11 = hxc_EvaluationFixture_callFlag;
+  if (hxc_tmp_global_load_result_n11)
   {
-    hxc_field_EvaluationFixture_shortCircuitIntact = false;
+    hxc_EvaluationFixture_shortCircuitIntact = false;
   }
-  hxc_field_EvaluationFixture_ternaryIntact = true;
-  bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n12 = hxc_field_EvaluationFixture_ternaryIntact;
-  uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n5 = 0;
-  if (hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n12)
+  hxc_EvaluationFixture_ternaryIntact = true;
+  bool hxc_tmp_global_load_result_n12 = hxc_EvaluationFixture_ternaryIntact;
+  uint32_t hxc_tmp_conditional_result_n5 = 0;
+  if (hxc_tmp_global_load_result_n12)
   {
-    uint32_t hxc_temp_EvaluationFixture_run_callzx2Dresult_n13 = hxc_method_EvaluationFixture_keepTernary();
-    hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n5 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n13;
-  }
-  else
-  {
-    uint32_t hxc_temp_EvaluationFixture_run_callzx2Dresult_n14 = hxc_method_EvaluationFixture_spoilTernary();
-    hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n5 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n14;
-  }
-  uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n15 = hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n5;
-  uint32_t hxc_local_EvaluationFixture_run_selected_n4 = hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n15;
-  hxc_field_EvaluationFixture_counter = 0;
-  uint32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n16 = hxc_field_EvaluationFixture_counter;
-  hxc_field_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n16 + (uint64_t)(uint32_t)1);
-  uint32_t hxc_local_EvaluationFixture_run_old_n6 = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n16;
-  uint32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n17 = hxc_field_EvaluationFixture_counter;
-  hxc_field_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n17 + (uint64_t)(uint32_t)1);
-  uint32_t hxc_local_EvaluationFixture_run_fresh_n7 = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n17 + (uint64_t)(uint32_t)1);
-  uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n18 = hxc_local_EvaluationFixture_run_old_n6;
-  (void)hxc_temp_EvaluationFixture_run_loadzx2Dresult_n18;
-  uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n19 = hxc_local_EvaluationFixture_run_fresh_n7;
-  (void)hxc_temp_EvaluationFixture_run_loadzx2Dresult_n19;
-  uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n20 = hxc_local_EvaluationFixture_run_selected_n4;
-  (void)hxc_temp_EvaluationFixture_run_loadzx2Dresult_n20;
-  uint32_t hxc_local_EvaluationFixture_run_assigned_n8 = 99;
-  uint32_t hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n21 = hxc_field_EvaluationFixture_counter;
-  hxc_local_EvaluationFixture_run_assigned_n8 = hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n21;
-  bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n22 = hxc_field_EvaluationFixture_callFlag;
-  uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10 = 0;
-  if (hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n22)
-  {
-    hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10 = 91;
+    uint32_t hxc_tmp_call_result_n13 = hxc_EvaluationFixture_keepTernary();
+    hxc_tmp_conditional_result_n5 = hxc_tmp_call_result_n13;
   }
   else
   {
-    bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n23 = hxc_field_EvaluationFixture_shortCircuitIntact;
-    uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n11 = 0;
-    if (hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n23)
+    uint32_t hxc_tmp_call_result_n14 = hxc_EvaluationFixture_spoilTernary();
+    hxc_tmp_conditional_result_n5 = hxc_tmp_call_result_n14;
+  }
+  uint32_t hxc_selected = hxc_tmp_conditional_result_n5;
+  hxc_EvaluationFixture_counter = 0;
+  uint32_t hxc_tmp_increment_load_result_n16 = hxc_EvaluationFixture_counter;
+  hxc_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_tmp_increment_load_result_n16 + (uint64_t)(uint32_t)1);
+  uint32_t hxc_old = hxc_tmp_increment_load_result_n16;
+  uint32_t hxc_tmp_increment_load_result_n17 = hxc_EvaluationFixture_counter;
+  hxc_EvaluationFixture_counter = (uint32_t)((uint64_t)(uint32_t)hxc_tmp_increment_load_result_n17 + (uint64_t)(uint32_t)1);
+  uint32_t hxc_fresh = (uint32_t)((uint64_t)(uint32_t)hxc_tmp_increment_load_result_n17 + (uint64_t)(uint32_t)1);
+  uint32_t hxc_tmp_load_result_n18 = hxc_old;
+  (void)hxc_tmp_load_result_n18;
+  uint32_t hxc_tmp_load_result_n19 = hxc_fresh;
+  (void)hxc_tmp_load_result_n19;
+  uint32_t hxc_tmp_load_result_n20 = hxc_selected;
+  (void)hxc_tmp_load_result_n20;
+  uint32_t hxc_assigned = 99;
+  uint32_t hxc_tmp_global_load_result_n21 = hxc_EvaluationFixture_counter;
+  hxc_assigned = hxc_tmp_global_load_result_n21;
+  bool hxc_tmp_global_load_result_n22 = hxc_EvaluationFixture_callFlag;
+  uint32_t hxc_tmp_conditional_result_n10 = 0;
+  if (hxc_tmp_global_load_result_n22)
+  {
+    hxc_tmp_conditional_result_n10 = 91;
+  }
+  else
+  {
+    bool hxc_tmp_global_load_result_n23 = hxc_EvaluationFixture_shortCircuitIntact;
+    uint32_t hxc_tmp_conditional_result_n11 = 0;
+    if (hxc_tmp_global_load_result_n23)
     {
-      bool hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n24 = hxc_field_EvaluationFixture_ternaryIntact;
-      uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n12 = 0;
-      if (hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n24)
+      bool hxc_tmp_global_load_result_n24 = hxc_EvaluationFixture_ternaryIntact;
+      uint32_t hxc_tmp_conditional_result_n12 = 0;
+      if (hxc_tmp_global_load_result_n24)
       {
-        uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n25 = hxc_local_EvaluationFixture_run_assigned_n8;
-        hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n12 = hxc_temp_EvaluationFixture_run_loadzx2Dresult_n25;
+        hxc_tmp_conditional_result_n12 = hxc_assigned;
       }
       else
       {
-        hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n12 = 93;
+        hxc_tmp_conditional_result_n12 = 93;
       }
-      uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n26 = hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n12;
-      hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n11 = hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n26;
+      hxc_tmp_conditional_result_n11 = hxc_tmp_conditional_result_n12;
     }
     else
     {
-      hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n11 = 94;
+      hxc_tmp_conditional_result_n11 = 94;
     }
-    uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n27 = hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n11;
-    hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10 = hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n27;
+    hxc_tmp_conditional_result_n10 = hxc_tmp_conditional_result_n11;
   }
-  uint32_t hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n28 = hxc_temp_EvaluationFixture_run_conditionalzx2Dresult_n10;
-  uint32_t hxc_local_EvaluationFixture_run_result_n9 = hxc_temp_EvaluationFixture_run_conditionalzx2Dloadzx2Dresult_n28;
-  int32_t hxc_local_EvaluationFixture_run_total_n13 = 0;
-  int32_t hxc_local_EvaluationFixture_run_outer_n14 = 0;
+  uint32_t hxc_result = hxc_tmp_conditional_result_n10;
+  int32_t hxc_total = 0;
+  int32_t hxc_outer = 0;
   while (1)
   {
-    int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n29 = hxc_local_EvaluationFixture_run_outer_n14;
-    if (!(hxc_temp_EvaluationFixture_run_loadzx2Dresult_n29 < 4))
+    if (!(hxc_outer < 4))
     {
       break;
     }
-    int32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n30 = hxc_local_EvaluationFixture_run_outer_n14;
-    hxc_local_EvaluationFixture_run_outer_n14 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n30, 1);
-    int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n31 = hxc_local_EvaluationFixture_run_outer_n14;
-    if (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n31 == 2)
+    hxc_outer = hxc_i32_add_wrapping(hxc_outer, 1);
+    if (hxc_outer == 2)
     {
       continue;
     }
-    int32_t hxc_local_EvaluationFixture_run_inner_n15 = 0;
+    int32_t hxc_inner = 0;
     do
     {
-      int32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n32 = hxc_local_EvaluationFixture_run_inner_n15;
-      hxc_local_EvaluationFixture_run_inner_n15 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n32, 1);
-      int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n33 = hxc_local_EvaluationFixture_run_inner_n15;
-      bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n16 = hxc_temp_EvaluationFixture_run_loadzx2Dresult_n33 == 2;
-      if (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n33 == 2)
+      hxc_inner = hxc_i32_add_wrapping(hxc_inner, 1);
+      int32_t hxc_tmp_load_result_n33 = hxc_inner;
+      bool hxc_tmp_short_circuit_result_n16 = hxc_tmp_load_result_n33 == 2;
+      if (hxc_tmp_load_result_n33 == 2)
       {
-        int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n34 = hxc_local_EvaluationFixture_run_outer_n14;
-        hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n16 = hxc_temp_EvaluationFixture_run_loadzx2Dresult_n34 == 3;
+        hxc_tmp_short_circuit_result_n16 = hxc_outer == 3;
       }
-      bool hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n35 = hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dresult_n16;
-      if (hxc_temp_EvaluationFixture_run_shortzx2Dcircuitzx2Dloadzx2Dresult_n35)
+      if (hxc_tmp_short_circuit_result_n16)
       {
         break;
       }
       else
       {
-        int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n36 = hxc_local_EvaluationFixture_run_inner_n15;
-        switch (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n36) {
+        switch (hxc_inner) {
           case 1:
             {
-              int32_t hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n37 = hxc_local_EvaluationFixture_run_total_n13;
-              int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n38 = hxc_local_EvaluationFixture_run_outer_n14;
-              hxc_local_EvaluationFixture_run_total_n13 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n37, hxc_temp_EvaluationFixture_run_loadzx2Dresult_n38);
+              int32_t hxc_tmp_compound_load_result_n37 = hxc_total;
+              hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n37, hxc_outer);
               break;
             }
           case 2:
           case 3:
             {
-              int32_t hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n39 = hxc_local_EvaluationFixture_run_total_n13;
-              int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n40 = hxc_local_EvaluationFixture_run_inner_n15;
-              hxc_local_EvaluationFixture_run_total_n13 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n39, hxc_temp_EvaluationFixture_run_loadzx2Dresult_n40);
+              int32_t hxc_tmp_compound_load_result_n39 = hxc_total;
+              hxc_total = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n39, hxc_inner);
               break;
             }
           default:
             {
-              int32_t hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n41 = hxc_local_EvaluationFixture_run_total_n13;
-              hxc_local_EvaluationFixture_run_total_n13 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n41, 9);
+              hxc_total = hxc_i32_add_wrapping(hxc_total, 9);
               break;
             }
         }
       }
-      int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n42 = hxc_local_EvaluationFixture_run_inner_n15;
-      if (!(hxc_temp_EvaluationFixture_run_loadzx2Dresult_n42 < 3))
+      if (!(hxc_inner < 3))
       {
         break;
       }
     }
     while (1);
   }
-  int32_t hxc_local_EvaluationFixture_run_rangeTotal_n17 = 0;
-  int32_t hxc_local_EvaluationFixture_run_rangeEnd_n18 = 3;
-  int32_t hxc_local_EvaluationFixture_run_zx60_n19 = 0;
-  int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n43 = hxc_local_EvaluationFixture_run_rangeEnd_n18;
-  int32_t hxc_local_EvaluationFixture_run_zx60_n20 = hxc_temp_EvaluationFixture_run_loadzx2Dresult_n43;
+  int32_t hxc_rangeTotal = 0;
+  int32_t hxc_rangeEnd = 3;
+  int32_t hxc_symbol_h9dc820c6c711 = 0;
+  int32_t hxc_symbol_hff91343ee89b = hxc_rangeEnd;
   while (1)
   {
-    int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n44 = hxc_local_EvaluationFixture_run_zx60_n19;
-    int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n45 = hxc_local_EvaluationFixture_run_zx60_n20;
-    if (!(hxc_temp_EvaluationFixture_run_loadzx2Dresult_n44 < hxc_temp_EvaluationFixture_run_loadzx2Dresult_n45))
+    int32_t hxc_tmp_load_result_n44 = hxc_symbol_h9dc820c6c711;
+    if (!(hxc_tmp_load_result_n44 < hxc_symbol_hff91343ee89b))
     {
       break;
     }
-    int32_t hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n46 = hxc_local_EvaluationFixture_run_zx60_n19;
-    hxc_local_EvaluationFixture_run_zx60_n19 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n46, 1);
-    int32_t hxc_local_EvaluationFixture_run_index_n21 = hxc_temp_EvaluationFixture_run_incrementzx2Dloadzx2Dresult_n46;
-    int32_t hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n47 = hxc_local_EvaluationFixture_run_rangeTotal_n17;
-    int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n48 = hxc_local_EvaluationFixture_run_index_n21;
-    hxc_local_EvaluationFixture_run_rangeTotal_n17 = hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping(hxc_temp_EvaluationFixture_run_compoundzx2Dloadzx2Dresult_n47, hxc_temp_EvaluationFixture_run_loadzx2Dresult_n48);
+    int32_t hxc_tmp_increment_load_result_n46 = hxc_symbol_h9dc820c6c711;
+    hxc_symbol_h9dc820c6c711 = hxc_i32_add_wrapping(hxc_tmp_increment_load_result_n46, 1);
+    int32_t hxc_index = hxc_tmp_increment_load_result_n46;
+    int32_t hxc_tmp_compound_load_result_n47 = hxc_rangeTotal;
+    hxc_rangeTotal = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n47, hxc_index);
   }
-  hxc_field_EvaluationFixture_switchCalls = 0;
-  int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n49 = hxc_local_EvaluationFixture_run_total_n13;
-  int32_t hxc_temp_EvaluationFixture_run_callzx2Dresult_n50 = hxc_method_EvaluationFixture_switchSubject(hxc_temp_EvaluationFixture_run_loadzx2Dresult_n49);
-  int32_t hxc_local_EvaluationFixture_run_zx60_n23 = hxc_temp_EvaluationFixture_run_callzx2Dresult_n50;
-  int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n51 = hxc_local_EvaluationFixture_run_zx60_n23;
-  uint32_t hxc_temp_EvaluationFixture_run_switchzx2Dresult_n24 = 0;
-  switch (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n51) {
+  hxc_EvaluationFixture_switchCalls = 0;
+  int32_t hxc_tmp_call_result_n50 = hxc_EvaluationFixture_switchSubject(hxc_total);
+  int32_t hxc_symbol_h0c443bac736a = hxc_tmp_call_result_n50;
+  int32_t hxc_tmp_load_result_n51 = hxc_symbol_h0c443bac736a;
+  uint32_t hxc_tmp_switch_result_n24 = 0;
+  switch (hxc_tmp_load_result_n51) {
     case 18:
       {
-        hxc_temp_EvaluationFixture_run_switchzx2Dresult_n24 = 2;
+        hxc_tmp_switch_result_n24 = 2;
         break;
       }
     case 19:
       {
-        hxc_temp_EvaluationFixture_run_switchzx2Dresult_n24 = 3;
+        hxc_tmp_switch_result_n24 = 3;
         break;
       }
     default:
       {
-        hxc_temp_EvaluationFixture_run_switchzx2Dresult_n24 = 95;
+        hxc_tmp_switch_result_n24 = 95;
         break;
       }
   }
-  uint32_t hxc_temp_EvaluationFixture_run_switchzx2Dresultzx2Dloadzx2Dresult_n52 = hxc_temp_EvaluationFixture_run_switchzx2Dresult_n24;
-  uint32_t hxc_local_EvaluationFixture_run_selectedBySwitch_n22 = hxc_temp_EvaluationFixture_run_switchzx2Dresultzx2Dloadzx2Dresult_n52;
-  bool hxc_local_EvaluationFixture_run_controlIntact_n25 = true;
-  int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n53 = hxc_local_EvaluationFixture_run_total_n13;
-  if (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n53 != 18)
+  uint32_t hxc_selectedBySwitch = hxc_tmp_switch_result_n24;
+  bool hxc_controlIntact = true;
+  if (hxc_total != 18)
   {
-    hxc_local_EvaluationFixture_run_controlIntact_n25 = false;
+    hxc_controlIntact = false;
   }
-  int32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n54 = hxc_local_EvaluationFixture_run_rangeTotal_n17;
-  if (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n54 != 3)
+  if (hxc_rangeTotal != 3)
   {
-    hxc_local_EvaluationFixture_run_controlIntact_n25 = false;
+    hxc_controlIntact = false;
   }
-  uint32_t hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n55 = hxc_field_EvaluationFixture_switchCalls;
-  if (hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits(hxc_temp_EvaluationFixture_run_globalzx2Dloadzx2Dresult_n55) != 1)
+  uint32_t hxc_tmp_global_load_result_n55 = hxc_EvaluationFixture_switchCalls;
+  if (hxc_u32_to_i32_bits(hxc_tmp_global_load_result_n55) != 1)
   {
-    hxc_local_EvaluationFixture_run_controlIntact_n25 = false;
+    hxc_controlIntact = false;
   }
-  bool hxc_temp_EvaluationFixture_run_loadzx2Dresult_n56 = hxc_local_EvaluationFixture_run_controlIntact_n25;
-  if (hxc_temp_EvaluationFixture_run_loadzx2Dresult_n56)
+  int32_t hxc_tmp_call_result_n56 = hxc_EvaluationFixture_readGlobalBeforeCall();
+  if (hxc_tmp_call_result_n56 != 5)
   {
-    uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n57 = hxc_local_EvaluationFixture_run_selectedBySwitch_n22;
-    hxc_local_EvaluationFixture_run_result_n9 = hxc_temp_EvaluationFixture_run_loadzx2Dresult_n57;
+    hxc_controlIntact = false;
+  }
+  if (hxc_controlIntact)
+  {
+    hxc_result = hxc_selectedBySwitch;
   }
   else
   {
-    hxc_local_EvaluationFixture_run_result_n9 = 96;
+    hxc_result = 96;
   }
-  uint32_t hxc_temp_EvaluationFixture_run_loadzx2Dresult_n58 = hxc_local_EvaluationFixture_run_result_n9;
-  uint32_t hxc_temp_EvaluationFixture_run_callzx2Dresult_n59 = hxc_method_EvaluationFixture_finish(hxc_temp_EvaluationFixture_run_loadzx2Dresult_n58);
-  return hxc_temp_EvaluationFixture_run_callzx2Dresult_n59;
+  uint32_t hxc_tmp_call_result_n60 = hxc_EvaluationFixture_finish(hxc_result);
+  return hxc_tmp_call_result_n60;
 }
 
-bool hxc_method_EvaluationFixture_setCallFlag(bool hxc_local_EvaluationFixture_setCallFlag_value_n0)
+bool hxc_EvaluationFixture_setCallFlag(bool hxc_value)
 {
-  hxc_field_EvaluationFixture_callFlag = hxc_local_EvaluationFixture_setCallFlag_value_n0;
-  return hxc_local_EvaluationFixture_setCallFlag_value_n0;
+  hxc_EvaluationFixture_callFlag = hxc_value;
+  return hxc_value;
 }
 
-bool hxc_method_EvaluationFixture_spoilShortCircuit(void)
+bool hxc_EvaluationFixture_spoilShortCircuit(void)
 {
-  hxc_field_EvaluationFixture_shortCircuitIntact = false;
+  hxc_EvaluationFixture_shortCircuitIntact = false;
   return true;
 }
 
-uint32_t hxc_method_EvaluationFixture_spoilTernary(void)
+uint32_t hxc_EvaluationFixture_spoilTernary(void)
 {
-  hxc_field_EvaluationFixture_ternaryIntact = false;
+  hxc_EvaluationFixture_ternaryIntact = false;
   return 8;
 }
 
-int32_t hxc_method_EvaluationFixture_switchSubject(int32_t hxc_local_EvaluationFixture_switchSubject_value_n0)
+int32_t hxc_EvaluationFixture_switchSubject(int32_t hxc_value)
 {
-  uint32_t hxc_temp_EvaluationFixture_switchSubject_incrementzx2Dloadzx2Dresult_n0 = hxc_field_EvaluationFixture_switchCalls;
-  hxc_field_EvaluationFixture_switchCalls = (uint32_t)((uint64_t)(uint32_t)hxc_temp_EvaluationFixture_switchSubject_incrementzx2Dloadzx2Dresult_n0 + (uint64_t)(uint32_t)1);
-  return hxc_local_EvaluationFixture_switchSubject_value_n0;
+  uint32_t hxc_tmp_increment_load_result_n0 = hxc_EvaluationFixture_switchCalls;
+  hxc_EvaluationFixture_switchCalls = (uint32_t)((uint64_t)(uint32_t)hxc_tmp_increment_load_result_n0 + (uint64_t)(uint32_t)1);
+  return hxc_value;
 }
 
 int main(void)
 {
-  hxc_method_EvaluationFixture_main();
+  hxc_EvaluationFixture_main();
   return 0;
 }

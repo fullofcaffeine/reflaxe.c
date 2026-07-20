@@ -1,25 +1,25 @@
 #include "hxc/program.h"
 
-int32_t hxc_method_caxecraft_domain_WorldStorage_readCode(uint8_t *hxc_local_caxecraft_domain_WorldStorage_readCode_cells_n0, size_t hxc_local_caxecraft_domain_WorldStorage_readCode_cells_length_n0, int32_t hxc_local_caxecraft_domain_WorldStorage_readCode_index_n1)
+int32_t hxc_caxecraft_domain_WorldStorage_readCode(uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_index)
 {
-  uint8_t *hxc_local_caxecraft_domain_WorldStorage_readCode_cells_borrow_n2 = hxc_local_caxecraft_domain_WorldStorage_readCode_cells_n0;
-  size_t hxc_temp_caxecraft_domain_WorldStorage_readCode_cells_borrow_length_n2 = hxc_local_caxecraft_domain_WorldStorage_readCode_cells_length_n0;
-  if (hxc_local_caxecraft_domain_WorldStorage_readCode_index_n1 < 0 || (size_t)hxc_local_caxecraft_domain_WorldStorage_readCode_index_n1 >= hxc_temp_caxecraft_domain_WorldStorage_readCode_cells_borrow_length_n2)
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n2 = hxc_length;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n2)
   {
     abort();
   }
-  uint8_t hxc_temp_caxecraft_domain_WorldStorage_readCode_collectionzx2Dindexzx2Dloadzx2Dresult_n0 = hxc_local_caxecraft_domain_WorldStorage_readCode_cells_borrow_n2[(size_t)hxc_local_caxecraft_domain_WorldStorage_readCode_index_n1];
-  return (int32_t)hxc_temp_caxecraft_domain_WorldStorage_readCode_collectionzx2Dindexzx2Dloadzx2Dresult_n0;
+  uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_borrow[(size_t)hxc_index];
+  return (int32_t)hxc_tmp_collection_index_load_result_n0;
 }
 
-void hxc_method_caxecraft_domain_WorldStorage_writeCode(uint8_t *hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_n0, size_t hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_length_n0, int32_t hxc_local_caxecraft_domain_WorldStorage_writeCode_index_n1, int32_t hxc_local_caxecraft_domain_WorldStorage_writeCode_code_n2)
+void hxc_caxecraft_domain_WorldStorage_writeCode(uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_index, int32_t hxc_code)
 {
-  uint8_t *hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_borrow_n3 = hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_n0;
-  size_t hxc_temp_caxecraft_domain_WorldStorage_writeCode_cells_borrow_length_n3 = hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_length_n0;
-  if (hxc_local_caxecraft_domain_WorldStorage_writeCode_index_n1 < 0 || (size_t)hxc_local_caxecraft_domain_WorldStorage_writeCode_index_n1 >= hxc_temp_caxecraft_domain_WorldStorage_writeCode_cells_borrow_length_n3)
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n3 = hxc_length;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n3)
   {
     abort();
   }
-  hxc_local_caxecraft_domain_WorldStorage_writeCode_cells_borrow_n3[(size_t)hxc_local_caxecraft_domain_WorldStorage_writeCode_index_n1] = (uint8_t)hxc_local_caxecraft_domain_WorldStorage_writeCode_code_n2;
+  hxc_borrow[(size_t)hxc_index] = (uint8_t)hxc_code;
   return;
 }

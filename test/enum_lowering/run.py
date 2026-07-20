@@ -351,7 +351,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ):
         raise EnumLoweringFailure("structural enum CAST emission or checks drifted")
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise EnumLoweringFailure("enum report omitted its finalized symbol table")
 
 

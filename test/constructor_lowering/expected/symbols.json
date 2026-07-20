@@ -1,16 +1,21 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "symbols": [
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_BaseRecord_new_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:BaseRecord|2:103:class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb33:i32|0:|1:0|3:10:BaseRecord3:new11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:BaseRecord|2:103:class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb33:i32|0:|1:0",
@@ -19,7 +24,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_BaseRecord_new_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "BaseRecord.new.call-result#0"
     },
     {
@@ -27,8 +32,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_BaseRecord_new_self_n0",
+      "cName": "hxc_self",
       "semanticKey": "5:local|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:BaseRecord|2:103:class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb33:i32|0:|1:0|3:10:BaseRecord3:new4:self|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -38,7 +46,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_BaseRecord_new_self_n0",
+      "baseName": "hxc_self",
       "sourceSymbol": "BaseRecord.new.self#0"
     },
     {
@@ -46,8 +54,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_BaseRecord_new_value_n1",
+      "cName": "hxc_value",
       "semanticKey": "5:local|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:BaseRecord|2:103:class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb33:i32|0:|1:0|3:10:BaseRecord3:new5:value|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -57,7 +68,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_BaseRecord_new_value_n1",
+      "baseName": "hxc_value",
       "sourceSymbol": "BaseRecord.new.value#1"
     },
     {
@@ -67,8 +78,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "ConstructorTrace",
+        "mark"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_ConstructorTrace_mark",
+      "cName": "hxc_ConstructorTrace_mark",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:ConstructorTrace4:mark|1:3:i32|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -78,7 +93,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_ConstructorTrace_mark",
+      "baseName": "hxc_ConstructorTrace_mark",
       "sourceSymbol": "ConstructorTrace.mark(i32)"
     },
     {
@@ -86,8 +101,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "digit"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_ConstructorTrace_mark_digit_n0",
+      "cName": "hxc_digit",
       "semanticKey": "5:local|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:16:ConstructorTrace4:mark|1:3:i32|0:|0:|3:16:ConstructorTrace4:mark5:digit|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -97,7 +115,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_ConstructorTrace_mark_digit_n0",
+      "baseName": "hxc_digit",
       "sourceSymbol": "ConstructorTrace.mark.digit#0"
     },
     {
@@ -105,11 +123,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "global-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_ConstructorTrace_mark_globalzx2Dloadzx2Dresult_n0",
+      "cName": "hxc_tmp_global_load_result_n0",
       "semanticKey": "9:temporary|94:ordinary:82:6:method|28:ordinary:16:translation-unit|2:16:ConstructorTrace4:mark|1:3:i32|0:|0:|3:16:ConstructorTrace4:mark18:global-load-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:16:ConstructorTrace4:mark|1:3:i32|0:|0:",
@@ -118,7 +141,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_ConstructorTrace_mark_globalzx2Dloadzx2Dresult_n0",
+      "baseName": "hxc_tmp_global_load_result_n0",
       "sourceSymbol": "ConstructorTrace.mark.global-load-result#0"
     },
     {
@@ -126,8 +149,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "ConstructorTrace",
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_field_ConstructorTrace_value",
+      "cName": "hxc_ConstructorTrace_value",
       "semanticKey": "5:field|28:ordinary:16:translation-unit|2:16:ConstructorTrace5:value|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -137,7 +164,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_ConstructorTrace_value",
+      "baseName": "hxc_ConstructorTrace_value",
       "sourceSymbol": "ConstructorTrace.value"
     },
     {
@@ -145,11 +172,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "if-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_blockzx2Dlabel_ifzx2Djoin_n3",
+      "cName": "hxc_tmp_if_join_n3",
       "semanticKey": "9:temporary|215:label:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|4:12:FailableBase3:new11:block-label7:if-join|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -158,7 +190,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_blockzx2Dlabel_ifzx2Djoin_n3",
+      "baseName": "hxc_tmp_if_join_n3",
       "sourceSymbol": "FailableBase.new.block-label.if-join#3"
     },
     {
@@ -166,11 +198,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "if-true"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_blockzx2Dlabel_ifzx2Dtrue_n2",
+      "cName": "hxc_tmp_if_true_n2",
       "semanticKey": "9:temporary|215:label:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|4:12:FailableBase3:new11:block-label7:if-true|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -179,7 +216,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_blockzx2Dlabel_ifzx2Dtrue_n2",
+      "baseName": "hxc_tmp_if_true_n2",
       "sourceSymbol": "FailableBase.new.block-label.if-true#2"
     },
     {
@@ -187,11 +224,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n1",
+      "cName": "hxc_tmp_short_circuit_join_n1",
       "semanticKey": "9:temporary|215:label:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|4:12:FailableBase3:new11:block-label18:short-circuit-join|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -200,7 +242,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n1",
+      "baseName": "hxc_tmp_short_circuit_join_n1",
       "sourceSymbol": "FailableBase.new.block-label.short-circuit-join#1"
     },
     {
@@ -208,11 +250,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n0",
+      "cName": "hxc_tmp_short_circuit_rhs_n0",
       "semanticKey": "9:temporary|215:label:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|4:12:FailableBase3:new11:block-label17:short-circuit-rhs|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -221,7 +268,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n0",
+      "baseName": "hxc_tmp_short_circuit_rhs_n0",
       "sourceSymbol": "FailableBase.new.block-label.short-circuit-rhs#0"
     },
     {
@@ -229,11 +276,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -242,7 +294,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "FailableBase.new.call-result#0"
     },
     {
@@ -250,11 +302,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_classzx2Dobjectzx2Daddress_n1",
+      "cName": "hxc_tmp_class_object_address_n1",
       "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new20:class-object-address|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -263,37 +320,19 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_classzx2Dobjectzx2Daddress_n1",
+      "baseName": "hxc_tmp_class_object_address_n1",
       "sourceSymbol": "FailableBase.new.class-object-address#1"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 2,
-      "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_loadzx2Dresult_n2",
-      "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new11:load-result|0:|0:|1:2",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_loadzx2Dresult_n2",
-      "sourceSymbol": "FailableBase.new.load-result#2"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FailableBase_new_self_n0",
+      "cName": "hxc_self",
       "semanticKey": "5:local|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new4:self|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -303,40 +342,24 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FailableBase_new_self_n0",
+      "baseName": "hxc_self",
       "sourceSymbol": "FailableBase.new.self#0"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 3,
-      "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_shortzx2Dcircuitzx2Dloadzx2Dresult_n3",
-      "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new25:short-circuit-load-result|0:|0:|1:3",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_shortzx2Dcircuitzx2Dloadzx2Dresult_n3",
-      "sourceSymbol": "FailableBase.new.short-circuit-load-result#3"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_shortzx2Dcircuitzx2Dresult_n4",
+      "cName": "hxc_tmp_short_circuit_result_n4",
       "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new20:short-circuit-result|0:|0:|1:4",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -345,7 +368,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_shortzx2Dcircuitzx2Dresult_n4",
+      "baseName": "hxc_tmp_short_circuit_result_n4",
       "sourceSymbol": "FailableBase.new.short-circuit-result#4"
     },
     {
@@ -353,8 +376,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "shouldFail"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FailableBase_new_shouldFail_n1",
+      "cName": "hxc_shouldFail",
       "semanticKey": "5:local|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new10:shouldFail|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -364,7 +390,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FailableBase_new_shouldFail_n1",
+      "baseName": "hxc_shouldFail",
       "sourceSymbol": "FailableBase.new.shouldFail#1"
     },
     {
@@ -372,8 +398,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "temporary"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FailableBase_new_temporary_n2",
+      "cName": "hxc_temporary",
       "semanticKey": "5:local|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|3:12:FailableBase3:new9:temporary|0:|0:|1:2",
       "escapeReasons": [],
       "namespace": {
@@ -383,7 +412,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FailableBase_new_temporary_n2",
+      "baseName": "hxc_temporary",
       "sourceSymbol": "FailableBase.new.temporary#2"
     },
     {
@@ -391,11 +420,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_FailableBase_new_temporary_objectzx2Dstorage_n3",
+      "cName": "hxc_tmp_object_storage_n3",
       "semanticKey": "9:temporary|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0|4:12:FailableBase3:new9:temporary14:object-storage|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
@@ -404,7 +438,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_FailableBase_new_temporary_objectzx2Dstorage_n3",
+      "baseName": "hxc_tmp_object_storage_n3",
       "sourceSymbol": "FailableBase.new.temporary.object-storage#3"
     },
     {
@@ -412,8 +446,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FailableLeaf_new_self_n0",
+      "cName": "hxc_self",
       "semanticKey": "5:local|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableLeaf|2:103:class-reference:nonnull:instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b4:bool|0:|1:0|3:12:FailableLeaf3:new4:self|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -423,7 +460,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FailableLeaf_new_self_n0",
+      "baseName": "hxc_self",
       "sourceSymbol": "FailableLeaf.new.self#0"
     },
     {
@@ -431,8 +468,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "shouldFail"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_FailableLeaf_new_shouldFail_n1",
+      "cName": "hxc_shouldFail",
       "semanticKey": "5:local|218:ordinary:205:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableLeaf|2:103:class-reference:nonnull:instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b4:bool|0:|1:0|3:12:FailableLeaf3:new10:shouldFail|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -442,7 +482,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_FailableLeaf_new_shouldFail_n1",
+      "baseName": "hxc_shouldFail",
       "sourceSymbol": "FailableLeaf.new.shouldFail#1"
     },
     {
@@ -450,11 +490,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_LeafRecord_new_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0|3:10:LeafRecord3:new11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0",
@@ -463,7 +508,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_LeafRecord_new_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "LeafRecord.new.call-result#0"
     },
     {
@@ -471,11 +516,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_LeafRecord_new_callzx2Dresult_n1",
+      "cName": "hxc_tmp_call_result_n1",
       "semanticKey": "9:temporary|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0|3:10:LeafRecord3:new11:call-result|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0",
@@ -484,7 +534,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_LeafRecord_new_callzx2Dresult_n1",
+      "baseName": "hxc_tmp_call_result_n1",
       "sourceSymbol": "LeafRecord.new.call-result#1"
     },
     {
@@ -492,11 +542,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_LeafRecord_new_callzx2Dresult_n2",
+      "cName": "hxc_tmp_call_result_n2",
       "semanticKey": "9:temporary|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0|3:10:LeafRecord3:new11:call-result|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0",
@@ -505,7 +560,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_LeafRecord_new_callzx2Dresult_n2",
+      "baseName": "hxc_tmp_call_result_n2",
       "sourceSymbol": "LeafRecord.new.call-result#2"
     },
     {
@@ -513,8 +568,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_LeafRecord_new_self_n0",
+      "cName": "hxc_self",
       "semanticKey": "5:local|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0|3:10:LeafRecord3:new4:self|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -524,7 +582,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_LeafRecord_new_self_n0",
+      "baseName": "hxc_self",
       "sourceSymbol": "LeafRecord.new.self#0"
     },
     {
@@ -532,8 +590,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "value"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_LeafRecord_new_value_n1",
+      "cName": "hxc_value",
       "semanticKey": "5:local|215:ordinary:202:6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0|3:10:LeafRecord3:new5:value|0:|0:|1:1",
       "escapeReasons": [],
       "namespace": {
@@ -543,7 +604,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_LeafRecord_new_value_n1",
+      "baseName": "hxc_value",
       "sourceSymbol": "LeafRecord.new.value#1"
     },
     {
@@ -551,8 +612,12 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "Main",
+        "main"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_Main_main",
+      "cName": "hxc_Main_main",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -562,7 +627,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_Main_main",
+      "baseName": "hxc_Main_main",
       "sourceSymbol": "Main.main"
     },
     {
@@ -570,11 +635,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 10,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10",
+      "cName": "hxc_tmp_short_circuit_join_n10",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|2:10",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -583,7 +653,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n10",
+      "baseName": "hxc_tmp_short_circuit_join_n10",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#10"
     },
     {
@@ -591,11 +661,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12",
+      "cName": "hxc_tmp_short_circuit_join_n12",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|2:12",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -604,7 +679,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n12",
+      "baseName": "hxc_tmp_short_circuit_join_n12",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#12"
     },
     {
@@ -612,11 +687,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 14,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n14",
+      "cName": "hxc_tmp_short_circuit_join_n14",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|2:14",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -625,7 +705,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n14",
+      "baseName": "hxc_tmp_short_circuit_join_n14",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#14"
     },
     {
@@ -633,11 +713,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4",
+      "cName": "hxc_tmp_short_circuit_join_n4",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|1:4",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -646,7 +731,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n4",
+      "baseName": "hxc_tmp_short_circuit_join_n4",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#4"
     },
     {
@@ -654,11 +739,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6",
+      "cName": "hxc_tmp_short_circuit_join_n6",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|1:6",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -667,7 +757,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n6",
+      "baseName": "hxc_tmp_short_circuit_join_n6",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#6"
     },
     {
@@ -675,11 +765,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8",
+      "cName": "hxc_tmp_short_circuit_join_n8",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label18:short-circuit-join|0:|0:|1:8",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -688,7 +783,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Djoin_n8",
+      "baseName": "hxc_tmp_short_circuit_join_n8",
       "sourceSymbol": "Main.main.block-label.short-circuit-join#8"
     },
     {
@@ -696,11 +791,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11",
+      "cName": "hxc_tmp_short_circuit_rhs_n11",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|2:11",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -709,7 +809,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n11",
+      "baseName": "hxc_tmp_short_circuit_rhs_n11",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#11"
     },
     {
@@ -717,11 +817,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n13",
+      "cName": "hxc_tmp_short_circuit_rhs_n13",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|2:13",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -730,7 +835,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n13",
+      "baseName": "hxc_tmp_short_circuit_rhs_n13",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#13"
     },
     {
@@ -738,11 +843,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3",
+      "cName": "hxc_tmp_short_circuit_rhs_n3",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -751,7 +861,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n3",
+      "baseName": "hxc_tmp_short_circuit_rhs_n3",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#3"
     },
     {
@@ -759,11 +869,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5",
+      "cName": "hxc_tmp_short_circuit_rhs_n5",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|1:5",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -772,7 +887,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n5",
+      "baseName": "hxc_tmp_short_circuit_rhs_n5",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#5"
     },
     {
@@ -780,11 +895,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7",
+      "cName": "hxc_tmp_short_circuit_rhs_n7",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|1:7",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -793,7 +913,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n7",
+      "baseName": "hxc_tmp_short_circuit_rhs_n7",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#7"
     },
     {
@@ -801,11 +921,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9",
+      "cName": "hxc_tmp_short_circuit_rhs_n9",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label17:short-circuit-rhs|0:|0:|1:9",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -814,7 +939,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_shortzx2Dcircuitzx2Drhs_n9",
+      "baseName": "hxc_tmp_short_circuit_rhs_n9",
       "sourceSymbol": "Main.main.block-label.short-circuit-rhs#9"
     },
     {
@@ -822,11 +947,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "while-body"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1",
+      "cName": "hxc_tmp_while_body_n1",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label10:while-body|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -835,7 +965,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dbody_n1",
+      "baseName": "hxc_tmp_while_body_n1",
       "sourceSymbol": "Main.main.block-label.while-body#1"
     },
     {
@@ -843,11 +973,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "while-condition"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0",
+      "cName": "hxc_tmp_while_condition_n0",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label15:while-condition|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -856,7 +991,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dcondition_n0",
+      "baseName": "hxc_tmp_while_condition_n0",
       "sourceSymbol": "Main.main.block-label.while-condition#0"
     },
     {
@@ -864,11 +999,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "while-exit"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2",
+      "cName": "hxc_tmp_while_exit_n2",
       "semanticKey": "9:temporary|73:label:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main11:block-label10:while-exit|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -877,7 +1017,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_blockzx2Dlabel_whilezx2Dexit_n2",
+      "baseName": "hxc_tmp_while_exit_n2",
       "sourceSymbol": "Main.main.block-label.while-exit#2"
     },
     {
@@ -885,11 +1025,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_callzx2Dresult_n0",
+      "cName": "hxc_tmp_call_result_n0",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:call-result|0:|0:|1:0",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -898,7 +1043,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_callzx2Dresult_n0",
+      "baseName": "hxc_tmp_call_result_n0",
       "sourceSymbol": "Main.main.call-result#0"
     },
     {
@@ -906,11 +1051,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "class-field-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n12",
+      "cName": "hxc_tmp_class_field_load_result_n12",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main23:class-field-load-result|0:|0:|2:12",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -919,7 +1069,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n12",
+      "baseName": "hxc_tmp_class_field_load_result_n12",
       "sourceSymbol": "Main.main.class-field-load-result#12"
     },
     {
@@ -927,11 +1077,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 15,
+      "readableName": [
+        "tmp",
+        "class-field-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n15",
+      "cName": "hxc_tmp_class_field_load_result_n15",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main23:class-field-load-result|0:|0:|2:15",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -940,7 +1095,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n15",
+      "baseName": "hxc_tmp_class_field_load_result_n15",
       "sourceSymbol": "Main.main.class-field-load-result#15"
     },
     {
@@ -948,11 +1103,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 18,
+      "readableName": [
+        "tmp",
+        "class-field-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n18",
+      "cName": "hxc_tmp_class_field_load_result_n18",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main23:class-field-load-result|0:|0:|2:18",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -961,7 +1121,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n18",
+      "baseName": "hxc_tmp_class_field_load_result_n18",
       "sourceSymbol": "Main.main.class-field-load-result#18"
     },
     {
@@ -969,11 +1129,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "class-field-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n6",
+      "cName": "hxc_tmp_class_field_load_result_n6",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main23:class-field-load-result|0:|0:|1:6",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -982,7 +1147,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n6",
+      "baseName": "hxc_tmp_class_field_load_result_n6",
       "sourceSymbol": "Main.main.class-field-load-result#6"
     },
     {
@@ -990,11 +1155,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "class-field-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n9",
+      "cName": "hxc_tmp_class_field_load_result_n9",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main23:class-field-load-result|0:|0:|1:9",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1003,7 +1173,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dfieldzx2Dloadzx2Dresult_n9",
+      "baseName": "hxc_tmp_class_field_load_result_n9",
       "sourceSymbol": "Main.main.class-field-load-result#9"
     },
     {
@@ -1011,11 +1181,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n1",
+      "cName": "hxc_tmp_class_object_address_n1",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:class-object-address|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1024,7 +1199,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n1",
+      "baseName": "hxc_tmp_class_object_address_n1",
       "sourceSymbol": "Main.main.class-object-address#1"
     },
     {
@@ -1032,11 +1207,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n2",
+      "cName": "hxc_tmp_class_object_address_n2",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:class-object-address|0:|0:|1:2",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1045,7 +1225,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n2",
+      "baseName": "hxc_tmp_class_object_address_n2",
       "sourceSymbol": "Main.main.class-object-address#2"
     },
     {
@@ -1053,11 +1233,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3",
+      "cName": "hxc_tmp_class_object_address_n3",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:class-object-address|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1066,7 +1251,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_classzx2Dobjectzx2Daddress_n3",
+      "baseName": "hxc_tmp_class_object_address_n3",
       "sourceSymbol": "Main.main.class-object-address#3"
     },
     {
@@ -1074,8 +1259,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
+      "readableName": [
+        "empty"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_Main_main_empty_n2",
+      "cName": "hxc_empty",
       "semanticKey": "5:local|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main5:empty|0:|0:|1:2",
       "escapeReasons": [],
       "namespace": {
@@ -1085,7 +1273,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_Main_main_empty_n2",
+      "baseName": "hxc_empty",
       "sourceSymbol": "Main.main.empty#2"
     },
     {
@@ -1093,11 +1281,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_empty_objectzx2Dstorage_n3",
+      "cName": "hxc_tmp_object_storage_n3",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main5:empty14:object-storage|0:|0:|1:3",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1106,7 +1299,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_empty_objectzx2Dstorage_n3",
+      "baseName": "hxc_tmp_object_storage_n3",
       "sourceSymbol": "Main.main.empty.object-storage#3"
     },
     {
@@ -1114,8 +1307,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 4,
+      "readableName": [
+        "failable"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_Main_main_failable_n4",
+      "cName": "hxc_failable",
       "semanticKey": "5:local|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main8:failable|0:|0:|1:4",
       "escapeReasons": [],
       "namespace": {
@@ -1125,7 +1321,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_Main_main_failable_n4",
+      "baseName": "hxc_failable",
       "sourceSymbol": "Main.main.failable#4"
     },
     {
@@ -1133,11 +1329,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_failable_objectzx2Dstorage_n5",
+      "cName": "hxc_tmp_object_storage_n5",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main8:failable14:object-storage|0:|0:|1:5",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1146,7 +1347,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_failable_objectzx2Dstorage_n5",
+      "baseName": "hxc_tmp_object_storage_n5",
       "sourceSymbol": "Main.main.failable.object-storage#5"
     },
     {
@@ -1154,11 +1355,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 4,
+      "readableName": [
+        "tmp",
+        "global-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_globalzx2Dloadzx2Dresult_n4",
+      "cName": "hxc_tmp_global_load_result_n4",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main18:global-load-result|0:|0:|1:4",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1167,7 +1373,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_globalzx2Dloadzx2Dresult_n4",
+      "baseName": "hxc_tmp_global_load_result_n4",
       "sourceSymbol": "Main.main.global-load-result#4"
     },
     {
@@ -1175,8 +1381,11 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "leaf"
+      ],
       "requestedName": null,
-      "cName": "hxc_local_Main_main_leaf_n0",
+      "cName": "hxc_leaf",
       "semanticKey": "5:local|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main4:leaf|0:|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1186,7 +1395,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_Main_main_leaf_n0",
+      "baseName": "hxc_leaf",
       "sourceSymbol": "Main.main.leaf#0"
     },
     {
@@ -1194,11 +1403,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_leaf_objectzx2Dstorage_n1",
+      "cName": "hxc_tmp_object_storage_n1",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|4:4:Main4:main4:leaf14:object-storage|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1207,7 +1421,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_leaf_objectzx2Dstorage_n1",
+      "baseName": "hxc_tmp_object_storage_n1",
       "sourceSymbol": "Main.main.leaf.object-storage#1"
     },
     {
@@ -1215,11 +1429,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n11",
+      "cName": "hxc_tmp_load_result_n11",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|2:11",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1228,7 +1447,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n11",
+      "baseName": "hxc_tmp_load_result_n11",
       "sourceSymbol": "Main.main.load-result#11"
     },
     {
@@ -1236,11 +1455,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 14,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n14",
+      "cName": "hxc_tmp_load_result_n14",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|2:14",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1249,7 +1473,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n14",
+      "baseName": "hxc_tmp_load_result_n14",
       "sourceSymbol": "Main.main.load-result#14"
     },
     {
@@ -1257,11 +1481,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 17,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n17",
+      "cName": "hxc_tmp_load_result_n17",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|2:17",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1270,40 +1499,24 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n17",
+      "baseName": "hxc_tmp_load_result_n17",
       "sourceSymbol": "Main.main.load-result#17"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 20,
-      "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n20",
-      "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|2:20",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n20",
-      "sourceSymbol": "Main.main.load-result#20"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 5,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n5",
+      "cName": "hxc_tmp_load_result_n5",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|1:5",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1312,7 +1525,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n5",
+      "baseName": "hxc_tmp_load_result_n5",
       "sourceSymbol": "Main.main.load-result#5"
     },
     {
@@ -1320,11 +1533,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_loadzx2Dresult_n8",
+      "cName": "hxc_tmp_load_result_n8",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main11:load-result|0:|0:|1:8",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1333,7 +1551,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_loadzx2Dresult_n8",
+      "baseName": "hxc_tmp_load_result_n8",
       "sourceSymbol": "Main.main.load-result#8"
     },
     {
@@ -1341,11 +1559,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 10,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n10",
+      "cName": "hxc_tmp_short_circuit_load_result_n10",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|2:10",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1354,7 +1577,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n10",
+      "baseName": "hxc_tmp_short_circuit_load_result_n10",
       "sourceSymbol": "Main.main.short-circuit-load-result#10"
     },
     {
@@ -1362,11 +1585,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 13,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n13",
+      "cName": "hxc_tmp_short_circuit_load_result_n13",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|2:13",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1375,7 +1603,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n13",
+      "baseName": "hxc_tmp_short_circuit_load_result_n13",
       "sourceSymbol": "Main.main.short-circuit-load-result#13"
     },
     {
@@ -1383,11 +1611,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n16",
+      "cName": "hxc_tmp_short_circuit_load_result_n16",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|2:16",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1396,7 +1629,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n16",
+      "baseName": "hxc_tmp_short_circuit_load_result_n16",
       "sourceSymbol": "Main.main.short-circuit-load-result#16"
     },
     {
@@ -1404,11 +1637,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 19,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n19",
+      "cName": "hxc_tmp_short_circuit_load_result_n19",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|2:19",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1417,40 +1655,24 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n19",
+      "baseName": "hxc_tmp_short_circuit_load_result_n19",
       "sourceSymbol": "Main.main.short-circuit-load-result#19"
     },
     {
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 21,
-      "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n21",
-      "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|2:21",
-      "escapeReasons": [
-        "non-c-identifier-byte"
-      ],
-      "namespace": {
-        "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
-        "kind": "ordinary"
-      },
-      "visibility": "internal",
-      "kind": "temporary",
-      "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n21",
-      "sourceSymbol": "Main.main.short-circuit-load-result#21"
-    },
-    {
-      "overloadSignature": [],
-      "collisionResolved": false,
-      "naming": "generated",
       "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n7",
+      "cName": "hxc_tmp_short_circuit_load_result_n7",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main25:short-circuit-load-result|0:|0:|1:7",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1459,7 +1681,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n7",
+      "baseName": "hxc_tmp_short_circuit_load_result_n7",
       "sourceSymbol": "Main.main.short-circuit-load-result#7"
     },
     {
@@ -1467,11 +1689,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 10,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10",
+      "cName": "hxc_tmp_short_circuit_result_n10",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|2:10",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1480,7 +1707,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n10",
+      "baseName": "hxc_tmp_short_circuit_result_n10",
       "sourceSymbol": "Main.main.short-circuit-result#10"
     },
     {
@@ -1488,11 +1715,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11",
+      "cName": "hxc_tmp_short_circuit_result_n11",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|2:11",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1501,7 +1733,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n11",
+      "baseName": "hxc_tmp_short_circuit_result_n11",
       "sourceSymbol": "Main.main.short-circuit-result#11"
     },
     {
@@ -1509,11 +1741,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 6,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n6",
+      "cName": "hxc_tmp_short_circuit_result_n6",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|1:6",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1522,7 +1759,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n6",
+      "baseName": "hxc_tmp_short_circuit_result_n6",
       "sourceSymbol": "Main.main.short-circuit-result#6"
     },
     {
@@ -1530,11 +1767,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n7",
+      "cName": "hxc_tmp_short_circuit_result_n7",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|1:7",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1543,7 +1785,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n7",
+      "baseName": "hxc_tmp_short_circuit_result_n7",
       "sourceSymbol": "Main.main.short-circuit-result#7"
     },
     {
@@ -1551,11 +1793,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 8,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8",
+      "cName": "hxc_tmp_short_circuit_result_n8",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|1:8",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1564,7 +1811,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n8",
+      "baseName": "hxc_tmp_short_circuit_result_n8",
       "sourceSymbol": "Main.main.short-circuit-result#8"
     },
     {
@@ -1572,11 +1819,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 9,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
       "requestedName": null,
-      "cName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9",
+      "cName": "hxc_tmp_short_circuit_result_n9",
       "semanticKey": "9:temporary|76:ordinary:64:6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:|3:4:Main4:main20:short-circuit-result|0:|0:|1:9",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "6:method|28:ordinary:16:translation-unit|2:4:Main4:main|0:|0:|0:",
@@ -1585,7 +1837,7 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_temp_Main_main_shortzx2Dcircuitzx2Dresult_n9",
+      "baseName": "hxc_tmp_short_circuit_result_n9",
       "sourceSymbol": "Main.main.short-circuit-result#9"
     },
     {
@@ -1593,6 +1845,10 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
+      "readableName": [
+        "c-standard-library",
+        "INT32_MIN"
+      ],
       "requestedName": "INT32_MIN",
       "cName": "INT32_MIN",
       "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library9:INT32_MIN|0:|0:|0:",
@@ -1612,6 +1868,10 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
+      "readableName": [
+        "c-standard-library",
+        "UINT32_C"
+      ],
       "requestedName": "UINT32_C",
       "cName": "UINT32_C",
       "semanticKey": "5:field|12:preprocessor|2:18:c-standard-library8:UINT32_C|0:|0:|0:",
@@ -1631,6 +1891,10 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
+      "readableName": [
+        "c-standard-library",
+        "abort"
+      ],
       "requestedName": "abort",
       "cName": "abort",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|2:18:c-standard-library5:abort|0:|0:|0:",
@@ -1653,8 +1917,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "compiler",
+        "constructor",
+        "BaseRecord"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_compiler_constructor_BaseRecord_n0",
+      "cName": "hxc_compiler_constructor_BaseRecord",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:BaseRecord|2:103:class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb33:i32|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1664,7 +1933,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_compiler_constructor_BaseRecord_n0",
+      "baseName": "hxc_compiler_constructor_BaseRecord",
       "sourceSymbol": "compiler.constructor.BaseRecord(class-reference:nonnull:instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3, i32)#0"
     },
     {
@@ -1675,8 +1944,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "compiler",
+        "constructor",
+        "FailableBase"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_compiler_constructor_FailableBase_n0",
+      "cName": "hxc_compiler_constructor_FailableBase",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableBase|2:103:class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb4:bool|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1686,7 +1960,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_compiler_constructor_FailableBase_n0",
+      "baseName": "hxc_compiler_constructor_FailableBase",
       "sourceSymbol": "compiler.constructor.FailableBase(class-reference:nonnull:instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb, bool)#0"
     },
     {
@@ -1697,8 +1971,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "compiler",
+        "constructor",
+        "FailableLeaf"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_compiler_constructor_FailableLeaf_n0",
+      "cName": "hxc_compiler_constructor_FailableLeaf",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor12:FailableLeaf|2:103:class-reference:nonnull:instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b4:bool|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1708,7 +1987,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_compiler_constructor_FailableLeaf_n0",
+      "baseName": "hxc_compiler_constructor_FailableLeaf",
       "sourceSymbol": "compiler.constructor.FailableLeaf(class-reference:nonnull:instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b, bool)#0"
     },
     {
@@ -1719,8 +1998,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
+      "readableName": [
+        "compiler",
+        "constructor",
+        "LeafRecord"
+      ],
       "requestedName": null,
-      "cName": "hxc_method_compiler_constructor_LeafRecord_n0",
+      "cName": "hxc_compiler_constructor_LeafRecord",
       "semanticKey": "6:method|28:ordinary:16:translation-unit|3:8:compiler11:constructor10:LeafRecord|2:103:class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a63:i32|0:|1:0",
       "escapeReasons": [],
       "namespace": {
@@ -1730,7 +2014,7 @@
       "visibility": "internal",
       "kind": "method",
       "specializationArguments": [],
-      "baseName": "hxc_method_compiler_constructor_LeafRecord_n0",
+      "baseName": "hxc_compiler_constructor_LeafRecord",
       "sourceSymbol": "compiler.constructor.LeafRecord(class-reference:nonnull:instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6, i32)#0"
     },
     {
@@ -1738,6 +2022,12 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
+      "readableName": [
+        "init",
+        "compiler",
+        "executable-entry-point",
+        "function.Main.main"
+      ],
       "requestedName": "main",
       "cName": "main",
       "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|3:8:compiler22:executable-entry-point18:function.Main.main|0:|0:|0:",
@@ -1757,12 +2047,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_BaseRecord",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class10:BaseRecord|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "BaseRecord"
       ],
+      "requestedName": null,
+      "cName": "hxc_BaseRecord",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class10:BaseRecord|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -1770,7 +2061,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_BaseRecord",
+      "baseName": "hxc_BaseRecord",
       "sourceSymbol": "compiler.haxe-class.BaseRecord"
     },
     {
@@ -1778,12 +2069,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_BaseRecord_field_baseField_n1",
-      "semanticKey": "5:field|85:member:75:type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3|5:8:compiler10:haxe-class10:BaseRecord5:field9:baseField|0:|0:|1:1",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "baseField"
       ],
+      "requestedName": null,
+      "cName": "hxc_baseField",
+      "semanticKey": "5:field|85:member:75:type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3|5:8:compiler10:haxe-class10:BaseRecord5:field9:baseField|0:|0:|1:1",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3",
         "kind": "member"
@@ -1791,7 +2083,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_BaseRecord_field_baseField_n1",
+      "baseName": "hxc_baseField",
       "sourceSymbol": "compiler.haxe-class.BaseRecord.field.baseField#1"
     },
     {
@@ -1799,12 +2091,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_BaseRecord_field_defaulted_n0",
-      "semanticKey": "5:field|85:member:75:type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3|5:8:compiler10:haxe-class10:BaseRecord5:field9:defaulted|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "defaulted"
       ],
+      "requestedName": null,
+      "cName": "hxc_defaulted",
+      "semanticKey": "5:field|85:member:75:type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3|5:8:compiler10:haxe-class10:BaseRecord5:field9:defaulted|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3",
         "kind": "member"
@@ -1812,7 +2105,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_BaseRecord_field_defaulted_n0",
+      "baseName": "hxc_defaulted",
       "sourceSymbol": "compiler.haxe-class.BaseRecord.field.defaulted#0"
     },
     {
@@ -1820,12 +2113,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_EmptyBase",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class9:EmptyBase|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "EmptyBase"
       ],
+      "requestedName": null,
+      "cName": "hxc_EmptyBase",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class9:EmptyBase|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -1833,7 +2127,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_EmptyBase",
+      "baseName": "hxc_EmptyBase",
       "sourceSymbol": "compiler.haxe-class.EmptyBase"
     },
     {
@@ -1841,12 +2135,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_EmptyBase_emptyzx2Danchor_n0",
-      "semanticKey": "5:field|85:member:75:type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911|4:8:compiler10:haxe-class9:EmptyBase12:empty-anchor|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "storage"
       ],
+      "requestedName": null,
+      "cName": "hxc_storage",
+      "semanticKey": "5:field|85:member:75:type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911|4:8:compiler10:haxe-class9:EmptyBase12:empty-anchor|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911",
         "kind": "member"
@@ -1854,7 +2149,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_EmptyBase_emptyzx2Danchor_n0",
+      "baseName": "hxc_storage",
       "sourceSymbol": "compiler.haxe-class.EmptyBase.empty-anchor#0"
     },
     {
@@ -1862,12 +2157,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_EmptyLeaf",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class9:EmptyLeaf|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "EmptyLeaf"
       ],
+      "requestedName": null,
+      "cName": "hxc_EmptyLeaf",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class9:EmptyLeaf|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -1875,7 +2171,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_EmptyLeaf",
+      "baseName": "hxc_EmptyLeaf",
       "sourceSymbol": "compiler.haxe-class.EmptyLeaf"
     },
     {
@@ -1883,12 +2179,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0",
-      "semanticKey": "5:field|85:member:75:type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|4:8:compiler10:haxe-class9:EmptyLeaf4:base|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "base"
       ],
+      "requestedName": null,
+      "cName": "hxc_base",
+      "semanticKey": "5:field|85:member:75:type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a|4:8:compiler10:haxe-class9:EmptyLeaf4:base|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a",
         "kind": "member"
@@ -1896,7 +2193,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0",
+      "baseName": "hxc_base",
       "sourceSymbol": "compiler.haxe-class.EmptyLeaf.base#0"
     },
     {
@@ -1904,12 +2201,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_FailableBase",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class12:FailableBase|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "FailableBase"
       ],
+      "requestedName": null,
+      "cName": "hxc_FailableBase",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class12:FailableBase|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -1917,7 +2215,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_FailableBase",
+      "baseName": "hxc_FailableBase",
       "sourceSymbol": "compiler.haxe-class.FailableBase"
     },
     {
@@ -1925,12 +2223,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_FailableBase_field_initializzedBeforeFailure_n0",
-      "semanticKey": "5:field|85:member:75:type.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb|5:8:compiler10:haxe-class12:FailableBase5:field24:initializedBeforeFailure|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "initializedBeforeFailure"
       ],
+      "requestedName": null,
+      "cName": "hxc_initializedBeforeFailure",
+      "semanticKey": "5:field|85:member:75:type.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb|5:8:compiler10:haxe-class12:FailableBase5:field24:initializedBeforeFailure|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb",
         "kind": "member"
@@ -1938,7 +2237,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_FailableBase_field_initializzedBeforeFailure_n0",
+      "baseName": "hxc_initializedBeforeFailure",
       "sourceSymbol": "compiler.haxe-class.FailableBase.field.initializedBeforeFailure#0"
     },
     {
@@ -1946,12 +2245,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_FailableLeaf",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class12:FailableLeaf|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "FailableLeaf"
       ],
+      "requestedName": null,
+      "cName": "hxc_FailableLeaf",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class12:FailableLeaf|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -1959,7 +2259,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_FailableLeaf",
+      "baseName": "hxc_FailableLeaf",
       "sourceSymbol": "compiler.haxe-class.FailableLeaf"
     },
     {
@@ -1967,12 +2267,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_FailableLeaf_base_n0",
-      "semanticKey": "5:field|85:member:75:type.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b|4:8:compiler10:haxe-class12:FailableLeaf4:base|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "base"
       ],
+      "requestedName": null,
+      "cName": "hxc_base",
+      "semanticKey": "5:field|85:member:75:type.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b|4:8:compiler10:haxe-class12:FailableLeaf4:base|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b",
         "kind": "member"
@@ -1980,7 +2281,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_FailableLeaf_base_n0",
+      "baseName": "hxc_base",
       "sourceSymbol": "compiler.haxe-class.FailableLeaf.base#0"
     },
     {
@@ -1988,12 +2289,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_type_compiler_haxezx2Dclass_LeafRecord",
-      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class10:LeafRecord|0:|0:|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "LeafRecord"
       ],
+      "requestedName": null,
+      "cName": "hxc_LeafRecord",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class10:LeafRecord|0:|0:|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "tag"
@@ -2001,7 +2303,7 @@
       "visibility": "internal",
       "kind": "type",
       "specializationArguments": [],
-      "baseName": "hxc_type_compiler_haxezx2Dclass_LeafRecord",
+      "baseName": "hxc_LeafRecord",
       "sourceSymbol": "compiler.haxe-class.LeafRecord"
     },
     {
@@ -2009,12 +2311,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0",
-      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|4:8:compiler10:haxe-class10:LeafRecord4:base|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "base"
       ],
+      "requestedName": null,
+      "cName": "hxc_base",
+      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|4:8:compiler10:haxe-class10:LeafRecord4:base|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6",
         "kind": "member"
@@ -2022,7 +2325,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0",
+      "baseName": "hxc_base",
       "sourceSymbol": "compiler.haxe-class.LeafRecord.base#0"
     },
     {
@@ -2030,12 +2333,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_firstLeafField_n1",
-      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|5:8:compiler10:haxe-class10:LeafRecord5:field14:firstLeafField|0:|0:|1:1",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "firstLeafField"
       ],
+      "requestedName": null,
+      "cName": "hxc_firstLeafField",
+      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|5:8:compiler10:haxe-class10:LeafRecord5:field14:firstLeafField|0:|0:|1:1",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6",
         "kind": "member"
@@ -2043,7 +2347,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_firstLeafField_n1",
+      "baseName": "hxc_firstLeafField",
       "sourceSymbol": "compiler.haxe-class.LeafRecord.field.firstLeafField#1"
     },
     {
@@ -2051,12 +2355,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 2,
-      "requestedName": null,
-      "cName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_secondLeafField_n2",
-      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|5:8:compiler10:haxe-class10:LeafRecord5:field15:secondLeafField|0:|0:|1:2",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "secondLeafField"
       ],
+      "requestedName": null,
+      "cName": "hxc_secondLeafField",
+      "semanticKey": "5:field|85:member:75:type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6|5:8:compiler10:haxe-class10:LeafRecord5:field15:secondLeafField|0:|0:|1:2",
+      "escapeReasons": [],
       "namespace": {
         "scope": "type.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6",
         "kind": "member"
@@ -2064,7 +2369,7 @@
       "visibility": "internal",
       "kind": "field",
       "specializationArguments": [],
-      "baseName": "hxc_field_compiler_haxezx2Dclass_LeafRecord_field_secondLeafField_n2",
+      "baseName": "hxc_secondLeafField",
       "sourceSymbol": "compiler.haxe-class.LeafRecord.field.secondLeafField#2"
     },
     {
@@ -2072,12 +2377,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
-      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "left"
       ],
+      "requestedName": null,
+      "cName": "hxc_left",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
         "kind": "ordinary"
@@ -2085,7 +2391,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_left_n0",
+      "baseName": "hxc_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.left#0"
     },
     {
@@ -2093,12 +2399,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
-      "requestedName": null,
-      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
-      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "right"
       ],
+      "requestedName": null,
+      "cName": "hxc_right",
+      "semanticKey": "5:local|126:ordinary:113:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:|4:8:compiler16:primitive-helper20:hxc.i32.add.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [],
       "namespace": {
         "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
         "kind": "ordinary"
@@ -2106,7 +2413,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Eaddzx2Ewrapping_right_n1",
+      "baseName": "hxc_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.add.wrapping.right#1"
     },
     {
@@ -2114,12 +2421,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0",
-      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping4:left|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "left"
       ],
+      "requestedName": null,
+      "cName": "hxc_left",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping4:left|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
         "kind": "ordinary"
@@ -2127,7 +2435,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_left_n0",
+      "baseName": "hxc_left",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.left#0"
     },
     {
@@ -2135,12 +2443,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
-      "requestedName": null,
-      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1",
-      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping5:right|0:|0:|1:1",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "right"
       ],
+      "requestedName": null,
+      "cName": "hxc_right",
+      "semanticKey": "5:local|131:ordinary:118:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:|4:8:compiler16:primitive-helper25:hxc.i32.multiply.wrapping5:right|0:|0:|1:1",
+      "escapeReasons": [],
       "namespace": {
         "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
         "kind": "ordinary"
@@ -2148,7 +2457,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Ei32zx2Emultiplyzx2Ewrapping_right_n1",
+      "baseName": "hxc_right",
       "sourceSymbol": "compiler.primitive-helper.hxc.i32.multiply.wrapping.right#1"
     },
     {
@@ -2156,12 +2465,13 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 0,
-      "requestedName": null,
-      "cName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
-      "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "value"
       ],
+      "requestedName": null,
+      "cName": "hxc_value",
+      "semanticKey": "5:local|125:ordinary:112:14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:|4:8:compiler16:primitive-helper19:hxc.u32.to.i32.bits5:value|0:|0:|1:0",
+      "escapeReasons": [],
       "namespace": {
         "scope": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
         "kind": "ordinary"
@@ -2169,7 +2479,7 @@
       "visibility": "internal",
       "kind": "local",
       "specializationArguments": [],
-      "baseName": "hxc_local_compiler_primitivezx2Dhelper_hxczx2Eu32zx2Etozx2Ei32zx2Ebits_value_n0",
+      "baseName": "hxc_value",
       "sourceSymbol": "compiler.primitive-helper.hxc.u32.to.i32.bits.value#0"
     },
     {
@@ -2177,12 +2487,15 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
-      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "i32",
+        "add",
+        "wrapping"
       ],
+      "requestedName": null,
+      "cName": "hxc_i32_add_wrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:20:hxc.i32.add.wrapping|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "ordinary"
@@ -2192,7 +2505,7 @@
       "specializationArguments": [
         "hxc.i32.add.wrapping"
       ],
-      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Eaddzx2Ewrapping",
+      "baseName": "hxc_i32_add_wrapping",
       "sourceSymbol": "compiler.primitive-helper<hxc.i32.add.wrapping>"
     },
     {
@@ -2200,12 +2513,15 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping",
-      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "i32",
+        "multiply",
+        "wrapping"
       ],
+      "requestedName": null,
+      "cName": "hxc_i32_multiply_wrapping",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:25:hxc.i32.multiply.wrapping|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "ordinary"
@@ -2215,7 +2531,7 @@
       "specializationArguments": [
         "hxc.i32.multiply.wrapping"
       ],
-      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Ei32zx2Emultiplyzx2Ewrapping",
+      "baseName": "hxc_i32_multiply_wrapping",
       "sourceSymbol": "compiler.primitive-helper<hxc.i32.multiply.wrapping>"
     },
     {
@@ -2223,12 +2539,16 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
-      "requestedName": null,
-      "cName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
-      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
-      "escapeReasons": [
-        "non-c-identifier-byte"
+      "readableName": [
+        "u32",
+        "to",
+        "i32",
+        "bits"
       ],
+      "requestedName": null,
+      "cName": "hxc_u32_to_i32_bits",
+      "semanticKey": "14:specialization|28:ordinary:16:translation-unit|2:8:compiler16:primitive-helper|0:|1:19:hxc.u32.to.i32.bits|0:",
+      "escapeReasons": [],
       "namespace": {
         "scope": "translation-unit",
         "kind": "ordinary"
@@ -2238,7 +2558,7 @@
       "specializationArguments": [
         "hxc.u32.to.i32.bits"
       ],
-      "baseName": "hxc_spec_compiler_primitivezx2Dhelper_of_hxczx2Eu32zx2Etozx2Ei32zx2Ebits",
+      "baseName": "hxc_u32_to_i32_bits",
       "sourceSymbol": "compiler.primitive-helper<hxc.u32.to.i32.bits>"
     },
     {
@@ -2246,8 +2566,14 @@
       "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
-      "requestedName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
-      "cName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "readableName": [
+        "module",
+        "compiler",
+        "program-header",
+        "guard"
+      ],
+      "requestedName": "HXC_PROGRAM_H_INCLUDED",
+      "cName": "HXC_PROGRAM_H_INCLUDED",
       "semanticKey": "6:module|12:preprocessor|3:8:compiler14:program-header5:guard|0:|0:|0:",
       "escapeReasons": [],
       "namespace": {
@@ -2257,7 +2583,7 @@
       "visibility": "internal",
       "kind": "module",
       "specializationArguments": [],
-      "baseName": "HXC_GENERATED_PATH_696E636C7564652F6878632F70726F6772616D2E68_INCLUDED",
+      "baseName": "HXC_PROGRAM_H_INCLUDED",
       "sourceSymbol": "compiler.program-header.guard"
     },
     {
@@ -2265,11 +2591,19 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": 1,
+      "readableName": [
+        "init",
+        "compiler",
+        "static-initialization",
+        "ConstructorTrace",
+        "static-field-value"
+      ],
       "requestedName": null,
-      "cName": "hxc_init_compiler_staticzx2Dinitializzation_ConstructorTrace_staticzx2Dfieldzx2Dvalue_n1",
+      "cName": "hxc_init_compiler_static_initialization_ConstructorTrace_static_field_value",
       "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|4:8:compiler21:static-initialization16:ConstructorTrace18:static-field-value|0:|0:|1:1",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "translation-unit",
@@ -2278,7 +2612,7 @@
       "visibility": "internal",
       "kind": "static-initializer",
       "specializationArguments": [],
-      "baseName": "hxc_init_compiler_staticzx2Dinitializzation_ConstructorTrace_staticzx2Dfieldzx2Dvalue_n1",
+      "baseName": "hxc_init_compiler_static_initialization_ConstructorTrace_static_field_value",
       "sourceSymbol": "compiler.static-initialization.ConstructorTrace.static-field-value#1"
     },
     {
@@ -2286,11 +2620,19 @@
       "collisionResolved": false,
       "naming": "generated",
       "sourceOrdinal": null,
+      "readableName": [
+        "init",
+        "compiler",
+        "static-initialization",
+        "hosted-executable",
+        "function.Main.main"
+      ],
       "requestedName": null,
-      "cName": "hxc_init_compiler_staticzx2Dinitializzation_hostedzx2Dexecutable_functionzx2EMainzx2Emain",
+      "cName": "hxc_init_compiler_static_initialization_hosted_executable_function_Main_main",
       "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|4:8:compiler21:static-initialization17:hosted-executable18:function.Main.main|0:|0:|0:",
       "escapeReasons": [
-        "non-c-identifier-byte"
+        "non-c-identifier-byte",
+        "separator-normalized"
       ],
       "namespace": {
         "scope": "translation-unit",
@@ -2299,10 +2641,10 @@
       "visibility": "internal",
       "kind": "static-initializer",
       "specializationArguments": [],
-      "baseName": "hxc_init_compiler_staticzx2Dinitializzation_hostedzx2Dexecutable_functionzx2EMainzx2Emain",
+      "baseName": "hxc_init_compiler_static_initialization_hosted_executable_function_Main_main",
       "sourceSymbol": "compiler.static-initialization.hosted-executable.function.Main.main"
     }
   ],
   "collisions": [],
-  "algorithm": "hxc-c-symbol-v1"
+  "algorithm": "hxc-c-symbol-v2"
 }

@@ -2,7 +2,7 @@
   {
     "instanceId": "instance.class.013f441ddf81490f0bde8c33b019f8a11fcac4294a7978b7bf4cb55f77513fb3",
     "elided": false,
-    "cName": "hxc_method_compiler_constructor_BaseRecord_n0",
+    "cName": "hxc_compiler_constructor_BaseRecord",
     "canFail": false,
     "id": "constructor.BaseRecord",
     "haxePath": "BaseRecord"
@@ -26,7 +26,7 @@
   {
     "instanceId": "instance.class.4d45d3f5f73ae1c326732425b6fae93179444309fa749f60010872941a8cd5fb",
     "elided": false,
-    "cName": "hxc_method_compiler_constructor_FailableBase_n0",
+    "cName": "hxc_compiler_constructor_FailableBase",
     "canFail": true,
     "id": "constructor.FailableBase",
     "haxePath": "FailableBase"
@@ -34,7 +34,7 @@
   {
     "instanceId": "instance.class.3240fcbecf4719a2e97503ee3f5a3f185b9a12a23e7fd2b5ed008161fe46762b",
     "elided": false,
-    "cName": "hxc_method_compiler_constructor_FailableLeaf_n0",
+    "cName": "hxc_compiler_constructor_FailableLeaf",
     "canFail": true,
     "id": "constructor.FailableLeaf",
     "haxePath": "FailableLeaf"
@@ -42,7 +42,7 @@
   {
     "instanceId": "instance.class.6496d5123c43d3e326fae55e002b27d083bb1e327a86985c522ebcded24489a6",
     "elided": false,
-    "cName": "hxc_method_compiler_constructor_LeafRecord_n0",
+    "cName": "hxc_compiler_constructor_LeafRecord",
     "canFail": false,
     "id": "constructor.LeafRecord",
     "haxePath": "LeafRecord"

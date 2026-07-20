@@ -302,6 +302,30 @@ def validate() -> list[str]:
             runner_path = safe_path(runner[1], f"suite {identifier} runner", errors)
             if runner_path is not None and not runner_path.is_file():
                 errors.append(f"fixture suite runner is missing: {runner_path.relative_to(ROOT)}")
+        snapshot_runner = entry.get("snapshotValidationRunner")
+        if snapshot_runner is not None:
+            if (
+                not isinstance(snapshot_runner, list)
+                or not snapshot_runner
+                or not all(isinstance(part, str) and part for part in snapshot_runner)
+            ):
+                errors.append(
+                    f"fixture suite {identifier} snapshotValidationRunner must be an argument array"
+                )
+            elif len(snapshot_runner) >= 2 and snapshot_runner[0].startswith("python"):
+                snapshot_runner_path = safe_path(
+                    snapshot_runner[1],
+                    f"suite {identifier} snapshotValidationRunner",
+                    errors,
+                )
+                if (
+                    snapshot_runner_path is not None
+                    and not snapshot_runner_path.is_file()
+                ):
+                    errors.append(
+                        "fixture suite snapshot-validation runner is missing: "
+                        f"{snapshot_runner_path.relative_to(ROOT)}"
+                    )
         suite_types = entry.get("types")
         if not isinstance(suite_types, list) or not suite_types:
             errors.append(f"fixture suite {identifier} must map at least one type")

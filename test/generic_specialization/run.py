@@ -295,7 +295,8 @@ def validate_positive(project: RenderedProject) -> None:
             record.get("semanticDigestSha256") != digest
             or record.get("instanceId") != f"function.specialization.{digest}"
             or not key.startswith("generic-function-v1(")
-            or not c_name.startswith("hxc_method_")
+            or not c_name.startswith("hxc_")
+            or "zx" in c_name
         ):
             raise GenericSpecializationFailure(f"function key/name drifted: {record!r}")
         arguments = require_list(record.get("arguments"), "function arguments")
@@ -569,7 +570,7 @@ NEGATIVE_EXPECTATIONS = {
     ),
     "code_size": (
         "Main.hx:6: lines 6-8",
-        "generic-specialization-code-size-budget:128-over-1",
+        "generic-specialization-code-size-budget:68-over-1",
     ),
 }
 

@@ -41,11 +41,18 @@ Field access keeps value and place operations distinct:
 
 - projecting from a parameter or immutable temporary uses
   `IRIOProject(instance, field)`;
-- reading a field of an addressable local first forms
-  `IRPField(local, field)`, takes its address, and loads through an explicit
-  `IRPDereference` place; and
+- reading a field of an addressable compiler-owned local uses
+  `IRPField(local, field)` directly. The local is already stable storage, so
+  taking `&local.field` and immediately dereferencing it would preserve no
+  extra fact; and
 - construction, projection, field places, address results, loads, calls, and
   returns are all type-checked by `HxcIRValidator`.
+
+The direct field place is still an explicit HxcIR read. A later, separately
+verified value-coalescing step may print that read at its single use only when
+there is no intervening read, write, call, failure, or lifetime change. Reads
+through imported pointers and other foreign or potentially volatile places
+remain materialized.
 
 This contract does not infer aliasing or identity from C syntax. Field mutation
 on an aggregate value, record equality/identity, open or extended structures,

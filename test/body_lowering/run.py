@@ -125,7 +125,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if not isinstance(functions, list):
         raise BodyLoweringFailure("body-lowering report omitted function records")
     by_field: dict[str, dict[str, object]] = {}
-    all_names: set[str] = set()
+    function_names: set[str] = set()
     for entry in functions:
         if not isinstance(entry, dict) or not isinstance(entry.get("field"), str):
             raise BodyLoweringFailure(f"invalid function record: {entry!r}")
@@ -135,25 +135,26 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             field in by_field
             or not isinstance(c_name, str)
             or not IDENTIFIER.fullmatch(c_name)
-            or not c_name.startswith("hxc_method_")
+            or c_name != f"hxc_BodyFixture_{field}"
+            or c_name in function_names
         ):
             raise BodyLoweringFailure(f"invalid finalized function name: {entry!r}")
         by_field[field] = entry
-        all_names.add(c_name)
+        function_names.add(c_name)
         locals_value = entry.get("locals")
         if not isinstance(locals_value, list):
             raise BodyLoweringFailure(f"function {field} omitted local names")
+        local_names: set[str] = set()
         for local in locals_value:
             if (
                 not isinstance(local, dict)
                 or not isinstance(local.get("irId"), str)
                 or not isinstance(local.get("cName"), str)
                 or not IDENTIFIER.fullmatch(local["cName"])
-                or not local["cName"].startswith("hxc_local_")
-                or local["cName"] in all_names
+                or local["cName"] in local_names
             ):
                 raise BodyLoweringFailure(f"invalid finalized local name: {local!r}")
-            all_names.add(local["cName"])
+            local_names.add(local["cName"])
     if set(by_field) != FIELDS:
         raise BodyLoweringFailure(
             f"lowered fields drifted: expected {sorted(FIELDS)!r}, got {sorted(by_field)!r}"
@@ -198,7 +199,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise BodyLoweringFailure("primitive body C omitted its exact standard headers")
 
     symbols = report.get("symbols")
-    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v1":
+    if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise BodyLoweringFailure("body lowering omitted the finalized symbol table")
     symbol_entries = symbols.get("symbols")
     if not isinstance(symbol_entries, list):
@@ -520,10 +521,10 @@ def check_production_boundaries() -> None:
             (supported_output / "hxc.stdlib-report.json").read_text(encoding="utf-8")
         )
         if (
-            "void hxc_method_BodyFixture_main(void);" not in header
+            "void hxc_BodyFixture_main(void);" not in header
             or '#include "hxc/program.h"' not in source
             or "int main(void)" not in source
-            or "hxc_method_BodyFixture_main();" not in source
+            or "hxc_BodyFixture_main();" not in source
             or initialization_plan.get("schemaVersion") != 1
             or initialization_plan.get("strategy") != "eager-haxe-type-order"
             or initialization_plan.get("executionOrder") != []

@@ -289,15 +289,17 @@ class CBodyEnumRegistry {
 		final hasPayload = enumHasPayload(definition, parameters, position, fail, node);
 		final representation = hasPayload ? CBERTaggedUnion : CBERNativeEnum;
 		final symbolRoot = ["compiler", "haxe-enum", digest];
-		final valueTagRequest = new CSymbolRequest(CSKType, symbolRoot.concat(["value"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+		final readableRoot = path.split(".");
+		final valueTagRequest = new CSymbolRequest(CSKType, symbolRoot.concat(["value"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys,
+			null, readableRoot);
 		final discriminantTagRequest = representation == CBERNativeEnum ? valueTagRequest : new CSymbolRequest(CSKType, symbolRoot.concat(["tag"]),
-			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys, null, readableRoot.concat(["tag"]));
 		final payloadUnionRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKType, symbolRoot.concat(["payload"]),
-			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys);
+			CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys, null, readableRoot.concat(["payload"]));
 		final tagMemberRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["tag"]),
-			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 0);
+			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 0, ["tag"]);
 		final payloadMemberRequest = representation == CBERNativeEnum ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["payload"]),
-			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 1);
+			CNSMember('type.enum.$digest'), CSVInternal, null, [], argumentKeys, 1, ["payload"]);
 		context.symbols.register(valueTagRequest);
 		context.symbols.register(discriminantTagRequest);
 		if (payloadUnionRequest != null)
@@ -325,11 +327,12 @@ class CBodyEnumRegistry {
 			final constructor = constructorSignature(definition, parameters, field, fail, node);
 			final caseSource = HaxeSourceSpan.fromPosition(field.pos, sourcePath);
 			final discriminantRequest = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName]), CNSOrdinary("translation-unit"), CSVInternal,
-				null, [], argumentKeys, field.index);
+				null, [], argumentKeys, field.index, readableRoot.concat([caseName]));
 			final payloadStructRequest = constructor.arguments.length == 0 ? null : new CSymbolRequest(CSKType,
-				symbolRoot.concat(["case", caseName, "payload"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys, field.index);
+				symbolRoot.concat(["case", caseName, "payload"]), CNSTag("translation-unit"), CSVInternal, null, [], argumentKeys, field.index,
+				readableRoot.concat([caseName, "payload"]));
 			final unionMemberRequest = constructor.arguments.length == 0 ? null : new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName]),
-				CNSMember('union.enum.$digest'), CSVInternal, null, [], argumentKeys, field.index);
+				CNSMember('union.enum.$digest'), CSVInternal, null, [], argumentKeys, field.index, [caseName]);
 			context.symbols.register(discriminantRequest);
 			if (payloadStructRequest != null)
 				context.symbols.register(payloadStructRequest);
@@ -346,7 +349,7 @@ class CBodyEnumRegistry {
 					return rejected(fail, field.pos, '$node:unsupported-payload:$path.$caseName.${argument.name}:${valueType.cSpelling}');
 				}
 				final request = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName, "payload", argument.name]),
-					CNSMember('case.enum.$digest.$caseName'), CSVInternal, null, [], argumentKeys, index);
+					CNSMember('case.enum.$digest.$caseName'), CSVInternal, null, [], argumentKeys, index, [argument.name]);
 				context.symbols.register(request);
 				tagCase.payload.push(new CPreparedBodyEnumPayload(argument.name, valueType, caseSource, request));
 			}

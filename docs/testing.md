@@ -145,6 +145,13 @@ Regenerate one suite intentionally:
 npm run snapshots:update -- --suite c-ast
 ```
 
+After writing, the updater normally invokes the suite's ordinary runner. A
+cataloged `snapshotValidationRunner` may provide a narrower post-update command
+for an unusually expensive suite when the updater has already rendered it
+twice. That command must still regenerate and compare the written bytes and run
+the edit-time semantic/native evidence; it never replaces the ordinary full
+runner in the canonical toolchain or hosted CI.
+
 An intentional full refresh requires the visibly broader command:
 
 ```sh
@@ -590,11 +597,15 @@ package/pre-commit/CI wiring, and the example manifest rule. It is part of
 `npm test` and the pre-commit path for relevant changes.
 
 `test/symbol_registry` is the focused positive/negative/snapshot suite for the
-schema-1 `hxc.symbols.json` shape. It renders twice, reverses request and typed
-declaration discovery order inside the Haxe fixture, validates exact-name
-failures and both collision origins, feeds finalized defaults into declaration
-planning, rejects host paths, and asserts an empty typed-contract runtime feature
-set. It proves naming analysis only; it does not claim production C emission.
+schema-2 `hxc.symbols.json` shape. It renders twice, reverses request and typed
+declaration discovery order inside the Haxe fixture, validates readable display
+identity separately from semantic identity, exact-name failures, and both
+collision origins, feeds finalized defaults into declaration planning, rejects
+host paths, and asserts an empty typed-contract runtime feature set. A strict
+native C11 probe includes standard headers and proves `hxc_`-prefixed readable
+locals/members cannot be rewritten by common `bool`, `NULL`, or `NAN` macros.
+The focused suite proves naming analysis; production symbol emission and
+generated-C readability are exercised by the lowering and Caxecraft suites.
 
 `test/project_emitter` is the negative/AST/snapshot/runtime suite for typed
 schema-1 project packaging, neutral build planning, optional adapters, and the

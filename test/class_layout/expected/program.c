@@ -1,131 +1,122 @@
 #include "hxc/program.h"
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_RootRecord, hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_RootRecord first storage field begins at offset zero");
+_Static_assert(offsetof(struct hxc_RootRecord, hxc_rootValue) == 0, "class hxc_RootRecord first storage field begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_RootRecord) >= _Alignof(int32_t), "class hxc_type_compiler_haxezx2Dclass_RootRecord alignment admits field 0");
+_Static_assert(_Alignof(struct hxc_RootRecord) >= _Alignof(int32_t), "class hxc_RootRecord alignment admits field 0");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_RootRecord) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_RootRecord, hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0) + sizeof(int32_t), "class hxc_type_compiler_haxezx2Dclass_RootRecord size contains its final storage member");
+_Static_assert(sizeof(struct hxc_RootRecord) >= offsetof(struct hxc_RootRecord, hxc_rootValue) + sizeof(int32_t), "class hxc_RootRecord size contains its final storage member");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord, hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_MiddleRecord base subobject begins at offset zero");
+_Static_assert(offsetof(struct hxc_MiddleRecord, hxc_base) == 0, "class hxc_MiddleRecord base subobject begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_RootRecord), "class hxc_type_compiler_haxezx2Dclass_MiddleRecord alignment admits its base subobject");
+_Static_assert(_Alignof(struct hxc_MiddleRecord) >= _Alignof(struct hxc_RootRecord), "class hxc_MiddleRecord alignment admits its base subobject");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord) >= sizeof(struct hxc_type_compiler_haxezx2Dclass_RootRecord), "class hxc_type_compiler_haxezx2Dclass_MiddleRecord contains its complete base subobject");
+_Static_assert(sizeof(struct hxc_MiddleRecord) >= sizeof(struct hxc_RootRecord), "class hxc_MiddleRecord contains its complete base subobject");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord, hxc_field_compiler_haxezx2Dclass_MiddleRecord_field_enabled_n1) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord, hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0) + sizeof(struct hxc_type_compiler_haxezx2Dclass_RootRecord), "class hxc_type_compiler_haxezx2Dclass_MiddleRecord field 0 follows the prior storage without overlap");
+_Static_assert(offsetof(struct hxc_MiddleRecord, hxc_enabled) >= offsetof(struct hxc_MiddleRecord, hxc_base) + sizeof(struct hxc_RootRecord), "class hxc_MiddleRecord field 0 follows the prior storage without overlap");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord) >= _Alignof(bool), "class hxc_type_compiler_haxezx2Dclass_MiddleRecord alignment admits field 0");
+_Static_assert(_Alignof(struct hxc_MiddleRecord) >= _Alignof(bool), "class hxc_MiddleRecord alignment admits field 0");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord, hxc_field_compiler_haxezx2Dclass_MiddleRecord_field_enabled_n1) + sizeof(bool), "class hxc_type_compiler_haxezx2Dclass_MiddleRecord size contains its final storage member");
+_Static_assert(sizeof(struct hxc_MiddleRecord) >= offsetof(struct hxc_MiddleRecord, hxc_enabled) + sizeof(bool), "class hxc_MiddleRecord size contains its final storage member");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_LeafRecord base subobject begins at offset zero");
+_Static_assert(offsetof(struct hxc_LeafRecord, hxc_base) == 0, "class hxc_LeafRecord base subobject begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord), "class hxc_type_compiler_haxezx2Dclass_LeafRecord alignment admits its base subobject");
+_Static_assert(_Alignof(struct hxc_LeafRecord) >= _Alignof(struct hxc_MiddleRecord), "class hxc_LeafRecord alignment admits its base subobject");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord) >= sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord), "class hxc_type_compiler_haxezx2Dclass_LeafRecord contains its complete base subobject");
+_Static_assert(sizeof(struct hxc_LeafRecord) >= sizeof(struct hxc_MiddleRecord), "class hxc_LeafRecord contains its complete base subobject");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_field_score_n1) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0) + sizeof(struct hxc_type_compiler_haxezx2Dclass_MiddleRecord), "class hxc_type_compiler_haxezx2Dclass_LeafRecord field 0 follows the prior storage without overlap");
+_Static_assert(offsetof(struct hxc_LeafRecord, hxc_score) >= offsetof(struct hxc_LeafRecord, hxc_base) + sizeof(struct hxc_MiddleRecord), "class hxc_LeafRecord field 0 follows the prior storage without overlap");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord) >= _Alignof(double), "class hxc_type_compiler_haxezx2Dclass_LeafRecord alignment admits field 0");
+_Static_assert(_Alignof(struct hxc_LeafRecord) >= _Alignof(double), "class hxc_LeafRecord alignment admits field 0");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_field_score_n1) + sizeof(double), "class hxc_type_compiler_haxezx2Dclass_LeafRecord field 1 follows the prior storage without overlap");
+_Static_assert(offsetof(struct hxc_LeafRecord, hxc_peer) >= offsetof(struct hxc_LeafRecord, hxc_score) + sizeof(double), "class hxc_LeafRecord field 1 follows the prior storage without overlap");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_RootRecord *), "class hxc_type_compiler_haxezx2Dclass_LeafRecord alignment admits field 1");
+_Static_assert(_Alignof(struct hxc_LeafRecord) >= _Alignof(struct hxc_RootRecord *), "class hxc_LeafRecord alignment admits field 1");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_LeafRecord, hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2) + sizeof(struct hxc_type_compiler_haxezx2Dclass_RootRecord *), "class hxc_type_compiler_haxezx2Dclass_LeafRecord size contains its final storage member");
+_Static_assert(sizeof(struct hxc_LeafRecord) >= offsetof(struct hxc_LeafRecord, hxc_peer) + sizeof(struct hxc_RootRecord *), "class hxc_LeafRecord size contains its final storage member");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_EmptyBase, hxc_field_compiler_haxezx2Dclass_EmptyBase_emptyzx2Danchor_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_EmptyBase strict-C empty-storage anchor begins at zero");
+_Static_assert(offsetof(struct hxc_EmptyBase, hxc_storage) == 0, "class hxc_EmptyBase strict-C empty-storage anchor begins at zero");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_EmptyBase) >= 1, "class hxc_type_compiler_haxezx2Dclass_EmptyBase strict-C empty-storage anchor occupies one byte");
+_Static_assert(sizeof(struct hxc_EmptyBase) >= 1, "class hxc_EmptyBase strict-C empty-storage anchor occupies one byte");
 
-_Static_assert(offsetof(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf, hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0) == 0, "class hxc_type_compiler_haxezx2Dclass_EmptyLeaf base subobject begins at offset zero");
+_Static_assert(offsetof(struct hxc_EmptyLeaf, hxc_base) == 0, "class hxc_EmptyLeaf base subobject begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf) >= _Alignof(struct hxc_type_compiler_haxezx2Dclass_EmptyBase), "class hxc_type_compiler_haxezx2Dclass_EmptyLeaf alignment admits its base subobject");
+_Static_assert(_Alignof(struct hxc_EmptyLeaf) >= _Alignof(struct hxc_EmptyBase), "class hxc_EmptyLeaf alignment admits its base subobject");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf) >= sizeof(struct hxc_type_compiler_haxezx2Dclass_EmptyBase), "class hxc_type_compiler_haxezx2Dclass_EmptyLeaf contains its complete base subobject");
+_Static_assert(sizeof(struct hxc_EmptyLeaf) >= sizeof(struct hxc_EmptyBase), "class hxc_EmptyLeaf contains its complete base subobject");
 
-_Static_assert(sizeof(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf) >= offsetof(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf, hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0) + sizeof(struct hxc_type_compiler_haxezx2Dclass_EmptyBase), "class hxc_type_compiler_haxezx2Dclass_EmptyLeaf size contains its final storage member");
+_Static_assert(sizeof(struct hxc_EmptyLeaf) >= offsetof(struct hxc_EmptyLeaf, hxc_base) + sizeof(struct hxc_EmptyBase), "class hxc_EmptyLeaf size contains its final storage member");
 
-struct hxc_type_compiler_haxezx2Dclass_EmptyBase *hxc_method_ClassLayoutFixture_asEmptyBase(struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf *hxc_local_ClassLayoutFixture_asEmptyBase_value_n0)
+struct hxc_EmptyBase *hxc_ClassLayoutFixture_asEmptyBase(struct hxc_EmptyLeaf *hxc_value)
 {
-  return hxc_local_ClassLayoutFixture_asEmptyBase_value_n0 == NULL ? NULL : &hxc_local_ClassLayoutFixture_asEmptyBase_value_n0->hxc_field_compiler_haxezx2Dclass_EmptyLeaf_base_n0;
+  return hxc_value == NULL ? NULL : &hxc_value->hxc_base;
 }
 
-struct hxc_type_compiler_haxezx2Dclass_MiddleRecord *hxc_method_ClassLayoutFixture_asMiddle(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_asMiddle_value_n0)
+struct hxc_MiddleRecord *hxc_ClassLayoutFixture_asMiddle(struct hxc_LeafRecord *hxc_value)
 {
-  return hxc_local_ClassLayoutFixture_asMiddle_value_n0 == NULL ? NULL : &hxc_local_ClassLayoutFixture_asMiddle_value_n0->hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0;
+  return hxc_value == NULL ? NULL : &hxc_value->hxc_base;
 }
 
-struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_method_ClassLayoutFixture_asRoot(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_asRoot_value_n0)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_value)
 {
-  return hxc_local_ClassLayoutFixture_asRoot_value_n0 == NULL ? NULL : &hxc_local_ClassLayoutFixture_asRoot_value_n0->hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0;
+  return hxc_value == NULL ? NULL : &hxc_value->hxc_base.hxc_base;
 }
 
-bool hxc_method_ClassLayoutFixture_different(struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_different_left_n0, struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_different_right_n1)
+bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right)
 {
-  return hxc_local_ClassLayoutFixture_different_left_n0 != hxc_local_ClassLayoutFixture_different_right_n1;
+  return hxc_left != hxc_right;
 }
 
-bool hxc_method_ClassLayoutFixture_isNull(struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_isNull_value_n0)
+bool hxc_ClassLayoutFixture_isNull(struct hxc_RootRecord *hxc_value)
 {
-  return hxc_local_ClassLayoutFixture_isNull_value_n0 == NULL;
+  return hxc_value == NULL;
 }
 
-void hxc_method_ClassLayoutFixture_main(void)
+void hxc_ClassLayoutFixture_main(void)
 {
-  struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_main_leaf_n0 = NULL;
-  struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n0 = hxc_local_ClassLayoutFixture_main_leaf_n0;
-  struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n1 = hxc_method_ClassLayoutFixture_asRoot(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n0);
-  struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_main_root_n1 = hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n1;
-  struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n2 = hxc_local_ClassLayoutFixture_main_leaf_n0;
-  struct hxc_type_compiler_haxezx2Dclass_MiddleRecord *hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n3 = hxc_method_ClassLayoutFixture_asMiddle(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n2);
-  struct hxc_type_compiler_haxezx2Dclass_MiddleRecord *hxc_local_ClassLayoutFixture_main_middle_n2 = hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n3;
-  struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf *hxc_local_ClassLayoutFixture_main_emptyLeaf_n3 = NULL;
-  struct hxc_type_compiler_haxezx2Dclass_EmptyLeaf *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n4 = hxc_local_ClassLayoutFixture_main_emptyLeaf_n3;
-  struct hxc_type_compiler_haxezx2Dclass_EmptyBase *hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n5 = hxc_method_ClassLayoutFixture_asEmptyBase(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n4);
-  struct hxc_type_compiler_haxezx2Dclass_EmptyBase *hxc_local_ClassLayoutFixture_main_emptyBase_n4 = hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n5;
+  struct hxc_LeafRecord *hxc_leaf = NULL;
+  struct hxc_RootRecord *hxc_tmp_call_result_n1 = hxc_ClassLayoutFixture_asRoot(hxc_leaf);
+  struct hxc_RootRecord *hxc_root = hxc_tmp_call_result_n1;
+  struct hxc_MiddleRecord *hxc_tmp_call_result_n3 = hxc_ClassLayoutFixture_asMiddle(hxc_leaf);
+  struct hxc_MiddleRecord *hxc_middle = hxc_tmp_call_result_n3;
+  struct hxc_EmptyLeaf *hxc_emptyLeaf = NULL;
+  struct hxc_EmptyBase *hxc_tmp_call_result_n5 = hxc_ClassLayoutFixture_asEmptyBase(hxc_emptyLeaf);
+  struct hxc_EmptyBase *hxc_emptyBase = hxc_tmp_call_result_n5;
   while (1)
   {
-    struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n6 = hxc_local_ClassLayoutFixture_main_root_n1;
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n6 == NULL;
-    if (hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n6 == NULL)
+    struct hxc_RootRecord *hxc_tmp_load_result_n6 = hxc_root;
+    bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_load_result_n6 == NULL;
+    if (hxc_tmp_load_result_n6 == NULL)
     {
-      struct hxc_type_compiler_haxezx2Dclass_MiddleRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n7 = hxc_local_ClassLayoutFixture_main_middle_n2;
-      hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n5 = hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n7 == NULL;
+      hxc_tmp_short_circuit_result_n5 = hxc_middle == NULL;
     }
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n5;
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n6 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8;
-    if (hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n8)
+    bool hxc_tmp_short_circuit_load_result_n8 = hxc_tmp_short_circuit_result_n5;
+    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n8;
+    if (hxc_tmp_short_circuit_load_result_n8)
     {
-      struct hxc_type_compiler_haxezx2Dclass_EmptyBase *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n9 = hxc_local_ClassLayoutFixture_main_emptyBase_n4;
-      hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n6 = hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n9 == NULL;
+      hxc_tmp_short_circuit_result_n6 = hxc_emptyBase == NULL;
     }
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n10 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n6;
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n7 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n10;
-    if (hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n10)
+    bool hxc_tmp_short_circuit_load_result_n10 = hxc_tmp_short_circuit_result_n6;
+    bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_short_circuit_load_result_n10;
+    if (hxc_tmp_short_circuit_load_result_n10)
     {
-      struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n11 = hxc_local_ClassLayoutFixture_main_root_n1;
-      bool hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n12 = hxc_method_ClassLayoutFixture_same(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n11, NULL);
-      hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n7 = hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n12;
+      bool hxc_tmp_call_result_n12 = hxc_ClassLayoutFixture_same(hxc_root, NULL);
+      hxc_tmp_short_circuit_result_n7 = hxc_tmp_call_result_n12;
     }
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n13 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n7;
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n8 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n13;
-    if (hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n13)
+    bool hxc_tmp_short_circuit_load_result_n13 = hxc_tmp_short_circuit_result_n7;
+    bool hxc_tmp_short_circuit_result_n8 = hxc_tmp_short_circuit_load_result_n13;
+    if (hxc_tmp_short_circuit_load_result_n13)
     {
-      struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n14 = hxc_local_ClassLayoutFixture_main_root_n1;
-      bool hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n15 = hxc_method_ClassLayoutFixture_different(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n14, NULL);
-      hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n8 = !hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n15;
+      bool hxc_tmp_call_result_n15 = hxc_ClassLayoutFixture_different(hxc_root, NULL);
+      hxc_tmp_short_circuit_result_n8 = !hxc_tmp_call_result_n15;
     }
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n16 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n8;
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n16;
-    if (hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n16)
+    bool hxc_tmp_short_circuit_load_result_n16 = hxc_tmp_short_circuit_result_n8;
+    bool hxc_tmp_short_circuit_result_n9 = hxc_tmp_short_circuit_load_result_n16;
+    if (hxc_tmp_short_circuit_load_result_n16)
     {
-      struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n17 = hxc_local_ClassLayoutFixture_main_root_n1;
-      bool hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n18 = hxc_method_ClassLayoutFixture_isNull(hxc_temp_ClassLayoutFixture_main_loadzx2Dresult_n17);
-      hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n9 = hxc_temp_ClassLayoutFixture_main_callzx2Dresult_n18;
+      bool hxc_tmp_call_result_n18 = hxc_ClassLayoutFixture_isNull(hxc_root);
+      hxc_tmp_short_circuit_result_n9 = hxc_tmp_call_result_n18;
     }
-    bool hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n19 = hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dresult_n9;
-    if (!!hxc_temp_ClassLayoutFixture_main_shortzx2Dcircuitzx2Dloadzx2Dresult_n19)
+    if (!!hxc_tmp_short_circuit_result_n9)
     {
       break;
     }
@@ -133,83 +124,83 @@ void hxc_method_ClassLayoutFixture_main(void)
   return;
 }
 
-int32_t hxc_method_ClassLayoutFixture_readInherited(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_readInherited_value_n0)
+int32_t hxc_ClassLayoutFixture_readInherited(struct hxc_LeafRecord *hxc_value)
 {
-  if (hxc_local_ClassLayoutFixture_readInherited_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  int32_t hxc_temp_ClassLayoutFixture_readInherited_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_readInherited_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0.hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0;
-  return hxc_temp_ClassLayoutFixture_readInherited_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
-struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_method_ClassLayoutFixture_readPeer(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_readPeer_value_n0)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_readPeer(struct hxc_LeafRecord *hxc_value)
 {
-  if (hxc_local_ClassLayoutFixture_readPeer_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_readPeer_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_readPeer_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2;
-  return hxc_temp_ClassLayoutFixture_readPeer_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  struct hxc_RootRecord *hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_peer;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
-int32_t hxc_method_ClassLayoutFixture_readRoot(struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_readRoot_value_n0)
+int32_t hxc_ClassLayoutFixture_readRoot(struct hxc_RootRecord *hxc_value)
 {
-  if (hxc_local_ClassLayoutFixture_readRoot_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  int32_t hxc_temp_ClassLayoutFixture_readRoot_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_readRoot_value_n0).hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0;
-  return hxc_temp_ClassLayoutFixture_readRoot_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_rootValue;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
-double hxc_method_ClassLayoutFixture_readScore(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_readScore_value_n0)
+double hxc_ClassLayoutFixture_readScore(struct hxc_LeafRecord *hxc_value)
 {
-  if (hxc_local_ClassLayoutFixture_readScore_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  double hxc_temp_ClassLayoutFixture_readScore_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_readScore_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_field_score_n1;
-  return hxc_temp_ClassLayoutFixture_readScore_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  double hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_score;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
-bool hxc_method_ClassLayoutFixture_same(struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_same_left_n0, struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_same_right_n1)
+bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right)
 {
-  return hxc_local_ClassLayoutFixture_same_left_n0 == hxc_local_ClassLayoutFixture_same_right_n1;
+  return hxc_left == hxc_right;
 }
 
-int32_t hxc_method_ClassLayoutFixture_writeInherited(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_writeInherited_value_n0, int32_t hxc_local_ClassLayoutFixture_writeInherited_next_n1)
+int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_value, int32_t hxc_next)
 {
-  if (hxc_local_ClassLayoutFixture_writeInherited_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  (*hxc_local_ClassLayoutFixture_writeInherited_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0.hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0 = hxc_local_ClassLayoutFixture_writeInherited_next_n1;
-  if (hxc_local_ClassLayoutFixture_writeInherited_value_n0 == NULL)
+  (*hxc_value).hxc_base.hxc_base.hxc_rootValue = hxc_next;
+  if (hxc_value == NULL)
   {
     abort();
   }
-  int32_t hxc_temp_ClassLayoutFixture_writeInherited_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_writeInherited_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_base_n0.hxc_field_compiler_haxezx2Dclass_MiddleRecord_base_n0.hxc_field_compiler_haxezx2Dclass_RootRecord_field_rootValue_n0;
-  return hxc_temp_ClassLayoutFixture_writeInherited_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
-struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_method_ClassLayoutFixture_writePeer(struct hxc_type_compiler_haxezx2Dclass_LeafRecord *hxc_local_ClassLayoutFixture_writePeer_value_n0, struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_local_ClassLayoutFixture_writePeer_peer_n1)
+struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *hxc_value, struct hxc_RootRecord *hxc_peer)
 {
-  if (hxc_local_ClassLayoutFixture_writePeer_value_n0 == NULL)
+  if (hxc_value == NULL)
   {
     abort();
   }
-  (*hxc_local_ClassLayoutFixture_writePeer_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2 = hxc_local_ClassLayoutFixture_writePeer_peer_n1;
-  if (hxc_local_ClassLayoutFixture_writePeer_value_n0 == NULL)
+  (*hxc_value).hxc_peer = hxc_peer;
+  if (hxc_value == NULL)
   {
     abort();
   }
-  struct hxc_type_compiler_haxezx2Dclass_RootRecord *hxc_temp_ClassLayoutFixture_writePeer_classzx2Dfieldzx2Dloadzx2Dresult_n0 = (*hxc_local_ClassLayoutFixture_writePeer_value_n0).hxc_field_compiler_haxezx2Dclass_LeafRecord_field_peer_n2;
-  return hxc_temp_ClassLayoutFixture_writePeer_classzx2Dfieldzx2Dloadzx2Dresult_n0;
+  struct hxc_RootRecord *hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_peer;
+  return hxc_tmp_class_field_load_result_n0;
 }
 
 int main(void)
 {
-  hxc_method_ClassLayoutFixture_main();
+  hxc_ClassLayoutFixture_main();
   return 0;
 }

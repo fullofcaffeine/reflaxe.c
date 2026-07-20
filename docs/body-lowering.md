@@ -160,13 +160,20 @@ ordered cleanup edges visible before C emission. See [bounded constructor
 lowering](constructor-lowering.md); escaping references and general object
 allocation remain fail-closed.
 
-Every local/global load first becomes a typed stable-value temporary; an unused
-read then becomes an explicit `(void)temporary` statement so source order is
-retained without native warnings. The emitted body slice selects no runtime
-feature, header, source, define, or symbol. Compiler-owned helpers remain
-private `static inline` declarations; the C math library fact is a build
-requirement, not an `hxrt` feature. Portable and metal use the same
-representation and operation semantics.
+Every local/global read first remains an explicit typed HxcIR instruction, so
+the semantic order is reviewable before C syntax is chosen. The C emitter may
+then *coalesce* a value—write the read directly at its one use—only for a
+private compiler-owned local or field when a closed proof finds no intervening
+read, write, call, failure, or lifetime change. Multiple-use, cross-block,
+global, indexed, pointer, imported, and otherwise observable reads keep a
+temporary. An unused read becomes an explicit `(void)temporary` statement so
+source order is retained without native warnings. See
+[evaluation order](evaluation-order.md) for the complete safety matrix.
+
+The emitted body slice selects no runtime feature, header, source, define, or
+symbol. Compiler-owned helpers remain private `static inline` declarations;
+the C math library fact is a build requirement, not an `hxrt` feature.
+Portable and metal use the same representation and operation semantics.
 
 ## Production boundary
 

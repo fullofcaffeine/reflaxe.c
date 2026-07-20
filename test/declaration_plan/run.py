@@ -6,6 +6,7 @@ from __future__ import annotations
 import difflib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -71,7 +72,11 @@ def difference(expected: str, actual: str, expected_name: str, actual_name: str)
 
 def check_report(report: dict[str, object]) -> None:
     expected = json.loads(EXPECTED_REPORT.read_text(encoding="utf-8"))
-    actual = {"plan": report.get("plan"), "diagnostics": report.get("diagnostics")}
+    actual = {
+        "plan": report.get("plan"),
+        "guardProof": report.get("guardProof"),
+        "diagnostics": report.get("diagnostics"),
+    }
     if actual != expected:
         raise DeclarationPlanFailure(
             "declaration plan snapshot drifted\nexpected:\n"
@@ -83,6 +88,31 @@ def check_report(report: dict[str, object]) -> None:
     serialized = json.dumps(actual, sort_keys=True).lower()
     if "hxrt" in serialized or "hxc_runtime" in serialized:
         raise DeclarationPlanFailure("declaration planning selected a hidden runtime dependency")
+
+    guard_proof = report.get("guardProof")
+    if (
+        not isinstance(guard_proof, dict)
+        or guard_proof.get("ordinaryPath")
+        != "include/hxc/modules/caxecraft/domain/BlockCoord.h"
+        or guard_proof.get("ordinaryGuard")
+        != "HXC_CAXECRAFT_DOMAIN_BLOCK_COORD_H_INCLUDED"
+    ):
+        raise DeclarationPlanFailure("ordinary readable header-guard proof drifted")
+    collisions = guard_proof.get("collisions")
+    if not isinstance(collisions, list) or len(collisions) != 2:
+        raise DeclarationPlanFailure("header-guard collision proof is incomplete")
+    collision_guards = {
+        item.get("guard") for item in collisions if isinstance(item, dict)
+    }
+    if len(collision_guards) != 2 or any(
+        not isinstance(guard, str)
+        or re.fullmatch(r"HXC_DEMO_FOO_BAR_H_H[0-9A-F]{16}_INCLUDED", guard)
+        is None
+        for guard in collision_guards
+    ):
+        raise DeclarationPlanFailure(
+            f"colliding readable guards lack distinct deterministic suffixes: {collision_guards!r}"
+        )
 
 
 def check_headers(report: dict[str, object]) -> None:

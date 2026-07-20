@@ -286,46 +286,33 @@ def check_type_dependencies(output: Path, label: str) -> None:
     common = (output / "include/hxc/detail/program_types.h").read_text(
         encoding="utf-8"
     )
-    has_point_definition = any(
-        line.startswith("struct hxc_type_compiler_closed") and line.endswith(" {")
-        for line in point.splitlines()
-    )
-    numbers_has_point_definition = any(
-        line.startswith("struct hxc_type_compiler_closed") and line.endswith(" {")
-        for line in numbers.splitlines()
-    )
-    point_tags = [
-        line.split()[1]
-        for line in point.splitlines()
-        if line.startswith("struct hxc_type_compiler_closed") and line.endswith(" {")
-    ]
-    hard_record_tags = [
-        line.split()[1]
-        for line in hard_record.splitlines()
-        if line.startswith("struct hxc_type_compiler_closed") and line.endswith(" {")
-    ]
+    point_tag = "hxc_layout_model_Point"
+    hard_record_tag = "hxc_layout_model_HardRecord"
+    left_tag = "hxc_layout_model_Left"
+    right_tag = "hxc_layout_model_Right"
+    has_point_definition = f"struct {point_tag} {{" in point
+    numbers_has_point_definition = f"struct {point_tag} {{" in numbers
     if (
         phase_include not in numbers
         or "model/Point.h" in numbers
         or phase_include not in state
-        or "case_Ready" not in phase
-        or "case_Ready" in common
+        or "hxc_layout_model_Phase_Ready" not in phase
+        or "hxc_layout_model_Phase_Ready" in common
         or not has_point_definition
         or numbers_has_point_definition
-        or len(point_tags) != 1
-        or f"struct {point_tags[0]} " not in numbers
-        or f"struct {point_tags[0]};" not in common
+        or f"struct {point_tag} " not in numbers
+        or f"struct {point_tag};" not in common
         or "model/Right.h" in left
         or "model/Left.h" in right
-        or "modelzx2ERight *" not in left
-        or "modelzx2ELeft *" not in right
-        or "modelzx2ELeft;" not in common
-        or "modelzx2ERight;" not in common
+        or f"struct {right_tag} *" not in left
+        or f"struct {left_tag} *" not in right
+        or f"struct {left_tag};" not in common
+        or f"struct {right_tag};" not in common
         or '#include "hxc/modules/layout/model/SoftRecord.h"' not in hard_record
         or "model/HardRecord.h" in soft_record
-        or len(hard_record_tags) != 1
-        or f"struct {hard_record_tags[0]} " not in soft_record
-        or f"struct {hard_record_tags[0]};" not in common
+        or f"struct {hard_record_tag} " not in soft_record
+        or f"struct {hard_record_tag};" not in common
+        or "zx" in "\n".join((numbers, state, phase, point, left, right, hard_record, soft_record, common))
     ):
         raise LayoutFailure(
             f"{label} lost hard complete-type edges or soft declaration forwards"
@@ -453,6 +440,24 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
     (fixture / "native").mkdir(parents=True)
     shutil.copy2(NATIVE / "harness.c", fixture / "native/harness.c")
     shutil.copy2(NATIVE / "entry.h", fixture / "native/entry.h")
+    trace_names = [
+        c_name
+        for source_symbol, c_name in rendered.semantic_symbols
+        if source_symbol == "layout.Main.trace"
+    ]
+    if len(trace_names) != 1:
+        raise LayoutFailure(
+            f"cannot resolve one layout.Main.trace C symbol: {trace_names!r}"
+        )
+    (fixture / "native/method_symbols.h").write_text(
+        "#ifndef HXC_LAYOUT_TEST_METHOD_SYMBOLS_H_INCLUDED\n"
+        "#define HXC_LAYOUT_TEST_METHOD_SYMBOLS_H_INCLUDED\n\n"
+        "/* Test-only alias projected from hxc.symbols.json. */\n"
+        f"#define HXC_LAYOUT_TRACE {trace_names[0]}\n\n"
+        "#endif /* HXC_LAYOUT_TEST_METHOD_SYMBOLS_H_INCLUDED */\n",
+        encoding="utf-8",
+        newline="\n",
+    )
     sources = tuple(
         f"generated/{path}"
         for path in (
@@ -528,7 +533,7 @@ def native(rendered: Rendered, oracle: str, root: Path, requested: str) -> None:
         oracle_project = CFixtureProject(
             f"project-layout-{rendered.layout}-oracle",
             (*sources, "native/harness.c"),
-            (*headers, "native/entry.h"),
+            (*headers, "native/entry.h", "native/method_symbols.h"),
             ("generated/include", "native"),
             oracle,
             (f"{rendered.layout}-layout", "eval-differential", "strict-c11"),

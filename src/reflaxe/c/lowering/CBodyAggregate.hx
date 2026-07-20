@@ -184,6 +184,7 @@ class CPreparedBodyAggregateField {
 
 private typedef CBodyAggregateTypedefOwner = {
 	final modulePath:String;
+	final displayName:String;
 	final position:Position;
 }
 
@@ -193,16 +194,18 @@ class CPreparedBodyAggregate {
 	public final digest:String;
 	public final declarationId:String;
 	public final instanceId:String;
+	public final displayName:Null<String>;
 	public final ownerModule:String;
 	public final source:HxcSourceSpan;
 	public final typeRequest:CSymbolRequest;
 	public final fields:Array<CPreparedBodyAggregateField>;
 
-	public function new(shapeKey:String, digest:String, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
+	public function new(shapeKey:String, digest:String, displayName:Null<String>, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
 		this.shapeKey = shapeKey;
 		this.digest = digest;
 		this.declarationId = 'type.closed-record.$digest';
 		this.instanceId = 'instance.closed-record.$digest';
+		this.displayName = displayName;
 		this.ownerModule = ownerModule;
 		this.source = source;
 		this.typeRequest = typeRequest;
@@ -212,7 +215,7 @@ class CPreparedBodyAggregate {
 	public function declaration():HxcIRTypeDeclaration {
 		return {
 			id: declarationId,
-			displayName: 'anonymous.record.${digest.substr(0, 16)}',
+			displayName: displayName == null ? 'anonymous.record.${digest.substr(0, 16)}' : displayName,
 			kind: IRTKAggregate(fields.map(field -> {
 				name: field.name,
 				type: field.type.irType,
@@ -324,7 +327,8 @@ class CBodyAggregateRegistry {
 					if (aggregateSource == null)
 						return rejected(fail, position, '$node:missing-source-for-aggregate-owner:$aggregateOwner');
 					final aggregatePosition = aliasOwner == null ? position : aliasOwner.position;
-					aggregate = prepareAggregate(reference, shape, aggregatePosition, aggregateOwner, aggregateSource, fail, node);
+					aggregate = prepareAggregate(reference, shape, aliasOwner == null ? null : aliasOwner.displayName, aggregatePosition, aggregateOwner,
+						aggregateSource, fail, node);
 					byShape.set(shape, aggregate);
 				}
 				CBodyValueType.aggregate(aggregate);
@@ -398,13 +402,15 @@ class CBodyAggregateRegistry {
 		return result;
 	}
 
-	function prepareAggregate(reference:Ref<AnonType>, shape:String, position:Position, ownerModule:String, sourcePath:String,
+	function prepareAggregate(reference:Ref<AnonType>, shape:String, displayName:Null<String>, position:Position, ownerModule:String, sourcePath:String,
 			fail:(Position, String) -> Void, node:String):CPreparedBodyAggregate {
 		final digest = Sha256.encode(shape);
 		final source = HaxeSourceSpan.fromPosition(position, sourcePath);
-		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "closed-record", digest], CNSTag("translation-unit"), CSVInternal);
+		final readableName = displayName == null ? ["anonymous", "record", digest.substr(0, 12)] : displayName.split(".");
+		final typeRequest = new CSymbolRequest(CSKType, ["compiler", "closed-record", digest], CNSTag("translation-unit"), CSVInternal, null, [], [], null,
+			readableName);
 		context.symbols.register(typeRequest);
-		final aggregate = new CPreparedBodyAggregate(shape, digest, ownerModule, source, typeRequest);
+		final aggregate = new CPreparedBodyAggregate(shape, digest, displayName, ownerModule, source, typeRequest);
 		final fields = reference.get().fields.copy();
 		fields.sort((left, right) -> compareUtf8(left.name, right.name));
 		for (index in 0...fields.length) {
@@ -421,7 +427,7 @@ class CBodyAggregateRegistry {
 				case FMethod(_): rejected(fail, field.pos, '$node.field:${field.name}:method');
 			};
 			final request = new CSymbolRequest(CSKField, ["compiler", "closed-record", digest, field.name], CNSMember(aggregate.declarationId), CSVInternal,
-				null, [], [], index);
+				null, [], [], index, [field.name]);
 			context.symbols.register(request);
 			aggregate.fields.push(new CPreparedBodyAggregateField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
 		}
@@ -519,6 +525,7 @@ class CBodyAggregateRegistry {
 				final definition = reference.get();
 				anonymousTypedefOwner(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), {
 					modulePath: definition.module,
+					displayName: definition.pack.concat([definition.name]).join("."),
 					position: definition.pos
 				});
 			case TAnonymous(_): candidate;
