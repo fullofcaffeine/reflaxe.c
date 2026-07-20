@@ -380,6 +380,45 @@ The overall required workflow still finished in about 13m26s, below the initial
 20-minute objective. More cold hosted samples are required before treating
 normal runner variation as a regression or setting a percentile budget.
 
+### Caxecraft compilation-server experiment
+
+The Caxecraft runner now has one owned way to start the exact pinned native
+Haxe server on an ephemeral loopback address. HaxeShim resolves HXML and scoped
+libraries first; the native Haxe 5 client and server then communicate without
+HaxeShim's multi-version proxy argument. Focused tests prove that interruption
+still terminates the process, a stalled termination is killed, and neither a
+global Haxe 4 executable nor a non-loopback listener is used.
+
+The server was not promoted into the normal edit gate because measurement did
+not show a benefit. One local sequential sample began at load 9.66 on 12 logical
+CPUs and became more contended while other repository compilers were active:
+
+| Render | Cold process | One shared server |
+| --- | ---: | ---: |
+| split | 47.265s | 57.004s |
+| package | 50.615s | 65.183s |
+| unity | 49.147s | 64.226s |
+| three-layout total | 147.026s | 186.413s |
+
+Every normal artifact and HxcIR dump matched byte-for-byte. The shared-server
+side was 26.8% slower in this **contended single sample**, which is diagnostic
+evidence rather than a percentile or stable regression number. A second probe
+kept the split layout and output directory identical for three consecutive
+requests. At starting load 18.32, they took 52.759s, 52.933s, and 56.853s. That
+flat result agrees with the hosted full-lane sample above, where four cold and
+four warm requests took 269.783s and 266.312s respectively.
+
+The result has a useful architectural meaning. Haxe's server can retain parsed
+and typed modules, but it does not skip Reflaxe.C's per-request whole-program
+lowering, validation, project planning, or output transaction. Different
+`hxc_project_layout` defines also create distinct compiler cache contexts. The
+current end-to-end cost is therefore not fixed by keeping the Haxe executable
+alive. The normal Caxecraft gate stays cold, while the exhaustive lane retains
+warm requests to prove deterministic output and absence of state leakage. The
+next optimization must add phase timing around typing and target compilation,
+then reduce demonstrated repeated target work without caching mutable
+`CompilationContext` state or weakening stale-file ownership checks.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

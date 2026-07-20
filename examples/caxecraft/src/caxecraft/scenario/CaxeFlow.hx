@@ -76,7 +76,6 @@ enum FlowPredicate {
 enum FlowArgument {
 	Value(value:FlowValue);
 	Variable(variable:ScenarioId);
-	Object(objectId:ScenarioId);
 }
 
 typedef FlowChoice = {

@@ -23,6 +23,66 @@ compiler-only MIT dependency. Its presence does not select, emit, or link any
 `hxrt` runtime feature; generated-program runtime planning remains strictly
 feature-driven.
 
+## Why this compiler uses Haxe 5 while sibling compilers use Haxe 4
+
+The nearby Reflaxe compilers are intentionally not on one universal Haxe
+version. On 2026-07-20, their checked-in `.haxerc` files had these exact pins:
+
+| Repository | Haxe pin | Library resolution |
+| --- | --- | --- |
+| `haxe.elixir.codex` | `4.3.7` | scoped |
+| `haxe.ruby` | `4.3.7` | scoped |
+| `haxe.rust` | `4.3.7` | scoped |
+| `haxe.go` | `4.3.7` | scoped |
+| `haxe.ocaml` | `4.3.7` | scoped |
+| this `haxe.c` repository | `5.0.0-preview.1` | scoped |
+
+This table records inspected sibling checkouts; it is not a promise about their
+future releases. It also does not mean Haxe 5 is automatically better for every
+Reflaxe compiler. Those projects have working Haxe 4 contracts and target-
+specific migration costs. Reflaxe.C has a narrower reason to differ: it needs
+Haxe to recognize a real C target and install C's platform facts *before* Haxe
+types the standard library and the program.
+
+The important Haxe 5 improvement for this compiler is `--custom-target` plus
+the early `PlatformConfig` hook. In plain terms, `c.Init.init()` can tell Haxe
+“this is the C target, strings use Unicode-scalar indexing, and only these
+environment capabilities exist” before a `#if`, a standard-library choice, or
+a typed expression is decided. Official Haxe 4.3.7 instead gives a Reflaxe
+backend the built-in `Cross` platform. `Cross` has the wrong `cross` identity
+and preselects UTF-16 and hosted capabilities that a macro cannot fully remove.
+Relabeling it after the fact would type one program and then pretend to emit a
+different one. [ADR 0007](adr/0007-strict-c11-target-and-platform-baseline.md)
+and the [Haxe 4.3.7 carrier audit](research/haxe-4.3.7-carrier-audit.md) contain
+the source-level and executable evidence.
+
+The pin changes more than target startup. Contributors should keep these
+differences in mind:
+
+- Run this checkout's `node_modules/.bin/haxe`, not an unqualified global
+  `haxe`; the latter may be 4.3.7 for work on a sibling repository.
+- Start production C builds with `--custom-target c=<output>`. Haxe 4-style
+  `Cross`, a manual `-D c`, or `c_output` alone is not an equivalent carrier.
+- Treat Haxe's typed AST (the compiler's already-resolved, typed program tree)
+  as versioned input. For example, this compiler exhaustively handles Haxe 5's
+  `AccPrivateCall`, which does not exist in 4.3.7. Do not copy a sibling
+  compiler's pattern match without auditing the pinned Haxe 5 definitions.
+- Treat the standard library as versioned semantic input too. Its declarations,
+  conditionals, and implementation shapes differ between 4.3.7 and this
+  preview, so source hashes, ledgers, snapshots, and differential oracles must
+  match this repository's pin.
+- `#if c` is reliable here because Haxe 5 establishes `c` during real target
+  initialization. Keep such branches at genuine representation, ABI, or
+  platform boundaries; they are not permission to duplicate portable logic.
+- A Haxe compilation server and every client connected to it must use this
+  exact Haxe 5 binary. Never reuse a sibling repository's Haxe 4 server. Server
+  caching saves startup and repeated typing work; it does not make compiler
+  versions or define sets interchangeable.
+- Preview APIs can change. Upgrade only through the atomic pin, API, stdlib,
+  snapshot, server-isolation, and native validation process below. A future
+  stable Haxe release with the same proven custom-target contract is preferable
+  to floating across previews.
+
 ## Install and verify
 
 From a fresh checkout:

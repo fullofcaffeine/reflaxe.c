@@ -2,15 +2,17 @@ package caxecraft.scenario;
 
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexToken;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioLexTokenKind;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
 import haxe.io.Bytes;
 
 /** Bounded UTF-8 decoder and tokenizer for the line-oriented CAXEMAP grammar. */
 final class ScenarioLexer {
 	public static function read(input:Bytes):ScenarioReadResult<Array<ScenarioLexRecord>> {
 		if (input.length > ScenarioLimits.MAX_FILE_BYTES)
-			return fail(1, 1, 0, LimitExceeded("file-bytes", ScenarioLimits.MAX_FILE_BYTES));
+			return fail(1, 1, 0, LimitExceeded(FileBytes, ScenarioLimits.MAX_FILE_BYTES));
 		final decoded = decodeUtf8(input);
 		return switch decoded {
 			case ReadError(diagnostics): ReadError(diagnostics);
@@ -78,7 +80,7 @@ final class ScenarioLexer {
 					case ReadOk(value):
 						record++;
 						if (record > ScenarioLimits.MAX_RECORDS)
-							return fail(line, 1, record, LimitExceeded("records", ScenarioLimits.MAX_RECORDS));
+							return fail(line, 1, record, LimitExceeded(LogicalRecords, ScenarioLimits.MAX_RECORDS));
 						records.push(value);
 				}
 				line++;
@@ -106,7 +108,7 @@ final class ScenarioLexer {
 				return fail(line, index + 1, record, InvalidToken);
 			final column = index + 1;
 			if (lineText.charCodeAt(index) == 40 || lineText.charCodeAt(index) == 41) {
-				tokens.push({text: lineText.charAt(index), quoted: false, coordinate: {line: line, column: column, record: record}});
+				tokens.push({text: lineText.charAt(index), kind: BareToken, coordinate: {line: line, column: column, record: record}});
 				index++;
 				continue;
 			} else if (lineText.charCodeAt(index) == 34) {
@@ -115,7 +117,7 @@ final class ScenarioLexer {
 					case ReadError(diagnostics):
 						return ReadError(diagnostics);
 					case ReadOk(value):
-						tokens.push({text: value.text, quoted: true, coordinate: {line: line, column: column, record: record}});
+						tokens.push({text: value.text, kind: QuotedText, coordinate: {line: line, column: column, record: record}});
 						index = value.next;
 				}
 			} else {
@@ -126,7 +128,7 @@ final class ScenarioLexer {
 						return fail(line, index + 1, record, InvalidToken);
 					index++;
 				}
-				tokens.push({text: lineText.substring(begin, index), quoted: false, coordinate: {line: line, column: column, record: record}});
+				tokens.push({text: lineText.substring(begin, index), kind: BareToken, coordinate: {line: line, column: column, record: record}});
 			}
 			if (index < lineText.length && lineText.charCodeAt(index) != 32 && lineText.charCodeAt(index) != 40 && lineText.charCodeAt(index) != 41)
 				return fail(line, index + 1, record, InvalidToken);
@@ -180,7 +182,7 @@ final class ScenarioLexer {
 			}
 			scalars++;
 			if (scalars > ScenarioLimits.MAX_TEXT_SCALARS)
-				return fail(line, start + 1, record, LimitExceeded("text-scalars", ScenarioLimits.MAX_TEXT_SCALARS));
+				return fail(line, start + 1, record, LimitExceeded(TextScalars, ScenarioLimits.MAX_TEXT_SCALARS));
 			index++;
 		}
 		return fail(line, start + 1, record, InvalidToken);

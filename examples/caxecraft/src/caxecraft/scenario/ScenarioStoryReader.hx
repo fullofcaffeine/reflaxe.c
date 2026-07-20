@@ -3,6 +3,7 @@ package caxecraft.scenario;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
@@ -10,7 +11,8 @@ import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioStory.ScenarioRoute;
 
 /** Reads player-facing dialogue, journal, objective, and route records. */
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of constructing this class.
 @:noCompletion
 final class ScenarioStoryReader {
 	final cursor:ScenarioRecordCursor;
@@ -33,8 +35,9 @@ final class ScenarioStoryReader {
 			final record = cursor.current();
 			if (record.indent != 2 || record.tokens.length < 4 || ScenarioTokenGrammar.firstText(record) != "line")
 				return cursor.failAt(record, UnexpectedRecord(ScenarioTokenGrammar.firstText(record)));
-			final speaker = record.tokens[1].text == "narrator" ? null : ScenarioTokenGrammar.scenarioId(record.tokens[1]);
-			if (record.tokens[1].text != "narrator" && speaker == null)
+			final narrator = ScenarioTokenGrammar.isBare(record.tokens[1], "narrator");
+			final speaker = narrator ? null : ScenarioTokenGrammar.scenarioId(record.tokens[1]);
+			if (!narrator && speaker == null)
 				return cursor.failToken(record.tokens[1], InvalidToken);
 			final parsed = ScenarioTokenGrammar.text(record, 2);
 			if (parsed == null || parsed.next != record.tokens.length)
@@ -43,14 +46,14 @@ final class ScenarioStoryReader {
 			cursor.advance();
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end dialogue"));
+			return cursor.failAt(header, MissingRecord(EndDialogueRecord));
 		cursor.advance();
 		return ReadOk({id: id, lines: lines});
 	}
 
 	public function readJournal():ScenarioReadResult<ScenarioJournalEntry> {
 		final header = cursor.current();
-		if (header.tokens.length < 5 || header.tokens[2].text != "title")
+		if (header.tokens.length < 5 || !ScenarioTokenGrammar.isBare(header.tokens[2], "title"))
 			return cursor.failAt(header, InvalidToken);
 		final id = ScenarioTokenGrammar.scenarioId(header.tokens[1]);
 		final title = ScenarioTokenGrammar.text(header, 3);
@@ -60,14 +63,14 @@ final class ScenarioStoryReader {
 		cursor.advance();
 
 		if (!cursor.hasRecord() || cursor.current().indent != 2 || ScenarioTokenGrammar.firstText(cursor.current()) != "body")
-			return cursor.failAt(header, MissingRecord("journal body"));
+			return cursor.failAt(header, MissingRecord(JournalBodyRecord));
 		final bodyRecord = cursor.current();
 		final body = ScenarioTokenGrammar.text(bodyRecord, 1);
 		if (body == null || body.next != bodyRecord.tokens.length)
 			return cursor.failAt(bodyRecord, InvalidToken);
 		cursor.advance();
 		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "journal"))
-			return cursor.failAt(header, MissingRecord("end journal"));
+			return cursor.failAt(header, MissingRecord(EndJournalRecord));
 		cursor.advance();
 		return ReadOk({id: id, title: title.value, body: body.value});
 	}
@@ -78,7 +81,7 @@ final class ScenarioStoryReader {
 			return cursor.failAt(header, InvalidToken);
 		final id = ScenarioTokenGrammar.scenarioId(header.tokens[1]);
 		final state = ScenarioTokenGrammar.objectiveState(header.tokens[2]);
-		if (id == null || state == null || header.tokens[3].text != "title")
+		if (id == null || state == null || !ScenarioTokenGrammar.isBare(header.tokens[3], "title"))
 			return cursor.failAt(header, InvalidToken);
 		cursor.locate(Objective(id), header);
 		final title = ScenarioTokenGrammar.text(header, 4);
@@ -87,14 +90,14 @@ final class ScenarioStoryReader {
 		cursor.advance();
 
 		if (!cursor.hasRecord() || cursor.current().indent != 2 || ScenarioTokenGrammar.firstText(cursor.current()) != "body")
-			return cursor.failAt(header, MissingRecord("objective body"));
+			return cursor.failAt(header, MissingRecord(ObjectiveBodyRecord));
 		final bodyRecord = cursor.current();
 		final body = ScenarioTokenGrammar.text(bodyRecord, 1);
 		if (body == null || body.next != bodyRecord.tokens.length)
 			return cursor.failAt(bodyRecord, InvalidToken);
 		cursor.advance();
 		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "objective"))
-			return cursor.failAt(header, MissingRecord("end objective"));
+			return cursor.failAt(header, MissingRecord(EndObjectiveRecord));
 		cursor.advance();
 		return ReadOk({
 			id: id,
@@ -106,7 +109,7 @@ final class ScenarioStoryReader {
 
 	public function readRoute():ScenarioReadResult<ScenarioRoute> {
 		final header = cursor.current();
-		if (header.tokens.length < 5 || header.tokens[2].text != "title")
+		if (header.tokens.length < 5 || !ScenarioTokenGrammar.isBare(header.tokens[2], "title"))
 			return cursor.failAt(header, InvalidToken);
 		final id = ScenarioTokenGrammar.scenarioId(header.tokens[1]);
 		final title = ScenarioTokenGrammar.text(header, 3);
@@ -129,7 +132,7 @@ final class ScenarioStoryReader {
 			cursor.advance();
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end route"));
+			return cursor.failAt(header, MissingRecord(EndRouteRecord));
 		cursor.advance();
 		return ReadOk({id: id, title: title.value, objectives: objectives});
 	}

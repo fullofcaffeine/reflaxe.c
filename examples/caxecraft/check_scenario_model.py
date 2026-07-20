@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 MODEL = CASE / "src/caxecraft/scenario"
 FIXTURE = CASE / "scenarios/minimal.caxemap"
-EXPECTED_TRACE = "scenario-model: 454598688\n"
+EXPECTED_TRACE = "scenario-model: -437492624\n"
 FORBIDDEN_MODEL_TEXT = (
     re.compile(r"#if\b"),
     re.compile(r"\bDynamic\b"),
@@ -72,7 +72,7 @@ def check_codec() -> None:
         raise ScenarioModelFailure(
             "CAXEMAP codec probe failed:\n" + result.stdout + result.stderr
         )
-    expected = "scenario-codec: 1196 + 4025 bytes, staged round-trip and 6 fail-closed families\n"
+    expected = "scenario-codec: 1196 + 4025 bytes, staged round-trip and exact malformed-input audit\n"
     if result.stdout != expected or result.stderr:
         raise ScenarioModelFailure(
             "CAXEMAP codec trace changed:\n"

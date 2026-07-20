@@ -270,8 +270,12 @@ final class ScenarioWriter {
 				lines.push(prefix + 'choose ${seed.text()} ${choices.length}');
 				for (choice in choices) {
 					lines.push('  choice weight ${choice.weight}');
-					for (entry in choice.actions)
-						appendAction(lines, "    do ", entry);
+					for (entry in choice.actions) {
+						switch entry {
+							case ChooseSeeded(_, _): throw "CAXEMAP 1 does not allow a choose action inside another choose action";
+							case _: lines.push("    do " + action(entry));
+						}
+					}
 					lines.push("  end choice");
 				}
 			case _:
@@ -309,7 +313,6 @@ final class ScenarioWriter {
 		return switch value {
 			case Value(value): 'value ${flowValue(value)}';
 			case Variable(id): 'variable ${id.text()}';
-			case Object(id): 'object ${id.text()}';
 		}
 	}
 

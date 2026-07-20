@@ -169,6 +169,27 @@ CI and the full repository toolchain gate use that exhaustive command. The
 short command is deliberately useful while developing the game or compiler; it
 is not a weaker replacement for release evidence.
 
+The warm-server part of the exhaustive command is currently a correctness and
+request-isolation proof, not a speed claim. Its runner starts the exact Haxe
+`5.0.0-preview.1` binary from this checkout's Lix installation, binds it only
+to `127.0.0.1` on an ephemeral port, and always stops it. HaxeShim still expands
+the scoped HXML/library arguments, so connecting directly to the native server
+does not bypass the pin or dependency rules. A global Haxe 4.3.7 process cannot
+be selected accidentally.
+
+A compiler server can reuse parsed and typed Haxe modules when the source,
+classpaths, and compile-time defines permit it. It still checks changed files,
+and Reflaxe.C still performs its whole-program HxcIR lowering, validation,
+project planning, and file emission for every request. Split, package, and
+unity builds also have different layout defines, so they do not form one shared
+cache context. Local and hosted measurements found no meaningful end-to-end
+speedup for the current Caxecraft builds, including repeated same-layout output.
+The normal edit gate therefore remains cold rather than adding a server that is
+sometimes slower under load. See [test performance](../../docs/test-performance.md)
+for the measurements. A future `hxc dev`/`hxc watch` path should enable server
+reuse only after phase timing shows that typing reuse reduces real wall time;
+it must preserve cold/server byte parity and fresh request-local compiler state.
+
 The playable app has registered generated-C snapshots too. They cover its
 manifest, empty runtime plan, generated program header, palette,
 allocation-free counter HUD, and Raylib application module. The check also
@@ -262,11 +283,13 @@ npm run snapshots:update -- --suite caxecraft-domain
 ```
 
 The eventual developer workflow is one project-level `hxc dev`/`hxc watch`
-command that owns compiler-server reuse, canonical watched inputs, debounce,
-last-known-good output, optional process restart, and structured events. That
-surface is intentionally being implemented with the target-neutral `hxc` CLI
-foundations rather than as a Caxecraft-only watcher. Until then, the direct HXML
-command above and the one-command proof remain the supported recovery paths.
+command that owns measured compiler-server reuse, canonical watched inputs,
+debounce, last-known-good output, optional process restart, and structured
+events. “Measured” matters: the server experiment above shows that keeping a
+process alive is not enough when target lowering dominates. That surface is
+intentionally being implemented with the target-neutral `hxc` CLI foundations
+rather than as a Caxecraft-only watcher. Until then, the direct HXML command
+above and the one-command proof remain the supported recovery paths.
 
 See [the domain design](../../docs/caxecraft-domain.md) for storage, target
 conditionals, the long-term adapter plan, DDA, collision, determinism, and QA

@@ -11,8 +11,14 @@ enum ScenarioReadResult<T> {
 /** One token after byte decoding, comment removal, and escape processing. */
 typedef ScenarioLexToken = {
 	final text:String;
-	final quoted:Bool;
+	final kind:ScenarioLexTokenKind;
 	final coordinate:ScenarioCoordinate;
+}
+
+/** Whether a token came from ordinary grammar text or a quoted text value. */
+enum ScenarioLexTokenKind {
+	BareToken;
+	QuotedText;
 }
 
 /** One non-comment logical record. `indent` counts leading ASCII spaces. */
@@ -34,13 +40,19 @@ enum ScenarioSourceSubject {
 	Palette(code:Int);
 	Chunk(id:ScenarioId);
 	Object(id:ScenarioId);
+	ObjectTag(objectId:ScenarioId, tag:ScenarioTag);
 	Dialogue(id:ScenarioId);
 	Journal(id:ScenarioId);
 	Objective(id:ScenarioId);
 	Route(id:ScenarioId);
 	Variable(id:ScenarioId);
 	Sequence(id:ScenarioId);
+	SequenceParameter(sequenceId:ScenarioId, parameterId:ScenarioId);
+	SequenceAction(sequenceId:ScenarioId, actionIndex:Int);
 	Rule(id:ScenarioId);
+	RuleEvent(ruleId:ScenarioId);
+	RulePredicate(ruleId:ScenarioId);
+	RuleAction(ruleId:ScenarioId, actionIndex:Int);
 	Extension(feature:ContentId, id:ScenarioId);
 }
 

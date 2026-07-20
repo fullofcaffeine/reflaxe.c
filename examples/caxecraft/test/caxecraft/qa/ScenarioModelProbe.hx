@@ -20,9 +20,13 @@ import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.Scenario.ScenarioMode;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioLexTokenKind;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.PersistenceStage;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
@@ -104,7 +108,34 @@ final class ScenarioModelProbe {
 			NearObject(objectId, otherId, 1000),
 			ModeIs(ScenarioMode.Creative)
 		];
-		final arguments:Array<FlowArgument> = [Value(FlowValue.Flag(true)), Variable(objectId), Object(otherId)];
+		final arguments:Array<FlowArgument> = [Value(FlowValue.Flag(true)), Variable(objectId)];
+		final tokenKinds:Array<ScenarioLexTokenKind> = [BareToken, QuotedText];
+		final sourceSubjects:Array<ScenarioSourceSubject> = [
+			Header,
+			Feature(content),
+			MapIdentity(objectId),
+			AssetPack,
+			Title,
+			Mode,
+			World,
+			Palette(0),
+			Chunk(objectId),
+			Object(objectId),
+			ObjectTag(objectId, new ScenarioTag("sample")),
+			Dialogue(objectId),
+			Journal(objectId),
+			Objective(objectId),
+			Route(objectId),
+			Variable(objectId),
+			Sequence(otherId),
+			SequenceParameter(otherId, objectId),
+			SequenceAction(otherId, 0),
+			Rule(objectId),
+			RuleEvent(objectId),
+			RulePredicate(objectId),
+			RuleAction(objectId, 0),
+			Extension(content, objectId)
+		];
 		final repeatPolicies:Array<FlowRepeatPolicy> = [Once, Repeat, Cooldown(1)];
 		final choice:FlowChoice = {weight: 1, actions: [EmitSignal(content)]};
 		final actions:Array<FlowAction> = [
@@ -206,19 +237,71 @@ final class ScenarioModelProbe {
 			InvalidToken,
 			InvalidEscape,
 			UnexpectedRecord("sample"),
-			MissingRecord("sample"),
+			MissingRecord(FormatHeader),
 			IntegerOutOfRange,
-			LimitExceeded("sample", 1),
+			LimitExceeded(FileBytes, 1),
 			InvalidRunTotal(objectId, 1, 2),
+			DuplicateContentId(content),
+			DuplicatePaletteCode(1),
 			DuplicateId(objectId),
-			DuplicateTag(new ScenarioTag("sample")),
+			DuplicateTag(objectId, new ScenarioTag("sample")),
 			UnresolvedReference(objectId),
+			UnresolvedContent(content),
 			ImpossiblePlacement(objectId),
 			InvalidRule(objectId),
 			RuleCycle(objectId),
 			InvalidExtension(objectId),
 			EventBudgetExhausted(1),
 			PersistenceFailed(PersistenceStage.ReplaceDestination)
+		];
+		final expectedRecords:Array<ScenarioExpectedRecord> = [
+			FormatHeader,
+			EndMapRecord,
+			MapRecord,
+			AssetPackRecord,
+			TitleRecord,
+			ModeRecord,
+			WorldRecord,
+			EndChunkRecord,
+			EndObjectRecord,
+			ObjectPlacementRecord,
+			EndDialogueRecord,
+			JournalBodyRecord,
+			EndJournalRecord,
+			ObjectiveBodyRecord,
+			EndObjectiveRecord,
+			EndRouteRecord,
+			EndSequenceRecord,
+			EndRuleRecord,
+			ChoiceRecord,
+			EndChoiceRecord,
+			ExtensionDataRecord,
+			EndExtensionRecord,
+			CoreFeatureRecord,
+			AirPaletteRecord,
+			CompleteChunkCoverage,
+			SinglePlayerSpawn
+		];
+		final limitKinds:Array<ScenarioLimitKind> = [
+			FileBytes,
+			LogicalRecords,
+			TextScalars,
+			WorldWidth,
+			WorldHeight,
+			WorldDepth,
+			WorldCells,
+			PaletteEntries,
+			Objects,
+			ObjectTags,
+			Dialogues,
+			DialogueLines,
+			Objectives,
+			Routes,
+			Sequences,
+			Variables,
+			Rules,
+			RuleActions,
+			SequenceCallDepth
 		];
 		final persistenceStages:Array<PersistenceStage> = [
 			CreateTemporary,
@@ -252,6 +335,12 @@ final class ScenarioModelProbe {
 			hash = mix(hash, predicateCode(predicate));
 		for (action in actions)
 			hash = mix(hash, actionCode(action));
+		for (argument in arguments)
+			hash = mix(hash, argumentCode(argument));
+		for (kind in tokenKinds)
+			hash = mix(hash, tokenKindCode(kind));
+		for (subject in sourceSubjects)
+			hash = mix(hash, sourceSubjectCode(subject));
 		for (repeat in repeatPolicies)
 			hash = mix(hash, repeatCode(repeat));
 		for (state in objectiveStates)
@@ -262,6 +351,10 @@ final class ScenarioModelProbe {
 			hash = mix(hash, textCode(text));
 		for (diagnostic in diagnostics)
 			hash = mix(hash, diagnosticCode(diagnostic));
+		for (expected in expectedRecords)
+			hash = mix(hash, expectedRecordCode(expected));
+		for (limit in limitKinds)
+			hash = mix(hash, limitKindCode(limit));
 		for (stage in persistenceStages)
 			hash = mix(hash, persistenceCode(stage));
 		return hash;
@@ -372,6 +465,46 @@ final class ScenarioModelProbe {
 			case ChooseSeeded(_, _): 18;
 		};
 
+	static function argumentCode(value:FlowArgument):Int
+		return switch value {
+			case Value(_): 1;
+			case Variable(_): 2;
+		};
+
+	static function tokenKindCode(value:ScenarioLexTokenKind):Int
+		return switch value {
+			case BareToken: 1;
+			case QuotedText: 2;
+		};
+
+	static function sourceSubjectCode(value:ScenarioSourceSubject):Int
+		return switch value {
+			case Header: 1;
+			case Feature(_): 2;
+			case MapIdentity(_): 3;
+			case AssetPack: 4;
+			case Title: 5;
+			case Mode: 6;
+			case World: 7;
+			case Palette(_): 8;
+			case Chunk(_): 9;
+			case Object(_): 10;
+			case ObjectTag(_, _): 11;
+			case Dialogue(_): 12;
+			case Journal(_): 13;
+			case Objective(_): 14;
+			case Route(_): 15;
+			case Variable(_): 16;
+			case Sequence(_): 17;
+			case SequenceParameter(_, _): 18;
+			case SequenceAction(_, _): 19;
+			case Rule(_): 20;
+			case RuleEvent(_): 21;
+			case RulePredicate(_): 22;
+			case RuleAction(_, _): 23;
+			case Extension(_, _): 24;
+		};
+
 	static function repeatCode(value:FlowRepeatPolicy):Int
 		return switch (value) {
 			case Once: 1;
@@ -411,15 +544,71 @@ final class ScenarioModelProbe {
 			case IntegerOutOfRange: 8;
 			case LimitExceeded(_, _): 9;
 			case InvalidRunTotal(_, _, _): 10;
-			case DuplicateId(_): 11;
-			case DuplicateTag(_): 12;
-			case UnresolvedReference(_): 13;
-			case ImpossiblePlacement(_): 14;
-			case InvalidRule(_): 15;
-			case RuleCycle(_): 16;
-			case InvalidExtension(_): 17;
-			case EventBudgetExhausted(_): 18;
-			case PersistenceFailed(_): 19;
+			case DuplicateContentId(_): 11;
+			case DuplicatePaletteCode(_): 12;
+			case DuplicateId(_): 13;
+			case DuplicateTag(_, _): 14;
+			case UnresolvedReference(_): 15;
+			case UnresolvedContent(_): 16;
+			case ImpossiblePlacement(_): 17;
+			case InvalidRule(_): 18;
+			case RuleCycle(_): 19;
+			case InvalidExtension(_): 20;
+			case EventBudgetExhausted(_): 21;
+			case PersistenceFailed(_): 22;
+		};
+
+	static function expectedRecordCode(value:ScenarioExpectedRecord):Int
+		return switch value {
+			case FormatHeader: 1;
+			case EndMapRecord: 2;
+			case MapRecord: 3;
+			case AssetPackRecord: 4;
+			case TitleRecord: 5;
+			case ModeRecord: 6;
+			case WorldRecord: 7;
+			case EndChunkRecord: 8;
+			case EndObjectRecord: 9;
+			case ObjectPlacementRecord: 10;
+			case EndDialogueRecord: 11;
+			case JournalBodyRecord: 12;
+			case EndJournalRecord: 13;
+			case ObjectiveBodyRecord: 14;
+			case EndObjectiveRecord: 15;
+			case EndRouteRecord: 16;
+			case EndSequenceRecord: 17;
+			case EndRuleRecord: 18;
+			case ChoiceRecord: 19;
+			case EndChoiceRecord: 20;
+			case ExtensionDataRecord: 21;
+			case EndExtensionRecord: 22;
+			case CoreFeatureRecord: 23;
+			case AirPaletteRecord: 24;
+			case CompleteChunkCoverage: 25;
+			case SinglePlayerSpawn: 26;
+		};
+
+	static function limitKindCode(value:ScenarioLimitKind):Int
+		return switch value {
+			case FileBytes: 1;
+			case LogicalRecords: 2;
+			case TextScalars: 3;
+			case WorldWidth: 4;
+			case WorldHeight: 5;
+			case WorldDepth: 6;
+			case WorldCells: 7;
+			case PaletteEntries: 8;
+			case Objects: 9;
+			case ObjectTags: 10;
+			case Dialogues: 11;
+			case DialogueLines: 12;
+			case Objectives: 13;
+			case Routes: 14;
+			case Sequences: 15;
+			case Variables: 16;
+			case Rules: 17;
+			case RuleActions: 18;
+			case SequenceCallDepth: 19;
 		};
 
 	static function persistenceCode(value:PersistenceStage):Int

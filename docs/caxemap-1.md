@@ -292,8 +292,13 @@ choose <seed-variable-id> <choice-count>
 ```
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
-<content-id>`, `variable <variable-id>`, or `object <object-id>`. A `choose`
-action is followed by exactly its declared number of choice blocks:
+<content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object
+argument because its sequence parameters have only the three value kinds above.
+Adding object parameters later requires real substitution and execution
+semantics; accepting an object spelling before then would create a value that
+can never match a parameter.
+
+A `choose` action is followed by exactly its declared number of choice blocks:
 
 ```text
 choice weight <positive-integer>
@@ -302,7 +307,11 @@ end choice
 ```
 
 The choice uses the named counter variable as an explicit deterministic seed.
-There is no wall-clock or implicit randomness.
+There is no wall-clock or implicit randomness. A choice may contain ordinary
+actions but not another `choose`. The outer `choose` and every action in all of
+its alternatives count toward the containing rule's 64-action limit. This
+keeps validation and the visual editor simple while still supporting branching
+scenarios for the first version.
 
 ## Reusable sequences
 
@@ -367,7 +376,9 @@ The implementation keeps those stages visible in the source tree:
 
 - `ScenarioLexer` checks bytes and turns each meaningful line into bounded
   tokens.
-- `ScenarioParser` is the small public syntax entry point.
+- Game and editor code passes the records from `ScenarioLexer.read(...)` to
+  `ScenarioParser.parse(...)`. That method checks the document's syntax and
+  coordinates the internal reader classes listed below.
 - `ScenarioDocumentReader` owns the header, top-level fields, and final model
   assembly. It delegates chunks and objects to `ScenarioWorldReader`, story
   records to `ScenarioStoryReader`, and rules to `CaxeFlowReader`.
@@ -398,11 +409,18 @@ missing chunks, duplicate IDs/tags, unresolved references, type-mismatched
 variables/arguments, impossible placements, invalid rule graphs, and unknown
 required features.
 
-Persistence writes canonical bytes to a validated sibling temporary, flushes
-as required by the platform adapter, and then replaces the destination
-atomically where the admitted platform guarantees that operation. A failed
-create, write, flush, replace, or cleanup has a distinct typed stage. The last
-known-good destination remains live and no partial candidate is accepted.
+The planned map-file persistence layer (`haxe_c-xge.19.4`) will write these
+canonical bytes to a validated sibling temporary, flush as required by the
+platform adapter, and then replace the destination atomically where the
+admitted platform guarantees that operation. A failed create, write, flush,
+replace, or cleanup has a distinct typed stage. The last known-good destination
+remains live and no partial candidate is accepted.
+
+That operation saves an authored map; it is not a player save. A `.caxemap`
+describes the world and scenario as designed. The separate save-game work in
+`haxe_c-4my` will record changes made while playing—such as modified blocks,
+player inventory and position, objectives, object state, and scheduled rule
+work—without rewriting the source map.
 
 ## Canonical example
 

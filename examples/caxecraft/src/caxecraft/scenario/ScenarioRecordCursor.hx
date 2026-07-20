@@ -16,7 +16,8 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 	reads visible and prevents the document, world, story, and CaxeFlow readers
 	from inventing subtly different source-coordinate behavior.
 **/
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of constructing this class.
 @:noCompletion
 final class ScenarioRecordCursor {
 	final records:Array<ScenarioLexRecord>;

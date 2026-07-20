@@ -15,7 +15,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -189,6 +189,25 @@ class RenderedProject:
     maintainability_report: dict[str, object]
 
 
+@dataclass(frozen=True)
+class HaxeInstallation:
+    """One exact compiler installation selected by this checkout's `.haxerc`."""
+
+    version: str
+    compiler: Path
+    standard_library: Path
+    haxelib_repository: Path
+    neko_library: Path | None
+
+
+@dataclass(frozen=True)
+class HaxeServerConnection:
+    """The owned server endpoint and the exact compiler that speaks to it."""
+
+    endpoint: str
+    installation: HaxeInstallation
+
+
 class TimingRecorder:
     """Record where the exhaustive example spends time without host paths.
 
@@ -276,40 +295,235 @@ def haxe_environment(locale: str, *, server: bool) -> dict[str, str]:
     return environment
 
 
+def pinned_haxe_installation(
+    *,
+    scope_root: Path = ROOT,
+    environment: Mapping[str, str] | None = None,
+) -> HaxeInstallation:
+    """Resolve the exact Lix/HaxeShim installation without using global Haxe.
+
+    HaxeShim normally performs this lookup before it launches the compiler. A
+    direct native client is needed here because HaxeShim's multi-version server
+    proxy adds a private routing argument that the native Haxe server does not
+    understand. Mirroring its documented directory convention lets us bind the
+    real compiler server to loopback while retaining the repository pin.
+    """
+
+    source_environment = os.environ if environment is None else environment
+    pin_path = scope_root / ".haxerc"
+    try:
+        pin: object = json.loads(pin_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise CaxecraftFailure(f"cannot read the Haxe pin {pin_path}: {error}") from error
+    if not isinstance(pin, dict):
+        raise CaxecraftFailure(".haxerc must contain a JSON object")
+    version = pin.get("version")
+    if (
+        not isinstance(version, str)
+        or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+_-]*", version) is None
+    ):
+        raise CaxecraftFailure(".haxerc contains an unsafe or missing Haxe version")
+    if pin.get("resolveLibs") != "scoped":
+        raise CaxecraftFailure("Caxecraft requires .haxerc resolveLibs=scoped")
+
+    haxe_root_text = source_environment.get("HAXE_ROOT") or source_environment.get(
+        "HAXESHIM_ROOT"
+    )
+    if haxe_root_text is None:
+        home_key = "APPDATA" if os.name == "nt" else "HOME"
+        home = source_environment.get(home_key)
+        if not home:
+            raise CaxecraftFailure(
+                f"cannot resolve the Lix Haxe installation: {home_key} is unset"
+            )
+        haxe_root = Path(home) / "haxe"
+    else:
+        haxe_root = Path(haxe_root_text)
+
+    versions_root = (haxe_root / "versions").resolve()
+    installation_root = (versions_root / version).resolve()
+    if installation_root.parent != versions_root:
+        raise CaxecraftFailure("the pinned Haxe version escaped the versions directory")
+    executable_name = "haxe.exe" if os.name == "nt" else "haxe"
+    compiler = installation_root / executable_name
+    standard_library = installation_root / "std"
+    if not compiler.is_file() or (os.name != "nt" and not os.access(compiler, os.X_OK)):
+        raise CaxecraftFailure(
+            f"pinned Haxe {version} is not installed at {compiler}; run npm ci"
+        )
+    if not standard_library.is_dir():
+        raise CaxecraftFailure(
+            f"pinned Haxe {version} has no standard library at {standard_library}"
+        )
+
+    neko_library: Path | None = None
+    platform_path = installation_root / "platform.txt"
+    if platform_path.is_file():
+        try:
+            platform = platform_path.read_text(encoding="utf-8").strip()
+        except (OSError, UnicodeError) as error:
+            raise CaxecraftFailure(
+                f"cannot read pinned Haxe platform metadata: {error}"
+            ) from error
+        if re.fullmatch(r"[A-Za-z0-9_-]+", platform) is None:
+            raise CaxecraftFailure("pinned Haxe platform metadata is malformed")
+        candidate = haxe_root / "neko" / "versions" / f"2.4.0-{platform}"
+        if candidate.is_dir():
+            neko_library = candidate.resolve()
+
+    return HaxeInstallation(
+        version,
+        compiler,
+        standard_library,
+        (haxe_root / "haxelib").resolve(),
+        neko_library,
+    )
+
+
+def pinned_haxe_environment(
+    locale: str, installation: HaxeInstallation
+) -> dict[str, str]:
+    """Reproduce HaxeShim's compiler environment for the direct native client."""
+
+    environment = haxe_environment(locale, server=True)
+    environment.update(
+        {
+            "HAXE_STD_PATH": str(installation.standard_library),
+            "HAXEPATH": str(installation.compiler.parent),
+            "HAXELIB_PATH": str(installation.haxelib_repository),
+            "HAXE_VERSION": installation.version,
+        }
+    )
+    if installation.neko_library is not None:
+        if os.name == "nt":
+            library_key = "PATH"
+        elif sys.platform == "darwin":
+            library_key = "DYLD_LIBRARY_PATH"
+        else:
+            library_key = "LD_LIBRARY_PATH"
+        library_path = str(installation.neko_library)
+        entries = environment.get(library_key, "").split(os.pathsep)
+        if library_path not in entries:
+            current = environment.get(library_key)
+            environment[library_key] = (
+                f"{current}{os.pathsep}{library_path}" if current else library_path
+            )
+    return environment
+
+
+def verify_pinned_haxe(installation: HaxeInstallation) -> None:
+    """Fail before starting a server if the resolved binary is not the pin."""
+
+    result = subprocess.run(
+        [str(installation.compiler), "--version"],
+        cwd=ROOT,
+        env=pinned_haxe_environment("C", installation),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    observed = f"{result.stdout}{result.stderr}".strip()
+    if result.returncode != 0 or observed != installation.version:
+        raise CaxecraftFailure(
+            "resolved Haxe compiler does not match .haxerc: "
+            f"expected {installation.version!r}, observed {observed!r}, "
+            f"exit={result.returncode}"
+        )
+
+
+def target_arguments(
+    output: Path,
+    *,
+    layout: str,
+    reverse: bool,
+    report: bool,
+) -> list[str]:
+    arguments = [BUILD_HXML.name, "-D", "hxc_runtime_diagnostics=off"]
+    if reverse:
+        arguments.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
+    if report:
+        arguments.extend(["-D", "reflaxe_c_static_initialization_report"])
+    if layout in ("package", "unity"):
+        arguments.extend(["-D", f"hxc_project_layout={layout}"])
+    elif layout != "split":
+        raise CaxecraftFailure(f"unknown Caxecraft project layout {layout!r}")
+    arguments.extend(["--custom-target", f"c={output}"])
+    return arguments
+
+
+def resolve_haxe_arguments(
+    arguments: Sequence[str], *, locale: str
+) -> tuple[str, ...]:
+    """Ask HaxeShim to expand HXML/scoped libraries for a native server client."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "--cwd",
+            str(CASE),
+            "--run",
+            "resolve-args",
+            *arguments,
+        ],
+        cwd=ROOT,
+        env=haxe_environment(locale, server=False),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stderr:
+        raise CaxecraftFailure(
+            "HaxeShim could not resolve the pinned Caxecraft build arguments\n"
+            f"exit={result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    resolved = tuple(result.stdout.splitlines())
+    if not resolved or any(
+        not argument or "\x00" in argument or "\r" in argument or "\n" in argument
+        for argument in resolved
+    ):
+        raise CaxecraftFailure("HaxeShim emitted malformed resolved arguments")
+    if "--haxe-version" in resolved or any(argument.endswith(".hxml") for argument in resolved):
+        raise CaxecraftFailure(
+            "HaxeShim left a proxy-only or unresolved build argument in the native request"
+        )
+    return resolved
+
+
 def compile_target(
     output: Path,
     *,
     layout: str = "split",
     reverse: bool = False,
     locale: str = "C",
-    connect: str | None = None,
+    connect: HaxeServerConnection | None = None,
     report: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    command = [development_tool("haxe")]
-    if connect is not None:
-        command.extend(["--connect", connect])
-    command.extend(
-        [
-            "--cwd",
-            str(CASE),
-            BUILD_HXML.name,
-            "-D",
-            "hxc_runtime_diagnostics=off",
-        ]
+    arguments = target_arguments(
+        output,
+        layout=layout,
+        reverse=reverse,
+        report=report,
     )
-    if reverse:
-        command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
-    if report:
-        command.extend(["-D", "reflaxe_c_static_initialization_report"])
-    if layout in ("package", "unity"):
-        command.extend(["-D", f"hxc_project_layout={layout}"])
-    elif layout != "split":
-        raise CaxecraftFailure(f"unknown Caxecraft project layout {layout!r}")
-    command.extend(["--custom-target", f"c={output}"])
+    if connect is None:
+        command = [development_tool("haxe"), "--cwd", str(CASE), *arguments]
+        cwd = ROOT
+        environment = haxe_environment(locale, server=False)
+    else:
+        resolved = resolve_haxe_arguments(arguments, locale=locale)
+        command = [
+            str(connect.installation.compiler),
+            "--connect",
+            connect.endpoint,
+            *resolved,
+        ]
+        cwd = CASE
+        environment = pinned_haxe_environment(locale, connect.installation)
     return subprocess.run(
         command,
-        cwd=ROOT,
-        env=haxe_environment(locale, server=connect is not None),
+        cwd=cwd,
+        env=environment,
         check=False,
         capture_output=True,
         text=True,
@@ -1208,6 +1422,41 @@ def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
     raise CaxecraftFailure("Haxe server did not accept connections")
 
 
+@contextmanager
+def haxe_compilation_server():
+    """Own one loopback-only Haxe server and always reap its process.
+
+    Haxe's server caches parsed and typed modules between requests. It still
+    checks source-file changes and keeps separate caches for different define
+    signatures. This helper does not weaken either check; it only avoids
+    starting a new compiler process for every request.
+    """
+
+    installation = pinned_haxe_installation()
+    verify_pinned_haxe(installation)
+    port = available_port()
+    endpoint = f"127.0.0.1:{port}"
+    server = subprocess.Popen(
+        [str(installation.compiler), "--server-listen", endpoint],
+        cwd=ROOT,
+        env=pinned_haxe_environment("C", installation),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        wait_for_server(server, port)
+        yield HaxeServerConnection(endpoint, installation)
+    finally:
+        if server.poll() is None:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+
 def check_determinism(
     projects: tuple[tuple[str, RenderedProject], ...],
     root: Path,
@@ -1236,21 +1485,8 @@ def check_determinism(
                 f"reverse-order/locale {layout} render",
             )
 
-    port = available_port()
-    endpoint = str(port)
-    environment = os.environ.copy()
-    environment.pop("HAXE_NO_SERVER", None)
     with timing.phase("warm-server", haxe_requests=2 * len(projects)):
-        server = subprocess.Popen(
-            [development_tool("haxe"), "--wait", endpoint],
-            cwd=ROOT,
-            env=environment,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-        try:
-            wait_for_server(server, port)
+        with haxe_compilation_server() as endpoint:
             for layout, first in projects:
                 warm_first = render_project(
                     root / layout / "warm-first",
@@ -1272,13 +1508,6 @@ def check_determinism(
                     warm_repeated.artifacts,
                     f"warm-server repeated {layout} render",
                 )
-        finally:
-            server.terminate()
-            try:
-                server.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                server.kill()
-                server.wait(timeout=5)
 
 
 def snapshot_values() -> dict[str, object]:
@@ -1790,21 +2019,21 @@ def main(argv: Iterable[str] = ()) -> int:
                 with timing.phase("eval-oracle", haxe_requests=1):
                     oracle = run_oracle()
                 with timing.phase("backend-render", haxe_requests=3):
-                    progress("split render + HxcIR")
+                    progress("cold split render + HxcIR")
                     first = render_project(
                         root / "first",
                         label="first cold Caxecraft render",
                     )
-                    progress("package render + semantic parity")
+                    progress("cold package render + semantic parity")
                     package = render_project(
                         root / "package",
-                        label="package Caxecraft render",
+                        label="cold package Caxecraft render",
                         layout="package",
                     )
-                    progress("unity render + semantic parity")
+                    progress("cold unity render + semantic parity")
                     unity = render_project(
                         root / "unity",
-                        label="unity Caxecraft render",
+                        label="cold unity Caxecraft render",
                         layout="unity",
                     )
                     if (

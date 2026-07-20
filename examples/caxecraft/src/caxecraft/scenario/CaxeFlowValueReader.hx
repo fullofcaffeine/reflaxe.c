@@ -25,14 +25,15 @@ private typedef ParsedFlowArgument = {
 	These functions do not move the document cursor. The record-level reader can
 	therefore decide atomically whether a whole WHEN, IF, or DO record is valid.
 **/
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of calling this class.
 
 @:noCompletion
 final class CaxeFlowValueReader {
 	public static function event(record:ScenarioLexRecord):Null<FlowEvent> {
 		if (record.tokens.length < 3)
 			return null;
-		return switch record.tokens[1].text {
+		return switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
 			case "enter-zone" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
 				idEvent(record.tokens[2], EnterZone);
 			case "leave-zone" if (ScenarioTokenGrammar.hasTokenCount(record, 3)):
@@ -61,19 +62,21 @@ final class CaxeFlowValueReader {
 	}
 
 	public static function predicate(record:ScenarioLexRecord, at:Int, depth:Int):Null<ParsedFlowPredicate> {
-		if (depth >= ScenarioLimits.MAX_PREDICATE_DEPTH || at >= record.tokens.length || record.tokens[at].text != "(")
+		if (depth >= ScenarioLimits.MAX_PREDICATE_DEPTH
+			|| at >= record.tokens.length
+			|| !ScenarioTokenGrammar.isBare(record.tokens[at], "("))
 			return null;
 		var next = at + 1;
 		if (next >= record.tokens.length)
 			return null;
-		final name = record.tokens[next++].text;
+		final name = ScenarioTokenGrammar.bareText(record.tokens[next++]);
 		var value:Null<FlowPredicate> = null;
 		switch name {
 			case "always":
 				value = Always;
 			case "all", "any":
 				final children:Array<FlowPredicate> = [];
-				while (next < record.tokens.length && record.tokens[next].text == "(") {
+				while (next < record.tokens.length && ScenarioTokenGrammar.isBare(record.tokens[next], "(")) {
 					final child = predicate(record, next, depth + 1);
 					if (child == null)
 						return null;
@@ -141,7 +144,7 @@ final class CaxeFlowValueReader {
 				value = NearObject(actor, objectId, maximum);
 				next += 3;
 			case "mode" if (next < record.tokens.length):
-				value = switch record.tokens[next].text {
+				value = switch ScenarioTokenGrammar.bareText(record.tokens[next]) {
 					case "creative": ModeIs(Creative);
 					case "adventure": ModeIs(Adventure);
 					case _: null;
@@ -149,7 +152,7 @@ final class CaxeFlowValueReader {
 				next++;
 			case _:
 		}
-		if (value == null || next >= record.tokens.length || record.tokens[next].text != ")")
+		if (value == null || next >= record.tokens.length || !ScenarioTokenGrammar.isBare(record.tokens[next], ")"))
 			return null;
 		return {value: value, next: next + 1};
 	}
@@ -158,7 +161,7 @@ final class CaxeFlowValueReader {
 	public static function action(record:ScenarioLexRecord, at:Int):Null<FlowAction> {
 		if (at >= record.tokens.length)
 			return null;
-		final name = record.tokens[at].text;
+		final name = ScenarioTokenGrammar.bareText(record.tokens[at]);
 		final remaining = record.tokens.length - at;
 		return switch name {
 			case "dialogue" if (remaining == 2): actionId(record.tokens[at + 1], ShowDialogue);
@@ -177,7 +180,8 @@ final class CaxeFlowValueReader {
 			case "signal" if (remaining == 2):
 				final signal = ScenarioTokenGrammar.contentId(record.tokens[at + 1]);
 				signal == null ? null : EmitSignal(signal);
-			case "effect" if (remaining == 2 || (remaining == 4 && record.tokens[at + 2].text == "at")): effectAction(record, at);
+			case "effect" if (remaining == 2 || (remaining == 4 && ScenarioTokenGrammar.isBare(record.tokens[at + 2], "at"))):
+				effectAction(record, at);
 			case "schedule" if (remaining >= 4): scheduleAction(record, at);
 			case "call" if (remaining >= 2): callAction(record, at);
 			case _:
@@ -243,7 +247,7 @@ final class CaxeFlowValueReader {
 	public static function flowValue(record:ScenarioLexRecord, at:Int):Null<FlowValue> {
 		if (at + 1 >= record.tokens.length)
 			return null;
-		return switch record.tokens[at].text {
+		return switch ScenarioTokenGrammar.bareText(record.tokens[at]) {
 			case "flag":
 				final value = ScenarioTokenGrammar.boolean(record.tokens[at + 1]);
 				value == null ? null : Flag(value);
@@ -274,16 +278,13 @@ final class CaxeFlowValueReader {
 	static function argument(record:ScenarioLexRecord, at:Int):Null<ParsedFlowArgument> {
 		if (at >= record.tokens.length)
 			return null;
-		return switch record.tokens[at].text {
+		return switch ScenarioTokenGrammar.bareText(record.tokens[at]) {
 			case "value":
 				final value = flowValue(record, at + 1);
 				value == null ? null : {value: Value(value), next: at + 3};
 			case "variable" if (at + 1 < record.tokens.length):
 				final id = ScenarioTokenGrammar.scenarioId(record.tokens[at + 1]);
 				id == null ? null : {value: Variable(id), next: at + 2};
-			case "object" if (at + 1 < record.tokens.length):
-				final id = ScenarioTokenGrammar.scenarioId(record.tokens[at + 1]);
-				id == null ? null : {value: Object(id), next: at + 2};
 			case _:
 				null;
 		}

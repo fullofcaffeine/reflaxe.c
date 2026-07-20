@@ -4,12 +4,14 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 import caxecraft.scenario.ScenarioWorld.VoxelRun;
 
 /** Reads world chunks and placed objects from the shared record cursor. */
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of constructing this class.
 @:noCompletion
 final class ScenarioWorldReader {
 	final cursor:ScenarioRecordCursor;
@@ -42,7 +44,7 @@ final class ScenarioWorldReader {
 			cursor.advance();
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end chunk"));
+			return cursor.failAt(header, MissingRecord(EndChunkRecord));
 		cursor.advance();
 		return ReadOk({
 			id: id,
@@ -76,6 +78,7 @@ final class ScenarioWorldReader {
 					if (tag == null)
 						return cursor.failToken(record.tokens[1], InvalidToken);
 					tags.push(tag);
+					cursor.locate(ObjectTag(id, tag), record);
 				case "placement":
 					if (placement != null)
 						return cursor.failAt(record, InvalidToken);
@@ -88,9 +91,9 @@ final class ScenarioWorldReader {
 			cursor.advance();
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end object"));
+			return cursor.failAt(header, MissingRecord(EndObjectRecord));
 		if (placement == null)
-			return cursor.failAt(header, MissingRecord("placement"));
+			return cursor.failAt(header, MissingRecord(ObjectPlacementRecord));
 		cursor.advance();
 		return ReadOk({id: id, tags: tags, placement: placement});
 	}
@@ -98,7 +101,7 @@ final class ScenarioWorldReader {
 	function placementValue(record:ScenarioLexRecord):Null<ObjectPlacement> {
 		if (record.tokens.length < 2)
 			return null;
-		return switch record.tokens[1].text {
+		return switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
 			case "player-spawn" if (ScenarioTokenGrammar.hasTokenCount(record, 6)): transformPlacement(record, PlayerSpawn);
 			case "checkpoint" if (ScenarioTokenGrammar.hasTokenCount(record, 6)): transformPlacement(record, Checkpoint);
 			case "item" if (ScenarioTokenGrammar.hasTokenCount(record, 8)): itemPlacement(record);

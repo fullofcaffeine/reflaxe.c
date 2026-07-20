@@ -3,6 +3,7 @@ package caxecraft.scenario;
 import caxecraft.scenario.CaxeFlow.FlowComparison;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexToken;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioLexTokenKind;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
@@ -14,30 +15,40 @@ typedef ParsedScenarioText = {
 }
 
 /** Small, context-free value readers shared by the record-level grammar. */
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of calling this class.
 
 @:noCompletion
 final class ScenarioTokenGrammar {
 	public static inline function hasTokenCount(record:ScenarioLexRecord, expected:Int):Bool
 		return record.tokens.length == expected;
 
+	public static inline function isBare(token:ScenarioLexToken, expected:String):Bool
+		return token.kind == BareToken && token.text == expected;
+
+	public static inline function isQuoted(token:ScenarioLexToken):Bool
+		return token.kind == QuotedText;
+
+	public static inline function bareText(token:ScenarioLexToken):Null<String>
+		return token.kind == BareToken ? token.text : null;
+
 	public static inline function firstText(record:ScenarioLexRecord):String
-		return record.tokens.length == 0 ? "" : record.tokens[0].text;
+		return record.tokens.length == 0 ? "" : (record.tokens[0].kind == BareToken ? record.tokens[0].text : "");
 
 	public static inline function isEnd(record:ScenarioLexRecord, kind:String):Bool
 		return isEndAt(record, kind, 0);
 
 	public static function isEndAt(record:ScenarioLexRecord, kind:String, indent:Int):Bool
-		return record.indent == indent && hasTokenCount(record, 2) && firstText(record) == "end" && record.tokens[1].text == kind;
+		return record.indent == indent && hasTokenCount(record, 2) && firstText(record) == "end" && isBare(record.tokens[1], kind);
 
 	public static function text(record:ScenarioLexRecord, at:Int):Null<ParsedScenarioText> {
 		if (at + 1 >= record.tokens.length)
 			return null;
-		return switch record.tokens[at].text {
+		return switch bareText(record.tokens[at]) {
 			case "message":
 				final id = messageId(record.tokens[at + 1]);
 				id == null ? null : {value: Message(id), next: at + 2};
-			case "literal" if (record.tokens[at + 1].quoted):
+			case "literal" if (isQuoted(record.tokens[at + 1])):
 				{value: Literal(record.tokens[at + 1].text), next: at + 2};
 			case _:
 				null;
@@ -80,7 +91,7 @@ final class ScenarioTokenGrammar {
 	/** Parse the one canonical spelling of a signed 32-bit decimal integer. */
 	public static function integer(token:ScenarioLexToken):Null<Int> {
 		final value = token.text;
-		if (token.quoted || value.length == 0 || value.charCodeAt(0) == 43)
+		if (token.kind != BareToken || value.length == 0 || value.charCodeAt(0) == 43)
 			return null;
 		var negative = false;
 		var at = 0;
@@ -108,14 +119,14 @@ final class ScenarioTokenGrammar {
 	}
 
 	public static function boolean(token:ScenarioLexToken):Null<Bool>
-		return switch token.text {
+		return switch bareText(token) {
 			case "true": true;
 			case "false": false;
 			case _: null;
 		}
 
 	public static function objectiveState(token:ScenarioLexToken):Null<ObjectiveState>
-		return switch token.text {
+		return switch bareText(token) {
 			case "hidden": Hidden;
 			case "active": Active;
 			case "complete": Complete;
@@ -124,7 +135,7 @@ final class ScenarioTokenGrammar {
 		}
 
 	public static function comparison(token:ScenarioLexToken):Null<FlowComparison>
-		return switch token.text {
+		return switch bareText(token) {
 			case "equal": Equal;
 			case "not-equal": NotEqual;
 			case "less": Less;
@@ -135,16 +146,16 @@ final class ScenarioTokenGrammar {
 		}
 
 	public static function scenarioId(token:ScenarioLexToken):Null<ScenarioId>
-		return !token.quoted && validId(token.text) ? new ScenarioId(token.text) : null;
+		return token.kind == BareToken && validId(token.text) ? new ScenarioId(token.text) : null;
 
 	public static function scenarioTag(token:ScenarioLexToken):Null<ScenarioTag>
-		return !token.quoted && validId(token.text) ? new ScenarioTag(token.text) : null;
+		return token.kind == BareToken && validId(token.text) ? new ScenarioTag(token.text) : null;
 
 	public static function messageId(token:ScenarioLexToken):Null<MessageId>
-		return !token.quoted && validId(token.text) ? new MessageId(token.text) : null;
+		return token.kind == BareToken && validId(token.text) ? new MessageId(token.text) : null;
 
 	public static function contentId(token:ScenarioLexToken):Null<ContentId> {
-		if (token.quoted)
+		if (token.kind != BareToken)
 			return null;
 		final separator = token.text.indexOf(":");
 		return separator <= 0
@@ -154,7 +165,7 @@ final class ScenarioTokenGrammar {
 	}
 
 	public static function logicalPath(token:ScenarioLexToken):Null<LogicalPath> {
-		if (token.quoted || token.text.length == 0 || token.text.indexOf("\\") != -1 || token.text.charAt(0) == "/")
+		if (token.kind != BareToken || token.text.length == 0 || token.text.indexOf("\\") != -1 || token.text.charAt(0) == "/")
 			return null;
 		for (part in token.text.split("/"))
 			if (part == "." || part == ".." || !validId(part))

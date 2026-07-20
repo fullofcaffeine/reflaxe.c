@@ -63,7 +63,7 @@ to enjoy or understand the game.
 
 | Moment | Player verb | Immediate feedback | Longer purpose |
 | --- | --- | --- | --- |
-| Explore | move, look, swim, inspect | landmark, soundless visual cue, Ivvy reaction | discover routes, materials, NPCs, and secrets |
+| Explore | move, look, swim, inspect | landmark, visible cue, optional spatial sound, Ivvy reaction | discover routes, materials, NPCs, and secrets |
 | Gather | mine, pick up, exchange | block crack, pickup arc, hotbar count | obtain building blocks, healing, tools, and route items |
 | Shape | place, remove, select | outline, placement preview, undo-safe result | build in Creative or solve spatial problems |
 | Interact | talk, activate, equip | prompt, dialogue card, journal update | learn objectives, codes, mechanics, and story |
@@ -333,6 +333,48 @@ entity and trigger placement, dialogue/objective editing, undo/redo, validation,
 save/load, and reversible Edit <-> Test Play transitions. The Adventure must
 round-trip through this public path with byte and semantic parity.
 
+## Music, sound, and audio authoring
+
+Caxecraft uses a small original audio identity rather than imitating another
+voxel game's melodies or effects. The first cue sheet covers menu/title,
+Evergrove exploration, the falls and submerged Tideweave route, Frostmere,
+Ashfall/castle tension, Browser's boss encounter, and victory. Short effects
+cover UI focus/confirm/cancel, footsteps by broad material family, block
+remove/place, pickup and inventory feedback, water, damage and combat,
+checkpoint recovery, bridge/suit mechanisms, enemies, and Ivvy's helpful
+reactions. The final list stays bounded and each cue has a stated gameplay
+purpose.
+
+MIDI is an editable composition source, not the shipped playback format.
+Raylib 6.0 streams WAV, QOA, OGG, MP3, FLAC, XM, and MOD, but does not provide a
+MIDI synthesizer. Caxecraft therefore keeps type-1 MIDI and a pinned composition
+or synthesis recipe where useful, exports looped music to Ogg Vorbis, and uses
+short lossless PCM WAV files for effects. Every source, instrument or synthesis
+recipe, offline render tool/version, loop point, export setting, license, and
+output hash is recorded. A clean build never calls an online music service.
+
+Shared gameplay emits typed requests using stable content IDs; it does not
+load files or own a native audio handle. The raylib adapter resolves those IDs,
+streams music, limits simultaneous effects, applies master/music/effects/
+ambience volumes, and releases every resource. CaxeMap asset packs will map
+audio IDs to logical files. CaxeFlow will admit a small closed set of actions
+for playing an effect and selecting or stopping music after their ordering,
+restart, fade, and missing-asset behavior is specified. Scenario rules never
+contain host paths.
+
+The editor will select and preview registered cues, stop preview immediately,
+author simple region music and trigger-driven effects, and validate missing or
+wrong-kind IDs. Essential information always has a visible cue or optional
+caption; puzzles, Ivvy hints, danger warnings, and objectives never depend on
+hearing alone. Settings and captions support English and es-MX, while stored
+audio identity remains language-neutral.
+
+This is planned work under `haxe_c-bf3`. The current locked RaylibHx core
+deliberately omitted resource-owning audio APIs, and the current CAXEMAP codec
+has no audio records or actions. The audio issue owns that binding extension,
+the original source/runtime assets, typed game adapter, language/editor
+surface, packaging, native QA, and generated-C inspection.
+
 ## UX, accessibility, and localization
 
 The main menu exposes **Adventure**, **Creative**, **Editor**, **Settings**,
@@ -383,6 +425,22 @@ needed for exact recovery. Quest-critical items cannot be dropped, consumed by
 Ivvy, lost on death, or duplicated across a retry. Editor test play operates on
 a reversible snapshot: stopping the test returns to the draft unless the user
 explicitly imports a supported change.
+
+The storage roles are deliberately separate:
+
+- An authored `.caxemap` contains the designed finite world, placements,
+  dialogue, objectives, and CaxeFlow rules. The editor saves this format.
+- A live game save refers to its source map and stores only the complete typed
+  state needed to resume play, including changed blocks, player state,
+  inventory, objects and characters, objectives, variables, timers, and the
+  deterministic choice state.
+- Editor test play uses a temporary in-memory snapshot. It does not silently
+  turn play-time changes into edits.
+
+The target-neutral map codec exists, but native map-file writes remain owned by
+`haxe_c-xge.19.4`. The live world/save-game model and codec are owned by
+`haxe_c-4my`; they are not implemented yet. The save format's public filename
+extension will be chosen with that codec rather than guessed in advance.
 
 User scenarios are local, finite, data-only `.caxemap` files in version 1.
 Sharing a map does not grant shell, native-code, arbitrary Lua, network, or

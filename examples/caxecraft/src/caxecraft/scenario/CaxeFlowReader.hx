@@ -14,9 +14,11 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 
 /** Reads CaxeFlow declarations and the block structure around typed values. */
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of constructing this class.
 @:noCompletion
 final class CaxeFlowReader {
 	final cursor:ScenarioRecordCursor;
@@ -32,7 +34,7 @@ final class CaxeFlowReader {
 		if (id == null)
 			return cursor.failToken(record.tokens[1], InvalidToken);
 		var valueIndex = 3;
-		final scope:Null<FlowScope> = switch record.tokens[2].text {
+		final scope:Null<FlowScope> = switch ScenarioTokenGrammar.bareText(record.tokens[2]) {
 			case "map": Map;
 			case "player": Player;
 			case "quest": Quest;
@@ -78,34 +80,37 @@ final class CaxeFlowReader {
 					if (parameterId == null || initial == null)
 						return cursor.failAt(record, InvalidToken);
 					parameters.push({id: parameterId, initial: initial});
+					cursor.locate(SequenceParameter(id, parameterId), record);
 					cursor.advance();
 				case "do":
 					switch readActionRecord(record, 1, 2) {
 						case ReadError(diagnostics): return ReadError(diagnostics);
-						case ReadOk(action): actions.push(action);
+						case ReadOk(action):
+							cursor.locate(SequenceAction(id, actions.length), record);
+							actions.push(action);
 					}
 				case other:
 					return cursor.failAt(record, UnexpectedRecord(other));
 			}
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end sequence"));
+			return cursor.failAt(header, MissingRecord(EndSequenceRecord));
 		cursor.advance();
 		return ReadOk({id: id, parameters: parameters, actions: actions});
 	}
 
 	public function readRule():ScenarioReadResult<FlowRule> {
 		final header = cursor.current();
-		if (header.tokens.length < 5 || header.tokens[2].text != "priority")
+		if (header.tokens.length < 5 || !ScenarioTokenGrammar.isBare(header.tokens[2], "priority"))
 			return cursor.failAt(header, InvalidToken);
 		final id = ScenarioTokenGrammar.scenarioId(header.tokens[1]);
 		final priority = ScenarioTokenGrammar.integer(header.tokens[3]);
 		var repeat:Null<FlowRepeatPolicy> = null;
-		if (header.tokens[4].text == "once" && header.tokens.length == 5)
+		if (ScenarioTokenGrammar.isBare(header.tokens[4], "once") && header.tokens.length == 5)
 			repeat = Once;
-		else if (header.tokens[4].text == "repeat" && header.tokens.length == 5)
+		else if (ScenarioTokenGrammar.isBare(header.tokens[4], "repeat") && header.tokens.length == 5)
 			repeat = Repeat;
-		else if (header.tokens[4].text == "cooldown" && header.tokens.length == 6) {
+		else if (ScenarioTokenGrammar.isBare(header.tokens[4], "cooldown") && header.tokens.length == 6) {
 			final ticks = ScenarioTokenGrammar.integer(header.tokens[5]);
 			if (ticks != null)
 				repeat = Cooldown(ticks);
@@ -129,6 +134,7 @@ final class CaxeFlowReader {
 					event = CaxeFlowValueReader.event(record);
 					if (event == null)
 						return cursor.failAt(record, InvalidToken);
+					cursor.locate(RuleEvent(id), record);
 					cursor.advance();
 				case "if":
 					if (predicate != null)
@@ -137,18 +143,21 @@ final class CaxeFlowReader {
 					if (parsed == null || parsed.next != record.tokens.length)
 						return cursor.failAt(record, InvalidToken);
 					predicate = parsed.value;
+					cursor.locate(RulePredicate(id), record);
 					cursor.advance();
 				case "do":
 					switch readActionRecord(record, 1, 2) {
 						case ReadError(diagnostics): return ReadError(diagnostics);
-						case ReadOk(action): actions.push(action);
+						case ReadOk(action):
+							cursor.locate(RuleAction(id, actions.length), record);
+							actions.push(action);
 					}
 				case other:
 					return cursor.failAt(record, UnexpectedRecord(other));
 			}
 		}
 		if (!cursor.hasRecord())
-			return cursor.failAt(header, MissingRecord("end rule"));
+			return cursor.failAt(header, MissingRecord(EndRuleRecord));
 		if (event == null || predicate == null)
 			return cursor.failAt(header, InvalidRule(id));
 		cursor.advance();
@@ -165,7 +174,7 @@ final class CaxeFlowReader {
 	function readActionRecord(record:ScenarioLexRecord, at:Int, choiceIndent:Int):ScenarioReadResult<FlowAction> {
 		if (at >= record.tokens.length)
 			return cursor.failAt(record, InvalidToken);
-		if (record.tokens[at].text != "choose") {
+		if (!ScenarioTokenGrammar.isBare(record.tokens[at], "choose")) {
 			final action = CaxeFlowValueReader.action(record, at);
 			if (action == null)
 				return cursor.failAt(record, InvalidToken);
@@ -183,12 +192,12 @@ final class CaxeFlowReader {
 		final choices:Array<FlowChoice> = [];
 		while (choices.length < choiceCount) {
 			if (!cursor.hasRecord())
-				return cursor.failAt(record, MissingRecord("choice"));
+				return cursor.failAt(record, MissingRecord(ChoiceRecord));
 			final choiceHeader = cursor.current();
 			if (choiceHeader.indent != choiceIndent
 				|| choiceHeader.tokens.length != 3
 				|| ScenarioTokenGrammar.firstText(choiceHeader) != "choice"
-				|| choiceHeader.tokens[1].text != "weight")
+				|| !ScenarioTokenGrammar.isBare(choiceHeader.tokens[1], "weight"))
 				return cursor.failAt(choiceHeader, UnexpectedRecord(ScenarioTokenGrammar.firstText(choiceHeader)));
 			final weight = ScenarioTokenGrammar.integer(choiceHeader.tokens[2]);
 			if (weight == null || weight <= 0)
@@ -201,7 +210,7 @@ final class CaxeFlowReader {
 				if (actionRecord.indent != choiceIndent + 2
 					|| ScenarioTokenGrammar.firstText(actionRecord) != "do"
 					|| actionRecord.tokens.length < 2
-					|| actionRecord.tokens[1].text == "choose")
+					|| ScenarioTokenGrammar.isBare(actionRecord.tokens[1], "choose"))
 					return cursor.failAt(actionRecord, UnexpectedRecord(ScenarioTokenGrammar.firstText(actionRecord)));
 				final action = CaxeFlowValueReader.action(actionRecord, 1);
 				if (action == null)
@@ -210,7 +219,7 @@ final class CaxeFlowReader {
 				cursor.advance();
 			}
 			if (!cursor.hasRecord())
-				return cursor.failAt(choiceHeader, MissingRecord("end choice"));
+				return cursor.failAt(choiceHeader, MissingRecord(EndChoiceRecord));
 			cursor.advance();
 			choices.push({weight: weight, actions: actions});
 		}

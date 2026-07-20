@@ -9,6 +9,7 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
@@ -24,7 +25,8 @@ import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 	produce. This class only owns the document header, singleton fields, feature
 	declarations, extensions, and final assembly.
 **/
-// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+// Used only by the CAXEMAP parser. Game and editor code should call
+// ScenarioParser.parse(...) instead of constructing this class.
 @:noCompletion
 final class ScenarioDocumentReader {
 	final cursor:ScenarioRecordCursor;
@@ -41,9 +43,9 @@ final class ScenarioDocumentReader {
 
 	public function read():ScenarioReadResult<ParsedScenario> {
 		if (!cursor.hasRecord())
-			return cursor.failAt(null, MissingRecord("CAXEMAP 1"));
+			return cursor.failAt(null, MissingRecord(FormatHeader));
 		final header = cursor.current();
-		if (header.indent != 0 || header.tokens.length != 2 || header.tokens[0].text != "CAXEMAP")
+		if (header.indent != 0 || header.tokens.length != 2 || ScenarioTokenGrammar.firstText(header) != "CAXEMAP")
 			return cursor.failAt(header, UnexpectedRecord(ScenarioTokenGrammar.firstText(header)));
 		final version = ScenarioTokenGrammar.integer(header.tokens[1]);
 		if (version == null)
@@ -84,7 +86,7 @@ final class ScenarioDocumentReader {
 					final feature = ScenarioTokenGrammar.contentId(record.tokens[2]);
 					if (feature == null)
 						return cursor.failToken(record.tokens[2], InvalidToken);
-					switch record.tokens[1].text {
+					switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
 						case "required": requiredFeatures.push(feature);
 						case "optional": optionalFeatures.push(feature);
 						case _: return cursor.failToken(record.tokens[1], InvalidToken);
@@ -119,7 +121,7 @@ final class ScenarioDocumentReader {
 				case "mode":
 					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || mode != null)
 						return cursor.failAt(record, InvalidToken);
-					mode = switch record.tokens[1].text {
+					mode = switch ScenarioTokenGrammar.bareText(record.tokens[1]) {
 						case "creative": Creative;
 						case "adventure": Adventure;
 						case _: null;
@@ -209,17 +211,17 @@ final class ScenarioDocumentReader {
 		}
 
 		if (!sawEnd)
-			return cursor.failAt(cursor.lastRecord(), MissingRecord("end-map"));
+			return cursor.failAt(cursor.lastRecord(), MissingRecord(EndMapRecord));
 		if (mapId == null)
-			return cursor.failAt(header, MissingRecord("map"));
+			return cursor.failAt(header, MissingRecord(MapRecord));
 		if (assetPack == null)
-			return cursor.failAt(header, MissingRecord("asset-pack"));
+			return cursor.failAt(header, MissingRecord(AssetPackRecord));
 		if (title == null)
-			return cursor.failAt(header, MissingRecord("title"));
+			return cursor.failAt(header, MissingRecord(TitleRecord));
 		if (mode == null)
-			return cursor.failAt(header, MissingRecord("mode"));
+			return cursor.failAt(header, MissingRecord(ModeRecord));
 		if (worldSize == null)
-			return cursor.failAt(header, MissingRecord("world"));
+			return cursor.failAt(header, MissingRecord(WorldRecord));
 
 		return ReadOk({
 			candidate: {
@@ -264,12 +266,12 @@ final class ScenarioDocumentReader {
 			|| cursor.current().indent != 2
 			|| !ScenarioTokenGrammar.hasTokenCount(cursor.current(), 2)
 			|| ScenarioTokenGrammar.firstText(cursor.current()) != "data"
-			|| !cursor.current().tokens[1].quoted)
-			return cursor.failAt(header, MissingRecord("extension data"));
+			|| !ScenarioTokenGrammar.isQuoted(cursor.current().tokens[1]))
+			return cursor.failAt(header, MissingRecord(ExtensionDataRecord));
 		final data = cursor.current().tokens[1].text;
 		cursor.advance();
 		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "extension"))
-			return cursor.failAt(header, MissingRecord("end extension"));
+			return cursor.failAt(header, MissingRecord(EndExtensionRecord));
 		cursor.advance();
 		return ReadOk({feature: feature, id: id, data: data});
 	}
