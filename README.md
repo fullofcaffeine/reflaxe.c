@@ -392,7 +392,10 @@ The catalog check is the fast integrated ownership proof after focused suites;
 the full check independently re-renders all registered artifacts when snapshot
 infrastructure changes and in the scheduled/manual cold workflow. For bounded
 local concurrency with ordered logs, use `npm run test:toolchain:parallel`
-(two workers by default).
+(four workers on an idle 8+ CPU host, automatically fewer when the host is
+busy). An explicit `--jobs 1..4` still wins. See
+[test feedback-loop performance](docs/test-performance.md) for the exact
+resource and safe-resume rules.
 
 Expected artifacts are never refreshed implicitly. For an intentional change,
 review the semantic diff produced by a targeted update, then inspect the Git

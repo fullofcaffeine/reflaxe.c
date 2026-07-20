@@ -87,10 +87,13 @@ fi
 # concurrency, plus governance and native smoke, instead of serializing and
 # repeating those owners. Ordinary compiler changes still use the narrower
 # focused conditions below.
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.github/workflows/|package(-lock)?\.json|docs/specs/fixture-taxonomy(\.schema)?\.json|scripts/ci/(check_ci_policy|check_toolchain|run_toolchain_shard)\.py|scripts/hooks/pre-commit|scripts/test/snapshots\.py|test/governance/test_(fixture_policy|toolchain_shard)\.py)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(\.github/workflows/|package(-lock)?\.json|docs/specs/(caxecraft-timing|fixture-taxonomy(\.schema)?|toolchain-timing)\.json|scripts/ci/(check_ci_policy|check_toolchain|run_toolchain_shard)\.py|scripts/hooks/pre-commit|scripts/test/snapshots\.py|test/governance/test_(caxecraft_timing|fixture_policy|toolchain_shard)\.py)'; then
   echo "[pre-commit] Running one bounded parallel exhaustive gate for cross-cutting test infrastructure..."
   npm run test:governance
-  npm run test:toolchain:parallel
+  # Resume is deliberately local to this hook. It can reuse only exact,
+  # unexpired passing shards from the same staged/worktree/tool environment;
+  # hosted CI and ordinary shard commands always run cold.
+  npm run test:toolchain:parallel -- --resume
   npm run test:native
   echo "[pre-commit] OK"
   exit 0

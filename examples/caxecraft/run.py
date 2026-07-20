@@ -16,6 +16,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Iterable
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -186,6 +187,78 @@ class RenderedProject:
     runtime_plan: dict[str, object]
     method_symbols: dict[str, object]
     maintainability_report: dict[str, object]
+
+
+class TimingRecorder:
+    """Record where the exhaustive example spends time without host paths.
+
+    A phase is a named piece of useful work. `haxe_requests` says how many
+    compiler processes or server requests that phase intentionally makes; it
+    separates compiler startup/reuse from native compilation and execution.
+    """
+
+    def __init__(self) -> None:
+        self.started_ns = time.monotonic_ns()
+        self.phases: list[dict[str, object]] = []
+
+    @contextmanager
+    def phase(self, name: str, *, haxe_requests: int = 0):
+        started_ns = time.monotonic_ns()
+        outcome = "passed"
+        try:
+            yield
+        except BaseException:
+            outcome = "failed"
+            raise
+        finally:
+            self.phases.append(
+                {
+                    "name": name,
+                    "outcome": outcome,
+                    "durationMs": elapsed_milliseconds(started_ns),
+                    "haxeRequests": haxe_requests,
+                }
+            )
+
+    def report(self, *, mode: str, outcome: str) -> dict[str, object]:
+        return {
+            "schemaVersion": 1,
+            "suite": "caxecraft-domain",
+            "mode": mode,
+            "outcome": outcome,
+            "durationMs": elapsed_milliseconds(self.started_ns),
+            "summary": {
+                "haxeRequests": sum(
+                    int(phase["haxeRequests"]) for phase in self.phases
+                ),
+            },
+            "phases": self.phases,
+        }
+
+
+def elapsed_milliseconds(started_ns: int) -> int:
+    return max(0, (time.monotonic_ns() - started_ns + 500_000) // 1_000_000)
+
+
+def write_timing_report(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        text=True,
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
 
 
 def development_tool(name: str) -> str:
@@ -1136,72 +1209,76 @@ def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
 
 
 def check_determinism(
-    projects: tuple[tuple[str, RenderedProject], ...], root: Path
+    projects: tuple[tuple[str, RenderedProject], ...],
+    root: Path,
+    timing: TimingRecorder,
 ) -> None:
-    for layout, first in projects:
-        repeated = render_project(
-            root / layout / "repeated",
-            label=f"repeated cold {layout} Caxecraft render",
-            layout=layout,
-        )
-        reversed_project = render_project(
-            root / layout / "reversed",
-            label=f"reverse-order/locale {layout} Caxecraft render",
-            layout=layout,
-            reverse=True,
-            locale=alternate_locale(),
-        )
-        assert_artifacts_equal(
-            first.artifacts, repeated.artifacts, f"repeated cold {layout} render"
-        )
-        assert_artifacts_equal(
-            first.artifacts,
-            reversed_project.artifacts,
-            f"reverse-order/locale {layout} render",
-        )
+    with timing.phase("cold-determinism", haxe_requests=2 * len(projects)):
+        for layout, first in projects:
+            repeated = render_project(
+                root / layout / "repeated",
+                label=f"repeated cold {layout} Caxecraft render",
+                layout=layout,
+            )
+            reversed_project = render_project(
+                root / layout / "reversed",
+                label=f"reverse-order/locale {layout} Caxecraft render",
+                layout=layout,
+                reverse=True,
+                locale=alternate_locale(),
+            )
+            assert_artifacts_equal(
+                first.artifacts, repeated.artifacts, f"repeated cold {layout} render"
+            )
+            assert_artifacts_equal(
+                first.artifacts,
+                reversed_project.artifacts,
+                f"reverse-order/locale {layout} render",
+            )
 
     port = available_port()
     endpoint = str(port)
     environment = os.environ.copy()
     environment.pop("HAXE_NO_SERVER", None)
-    server = subprocess.Popen(
-        [development_tool("haxe"), "--wait", endpoint],
-        cwd=ROOT,
-        env=environment,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    try:
-        wait_for_server(server, port)
-        for layout, first in projects:
-            warm_first = render_project(
-                root / layout / "warm-first",
-                label=f"first warm-server {layout} Caxecraft render",
-                layout=layout,
-                connect=endpoint,
-            )
-            warm_repeated = render_project(
-                root / layout / "warm-repeated",
-                label=f"repeated warm-server {layout} Caxecraft render",
-                layout=layout,
-                connect=endpoint,
-            )
-            assert_artifacts_equal(
-                first.artifacts, warm_first.artifacts, f"cold/warm {layout} render"
-            )
-            assert_artifacts_equal(
-                warm_first.artifacts,
-                warm_repeated.artifacts,
-                f"warm-server repeated {layout} render",
-            )
-    finally:
-        server.terminate()
+    with timing.phase("warm-server", haxe_requests=2 * len(projects)):
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=environment,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
         try:
-            server.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            server.kill()
-            server.wait(timeout=5)
+            wait_for_server(server, port)
+            for layout, first in projects:
+                warm_first = render_project(
+                    root / layout / "warm-first",
+                    label=f"first warm-server {layout} Caxecraft render",
+                    layout=layout,
+                    connect=endpoint,
+                )
+                warm_repeated = render_project(
+                    root / layout / "warm-repeated",
+                    label=f"repeated warm-server {layout} Caxecraft render",
+                    layout=layout,
+                    connect=endpoint,
+                )
+                assert_artifacts_equal(
+                    first.artifacts, warm_first.artifacts, f"cold/warm {layout} render"
+                )
+                assert_artifacts_equal(
+                    warm_first.artifacts,
+                    warm_repeated.artifacts,
+                    f"warm-server repeated {layout} render",
+                )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
 
 
 def snapshot_values() -> dict[str, object]:
@@ -1637,6 +1714,16 @@ def parse_args(argv: Iterable[str]) -> argparse.Namespace:
         action="store_true",
         help="run the exhaustive determinism and O0/O2/sanitizer CI matrix",
     )
+    parser.add_argument(
+        "--timing-report",
+        type=Path,
+        default=(
+            Path(os.environ["HXC_CAXECRAFT_TIMING_REPORT"])
+            if "HXC_CAXECRAFT_TIMING_REPORT" in os.environ
+            else None
+        ),
+        help="write path-free phase and Haxe-request timing JSON",
+    )
     return parser.parse_args(list(argv))
 
 
@@ -1680,100 +1767,110 @@ def checked_in_projects(
 
 def main(argv: Iterable[str] = ()) -> int:
     args = parse_args(argv)
+    timing = TimingRecorder()
+    timing_mode = "native-only" if args.native_only else ("full" if args.full else "quick")
     try:
         progress("asset manifest + negative contracts")
-        validate_asset_pack(CASE / "assets")
-        negative_contracts()
+        with timing.phase("asset-contracts"):
+            validate_asset_pack(CASE / "assets")
+            negative_contracts()
         with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-domain-") as temporary:
             root = Path(temporary)
             if args.native_only:
                 progress("load checked-in split/package/unity baselines")
-                checked_in, oracle = checked_in_projects(
-                    root / "checked-in", expected_values()
-                )
-                split = checked_in["split"]
-                package = checked_in["package"]
-                unity = checked_in["unity"]
+                with timing.phase("checked-in-load"):
+                    checked_in, oracle = checked_in_projects(
+                        root / "checked-in", expected_values()
+                    )
+                    split = checked_in["split"]
+                    package = checked_in["package"]
+                    unity = checked_in["unity"]
             else:
                 progress("Eval oracle")
-                oracle = run_oracle()
-                progress("split render + HxcIR")
-                first = render_project(
-                    root / "first",
-                    label="first cold Caxecraft render",
-                )
-                progress("package render + semantic parity")
-                package = render_project(
-                    root / "package",
-                    label="package Caxecraft render",
-                    layout="package",
-                )
-                progress("unity render + semantic parity")
-                unity = render_project(
-                    root / "unity",
-                    label="unity Caxecraft render",
-                    layout="unity",
-                )
-                if (
-                    any(
-                        project.hxcir != first.hxcir
-                        for project in (package, unity)
+                with timing.phase("eval-oracle", haxe_requests=1):
+                    oracle = run_oracle()
+                with timing.phase("backend-render", haxe_requests=3):
+                    progress("split render + HxcIR")
+                    first = render_project(
+                        root / "first",
+                        label="first cold Caxecraft render",
                     )
-                    or any(
-                        project.runtime_plan != first.runtime_plan
-                        for project in (package, unity)
+                    progress("package render + semantic parity")
+                    package = render_project(
+                        root / "package",
+                        label="package Caxecraft render",
+                        layout="package",
                     )
-                    or any(
-                        project.method_symbols != first.method_symbols
-                        for project in (package, unity)
+                    progress("unity render + semantic parity")
+                    unity = render_project(
+                        root / "unity",
+                        label="unity Caxecraft render",
+                        layout="unity",
                     )
-                ):
-                    raise CaxecraftFailure(
-                        "split, package, and unity layouts changed HxcIR, runtime, or method symbols"
+                    if (
+                        any(
+                            project.hxcir != first.hxcir
+                            for project in (package, unity)
+                        )
+                        or any(
+                            project.runtime_plan != first.runtime_plan
+                            for project in (package, unity)
+                        )
+                        or any(
+                            project.method_symbols != first.method_symbols
+                            for project in (package, unity)
+                        )
+                    ):
+                        raise CaxecraftFailure(
+                            "split, package, and unity layouts changed HxcIR, "
+                            "runtime, or method symbols"
+                        )
+                    require_maintainability_layout_parity(
+                        first.maintainability_report,
+                        package.maintainability_report,
+                        unity.maintainability_report,
                     )
-                require_maintainability_layout_parity(
-                    first.maintainability_report,
-                    package.maintainability_report,
-                    unity.maintainability_report,
-                )
                 if args.full:
                     progress("split/package cold/reversed/locale/warm determinism")
                     check_determinism(
                         (("split", first), ("package", package)),
                         root / "determinism",
+                        timing,
                     )
                 progress("checked-in split/package/unity snapshots")
-                validate_snapshots(first, package, unity, oracle)
+                with timing.phase("snapshot-validation"):
+                    validate_snapshots(first, package, unity, oracle)
                 split = first
-            progress("split native differential")
-            run_native(
-                split,
-                "split",
-                oracle,
-                requested_toolchain=args.toolchain,
-                root=root / "native-split",
-                full=args.full or args.native_only,
-            )
-            if package is not None:
-                progress("package native differential")
+            with timing.phase("native-build-run"):
+                progress("split native differential")
                 run_native(
-                    package,
-                    "package",
+                    split,
+                    "split",
                     oracle,
                     requested_toolchain=args.toolchain,
-                    root=root / "native-package",
+                    root=root / "native-split",
                     full=args.full or args.native_only,
                 )
-            if unity is not None:
-                progress("unity native differential")
-                run_native(
-                    unity,
-                    "unity",
-                    oracle,
-                    requested_toolchain=args.toolchain,
-                    root=root / "native-unity",
-                    full=args.full or args.native_only,
-                )
+                if package is not None:
+                    progress("package native differential")
+                    run_native(
+                        package,
+                        "package",
+                        oracle,
+                        requested_toolchain=args.toolchain,
+                        root=root / "native-package",
+                        full=args.full or args.native_only,
+                    )
+                if unity is not None:
+                    progress("unity native differential")
+                    run_native(
+                        unity,
+                        "unity",
+                        oracle,
+                        requested_toolchain=args.toolchain,
+                        root=root / "native-unity",
+                        full=args.full or args.native_only,
+                    )
     except (
         AssetValidationError,
         CFixtureFailure,
@@ -1785,8 +1882,19 @@ def main(argv: Iterable[str] = ()) -> int:
         json.JSONDecodeError,
         subprocess.TimeoutExpired,
     ) as error:
+        if args.timing_report is not None:
+            write_timing_report(
+                args.timing_report,
+                timing.report(mode=timing_mode, outcome="failed"),
+            )
         print(f"caxecraft-domain: ERROR: {error}", file=sys.stderr)
         return 1
+
+    if args.timing_report is not None:
+        write_timing_report(
+            args.timing_report,
+            timing.report(mode=timing_mode, outcome="passed"),
+        )
 
     mode = (
         "checked-in split/package/unity C baselines"

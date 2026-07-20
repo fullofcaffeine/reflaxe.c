@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/caxecraft-timing.schema.json",
+  "title": "reflaxe.c Caxecraft timing evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "suite",
+    "mode",
+    "outcome",
+    "durationMs",
+    "summary",
+    "phases"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": 1
+    },
+    "suite": {
+      "const": "caxecraft-domain"
+    },
+    "mode": {
+      "enum": [
+        "quick",
+        "full",
+        "native-only"
+      ]
+    },
+    "outcome": {
+      "$ref": "#/$defs/outcome"
+    },
+    "durationMs": {
+      "$ref": "#/$defs/durationMs"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "haxeRequests"
+      ],
+      "properties": {
+        "haxeRequests": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "phases": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/phase"
+      }
+    }
+  },
+  "$defs": {
+    "outcome": {
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "outcome",
+        "durationMs",
+        "haxeRequests"
+      ],
+      "properties": {
+        "name": {
+          "enum": [
+            "asset-contracts",
+            "checked-in-load",
+            "eval-oracle",
+            "backend-render",
+            "cold-determinism",
+            "warm-server",
+            "snapshot-validation",
+            "native-build-run"
+          ]
+        },
+        "outcome": {
+          "$ref": "#/$defs/outcome"
+        },
+        "durationMs": {
+          "$ref": "#/$defs/durationMs"
+        },
+        "haxeRequests": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

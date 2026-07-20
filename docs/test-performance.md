@@ -106,11 +106,14 @@ npm run test:toolchain-shards
 # Run one focused shard locally; each command inside it remains serial.
 npm run test:toolchain:shard -- contracts
 
-# Run every isolation-approved shard locally with two workers by default.
+# Run every isolation-approved shard with a resource-aware 1-4 workers.
 npm run test:toolchain:parallel
 
-# Override the conservative worker count and retain timing JSON.
+# Override automatic selection and retain timing JSON.
 npm run test:toolchain:parallel -- --jobs 4 --timing-dir /tmp/hxc-timings
+
+# Reuse only exact, unexpired passing shards from an interrupted local run.
+npm run test:toolchain:parallel -- --resume
 
 # Run the canonical exhaustive reference lane.
 npm run test:toolchain
@@ -211,11 +214,24 @@ same declared toolchain, inputs, concurrency, cache state, and a comparable
 resource environment.
 
 `test:toolchain:parallel` therefore runs shards concurrently but never runs the
-commands inside one shard concurrently. It defaults to two workers regardless
-of host core count; `--jobs` or `HXC_TEST_JOBS` may select one through four.
+commands inside one shard concurrently. Without an override, it compares the
+one-minute system load with the logical CPU count:
+
+- an idle host with at least eight logical CPUs, load at or below 0.50 per CPU,
+  and four CPUs of measured headroom runs all four isolated shards;
+- a moderately occupied host with at least four logical CPUs, load at or below
+  0.85 per CPU, and two CPUs of headroom runs two; and
+- a saturated host runs one.
+
+When the operating system cannot report load, the portable fallback uses two
+workers on a host with at least four logical CPUs and one otherwise. Invalid or
+non-finite load data takes the same conservative fallback. `--jobs` has priority
+over `HXC_TEST_JOBS`; both accept only 1 through 4. The runner prints the choice
+and reason before starting, so "automatic" never means hidden.
+
 Each shard writes to an isolated temporary log. Completion progress is printed
 at 30-second intervals, then full logs are replayed in canonical shard order so
-interleaving cannot hide the first useful failure. All admitted shards finish
+interleaving cannot hide the first useful failure. All scheduled shards finish
 to retain independent evidence even when one fails.
 
 The pre-commit hook uses this exhaustive path once when staged changes touch
@@ -225,6 +241,42 @@ old behavior where the same global file matched nearly every focused condition
 and serialized all owners one by one. It still runs governance and native
 smoke around the exact 38-command partition. Ordinary compiler edits continue
 to select only their narrower focused gates.
+
+### Safe local resume
+
+The hook opts into `--resume` so a retry after one failed or timed-out shard
+does not discard the other three successes. A reusable record is not a general
+test cache. It is a local, ignored receipt saying one exact shard passed one
+exact set of inputs, and it expires after 24 hours.
+
+The receipt key includes:
+
+- the staged Git tree plus unstaged tracked changes and relevant untracked
+  files under compiler, runtime, test, script, specification, and example roots;
+- the complete canonical command sequence, four-shard registry, command bodies,
+  and isolation declarations;
+- the reviewed Haxe/Reflaxe, npm, and Raylib lock files;
+- the shard runner and pre-commit-hook bytes;
+- hashes of the resolved Haxe, Node, Python, native compiler, build-tool, shell,
+  JSON, and Git identities; and
+- one-way hashes of every inherited environment value, covering native
+  compilers, SDKs, include/library paths, Python/Node options, locales,
+  timezones, and package resolution without writing their values to a receipt.
+
+Only the scheduling override and Caxecraft's internally replaced timing-output
+path are excluded because neither changes what a shard proves. Missing,
+malformed, failed, future-dated, expired, symlinked, or mismatched receipts
+cause execution. The runner recomputes the input identity after the run and
+refuses to write reusable evidence if the checkout or environment changed while
+tests were active.
+
+Receipts live under ignored `.cache/toolchain-shards/`. Logs still appear in
+canonical order, and timing summaries distinguish `executedShards` from
+`reusedShards`; a historical duration is never presented as current work.
+Beads export, formatting, local-path and whitespace checks, staged secret
+scanning, governance, and the native smoke lane remain outside this mechanism
+and run on every applicable hook invocation. GitHub runs `--run <shard>` in a
+clean job without `--resume`, so local evidence can never replace hosted CI.
 
 ## Budgets and observability
 
@@ -242,6 +294,16 @@ aggregate with `--timing-dir`. Reports deliberately contain no timestamp,
 checkout path, or log text. Do not compare developer laptop wall time directly
 with hosted CI, and do not label a change a performance improvement without a
 comparable before and after sample.
+
+The successful Caxecraft command embeds its own phase report, also described by
+[`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps
+asset checks, the Eval reference run, the first three backend renders, cold
+determinism, warm compiler-server reuse, snapshot validation, and native
+compile/run work separate. It also records the reviewed 12 Haxe requests. This
+distinguishes time spent starting or asking the Haxe compiler from time spent
+compiling and running generated C. The shard runner rejects a successful
+Caxecraft result if a phase is absent, reordered, failed, or reports the wrong
+request count, so the measurements cannot silently lose work.
 
 ### Local contention diagnostic
 
@@ -262,6 +324,28 @@ non-owning view of adjacent values, represented in C as an element pointer plus
 an element count. The compiler feature turns typed fixed arrays, borrowed spans,
 checked indexing, and direct iteration into allocation-free C. The readable
 feature and safety contract is in [Fixed arrays and spans](span-lowering.md).
+
+The first phase-instrumented run on 2026-07-20 deliberately forced four workers
+while the same pre-run probe saw load 11.16 on 12 logical CPUs. It passed all
+38 commands in 546,791ms, but it is the **contended** sample, not the clean
+after-number: automatic selection correctly chose one worker for those host
+conditions. Caxecraft was the 546,780ms critical path, split as follows:
+
+| Caxecraft phase | Time | Haxe requests |
+| --- | ---: | ---: |
+| Eval reference | 745ms | 1 |
+| first split/package/unity backend renders | 150,698ms | 3 |
+| cold repeated/order/locale determinism | 206,013ms | 4 |
+| warm compiler-server determinism | 173,932ms | 4 |
+| snapshot validation | 7,817ms | 0 |
+| native O0/O2/sanitizer compile and run | 6,178ms | 0 |
+
+This tells us why the forced run was slow: Haxe render requests competing with
+other local compiler jobs dominated; compiling and executing generated C did
+not. The earlier runner did not record these inner phases, so this sample
+establishes the phase baseline rather than inventing a before split. A clean
+hosted after-sample is still required before closing `haxe_c-wii.4` or claiming
+that any individual phase became faster.
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
@@ -312,9 +396,10 @@ total wall time even on a handled failure.
 
 Four simultaneous shards also made the span command about 39 seconds and the
 Caxecraft command about 50 seconds slower than an earlier two-worker sample.
-That contention is why local execution defaults to two workers. GitHub shards
-run on separately provisioned runners and require their own comparable timing
-series before budgets are enforced.
+That observation is why local execution is now resource-aware: an idle machine
+gets the faster four-shard wall time, while a busy machine stops adding pressure.
+GitHub shards run on separately provisioned runners and require their own
+comparable timing series before budgets are enforced.
 
 Timeouts are containment:
 
