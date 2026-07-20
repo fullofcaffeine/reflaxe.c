@@ -398,6 +398,17 @@ multiple established targets, and compiler extensibility can shape very
 different outputs. Caxecraft should make that advantage concrete without
 turning the slogan into a false claim that every target works automatically.
 
+The source itself is part of that proof. A TypeScript developer should be able
+to open the game and recognize modules, records, arrays, functions, and familiar
+control flow, then see Haxe add useful nominal abstracts, closed enums, and
+exhaustive pattern matching where they prevent mistakes. Prefer small cohesive
+readers and domain operations over framework-style boilerplate, numeric type
+tags, giant controllers, or C-shaped procedural code. Target-specific storage,
+ownership, and ABI details belong behind narrow typed adapters with a plain-
+language reason. This standard applies to tools and codecs as well as gameplay;
+passing Eval or generating C is not enough if the Haxe is unpleasant to learn
+from.
+
 Shared Haxe owns gameplay, CaxeMap/CaxeFlow, quests, editor semantics, and
 deterministic traces. Narrow adapters own:
 
@@ -522,6 +533,30 @@ editor/CaxeFlow, authored Adventure, measured rendering, and finally
 public-showcase evidence. Art and design can develop earlier, but no
 documentation may collapse the first slice into "finished" or
 "showcase-ready."
+
+## Second phase: local two-player creation
+
+Local two-player split screen is intentionally scheduled after the complete
+single-player showcase milestone. It must not delay the first honest Creative,
+Adventure, editor, localization, and compiler-QA release. The durable owner is
+`haxe_c-xge.28`.
+
+That phase should open a general creation space instead of bolting one co-op
+campaign onto the game. CaxeMap and CaxeFlow will gain the smallest closed
+concepts needed to address a player or team, share or separate state, assign
+spawn/checkpoint groups, and express cooperative, race, and versus completion
+rules. Creators should then be able to make asymmetric puzzle adventures in
+the spirit of two-person co-op games, races, or small arenas without editing
+Haxe source or embedding an unrestricted scripting language. Existing
+single-player maps must keep working unchanged.
+
+Controllers are part of the product contract, not an optional polish pass.
+The two-player phase includes clear device assignment, two common gamepads,
+documented keyboard fallback, hot-plug/reconnect behavior, pause/focus rules,
+and English/Spanish prompts. Both viewports render one deterministic world
+simulation, while headless tests cover input ordering plus shared and
+per-player state. Online multiplayer is separate research: split screen does
+not silently commit the format to networking, rollback, or matchmaking.
 
 ## Definition of the first showcase release
 

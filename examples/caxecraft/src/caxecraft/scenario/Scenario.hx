@@ -13,6 +13,7 @@ typedef Scenario = {
 	final objects:Array<ScenarioObject>;
 	final story:ScenarioStory;
 	final flow:CaxeFlow;
+	final extensions:Array<ScenarioExtension>;
 }
 
 enum ScenarioMode {

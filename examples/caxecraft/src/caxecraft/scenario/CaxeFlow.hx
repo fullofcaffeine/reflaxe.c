@@ -23,6 +23,13 @@ enum FlowValue {
 	State(value:ContentId);
 }
 
+/** Closed value type used for parameters and variable compatibility checks. */
+enum FlowValueKind {
+	FlagValue;
+	CounterValue;
+	StateValue;
+}
+
 typedef FlowVariable = {
 	final id:ScenarioId;
 	final scope:FlowScope;

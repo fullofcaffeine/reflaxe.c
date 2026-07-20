@@ -1,0 +1,143 @@
+CAXEMAP 1
+feature required caxecraft:core
+feature optional caxecraft:weather
+map codec.full
+asset-pack packs/caxecraft/base
+title literal "Codec \"full\"\nmap"
+mode adventure
+world 4 4 4
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 4 4 4
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+end chunk
+object checkpoint.start
+  tag checkpoint
+  placement checkpoint 500 1000 500 0
+end object
+object entity.browser
+  tag enemy
+  placement entity caxecraft:browser 2500 1000 2500 180
+end object
+object item.pick
+  tag item
+  placement item caxecraft:haxe-pick 1 1500 1000 1500 0
+end object
+object npc.ivvy
+  tag friend
+  placement npc caxecraft:ivvy dialogue.ivvy 2000 1000 1500 270
+end object
+object player.one
+  tag player
+  placement player-spawn 500 1000 500 0
+end object
+object prefab.house
+  tag landmark
+  placement prefab caxecraft:house 3000 1000 500 90
+end object
+object state.bridge
+  tag puzzle
+  placement stateful caxecraft:bridge caxecraft:closed 2000 1000 3000 0
+end object
+object zone.test
+  tag trigger
+  placement trigger-zone 1 1 1 2 2 2
+end object
+dialogue dialogue.ivvy
+  line narrator message dialogue.narrator
+  line npc.ivvy literal "¡Vamos, Haxirio!"
+end dialogue
+journal journal.bridge title message journal.bridge.title
+  body literal "Lower the bridge."
+end journal
+objective objective.bridge hidden title message objective.bridge.title
+  body message objective.bridge.body
+end objective
+objective objective.ivvy active title message objective.ivvy.title
+  body message objective.ivvy.body
+end objective
+route route.castle title message route.castle.title
+  objective objective.ivvy
+  objective objective.bridge
+end route
+variable map.ready map flag false
+variable player.score player counter 0
+variable quest.bridge quest state caxecraft:closed
+variable local.choice local sequence.helper flag true
+sequence sequence.helper
+  parameter enabled flag true
+  do set-flag map.ready true
+end sequence
+rule rule.block priority 20 repeat
+  when block-changed zone.test caxecraft:bedrock
+  if (all (flag map.ready true) (not (mode creative)))
+  do add-counter player.score 1
+end rule
+rule rule.choice priority 30 cooldown 5
+  when interact state.bridge
+  if (any (state quest.bridge caxecraft:closed) (object-state state.bridge caxecraft:closed))
+  do choose player.score 2
+  choice weight 1
+    do set-state quest.bridge caxecraft:open
+    do set-object-state state.bridge caxecraft:open
+  end choice
+  choice weight 2
+    do effect caxecraft:spark at state.bridge
+  end choice
+end rule
+rule rule.defeat priority 40 once
+  when entity-defeated entity.browser
+  if (objective objective.bridge active)
+  do objective objective.bridge complete
+  do journal journal.bridge
+end rule
+rule rule.enter priority 10 once
+  when enter-zone zone.test
+  if (inventory-has player.one caxecraft:haxe-pick greater-or-equal 1)
+  do dialogue dialogue.ivvy
+  do give-item player.one caxecraft:haxe-pick 1
+  do take-item player.one caxecraft:haxe-pick 1
+end rule
+rule rule.leave priority 11 repeat
+  when leave-zone zone.test
+  if (near player.one npc.ivvy 4000)
+  do checkpoint checkpoint.start
+end rule
+rule rule.objective priority 50 repeat
+  when objective-changed objective.bridge
+  if (counter player.score greater 0)
+  do spawn entity.browser
+  do despawn entity.browser
+end rule
+rule rule.signal priority 60 repeat
+  when signal caxecraft:bridge-lowered
+  if (always)
+  do call sequence.helper value flag true
+end rule
+rule rule.state priority 70 repeat
+  when state-changed map.ready
+  if (flag map.ready true)
+  do schedule timer.bridge 10 sequence.helper variable map.ready
+end rule
+rule rule.timer priority 80 repeat
+  when timer timer.bridge
+  if (mode adventure)
+  do signal caxecraft:bridge-lowered
+end rule
+rule rule.use priority 90 repeat
+  when use-item caxecraft:haxe-pick
+  if (always)
+  do set-counter player.score 2
+  do effect caxecraft:spark
+end rule
+extension caxecraft:weather weather.settings
+  data "snow=gentle"
+end extension
+end-map

@@ -19,10 +19,10 @@ enum ScenarioDiagnosticKind {
 	UnknownRequiredFeature(feature:ContentId);
 	InvalidToken;
 	InvalidEscape;
-	UnexpectedRecord(recordType:ContentId);
-	MissingRecord(recordType:ContentId);
+	UnexpectedRecord(recordType:String);
+	MissingRecord(recordType:String);
 	IntegerOutOfRange;
-	LimitExceeded(limit:ContentId, maximum:Int);
+	LimitExceeded(limit:String, maximum:Int);
 	InvalidRunTotal(chunk:ScenarioId, expected:Int, actual:Int);
 	DuplicateId(id:ScenarioId);
 	DuplicateTag(tag:ScenarioTag);
@@ -30,6 +30,7 @@ enum ScenarioDiagnosticKind {
 	ImpossiblePlacement(id:ScenarioId);
 	InvalidRule(id:ScenarioId);
 	RuleCycle(id:ScenarioId);
+	InvalidExtension(id:ScenarioId);
 	EventBudgetExhausted(maximum:Int);
 	PersistenceFailed(stage:PersistenceStage);
 }

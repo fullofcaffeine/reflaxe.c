@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 MODEL = CASE / "src/caxecraft/scenario"
 FIXTURE = CASE / "scenarios/minimal.caxemap"
-EXPECTED_TRACE = "scenario-model: 1783751633\n"
+EXPECTED_TRACE = "scenario-model: 454598688\n"
 FORBIDDEN_MODEL_TEXT = (
     re.compile(r"#if\b"),
     re.compile(r"\bDynamic\b"),
@@ -61,6 +61,22 @@ def check_positive_model() -> None:
         raise ScenarioModelFailure(
             "CAXEMAP model trace changed:\n"
             f"expected stdout: {EXPECTED_TRACE!r}\n"
+            f"actual stdout:   {result.stdout!r}\n"
+            f"actual stderr:   {result.stderr!r}"
+        )
+
+
+def check_codec() -> None:
+    result = run_haxe("scenario-codec.hxml")
+    if result.returncode != 0:
+        raise ScenarioModelFailure(
+            "CAXEMAP codec probe failed:\n" + result.stdout + result.stderr
+        )
+    expected = "scenario-codec: 1196 + 4025 bytes, staged round-trip and 6 fail-closed families\n"
+    if result.stdout != expected or result.stderr:
+        raise ScenarioModelFailure(
+            "CAXEMAP codec trace changed:\n"
+            f"expected stdout: {expected!r}\n"
             f"actual stdout:   {result.stdout!r}\n"
             f"actual stderr:   {result.stderr!r}"
         )
@@ -126,6 +142,7 @@ def main() -> int:
         check_model_boundary()
         check_canonical_fixture_shape()
         check_positive_model()
+        check_codec()
         check_nominal_identity_failure()
     except (OSError, UnicodeError, ScenarioModelFailure) as error:
         print(f"caxemap-model: ERROR: {error}", file=sys.stderr)

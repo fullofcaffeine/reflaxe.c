@@ -13,6 +13,7 @@ import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowParameter;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlow.FlowValueKind;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
@@ -87,6 +88,7 @@ final class ScenarioModelProbe {
 		];
 		final scopes:Array<FlowScope> = [FlowScope.Map, FlowScope.Player, FlowScope.Quest, FlowScope.Local(otherId)];
 		final values:Array<FlowValue> = [FlowValue.Flag(false), FlowValue.Counter(0), FlowValue.State(content)];
+		final valueKinds:Array<FlowValueKind> = [FlagValue, CounterValue, StateValue];
 		final comparisons:Array<FlowComparison> = [Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual];
 		final predicates:Array<FlowPredicate> = [
 			Always,
@@ -187,7 +189,14 @@ final class ScenarioModelProbe {
 			world: world,
 			objects: objects,
 			story: story,
-			flow: flow
+			flow: flow,
+			extensions: [
+				{
+					feature: new ContentId("caxecraft:sample"),
+					id: new ScenarioId("extension.sample"),
+					data: "sample"
+				}
+			]
 		};
 
 		final diagnostics:Array<ScenarioDiagnosticKind> = [
@@ -196,10 +205,10 @@ final class ScenarioModelProbe {
 			UnknownRequiredFeature(content),
 			InvalidToken,
 			InvalidEscape,
-			UnexpectedRecord(content),
-			MissingRecord(content),
+			UnexpectedRecord("sample"),
+			MissingRecord("sample"),
 			IntegerOutOfRange,
-			LimitExceeded(content, 1),
+			LimitExceeded("sample", 1),
 			InvalidRunTotal(objectId, 1, 2),
 			DuplicateId(objectId),
 			DuplicateTag(new ScenarioTag("sample")),
@@ -207,6 +216,7 @@ final class ScenarioModelProbe {
 			ImpossiblePlacement(objectId),
 			InvalidRule(objectId),
 			RuleCycle(objectId),
+			InvalidExtension(objectId),
 			EventBudgetExhausted(1),
 			PersistenceFailed(PersistenceStage.ReplaceDestination)
 		];
@@ -234,6 +244,8 @@ final class ScenarioModelProbe {
 			hash = mix(hash, scopeCode(scope));
 		for (value in values)
 			hash = mix(hash, valueCode(value));
+		for (kind in valueKinds)
+			hash = mix(hash, valueKindCode(kind));
 		for (comparison in comparisons)
 			hash = mix(hash, comparisonCode(comparison));
 		for (predicate in predicates)
@@ -303,6 +315,13 @@ final class ScenarioModelProbe {
 			case Flag(_): 1;
 			case Counter(_): 2;
 			case State(_): 3;
+		};
+
+	static function valueKindCode(value:FlowValueKind):Int
+		return switch (value) {
+			case FlagValue: 1;
+			case CounterValue: 2;
+			case StateValue: 3;
 		};
 
 	static function comparisonCode(value:FlowComparison):Int
@@ -398,8 +417,9 @@ final class ScenarioModelProbe {
 			case ImpossiblePlacement(_): 14;
 			case InvalidRule(_): 15;
 			case RuleCycle(_): 16;
-			case EventBudgetExhausted(_): 17;
-			case PersistenceFailed(_): 18;
+			case InvalidExtension(_): 17;
+			case EventBudgetExhausted(_): 18;
+			case PersistenceFailed(_): 19;
 		};
 
 	static function persistenceCode(value:PersistenceStage):Int

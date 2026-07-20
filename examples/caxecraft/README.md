@@ -25,6 +25,33 @@ branch to the generated executable. Only the selected imports, types, and
 expressions exist in that compilation. Passing `-D c` manually does not start
 the C target and is not a supported build.
 
+It helps to read the directive as “choose one source shape for this build,” not
+as an `if` statement. For example, `WorldCells` is effectively one of these two
+programs after Haxe has selected the target:
+
+```haxe
+// Production C build: a borrowed view over fixed native bytes.
+typedef WorldCells = c.Span<c.UInt8>;
+
+// Eval oracle build: an ordinary managed Haxe collection.
+typedef WorldCells = Array<Int>;
+```
+
+The compiler never tries to unify both storage types in one executable. The C
+build does not contain the fallback, and Eval never needs to understand the C
+ABI types. This differs from a TypeScript runtime check such as
+`if (platform === "c")`: there is no target string, dormant branch, or per-frame
+decision in generated C.
+
+Why choose different storage at all? The world is finite and its block codes
+fit in one byte. The C showcase can therefore prove a direct fixed byte array,
+borrowed safely as a span, with no heap allocation, garbage collector, or
+general array runtime for that buffer. Eval's `Array<Int>` is intentionally the
+simplest independent carrier for executing the same algorithms and comparing
+their results. It is a semantic oracle, not a claim that its memory layout or
+performance matches C. This seam demonstrates Haxe's “metal” option while the
+gameplay on either side remains normal high-level Haxe.
+
 The current conditionals are deliberately narrow:
 
 - `WorldCells` selects compact borrowed `Span<UInt8>` storage for C and an
@@ -49,6 +76,13 @@ target branches throughout gameplay or impose one universal rendering API/IR.
 Only abstractions demonstrated by at least two working adapters should move
 into shared code. The detailed boundary rules, limitations, and migration
 sequence live in [the domain design](../../docs/caxecraft-domain.md).
+
+A new `#if c` is justified only when a compile-time representation, ABI, native
+resource, or platform service truly differs. It is not a shortcut for missing
+compiler support and must not duplicate game rules. If both branches start
+implementing terrain, combat, quests, or editor behavior, the seam is in the
+wrong place: that behavior belongs in shared typed Haxe, with the differing
+storage or platform operation moved behind a small adapter.
 
 From the repository root, run the fast development proof:
 
@@ -167,13 +201,15 @@ The CAXEMAP 1 authoring foundation has a separate fast model contract:
 npm run test:caxecraft-scenario-model
 ```
 
-It compiles every closed scenario and CaxeFlow model family under Eval, proves
-that object IDs cannot be mixed with registry content IDs, checks the first
-canonical fixture, and rejects Raylib/C target leakage from the shared model.
-This is model and format evidence only: the parser, native persistence, rule
-executor, and visual editor remain the ordered `haxe_c-xge.19.*` slices. The
-readable [CAXEMAP 1 reference](../../docs/caxemap-1.md) defines their common
-contract.
+It compiles every closed scenario and CaxeFlow family under Eval, proves that
+object IDs cannot be mixed with registry content IDs, and rejects Raylib/C
+target leakage from the shared model. The same fast command now exercises the
+in-progress staged codec: bounded UTF-8/token decoding, syntax parsing, typed
+content-registry validation, byte-identical canonical writing, CRLF and input-
+order convergence, two readable fixtures, and fail-closed malformed families.
+It is not native persistence, the rule executor, or the visual editor; those
+remain ordered `haxe_c-xge.19.*` slices. The readable
+[CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
 To compile only the C project through the direct recovery path:
 

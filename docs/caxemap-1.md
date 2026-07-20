@@ -1,7 +1,8 @@
 # CAXEMAP 1 scenario format
 
-Status: accepted format contract; parser, validator, persistence, and editor are
-delivered by the ordered `haxe_c-xge.19.*` implementation slices.
+Status: accepted format contract. The target-neutral Eval codec/validator is in
+progress under `haxe_c-xge.19.2`; native persistence, execution, and editor work
+remain later ordered `haxe_c-xge.19.*` slices.
 
 CAXEMAP is Caxecraft's public map and story format. Creative, Adventure, the
 in-game editor, Eval tests, and generated C all use the same typed model. Built-
@@ -87,10 +88,12 @@ The remaining top-level records appear in this canonical order:
 5. chunks sorted by origin `z`, then `y`, then `x`, then ID;
 6. objects sorted by ID;
 7. dialogues, journal entries, objectives, and routes, each sorted by ID;
-8. variables sorted by scope then ID;
+8. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
+   sequence ID) and then variable ID;
 9. sequences sorted by ID;
-10. rules sorted by ID; and
-11. `end-map`.
+10. rules sorted by ID;
+11. optional extension blocks sorted by feature content ID then record ID; and
+12. `end-map`.
 
 Ordering that carries meaning is never sorted: voxel runs, object tags,
 dialogue lines, route objectives, predicate children, sequence parameters,

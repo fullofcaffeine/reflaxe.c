@@ -168,6 +168,15 @@ performance, packaging, and developer experience together.
   output shape, compile time, runtime cost, allocations, code size, diagnostics,
   and workflow friction where relevant. Turn a broadly useful improvement into
   a compiler capability rather than local game scaffolding.
+- Treat Caxecraft's Haxe source as part of the showcase. It should be inviting
+  to a TypeScript developer: use ordinary Haxe, descriptive domain names,
+  nominal abstracts, immutable records, closed enums, exhaustive matching, and
+  small cohesive modules where they make intent clearer. Do not transliterate
+  C/Java machinery into Haxe, encode closed concepts as numeric/string tags, or
+  let one parser/controller/game-loop class become a procedural blob. Isolate
+  unavoidable target or ABI detail behind a narrow typed adapter and explain
+  why it exists. Compiler limitations must not force unrelated shared gameplay
+  code into a low-level style; fix or track the general compiler gap instead.
 - Preserve the accepted architecture and policy hierarchy while improving the
   workload: typed source and plans, HxcIR where C semantic gaps require it,
   structural CAST, explicit ownership/runtime decisions, formatting-only
