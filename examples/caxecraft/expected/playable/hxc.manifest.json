@@ -1,0 +1,303 @@
+{
+  "configuration": {
+    "profile": "portable",
+    "environment": "hosted",
+    "cStandard": "c11",
+    "runtimePolicy": "none",
+    "projectLayout": "split",
+    "runtimeDiagnostics": "off"
+  },
+  "ownershipManifest": "_GeneratedFiles.json",
+  "build": {
+    "publicHeaders": [],
+    "sources": [
+      "src/hxc/main.c",
+      "src/hxc/support.c",
+      "src/modules/caxecraft/app/CaxecraftPalette.c",
+      "src/modules/caxecraft/app/HudDigits.c",
+      "src/modules/caxecraft/app/Main.c",
+      "src/modules/caxecraft/domain/PlayerPhysics.c",
+      "src/modules/caxecraft/domain/VoxelRaycast.c",
+      "src/modules/caxecraft/domain/World.c",
+      "src/modules/caxecraft/domain/WorldStorage.c"
+    ],
+    "cStandard": "c11",
+    "definitions": [],
+    "extensions": false,
+    "schemaVersion": 1,
+    "privateHeaders": [
+      "include/hxc/detail/program_types.h",
+      "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
+      "include/hxc/modules/caxecraft/app/HudDigits.h",
+      "include/hxc/modules/caxecraft/app/Main.h",
+      "include/hxc/modules/caxecraft/domain/AxisMove.h",
+      "include/hxc/modules/caxecraft/domain/BlockCoord.h",
+      "include/hxc/modules/caxecraft/domain/BlockKind.h",
+      "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
+      "include/hxc/modules/caxecraft/domain/PlayerState.h",
+      "include/hxc/modules/caxecraft/domain/RaycastHit.h",
+      "include/hxc/modules/caxecraft/domain/StepInput.h",
+      "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
+      "include/hxc/modules/caxecraft/domain/World.h",
+      "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+      "include/hxc/modules/raylib/raw/Camera3D.h",
+      "include/hxc/modules/raylib/raw/Color.h",
+      "include/hxc/modules/raylib/raw/Vector2.h",
+      "include/hxc/modules/raylib/raw/Vector3.h",
+      "include/hxc/program.h"
+    ],
+    "frameworks": [],
+    "includeDirectories": [
+      "include"
+    ],
+    "requiredHeaders": [
+      {
+        "path": "raylib.h",
+        "ownerModulePaths": [
+          "raylib.raw.Camera3D",
+          "raylib.raw.Color",
+          "raylib.raw.Raylib",
+          "raylib.raw.Vector2",
+          "raylib.raw.Vector3"
+        ],
+        "kind": "system"
+      }
+    ],
+    "libraries": [
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "m"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "GL"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "dl"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "rt"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "X11"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "raylib"
+      },
+      {
+        "ownerModulePaths": [
+          "raylib.raw.Raylib"
+        ],
+        "name": "pthread"
+      }
+    ],
+    "runtimeHeaders": [],
+    "artifact": {
+      "targetName": "hxc_program",
+      "kind": "executable"
+    },
+    "pkgConfigPackages": [],
+    "warningPolicy": "strict"
+  },
+  "schemaVersion": 1,
+  "compilationStatus": "lowered-direct-value-executable",
+  "generator": "reflaxe.c",
+  "artifacts": [
+    {
+      "sha256": "74b4ffa4f5d1a2a2a8cae25996d580919180263c5ad24967c0330d309e29f543",
+      "path": "cmake/CMakeLists.txt",
+      "kind": "cmake-adapter"
+    },
+    {
+      "sha256": "aa1df9ea5558b3ef7590b2f6e71a81a675f309abea1d47adbfd34034c0f67338",
+      "path": "hxc.abi.json",
+      "kind": "abi-manifest"
+    },
+    {
+      "sha256": "6aef9c040069a8123d88bf2f92fb4431a361fb062222f6c7e58043f5dcb5e0b8",
+      "path": "hxc.initialization-plan.json",
+      "kind": "initialization-plan"
+    },
+    {
+      "sha256": "42fd5901b4292affd796bb5d522359aa3b75b4ef543cb103b40feac1fc40f983",
+      "path": "hxc.runtime-plan.json",
+      "kind": "runtime-plan"
+    },
+    {
+      "sha256": "aa9b7ac197bb0bb82cde8de3b4fd8c16dda4379bbda34c0d35e27651c3871262",
+      "path": "hxc.stdlib-report.json",
+      "kind": "stdlib-report"
+    },
+    {
+      "sha256": "4f9f3532c4b70c8a1bdc2d672614272c97cc70ca6eae1f38bac6a08dd0806b57",
+      "path": "hxc.symbols.json",
+      "kind": "symbol-table"
+    },
+    {
+      "sha256": "f1287bd021bf14c9ad86ab944b11b5f12a6b5644efbbbcfe324e4a27ff019370",
+      "path": "include/hxc/detail/program_types.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "a64bd28fdd6b4b2976176497cadbdf478022d588c0b9b6fa12dcd326e0ac1545",
+      "path": "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5218391c13c2a774b6d611eb8f980ba77d5727c5a9aa646cbeafe863083ca808",
+      "path": "include/hxc/modules/caxecraft/app/HudDigits.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "116d6f9fa0f95c3499a00dae061748f88402cfa2c8d8e810d94498dcca66d1ca",
+      "path": "include/hxc/modules/caxecraft/app/Main.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "cc6fea96691ea6cf65d6b267eeb47b571964c05cb68c856bd60c8a75d05b2c27",
+      "path": "include/hxc/modules/caxecraft/domain/AxisMove.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "b2b7cd3aade6aba96a45f84ebbf297e1741809de6f28c061a914529bfd3714b9",
+      "path": "include/hxc/modules/caxecraft/domain/BlockCoord.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "e21a24514adc50993891c78bc260603bdd5ab3f96d5f111c98b934395bcb3c3a",
+      "path": "include/hxc/modules/caxecraft/domain/BlockKind.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "7fd4b350603e5220254733e7b150d6ed2e3b5c517f6051d7e89ab3cd01774fc7",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1bfe033b1930cca6b256fe31a4d72c857b5ca6b21e79d15e7166945c624e5947",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "9576a77399cb020b710cff0b51a1b08f5bf97fc446c5bcfd726172fd7defff1d",
+      "path": "include/hxc/modules/caxecraft/domain/RaycastHit.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "351f03f466158bda55711d622a0c256812c1f8efc94b32490ff41b3e2f309fa9",
+      "path": "include/hxc/modules/caxecraft/domain/StepInput.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "ef80ec50b66f1a020f038a4ed010256e11a9e6ca09d5ba36f8c3c96c17d9146a",
+      "path": "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "d1de0905cfea8bec84b8f83d1c5416148c5aee0a2320bf2919a69136ecf5cf36",
+      "path": "include/hxc/modules/caxecraft/domain/World.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "f05593f6cd4da79da515a5d96c28d534b87b865715eed25ed6c5b5ac74a501a6",
+      "path": "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5c3dfb7f2257343c0cb19c8c4379f7bcda9d280d7e229018097d42eef2da0518",
+      "path": "include/hxc/modules/raylib/raw/Camera3D.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5eb6a09dcef582cc1d8479bc0c7d04ad77ec456bc775f1589828f64c0fba264e",
+      "path": "include/hxc/modules/raylib/raw/Color.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "640b2b8b0eef1ec5946dd9e2fc3d776aef9f9d715e28a84200fafdbbba7fa8ac",
+      "path": "include/hxc/modules/raylib/raw/Vector2.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "e7f9c54dd2c4b1dcfe2bc2d9a64bb87a00f779566e158300b84f50d4c240dad2",
+      "path": "include/hxc/modules/raylib/raw/Vector3.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "901af93899c35fdba9d23006928dd263e5c5e52736ef90054d7d1102ad571e32",
+      "path": "include/hxc/program.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "16b274992293457bd71ba88d654145cb4118c3ebe3cedf2ad6349a8ab514fdae",
+      "path": "meson.build",
+      "kind": "meson-adapter"
+    },
+    {
+      "sha256": "49ecea89985636c01ebce2abd5d7e636357c6805657a616dd39ce72dabc4cd99",
+      "path": "src/hxc/main.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "3aee1bc1de7c33c41800cb724f3f6b2e8124edaab621c78161c3a44de75f05bf",
+      "path": "src/hxc/support.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "accccdef9461b3fddc71e3806888fd8dcb46ee1d5f3acf231bc32e81259e0e94",
+      "path": "src/modules/caxecraft/app/CaxecraftPalette.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "26c199b6be413b891ff1ad3753939881f504ee3d0749cbf6a207f4234e2a3afe",
+      "path": "src/modules/caxecraft/app/HudDigits.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "9e01f82a052ea3ff5a903d3e856e10b5c3b2162942436d09a1305306cbae5555",
+      "path": "src/modules/caxecraft/app/Main.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "3edaa6fe6b2532ae613ebb2730db7c1ec9bc61f84667702094b12bd7db8397e8",
+      "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "4ad5477fd62eeb5f7cd05cebe3bfaa8bc3da2e287029ff806d2392a1cdc4c449",
+      "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "b7e1a6c62d1c021a07d7c37e82f8142e86e6b4c96194a2f5aa2b171e7db5b273",
+      "path": "src/modules/caxecraft/domain/World.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "affb31b22326d7410314dcd7e04af2ac051f693816634e582a19ce03011981fd",
+      "path": "src/modules/caxecraft/domain/WorldStorage.c",
+      "kind": "source"
+    }
+  ],
+  "contentAddressing": {
+    "scope": "all compiler artifacts except hxc.manifest.json and _GeneratedFiles.json",
+    "algorithm": "sha256"
+  },
+  "projectName": "caxecraft.app.Main"
+}

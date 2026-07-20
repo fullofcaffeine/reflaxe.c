@@ -33,6 +33,8 @@
     "test:caxecraft-assets": "python3 examples/caxecraft/check_assets.py",
     "test:caxecraft-domain": "python3 examples/caxecraft/run.py",
     "test:caxecraft-domain:full": "python3 examples/caxecraft/run.py --full",
+    "test:caxecraft-playable": "python3 examples/caxecraft/play.py --check-snapshots",
+    "caxecraft:play": "python3 examples/caxecraft/play.py",
     "test:stdlib-ledger": "python3 test/stdlib_ledger/run.py",
     "test:hxc-ir": "python3 test/hxc_ir/run.py",
     "test:primitive-semantics": "python3 test/primitive_semantics/run.py",

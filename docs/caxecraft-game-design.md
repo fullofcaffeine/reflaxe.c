@@ -5,10 +5,13 @@ Product owner: `haxe_c-xge`
 Audience: players, designers, contributors, compiler engineers, and reviewers
 
 Status: accepted product and technical direction; implementation is staged.
-The deterministic domain exists today, and the first original art pack is
-checked in. A playable raylib shell, the modes, the editor, persistence, and
-the authored campaign are not yet implemented. Do not describe the concept art
-or asset atlases as evidence that those capabilities run.
+The deterministic domain, first original art pack, and first native Raylib
+feasibility slice exist today. That slice can move, collide, jump, select,
+remove, and place colored blocks; it is not the planned finished game. The
+modes, asset-integrated visual pass, inventory, creatures, NPCs, editor,
+persistence, localization, Ivvy behavior, and authored campaign are not yet
+implemented. Do not describe concept art or asset atlases as evidence that
+those capabilities run.
 
 The durable work owners are:
 
@@ -506,10 +509,12 @@ Those fixed-corpus gates prevent silent regression, but declaration cleanup and
 broad arbitrary-program handoff evidence remain separate; this slice alone is
 not a universal C-programmer handoff claim.
 
-The implementation sequence is first playable and RaylibHx, visual integration,
-inventory/entities, CaxeMap plus editor/CaxeFlow, authored Adventure, measured
-rendering, and finally public-showcase evidence. Art and design can develop
-earlier, but no documentation may collapse those gates into "playable now."
+The implementation sequence is the completed first feasibility slice and
+RaylibHx core, followed by visual integration, inventory/entities, CaxeMap plus
+editor/CaxeFlow, authored Adventure, measured rendering, and finally
+public-showcase evidence. Art and design can develop earlier, but no
+documentation may collapse the first slice into "finished" or
+"showcase-ready."
 
 ## Definition of the first showcase release
 
@@ -532,6 +537,6 @@ The first showcase release is reached only when all of the following are true:
 - every bitmap/font/native dependency has offline bytes, hashes, provenance,
   license/brand handling, and an explicit runtime lifetime.
 
-Until then, individual assets, deterministic domain traces, or compiler
-fixtures are evidence for their bounded slices only—not evidence that the game
-is finished or playable.
+Until then, individual assets, deterministic domain traces, the current
+feasibility executable, or compiler fixtures are evidence for their bounded
+slices only—not evidence that the complete designed game is finished.

@@ -1,0 +1,4 @@
+-cp src
+-lib reflaxe.c
+-main caxecraft.app.Main
+-D hxc_runtime=none

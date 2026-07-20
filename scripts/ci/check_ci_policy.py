@@ -550,10 +550,15 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/assets/branding/caxecraft-wordmark.png",
     "examples/caxecraft/assets/showcase/title-panorama.png",
     "examples/caxecraft/build.hxml",
+    "examples/caxecraft/play.hxml",
+    "examples/caxecraft/play.py",
     "examples/caxecraft/check_assets.py",
     "examples/caxecraft/oracle.hxml",
     "examples/caxecraft/case.json",
     "examples/caxecraft/run.py",
+    "examples/caxecraft/src/caxecraft/app/CaxecraftPalette.hx",
+    "examples/caxecraft/src/caxecraft/app/HudDigits.hx",
+    "examples/caxecraft/src/caxecraft/app/Main.hx",
     "examples/caxecraft/src/caxecraft/domain/AxisMove.hx",
     "examples/caxecraft/src/caxecraft/domain/BlockCoord.hx",
     "examples/caxecraft/src/caxecraft/domain/BlockKind.hx",
@@ -591,6 +596,12 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/expected/unity/include/hxc/program.h",
     "examples/caxecraft/expected/unity/src/program.c",
     "examples/caxecraft/expected/oracle.txt",
+    "examples/caxecraft/expected/playable/hxc.manifest.json",
+    "examples/caxecraft/expected/playable/hxc.runtime-plan.json",
+    "examples/caxecraft/expected/playable/include/hxc/program.h",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/app/CaxecraftPalette.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/app/HudDigits.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/app/Main.c",
     "scripts/test/generated_c_maintainability.py",
     "docs/generated-c-maintainability.md",
     "docs/specs/generated-c-maintainability.schema.json",
@@ -796,6 +807,11 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/arithmetic_semantics/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 examples/caxecraft/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
+    "python3 examples/caxecraft/play.py \\",
+    "--prebuilt-raylib-cache",
+    "--prebuilt-raylib-build",
+    "--prebuilt-raylib-report",
+    'for optimization in 0 2; do',
     "--require-hashes",
     "--no-input",
     "--only-binary=:all:",
@@ -976,6 +992,10 @@ def validate() -> list[str]:
         errors.append("package.json must retain the offline Caxecraft asset-manifest gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
         errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
+    if scripts.get("test:caxecraft-playable") != "python3 examples/caxecraft/play.py --check-snapshots":
+        errors.append("package.json must retain the focused Caxecraft playable snapshot gate")
+    if scripts.get("caxecraft:play") != "python3 examples/caxecraft/play.py":
+        errors.append("package.json must retain the one-command Caxecraft developer workflow")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))
     for required_beads_command in (
         "python3 scripts/beads/validate_plan.py",

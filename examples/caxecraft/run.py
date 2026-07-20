@@ -27,6 +27,10 @@ from check_assets import (  # noqa: E402
     negative_contracts,
     validate_asset_pack,
 )
+from play import (  # noqa: E402
+    PLAYABLE_SNAPSHOT_FORMATS,
+    snapshot_values as playable_snapshot_values,
+)
 
 BUILD_HXML = CASE / "build.hxml"
 ORACLE_HXML = CASE / "oracle.hxml"
@@ -112,6 +116,7 @@ SNAPSHOT_FORMATS = {
     "unity/include/hxc/program.h": "header",
     "unity/src/program.c": "c",
     "oracle.txt": "text",
+    **PLAYABLE_SNAPSHOT_FORMATS,
 }
 MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 STRICT_FLAGS = (
@@ -1236,6 +1241,7 @@ def snapshot_values() -> dict[str, object]:
             unity.maintainability_report,
         )
         oracle = run_oracle().decode("ascii")
+        playable = playable_snapshot_values()
         return {
             **{
                 path: (split.output / path).read_text(encoding="utf-8")
@@ -1259,6 +1265,7 @@ def snapshot_values() -> dict[str, object]:
                 encoding="utf-8"
             ),
             "oracle.txt": oracle,
+            **playable,
         }
 
 
@@ -1383,6 +1390,7 @@ def validate_snapshots(
     oracle: bytes,
 ) -> None:
     expected = expected_values()
+    playable = playable_snapshot_values()
     actual: dict[str, object] = {
         **{
             path: (split.output / path).read_text(encoding="utf-8")
@@ -1404,6 +1412,7 @@ def validate_snapshots(
             encoding="utf-8"
         ),
         "oracle.txt": oracle.decode("ascii"),
+        **playable,
     }
     if actual == expected:
         return

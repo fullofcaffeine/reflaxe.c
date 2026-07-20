@@ -39,6 +39,10 @@
       "cName": "hxc_caxecraft_domain_PlayerPhysics_abs"
     },
     {
+      "sourceSymbol": "caxecraft.domain.PlayerPhysics.canPlaceAt(instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
+      "cName": "hxc_caxecraft_domain_PlayerPhysics_canPlaceAt"
+    },
+    {
       "sourceSymbol": "caxecraft.domain.PlayerPhysics.floorToInt(f64)",
       "cName": "hxc_caxecraft_domain_PlayerPhysics_floorToInt"
     },

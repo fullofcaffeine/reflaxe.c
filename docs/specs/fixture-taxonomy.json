@@ -1003,12 +1003,13 @@
       ],
       "status": "active",
       "assertions": [
-        "the initial non-playable design art pack is offline and exact: its manifest owns every primary-source PNG hash, dimensions, alpha contract, semantic atlas cell, generation/privacy record, complete file inventory, and minimal metadata policy before any runtime-integration claim",
-        "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, and fixed-step AABB player collision over a narrow fixed-array storage seam",
+        "the initial design art pack is offline and exact but not loaded by the first playable: its manifest owns every primary-source PNG hash, dimensions, alpha contract, semantic atlas cell, generation/privacy record, complete file inventory, and minimal metadata policy before any runtime-integration claim",
+        "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, fixed-step AABB player collision, and player-safe adjacent placement over a narrow fixed-array storage seam",
         "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
         "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
         "the generated program matches centrally owned split, package, and unity header/C snapshots, schema-validated maintainability reports, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
-        "split, package, and unity reports preserve identical 53-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named package/QA/unity overrides",
+        "split, package, and unity reports preserve identical 54-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named package/QA/unity overrides",
+        "the separate first-playable snapshots preserve the generated manifest, empty runtime plan, program header, palette, HUD, and application module while requiring direct Raylib window/input/draw calls and rejecting goto, hxrt, and allocation calls",
         "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2 and under address and undefined-behavior sanitizers"
       ]
     },

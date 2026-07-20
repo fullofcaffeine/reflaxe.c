@@ -265,6 +265,42 @@ double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value)
   return -hxc_value;
 }
 
+bool hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(struct hxc_caxecraft_domain_PlayerState hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord)
+{
+  double hxc_playerMinimumX = hxc_state.hxc_x - 0.30;
+  double hxc_playerMaximumX = hxc_state.hxc_x + 0.30;
+  double hxc_playerMinimumY = hxc_state.hxc_y;
+  double hxc_playerMaximumY = hxc_state.hxc_y + 1.80;
+  double hxc_playerMinimumZ = hxc_state.hxc_z - 0.30;
+  double hxc_playerMaximumZ = hxc_state.hxc_z + 0.30;
+  bool hxc_separated = false;
+  if (hxc_playerMaximumX <= (double)hxc_coord.hxc_x)
+  {
+    hxc_separated = true;
+  }
+  if (hxc_playerMinimumX >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_x, 1))
+  {
+    hxc_separated = true;
+  }
+  if (hxc_playerMaximumY <= (double)hxc_coord.hxc_y)
+  {
+    hxc_separated = true;
+  }
+  if (hxc_playerMinimumY >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_y, 1))
+  {
+    hxc_separated = true;
+  }
+  if (hxc_playerMaximumZ <= (double)hxc_coord.hxc_z)
+  {
+    hxc_separated = true;
+  }
+  if (hxc_playerMinimumZ >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_z, 1))
+  {
+    hxc_separated = true;
+  }
+  return hxc_separated;
+}
+
 int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value)
 {
   int32_t hxc_truncated = hxc_f64_to_i32_saturating(hxc_value);

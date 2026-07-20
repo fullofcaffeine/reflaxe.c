@@ -73,6 +73,8 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_terrainTrace(void);
 
 double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value);
 
+bool hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(struct hxc_caxecraft_domain_PlayerState hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+
 int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value);
 
 struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_PlayerPhysics_input(double hxc_moveX, double hxc_moveZ, bool hxc_jump);

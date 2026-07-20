@@ -419,8 +419,8 @@
       "area": "product",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Repository-owned hello and Caxecraft-domain examples compile ordinary Haxe through generated C and run with exact Eval differentials.",
-      "scope": "examples/hello proves the exact four-feature literal-output closure. examples/caxecraft proves a finite 16 KiB voxel world, deterministic terrain/edits/DDA/fixed-step AABB collision, 32 property seeds, compiler-server determinism, split/package/unity layout parity, and allocation-free runtime-none C under strict and sanitized native lanes; it is the renderer-independent core rather than the pending playable Raylib shell.",
+      "summary": "Repository-owned hello and Caxecraft examples compile ordinary Haxe through generated C; Caxecraft now includes a directly linked Raylib feasibility executable plus exact domain differentials.",
+      "scope": "examples/hello proves the exact four-feature literal-output closure. examples/caxecraft proves a finite 16 KiB voxel world, deterministic terrain/edits/DDA/fixed-step AABB collision, safe player-aware placement, 32 property seeds, compiler-server determinism, split/package/unity domain parity, and allocation-free runtime-none C under strict and sanitized native lanes. Its separate C-only application snapshot proves a direct Raylib window/input/draw loop, exposed-block rendering, counters, typed mouse/vector access, and no generated goto, hxrt, or allocation call; the documented developer command also compiles and links the native executable against checksum-pinned Raylib.",
       "evidence": [
         "examples/hello/README.md",
         "examples/hello/case.json",
@@ -428,6 +428,9 @@
         "examples/hello/run.py",
         "docs/caxecraft-domain.md",
         "examples/caxecraft/case.json",
+        "examples/caxecraft/play.py",
+        "examples/caxecraft/expected/playable/src/modules/caxecraft/app/Main.c",
+        "examples/caxecraft/expected/playable/hxc.runtime-plan.json",
         "examples/caxecraft/expected/src/modules/caxecraft/domain/World.c",
         "examples/caxecraft/expected/package/src/packages/caxecraft/domain/package.c",
         "examples/caxecraft/run.py"
@@ -438,7 +441,8 @@
         "E9.T02"
       ],
       "limitations": [
-        "The playable Raylib shell, packaged hxc/watch workflow, fresh-install walkthrough, general Haxe or String support, supported platform, performance claim, and stable public ABI remain unproven.",
+        "A human interactive smoke, Windows one-command native link adapter, packaged hxc/watch workflow, fresh-install walkthrough, general Haxe or String support, supported-platform claim, performance claim, and stable public ABI remain unproven.",
+        "The current texture-free playable slice is not the designed Creative/Adventure game; visual integration, inventory, creatures, NPCs, editor, persistence, localization, Ivvy behavior, authored content, and measured chunk rendering retain separate owners.",
         "Both examples use reusable compiler paths without raw C injection or an example-specific compiler branch; fixture-only native consumers are not generated application source."
       ]
     },

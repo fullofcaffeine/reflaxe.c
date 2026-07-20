@@ -52,7 +52,7 @@
         "maxFunctionLines": 400,
         "maxBranchCount": 40,
         "maxNestingDepth": 8,
-        "maxTemporaryDeclarations": 514,
+        "maxTemporaryDeclarations": 520,
         "maxTemporaryReferences": 800,
         "maxTemporaryDeclarationsPerKFunctionLines": 300,
         "maxFunctionTemporaryDeclarationsPerKLines": 500,
@@ -78,20 +78,20 @@
       "fileOverrides": [
         {
           "path": "src/packages/caxecraft/domain/package.c",
-          "maxFileLines": 1318,
+          "maxFileLines": 1356,
           "reason": "Package layout intentionally groups the reviewed production domain modules into one package source; per-function limits remain unchanged."
         },
         {
           "path": "src/packages/caxecraft/qa/package.c",
-          "maxFileLines": 617,
+          "maxFileLines": 631,
           "reason": "The QA package intentionally keeps the complete end-to-end domain oracle together; the corresponding function override remains separately bounded."
         }
       ],
       "functionOverrides": [
         {
           "functionId": "caxecraft.qa.DomainProbe.selfCheck",
-          "maxFunctionLines": 571,
-          "maxBranchCount": 81,
+          "maxFunctionLines": 585,
+          "maxBranchCount": 83,
           "maxNestingDepth": 8,
           "maxFunctionTemporaryDeclarationsPerKLines": 500,
           "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
@@ -107,7 +107,7 @@
         "maxFunctionLines": 400,
         "maxBranchCount": 40,
         "maxNestingDepth": 8,
-        "maxTemporaryDeclarations": 514,
+        "maxTemporaryDeclarations": 520,
         "maxTemporaryReferences": 800,
         "maxTemporaryDeclarationsPerKFunctionLines": 300,
         "maxFunctionTemporaryDeclarationsPerKLines": 500,
@@ -133,15 +133,15 @@
       "fileOverrides": [
         {
           "path": "src/modules/caxecraft/qa/DomainProbe.c",
-          "maxFileLines": 617,
+          "maxFileLines": 631,
           "reason": "The QA probe intentionally keeps the complete end-to-end domain oracle in one source-owned module; the corresponding function override remains separately bounded."
         }
       ],
       "functionOverrides": [
         {
           "functionId": "caxecraft.qa.DomainProbe.selfCheck",
-          "maxFunctionLines": 571,
-          "maxBranchCount": 81,
+          "maxFunctionLines": 585,
+          "maxBranchCount": 83,
           "maxNestingDepth": 8,
           "maxFunctionTemporaryDeclarationsPerKLines": 500,
           "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
@@ -157,7 +157,7 @@
         "maxFunctionLines": 400,
         "maxBranchCount": 40,
         "maxNestingDepth": 8,
-        "maxTemporaryDeclarations": 514,
+        "maxTemporaryDeclarations": 520,
         "maxTemporaryReferences": 800,
         "maxTemporaryDeclarationsPerKFunctionLines": 300,
         "maxFunctionTemporaryDeclarationsPerKLines": 500,
@@ -183,15 +183,15 @@
       "fileOverrides": [
         {
           "path": "src/program.c",
-          "maxFileLines": 2076,
+          "maxFileLines": 2128,
           "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit; per-function limits remain unchanged."
         }
       ],
       "functionOverrides": [
         {
           "functionId": "caxecraft.qa.DomainProbe.selfCheck",
-          "maxFunctionLines": 571,
-          "maxBranchCount": 81,
+          "maxFunctionLines": 585,
+          "maxBranchCount": 83,
           "maxNestingDepth": 8,
           "maxFunctionTemporaryDeclarationsPerKLines": 500,
           "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."

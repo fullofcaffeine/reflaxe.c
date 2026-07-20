@@ -1,6 +1,6 @@
 # Caxecraft deterministic domain
 
-Caxecraft is both a future Raylib game and haxe.c's current flagship
+Caxecraft is both a growing Raylib game and haxe.c's current flagship
 product-level end-to-end workload. It is the main integrated QA path used to
 find reusable compiler, generated-C, runtime, interop, and tooling
 improvements—not an example that may paper over those problems locally. Its
@@ -41,6 +41,13 @@ contract is documented in [configuration](configuration.md#target-activation-and
 | `WorldStorage.hx` | exact `UInt8` widening and explicit narrowing | direct `Int` array access | C ABI-width conversions must remain explicit without infecting algorithms. |
 | `CaxecraftTrace.hx` | fixed `CArray<UInt8, WorldVolume>` backing | freshly filled Haxe array | Each trace needs owned test storage, but all operations after construction stay shared. |
 | `DomainProbe.hx` | fixed storage and no Haxe `Sys` output | Haxe array and printed oracle lines | The C slice is runtime-free, so an independent fixture C consumer prints returned values. |
+
+The complete `caxecraft.app` source set is also guarded by `#if c`. That is a
+different kind of seam: the whole window/input/render adapter exists only for
+the C application because it speaks directly to Raylib's C ABI. Shared world,
+ray, edit, and physics algorithms do not import that adapter. A future browser
+or Rust presentation should supply its own narrow application adapter rather
+than putting `#if c` tests inside gameplay or frame-by-frame control flow.
 
 The import guards are part of the same boundary: non-C compilation never sees
 the C-only carrier imports. The repeated storage setup in the trace is visible
@@ -333,7 +340,10 @@ Regenerate reviewable evidence only after inspecting a semantic change:
 npm run snapshots:update -- --suite caxecraft-domain
 ```
 
-This evidence proves the bounded domain slice. It does not yet claim a playable
-Raylib shell, infinite chunks, persistence, networking, general collection or
-String support, a public C ABI, or cross-target equivalence beyond the declared
-Eval oracle.
+This evidence proves the bounded domain slice. A separate registered playable
+snapshot proves the current C adapter emits direct Raylib window, input, and
+draw calls with no `hxrt`, allocation call, or generated `goto`; the documented
+native command also compiles and links it against pinned Raylib. Neither proof
+claims infinite chunks, persistence, networking, general collection or String
+support, a public C ABI, optimized rendering, or cross-target equivalence
+beyond the declared Eval oracle.

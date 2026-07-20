@@ -371,6 +371,34 @@ jobs:
             --allow-network \
             --report "$raylib_report"
 
+      - name: Compile first Caxecraft playable through the Windows C target
+        if: matrix.platform == 'windows'
+        shell: bash
+        run: |
+          python3 examples/caxecraft/play.py \
+            --compile-only \
+            --output-root "$RUNNER_TEMP/caxecraft-playable-c"
+
+      - name: Compile and link first Caxecraft playable at O0 and O2
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
+          raylib_build="$RUNNER_TEMP/raylib-desktop-build"
+          raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
+          for optimization in 0 2; do
+            python3 examples/caxecraft/play.py \
+              --build-only \
+              --optimization "$optimization" \
+              --cc "${{ matrix.cc }}" \
+              --cxx "${{ matrix.cxx }}" \
+              --prebuilt-raylib-cache "$raylib_cache" \
+              --prebuilt-raylib-build "$raylib_build" \
+              --prebuilt-raylib-report "$raylib_report" \
+              --output-root "$RUNNER_TEMP/caxecraft-playable-o$optimization"
+          done
+
       - name: Preserve normalized Raylib desktop evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

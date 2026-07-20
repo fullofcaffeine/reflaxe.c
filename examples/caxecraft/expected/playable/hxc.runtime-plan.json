@@ -10,6 +10,7 @@
     "primitive-values",
     "selected-program-local-helpers",
     "static-functions",
+    "typed-header-owned-c-imports",
     "ub-safe-primitive-operations"
   ],
   "profile": "portable",
@@ -27,15 +28,16 @@
       "primitive-values",
       "selected-program-local-helpers",
       "static-functions",
+      "typed-header-owned-c-imports",
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 6,
-      "functions": 42,
-      "blocks": 457,
-      "modules": 12,
+      "typeInstances": 11,
+      "functions": 37,
+      "blocks": 411,
+      "modules": 17,
       "runtimeIntents": 0,
-      "instructions": 2255,
+      "instructions": 2219,
       "cleanupActions": 0
     },
     "programLocalHelpers": [
@@ -43,6 +45,7 @@
       "hxc.f64.to.i32.saturating",
       "hxc.i32.add.wrapping",
       "hxc.i32.bit-and",
+      "hxc.i32.bit-or",
       "hxc.i32.bit-xor",
       "hxc.i32.modulo.zero-safe",
       "hxc.i32.multiply.wrapping",
@@ -51,7 +54,7 @@
       "hxc.i32.unsigned-shift-right.masked",
       "hxc.u32.to.i32.bits"
     ],
-    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent, plus specialized native/tagged Haxe enum values with checked payload projection and finite recursive pointer layouts",
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent, plus specialized native/tagged Haxe enum values with checked payload projection and finite recursive pointer layouts, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation",
     "scope": "reachable-whole-program",
     "status": "eligible",
     "schemaVersion": 1,

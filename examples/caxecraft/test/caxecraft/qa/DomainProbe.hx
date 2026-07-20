@@ -134,6 +134,10 @@ final class DomainProbe {
 		clear(cells);
 		CaxecraftTrace.makeFloor(cells);
 		var player = PlayerPhysics.player(5.5, 1.0, 5.5);
+		if (PlayerPhysics.canPlaceAt(player, World.coord(5, 1, 5)))
+			return 37;
+		if (!PlayerPhysics.canPlaceAt(player, World.coord(7, 1, 5)))
+			return 39;
 		player = PlayerPhysics.step(cells, player, PlayerPhysics.input(0.0, 0.0, false));
 		if (!player.grounded || !near(player.y, 1.0) || !near(player.velocityY, 0.0))
 			return 30;

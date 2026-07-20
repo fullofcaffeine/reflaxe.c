@@ -277,7 +277,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `declaration-planner` | `implemented` | Structural declaration planning handles complete types, forward declarations, includes, and private boundaries deterministically. |
 | `diagnostics` | `implemented` | Thirteen typed diagnostic IDs and deterministic schema-1 records are registry- and drift-checked. |
 | `direct-c-import` | `implemented` | Reached hand-authored extern declarations directly consume an authoritative C header and library through structural generated C. |
-| `example-portfolio` | `implemented` | Repository-owned hello and Caxecraft-domain examples compile ordinary Haxe through generated C and run with exact Eval differentials. |
+| `example-portfolio` | `implemented` | Repository-owned hello and Caxecraft examples compile ordinary Haxe through generated C; Caxecraft now includes a directly linked Raylib feasibility executable plus exact domain differentials. |
 | `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
 | `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
 | `generated-file-ownership` | `implemented` | Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling. |

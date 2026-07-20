@@ -15,7 +15,7 @@
       "maxFunctionLines": 400,
       "maxBranchCount": 40,
       "maxNestingDepth": 8,
-      "maxTemporaryDeclarations": 514,
+      "maxTemporaryDeclarations": 520,
       "maxTemporaryReferences": 800,
       "maxTemporaryDeclarationsPerKFunctionLines": 300,
       "maxFunctionTemporaryDeclarationsPerKLines": 500,
@@ -41,52 +41,52 @@
     "fileOverrides": [
       {
         "path": "src/program.c",
-        "maxFileLines": 2076,
+        "maxFileLines": 2128,
         "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit; per-function limits remain unchanged."
       }
     ],
     "functionOverrides": [
       {
         "functionId": "caxecraft.qa.DomainProbe.selfCheck",
-        "maxFunctionLines": 571,
-        "maxBranchCount": 81,
+        "maxFunctionLines": 585,
+        "maxBranchCount": 83,
         "maxNestingDepth": 8,
         "maxFunctionTemporaryDeclarationsPerKLines": 500,
         "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
       }
     ],
-    "sha256": "85eedf873c30e0660ebaff8ccd13f0db8b3967986c5c1d16a2304806a62de8ce"
+    "sha256": "822bd534feb9f54732e5d2e8a39eb735ceab37278c9ca65b6e717c1196eabc5b"
   },
   "inputs": [
     {
       "path": "include/hxc/program.h",
-      "sha256": "22f29fe839ef7f851a9c081fefe9aa5465580ab821a4b6dfa969fdea54374fca"
+      "sha256": "b7f2cbf56620d5f48de765419414b4492ddb8f366bae094ac9cf489151521ab8"
     },
     {
       "path": "src/program.c",
-      "sha256": "377258ee34e4bb31e1e0ef38d4ad0fe91b673de42554f748d5c471a3f5582bba"
+      "sha256": "175309317741bd8a6cde2473990f2dcb364f1d775e16a41ab94b5c920952e7c1"
     }
   ],
   "summary": {
     "artifactCount": 2,
-    "physicalLineCount": 2303,
-    "codeLineCount": 2133,
+    "physicalLineCount": 2355,
+    "codeLineCount": 2183,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
-    "functionCount": 53,
-    "functionIdentityMappedCount": 53,
+    "functionCount": 54,
+    "functionIdentityMappedCount": 54,
     "functionIdentityMappedBasisPoints": 10000,
-    "sourceSpanMappedFunctionCount": 41,
-    "sourceSpanMappedFunctionBasisPoints": 7735,
+    "sourceSpanMappedFunctionCount": 42,
+    "sourceSpanMappedFunctionBasisPoints": 7777,
     "lineMappedFunctionCount": 0,
     "lineMappedFunctionBasisPoints": 0,
     "ownerMappedArtifactCount": 2,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 230,
-    "temporaryDeclarationCount": 514,
-    "temporaryReferenceCount": 757,
-    "temporaryDeclarationsPerKFunctionCodeLines": 262,
+    "branchCount": 238,
+    "temporaryDeclarationCount": 520,
+    "temporaryReferenceCount": 763,
+    "temporaryDeclarationsPerKFunctionCodeLines": 258,
     "maxIdentifier": {
       "name": "hxc_caxecraft_domain_CaxecraftTrace_collisionTrace",
       "bytes": 50,
@@ -128,19 +128,19 @@
   "files": [
     {
       "path": "include/hxc/program.h",
-      "sha256": "22f29fe839ef7f851a9c081fefe9aa5465580ab821a4b6dfa969fdea54374fca",
+      "sha256": "b7f2cbf56620d5f48de765419414b4492ddb8f366bae094ac9cf489151521ab8",
       "owner": {
         "kind": "compiler-support",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 227,
-      "codeLineCount": 167,
+      "physicalLineCount": 229,
+      "codeLineCount": 168,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 608,
+      "identifierCount": 616,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_CaxecraftTrace_collisionTrace",
         "bytes": 50,
@@ -407,27 +407,27 @@
     },
     {
       "path": "src/program.c",
-      "sha256": "377258ee34e4bb31e1e0ef38d4ad0fe91b673de42554f748d5c471a3f5582bba",
+      "sha256": "175309317741bd8a6cde2473990f2dcb364f1d775e16a41ab94b5c920952e7c1",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 2076,
-      "codeLineCount": 1966,
+      "physicalLineCount": 2126,
+      "codeLineCount": 2015,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 4898,
+      "identifierCount": 5012,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_CaxecraftTrace_collisionTrace",
         "bytes": 50,
         "line": 139,
         "column": 9
       },
-      "temporaryDeclarationCount": 514,
-      "temporaryReferenceCount": 757,
+      "temporaryDeclarationCount": 520,
+      "temporaryReferenceCount": 763,
       "functions": [
         {
           "functionId": "caxecraft.domain.CaxecraftTrace.collisionTrace",
@@ -718,17 +718,17 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 155,
+              "startLine": 179,
               "startColumn": 41,
-              "endLine": 157,
+              "endLine": 181,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 155,
+            "startLine": 179,
             "startColumn": 41,
-            "endLine": 157,
+            "endLine": 181,
             "endColumn": 3
           },
           "startLine": 395,
@@ -745,6 +745,41 @@
           "temporaryDeclarationsPerKCodeLines": 0
         },
         {
+          "functionId": "caxecraft.domain.PlayerPhysics.canPlaceAt",
+          "cName": "hxc_caxecraft_domain_PlayerPhysics_canPlaceAt",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "caxecraft.domain.PlayerPhysics",
+            "source": {
+              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "startLine": 31,
+              "startColumn": 78,
+              "endLine": 52,
+              "endColumn": 3
+            }
+          },
+          "source": {
+            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "startLine": 31,
+            "startColumn": 78,
+            "endLine": 52,
+            "endColumn": 3
+          },
+          "startLine": 404,
+          "endLine": 438,
+          "physicalLineCount": 35,
+          "codeLineCount": 35,
+          "bodyCodeLineCount": 32,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 6,
+          "maxNestingDepth": 1,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
           "functionId": "caxecraft.domain.PlayerPhysics.floorToInt",
           "cName": "hxc_caxecraft_domain_PlayerPhysics_floorToInt",
           "identityMapped": true,
@@ -753,21 +788,21 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 150,
+              "startLine": 174,
               "startColumn": 46,
-              "endLine": 153,
+              "endLine": 177,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 150,
+            "startLine": 174,
             "startColumn": 46,
-            "endLine": 153,
+            "endLine": 177,
             "endColumn": 3
           },
-          "startLine": 404,
-          "endLine": 412,
+          "startLine": 440,
+          "endLine": 448,
           "physicalLineCount": 9,
           "codeLineCount": 9,
           "bodyCodeLineCount": 6,
@@ -801,8 +836,8 @@
             "endLine": 28,
             "endColumn": 3
           },
-          "startLine": 414,
-          "endLine": 417,
+          "startLine": 450,
+          "endLine": 453,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -823,21 +858,21 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 84,
+              "startLine": 108,
               "startColumn": 104,
-              "endLine": 123,
+              "endLine": 147,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 84,
+            "startLine": 108,
             "startColumn": 104,
-            "endLine": 123,
+            "endLine": 147,
             "endColumn": 3
           },
-          "startLine": 419,
-          "endLine": 505,
+          "startLine": 455,
+          "endLine": 541,
           "physicalLineCount": 87,
           "codeLineCount": 87,
           "bodyCodeLineCount": 84,
@@ -858,21 +893,21 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 125,
+              "startLine": 149,
               "startColumn": 77,
-              "endLine": 148,
+              "endLine": 172,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 125,
+            "startLine": 149,
             "startColumn": 77,
-            "endLine": 148,
+            "endLine": 172,
             "endColumn": 3
           },
-          "startLine": 507,
-          "endLine": 573,
+          "startLine": 543,
+          "endLine": 609,
           "physicalLineCount": 67,
           "codeLineCount": 67,
           "bodyCodeLineCount": 64,
@@ -906,8 +941,8 @@
             "endLine": 24,
             "endColumn": 3
           },
-          "startLine": 575,
-          "endLine": 578,
+          "startLine": 611,
+          "endLine": 614,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -928,21 +963,21 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 31,
+              "startLine": 55,
               "startColumn": 87,
-              "endLine": 47,
+              "endLine": 71,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 31,
+            "startLine": 55,
             "startColumn": 87,
-            "endLine": 47,
+            "endLine": 71,
             "endColumn": 3
           },
-          "startLine": 580,
-          "endLine": 604,
+          "startLine": 616,
+          "endLine": 640,
           "physicalLineCount": 25,
           "codeLineCount": 25,
           "bodyCodeLineCount": 22,
@@ -963,21 +998,21 @@
             "modulePath": "caxecraft.domain.PlayerPhysics",
             "source": {
               "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 50,
+              "startLine": 74,
               "startColumn": 101,
-              "endLine": 82,
+              "endLine": 106,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 50,
+            "startLine": 74,
             "startColumn": 101,
-            "endLine": 82,
+            "endLine": 106,
             "endColumn": 3
           },
-          "startLine": 606,
-          "endLine": 688,
+          "startLine": 642,
+          "endLine": 724,
           "physicalLineCount": 83,
           "codeLineCount": 83,
           "bodyCodeLineCount": 80,
@@ -1011,8 +1046,8 @@
             "endLine": 84,
             "endColumn": 3
           },
-          "startLine": 690,
-          "endLine": 697,
+          "startLine": 726,
+          "endLine": 733,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -1046,8 +1081,8 @@
             "endLine": 80,
             "endColumn": 3
           },
-          "startLine": 699,
-          "endLine": 707,
+          "startLine": 735,
+          "endLine": 743,
           "physicalLineCount": 9,
           "codeLineCount": 9,
           "bodyCodeLineCount": 6,
@@ -1081,8 +1116,8 @@
             "endLine": 102,
             "endColumn": 3
           },
-          "startLine": 709,
-          "endLine": 712,
+          "startLine": 745,
+          "endLine": 748,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -1116,8 +1151,8 @@
             "endLine": 119,
             "endColumn": 3
           },
-          "startLine": 714,
-          "endLine": 717,
+          "startLine": 750,
+          "endLine": 753,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -1151,8 +1186,8 @@
             "endLine": 75,
             "endColumn": 3
           },
-          "startLine": 719,
-          "endLine": 1084,
+          "startLine": 755,
+          "endLine": 1120,
           "physicalLineCount": 366,
           "codeLineCount": 366,
           "bodyCodeLineCount": 363,
@@ -1186,8 +1221,8 @@
             "endLine": 16,
             "endColumn": 3
           },
-          "startLine": 1086,
-          "endLine": 1118,
+          "startLine": 1122,
+          "endLine": 1154,
           "physicalLineCount": 33,
           "codeLineCount": 33,
           "bodyCodeLineCount": 30,
@@ -1221,8 +1256,8 @@
             "endLine": 12,
             "endColumn": 3
           },
-          "startLine": 1120,
-          "endLine": 1123,
+          "startLine": 1156,
+          "endLine": 1159,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -1256,8 +1291,8 @@
             "endLine": 130,
             "endColumn": 3
           },
-          "startLine": 1125,
-          "endLine": 1210,
+          "startLine": 1161,
+          "endLine": 1246,
           "physicalLineCount": 86,
           "codeLineCount": 86,
           "bodyCodeLineCount": 83,
@@ -1291,8 +1326,8 @@
             "endLine": 29,
             "endColumn": 3
           },
-          "startLine": 1212,
-          "endLine": 1220,
+          "startLine": 1248,
+          "endLine": 1256,
           "physicalLineCount": 9,
           "codeLineCount": 9,
           "bodyCodeLineCount": 6,
@@ -1326,8 +1361,8 @@
             "endLine": 63,
             "endColumn": 3
           },
-          "startLine": 1222,
-          "endLine": 1238,
+          "startLine": 1258,
+          "endLine": 1274,
           "physicalLineCount": 17,
           "codeLineCount": 17,
           "bodyCodeLineCount": 14,
@@ -1361,8 +1396,8 @@
             "endLine": 56,
             "endColumn": 3
           },
-          "startLine": 1240,
-          "endLine": 1256,
+          "startLine": 1276,
+          "endLine": 1292,
           "physicalLineCount": 17,
           "codeLineCount": 17,
           "bodyCodeLineCount": 14,
@@ -1396,8 +1431,8 @@
             "endLine": 39,
             "endColumn": 3
           },
-          "startLine": 1258,
-          "endLine": 1283,
+          "startLine": 1294,
+          "endLine": 1319,
           "physicalLineCount": 26,
           "codeLineCount": 26,
           "bodyCodeLineCount": 23,
@@ -1431,8 +1466,8 @@
             "endLine": 49,
             "endColumn": 3
           },
-          "startLine": 1285,
-          "endLine": 1310,
+          "startLine": 1321,
+          "endLine": 1346,
           "physicalLineCount": 26,
           "codeLineCount": 26,
           "bodyCodeLineCount": 23,
@@ -1466,8 +1501,8 @@
             "endLine": 98,
             "endColumn": 3
           },
-          "startLine": 1312,
-          "endLine": 1339,
+          "startLine": 1348,
+          "endLine": 1375,
           "physicalLineCount": 28,
           "codeLineCount": 28,
           "bodyCodeLineCount": 25,
@@ -1501,8 +1536,8 @@
             "endLine": 70,
             "endColumn": 3
           },
-          "startLine": 1341,
-          "endLine": 1356,
+          "startLine": 1377,
+          "endLine": 1392,
           "physicalLineCount": 16,
           "codeLineCount": 16,
           "bodyCodeLineCount": 13,
@@ -1536,8 +1571,8 @@
             "endLine": 88,
             "endColumn": 3
           },
-          "startLine": 1358,
-          "endLine": 1381,
+          "startLine": 1394,
+          "endLine": 1417,
           "physicalLineCount": 24,
           "codeLineCount": 24,
           "bodyCodeLineCount": 21,
@@ -1571,8 +1606,8 @@
             "endLine": 79,
             "endColumn": 3
           },
-          "startLine": 1383,
-          "endLine": 1399,
+          "startLine": 1419,
+          "endLine": 1435,
           "physicalLineCount": 17,
           "codeLineCount": 17,
           "bodyCodeLineCount": 14,
@@ -1606,8 +1641,8 @@
             "endLine": 141,
             "endColumn": 3
           },
-          "startLine": 1401,
-          "endLine": 1421,
+          "startLine": 1437,
+          "endLine": 1457,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -1641,8 +1676,8 @@
             "endLine": 147,
             "endColumn": 3
           },
-          "startLine": 1423,
-          "endLine": 1430,
+          "startLine": 1459,
+          "endLine": 1466,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -1676,8 +1711,8 @@
             "endLine": 29,
             "endColumn": 3
           },
-          "startLine": 1432,
-          "endLine": 1442,
+          "startLine": 1468,
+          "endLine": 1478,
           "physicalLineCount": 11,
           "codeLineCount": 11,
           "bodyCodeLineCount": 8,
@@ -1711,8 +1746,8 @@
             "endLine": 37,
             "endColumn": 3
           },
-          "startLine": 1444,
-          "endLine": 1454,
+          "startLine": 1480,
+          "endLine": 1490,
           "physicalLineCount": 11,
           "codeLineCount": 11,
           "bodyCodeLineCount": 8,
@@ -1733,21 +1768,21 @@
             "modulePath": "caxecraft.qa.DomainProbe",
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
-              "startLine": 191,
+              "startLine": 195,
               "startColumn": 47,
-              "endLine": 197,
+              "endLine": 201,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
-            "startLine": 191,
+            "startLine": 195,
             "startColumn": 47,
-            "endLine": 197,
+            "endLine": 201,
             "endColumn": 3
           },
-          "startLine": 1456,
-          "endLine": 1476,
+          "startLine": 1492,
+          "endLine": 1512,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -1781,8 +1816,8 @@
             "endLine": 45,
             "endColumn": 3
           },
-          "startLine": 1478,
-          "endLine": 1483,
+          "startLine": 1514,
+          "endLine": 1519,
           "physicalLineCount": 6,
           "codeLineCount": 6,
           "bodyCodeLineCount": 3,
@@ -1803,21 +1838,21 @@
             "modulePath": "caxecraft.qa.DomainProbe",
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
-              "startLine": 199,
+              "startLine": 203,
               "startColumn": 53,
-              "endLine": 202,
+              "endLine": 206,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
-            "startLine": 199,
+            "startLine": 203,
             "startColumn": 53,
-            "endLine": 202,
+            "endLine": 206,
             "endColumn": 3
           },
-          "startLine": 1485,
-          "endLine": 1498,
+          "startLine": 1521,
+          "endLine": 1534,
           "physicalLineCount": 14,
           "codeLineCount": 14,
           "bodyCodeLineCount": 11,
@@ -1840,7 +1875,7 @@
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 48,
               "startColumn": 41,
-              "endLine": 189,
+              "endLine": 193,
               "endColumn": 3
             }
           },
@@ -1848,21 +1883,21 @@
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 48,
             "startColumn": 41,
-            "endLine": 189,
+            "endLine": 193,
             "endColumn": 3
           },
-          "startLine": 1500,
-          "endLine": 2070,
-          "physicalLineCount": 571,
-          "codeLineCount": 571,
-          "bodyCodeLineCount": 568,
+          "startLine": 1536,
+          "endLine": 2120,
+          "physicalLineCount": 585,
+          "codeLineCount": 585,
+          "bodyCodeLineCount": 582,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 81,
+          "branchCount": 83,
           "maxNestingDepth": 4,
-          "temporaryDeclarationCount": 195,
-          "temporaryReferenceCount": 343,
-          "temporaryDeclarationsPerKCodeLines": 342
+          "temporaryDeclarationCount": 201,
+          "temporaryReferenceCount": 349,
+          "temporaryDeclarationsPerKCodeLines": 344
         },
         {
           "functionId": "compiler.src/program.c:main",
@@ -1874,8 +1909,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 2072,
-          "endLine": 2076,
+          "startLine": 2122,
+          "endLine": 2126,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,

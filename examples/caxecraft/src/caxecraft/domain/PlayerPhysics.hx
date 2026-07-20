@@ -27,6 +27,30 @@ final class PlayerPhysics {
 		return {moveX: moveX, moveZ: moveZ, jump: jump};
 	}
 
+	/** True when placing one unit block at `coord` cannot overlap the player. */
+	public static function canPlaceAt(state:PlayerState, coord:BlockCoord):Bool {
+		final playerMinimumX = state.x - HALF_WIDTH;
+		final playerMaximumX = state.x + HALF_WIDTH;
+		final playerMinimumY = state.y;
+		final playerMaximumY = state.y + HEIGHT;
+		final playerMinimumZ = state.z - HALF_WIDTH;
+		final playerMaximumZ = state.z + HALF_WIDTH;
+		var separated = false;
+		if (playerMaximumX <= coord.x)
+			separated = true;
+		if (playerMinimumX >= coord.x + 1)
+			separated = true;
+		if (playerMaximumY <= coord.y)
+			separated = true;
+		if (playerMinimumY >= coord.y + 1)
+			separated = true;
+		if (playerMaximumZ <= coord.z)
+			separated = true;
+		if (playerMinimumZ >= coord.z + 1)
+			separated = true;
+		return separated;
+	}
+
 	/** Lift an invalid spawn by whole blocks until its AABB is free. */
 	public static function recoverSpawn(cells:WorldCells, state:PlayerState):PlayerState {
 		var recoveredY = state.y;

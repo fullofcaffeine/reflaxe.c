@@ -241,6 +241,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_project_layout_script = "python3 test/project_layout/run.py"
     expected_caxecraft_domain_script = "python3 examples/caxecraft/run.py"
     expected_caxecraft_domain_full_script = "python3 examples/caxecraft/run.py --full"
+    expected_caxecraft_playable_script = "python3 examples/caxecraft/play.py --check-snapshots"
+    expected_caxecraft_play_script = "python3 examples/caxecraft/play.py"
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
@@ -437,6 +439,17 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         != expected_caxecraft_domain_full_script
     ):
         errors.append("package.json must retain the exhaustive Caxecraft CI gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-playable")
+        != expected_caxecraft_playable_script
+    ):
+        errors.append("package.json must retain the focused Caxecraft playable snapshot gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("caxecraft:play") != expected_caxecraft_play_script
+    ):
+        errors.append("package.json must retain the one-command Caxecraft developer workflow")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script
