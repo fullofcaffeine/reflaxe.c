@@ -343,9 +343,42 @@ conditions. Caxecraft was the 546,780ms critical path, split as follows:
 This tells us why the forced run was slow: Haxe render requests competing with
 other local compiler jobs dominated; compiling and executing generated C did
 not. The earlier runner did not record these inner phases, so this sample
-establishes the phase baseline rather than inventing a before split. A clean
-hosted after-sample is still required before closing `haxe_c-wii.4` or claiming
-that any individual phase became faster.
+establishes the local phase baseline rather than inventing a before split.
+
+### Resource-adaptive runner hosted result
+
+Clean Governance run
+[29757235207](https://github.com/fullofcaffeine/reflaxe.c/actions/runs/29757235207)
+passed every required job and its aggregate gate. Hosted jobs never read local
+resume receipts. Their uploaded reports recorded the exact work below:
+
+| Shard | Command wall time | Longest command |
+| --- | ---: | --- |
+| `contracts` | 7m05s | `project-emitter`, 2m34s |
+| `lowering-objects` | 5m56s | `constructor-lowering`, 1m01s |
+| `lowering-semantics` | 4m03s | `span-lowering`, 1m16s |
+| `caxecraft` | 13m03s | full Caxecraft QA, 13m02s |
+
+The Caxecraft phase report accounts for all 12 Haxe requests:
+
+| Caxecraft phase | Time | Haxe requests |
+| --- | ---: | ---: |
+| asset contracts | 101ms | 0 |
+| Eval reference | 985ms | 1 |
+| first split/package/unity backend renders | 202,155ms | 3 |
+| cold repeated/order/locale determinism | 269,783ms | 4 |
+| warm compiler-server determinism | 266,312ms | 4 |
+| snapshot validation | 11,808ms | 0 |
+| native O0/O2/sanitizer compile and run | 30,652ms | 0 |
+
+This sample is slower than the earlier 6m41s hosted Caxecraft result, so it is
+not evidence that an individual phase became faster. It is evidence that the
+new instrumentation retains the complete QA workload and identifies its cost:
+the repeated Haxe backend and determinism requests consumed about 12m18s,
+whereas snapshot validation and native C work together consumed about 42s.
+The overall required workflow still finished in about 13m26s, below the initial
+20-minute objective. More cold hosted samples are required before treating
+normal runner variation as a regression or setting a percentile budget.
 
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
