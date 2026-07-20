@@ -361,6 +361,37 @@ source coordinates, and a fully validated `Scenario`. The live world changes
 only after the third stage succeeds. Diagnostics identify line, column, logical
 record, closed failure kind, and related typed identity where applicable.
 
+### Reader implementation map
+
+The implementation keeps those stages visible in the source tree:
+
+- `ScenarioLexer` checks bytes and turns each meaningful line into bounded
+  tokens.
+- `ScenarioParser` is the small public syntax entry point.
+- `ScenarioDocumentReader` owns the header, top-level fields, and final model
+  assembly. It delegates chunks and objects to `ScenarioWorldReader`, story
+  records to `ScenarioStoryReader`, and rules to `CaxeFlowReader`.
+- `ScenarioTokenGrammar` owns context-free values such as IDs, integers,
+  transforms, and localized text references. `CaxeFlowValueReader` does the
+  same for events, predicates, arguments, and non-branching actions.
+- `ScenarioValidator` resolves references and checks meaning only after the
+  complete candidate exists. `ScenarioWriter` accepts only that validated
+  model and produces the one canonical byte spelling.
+
+The readers share a `ScenarioRecordCursor`. Here, a **cursor** is simply the
+current line plus the source locations collected so far. A successful reader
+advances it past one complete record or block; a failed reader returns a typed
+diagnostic without pretending that a partial object is usable. This small
+state object preserves exact error locations without hiding the grammar behind
+a parser framework. Predicate parsing is the one recursive part, and its depth
+is checked before descending.
+
+Application and editor code should call `ScenarioLexer.read(...)`,
+`ScenarioParser.parse(...)`, `ScenarioValidator.validate(...)`, and
+`ScenarioWriter.write(...)`. The smaller reader classes are visible between
+Haxe source files so they can collaborate, but they are implementation details.
+Their `@:noCompletion` marker keeps them out of normal editor suggestions.
+
 The validator rejects malformed UTF-8, invalid escapes, overflow, duplicate or
 missing singleton records, limit violations, invalid RLE totals, overlapping or
 missing chunks, duplicate IDs/tags, unresolved references, type-mismatched

@@ -1,0 +1,276 @@
+package caxecraft.scenario;
+
+import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.Scenario.ScenarioMode;
+import caxecraft.scenario.ScenarioCodecModel.ParsedScenario;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
+import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
+import caxecraft.scenario.ScenarioStory.ScenarioObjective;
+import caxecraft.scenario.ScenarioStory.ScenarioRoute;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
+import caxecraft.scenario.ScenarioWorld.VoxelChunk;
+
+/**
+	Coordinates the top-level CAXEMAP grammar.
+
+	Nested record families are delegated to readers named after the model they
+	produce. This class only owns the document header, singleton fields, feature
+	declarations, extensions, and final assembly.
+**/
+// Internal helper. Application code should call ScenarioParser.parse(...) instead.
+@:noCompletion
+final class ScenarioDocumentReader {
+	final cursor:ScenarioRecordCursor;
+	final worldReader:ScenarioWorldReader;
+	final storyReader:ScenarioStoryReader;
+	final flowReader:CaxeFlowReader;
+
+	public function new(records:Array<ScenarioLexRecord>) {
+		cursor = new ScenarioRecordCursor(records);
+		worldReader = new ScenarioWorldReader(cursor);
+		storyReader = new ScenarioStoryReader(cursor);
+		flowReader = new CaxeFlowReader(cursor);
+	}
+
+	public function read():ScenarioReadResult<ParsedScenario> {
+		if (!cursor.hasRecord())
+			return cursor.failAt(null, MissingRecord("CAXEMAP 1"));
+		final header = cursor.current();
+		if (header.indent != 0 || header.tokens.length != 2 || header.tokens[0].text != "CAXEMAP")
+			return cursor.failAt(header, UnexpectedRecord(ScenarioTokenGrammar.firstText(header)));
+		final version = ScenarioTokenGrammar.integer(header.tokens[1]);
+		if (version == null)
+			return cursor.failToken(header.tokens[1], IntegerOutOfRange);
+		if (version != 1)
+			return cursor.failToken(header.tokens[1], UnknownVersion(version));
+		cursor.locate(Header, header);
+		cursor.advance();
+
+		final requiredFeatures:Array<ContentId> = [];
+		final optionalFeatures:Array<ContentId> = [];
+		var mapId:Null<ScenarioId> = null;
+		var assetPack:Null<LogicalPath> = null;
+		var title:Null<ScenarioText> = null;
+		var mode:Null<ScenarioMode> = null;
+		var worldSize:Null<VoxelSize> = null;
+		final palette:Array<BlockPaletteEntry> = [];
+		final chunks:Array<VoxelChunk> = [];
+		final objects:Array<ScenarioObject> = [];
+		final dialogues:Array<ScenarioDialogue> = [];
+		final journal:Array<ScenarioJournalEntry> = [];
+		final objectives:Array<ScenarioObjective> = [];
+		final routes:Array<ScenarioRoute> = [];
+		final variables:Array<FlowVariable> = [];
+		final sequences:Array<FlowSequence> = [];
+		final rules:Array<FlowRule> = [];
+		final extensions:Array<ScenarioExtension> = [];
+		var sawEnd = false;
+
+		while (cursor.hasRecord()) {
+			final record = cursor.current();
+			if (record.indent != 0)
+				return cursor.failAt(record, UnexpectedRecord(ScenarioTokenGrammar.firstText(record)));
+			switch ScenarioTokenGrammar.firstText(record) {
+				case "feature":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 3))
+						return cursor.failAt(record, InvalidToken);
+					final feature = ScenarioTokenGrammar.contentId(record.tokens[2]);
+					if (feature == null)
+						return cursor.failToken(record.tokens[2], InvalidToken);
+					switch record.tokens[1].text {
+						case "required": requiredFeatures.push(feature);
+						case "optional": optionalFeatures.push(feature);
+						case _: return cursor.failToken(record.tokens[1], InvalidToken);
+					}
+					cursor.locate(Feature(feature), record);
+					cursor.advance();
+				case "map":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || mapId != null)
+						return cursor.failAt(record, InvalidToken);
+					mapId = ScenarioTokenGrammar.scenarioId(record.tokens[1]);
+					if (mapId == null)
+						return cursor.failToken(record.tokens[1], InvalidToken);
+					cursor.locate(MapIdentity(mapId), record);
+					cursor.advance();
+				case "asset-pack":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || assetPack != null)
+						return cursor.failAt(record, InvalidToken);
+					assetPack = ScenarioTokenGrammar.logicalPath(record.tokens[1]);
+					if (assetPack == null)
+						return cursor.failToken(record.tokens[1], InvalidToken);
+					cursor.locate(AssetPack, record);
+					cursor.advance();
+				case "title":
+					if (title != null)
+						return cursor.failAt(record, InvalidToken);
+					final parsed = ScenarioTokenGrammar.text(record, 1);
+					if (parsed == null || parsed.next != record.tokens.length)
+						return cursor.failAt(record, InvalidToken);
+					title = parsed.value;
+					cursor.locate(Title, record);
+					cursor.advance();
+				case "mode":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || mode != null)
+						return cursor.failAt(record, InvalidToken);
+					mode = switch record.tokens[1].text {
+						case "creative": Creative;
+						case "adventure": Adventure;
+						case _: null;
+					}
+					if (mode == null)
+						return cursor.failToken(record.tokens[1], InvalidToken);
+					cursor.locate(Mode, record);
+					cursor.advance();
+				case "world":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 4) || worldSize != null)
+						return cursor.failAt(record, InvalidToken);
+					worldSize = ScenarioTokenGrammar.size(record, 1);
+					if (worldSize == null)
+						return cursor.failAt(record, IntegerOutOfRange);
+					cursor.locate(World, record);
+					cursor.advance();
+				case "palette":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 3))
+						return cursor.failAt(record, InvalidToken);
+					final code = ScenarioTokenGrammar.integer(record.tokens[1]);
+					final block = ScenarioTokenGrammar.contentId(record.tokens[2]);
+					if (code == null || block == null)
+						return cursor.failAt(record, InvalidToken);
+					palette.push({code: code, blockType: block});
+					cursor.locate(Palette(code), record);
+					cursor.advance();
+				case "chunk":
+					switch worldReader.readChunk() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(chunk): chunks.push(chunk);
+					}
+				case "object":
+					switch worldReader.readObject() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(object): objects.push(object);
+					}
+				case "dialogue":
+					switch storyReader.readDialogue() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(dialogue): dialogues.push(dialogue);
+					}
+				case "journal":
+					switch storyReader.readJournal() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(entry): journal.push(entry);
+					}
+				case "objective":
+					switch storyReader.readObjective() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(objective): objectives.push(objective);
+					}
+				case "route":
+					switch storyReader.readRoute() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(route): routes.push(route);
+					}
+				case "variable":
+					switch flowReader.readVariable() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(variable): variables.push(variable);
+					}
+				case "sequence":
+					switch flowReader.readSequence() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(sequence): sequences.push(sequence);
+					}
+				case "rule":
+					switch flowReader.readRule() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(rule): rules.push(rule);
+					}
+				case "extension":
+					switch readExtension() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(extension): extensions.push(extension);
+					}
+				case "end-map":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 1))
+						return cursor.failAt(record, InvalidToken);
+					sawEnd = true;
+					cursor.advance();
+					if (cursor.hasRecord())
+						return cursor.failAt(cursor.current(), UnexpectedRecord(ScenarioTokenGrammar.firstText(cursor.current())));
+				case other:
+					return cursor.failAt(record, UnexpectedRecord(other));
+			}
+		}
+
+		if (!sawEnd)
+			return cursor.failAt(cursor.lastRecord(), MissingRecord("end-map"));
+		if (mapId == null)
+			return cursor.failAt(header, MissingRecord("map"));
+		if (assetPack == null)
+			return cursor.failAt(header, MissingRecord("asset-pack"));
+		if (title == null)
+			return cursor.failAt(header, MissingRecord("title"));
+		if (mode == null)
+			return cursor.failAt(header, MissingRecord("mode"));
+		if (worldSize == null)
+			return cursor.failAt(header, MissingRecord("world"));
+
+		return ReadOk({
+			candidate: {
+				formatVersion: 1,
+				requiredFeatures: requiredFeatures,
+				optionalFeatures: optionalFeatures,
+				id: mapId,
+				assetPack: assetPack,
+				title: title,
+				mode: mode,
+				world: {
+					size: worldSize,
+					palette: palette,
+					chunks: chunks
+				},
+				objects: objects,
+				story: {
+					dialogues: dialogues,
+					journal: journal,
+					objectives: objectives,
+					routes: routes
+				},
+				flow: {variables: variables, sequences: sequences, rules: rules},
+				extensions: extensions
+			},
+			recordCoordinates: cursor.recordCoordinates(),
+			sourceLocations: cursor.sourceLocations()
+		});
+	}
+
+	function readExtension():ScenarioReadResult<ScenarioExtension> {
+		final header = cursor.current();
+		if (!ScenarioTokenGrammar.hasTokenCount(header, 3))
+			return cursor.failAt(header, InvalidToken);
+		final feature = ScenarioTokenGrammar.contentId(header.tokens[1]);
+		final id = ScenarioTokenGrammar.scenarioId(header.tokens[2]);
+		if (feature == null || id == null)
+			return cursor.failAt(header, InvalidToken);
+		cursor.locate(Extension(feature, id), header);
+		cursor.advance();
+		if (!cursor.hasRecord()
+			|| cursor.current().indent != 2
+			|| !ScenarioTokenGrammar.hasTokenCount(cursor.current(), 2)
+			|| ScenarioTokenGrammar.firstText(cursor.current()) != "data"
+			|| !cursor.current().tokens[1].quoted)
+			return cursor.failAt(header, MissingRecord("extension data"));
+		final data = cursor.current().tokens[1].text;
+		cursor.advance();
+		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "extension"))
+			return cursor.failAt(header, MissingRecord("end extension"));
+		cursor.advance();
+		return ReadOk({feature: feature, id: id, data: data});
+	}
+}
