@@ -1,0 +1,413 @@
+package caxecraft.qa;
+
+import caxecraft.scenario.CaxeFlow;
+import caxecraft.scenario.CaxeFlow.FlowAction;
+import caxecraft.scenario.CaxeFlow.FlowArgument;
+import caxecraft.scenario.CaxeFlow.FlowChoice;
+import caxecraft.scenario.CaxeFlow.FlowComparison;
+import caxecraft.scenario.CaxeFlow.FlowEvent;
+import caxecraft.scenario.CaxeFlow.FlowPredicate;
+import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
+import caxecraft.scenario.CaxeFlow.FlowRule;
+import caxecraft.scenario.CaxeFlow.FlowScope;
+import caxecraft.scenario.CaxeFlow.FlowSequence;
+import caxecraft.scenario.CaxeFlow.FlowParameter;
+import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.ContentId;
+import caxecraft.scenario.LogicalPath;
+import caxecraft.scenario.MessageId;
+import caxecraft.scenario.Scenario;
+import caxecraft.scenario.Scenario.ScenarioMode;
+import caxecraft.scenario.ScenarioDiagnostic.PersistenceStage;
+import caxecraft.scenario.ScenarioDiagnostic;
+import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
+import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
+import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
+import caxecraft.scenario.ScenarioGeometry.VoxelPoint;
+import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.ScenarioId;
+import caxecraft.scenario.ScenarioObject;
+import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioStory;
+import caxecraft.scenario.ScenarioStory.ObjectiveState;
+import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
+import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
+import caxecraft.scenario.ScenarioStory.ScenarioObjective;
+import caxecraft.scenario.ScenarioStory.ScenarioRoute;
+import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioText;
+import caxecraft.scenario.ScenarioWorld;
+import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
+import caxecraft.scenario.ScenarioWorld.VoxelChunk;
+import caxecraft.scenario.ScenarioWorld.VoxelRun;
+
+/** Eval-only construction probe for every closed CAXEMAP 1 model family. */
+final class ScenarioModelProbe {
+	static function main():Void {
+		Sys.println("scenario-model: " + modelHash());
+	}
+
+	public static function modelHash():Int {
+		final objectId = new ScenarioId("object.one");
+		final otherId = new ScenarioId("object.two");
+		final content = new ContentId("caxecraft:sample");
+		final transform:ScenarioTransform = {
+			xMilli: 1000,
+			yMilli: 2000,
+			zMilli: 3000,
+			yawDegrees: 90
+		};
+		final bounds:VoxelBounds = {
+			origin: point(0, 0, 0),
+			size: size(2, 2, 2)
+		};
+		final placements:Array<ObjectPlacement> = [
+			PlayerSpawn(transform),
+			Checkpoint(transform),
+			Item(content, 1, transform),
+			Entity(content, transform),
+			Npc(content, otherId, transform),
+			Prefab(content, transform),
+			TriggerZone(bounds),
+			StatefulObject(content, content, transform)
+		];
+
+		final events:Array<FlowEvent> = [
+			EnterZone(objectId),
+			LeaveZone(objectId),
+			Interact(objectId),
+			BlockChanged(objectId, content),
+			UseItem(content),
+			EntityDefeated(objectId),
+			SignalReceived(content),
+			TimerExpired(objectId),
+			ObjectiveChanged(objectId),
+			StateChanged(objectId)
+		];
+		final scopes:Array<FlowScope> = [FlowScope.Map, FlowScope.Player, FlowScope.Quest, FlowScope.Local(otherId)];
+		final values:Array<FlowValue> = [FlowValue.Flag(false), FlowValue.Counter(0), FlowValue.State(content)];
+		final comparisons:Array<FlowComparison> = [Equal, NotEqual, Less, LessOrEqual, Greater, GreaterOrEqual];
+		final predicates:Array<FlowPredicate> = [
+			Always,
+			All([Always]),
+			AnyOf([Always]),
+			Not(Always),
+			FlagIs(objectId, true),
+			CounterCompare(objectId, FlowComparison.GreaterOrEqual, 1),
+			StateIs(objectId, content),
+			ObjectStateIs(objectId, content),
+			InventoryHas(objectId, content, FlowComparison.Equal, 1),
+			ObjectiveIs(objectId, ObjectiveState.Active),
+			NearObject(objectId, otherId, 1000),
+			ModeIs(ScenarioMode.Creative)
+		];
+		final arguments:Array<FlowArgument> = [Value(FlowValue.Flag(true)), Variable(objectId), Object(otherId)];
+		final repeatPolicies:Array<FlowRepeatPolicy> = [Once, Repeat, Cooldown(1)];
+		final choice:FlowChoice = {weight: 1, actions: [EmitSignal(content)]};
+		final actions:Array<FlowAction> = [
+			ShowDialogue(objectId),
+			AddJournal(objectId),
+			SetFlag(objectId, true),
+			SetCounter(objectId, 1),
+			AddCounter(objectId, 2),
+			SetState(objectId, content),
+			GiveItem(objectId, content, 1),
+			TakeItem(objectId, content, 1),
+			Spawn(objectId),
+			Despawn(objectId),
+			SetObjectState(objectId, content),
+			SetCheckpoint(objectId),
+			SetObjective(objectId, ObjectiveState.Complete),
+			PlayEffect(content, objectId),
+			EmitSignal(content),
+			Schedule(otherId, 1, otherId, arguments),
+			CallSequence(otherId, arguments),
+			ChooseSeeded(objectId, [choice])
+		];
+
+		final variables:Array<FlowVariable> = [
+			{id: objectId, scope: FlowScope.Map, initial: FlowValue.Flag(false)},
+			{id: otherId, scope: FlowScope.Player, initial: FlowValue.Counter(0)},
+			{id: new ScenarioId("quest.state"), scope: FlowScope.Quest, initial: FlowValue.State(content)},
+			{id: new ScenarioId("local.flag"), scope: FlowScope.Local(otherId), initial: FlowValue.Flag(false)}
+		];
+		final parameter:FlowParameter = {id: objectId, initial: FlowValue.Counter(0)};
+		final sequence:FlowSequence = {id: otherId, parameters: [parameter], actions: actions};
+		final rule:FlowRule = {
+			id: objectId,
+			priority: 100,
+			repeat: FlowRepeatPolicy.Once,
+			event: events[0],
+			predicate: predicates[0],
+			actions: actions
+		};
+		final flow:CaxeFlow = {variables: variables, sequences: [sequence], rules: [rule]};
+
+		final palette:Array<BlockPaletteEntry> = [{code: 0, blockType: new ContentId("caxecraft:air")}];
+		final runs:Array<VoxelRun> = [{paletteCode: 0, count: 8}];
+		final chunk:VoxelChunk = {
+			id: objectId,
+			origin: point(0, 0, 0),
+			size: size(2, 2, 2),
+			runs: runs
+		};
+		final world:ScenarioWorld = {size: size(2, 2, 2), palette: palette, chunks: [chunk]};
+		final objects:Array<ScenarioObject> = [{id: objectId, tags: [new ScenarioTag("sample")], placement: placements[0]}];
+		final dialogue:ScenarioDialogue = {
+			id: objectId,
+			lines: [{speaker: null, text: ScenarioText.Message(new MessageId("sample.message"))}]
+		};
+		final journal:ScenarioJournalEntry = {
+			id: objectId,
+			title: ScenarioText.Literal("Title"),
+			body: ScenarioText.Literal("Body")
+		};
+		final objective:ScenarioObjective = {
+			id: objectId,
+			title: ScenarioText.Literal("Title"),
+			body: ScenarioText.Literal("Body"),
+			initialState: ObjectiveState.Active
+		};
+		final route:ScenarioRoute = {id: objectId, title: ScenarioText.Literal("Route"), objectives: [objectId]};
+		final story:ScenarioStory = {
+			dialogues: [dialogue],
+			journal: [journal],
+			objectives: [objective],
+			routes: [route]
+		};
+		final scenario:Scenario = {
+			formatVersion: 1,
+			requiredFeatures: [new ContentId("caxecraft:core")],
+			optionalFeatures: [],
+			id: objectId,
+			assetPack: new LogicalPath("packs/caxecraft/base"),
+			title: ScenarioText.Message(new MessageId("sample.title")),
+			mode: ScenarioMode.Creative,
+			world: world,
+			objects: objects,
+			story: story,
+			flow: flow
+		};
+
+		final diagnostics:Array<ScenarioDiagnosticKind> = [
+			MalformedUtf8(1),
+			UnknownVersion(2),
+			UnknownRequiredFeature(content),
+			InvalidToken,
+			InvalidEscape,
+			UnexpectedRecord(content),
+			MissingRecord(content),
+			IntegerOutOfRange,
+			LimitExceeded(content, 1),
+			InvalidRunTotal(objectId, 1, 2),
+			DuplicateId(objectId),
+			DuplicateTag(new ScenarioTag("sample")),
+			UnresolvedReference(objectId),
+			ImpossiblePlacement(objectId),
+			InvalidRule(objectId),
+			RuleCycle(objectId),
+			EventBudgetExhausted(1),
+			PersistenceFailed(PersistenceStage.ReplaceDestination)
+		];
+		final persistenceStages:Array<PersistenceStage> = [
+			CreateTemporary,
+			WriteTemporary,
+			FlushTemporary,
+			ReplaceDestination,
+			CleanupTemporary
+		];
+		final objectiveStates:Array<ObjectiveState> = [Hidden, Active, Complete, Failed];
+		final modes:Array<ScenarioMode> = [Creative, Adventure];
+		final texts:Array<ScenarioText> = [Message(new MessageId("sample.message")), Literal("sample")];
+		final diagnostic:ScenarioDiagnostic = {
+			coordinate: {line: 1, column: 1, record: 0},
+			kind: diagnostics[0]
+		};
+
+		var hash = scenario.formatVersion + diagnostic.coordinate.line;
+		for (placement in placements)
+			hash = mix(hash, placementCode(placement));
+		for (event in events)
+			hash = mix(hash, eventCode(event));
+		for (scope in scopes)
+			hash = mix(hash, scopeCode(scope));
+		for (value in values)
+			hash = mix(hash, valueCode(value));
+		for (comparison in comparisons)
+			hash = mix(hash, comparisonCode(comparison));
+		for (predicate in predicates)
+			hash = mix(hash, predicateCode(predicate));
+		for (action in actions)
+			hash = mix(hash, actionCode(action));
+		for (repeat in repeatPolicies)
+			hash = mix(hash, repeatCode(repeat));
+		for (state in objectiveStates)
+			hash = mix(hash, objectiveStateCode(state));
+		for (mode in modes)
+			hash = mix(hash, modeCode(mode));
+		for (text in texts)
+			hash = mix(hash, textCode(text));
+		for (diagnostic in diagnostics)
+			hash = mix(hash, diagnosticCode(diagnostic));
+		for (stage in persistenceStages)
+			hash = mix(hash, persistenceCode(stage));
+		return hash;
+	}
+
+	static function point(x:Int, y:Int, z:Int):VoxelPoint
+		return {x: x, y: y, z: z};
+
+	static function size(width:Int, height:Int, depth:Int):VoxelSize
+		return {width: width, height: height, depth: depth};
+
+	static function mix(hash:Int, value:Int):Int
+		return (hash ^ value) * 16777619;
+
+	static function placementCode(value:ObjectPlacement):Int
+		return switch (value) {
+			case PlayerSpawn(_): 1;
+			case Checkpoint(_): 2;
+			case Item(_, _, _): 3;
+			case Entity(_, _): 4;
+			case Npc(_, _, _): 5;
+			case Prefab(_, _): 6;
+			case TriggerZone(_): 7;
+			case StatefulObject(_, _, _): 8;
+		};
+
+	static function eventCode(value:FlowEvent):Int
+		return switch (value) {
+			case EnterZone(_): 1;
+			case LeaveZone(_): 2;
+			case Interact(_): 3;
+			case BlockChanged(_, _): 4;
+			case UseItem(_): 5;
+			case EntityDefeated(_): 6;
+			case SignalReceived(_): 7;
+			case TimerExpired(_): 8;
+			case ObjectiveChanged(_): 9;
+			case StateChanged(_): 10;
+		};
+
+	static function scopeCode(value:FlowScope):Int
+		return switch (value) {
+			case Map: 1;
+			case Player: 2;
+			case Quest: 3;
+			case Local(_): 4;
+		};
+
+	static function valueCode(value:FlowValue):Int
+		return switch (value) {
+			case Flag(_): 1;
+			case Counter(_): 2;
+			case State(_): 3;
+		};
+
+	static function comparisonCode(value:FlowComparison):Int
+		return switch (value) {
+			case Equal: 1;
+			case NotEqual: 2;
+			case Less: 3;
+			case LessOrEqual: 4;
+			case Greater: 5;
+			case GreaterOrEqual: 6;
+		};
+
+	static function predicateCode(value:FlowPredicate):Int
+		return switch (value) {
+			case Always: 1;
+			case All(_): 2;
+			case AnyOf(_): 3;
+			case Not(_): 4;
+			case FlagIs(_, _): 5;
+			case CounterCompare(_, _, _): 6;
+			case StateIs(_, _): 7;
+			case ObjectStateIs(_, _): 8;
+			case InventoryHas(_, _, _, _): 9;
+			case ObjectiveIs(_, _): 10;
+			case NearObject(_, _, _): 11;
+			case ModeIs(_): 12;
+		};
+
+	static function actionCode(value:FlowAction):Int
+		return switch (value) {
+			case ShowDialogue(_): 1;
+			case AddJournal(_): 2;
+			case SetFlag(_, _): 3;
+			case SetCounter(_, _): 4;
+			case AddCounter(_, _): 5;
+			case SetState(_, _): 6;
+			case GiveItem(_, _, _): 7;
+			case TakeItem(_, _, _): 8;
+			case Spawn(_): 9;
+			case Despawn(_): 10;
+			case SetObjectState(_, _): 11;
+			case SetCheckpoint(_): 12;
+			case SetObjective(_, _): 13;
+			case PlayEffect(_, _): 14;
+			case EmitSignal(_): 15;
+			case Schedule(_, _, _, _): 16;
+			case CallSequence(_, _): 17;
+			case ChooseSeeded(_, _): 18;
+		};
+
+	static function repeatCode(value:FlowRepeatPolicy):Int
+		return switch (value) {
+			case Once: 1;
+			case Repeat: 2;
+			case Cooldown(_): 3;
+		};
+
+	static function objectiveStateCode(value:ObjectiveState):Int
+		return switch (value) {
+			case Hidden: 1;
+			case Active: 2;
+			case Complete: 3;
+			case Failed: 4;
+		};
+
+	static function modeCode(value:ScenarioMode):Int
+		return switch (value) {
+			case Creative: 1;
+			case Adventure: 2;
+		};
+
+	static function textCode(value:ScenarioText):Int
+		return switch (value) {
+			case Message(_): 1;
+			case Literal(_): 2;
+		};
+
+	static function diagnosticCode(value:ScenarioDiagnosticKind):Int
+		return switch (value) {
+			case MalformedUtf8(_): 1;
+			case UnknownVersion(_): 2;
+			case UnknownRequiredFeature(_): 3;
+			case InvalidToken: 4;
+			case InvalidEscape: 5;
+			case UnexpectedRecord(_): 6;
+			case MissingRecord(_): 7;
+			case IntegerOutOfRange: 8;
+			case LimitExceeded(_, _): 9;
+			case InvalidRunTotal(_, _, _): 10;
+			case DuplicateId(_): 11;
+			case DuplicateTag(_): 12;
+			case UnresolvedReference(_): 13;
+			case ImpossiblePlacement(_): 14;
+			case InvalidRule(_): 15;
+			case RuleCycle(_): 16;
+			case EventBudgetExhausted(_): 17;
+			case PersistenceFailed(_): 18;
+		};
+
+	static function persistenceCode(value:PersistenceStage):Int
+		return switch (value) {
+			case CreateTemporary: 1;
+			case WriteTemporary: 2;
+			case FlushTemporary: 3;
+			case ReplaceDestination: 4;
+			case CleanupTemporary: 5;
+		};
+}

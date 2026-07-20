@@ -245,6 +245,13 @@ version is deliberately line-oriented and typed rather than general JSON or a
 serialized dynamic object graph. This keeps it human-diffable, permits a small
 validated parser, and avoids making `Dynamic` the scenario model.
 
+The exact version-1 grammar, bounds, canonical ordering, CaxeFlow vocabulary,
+execution boundaries, recovery rules, and first review fixture are published
+in the [CAXEMAP 1 reference](caxemap-1.md). The broad editor feature is split
+into `haxe_c-xge.19.1` through `.19.6`, so the format/model, codec, rule engine,
+native persistence, editor semantics, and child-friendly Raylib UI each have a
+separate acceptance boundary.
+
 A scenario contains:
 
 - format version, logical asset pack, title, and bounded world dimensions;

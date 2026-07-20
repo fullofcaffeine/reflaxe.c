@@ -83,7 +83,7 @@ GitHub Actions partitions that same sequence into four isolated shards:
 | `contracts` | pins, Beads plan, diagnostics, activation, typed boundaries, C import, AST/plans, runtime contracts, hello, HxcIR, primitive and stdlib contracts | separate hosted runner, checkout, process tree, and temporary roots |
 | `lowering-objects` | bodies, functions, aggregates, classes, constructors, dispatch, enums, and generics | no filesystem or process state is shared with another shard |
 | `lowering-semantics` | evaluation order, initialization, arithmetic, differential corpus, spans, and project layouts | native/compiler-server work remains serial inside this shard but isolated from the others |
-| `caxecraft` | the complete split/package/unity, oracle, native, optimized, and sanitizer showcase lane, followed by the snapshot ownership catalog | its long end-to-end proof receives its own resource budget; the catalog check is non-rendering and takes negligible time |
+| `caxecraft` | the target-neutral CAXEMAP model contract; complete split/package/unity, oracle, native, optimized, and sanitizer showcase lane; then the snapshot ownership catalog | its long end-to-end proof receives its own resource budget; the model and catalog checks stay separately visible and fast |
 
 The matrix uses `fail-fast: false`, so one failure does not erase evidence from
 the other shards. A small `pinned-toolchain` aggregate job runs with `always()`
@@ -239,7 +239,7 @@ cross-cutting test infrastructure such as `package.json`, the snapshot
 registry, shard runner, CI policy, or their governance tests. That avoids the
 old behavior where the same global file matched nearly every focused condition
 and serialized all owners one by one. It still runs governance and native
-smoke around the exact 38-command partition. Ordinary compiler edits continue
+smoke around the exact 39-command partition. Ordinary compiler edits continue
 to select only their narrower focused gates.
 
 ### Safe local resume

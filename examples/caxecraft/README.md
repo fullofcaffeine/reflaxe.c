@@ -161,6 +161,20 @@ The images are not loaded by a playable renderer yet, so passing this gate is
 asset-inventory evidence rather than a gameplay or visual-polish claim. See
 [`assets/README.md`](assets/README.md) for the boundary.
 
+The CAXEMAP 1 authoring foundation has a separate fast model contract:
+
+```sh
+npm run test:caxecraft-scenario-model
+```
+
+It compiles every closed scenario and CaxeFlow model family under Eval, proves
+that object IDs cannot be mixed with registry content IDs, checks the first
+canonical fixture, and rejects Raylib/C target leakage from the shared model.
+This is model and format evidence only: the parser, native persistence, rule
+executor, and visual editor remain the ordered `haxe_c-xge.19.*` slices. The
+readable [CAXEMAP 1 reference](../../docs/caxemap-1.md) defines their common
+contract.
+
 To compile only the C project through the direct recovery path:
 
 ```sh

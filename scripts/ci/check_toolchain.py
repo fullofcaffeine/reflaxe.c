@@ -239,6 +239,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_primitive_differential_script = "python3 test/primitive_differential/run.py"
     expected_span_lowering_script = "python3 test/span_lowering/run.py"
     expected_project_layout_script = "python3 test/project_layout/run.py"
+    expected_caxecraft_scenario_model_script = (
+        "python3 examples/caxecraft/check_scenario_model.py"
+    )
     expected_caxecraft_domain_script = "python3 examples/caxecraft/run.py"
     expected_caxecraft_domain_full_script = "python3 examples/caxecraft/run.py --full"
     expected_caxecraft_playable_script = "python3 examples/caxecraft/play.py --check-snapshots"
@@ -259,7 +262,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-scenario-model && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -428,6 +431,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:project-layout") != expected_project_layout_script
     ):
         errors.append("package.json must retain the generated-C project-layout gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-scenario-model")
+        != expected_caxecraft_scenario_model_script
+    ):
+        errors.append("package.json must retain the target-neutral CAXEMAP model gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-domain") != expected_caxecraft_domain_script
