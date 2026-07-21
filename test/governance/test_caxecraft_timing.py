@@ -48,6 +48,25 @@ class CaxecraftTimingTests(unittest.TestCase):
                 phase_lines + "\nHXC_PHASE_TIMING\ttarget pipeline\t1"
             )
 
+        detail_lines = "\n".join(
+            f"HXC_DETAIL_TIMING\t{detail}\t{index + 1}"
+            for index, detail in enumerate(profiler.DETAIL_PHASES)
+        )
+        self.assertEqual(
+            profiler.parse_detail_records(detail_lines),
+            {
+                detail: index + 1
+                for index, detail in enumerate(profiler.DETAIL_PHASES)
+            },
+        )
+        self.assertEqual(
+            profiler.parse_detail_records(detail_lines + "\n" + detail_lines),
+            {
+                detail: (index + 1) * 2
+                for index, detail in enumerate(profiler.DETAIL_PHASES)
+            },
+        )
+
         table = "\n".join(
             (
                 "name                 | time(s) |   % |  p% |     # | info",

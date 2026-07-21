@@ -142,6 +142,13 @@ private typedef CBodyLoopDecision = {
 	final postTest:Bool;
 }
 
+private typedef CBodyNormalJoinCandidate = {
+	final blockId:String;
+	final reachCount:Int;
+	final maximumDistance:Int;
+	final totalDistance:Int;
+}
+
 private class CBodyNaturalLoop {
 	public final headerBlockId:String;
 	public final nodes:Map<String, Bool> = [];
@@ -157,15 +164,56 @@ class CBodyControlFlowPlanner {
 	public function new() {}
 
 	public function plan(fn:HxcIRFunction):CBodyControlFlowPlan {
+		return planWithWorkReport(fn).plan;
+	}
+
+	/**
+		Build a plan and expose deterministic algorithmic-work counts for focused
+		performance tests. The counts describe graph searches, not elapsed time,
+		so a busy machine cannot make the regression flaky.
+	**/
+	public function planWithWorkReport(fn:HxcIRFunction):CBodyControlFlowPlanningResult {
 		final analysis = new CBodyControlFlowAnalysis(fn);
 		analysis.requireAdmittedGraph();
 		if (analysis.irreducibleEntries.length > 0) {
-			return CCFLegacyIrreducible(analysis.irreducibleEntries);
+			return new CBodyControlFlowPlanningResult(CCFLegacyIrreducible(analysis.irreducibleEntries), analysis.workReport());
 		}
 		final builder = new CBodyControlFlowBuilder(fn, analysis);
 		final result = builder.build();
 		new CBodyControlFlowPlanValidator(fn, analysis).requireValid(result);
-		return result;
+		return new CBodyControlFlowPlanningResult(result, analysis.workReport());
+	}
+}
+
+/** A structural plan paired with stable work counts from the same request. */
+@:noCompletion
+class CBodyControlFlowPlanningResult {
+	public final plan:CBodyControlFlowPlan;
+	public final work:CBodyControlFlowWorkReport;
+
+	public function new(plan:CBodyControlFlowPlan, work:CBodyControlFlowWorkReport) {
+		this.plan = plan;
+		this.work = work;
+	}
+}
+
+/**
+	Machine-independent evidence for the normal-join search.
+
+	A "candidate proof" is the expensive check that every normal path reaches a
+	possible join and that branch prefixes do not overlap. A "distance search"
+	walks the admitted graph once from one branch start.
+**/
+@:noCompletion
+class CBodyControlFlowWorkReport {
+	public final normalJoinSearches:Int;
+	public final normalJoinCandidateProofs:Int;
+	public final normalJoinDistanceSearches:Int;
+
+	public function new(normalJoinSearches:Int, normalJoinCandidateProofs:Int, normalJoinDistanceSearches:Int) {
+		this.normalJoinSearches = normalJoinSearches;
+		this.normalJoinCandidateProofs = normalJoinCandidateProofs;
+		this.normalJoinDistanceSearches = normalJoinDistanceSearches;
 	}
 }
 
@@ -1119,6 +1167,9 @@ private class CBodyControlFlowAnalysis {
 	public final fn:HxcIRFunction;
 	public final blocks:Map<String, HxcIRBlock> = [];
 	public final blockOrder:Map<String, Int> = [];
+
+	final successorsByBlock:Map<String, Array<String>> = [];
+
 	public final orderedReachable:Array<String> = [];
 	public final reachable:Map<String, Bool> = [];
 	public final predecessors:Map<String, Array<String>> = [];
@@ -1126,6 +1177,10 @@ private class CBodyControlFlowAnalysis {
 	public final postDominators:Map<String, Map<String, Bool>> = [];
 	public final loopsByHeader:Map<String, CBodyNaturalLoop> = [];
 	public final irreducibleEntries:Array<String> = [];
+
+	var normalJoinSearches:Int = 0;
+	var normalJoinCandidateProofs:Int = 0;
+	var normalJoinDistanceSearches:Int = 0;
 
 	public function new(fn:HxcIRFunction) {
 		this.fn = fn;
@@ -1136,6 +1191,8 @@ private class CBodyControlFlowAnalysis {
 			blockOrder.set(block.id, index);
 			predecessors.set(block.id, []);
 		}
+		for (block in fn.blocks)
+			successorsByBlock.set(block.id, collectSuccessors(block));
 		computeReachability();
 		computePredecessors();
 		computeDominators();
@@ -1213,9 +1270,16 @@ private class CBodyControlFlowAnalysis {
 
 	public function successors(blockId:String):Array<String> {
 		final block = requireBlock(blockId);
-		if (block.terminator == null)
-			return [];
+		final result = successorsByBlock.get(block.id);
+		if (result == null)
+			return fail('control-flow analysis for `${fn.id}` lost successor set `$blockId`');
+		return result;
+	}
+
+	function collectSuccessors(block:HxcIRBlock):Array<String> {
 		final result:Array<String> = [];
+		if (block.terminator == null)
+			return result;
 		function add(target:String):Void {
 			if (result.indexOf(target) == -1)
 				result.push(target);
@@ -1243,6 +1307,10 @@ private class CBodyControlFlowAnalysis {
 			case IRTReturn(_, _) | IRTUnreachable:
 		}
 		return result;
+	}
+
+	public function workReport():CBodyControlFlowWorkReport {
+		return new CBodyControlFlowWorkReport(normalJoinSearches, normalJoinCandidateProofs, normalJoinDistanceSearches);
 	}
 
 	public function dominates(dominator:String, blockId:String):Bool {
@@ -1307,27 +1375,24 @@ private class CBodyControlFlowAnalysis {
 	**/
 	public function normalJoin(starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>, unavailable:Map<String, Bool>,
 			preferredCandidate:Null<String>):Null<String> {
+		normalJoinSearches++;
+		final distances = distancesForStarts(starts, allowed);
 		if (preferredCandidate != null
 			&& allowed.exists(preferredCandidate)
 			&& !escapeTargets.exists(preferredCandidate)
 			&& !unavailable.exists(preferredCandidate)
-			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable))
+			&& isNormalJoinWithAvailability(preferredCandidate, starts, allowed, escapeTargets, unavailable, distances))
 			return preferredCandidate;
-		var best:Null<String> = null;
-		var bestReachCount = -1;
-		var bestMaximum = 0x3FFFFFFF;
-		var bestTotal = 0x3FFFFFFF;
+
+		final candidates:Array<CBodyNormalJoinCandidate> = [];
 		for (candidate in orderedReachable) {
-			if (!allowed.exists(candidate)
-				|| escapeTargets.exists(candidate)
-				|| unavailable.exists(candidate)
-				|| !isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable))
+			if (!allowed.exists(candidate) || escapeTargets.exists(candidate) || unavailable.exists(candidate))
 				continue;
 			var reachCount = 0;
 			var maximum = 0;
 			var total = 0;
-			for (start in starts) {
-				final distance = shortestDistance(start, candidate, allowed);
+			for (distanceByBlock in distances) {
+				final distance = distanceByBlock.get(candidate);
 				if (distance == null)
 					continue;
 				reachCount++;
@@ -1335,31 +1400,45 @@ private class CBodyControlFlowAnalysis {
 					maximum = distance;
 				total += distance;
 			}
-			if (reachCount > bestReachCount
-				|| reachCount == bestReachCount
-				&& (maximum < bestMaximum || maximum == bestMaximum && total < bestTotal)) {
-				best = candidate;
-				bestReachCount = reachCount;
-				bestMaximum = maximum;
-				bestTotal = total;
-			}
+			candidates.push({
+				blockId: candidate,
+				reachCount: reachCount,
+				maximumDistance: maximum,
+				totalDistance: total
+			});
 		}
-		return best;
+		// This is the exact score used by the previous exhaustive search. Sorting
+		// first is semantics-preserving: the first valid candidate has the same
+		// score and source block-order tie break as the former retained minimum.
+		candidates.sort((left, right) -> {
+			if (left.reachCount != right.reachCount)
+				return right.reachCount - left.reachCount;
+			if (left.maximumDistance != right.maximumDistance)
+				return left.maximumDistance - right.maximumDistance;
+			if (left.totalDistance != right.totalDistance)
+				return left.totalDistance - right.totalDistance;
+			return compareBlockIds(left.blockId, right.blockId);
+		});
+		for (candidate in candidates)
+			if (isNormalJoinWithAvailability(candidate.blockId, starts, allowed, escapeTargets, unavailable, distances))
+				return candidate.blockId;
+		return null;
 	}
 
 	public function isNormalJoin(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Bool {
 		final unavailable:Map<String, Bool> = [];
-		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable);
+		return isNormalJoinWithAvailability(candidate, starts, allowed, escapeTargets, unavailable, distancesForStarts(starts, allowed));
 	}
 
 	function isNormalJoinWithAvailability(candidate:String, starts:Array<String>, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>,
-			unavailable:Map<String, Bool>):Bool {
+			unavailable:Map<String, Bool>, distances:Array<Map<String, Int>>):Bool {
+		normalJoinCandidateProofs++;
 		if (!allowed.exists(candidate) || escapeTargets.exists(candidate))
 			return false;
 		final completing = completionSet(candidate, allowed, escapeTargets);
 		var hasContinuingPath = false;
-		for (start in starts) {
-			if (shortestDistance(start, candidate, allowed) != null)
+		for (index => start in starts) {
+			if (distances[index].exists(candidate))
 				hasContinuingPath = true;
 			if (!escapeTargets.exists(start) && !completing.exists(start))
 				return false;
@@ -1443,13 +1522,21 @@ private class CBodyControlFlowAnalysis {
 		return result;
 	}
 
-	function shortestDistance(start:String, candidate:String, allowed:Map<String, Bool>):Null<Int> {
-		if (start == candidate)
-			return 0;
+	function distancesForStarts(starts:Array<String>, allowed:Map<String, Bool>):Array<Map<String, Int>> {
+		final result:Array<Map<String, Int>> = [];
+		for (start in starts) {
+			normalJoinDistanceSearches++;
+			result.push(distancesFromStart(start, allowed));
+		}
+		return result;
+	}
+
+	function distancesFromStart(start:String, allowed:Map<String, Bool>):Map<String, Int> {
+		final distances:Map<String, Int> = [];
 		if (!allowed.exists(start))
-			return null;
+			return distances;
 		final pending:Array<String> = [start];
-		final distances:Map<String, Int> = [start => 0];
+		distances.set(start, 0);
 		var index = 0;
 		while (index < pending.length) {
 			final current = pending[index++];
@@ -1457,15 +1544,13 @@ private class CBodyControlFlowAnalysis {
 			if (distance == null)
 				return fail('normal-join distance in `${fn.id}` lost block `$current`');
 			for (target in successors(current)) {
-				if (target == candidate)
-					return distance + 1;
 				if (allowed.exists(target) && !distances.exists(target)) {
 					distances.set(target, distance + 1);
 					pending.push(target);
 				}
 			}
 		}
-		return null;
+		return distances;
 	}
 
 	static function isAbruptTerminal(block:HxcIRBlock):Bool {

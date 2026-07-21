@@ -442,6 +442,22 @@ class EvaluationOrderProbe {
 			syntheticBlock("common-tail", IRTReturn(null, []), source)
 		], source);
 		requireStructured("branch with an abrupt arm and common normal tail", normalJoinBranch, planner.plan(normalJoinBranch), verifier);
+		final earlyReturnLadderBlocks:Array<HxcIRBlock> = [];
+		for (index in 0...30) {
+			final next = index == 29 ? "common-tail" : 'check-${index + 1}';
+			earlyReturnLadderBlocks.push(syntheticBlock('check-$index', IRTBranch("condition", plainEdge('early-return-$index'), plainEdge(next)), source));
+		}
+		for (index in 0...30)
+			earlyReturnLadderBlocks.push(syntheticBlock('early-return-$index', IRTReturn(null, []), source));
+		earlyReturnLadderBlocks.push(syntheticBlock("common-tail", IRTReturn(null, []), source));
+		final earlyReturnLadder = syntheticFunction("synthetic.early-return-ladder", [condition], "check-0", earlyReturnLadderBlocks, source);
+		final ladderResult = planner.planWithWorkReport(earlyReturnLadder);
+		requireStructured("thirty-step early-return ladder", earlyReturnLadder, ladderResult.plan, verifier);
+		if (ladderResult.work.normalJoinSearches < 30)
+			throw new haxe.Exception('early-return ladder exercised only ${ladderResult.work.normalJoinSearches} normal-join searches');
+		if (ladderResult.work.normalJoinCandidateProofs > ladderResult.work.normalJoinSearches * 2)
+			throw new haxe.Exception('early-return ladder used ${ladderResult.work.normalJoinCandidateProofs} candidate proofs for '
+				+ '${ladderResult.work.normalJoinSearches} searches; ranked search should need at most one build proof and one validation proof per branch');
 		final sharedTargetBranch = syntheticFunction("synthetic.shared-target-branch", [condition], "entry", [
 			syntheticBlock("entry", IRTBranch("condition", plainEdge("nested"), plainEdge("join")), source),
 			syntheticBlock("nested", IRTBranch("condition", plainEdge("shared-arm"), plainEdge("shared-arm")), source),

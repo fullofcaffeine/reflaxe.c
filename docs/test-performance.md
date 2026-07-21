@@ -502,6 +502,44 @@ illustrate why a reusable result also needs stable fingerprints and dependency
 tracking. None of those sources justifies persisting raw mutable `TypedExpr` or
 skipping output-ownership validation.
 
+### Ranked normal-join proof
+
+Beads issue `haxe_c-xge.30` split the remaining CAST-body work into three
+opt-in details. A *normal join* is the block where ordinary paths from separate
+branches meet again. The first profile showed that control-flow planning, not
+value setup or C syntax construction, consumed effectively the whole body
+phase. The planner was proving every eligible block and only then selecting
+the best valid join. Deep early-return code made those full-graph proofs grow
+far faster than the source program.
+
+The replacement keeps the exact selection rule but changes the work order:
+compute graph distances once, rank candidates using the existing score, then
+run the expensive validity proof until the first valid candidate is found.
+Successor lists are also derived once per request instead of rebuilt during
+every graph walk. A deterministic 30-branch work-counter fixture prevents a
+return to exhaustive candidate proof.
+
+Both three-cold/three-post-prime samples were contended diagnostics, not
+performance budgets. The baseline began at one-minute load `142.506`; the
+final optimized sample began at `15.518` on 12 logical CPUs. Corrected Haxe
+detail timers provide the baseline split, while the final profiler's
+independent `Sys.time()` detail records isolate the optimized target work:
+
+| Transport | Before wall median | After wall median | Before control-flow median | After control-flow median |
+| --- | ---: | ---: | ---: | ---: |
+| fresh process | 46.336s | 7.884s | 28.875s | 0.522s |
+| owned server, after one prime | 17.045s | 7.143s | 12.333s | 0.676s |
+
+In the final cold sample, setup/value planning took 8ms and CAST emission took
+22ms, versus 522ms for control-flow planning. That confirms the named
+subphase rather than merely showing that the enclosing body phase improved.
+
+The before/after reports produced the same 30 normal artifacts with SHA-256
+tree digest `ae7c03d7c152fbea97591a565aa6eab074e012f10cff6a6b65e60d2aa5bcefd2`.
+The internal control-flow reduction is the durable result; the wall numbers
+show practical direction under load but must not be published as a stable
+median, percentile, or machine-independent speedup claim.
+
 The measured time belongs to that feature's exhaustive **test suite**, not to a
 single lowering pass or a typical user build. Before `haxe_c-xge.26`, its
 runner started 87 independent Haxe processes: 18 report/determinism renders, 36

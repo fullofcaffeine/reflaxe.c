@@ -225,3 +225,26 @@ now guards the fixed body, evaluation-order, and Caxecraft corpora. Declaration
 cleanup and broad arbitrary-program handoff evidence remain separate work.
 Structural control flow is a prerequisite for those improvements, not proof
 that every generated program already resembles handwritten C.
+
+## Why normal-join search is ranked before proof
+
+A *normal join* is the first block where the ordinary, non-returning paths from
+two or more branches meet again. Proving a join is intentionally strict: every
+normal path must reach it, abrupt exits such as `return` must be accounted for,
+and two branch arms must not claim the same pre-join block. That proof walks the
+control-flow graph and is more expensive than measuring how far each candidate
+is from the branch starts.
+
+The planner therefore performs the cheaper work first. It walks outward from
+each branch start once, assigns every eligible candidate the established
+nearest-join score, and orders candidates by that score. It then proves
+candidates in order and stops at the first valid one. This produces the same
+answer as the former exhaustive algorithm: the score, tie break, validity
+rules, preferred enclosing stop, and final independent plan validation are
+unchanged. Only the order of work changed.
+
+The evaluation-order suite includes a 30-branch early-return ladder. Its
+machine-independent work report permits at most one candidate proof while
+building each branch plus one proof while independently validating it. This
+guards the algorithmic improvement without using a wall-clock timeout, which
+would be unreliable on a busy development machine.

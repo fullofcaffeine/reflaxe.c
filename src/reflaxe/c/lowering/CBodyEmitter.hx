@@ -2,6 +2,8 @@ package reflaxe.c.lowering;
 
 #if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
+import reflaxe.c.CPhaseTiming;
+import reflaxe.c.CPhaseTiming.CDetailTimingId;
 import reflaxe.c.ast.CAST;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcIRFixedArrayPolicy;
@@ -294,6 +296,7 @@ class CBodyEmitter {
 		if (fn.blocks.length == 0 || fn.entryBlockId != fn.blocks[0].id) {
 			fail('body lowering requires an entry-first block graph in `${fn.id}`');
 		}
+		final setupTimer = CPhaseTiming.startDetail(CDTBodySetupAndValuePlanning);
 		validateConstructionCleanupRegions(fn);
 		final resolvedSpanLengthNames:Map<String, CIdentifier> = spanLengthNames == null ? [] : spanLengthNames;
 		final coalescing = new CBodyValueCoalescingPlanner().plan(fn);
@@ -337,7 +340,11 @@ class CBodyEmitter {
 					statements.push(SExpr(ECast(new CType(TVoid), DName(null), spanLength)));
 			}
 		}
+		CPhaseTiming.stopDetail(setupTimer);
+		final controlFlowTimer = CPhaseTiming.startDetail(CDTBodyControlFlowPlanning);
 		final plan = new CBodyControlFlowPlanner().plan(fn);
+		CPhaseTiming.stopDetail(controlFlowTimer);
+		final emissionTimer = CPhaseTiming.startDetail(CDTBodyCASTEmission);
 		switch plan {
 			case CCFStructured(root, labeledTargets):
 				for (target in labeledTargets)
@@ -346,6 +353,7 @@ class CBodyEmitter {
 			case CCFLegacyIrreducible(_):
 				emitLegacyGraph(statements, state, fn);
 		}
+		CPhaseTiming.stopDetail(emissionTimer);
 		if (state.terminatedByTailLoop) {
 			if (fn.blocks.length != 1) {
 				fail('tail-loop lowering in `${fn.id}` requires one HxcIR block');

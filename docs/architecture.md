@@ -71,6 +71,12 @@ and owns an ephemeral loopback compiler server for post-prime warm samples. It
 never caches `TypedExpr`, `CompilationContext`, symbols, output ownership, or
 other mutable request state.
 
+The broad CAST-body phase also has three closed, opt-in detail clocks: body
+setup/value planning, control-flow planning, and CAST emission. Repeated calls
+are added together in the profiler report. This is diagnostic structure, not a
+new compiler layer: the HxcIR control-flow plan remains the semantic authority,
+and CAST emission still only turns that verified plan into C syntax.
+
 See [test feedback-loop and CI performance](test-performance.md) for the
 measurement method, the pinned-Haxe macOS timer caveat, and current Caxecraft
 results.

@@ -37,6 +37,7 @@ from run import (  # noqa: E402
 
 
 PHASE_PREFIX = "HXC_PHASE_TIMING\t"
+DETAIL_PREFIX = "HXC_DETAIL_TIMING\t"
 PINNED_HAXE_SOURCE_REVISION = "2c1e544e0a2c7524ef4c8e103f1b0580362ea538"
 PHASES = (
     "typed input capture",
@@ -54,6 +55,11 @@ PHASES = (
     "C printing",
     "artifact planning",
     "output ownership",
+)
+DETAIL_PHASES = (
+    "body setup and value planning",
+    "body control-flow planning",
+    "body CAST emission",
 )
 SEMANTIC_CHILDREN = (
     "HxcIR construction",
@@ -193,6 +199,42 @@ def parse_phase_records(stdout: str) -> dict[str, int]:
     if missing:
         raise CompilerProfileFailure(
             f"compiler phase report omitted {', '.join(missing)}"
+        )
+    return records
+
+
+def parse_detail_records(stdout: str) -> dict[str, int]:
+    records = {detail: 0 for detail in DETAIL_PHASES}
+    counts = {detail: 0 for detail in DETAIL_PHASES}
+    for line in stdout.splitlines():
+        if not line.startswith(DETAIL_PREFIX):
+            continue
+        fields = line.split("\t")
+        if len(fields) != 3 or fields[0] != DETAIL_PREFIX.rstrip("\t"):
+            raise CompilerProfileFailure(
+                f"malformed compiler detail record: {line!r}"
+            )
+        detail = fields[1]
+        if detail not in records:
+            raise CompilerProfileFailure(
+                f"unknown compiler detail record: {detail!r}"
+            )
+        try:
+            duration = int(fields[2])
+        except ValueError as error:
+            raise CompilerProfileFailure(
+                f"compiler detail {detail!r} has a non-integer duration"
+            ) from error
+        if duration < 0:
+            raise CompilerProfileFailure(
+                f"compiler detail {detail!r} has a negative duration"
+            )
+        records[detail] += duration
+        counts[detail] += 1
+    missing = [detail for detail in DETAIL_PHASES if counts[detail] == 0]
+    if missing:
+        raise CompilerProfileFailure(
+            f"compiler detail report omitted {', '.join(missing)}"
         )
     return records
 
@@ -347,6 +389,7 @@ def run_sample(
         )
     validate_haxe_timer_stream(result.stderr)
     phases = parse_phase_records(result.stdout)
+    details = parse_detail_records(result.stdout)
     haxe_rows = parse_haxe_timer_rows(
         result.stdout + "\n" + result.stderr,
         clock,
@@ -357,6 +400,10 @@ def run_sample(
         "phases": [
             {"name": phase, "durationMs": round(phases[phase] / 1000.0, 3)}
             for phase in PHASES
+        ],
+        "details": [
+            {"name": detail, "durationMs": round(details[detail] / 1000.0, 3)}
+            for detail in DETAIL_PHASES
         ],
         "accounting": [
             {"name": phase, "durationMs": round(accounting[phase] / 1000.0, 3)}
@@ -371,6 +418,9 @@ def sample_summary(samples: Sequence[dict[str, object]]) -> dict[str, object]:
     accounting_by_name: dict[str, list[float]] = {
         phase: [] for phase in ACCOUNTING_PHASES
     }
+    details_by_name: dict[str, list[float]] = {
+        detail: [] for detail in DETAIL_PHASES
+    }
     for sample in samples:
         accounting = sample.get("accounting")
         if not isinstance(accounting, list):
@@ -383,11 +433,27 @@ def sample_summary(samples: Sequence[dict[str, object]]) -> dict[str, object]:
             if name not in accounting_by_name or not isinstance(duration, (int, float)):
                 raise CompilerProfileFailure("sample accounting fields are malformed")
             accounting_by_name[name].append(float(duration))
+        details = sample.get("details")
+        if not isinstance(details, list):
+            raise CompilerProfileFailure("sample details are malformed")
+        for item in details:
+            if not isinstance(item, dict):
+                raise CompilerProfileFailure("sample detail item is malformed")
+            name = item.get("name")
+            duration = item.get("durationMs")
+            if name not in details_by_name or not isinstance(duration, (int, float)):
+                raise CompilerProfileFailure("sample detail fields are malformed")
+            details_by_name[name].append(float(duration))
     medians = {
         name: round(statistics.median(values), 3)
         for name, values in accounting_by_name.items()
     }
     dominant = max(ACCOUNTING_PHASES, key=lambda name: medians[name])
+    detail_medians = {
+        name: round(statistics.median(values), 3)
+        for name, values in details_by_name.items()
+    }
+    dominant_detail = max(DETAIL_PHASES, key=lambda name: detail_medians[name])
     return {
         "wallMs": {
             "minimum": round(min(walls), 3),
@@ -399,6 +465,11 @@ def sample_summary(samples: Sequence[dict[str, object]]) -> dict[str, object]:
             for name in ACCOUNTING_PHASES
         ],
         "dominantAccountingPhase": dominant,
+        "medianBodyDetails": [
+            {"name": name, "durationMs": detail_medians[name]}
+            for name in DETAIL_PHASES
+        ],
+        "dominantBodyDetail": dominant_detail,
     }
 
 
@@ -564,7 +635,8 @@ def main(argv: Iterable[str] = ()) -> int:
         "caxecraft-compiler-profile: OK: "
         f"cold median {cold_wall['median']}ms; warm median {warm_wall['median']}ms; "
         f"cold dominant {cold_summary['dominantAccountingPhase']}; "
-        f"warm dominant {warm_summary['dominantAccountingPhase']}"
+        f"warm dominant {warm_summary['dominantAccountingPhase']}; "
+        f"body detail {warm_summary['dominantBodyDetail']}"
     )
     return 0
 
