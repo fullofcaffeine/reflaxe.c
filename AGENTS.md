@@ -60,6 +60,20 @@ and pleasant.
 - In code comments, explain intent, ownership, invariants, tradeoffs, and
   surprising constraints. Do not narrate obvious syntax. A reader should learn
   why the code has this shape and when the rule applies.
+- Start every repository-owned Haxe source file, after its package/import
+  preamble, with module-level HxDoc that gives a newcomer the local mental
+  model: what the module owns, why that work has a separate home, and briefly
+  how its main data or control flow works.
+  Give every class, abstract, enum, public function or field with meaningful
+  behavior, and every complex private function clear HxDoc using the same
+  compact **what / why / how** order. Document inputs, outputs, observable side
+  effects, ownership or lifetime, failure behavior, and important invariants
+  when they matter. A short one-line HxDoc is enough for a simple public value;
+  a complex boundary needs a fuller explanation and a small example when that
+  is the clearest teaching tool. Do not add boilerplate that restates the name,
+  type signature, or obvious syntax, and do not let comments compensate for an
+  oversized or poorly named API. Update the HxDoc in the same change whenever
+  the documented behavior changes.
 - Link to the canonical deeper document when a short explanation would become
   repetitive. The local text must still make sense on its own; a link is a path
   to more depth, not a substitute for a basic definition.
