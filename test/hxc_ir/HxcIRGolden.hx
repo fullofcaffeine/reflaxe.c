@@ -62,6 +62,7 @@ class HxcIRGolden {
 				zeroFixedArrayNonAutomatic: invalidDiagnostics(zeroFixedArrayNonAutomaticProgram()),
 				invalidStaticBoundsProof: invalidDiagnostics(invalidStaticBoundsProofProgram()),
 				uncheckedCollectionAccess: invalidDiagnostics(uncheckedCollectionAccessProgram()),
+				nonDominatingBoundsProof: invalidDiagnostics(nonDominatingBoundsProofProgram()),
 				unknownLoopBoundsGuard: invalidDiagnostics(unknownLoopBoundsGuardProgram()),
 				voidReturnWithValue: invalidDiagnostics(voidReturnWithValueProgram()),
 				valueReturnWithoutValue: invalidDiagnostics(valueReturnWithoutValueProgram()),
@@ -1175,6 +1176,58 @@ class HxcIRGolden {
 		], terminator(IRTReturn(null, []), file, 4), [
 			local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "invalid.Length2"), IRLSAutomatic, IRISInitialized, file, 1)
 		], [], file);
+	}
+
+	/** A check on only one branch must not authorize the shared join block. */
+	static function nonDominatingBoundsProofProgram():HxcIRProgram {
+		final file = "test/negative/NonDominatingBoundsProof.hx";
+		final program = minimalProgram("invalid.NonDominatingBoundsProof", [], null, [
+			local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "invalid.Length2"), IRLSAutomatic, IRISInitialized, file, 1)
+		], [], file);
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.index", IRTInt(32, true), file, 1));
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		final checkedEdge:HxcIRBlockEdge = {targetBlockId: "checked", arguments: [], cleanup: []};
+		final uncheckedEdge:HxcIRBlockEdge = {targetBlockId: "unchecked", arguments: [], cleanup: []};
+		final joinEdge:HxcIRBlockEdge = {targetBlockId: "join", arguments: [], cleanup: []};
+		fn.blocks.resize(0);
+		final replacementBlocks:Array<HxcIRBlock> = [
+			{
+				id: "entry",
+				parameters: [],
+				instructions: [],
+				terminator: terminator(IRTBranch("value.condition", checkedEdge, uncheckedEdge), file, 2),
+				source: span(file, 2)
+			},
+			{
+				id: "checked",
+				parameters: [],
+				instructions: [
+					instruction("checked.bounds", null, IRIOBoundsCheck(IRPLocal("local.fixed"), "value.index", IRBPCheckedAbort("portable", "debug")), file, 3)
+				],
+				terminator: terminator(IRTJump(joinEdge), file, 4),
+				source: span(file, 3, 4)
+			},
+			{
+				id: "unchecked",
+				parameters: [],
+				instructions: [],
+				terminator: terminator(IRTJump(joinEdge), file, 5),
+				source: span(file, 5)
+			},
+			{
+				id: "join",
+				parameters: [],
+				instructions: [
+					instruction("bad.load", result("value.element", IRTInt(32, true)), IRIOLoad(IRPIndex(IRPLocal("local.fixed"), "value.index")), file, 6)
+				],
+				terminator: terminator(IRTReturn(null, []), file, 7),
+				source: span(file, 6, 7)
+			}
+		];
+		for (block in replacementBlocks)
+			fn.blocks.push(block);
+		return program;
 	}
 
 	static function unknownLoopBoundsGuardProgram():HxcIRProgram {

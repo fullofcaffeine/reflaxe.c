@@ -17,6 +17,15 @@ int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index)
   return hxc_tmp_collection_index_load_result_n0;
 }
 
+uint8_t hxc_SpanFixture_conditionalAssignment(bool hxc_selectReplacement)
+{
+  uint8_t hxc_values[4] = { 0 };
+  uint8_t *hxc_mutable = hxc_values;
+  size_t hxc_tmp_length_n2 = sizeof(hxc_values) / sizeof(hxc_values[0]);
+  uint8_t hxc_tmp_call_result_n0 = hxc_SpanConditionalAssignment_assignSelected(hxc_mutable, hxc_tmp_length_n2, 1, (uint8_t)37, (uint8_t)73, hxc_selectReplacement);
+  return hxc_tmp_call_result_n0;
+}
+
 int32_t hxc_SpanFixture_constSum(void)
 {
   int32_t hxc_values[4] = { 2, 4, 8, 16 };
@@ -94,6 +103,8 @@ void hxc_SpanFixture_main(void)
   uint8_t hxc_tmp_call_result_n1 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_mutatedGridCell(hxc_tmp_call_result_n1);
   hxc_SpanFixture_finalClassParameterRoundTrip((uint8_t)201);
+  hxc_SpanFixture_conditionalAssignment(true);
+  hxc_SpanFixture_conditionalAssignment(false);
   return;
 }
 
@@ -238,6 +249,32 @@ uint8_t hxc_SpanFixture_zeroedGridCell(void)
     abort();
   }
   uint8_t hxc_tmp_collection_index_load_result_n1 = hxc_view[(size_t)hxc_tmp_call_result_n0];
+  return hxc_tmp_collection_index_load_result_n1;
+}
+
+uint8_t hxc_SpanConditionalAssignment_assignSelected(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_whenTrue, uint8_t hxc_whenFalse, bool hxc_selectTrue)
+{
+  uint8_t *hxc_borrow = hxc_values;
+  size_t hxc_tmp_length_n5 = hxc_length;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n5)
+  {
+    abort();
+  }
+  uint8_t hxc_tmp_conditional_result_n6 = 0;
+  if (hxc_selectTrue)
+  {
+    hxc_tmp_conditional_result_n6 = hxc_whenTrue;
+  }
+  else
+  {
+    hxc_tmp_conditional_result_n6 = hxc_whenFalse;
+  }
+  hxc_borrow[(size_t)hxc_index] = hxc_tmp_conditional_result_n6;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n5)
+  {
+    abort();
+  }
+  uint8_t hxc_tmp_collection_index_load_result_n1 = hxc_borrow[(size_t)hxc_index];
   return hxc_tmp_collection_index_load_result_n1;
 }
 

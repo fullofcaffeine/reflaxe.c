@@ -33,6 +33,8 @@ struct hxc_SpanFixture_FinalSpanMutator {
 
 int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index);
 
+uint8_t hxc_SpanFixture_conditionalAssignment(bool hxc_selectReplacement);
+
 int32_t hxc_SpanFixture_constSum(void);
 
 uint8_t hxc_SpanFixture_finalClassParameterRoundTrip(uint8_t hxc_replacement);
@@ -58,6 +60,8 @@ uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_
 uint8_t hxc_SpanFixture_spanBeforeConditionalArgument(bool hxc_selectThird);
 
 uint8_t hxc_SpanFixture_zeroedGridCell(void);
+
+uint8_t hxc_SpanConditionalAssignment_assignSelected(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_whenTrue, uint8_t hxc_whenFalse, bool hxc_selectTrue);
 
 uint8_t hxc_SpanFixture_FinalSpanMutator_replace(struct hxc_SpanFixture_FinalSpanMutator *hxc_self, uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
 

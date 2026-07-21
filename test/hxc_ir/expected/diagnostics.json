@@ -2,6 +2,9 @@
   "cstringByteLengthMismatch": [
     "HXC9000 error [profile=portable] test/negative/CStringByteLengthMismatch.hx:2:1-2:2 [module:invalid.CStringByteLengthMismatch.function:invalid.CStringByteLengthMismatch.main.block:entry.instruction:0:bad.cstring.constant] Invalid HxcIR: C string literal records UTF-8 byte length 3 but encodes to 6 byte(s) Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "nonDominatingBoundsProof": [
+    "HXC9000 error [profile=portable] test/negative/NonDominatingBoundsProof.hx:6:1-6:2 [module:invalid.NonDominatingBoundsProof.function:invalid.NonDominatingBoundsProof.main.block:join.instruction:0:bad.load] Invalid HxcIR: fixed-array/span access requires a preceding bounds policy for the same collection and index Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "addressTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/AddressTypeMismatch.hx:2:1-2:2 [module:invalid.AddressTypeMismatch.function:invalid.AddressTypeMismatch.main.block:entry.instruction:0:bad.address] Invalid HxcIR: address result must be a non-null pointer to its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

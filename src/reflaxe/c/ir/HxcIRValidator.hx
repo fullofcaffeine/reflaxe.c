@@ -9,6 +9,12 @@ private typedef HxcIRInstructionSite = {
 	final block:HxcIRBlock;
 }
 
+/** Bounds checks that are guaranteed to run before another basic block. */
+private typedef HxcIRBoundsDominance = {
+	final dominators:Map<String, Map<String, Bool>>;
+	final proofsByBlock:Map<String, Map<String, Bool>>;
+}
+
 /** Validates the semantic invariants required before any HxcIR reaches C AST lowering. */
 class HxcIRValidator {
 	public static inline final SCHEMA_VERSION = 10;
@@ -587,9 +593,204 @@ private class HxcIRValidationState {
 			}
 		}
 
+		final boundsDominance = buildBoundsDominance(fn, blocks);
 		for (block in sorted(fn.blocks, item -> item.id)) {
-			validateBlock(fn, block, '$path.block:${block.id}', locals, blocks, regions, instructionSites, valueSites);
+			validateBlock(fn, block, '$path.block:${block.id}', locals, blocks, regions, instructionSites, valueSites, boundsDominance);
 		}
+	}
+
+	/**
+		Find bounds checks that dominate later control-flow blocks.
+
+		A check in a predecessor remains valid because HxcIR values are immutable and
+		whole fixed-array/span assignment is forbidden. Checks in a block with an
+		instruction-level failure jump are kept local: that jump could leave before a
+		later check, so block-level dominance alone would not be a sufficient proof.
+	**/
+	function buildBoundsDominance(fn:HxcIRFunction, blocks:Map<String, HxcIRBlock>):HxcIRBoundsDominance {
+		final successors:Map<String, Array<String>> = [];
+		final predecessors:Map<String, Array<String>> = [];
+		final proofsByBlock:Map<String, Map<String, Bool>> = [];
+		for (block in fn.blocks) {
+			predecessors.set(block.id, []);
+			final targets = blockTargets(block);
+			successors.set(block.id, targets);
+			final proofs:Map<String, Bool> = [];
+			if (!hasInstructionFailureJump(block)) {
+				for (instruction in block.instructions) {
+					switch instruction.kind {
+						case IRIOBoundsCheck(collection, indexValueId, _):
+							final key = collectionProofKey(collection, indexValueId);
+							if (key != null)
+								proofs.set(key, true);
+						case _:
+					}
+				}
+			}
+			proofsByBlock.set(block.id, proofs);
+		}
+		for (source in fn.blocks) {
+			final targets = successors.get(source.id);
+			if (targets == null)
+				continue;
+			for (target in targets) {
+				final incoming = predecessors.get(target);
+				if (incoming != null && incoming.indexOf(source.id) == -1)
+					incoming.push(source.id);
+			}
+		}
+
+		final reachable:Map<String, Bool> = [];
+		if (blocks.exists(fn.entryBlockId)) {
+			final pending = [fn.entryBlockId];
+			var next = 0;
+			while (next < pending.length) {
+				final blockId = pending[next++];
+				if (reachable.exists(blockId))
+					continue;
+				reachable.set(blockId, true);
+				final outgoing = successors.get(blockId);
+				if (outgoing != null)
+					for (target in outgoing)
+						if (blocks.exists(target) && !reachable.exists(target))
+							pending.push(target);
+			}
+		}
+
+		final allReachable:Map<String, Bool> = [];
+		for (blockId in reachable.keys())
+			allReachable.set(blockId, true);
+		final dominators:Map<String, Map<String, Bool>> = [];
+		for (blockId in reachable.keys())
+			dominators.set(blockId, blockId == fn.entryBlockId ? boolSingleton(blockId) : copyBoolSet(allReachable));
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (blockId in reachable.keys()) {
+				if (blockId == fn.entryBlockId)
+					continue;
+				final incoming = predecessors.get(blockId);
+				if (incoming == null)
+					continue;
+				final reachableIncoming = incoming.filter(value -> reachable.exists(value));
+				if (reachableIncoming.length == 0)
+					continue;
+				final first = dominators.get(reachableIncoming[0]);
+				if (first == null)
+					continue;
+				var nextSet = copyBoolSet(first);
+				for (index in 1...reachableIncoming.length) {
+					final candidate = dominators.get(reachableIncoming[index]);
+					if (candidate != null)
+						nextSet = intersectBoolSets(nextSet, candidate);
+				}
+				nextSet.set(blockId, true);
+				final current = dominators.get(blockId);
+				if (current == null || !sameBoolSet(current, nextSet)) {
+					dominators.set(blockId, nextSet);
+					changed = true;
+				}
+			}
+		}
+		return {dominators: dominators, proofsByBlock: proofsByBlock};
+	}
+
+	/** Collect normal and explicit failure successors without trusting their IDs. */
+	function blockTargets(block:HxcIRBlock):Array<String> {
+		final result:Array<String> = [];
+		function add(target:String):Void {
+			if (result.indexOf(target) == -1)
+				result.push(target);
+		}
+		for (instruction in block.instructions) {
+			final failure = switch instruction.kind {
+				case IRIOCall(call): call.failure;
+				case IRIOConvert(_, _, _, _, edge) | IRIOAllocate(_, _, _, edge): edge;
+				case _: null;
+			};
+			if (failure != null)
+				switch failure.target {
+					case IRFTBlock(target):
+						add(target);
+					case IRFTPropagate | IRFTAbort:
+				}
+		}
+		if (block.terminator != null)
+			switch block.terminator.kind {
+				case IRTJump(edge):
+					add(edge.targetBlockId);
+				case IRTBranch(_, whenTrue, whenFalse):
+					add(whenTrue.targetBlockId);
+					add(whenFalse.targetBlockId);
+				case IRTSwitch(_, cases, defaultEdge):
+					for (item in cases)
+						add(item.edge.targetBlockId);
+					add(defaultEdge.targetBlockId);
+				case IRTTagSwitch(_, cases, defaultEdge):
+					for (item in cases)
+						add(item.edge.targetBlockId);
+					if (defaultEdge != null)
+						add(defaultEdge.targetBlockId);
+				case IRTThrow(_, failure):
+					switch failure.target {
+						case IRFTBlock(target): add(target);
+						case IRFTPropagate | IRFTAbort:
+					}
+				case IRTReturn(_, _) | IRTUnreachable:
+			}
+		return result;
+	}
+
+	/** True when control can leave in the middle of the block. */
+	function hasInstructionFailureJump(block:HxcIRBlock):Bool {
+		for (instruction in block.instructions) {
+			final failure = switch instruction.kind {
+				case IRIOCall(call): call.failure;
+				case IRIOConvert(_, _, _, _, edge) | IRIOAllocate(_, _, _, edge): edge;
+				case _: null;
+			};
+			if (failure != null)
+				switch failure.target {
+					case IRFTBlock(_):
+						return true;
+					case IRFTPropagate | IRFTAbort:
+				}
+		}
+		return false;
+	}
+
+	static function boolSingleton(value:String):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		result.set(value, true);
+		return result;
+	}
+
+	static function copyBoolSet(source:Map<String, Bool>):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		for (key in source.keys())
+			result.set(key, true);
+		return result;
+	}
+
+	static function intersectBoolSets(left:Map<String, Bool>, right:Map<String, Bool>):Map<String, Bool> {
+		final result:Map<String, Bool> = [];
+		for (key in left.keys())
+			if (right.exists(key))
+				result.set(key, true);
+		return result;
+	}
+
+	static function sameBoolSet(left:Map<String, Bool>, right:Map<String, Bool>):Bool {
+		var leftCount = 0;
+		for (key in left.keys()) {
+			leftCount++;
+			if (!right.exists(key))
+				return false;
+		}
+		var rightCount = 0;
+		for (_ in right.keys())
+			rightCount++;
+		return leftCount == rightCount;
 	}
 
 	function validateParameter(parameter:HxcIRParameter, path:String):Void {
@@ -656,7 +857,8 @@ private class HxcIRValidationState {
 	}
 
 	function validateBlock(fn:HxcIRFunction, block:HxcIRBlock, path:String, locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>,
-			regions:Map<String, HxcIRCleanupRegion>, instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>):Void {
+			regions:Map<String, HxcIRCleanupRegion>, instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>,
+			boundsDominance:HxcIRBoundsDominance):Void {
 		final available:Map<String, HxcIRTypeRef> = [];
 		for (parameter in fn.parameters) {
 			available.set(parameter.id, parameter.type);
@@ -670,7 +872,7 @@ private class HxcIRValidationState {
 		for (index => instruction in block.instructions) {
 			final instructionPath = '$path.instruction:$index:${instruction.id}';
 			validateInstruction(instruction, instructionPath, block, available, locals, blocks, regions, instructionSites, valueSites, boundsProofs,
-				nullProofs);
+				nullProofs, boundsDominance);
 			if (instruction.result != null) {
 				available.set(instruction.result.id, instruction.result.type);
 			}
@@ -687,7 +889,7 @@ private class HxcIRValidationState {
 	function validateInstruction(instruction:HxcIRInstruction, path:String, block:HxcIRBlock, available:Map<String, HxcIRTypeRef>,
 			locals:Map<String, HxcIRLocal>, blocks:Map<String, HxcIRBlock>, regions:Map<String, HxcIRCleanupRegion>,
 			instructionSites:Map<String, HxcIRInstructionSite>, valueSites:Map<String, HxcIRInstructionSite>, boundsProofs:Map<String, Bool>,
-			nullProofs:Map<String, Bool>):Void {
+			nullProofs:Map<String, Bool>, boundsDominance:HxcIRBoundsDominance):Void {
 		final resultExpected = instructionProducesValue(instruction.kind);
 		if (resultExpected && instruction.result == null) {
 			add(path, "value-producing instruction has no result", instruction.source);
@@ -705,14 +907,14 @@ private class HxcIRValidationState {
 				}
 			case IRIOLoad(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
-				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, boundsDominance);
 				final loadedType = knownPlaceType(place, available, locals);
 				if (instruction.result != null && loadedType != null && typeKey(instruction.result.type) != typeKey(loadedType)) {
 					add(path, "load result type does not match its place type", instruction.source);
 				}
 			case IRIOAddress(place):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
-				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, boundsDominance);
 				final addressedType = knownPlaceType(place, available, locals);
 				if (isRootPlace(place) && addressedType != null && isCollectionType(addressedType)) {
 					add(path, "taking the address of fixed-array/span storage is outside the admitted bounds-proof model", instruction.source);
@@ -726,7 +928,7 @@ private class HxcIRValidationState {
 				}
 			case IRIOStore(place, valueId):
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
-				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals);
+				validateCollectionAccessProof(place, boundsProofs, path, instruction.source, available, locals, block.id, boundsDominance);
 				final storedType = requireValue(valueId, '$path.value', instruction.source, available);
 				final storePlaceType = knownPlaceType(place, available, locals);
 				if (isRootPlace(place) && storePlaceType != null && isCollectionType(storePlaceType)) {
@@ -1866,22 +2068,37 @@ private class HxcIRValidationState {
 	}
 
 	function validateCollectionAccessProof(place:HxcIRPlace, boundsProofs:Map<String, Bool>, path:String, source:HxcSourceSpan,
-			available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>):Void {
+			available:Map<String, HxcIRTypeRef>, locals:Map<String, HxcIRLocal>, blockId:String, boundsDominance:HxcIRBoundsDominance):Void {
 		switch place {
 			case IRPIndex(base, indexValueId):
 				switch knownPlaceType(base, available, locals) {
 					case IRTFixedArray(_, _, _) | IRTSpan(_, _):
 						final key = collectionProofKey(base, indexValueId);
-						if (key == null || !boundsProofs.exists(key)) {
+						if (key == null || !boundsProofs.exists(key) && !hasDominatingBoundsProof(key, blockId, boundsDominance)) {
 							add(path, "fixed-array/span access requires a preceding bounds policy for the same collection and index", source);
 						}
 					case _:
 				}
-				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals);
+				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals, blockId, boundsDominance);
 			case IRPField(base, _):
-				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals);
+				validateCollectionAccessProof(base, boundsProofs, path, source, available, locals, blockId, boundsDominance);
 			case IRPLocal(_) | IRPGlobal(_) | IRPDereference(_):
 		}
+	}
+
+	/** Accept a proof only when its complete block precedes every path here. */
+	static function hasDominatingBoundsProof(key:String, blockId:String, facts:HxcIRBoundsDominance):Bool {
+		final dominators = facts.dominators.get(blockId);
+		if (dominators == null)
+			return false;
+		for (dominator in dominators.keys()) {
+			if (dominator == blockId)
+				continue;
+			final proofs = facts.proofsByBlock.get(dominator);
+			if (proofs != null && proofs.exists(key))
+				return true;
+		}
+		return false;
 	}
 
 	static function collectionProofKey(collection:HxcIRPlace, indexValueId:String):Null<String> {

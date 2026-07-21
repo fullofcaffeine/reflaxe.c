@@ -92,6 +92,15 @@ class SpanFixture {
 		return forwardRead(readOnly, 2);
 	}
 
+	#if !span_lowering_report
+	/** Exercise a module-level indexed store whose value joins two branches. */
+	static function conditionalAssignment(selectReplacement:Bool):UInt8 {
+		var values:CArray<UInt8, Length4> = CArray.zero(4);
+		var mutable:Span<UInt8> = values.span();
+		return SpanConditionalAssignment.assignSelected(mutable, 1, c.IntConvert.modulo(37), c.IntConvert.modulo(73), selectReplacement);
+	}
+	#end
+
 	static function linearIndex(x:Int, y:Int, z:Int):Int {
 		return x + GRID_WIDTH * (y + GRID_HEIGHT * z);
 	}
@@ -127,6 +136,8 @@ class SpanFixture {
 		mutatedGridCell(zeroedGridCell());
 		#if !span_lowering_report
 		finalClassParameterRoundTrip(c.IntConvert.modulo(201));
+		conditionalAssignment(true);
+		conditionalAssignment(false);
 		#end
 	}
 
