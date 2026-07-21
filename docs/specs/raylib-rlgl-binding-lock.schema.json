@@ -80,7 +80,7 @@
           "required": ["constants", "functions", "omittedFamilies"],
           "properties": {
             "constants": { "const": 1 },
-            "functions": { "const": 7 },
+            "functions": { "const": 8 },
             "omittedFamilies": { "const": 1 }
           }
         },
@@ -100,8 +100,8 @@
         },
         "functions": {
           "type": "array",
-          "minItems": 7,
-          "maxItems": 7,
+          "minItems": 8,
+          "maxItems": 8,
           "items": { "$ref": "#/$defs/function" }
         }
       }

@@ -116,6 +116,40 @@ MOSSLING_ENTITY_COLORS = {
     (165, 144, 112),
     (147, 128, 100),
 }
+PILOT_TELEMETRY_MAGIC = 0x43585054
+PILOT_TELEMETRY_VERSION = 1
+PILOT_TELEMETRY_WORDS = 32
+PILOT_TELEMETRY_COLORS = tuple(
+    (
+        8 + nibble * 16,
+        247 - nibble * 16,
+        (170, 186, 138, 154, 234, 250, 202, 218, 42, 58, 10, 26, 106, 122, 74, 90)[nibble],
+        255,
+    )
+    for nibble in range(16)
+)
+PILOT_SCRIPT_CODES = {
+    "launch-smoke": 0,
+    "secondary-locale": 0,
+    "move-jump-edit": 1,
+    "pause-recapture": 2,
+    "combat-drop": 3,
+    "recovery-use": 4,
+    "full-inventory-gift": 5,
+    "full-inventory-mining": 6,
+    "resize-layout": 7,
+}
+PILOT_FRAME_LIMITS = {
+    "launch-smoke": 4,
+    "secondary-locale": 4,
+    "move-jump-edit": 10,
+    "pause-recapture": 7,
+    "combat-drop": 40,
+    "recovery-use": 4,
+    "full-inventory-gift": 4,
+    "full-inventory-mining": 7,
+    "resize-layout": 6,
+}
 
 
 class PlayFailure(RuntimeError):
@@ -256,53 +290,33 @@ def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subproc
     return result
 
 
-def validate_smoke_screenshot(
-    path: Path,
-    *,
-    platform_name: str,
-    expected_logical_size: tuple[int, int] = (1280, 720),
-    expected_title: bool = True,
-    expected_drop: bool = False,
-    expected_attack: bool = False,
-    expected_recovery: bool = False,
-    expected_inventory_full: bool = False,
-    expected_entities: bool = False,
-) -> tuple[int, int]:
-    """Prove the captured title frame contains staged art and readable UI."""
+def decode_rgba_png(path: Path, label: str) -> tuple[int, int, bytes]:
+    """Decode the narrow PNG form emitted by the pinned Raylib screenshot path."""
     try:
         data = path.read_bytes()
     except OSError as error:
-        raise PlayFailure(f"Caxecraft smoke did not produce its framebuffer screenshot: {error}") from error
+        raise PlayFailure(f"Caxecraft {label} did not produce its framebuffer screenshot: {error}") from error
     if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
-        raise PlayFailure("Caxecraft smoke screenshot is not a structurally valid PNG")
+        raise PlayFailure(f"Caxecraft {label} screenshot is not a structurally valid PNG")
     width, height = struct.unpack(">II", data[16:24])
-    expected_dimensions = {expected_logical_size}
-    if platform_name == "macos":
-        expected_dimensions.add((expected_logical_size[0] * 2, expected_logical_size[1] * 2))
-    if (width, height) not in expected_dimensions:
-        raise PlayFailure(
-            f"Caxecraft smoke screenshot must match its logical {expected_logical_size[0]}x{expected_logical_size[1]} window at an admitted pixel scale, "
-            f"found {width}x{height}; "
-            "this can indicate a broken high-DPI framebuffer"
-        )
     if data[24:29] != bytes((8, 6, 0, 0, 0)):
-        raise PlayFailure("Caxecraft smoke screenshot must be a non-interlaced 8-bit RGBA PNG")
+        raise PlayFailure(f"Caxecraft {label} screenshot must be a non-interlaced 8-bit RGBA PNG")
 
     compressed = bytearray()
     offset = 8
     saw_end = False
     while offset < len(data):
         if offset + 12 > len(data):
-            raise PlayFailure("Caxecraft smoke screenshot contains a truncated PNG chunk")
+            raise PlayFailure(f"Caxecraft {label} screenshot contains a truncated PNG chunk")
         length = struct.unpack(">I", data[offset : offset + 4])[0]
         chunk_end = offset + 12 + length
         if chunk_end > len(data):
-            raise PlayFailure("Caxecraft smoke screenshot contains an out-of-bounds PNG chunk")
+            raise PlayFailure(f"Caxecraft {label} screenshot contains an out-of-bounds PNG chunk")
         chunk_type = data[offset + 4 : offset + 8]
         payload = data[offset + 8 : offset + 8 + length]
         expected_crc = struct.unpack(">I", data[offset + 8 + length : chunk_end])[0]
         if zlib.crc32(chunk_type + payload) & 0xFFFFFFFF != expected_crc:
-            raise PlayFailure("Caxecraft smoke screenshot contains a PNG checksum mismatch")
+            raise PlayFailure(f"Caxecraft {label} screenshot contains a PNG checksum mismatch")
         if chunk_type == b"IDAT":
             compressed.extend(payload)
         if chunk_type == b"IEND":
@@ -310,38 +324,23 @@ def validate_smoke_screenshot(
             break
         offset = chunk_end
     if not compressed or not saw_end:
-        raise PlayFailure("Caxecraft smoke screenshot omitted PNG image data or its end marker")
+        raise PlayFailure(f"Caxecraft {label} screenshot omitted PNG image data or its end marker")
 
     try:
         filtered = zlib.decompress(bytes(compressed))
     except zlib.error as error:
-        raise PlayFailure(f"Caxecraft smoke screenshot contains invalid compressed pixels: {error}") from error
+        raise PlayFailure(f"Caxecraft {label} screenshot contains invalid compressed pixels: {error}") from error
     bytes_per_pixel = 4
     stride = width * bytes_per_pixel
     expected_size = height * (stride + 1)
     if len(filtered) != expected_size:
-        raise PlayFailure("Caxecraft smoke screenshot pixel payload has the wrong size")
+        raise PlayFailure(f"Caxecraft {label} screenshot pixel payload has the wrong size")
 
     previous = bytearray(stride)
-    brand_cyan_pixels = 0
-    brand_orange_pixels = 0
-    brand_white_pixels = 0
-    warm_scene_pixels = 0
-    green_scene_pixels = 0
-    sky_scene_pixels = 0
-    sun_scene_pixels = 0
-    dark_panel_pixels = 0
-    light_ui_pixels = 0
-    nia_entity_pixels = 0
-    mossling_entity_pixels = 0
-    berry_pixels = 0
-    recovery_pixels = 0
-    inventory_full_pixels = 0
-    damage_pixels = 0
-    non_dark_pixels = 0
-    quantized_colors: set[int] = set()
+    pixels = bytearray(width * height * bytes_per_pixel)
+    pixel_at = 0
     at = 0
-    for row in range(height):
+    for _row in range(height):
         filter_kind = filtered[at]
         at += 1
         encoded = filtered[at : at + stride]
@@ -368,8 +367,60 @@ def validate_smoke_screenshot(
                     above if above_distance <= upper_left_distance else upper_left
                 )
             else:
-                raise PlayFailure(f"Caxecraft smoke screenshot uses unknown PNG filter {filter_kind}")
+                raise PlayFailure(f"Caxecraft {label} screenshot uses unknown PNG filter {filter_kind}")
             decoded[index] = (value + predictor) & 0xFF
+        pixels[pixel_at : pixel_at + stride] = decoded
+        pixel_at += stride
+        previous = decoded
+    return width, height, bytes(pixels)
+
+
+def validate_smoke_screenshot(
+    path: Path,
+    *,
+    platform_name: str,
+    expected_logical_size: tuple[int, int] = (1280, 720),
+    expected_title: bool = True,
+    expected_drop: bool = False,
+    expected_attack: bool = False,
+    expected_recovery: bool = False,
+    expected_inventory_full: bool = False,
+    expected_entities: bool = False,
+) -> tuple[int, int]:
+    """Prove the captured title frame contains staged art and readable UI."""
+    width, height, pixels = decode_rgba_png(path, "smoke")
+    expected_dimensions = {expected_logical_size}
+    if platform_name == "macos":
+        expected_dimensions.add((expected_logical_size[0] * 2, expected_logical_size[1] * 2))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            f"Caxecraft smoke screenshot must match its logical {expected_logical_size[0]}x{expected_logical_size[1]} window at an admitted pixel scale, "
+            f"found {width}x{height}; "
+            "this can indicate a broken high-DPI framebuffer"
+        )
+    bytes_per_pixel = 4
+    stride = width * bytes_per_pixel
+
+    brand_cyan_pixels = 0
+    brand_orange_pixels = 0
+    brand_white_pixels = 0
+    warm_scene_pixels = 0
+    green_scene_pixels = 0
+    sky_scene_pixels = 0
+    sun_scene_pixels = 0
+    dark_panel_pixels = 0
+    light_ui_pixels = 0
+    nia_entity_pixels = 0
+    mossling_entity_pixels = 0
+    berry_pixels = 0
+    recovery_pixels = 0
+    inventory_full_pixels = 0
+    damage_pixels = 0
+    non_dark_pixels = 0
+    quantized_colors: set[int] = set()
+    for row in range(height):
+        row_start = row * stride
+        decoded = pixels[row_start : row_start + stride]
         for index in range(0, stride, bytes_per_pixel):
             red, green, blue = decoded[index : index + 3]
             column = index // bytes_per_pixel
@@ -407,7 +458,6 @@ def validate_smoke_screenshot(
                     brand_orange_pixels += 1
                 if red > 220 and green > 220 and blue > 210:
                     brand_white_pixels += 1
-        previous = decoded
     if expected_title and (
         brand_cyan_pixels < 200
         or brand_orange_pixels < 100
@@ -470,6 +520,170 @@ def validate_smoke_screenshot(
             f"(inventoryFull={inventory_full_pixels})"
         )
     return width, height
+
+
+def signed_word(value: int) -> int:
+    """Interpret one decoded 32-bit word as Haxe/C's signed `Int`."""
+    return value - 0x1_0000_0000 if value >= 0x8000_0000 else value
+
+
+def decode_pilot_telemetry(path: Path, expected_logical_size: tuple[int, int]) -> list[int]:
+    """Read and validate the pilot-only colored record at the framebuffer edge."""
+    width, height, pixels = decode_rgba_png(path, "pilot state")
+    logical_width, logical_height = expected_logical_size
+    if width % logical_width != 0 or height % logical_height != 0:
+        raise PlayFailure(
+            f"pilot telemetry framebuffer {width}x{height} is not an integer scale of "
+            f"{logical_width}x{logical_height}"
+        )
+    scale_x = width // logical_width
+    scale_y = height // logical_height
+    if scale_x != scale_y or scale_x not in (1, 2):
+        raise PlayFailure(f"pilot telemetry uses unsupported framebuffer scale {scale_x}x{scale_y}")
+    scale = scale_x
+    required_width = PILOT_TELEMETRY_WORDS * 8 * 2 * scale
+    if required_width > width:
+        raise PlayFailure("pilot telemetry record does not fit in the captured framebuffer")
+
+    color_to_nibble = {color: nibble for nibble, color in enumerate(PILOT_TELEMETRY_COLORS)}
+    words: list[int] = []
+    sample_y = height - scale
+    for word_index in range(PILOT_TELEMETRY_WORDS):
+        value = 0
+        for digit in range(8):
+            sample_x = (word_index * 8 + digit) * 2 * scale + scale
+            offset = (sample_y * width + sample_x) * 4
+            color = tuple(pixels[offset : offset + 4])
+            nibble = color_to_nibble.get(color)
+            if nibble is None:
+                raise PlayFailure(
+                    f"pilot telemetry word {word_index}, digit {digit} has unknown color {color}"
+                )
+            value = (value << 4) | nibble
+        words.append(value)
+
+    if words[0] != PILOT_TELEMETRY_MAGIC:
+        raise PlayFailure(f"pilot telemetry magic drifted: 0x{words[0]:08x}")
+    if words[1] != PILOT_TELEMETRY_VERSION:
+        raise PlayFailure(
+            f"pilot telemetry version {words[1]} is unsupported; expected {PILOT_TELEMETRY_VERSION}"
+        )
+    if words[2] != PILOT_TELEMETRY_WORDS:
+        raise PlayFailure(
+            f"pilot telemetry declares {words[2]} words; expected {PILOT_TELEMETRY_WORDS}"
+        )
+    return words
+
+
+def build_pilot_report(
+    *,
+    state_path: Path,
+    review_screenshot: Path,
+    pilot: str,
+    platform_name: str,
+    cc: str,
+    compiler_version: str,
+) -> dict[str, object]:
+    """Convert one validated native framebuffer record into portable JSON evidence."""
+    logical_size = (960, 540) if pilot == "resize-layout" else (1280, 720)
+    words = decode_pilot_telemetry(state_path, logical_size)
+    script_code = signed_word(words[3])
+    expected_code = PILOT_SCRIPT_CODES[pilot]
+    if script_code != expected_code:
+        raise PlayFailure(f"pilot {pilot!r} emitted script code {script_code}; expected {expected_code}")
+    completed_frames = signed_word(words[5])
+    completed_ticks = signed_word(words[6])
+    expected_frames = PILOT_FRAME_LIMITS[pilot]
+    if completed_frames != expected_frames:
+        raise PlayFailure(
+            f"pilot {pilot!r} completed {completed_frames} frames; expected its bounded {expected_frames}"
+        )
+    if completed_ticks < 0 or completed_ticks > completed_frames:
+        raise PlayFailure(
+            f"pilot {pilot!r} reported impossible fixed ticks {completed_ticks}/{completed_frames}"
+        )
+
+    signed = [signed_word(value) for value in words]
+    for field, value in (
+        ("grounded", signed[13]),
+        ("selection.hit", signed[15]),
+        ("mosslingAlive", signed[30]),
+    ):
+        if value not in (0, 1):
+            raise PlayFailure(f"pilot telemetry {field} must be zero or one, found {value}")
+    if signed[22] < 0 or signed[23] < 0 or signed[24] < 0:
+        raise PlayFailure("pilot telemetry edit counters cannot be negative")
+    if signed[25] < 0 or signed[26] < 0:
+        raise PlayFailure("pilot telemetry render counters cannot be negative")
+    if not 0 <= signed[27] <= 6 or not 0 <= signed[28] < 8 or not 0 <= signed[29] <= 2:
+        raise PlayFailure("pilot telemetry gameplay carriers are outside their closed ranges")
+    if not 0 <= signed[31] <= 7:
+        raise PlayFailure("pilot telemetry presentation flags contain unknown bits")
+
+    raylib_lock = provision.load_lock()
+    upstream = raylib_lock.get("upstream")
+    if not isinstance(upstream, dict):
+        raise PlayFailure("Raylib lock omitted its upstream identity")
+    report: dict[str, object] = {
+        "schemaVersion": 1,
+        "script": {
+            "id": pilot,
+            "code": script_code,
+            "inputHash": f"{words[4]:08x}",
+        },
+        "clock": {
+            "fixedStepMilliseconds": 50,
+            "completedFrames": completed_frames,
+            "completedTicks": completed_ticks,
+        },
+        "player": {
+            "xMilli": signed[7],
+            "yMilli": signed[8],
+            "zMilli": signed[9],
+            "velocityXMilli": signed[10],
+            "velocityYMilli": signed[11],
+            "velocityZMilli": signed[12],
+            "grounded": signed[13] == 1,
+        },
+        "world": {
+            "stateHash": f"{words[14]:08x}",
+            "selection": {
+                "hit": signed[15] == 1,
+                "cell": [signed[16], signed[17], signed[18]],
+                "previous": [signed[19], signed[20], signed[21]],
+            },
+            "edits": {
+                "removed": signed[22],
+                "placed": signed[23],
+                "rejected": signed[24],
+            },
+        },
+        "render": {
+            "visibleBlocks": signed[25],
+            "terrainDrawCalls": signed[26],
+            "title": bool(signed[31] & 1),
+            "paused": bool(signed[31] & 2),
+            "cursorCaptured": bool(signed[31] & 4),
+        },
+        "gameplay": {
+            "health": signed[27],
+            "hotbarSlot": signed[28],
+            "guidePhase": signed[29],
+            "mosslingAlive": signed[30] == 1,
+        },
+        "termination": {"reason": "script-complete", "exitCode": 0},
+        "native": {
+            "platform": platform_name,
+            "compiler": {"command": Path(cc).name, "version": compiler_version},
+            "raylib": {
+                "release": upstream.get("release"),
+                "commit": upstream.get("commit"),
+                "configuration": "desktop",
+            },
+        },
+        "evidence": {"reviewScreenshot": review_screenshot.name},
+    }
+    return report
 
 
 def validate_presented_screenshot(
@@ -1122,30 +1336,67 @@ def main(argv: list[str]) -> int:
                 "resize-layout": "caxecraft-pilot-resize.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
-            if screenshot.exists():
-                screenshot.unlink()
-            run([str(executable)], cwd=executable.parent, timeout=15, label=f"Caxecraft {selected_pilot} graphical pilot")
-            if selected_pilot in ("launch-smoke", "secondary-locale"):
-                width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
-            elif selected_pilot == "resize-layout":
-                width, height = validate_smoke_screenshot(
-                    screenshot,
-                    platform_name=platform_name,
-                    expected_logical_size=(960, 540),
+            state_screenshot = executable.parent / "caxecraft-pilot-state.png"
+            reports: list[dict[str, object]] = []
+            compiler_version = tool_version(args.cc)
+            width = 0
+            height = 0
+            for repeat in range(2):
+                for stale in (screenshot, state_screenshot):
+                    if stale.exists():
+                        stale.unlink()
+                run(
+                    [str(executable)],
+                    cwd=executable.parent,
+                    timeout=15,
+                    label=f"Caxecraft {selected_pilot} graphical pilot run {repeat + 1}",
                 )
-            else:
-                width, height = validate_presented_screenshot(
-                    screenshot,
-                    platform_name=platform_name,
-                    expected_drop=selected_pilot == "combat-drop",
-                    expected_attack=selected_pilot == "combat-drop",
-                    expected_recovery=selected_pilot == "recovery-use",
-                    expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
-                    expected_entities=selected_pilot == "full-inventory-gift",
+                if selected_pilot in ("launch-smoke", "secondary-locale"):
+                    width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
+                elif selected_pilot == "resize-layout":
+                    width, height = validate_smoke_screenshot(
+                        screenshot,
+                        platform_name=platform_name,
+                        expected_logical_size=(960, 540),
+                    )
+                else:
+                    width, height = validate_presented_screenshot(
+                        screenshot,
+                        platform_name=platform_name,
+                        expected_drop=selected_pilot == "combat-drop",
+                        expected_attack=selected_pilot == "combat-drop",
+                        expected_recovery=selected_pilot == "recovery-use",
+                        expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
+                        expected_entities=selected_pilot == "full-inventory-gift",
+                    )
+                reports.append(
+                    build_pilot_report(
+                        state_path=state_screenshot,
+                        review_screenshot=screenshot,
+                        pilot=selected_pilot,
+                        platform_name=platform_name,
+                        cc=args.cc,
+                        compiler_version=compiler_version,
+                    )
                 )
+            if reports[0] != reports[1]:
+                first = json.dumps(reports[0], ensure_ascii=False, indent=2, sort_keys=True).splitlines()
+                second = json.dumps(reports[1], ensure_ascii=False, indent=2, sort_keys=True).splitlines()
+                difference = "\n".join(
+                    difflib.unified_diff(first, second, fromfile="pilot-run-1", tofile="pilot-run-2", lineterm="")
+                )
+                raise PlayFailure(f"repeated native pilot semantic evidence drifted:\n{difference}")
+            report_path = executable.parent / "caxecraft-pilot-report.json"
+            report_path.write_text(
+                json.dumps(reports[0], ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+                newline="\n",
+            )
+            state_screenshot.unlink()
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "
-                f"({width}x{height} presented framebuffer and bounded exit within 15 seconds)"
+                f"({width}x{height} presented framebuffer, two identical semantic runs, "
+                f"and bounded exit within 15 seconds; report {report_path})"
             )
             return 0
         print("caxecraft: launching; press Q to quit")

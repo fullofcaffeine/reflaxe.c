@@ -1,9 +1,10 @@
 # Caxecraft deterministic game pilot
 
 Status: named input scripts, real native Raylib execution, framebuffer capture,
-structural image checks, and bounded automatic exit are implemented under
-`haxe_c-xge.31`. Exporting complete semantic state and running the hosted
-graphical lane in CI remain open.
+structural image checks, a versioned semantic report, repeated-run comparison,
+and bounded automatic exit are implemented under `haxe_c-xge.31`. The Linux
+desktop lane is wired to run this proof under a virtual display and preserve
+the report plus review image. A live command connection remains later work.
 
 ## What the pilot does
 
@@ -17,7 +18,7 @@ pilot build:    fixed script -----------------------------> named intent
                                                                |
                           movement / edit / UI / render <-------+
                                                                |
-                              presented screenshot + clean exit
+                    semantic report + review screenshot + clean exit
 ```
 
 `GameInputFrame` describes intent rather than hardware buttons: move, look,
@@ -37,8 +38,9 @@ is busy; it changes only the time source, not the gameplay transition code.
 This is **Playwright-like** in one limited sense. Playwright drives a program
 through named actions and inspects deliberate checkpoints. Caxecraft does the
 same for a native game: it compiles a named action script into a test build,
-runs the real generated C executable, captures a frame only after
-`EndDrawing`, validates visible scene roles, and exits by itself. It is not a
+runs the real generated C executable, flushes and captures the final frame,
+presents it through `EndDrawing`, validates visible scene roles, and exits by
+itself. It is not a
 general macro recorder or a replacement for manual checks of mouse feel,
 focus, resizing, controller ergonomics, animation, or artistic quality.
 
@@ -129,6 +131,81 @@ framebuffer). The same responsive title layout and asset ownership code runs at
 both sizes; the scripted request and screenshot path are absent from release
 builds.
 
+## How semantic state leaves the native game
+
+A screenshot can prove that the game drew a scene, but it cannot reliably tell
+us an exact player coordinate, world hash, or rejected edit count. Pilot builds
+therefore draw a tiny machine-readable strip along the bottom edge of a second
+frame capture. Each colored mark represents one hexadecimal digit. Thirty-two
+fixed-width words carry a magic number, protocol version, script identity and
+input hash, completed frames and fixed ticks, player motion, world selection
+and edit counts, render counters, inventory/actor state, and presentation flags.
+
+This strip is test instrumentation, not game content or a public save format.
+It is used because it exercises the same real Raylib framebuffer without adding
+a JSON writer, filesystem service, socket, or general runtime dependency to the
+generated game. The host runner accepts only the exact opaque colors, word
+count, version, logical framebuffer scale, and closed field ranges. Unknown
+colors, changed magic, unsupported versions, impossible counts, and unknown
+flags fail before a report is written.
+
+The edit and render counters that feed the strip are also inside the
+`caxecraft_pilot` compile-time boundary. An interactive/release build therefore
+does not merely hide the strip: it contains no pilot counter storage,
+counter-increment branches, explicit batch flush, state screenshot, or report
+transport. The ordinary playable snapshot is the fail-closed check for that
+separation.
+
+Raylib normally submits its queued draw work and swaps front/back buffers in
+`EndDrawing`. A screenshot taken after that swap can read the previous back
+buffer on some desktop systems. The pilot therefore calls the reviewed rlgl
+batch flush only at explicit review/state capture points, captures the
+now-complete back buffer, and then calls `EndDrawing` to present that same
+frame. Ordinary builds contain no extra flush or state strip; frequent manual
+flushes would split useful GPU batches and hurt rendering performance.
+
+The runner converts the validated strip to
+`caxecraft-pilot-report.json`. It runs the same executable twice and compares
+the complete normalized report, including native compiler and pinned Raylib
+identity. Checkout paths and temporary directories are deliberately absent;
+the report names the review screenshot only by its packaged filename. The
+whole screenshot remains a broad visual/scene check rather than a
+cross-driver pixel golden.
+
+### Why this carrier is temporary
+
+The colored strip is acceptable for one small final observation because all of
+its behavior is written in Haxe, compiled through haxe.c, removed from release
+builds, and carried by Raylib APIs the game already proves. It adds no hidden C
+helper, file path, port, socket lifecycle, JSON runtime, or second gameplay
+implementation. It also forces the native graphical test to prove that a
+complete frame really reached the framebuffer.
+
+It would be a poor general control protocol. It has little bandwidth, spends
+framebuffer pixels, depends on capture timing and display scale, and cannot
+carry interactive requests back into the game. Adding more colored words would
+make the test harder to understand without improving the compiler. The strip
+therefore freezes at this bounded version and must not become the console,
+CaxeTest language, save format, or live agent bridge.
+
+| Carrier | Useful property | Cost or risk | Decision |
+| --- | --- | --- | --- |
+| framebuffer strip | works through the already admitted Haxe/Raylib path and proves a rendered frame | low bandwidth and tied to graphics | keep only for the current one-shot bootstrap |
+| Haxe standard output | simplest final structured report; the launcher already owns the child process | needs general `haxe.io.Output`, strings/bytes, and framing | next replacement for final telemetry |
+| Haxe standard input/output pipes | private two-way channel with no port, firewall, discovery, or remote bind | needs framing, limits, backpressure, and clean end-of-file behavior | preferred live agent transport when the runner launches the game |
+| Haxe file output | easy to inspect after a crash | introduces paths, stale files, permissions, and atomic-write policy | use for ordinary evidence/save artifacts after filesystem support, not live control |
+| loopback socket | permits attaching to an existing process or multiple tools | port allocation, authentication, firewall, timeout, and platform socket policy | add only if a real attach/multi-client need justifies it |
+
+The preferred live path is therefore a versioned, length-bounded protocol over
+the child process's inherited standard input and output. The encoder, decoder,
+command dispatch, and observations stay Haxe. A host runner may remain Python
+because it launches compilers and processes, but it cannot own or duplicate game
+semantics. `haxe_c-8al` owns standard Haxe streams, `haxe_c-0bx` owns general
+JSON support if JSON Lines remains the selected message spelling, and
+`haxe_c-xge.19.8.1` owns the disabled-by-default Caxecraft agent bridge. A
+Caxecraft-specific C function or application-owned `extern` shim is explicitly
+not an alternative.
+
 ## Why the native path has one compile-time condition
 
 Interactive releases must contain no scripted-input channel. The application
@@ -167,6 +244,12 @@ the first authority:
 A later live adapter should translate validated versioned messages into this
 same intent vocabulary. It must not become a second game implementation.
 
+The pilot is not the cutscene system either. A cutscene is shipped CaxeFlow
+content that sequences authorized world/presentation actions and defines its
+skip result. A pilot supplies player input such as start, advance, or skip and
+then observes the real cutscene result. They may share the fixed clock and
+engine driver, but never the same script authority or story source.
+
 ## Current evidence and remaining work
 
 The target-neutral probe runs under pinned Haxe Eval in two installed locales.
@@ -175,14 +258,14 @@ permanent bounded quit, and absence of C/Raylib/untyped leakage.
 
 The native commands compile through production `--custom-target c`, require an
 empty `hxrt` plan, build and launch pinned Raylib, stage only hash-verified
-assets, inspect a real RGBA framebuffer, and require a clean process exit. The
-generated-C gate also rejects `goto`, allocation calls, and hidden `hxrt`, and
-checks exact texture load/validity/unload ownership counts.
+assets, inspect a real RGBA framebuffer, decode the versioned state record, run
+the same executable twice, and require equal reports plus clean process exits.
+The generated-C gate also rejects `goto`, allocation calls, and hidden `hxrt`,
+and checks exact texture load/validity/unload ownership counts.
 
-The pilot is useful for visual debugging now, but `haxe_c-xge.31` remains open
-until native results also export a versioned semantic report containing player
-and world state, selected cell, edit outcomes, fixed ticks, render counters,
-termination reason, input hash, native compiler/Raylib identity, and normalized
-evidence paths. Repeated native runs must then prove identical semantic reports,
-and hosted CI must run the graphical executable under its accepted virtual or
-software display.
+The Linux desktop workflow runs the launch pilot through Xvfb, a small virtual
+display server used when CI has no physical monitor. It uploads the normalized
+JSON report and human-review screenshot as one fail-closed artifact. This lane
+proves the compiled application can open, draw, report state, and quit on the
+hosted Linux image; it does not replace the separate macOS/Windows compile/link
+matrix or manual input-quality review.

@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import re
+import struct
 import subprocess
 import sys
+import tempfile
+import zlib
 from pathlib import Path
 
 CASE = Path(__file__).resolve().parent
@@ -21,6 +24,7 @@ from run import (  # noqa: E402
     resolve_haxe_arguments,
     verify_pinned_haxe,
 )
+import play as playable  # noqa: E402
 
 EXPECTED_TRACE = (
     "caxecraft-pilot: 8 named scripts, 82 deterministic frames, 10 checkpoints; "
@@ -41,6 +45,76 @@ FORBIDDEN_PILOT_TEXT = (
 
 class PilotFailure(RuntimeError):
     pass
+
+
+def png_chunk(kind: bytes, payload: bytes) -> bytes:
+    """Build one checksummed PNG chunk for the telemetry decoder fixtures."""
+    checksum = zlib.crc32(kind + payload) & 0xFFFFFFFF
+    return struct.pack(">I", len(payload)) + kind + payload + struct.pack(">I", checksum)
+
+
+def write_telemetry_fixture(path: Path, words: list[int], *, unknown_color: bool = False) -> None:
+    """Write the smallest faithful 1x-scale framebuffer accepted by the native decoder."""
+    width, height = 1280, 720
+    stride = width * 4
+    filtered = bytearray(height * (stride + 1))
+    row_start = (height - 1) * (stride + 1) + 1
+    for word_index, word in enumerate(words):
+        for digit in range(8):
+            nibble = (word >> ((7 - digit) * 4)) & 0xF
+            sample_x = (word_index * 8 + digit) * 2 + 1
+            color = playable.PILOT_TELEMETRY_COLORS[nibble]
+            offset = row_start + sample_x * 4
+            filtered[offset : offset + 4] = bytes(color)
+    if unknown_color:
+        filtered[row_start + 4 : row_start + 8] = bytes((1, 2, 3, 255))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)
+    path.write_bytes(
+        b"\x89PNG\r\n\x1a\n"
+        + png_chunk(b"IHDR", header)
+        + png_chunk(b"IDAT", zlib.compress(bytes(filtered), level=9))
+        + png_chunk(b"IEND", b"")
+    )
+
+
+def expect_telemetry_failure(path: Path, words: list[int], expected: str, *, unknown_color: bool = False) -> None:
+    """Prove malformed or unsupported telemetry fails with an actionable reason."""
+    write_telemetry_fixture(path, words, unknown_color=unknown_color)
+    try:
+        playable.decode_pilot_telemetry(path, (1280, 720))
+    except playable.PlayFailure as error:
+        if expected not in str(error):
+            raise PilotFailure(f"telemetry failure omitted {expected!r}: {error}") from error
+        return
+    raise PilotFailure(f"telemetry fixture unexpectedly admitted {expected}")
+
+
+def check_native_telemetry_decoder() -> None:
+    """Lock the versioned native report boundary without launching a graphical process."""
+    words = [0] * playable.PILOT_TELEMETRY_WORDS
+    words[0] = playable.PILOT_TELEMETRY_MAGIC
+    words[1] = playable.PILOT_TELEMETRY_VERSION
+    words[2] = playable.PILOT_TELEMETRY_WORDS
+    with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-pilot-telemetry-") as temporary:
+        path = Path(temporary) / "telemetry.png"
+        write_telemetry_fixture(path, words)
+        if playable.decode_pilot_telemetry(path, (1280, 720)) != words:
+            raise PilotFailure("valid pilot telemetry did not round-trip exactly")
+
+        malformed_magic = list(words)
+        malformed_magic[0] ^= 1
+        expect_telemetry_failure(path, malformed_magic, "magic drifted")
+
+        unsupported_version = list(words)
+        unsupported_version[1] += 1
+        expect_telemetry_failure(path, unsupported_version, "version 2 is unsupported")
+
+        malformed_length = list(words)
+        malformed_length[2] -= 1
+        expect_telemetry_failure(path, malformed_length, "declares 31 words")
+
+        expect_telemetry_failure(path, words, "has unknown color", unknown_color=True)
 
 
 def check_target_neutral_boundary() -> None:
@@ -85,6 +159,7 @@ def run_probe(locale: str) -> str:
 def main() -> int:
     try:
         check_target_neutral_boundary()
+        check_native_telemetry_decoder()
         locale = alternate_locale()
         if locale == "C":
             raise PilotFailure("no alternate locale is installed for the pilot lane")

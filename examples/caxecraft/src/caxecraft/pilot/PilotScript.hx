@@ -8,7 +8,7 @@ import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 
 /** Closed, allocation-free names for deterministic game scripts. */
-enum abstract PilotScriptName(Int) {
+enum abstract PilotScriptName(Int) to Int {
 	var LaunchSmoke = 0;
 	var MoveJumpEdit = 1;
 	var PauseRecapture = 2;
@@ -20,7 +20,7 @@ enum abstract PilotScriptName(Int) {
 }
 
 /** One closed semantic action selected for a scripted frame. */
-enum abstract PilotAction(Int) {
+enum abstract PilotAction(Int) to Int {
 	var Idle = 0;
 	var Quit = 1;
 	var Forward = 2;
@@ -47,6 +47,40 @@ enum abstract PilotAction(Int) {
  */
 final class PilotScript {
 	public static inline final ABSOLUTE_FRAME_LIMIT:Int = 120;
+
+	/** Stable numeric identity carried by native telemetry without a C string. */
+	public static function scriptCode(name:PilotScriptName):Int
+		return name;
+
+	/**
+	 * Hash every scripted input and initial fixture fact for reproducible reports.
+	 *
+	 * The value is an identity for test input, not a security digest. Including
+	 * the bounded action sequence, viewport requests, health, and complete
+	 * inventory means a report cannot silently keep an old identity after one of
+	 * those inputs changes.
+	 */
+	public static function inputHash(name:PilotScriptName):Int {
+		var hash = mix(-2128831035, scriptCode(name));
+		var frame = 0;
+		while (frame < frameLimit(name)) {
+			hash = mix(hash, actionCode(actionAt(name, frame)));
+			hash = mix(hash, requestedWindowWidth(name, frame));
+			hash = mix(hash, requestedWindowHeight(name, frame));
+			frame++;
+		}
+		hash = mix(hash, initialHealth(name));
+		final inventory = initialInventory(name);
+		hash = mix(hash, inventory.selected);
+		hash = mix(hash, inventory.grass);
+		hash = mix(hash, inventory.dirt);
+		hash = mix(hash, inventory.stone);
+		hash = mix(hash, inventory.haxeforge);
+		hash = mix(hash, inventory.sword);
+		hash = mix(hash, inventory.berries);
+		hash = mix(hash, inventory.bread);
+		return mix(hash, inventory.lantern);
+	}
 
 	public static function frameLimit(name:PilotScriptName):Int {
 		if (name == LaunchSmoke)
@@ -168,6 +202,7 @@ final class PilotScript {
 				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
 			case ResizeLayout:
 				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot) : null;
+			case _: null;
 		};
 	}
 
@@ -209,6 +244,14 @@ final class PilotScript {
 
 	public static inline function complete(name:PilotScriptName, frameNumber:Int):Bool
 		return frameNumber >= frameLimit(name) - 1;
+
+	/** Closed integer spelling used only by the versioned input hash. */
+	static function actionCode(action:PilotAction):Int
+		return action;
+
+	/** FNV-style 32-bit mix shared by every input field. */
+	static inline function mix(hash:Int, value:Int):Int
+		return (hash ^ value) * 16777619;
 
 	static function moveJumpAction(frameNumber:Int):PilotAction {
 		return switch frameNumber {

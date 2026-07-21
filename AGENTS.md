@@ -490,6 +490,30 @@ missing-metadata or missing-adapter assumptions.
   validated metadata/macros, a narrow typed DSL only for a demonstrated language
   gap, and finally explicit raw C authority. Repeated raw snippets indicate a
   missing abstraction.
+- Repository-owned program behavior is written in Haxe and compiled through
+  haxe.c. This applies to examples, flagship applications, editor/game systems,
+  test-only code that runs inside a generated executable, and reusable project
+  libraries. An `extern` describes an ABI that already exists outside that Haxe
+  program; it is not permission to implement a new repository feature in C and
+  place a Haxe declaration in front of it. When ordinary Haxe exposes a missing
+  lowering, standard-library adapter, runtime feature, diagnostic, or output-
+  quality problem, reduce it to a general compiler fixture, create or update its
+  Beads owner, fix the owning compiler/runtime layer, and keep the application
+  path as end-to-end evidence. Do not bypass that flywheel with an example-
+  specific C helper, application-owned shim, or raw call.
+- Direct repository-owned C or C++ is an exceptional leaf boundary, not an
+  alternative implementation language. Legitimate cases are limited to such
+  things as ABI/layout probes, native consumer harnesses, generated-C fixtures,
+  a narrowly selected `hxrt` or platform primitive that cannot soundly be
+  expressed before the relevant Haxe capability exists, and adaptation of an
+  external library whose existing ABI requires it. Every exception must be the
+  smallest possible unit, have a named owner, state in a nearby comment why
+  Haxe cannot currently express it, document ABI/ownership/failure and removal
+  or permanence policy, and carry focused native plus generated-Haxe evidence.
+  It must never duplicate game, application, compiler-policy, or scenario
+  semantics. Host-side Python/shell orchestration may invoke compilers, inspect
+  artifacts, and control processes, but it must not become a second
+  implementation of behavior that belongs in the generated Haxe program.
 - Do not require or generate redundant metadata when a safe canonical identity
   default expresses the exact same fact. Prefer the ordinary Haxe spelling or
   structure, resolve that default once at the typed boundary, validate it with

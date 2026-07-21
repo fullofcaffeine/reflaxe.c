@@ -44,6 +44,10 @@ import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
 import caxecraft.localization.UiCatalog;
 import caxecraft.localization.UiCatalog.LocaleCursor;
 import caxecraft.localization.UiCatalog.UiMessage;
+#if caxecraft_pilot
+import caxecraft.app.PilotTelemetry.drawPilotTelemetry;
+import raylib.Rlgl;
+#end
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
@@ -184,6 +188,11 @@ final class Main {
 		var inventoryFullReason = InventoryFullReason.None;
 		var recoveryFeedback = RecoveryDecision.NotRecoveryItem;
 		var recoveryFeedbackFrames = 0;
+		#if caxecraft_pilot
+		var removedBlocks = 0;
+		var placedBlocks = 0;
+		var rejectedEdits = 0;
+		#end
 
 		while (!quit && !Raylib.WindowShouldClose()) {
 			var recapturedThisFrame = false;
@@ -388,13 +397,25 @@ final class Main {
 						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword) && hit.hit) {
 							final mining = attemptMining(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ), inventory);
 							inventory = mining.inventory;
+							#if caxecraft_pilot
+							if (mining.outcome == MiningOutcome.Collected)
+								removedBlocks++;
+							#end
 							if (mining.outcome == MiningOutcome.InventoryFull) {
+								#if caxecraft_pilot
+								rejectedEdits++;
+								#end
 								inventoryFullReason = InventoryFullReason.BlockStack;
 								inventoryFullFrames = 90;
 							}
 						}
 					} else if (hit.hit) {
+						#if caxecraft_pilot
+						if (World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ)))
+							removedBlocks++;
+						#else
 						World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ));
+						#end
 					}
 				}
 			}
@@ -413,10 +434,18 @@ final class Main {
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
 							|| !PlayerPhysics.canPlaceAt(player, placement)
-							|| !World.place(cells, placement, selectedBlock))
+							|| !World.place(cells, placement, selectedBlock)) {
 							placementBlockedFrames = 60;
-						else if (selectedMode == GameMode.Adventure)
-							inventory = Inventory.consumeSelected(inventory);
+							#if caxecraft_pilot
+							rejectedEdits++;
+							#end
+						} else {
+							#if caxecraft_pilot
+							placedBlocks++;
+							#end
+							if (selectedMode == GameMode.Adventure)
+								inventory = Inventory.consumeSelected(inventory);
+						}
 					}
 				}
 			}
@@ -454,6 +483,10 @@ final class Main {
 
 			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ), Vector3.fromFloat(eyeX + lookX, eyeY + lookY, eyeZ + lookZ),
 				Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(70.0), CameraProjection.Perspective);
+			#if caxecraft_pilot
+			var visibleBlocks = 0;
+			var terrainDrawCalls = 0;
+			#end
 			Raylib.BeginDrawing();
 			if (onTitle) {
 				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale);
@@ -466,6 +499,10 @@ final class Main {
 				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(30.0), CaxecraftPalette.sunCore());
 				Raylib.BeginMode3D(camera);
 				final renderCounters = TerrainRenderer.draw(cells, terrainTexture, terrainTextureReady, player.x, player.z);
+				#if caxecraft_pilot
+				visibleBlocks = renderCounters.visible;
+				terrainDrawCalls = renderCounters.drawCalls;
+				#end
 				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
@@ -476,10 +513,26 @@ final class Main {
 					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullReason, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
 					hudTextureReady, itemTexture, itemTextureReady);
 			}
-			Raylib.EndDrawing();
 			#if caxecraft_pilot
-			// Checkpoints are handled after presentation, just as browser test
-			// tools capture a page only after the requested state is visible.
+			final pilotComplete = PilotScript.complete(pilotName, frameCount);
+			if (pilotComplete)
+				drawPilotTelemetry(pilotName, frameCount + 1, updateCount, player, cells, hit, removedBlocks, placedBlocks, rejectedEdits, visibleBlocks,
+					terrainDrawCalls, vitals.health, inventory.selected, GuideNpc.phase(guide), Mossling.isAlive(mossling), onTitle, paused, captured);
+			var capturePilotFrame = pilotComplete;
+			if ((pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
+				|| (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 8)
+				|| (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
+				|| (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
+				|| (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
+				|| (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
+				|| (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
+				|| (pilotName == PilotScriptName.ResizeLayout && frameCount == 3))
+				capturePilotFrame = true;
+			// Submit this frame before reading it. `EndDrawing()` would otherwise
+			// swap the buffers first, causing Raylib's screenshot function to read
+			// the previous frame on a double-buffered desktop window.
+			if (capturePilotFrame)
+				Rlgl.FlushBatch();
 			if (pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
 				#if caxecraft_pilot_secondary_locale
 				Raylib.TakeScreenshot("caxecraft-secondary-locale.png");
@@ -500,7 +553,10 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-full-mining.png");
 			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
 				Raylib.TakeScreenshot("caxecraft-pilot-resize.png");
+			if (pilotComplete)
+				Raylib.TakeScreenshot("caxecraft-pilot-state.png");
 			#end
+			Raylib.EndDrawing();
 			frameCount++;
 		}
 

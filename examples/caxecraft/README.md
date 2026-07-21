@@ -19,6 +19,11 @@ cannot accept it. The complete
 Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
 [game design document](../../docs/caxecraft-game-design.md).
+Creators and prospective modders should start with the concise
+[creator and modding guide](../../docs/caxecraft-modding.md). It explains which
+facts belong to CaxeMap, CaxeFlow, content definitions, Haxe mechanics, or test
+pilots, and clearly marks the authoring pieces that are not connected to the
+native playable yet.
 
 The core is ordinary Haxe. Only `WorldCells` and `WorldStorage` know that the C
 build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
@@ -384,8 +389,8 @@ contracts, semantic atlas-cell order, a complete no-sidecar file inventory,
 minimal PNG metadata, and repository-scoped generation/privacy records. The
 domain runner invokes the same validator before compiling.
 The playable currently packages the panorama, wordmark, HUD, item, entity, and
-base-terrain atlases as exact verified primary bytes. The other four atlases remain
-design-only, so the
+base-terrain atlases as exact verified primary bytes. The other five atlases,
+including the cutscene-editor icon sheet, remain design-only, so the
 asset gate alone is still not gameplay or visual-polish evidence. See
 [`assets/README.md`](assets/README.md) for the exact boundary.
 

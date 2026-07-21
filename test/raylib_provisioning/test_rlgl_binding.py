@@ -38,7 +38,7 @@ class RaylibRlglBindingTests(unittest.TestCase):
     def test_slice_is_exact_and_omits_identity_metadata(self) -> None:
         selection = load_selection()
         self.assertEqual(selection["constant"], {"name": "RL_QUADS", "value": 7})
-        self.assertEqual(len(selection["functions"]), 7)
+        self.assertEqual(len(selection["functions"]), 8)
         rendered = render_raw(load_lock())
         for forbidden in ("Dynamic", "untyped", "__c__", "@:native", "@:c.name(", "new "):
             self.assertNotIn(forbidden, rendered)

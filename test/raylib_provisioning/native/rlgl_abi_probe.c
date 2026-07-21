@@ -14,6 +14,7 @@ hxc_check_raylib_rlgl_signatures(void)
 {
     void (*const hxc_signature_rlBegin)(int) = &rlBegin;
     void (*const hxc_signature_rlColor4ub)(unsigned char, unsigned char, unsigned char, unsigned char) = &rlColor4ub;
+    void (*const hxc_signature_rlDrawRenderBatchActive)(void) = &rlDrawRenderBatchActive;
     void (*const hxc_signature_rlEnd)(void) = &rlEnd;
     void (*const hxc_signature_rlNormal3f)(float, float, float) = &rlNormal3f;
     void (*const hxc_signature_rlSetTexture)(unsigned int) = &rlSetTexture;
@@ -22,6 +23,7 @@ hxc_check_raylib_rlgl_signatures(void)
 
     (void)hxc_signature_rlBegin;
     (void)hxc_signature_rlColor4ub;
+    (void)hxc_signature_rlDrawRenderBatchActive;
     (void)hxc_signature_rlEnd;
     (void)hxc_signature_rlNormal3f;
     (void)hxc_signature_rlSetTexture;

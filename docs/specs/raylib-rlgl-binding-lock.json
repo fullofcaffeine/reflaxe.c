@@ -1,5 +1,5 @@
 {
-  "declarationSha256": "9299c73507c430b668cb6d96f0fc04daf8dc02ce9d8568ff93a13759fdefd76f",
+  "declarationSha256": "778d92fb36594c7ff7bcb06523c6eebb19baae5e1a7eeac3ee04a949463f3fe1",
   "declarations": {
     "constant": {
       "name": "RL_QUADS",
@@ -67,6 +67,16 @@
           "haxeType": "Void"
         },
         "sourceLine": 625
+      },
+      {
+        "name": "rlDrawRenderBatchActive",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 728
       },
       {
         "name": "rlEnd",
@@ -230,7 +240,7 @@
   "selection": {
     "counts": {
       "constants": 1,
-      "functions": 7,
+      "functions": 8,
       "omittedFamilies": 1
     },
     "coverageState": "caxecraft-quad-batch-only",
@@ -238,11 +248,11 @@
       {
         "family": "remaining-rlgl-api",
         "owner": "haxe_c-xge.10",
-        "reason": "Caxecraft needs only one texture-bound quad batch; matrices, shaders, buffers, framebuffers, and raw graphics state remain outside this reviewed slice."
+        "reason": "Caxecraft needs one texture-bound quad batch plus an explicit flush for deterministic current-frame captures; matrices, shaders, buffers, framebuffers, and other raw graphics state remain outside this reviewed slice."
       }
     ],
     "path": "docs/specs/raylib-rlgl-selection.json",
-    "sha256": "14dd273ff89f8e96591135a59cf26de357a0969a6a07a62a2efab9faac476904"
+    "sha256": "cf263285ca722241e289d213f7f769f5797e35b98bc65257f1df47b21b05a765"
   },
   "upstream": {
     "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",

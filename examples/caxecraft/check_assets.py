@@ -30,6 +30,7 @@ EXPECTED_ASSET_IDS = frozenset(
         "adventure-items",
         "adventure-terrain",
         "caxecraft-wordmark",
+        "cutscene-editor",
         "entities",
         "hud",
         "items",
@@ -43,6 +44,7 @@ EXPECTED_GENERATION_RECORD_IDS = frozenset(
         "adventure-characters",
         "adventure-items",
         "adventure-terrain",
+        "cutscene-editor",
         "entities",
         "hud",
         "items",
@@ -56,6 +58,10 @@ EXPECTED_SUPPORT_FILES = frozenset({"README.md", "manifest.json"})
 IVVY_PRIVATE_REFERENCE = (
     "Private user-provided family-cat photograph used only as visual reference; "
     "not included in or distributed from this repository."
+)
+CUTSCENE_EDITOR_REFERENCE = (
+    "Existing repository HUD and Adventure-item atlases used only as visual-style "
+    "references; neither was an edit target."
 )
 EXPECTED_GRID_CELLS = {
     "adventure-characters": (
@@ -75,6 +81,12 @@ EXPECTED_GRID_CELLS = {
         "ash-top", "ash-side", "charred-basalt", "ember-rock",
         "pine-canopy", "snowy-pine-canopy", "dark-pine-bark", "submerged-ruin-stone",
         "castle-slate", "fortress-brick", "teal-copper-roof", "bridge-rune-tile",
+    ),
+    "cutscene-editor": (
+        "camera-anchor", "camera-look-target", "camera-dolly-path", "camera-follow",
+        "hard-cut", "smooth-blend", "fade-to-black", "timed-hold",
+        "actor-position", "actor-move", "actor-look", "dialogue-subtitle",
+        "music", "sound-effect", "branch", "skip-fast-forward",
     ),
     "entities": (
         "moss-front", "moss-three-quarter", "moss-side", "moss-back",
@@ -305,7 +317,12 @@ def validate_generation_records(records: dict[str, Any]) -> None:
             "openai-built-in-imagegen"
         ):
             fail(f"generated art record {record_id} lost its generation identity")
-        expected_references = [IVVY_PRIVATE_REFERENCE] if record_id == "ivvy" else []
+        if record_id == "ivvy":
+            expected_references = [IVVY_PRIVATE_REFERENCE]
+        elif record_id == "cutscene-editor":
+            expected_references = [CUTSCENE_EDITOR_REFERENCE]
+        else:
+            expected_references = []
         if references != expected_references:
             fail(f"generation record {record_id} has an unexpected reference inventory")
 
@@ -360,6 +377,7 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         "adventure-characters",
         "adventure-items",
         "adventure-terrain",
+        "cutscene-editor",
         "ivvy",
     ]:
         fail("design-only atlas inventory drifted without runtime review")

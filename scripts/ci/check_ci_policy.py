@@ -550,6 +550,7 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/assets/atlases/adventure-characters.png",
     "examples/caxecraft/assets/atlases/adventure-items.png",
     "examples/caxecraft/assets/atlases/adventure-terrain.png",
+    "examples/caxecraft/assets/atlases/cutscene-editor.png",
     "examples/caxecraft/assets/atlases/entities.png",
     "examples/caxecraft/assets/atlases/hud.png",
     "examples/caxecraft/assets/atlases/items.png",
@@ -838,6 +839,10 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'if [ "${{ matrix.platform }}" = linux ]; then',
     'xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24"',
     "--smoke \\",
+    "      - name: Preserve Caxecraft graphical pilot evidence\n",
+    "          name: caxecraft-pilot-${{ matrix.name }}\n",
+    "caxecraft-pilot-report.json\n",
+    "caxecraft-smoke.png\n",
     "            xvfb \\",
     "            xauth\n",
     "--require-hashes",
@@ -1027,6 +1032,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
     if scripts.get("test:caxecraft-playable") != "python3 examples/caxecraft/play.py --check-snapshots":
         errors.append("package.json must retain the focused Caxecraft playable snapshot gate")
+    if scripts.get("test:caxecraft-pilot") != "python3 examples/caxecraft/check_pilot.py":
+        errors.append("package.json must retain the deterministic Caxecraft pilot contract gate")
     if scripts.get("caxecraft:play") != "python3 examples/caxecraft/play.py":
         errors.append("package.json must retain the one-command Caxecraft developer workflow")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))

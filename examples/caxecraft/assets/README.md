@@ -3,8 +3,9 @@
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
 item atlas, entity atlas, and base terrain atlas as exact primary PNG bytes.
-Four atlases remain design inputs: their presence is not evidence that
-Adventure terrain/characters, Ivvy, or Adventure props use textures yet. The
+Five atlases remain design inputs: their presence is not evidence that
+Adventure terrain/characters, Ivvy, Adventure props, or cutscene-editor icons
+are used by the native game yet. The
 complete scope is described by the
 [game design document](../../../docs/caxecraft-game-design.md) and
 [domain design](../../../docs/caxecraft-domain.md).
@@ -49,3 +50,9 @@ Runtime coordinates are centralized as typed `ItemKind`/hotbar mappings in
 `CaxecraftAtlas` and material/face mappings in `TerrainAtlas`; adding a used
 cell requires updating one presentation table and the manifest-owned semantic
 order rather than scattering integer rectangles through gameplay.
+
+`atlases/cutscene-editor.png` is the design source for the planned visual
+cinematic tools. Its 16 cells cover camera placement and movement, shot
+transitions, waits, actor staging, dialogue, music/effects, branching, and
+skip. It is deliberately classified as design-only until the public editor
+selects those cells through a typed presentation table and native UI tests.

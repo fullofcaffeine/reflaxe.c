@@ -37,6 +37,18 @@ canonical data.
   small typed engine capability and expose it through the shared registry and
   editor. Do not add a character-name branch, duplicate simulator, arbitrary
   script hook, or raw-C shortcut.
+- Use one general event-to-action path for authored behavior. An engine event
+  reports that something happened, optional CaxeFlow conditions decide whether
+  a rule applies, and its ordered actions invoke any compatible admitted
+  mechanic. A trigger volume, switch, timer, quest change, or cutscene must not
+  grow a private scripting system or a feature-specific callback path. Extend
+  the closed typed event/action registries and exhaustive executor instead.
+- Guided cards, advanced visual logic, and text editing are views of the same
+  validated CaxeMap/CaxeFlow model. Do not give text mode privileged mechanics,
+  silently simplify a rule when returning to cards, or maintain a second file
+  format for agents. “Script” means the bounded data-only CaxeFlow language
+  here; it never grants arbitrary Haxe, C, Lua, shell, filesystem, or host API
+  execution.
 - Build runtime instances from the validated content model at the level-loading
   boundary. A runtime `Npc`, `Enemy`, `DialogueSession`, or similar class is
   appropriate when each value has real instance state, identity, and lifetime.
@@ -68,3 +80,44 @@ generic NPC runtime. Her placement, dialogue, gift, and conversation progress
 belong to the shipped map and CaxeFlow rules. A reusable NPC interaction system
 may be a class if it carries per-instance state, but `GuideNpc` must not remain
 a Nia-specific static API beside a second hardcoded copy in `Main.hx`.
+
+## Original Art and Audio Assets
+
+Create original visual and audio assets on demand when an implemented game or
+editor feature has a concrete need for them. An agent does not need separate
+permission for each asset, but must not generate a speculative asset dump or
+describe an unused file as integrated game content. Match Caxecraft's reviewed
+voxel-adventure direction and the purpose of the scene, then inspect and test
+the result before it becomes a project asset.
+
+Music and sound should evoke a warm block-building adventure and a playful
+fantasy role-playing game without copying another game's melody, sound,
+instrument arrangement, logo, character, or other recognizable trade dress.
+Use those genres as mood references, not as source material. The soundtrack
+should eventually provide distinct original cues for at least the title/menu,
+village safety, broad exploration, mystery or puzzle solving, underwater
+travel, snow and ash regions, castle danger, Browser's boss battle, victory,
+and game over. Transitions should support the player's changing mood instead
+of treating one loop as background for the whole game. Sound effects should
+share that identity across user-interface feedback, footsteps and materials,
+blocks, inventory and pickups, water, creatures, Ivvy, combat, mechanisms, and
+important story events.
+
+Keep an editable source when it adds value. MIDI means the note, timing, and
+instrument instructions used to edit a composition; it is not a recording and
+Raylib does not play it directly. Preserve type-1 MIDI or another pinned source
+project for suitable music, then export loop-ready Ogg Vorbis files for the
+game. Preserve synthesis recipes or lossless masters for effects and export
+short PCM WAV files. Do not add a runtime MIDI synthesizer merely to play the
+editable source. Record the render tool and version, instruments or synthesis
+recipe, export settings, loop points, license, and final hashes so another
+developer can reproduce and audit the shipped bytes without an online service.
+
+Every admitted asset must use a stable logical content ID and the reviewed
+asset manifest. Gameplay and CaxeFlow request that ID; they never hardcode a
+host path or own a Raylib resource handle. Update the cue sheet, semantic atlas
+cells or audio metadata, provenance, rights, and focused validation together.
+Generated design input is not runtime-integration evidence: only claim a cue,
+effect, or image is playable after the ordinary loader/adapter, packaging, and
+native game checks use it. Preserve existing contributor artwork and sources;
+replace them only when the active work explicitly owns that change.

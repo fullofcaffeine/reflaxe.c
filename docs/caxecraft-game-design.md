@@ -298,6 +298,31 @@ has subtitles and a visible cue in both launch languages. This bounded system
 is owned by `haxe_c-xge.20.3`; it must not grow into an arbitrary scripting or
 timeline engine without demonstrated content pressure.
 
+The bounded model can still create appealing in-engine mini movies. A
+**camera anchor** is a named position and viewing target placed in the level.
+A **shot** chooses anchors plus field of view, duration, and cut or smooth-move
+behavior. A **beat** groups presentation that should happen together: for
+example, move Ivvy toward a marker while the camera follows and music fades,
+then wait for both movement and the authored duration before showing dialogue.
+The editor presents ordered beats and a few parallel presentation lanes rather
+than exposing an unrestricted animation graph.
+
+Actors use named staging markers for position, facing, look target, and a
+small registered animation state. Camera choices cover hard cuts, holds,
+smooth blends, paths, follow/look-at shots, and a reduced-motion substitute.
+Dialogue, subtitles, fades, music, effects, actor blocking, CaxeFlow actions,
+and level transitions all use typed content references. A branch may inspect a
+bounded CaxeFlow predicate or present an authored choice, but each branch must
+declare where it rejoins and which persistent facts it completes.
+
+Persistent story changes and transient presentation remain separate. The
+normal path applies persistent changes at declared commit beats. The skip path
+applies one validated, idempotent completion batch, which means running it
+twice has the same effect as running it once, then restores controls, cursor,
+camera, and audio policy. The editor previews both normal and skipped final
+state, checks missing markers and impossible durations, and lets tests start,
+advance, pause, skip, or observe a cutscene through ordinary player input.
+
 ### Cast and emotional roles
 
 | Character | Game role | Personality and readability | Mechanical contract |
@@ -495,6 +520,19 @@ DO   <action>
 DO   <action>          # ordered
 ```
 
+The complete mental model is:
+
+```text
+typed event -> optional conditions -> ordered actions -> deferred new events
+```
+
+An **event source** is a small engine adapter that reports an authoritative
+fact such as “player entered this volume” or “this objective completed.” An
+**action** requests one admitted engine capability. Entering an area therefore
+does not imply a cutscene: the same event can open a bridge, start music, spawn
+an encounter, change weather, update a quest, call a reusable sequence, start
+a cutscene, or combine several compatible actions in a declared order.
+
 The admitted first-version events cover entering/leaving a zone, interaction,
 block change, item use, entity defeat, signal receipt, timer expiry, objective
 change, and fixed-tick state change. Predicates cover typed flags/counters,
@@ -511,6 +549,49 @@ predicate depth have hard budgets. Exhausting a budget produces a visible
 scenario diagnostic instead of a hang or silent truncation. Seeded choices are
 explicit; unseeded randomness and wall-clock timing are not part of scenario
 semantics.
+
+#### Event sources and spatial trigger volumes
+
+CAXEMAP 1 already has axis-aligned `trigger-zone` placements and the executor
+already handles `enter-zone` and `leave-zone`. The generalized event/editor
+work under `haxe_c-xge.19.10` extends that real foundation; it is planned work,
+not a claim that every event below is currently implemented.
+
+Each emitted event has a closed typed context. Depending on its family, that
+context can identify the source volume or object, the subject actor, a stable
+position, an item or block kind, and the old/new state. It is not a dynamic
+string-to-value map. Conditions and actions may read only the fields declared
+for that event family, and the editor offers only compatible choices. Adding a
+vehicle-entered event, for example, requires one typed Haxe adapter, registry
+schema, validator/executor handling, editor copy, and focused tests; a content
+file cannot install an arbitrary callback.
+
+Spatial volumes use visible stable IDs and explicit actor filters. They define
+global or per-actor once/repeat/cooldown policy, enabled state, and half-open
+boundaries so a point on a shared edge belongs to only one side. Normal
+movement tests the segment between fixed-tick positions so a fast actor cannot
+skip a thin volume. A teleport leaves the old occupancy and enters only the
+destination occupancy; it does not pretend the actor walked through every
+intervening volume. Spawning inside a volume produces its first entry after
+the level-ready boundary. Save data preserves occupancy, once/cooldown facts,
+and pending work, so loading does not grant a second reward merely because the
+player is still standing inside the same area.
+
+When several contacts happen together, path order comes first, then stable
+volume and actor IDs. Event adapters only report facts; they never mutate the
+world directly. Rules still observe the stable tick view, execute admitted
+actions in authored order, and defer signals or resulting state events to the
+next rule boundary. Audio completion, frame count, raw keyboard keys, and
+other presentation/device facts cannot be the sole authority for required
+gameplay progress because a headless or muted game must behave the same.
+
+The useful event families are deliberately broad but closed: spatial
+enter/leave, interaction and item use, object or block changes, actor spawn or
+defeat, health/state thresholds, dialogue or choice completion, objective and
+quest changes, timers and signals, level ready/exit, and cutscene completion
+markers. New families are admitted only when shipped mechanics need them.
+This is an extensible registry, not a universal event bus or embedded scripting
+virtual machine.
 
 ### Child-friendly visual rules
 
@@ -530,6 +611,22 @@ enemy wave, bridge switch, and simple win condition. A world overlay draws
 event/signal relationships and highlights broken references. Text and icons
 coexist for accessibility; important state does not depend on color alone.
 
+Trigger editing has two synchronized views. In the world view, creators place,
+name, resize, filter, enable, copy, and select translucent volumes or object
+event sources. The logic view turns the selection into large WHEN/IF/DO cards;
+object and action references are picked from the world rather than typed. A
+live event-flow overlay can show which source fired, which condition passed or
+failed, which actions ran, and which follow-up event was deferred. Test play
+may pause on one of those steps, but it still drives the real executor rather
+than an editor-only simulation.
+
+A cutscene appears in this editor as an ordinary available action. Selecting
+it opens the focused shot-and-beat editor described above; returning to the
+rule shows “start this cutscene” like any other action. Doors, weather, audio,
+encounters, objectives, and level transitions follow the same pattern. This
+keeps the general rule graph readable while allowing mini movies to have a
+purpose-built timeline view over the same canonical scenario data.
+
 An **Advanced** disclosure expands the same rule—not a second toy format—to
 show nested predicates, typed local/map/player/quest variables, fixed-tick
 delays, reusable parameterized action sequences, signals, and seeded choices.
@@ -539,6 +636,16 @@ The current catalog is closed and explicit; it does not yet provide a public
 extension API or macro. Version 1 maps never embed arbitrary Lua, native code,
 shell commands, or downloaded scripts, which keeps shared child-created content
 substantially safer and keeps C emission inspectable.
+
+An expert or agent can open **Text** and edit the exact CaxeMap/CaxeFlow source
+behind those cards. Syntax coloring, registry-backed completion, world-object
+lookup, formatting, inline diagnostics, and jump-to-world references make the
+text view practical without creating a privileged developer language. Applying
+text parses and validates a typed draft before it can replace the last playable
+snapshot. Returning to visual mode must represent the complete admitted rule;
+it cannot discard nested logic or replace it with an opaque “custom script”
+card. Canonical formatting and comment-preservation behavior are part of the
+format contract rather than editor guesswork.
 
 The first action-catalog foundation is now executable under the pinned Eval
 oracle, with a deliberately narrow scope. Each of the 18 existing `FlowAction`
@@ -753,7 +860,8 @@ processing history, and license notes live in that directory. The pack covers:
 - base and Adventure terrain materials;
 - inventory, suit, powerup, quest, and puzzle icons;
 - two friendly NPCs, two ordinary enemies, Haxirio, Ceesh, Browser, and Ivvy;
-- HUD states, the C/Haxe-aware engineering wordmark, and title panorama.
+- HUD and cutscene-editor states, the C/Haxe-aware engineering wordmark, and
+  title panorama.
 
 These are original Caxecraft primary source assets. They deliberately avoid
 existing game marks and characters, and the current pack contains no official
@@ -782,6 +890,8 @@ and C/Haxe identity. They are not renderer screenshots.
 ![Adventure character atlas for Haxirio, Ceesh, and Browser](../examples/caxecraft/assets/atlases/adventure-characters.png)
 
 ![Ivvy companion atlas with follow, help, water-safe, rest, and celebration poses](../examples/caxecraft/assets/atlases/ivvy.png)
+
+![Cutscene-editor atlas with camera, actor, dialogue, audio, branch, and skip controls](../examples/caxecraft/assets/atlases/cutscene-editor.png)
 
 ## QA and compiler value
 

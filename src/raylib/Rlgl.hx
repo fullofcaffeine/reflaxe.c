@@ -15,10 +15,22 @@ private typedef RawRlgl = raylib.raw.Rlgl;
  * selects hxrt. Calls must stay balanced on raylib's main render thread.
  *
  * This is intentionally not a general OpenGL or rlgl wrapper. The exact raw
- * seven-function slice is generated and verified from pinned `rlgl.h`; expand
+ * eight-function slice is generated and verified from pinned `rlgl.h`; expand
  * it only when another reviewed rendering need earns the additional state.
  */
 final class Rlgl {
+	/**
+	 * Submit the active batch without swapping the window buffers.
+	 *
+	 * Raylib normally performs this step inside `EndDrawing()`. A test pilot
+	 * uses the explicit form when it must read the exact frame currently being
+	 * built before `EndDrawing()` swaps front and back buffers. This is a narrow
+	 * synchronization point, not a per-shape drawing primitive; frequent calls
+	 * split batches and can reduce rendering performance.
+	 */
+	public static inline function FlushBatch():Void
+		RawRlgl.rlDrawRenderBatchActive();
+
 	/** Bind `texture` and begin one quad region. The caller keeps ownership. */
 	public static inline function BeginQuads(texture:Texture2D):Void {
 		final raw:RawTexture2D = texture;

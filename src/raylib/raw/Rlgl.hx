@@ -33,6 +33,8 @@ extern class Rlgl {
 
 	public static function rlColor4ub(r:c.UInt8, g:c.UInt8, b:c.UInt8, a:c.UInt8):Void;
 
+	public static function rlDrawRenderBatchActive():Void;
+
 	public static function rlEnd():Void;
 
 	public static function rlNormal3f(x:c.Float32, y:c.Float32, z:c.Float32):Void;

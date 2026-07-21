@@ -26,6 +26,7 @@
       "adventure-characters",
       "adventure-items",
       "adventure-terrain",
+      "cutscene-editor",
       "ivvy"
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
@@ -66,6 +67,17 @@
       "promptSummary": "Original seamless 4x4 voxel material atlas for snow, ice, ash, basalt, pine, underwater ruins, castle, copper roof, and bridge runes; edge-to-edge square textures; no text, logos, or copied game textures.",
       "referenceInputs": [],
       "processing": "Selected built-in output and packed to 1024x1024 RGB."
+    },
+    "cutscene-editor": {
+      "mode": "openai-built-in-imagegen",
+      "artifactIds": [
+        "exec-e567d2ba-3c38-44cd-b4ad-485238a1d31c"
+      ],
+      "promptSummary": "Original transparent 4x4 voxel-RPG cutscene-editor icon atlas for camera anchors/targets/paths/follow, cuts/blends/fades/waits, actor staging/movement/look, dialogue, music, sound, branching, and skip; teal, copper, slate, amber, and cream; no text, logos, or watermark.",
+      "referenceInputs": [
+        "Existing repository HUD and Adventure-item atlases used only as visual-style references; neither was an edit target."
+      ],
+      "processing": "Selected built-in output, removed the flat magenta chroma key with the installed border-key soft-matte/despill helper, and packed to 1024x1024 RGBA."
     },
     "entities": {
       "mode": "openai-built-in-imagegen",
@@ -236,6 +248,41 @@
           "fortress-brick",
           "teal-copper-roof",
           "bridge-rune-tile"
+        ]
+      }
+    },
+    {
+      "id": "cutscene-editor",
+      "path": "atlases/cutscene-editor.png",
+      "kind": "icon-atlas",
+      "width": 1024,
+      "height": 1024,
+      "alpha": true,
+      "sha256": "3ac00e5305ee70e09c7d0c5e3fe89dbf77b2c62a9af5098fa3f5379832d6d407",
+      "generationRecord": "cutscene-editor",
+      "rights": "caxecraft-original",
+      "grid": {
+        "columns": 4,
+        "rows": 4,
+        "cellWidth": 256,
+        "cellHeight": 256,
+        "cells": [
+          "camera-anchor",
+          "camera-look-target",
+          "camera-dolly-path",
+          "camera-follow",
+          "hard-cut",
+          "smooth-blend",
+          "fade-to-black",
+          "timed-hold",
+          "actor-position",
+          "actor-move",
+          "actor-look",
+          "dialogue-subtitle",
+          "music",
+          "sound-effect",
+          "branch",
+          "skip-fast-forward"
         ]
       }
     },

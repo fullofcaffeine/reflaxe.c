@@ -98,6 +98,47 @@ this version. Importing selected play changes later would need its own closed
 command and clear ownership rules. Silent import would make a test run mutate
 the map and defeat reversible experimentation.
 
+## Planned visual event and cinematic authoring
+
+The native editor will not have separate trigger systems for doors, encounters,
+music, quests, and cutscenes. They all use one CaxeFlow relationship:
+
+```text
+event source -> conditions -> ordered actions
+```
+
+A spatial volume is one event source. The world view will let a creator place,
+name, resize, filter, enable, duplicate, and select its visible gizmo. The card
+view will show the same data as icon-and-text WHEN/IF/DO sentences and will pick
+objects or actions from the world and shared registries instead of asking a
+child to type IDs. An event-flow overlay and bounded test trace will explain
+which source fired, why each condition passed or failed, which actions ran, and
+which signals or state changes were deferred.
+
+The same typed draft has three authoring depths. **Guided** mode uses large
+icon-and-sentence cards, templates, and world picking. **Advanced visual** mode
+reveals nested predicates, event context, variables, branches, sequences, and
+timing while preserving those cards. **Text** mode edits the exact bounded
+CaxeMap/CaxeFlow source with syntax coloring, shared-registry completion,
+formatting, source-positioned diagnostics, and jump-to-world references. It is
+especially useful for experienced creators and automation agents.
+
+Moving between views must parse and validate the same model. Text mode cannot
+call a mechanic unavailable to cards, and the visual views cannot flatten or
+hide advanced logic behind an opaque custom-script block. Invalid text remains
+an editor draft and cannot replace the last playable scenario. “Text script”
+therefore means the data-only CaxeFlow language, not arbitrary Haxe, C, Lua,
+shell commands, file access, or native callbacks.
+
+Starting a cutscene is one possible action, not a privileged trigger. Its
+focused editor will arrange named camera anchors, actor staging markers,
+ordered beats, limited parallel movement/camera/audio lanes, localized cards,
+fades, choices, and persistent CaxeFlow changes. Normal and skip previews must
+reach the same required persistent state and restore camera and controls. This
+work is planned under `haxe_c-xge.19.10`, `haxe_c-xge.19.6`, and
+`haxe_c-xge.20.3`; the implemented renderer-independent editor described above
+does not yet provide these native visual tools.
+
 ## Executable evidence
 
 Run the focused proof from the repository root:
