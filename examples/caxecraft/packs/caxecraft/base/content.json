@@ -1,0 +1,190 @@
+{
+  "schemaVersion": 1,
+  "logicalPath": "packs/caxecraft/base",
+  "packId": "caxecraft:base",
+  "packVersion": 1,
+  "assetManifestId": "caxecraft-showcase-v1-draft",
+  "airBlock": "caxecraft:air",
+  "features": [
+    "caxecraft:core"
+  ],
+  "blocks": [
+    {
+      "id": "caxecraft:air",
+      "storageCode": 0,
+      "collision": "passable",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "air"
+    },
+    {
+      "id": "caxecraft:bedrock",
+      "storageCode": 4,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "foundation-rock"
+    },
+    {
+      "id": "caxecraft:dirt",
+      "storageCode": 2,
+      "collision": "solid",
+      "edit": "collectable",
+      "dropItem": "caxecraft:dirt-block",
+      "renderProfile": "rich-soil"
+    },
+    {
+      "id": "caxecraft:grass",
+      "storageCode": 1,
+      "collision": "solid",
+      "edit": "collectable",
+      "dropItem": "caxecraft:grass-block",
+      "renderProfile": "meadow-grass"
+    },
+    {
+      "id": "caxecraft:stone",
+      "storageCode": 3,
+      "collision": "solid",
+      "edit": "collectable",
+      "dropItem": "caxecraft:stone-block",
+      "renderProfile": "slate-stone"
+    }
+  ],
+  "items": [
+    {
+      "id": "caxecraft:berries",
+      "maxStack": 64,
+      "useProfile": "consume-one-heart",
+      "placementBlock": null,
+      "icon": {
+        "asset": "items",
+        "cell": "berries"
+      }
+    },
+    {
+      "id": "caxecraft:bread",
+      "maxStack": 64,
+      "useProfile": "none",
+      "placementBlock": null,
+      "icon": {
+        "asset": "items",
+        "cell": "bread"
+      }
+    },
+    {
+      "id": "caxecraft:copper-sword",
+      "maxStack": 1,
+      "useProfile": "melee-sword",
+      "placementBlock": null,
+      "icon": {
+        "asset": "items",
+        "cell": "copper-sword"
+      }
+    },
+    {
+      "id": "caxecraft:dirt-block",
+      "maxStack": 64,
+      "useProfile": "place-block",
+      "placementBlock": "caxecraft:dirt",
+      "icon": {
+        "asset": "items",
+        "cell": "soil-block"
+      }
+    },
+    {
+      "id": "caxecraft:grass-block",
+      "maxStack": 64,
+      "useProfile": "place-block",
+      "placementBlock": "caxecraft:grass",
+      "icon": {
+        "asset": "items",
+        "cell": "grass-block"
+      }
+    },
+    {
+      "id": "caxecraft:haxeforge",
+      "maxStack": 1,
+      "useProfile": "haxeforge-tool",
+      "placementBlock": null,
+      "icon": {
+        "asset": "items",
+        "cell": "wood-pick"
+      }
+    },
+    {
+      "id": "caxecraft:lantern",
+      "maxStack": 64,
+      "useProfile": "light-source",
+      "placementBlock": null,
+      "icon": {
+        "asset": "items",
+        "cell": "lantern"
+      }
+    },
+    {
+      "id": "caxecraft:stone-block",
+      "maxStack": 64,
+      "useProfile": "place-block",
+      "placementBlock": "caxecraft:stone",
+      "icon": {
+        "asset": "items",
+        "cell": "slate-stone"
+      }
+    }
+  ],
+  "npcs": [
+    {
+      "id": "caxecraft:nia",
+      "behaviorProfile": "stationary-dialogue",
+      "interactionRadiusMilli": 3500,
+      "presentation": {
+        "asset": "entities",
+        "cell": "nia-front"
+      }
+    }
+  ],
+  "enemies": [
+    {
+      "id": "caxecraft:mossling",
+      "behaviorProfile": "wander-chase-melee",
+      "maxHealth": 3,
+      "noticeRadiusMilli": 6000,
+      "strikeRadiusMilli": 3000,
+      "attackRadiusMilli": 1400,
+      "windupTicks": 8,
+      "recoveryTicks": 12,
+      "stepMilli": 80,
+      "drop": "caxecraft:mossling-berries",
+      "presentation": {
+        "asset": "entities",
+        "cell": "mossling-front"
+      }
+    }
+  ],
+  "drops": [
+    {
+      "id": "caxecraft:mossling-berries",
+      "item": "caxecraft:berries",
+      "quantity": 2,
+      "pickupRadiusMilli": 1500,
+      "presentation": {
+        "asset": "items",
+        "cell": "berries"
+      }
+    }
+  ],
+  "effects": [
+    {
+      "id": "caxecraft:berry-pickup",
+      "profile": "pickup-feedback"
+    },
+    {
+      "id": "caxecraft:copper-strike",
+      "profile": "melee-feedback"
+    }
+  ],
+  "prefabs": [],
+  "statefulObjects": [],
+  "states": [],
+  "signals": []
+}

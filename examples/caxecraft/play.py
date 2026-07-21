@@ -83,6 +83,7 @@ RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "en
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
 RUNTIME_CONTENT_FILES = (
     "locales/ui.json",
+    "packs/caxecraft/base/content.json",
     "scenarios/first-playable/map.caxemap",
 )
 
@@ -234,11 +235,12 @@ def stage_runtime_assets(destination: Path) -> None:
 def stage_content_catalogs(destination: Path) -> None:
     """Package validated text sources without claiming runtime loading yet.
 
-    The current C adapter embeds reviewed literals at build time. Keeping the
-    exact UI catalog and CaxeMap beside the executable makes the intended
-    package boundary real: global UI text is separate, while Nia and other
-    authored prose stays inside the first-playable map. Native map loading
-    remains an explicit later capability rather than an example-only shortcut.
+    The current C adapters embed reviewed facts at build time. Keeping the exact
+    UI catalog, content manifest, and CaxeMap beside the executable makes the
+    intended package boundary real: reusable definitions live in the content
+    pack, global UI text is separate, and authored prose stays inside the map.
+    Native loading remains an explicit later capability rather than an
+    example-only shortcut.
     """
 
     stage_root = destination / "content"

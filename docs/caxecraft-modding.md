@@ -19,17 +19,21 @@ playable world.
 | blocks, dimensions, placed objects, spawn points, tags | CaxeMap | these describe one level |
 | dialogue, objectives, and translated story text | the level's CaxeMap | prose travels with the content that uses it |
 | triggers, gifts, state changes, encounters, and progression | CaxeFlow rules inside CaxeMap | these are authored cause-and-effect rules |
-| item, actor, behavior, render, audio, and effect definitions | validated content registry | levels reference stable definitions rather than copying their implementation |
+| item, actor, behavior, render, audio, and effect definitions | validated content pack | levels reference stable definitions rather than copying their implementation |
 | level order and transitions | campaign data | campaigns connect levels; this format is planned, not shipped |
 | movement, inventory transfer, combat, dialogue playback, and rule execution | ordinary typed Haxe | these are reusable game mechanics |
 | menus and product-wide interface text | `locales/ui.json` | global interface text is not level story content |
 | asset bytes and provenance | `assets/manifest.json` | this lock proves which reviewed files are packaged |
 | automated player input and assertions | CaxeTest/native pilot | tests exercise content; they are not content |
 
-The planned general content manifest is owned by `haxe_c-xge.20.4.1`. Today,
-`ScenarioContentRegistry` is the typed validation boundary and
-`assets/manifest.json` is only the reviewed visual-asset manifest. Do not call
-either one a finished mod-pack loader yet.
+The built-in schema-1 content manifest is
+[`packs/caxecraft/base/content.json`](../examples/caxecraft/packs/caxecraft/base/content.json).
+A strict build-time validator turns it into the typed
+`ScenarioContentRegistry` used by CaxeMap and editor validation. The separate
+`assets/manifest.json` proves the reviewed visual bytes that those logical
+definitions reference. Arbitrary runtime pack discovery/loading is not
+implemented yet, so copying a new JSON file beside the game does not install a
+mod.
 
 ## CaxeFlow versus the native pilot
 
@@ -121,6 +125,9 @@ npm run test:caxecraft-caxeflow
 # Check editor commands, history, and disposable test play.
 npm run test:caxecraft-editor
 
+# Validate built-in definitions, editor resolution, packaging, Eval, and C.
+npm run test:caxecraft-content-pack
+
 # Check canonical bytes across locale and repeated builds.
 npm run test:caxecraft-scenario-determinism
 
@@ -159,7 +166,7 @@ The intended loop is:
 6. save canonical CaxeMap/campaign data; and
 7. run CaxeTest/native pilots for repeatable regression checks.
 
-The visual Raygui editor, complete content-pack loader, campaign format,
+The visual Raygui editor, arbitrary runtime content-pack loader, campaign format,
 direct native CaxeMap loading, save overlays, and child-friendly visual cards
 are planned Beads work. The renderer-independent editor model and CaxeMap 1
 format are implemented foundations, not a claim that the complete creator UI

@@ -463,17 +463,21 @@ A scenario contains:
 - dialogue, journal entries, objectives, routes, and mode settings;
 - CaxeFlow state declarations, rules, and reusable action sequences.
 
-The required `asset-pack` record is currently a validated logical path, not a
-claim that a general content-pack loader is implemented. The repository's
-`assets/manifest.json` already owns reviewed image identity, dimensions,
-hashes, provenance, and runtime packaging, while `ScenarioContentRegistry` is
-the typed interface used to validate logical content IDs. Today its concrete
-facts still come from Haxe adapters. `haxe_c-xge.20.4.1` owns the minimal
-versioned data manifest that will define blocks, items, actors, selected engine
-behaviors, drops, and presentation profiles without duplicating asset hashes or
-embedding code. Until that gate closes, documentation must distinguish the
-real asset manifest and compile-time registry from the planned content-pack
-system.
+The required `asset-pack` record resolves to the checked-in schema-1 manifest
+at `packs/caxecraft/base/content.json`. That data defines the current blocks,
+items, actors, selected engine behavior profiles, drops, effects, and logical
+presentation references. A strict build-time validator checks every field and
+reference, then generates the ordinary typed Haxe `BaseContentRegistry` used by
+CaxeMap and renderer-independent editor validation. The exact JSON is packaged
+beside the executable.
+
+This is a validated built-in content pack, not yet a general runtime loader.
+The native game cannot discover arbitrary directories or parse their JSON at
+runtime. `assets/manifest.json` remains the separate owner of reviewed image
+identity, dimensions, hashes, provenance, and packaged bytes; content data
+refers to those logical visuals instead of copying their hashes. The generated
+Haxe adapter is replaceable packaging glue until the ordinary native loader
+exists, never a second editable source of truth.
 
 The distributable unit is a **scenario package**. CAXEMAP 1 keeps stable
 language-neutral message IDs and each complete locale catalog in the same

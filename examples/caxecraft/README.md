@@ -31,6 +31,22 @@ build uses a stack-backed `CArray<UInt8>`/`Span<UInt8>` while Eval uses
 realistic, allocation-free C workload without hiding C behind a portability
 framework.
 
+Reusable content now has one checked-in source of truth:
+[`packs/caxecraft/base/content.json`](packs/caxecraft/base/content.json). It
+defines the current blocks, items, actors, behavior profiles, drops, effects,
+and logical visuals. A strict build-time validator rejects malformed or
+unresolved data and generates a typed Haxe adapter; CaxeMap and the editor use
+that same registry. The exact JSON is also packaged with the executable. This
+is not yet arbitrary runtime mod loading—the generated adapter is a temporary
+bridge until native JSON and filesystem support can load the same format.
+
+After editing the built-in pack, run:
+
+```sh
+python3 examples/caxecraft/content_pack.py
+npm run test:caxecraft-content-pack
+```
+
 ## Why the source contains `#if c`
 
 `c` is a Haxe compile-time define exposed by the verified

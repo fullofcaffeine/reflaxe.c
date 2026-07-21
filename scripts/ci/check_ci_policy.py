@@ -563,6 +563,15 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/terrain-atlas.hxml",
     "examples/caxecraft/play.py",
     "examples/caxecraft/check_assets.py",
+    "examples/caxecraft/check_content_pack.py",
+    "examples/caxecraft/content_pack.py",
+    "examples/caxecraft/content-pack.hxml",
+    "examples/caxecraft/content-pack-c.hxml",
+    "examples/caxecraft/packs/caxecraft/base/content.json",
+    "examples/caxecraft/packs/caxecraft/base/README.md",
+    "examples/caxecraft/src/caxecraft/content/BaseContentPack.hx",
+    "examples/caxecraft/test/caxecraft/qa/ContentPackProbe.hx",
+    "examples/caxecraft/test/caxecraft/qa/ContentPackCompilerProbe.hx",
     "examples/caxecraft/oracle.hxml",
     "examples/caxecraft/case.json",
     "examples/caxecraft/run.py",
@@ -1028,6 +1037,11 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:caxecraft-domain entry point")
     if scripts.get("test:caxecraft-assets") != "python3 examples/caxecraft/check_assets.py":
         errors.append("package.json must retain the offline Caxecraft asset-manifest gate")
+    if (
+        scripts.get("test:caxecraft-content-pack")
+        != "python3 examples/caxecraft/check_content_pack.py"
+    ):
+        errors.append("package.json must retain the validated Caxecraft content-pack gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
         errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
     if scripts.get("test:caxecraft-playable") != "python3 examples/caxecraft/play.py --check-snapshots":
@@ -1148,6 +1162,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:span-lowering")
     if "npm run test:project-layout" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:project-layout")
+    if "npm run test:caxecraft-content-pack" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append("package.json test:toolchain must execute test:caxecraft-content-pack")
     if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-domain:full")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
