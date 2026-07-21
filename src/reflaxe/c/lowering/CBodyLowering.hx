@@ -61,6 +61,10 @@ import reflaxe.c.semantics.CPrimitiveTypes;
 typedef CBodyFunctionInput = {
 	final modulePath:String;
 	final declarationPath:String;
+
+	/** Source-facing owner used only to make generated C names readable. */
+	final ?readableDeclarationPath:String;
+
 	final sourcePath:String;
 	final fieldName:String;
 	final sourceOrder:Int;
@@ -75,6 +79,10 @@ typedef CBodyFunctionInput = {
 typedef CBodyGlobalInput = {
 	final modulePath:String;
 	final declarationPath:String;
+
+	/** Source-facing owner used only to make generated C names readable. */
+	final ?readableDeclarationPath:String;
+
 	final sourcePath:String;
 	final fieldName:String;
 	final sourceOrder:Int;
@@ -95,6 +103,10 @@ typedef CBodyInitializerInput = {
 	final id:String;
 	final modulePath:String;
 	final declarationPath:String;
+
+	/** Source-facing owner used only to make generated C names readable. */
+	final ?readableDeclarationPath:String;
+
 	final sourcePath:String;
 	final displayName:String;
 	final sourceOrder:Int;
@@ -847,7 +859,9 @@ private class BodyGlobalRegistry {
 			globalInitializer(input.expression, mapping.irType, fail, fieldName);
 		}
 		final declarationPath = input.declarationPath;
-		final request = new CSymbolRequest(CSKField, declarationPath.split(".").concat([fieldName]), CNSOrdinary("translation-unit"), CSVInternal);
+		final readableName = input.readableDeclarationPath == null ? null : input.readableDeclarationPath.split(".").concat([fieldName]);
+		final request = new CSymbolRequest(CSKField, declarationPath.split(".").concat([fieldName]), CNSOrdinary("translation-unit"), CSVInternal, null, [],
+			[], null, readableName);
 		context.symbols.register(request);
 		final prepared:PreparedBodyGlobal = {
 			modulePath: input.modulePath,
@@ -1005,8 +1019,9 @@ private class FunctionPreparer {
 			signatureParameters.unshift(selfParameter);
 		final overloadSignature = signatureParameters.length == 0 ? [] : signatureParameters.map(parameter -> valueTypeKey(parameter.ir.type));
 		final specializationArguments = input.specialization == null ? [] : input.specialization.arguments.map(argument -> argument.key);
+		final readableName = input.readableDeclarationPath == null ? null : input.readableDeclarationPath.split(".").concat([input.fieldName]);
 		final functionRequest = new CSymbolRequest(CSKMethod, input.declarationPath.split(".").concat([input.fieldName]), CNSOrdinary("translation-unit"),
-			CSVInternal, null, overloadSignature, specializationArguments);
+			CSVInternal, null, overloadSignature, specializationArguments, null, readableName);
 		context.symbols.register(functionRequest);
 		if (selfParameter != null) {
 			final request = new CSymbolRequest(CSKLocal, input.declarationPath.split(".").concat([input.fieldName, "self"]),
@@ -1268,8 +1283,9 @@ private class InitializerPreparer {
 			case CBIStaticField(globalId): PBRStaticFieldInitializer(globalId);
 		};
 		final symbolPath = ["compiler", "static-initialization"].concat(input.declarationPath.split(".")).concat([input.displayName]);
+		final readableName = input.readableDeclarationPath == null ? null : input.readableDeclarationPath.split(".").concat([input.displayName]);
 		final functionRequest = new CSymbolRequest(CSKStaticInitializer, symbolPath, CNSOrdinary("translation-unit"), CSVInternal, null, [], [],
-			input.sourceOrder);
+			input.sourceOrder, readableName);
 		context.symbols.register(functionRequest);
 		return {
 			modulePath: input.modulePath,

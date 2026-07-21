@@ -287,6 +287,41 @@ function and the unity implementation have exact, named size overrides rather
 than wildcard exemptions. These measurements describe this fixed corpus, not a
 claim that every Haxe program has the same readability.
 
+### Haxe modules versus classes
+
+A file that only groups stateless operations now uses Haxe module-level
+functions by default. A caller imports the operation directly, usually with a
+domain-specific alias such as `attemptMining`, instead of creating an empty
+`class Mining` wrapper only to write `Mining.attempt(...)`. This is an important
+Haxe distinction: a packed module organizes source declarations, but is not a
+runtime namespace object. `Recovery`, `Mining`, and `BerryDrop` are the first
+representative migration.
+The focused compiler fixture in [function lowering](function-lowering.md)
+proves that this ordinary Haxe form keeps source-shaped split files and emits
+readable C names without exposing Haxe's hidden module-fields class.
+
+The July 2026 audit classifies the remaining static-only Caxecraft wrappers as
+follows. “Migrate by ownership slice” means the source design favors a module,
+but each change still keeps the relevant Eval/C/native or editor evidence; it
+does not authorize a mechanical repository-wide rewrite.
+
+| Classification | Current types | Reason |
+| --- | --- | --- |
+| Migrated | `Recovery`, `Mining`, `BerryDrop` | Stateless gameplay operations with stable module-shaped call sites. |
+| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TerrainRenderer`, `TitleMenu`, `CaxecraftTrace`, `PlayerPhysics`, `VoxelRaycast`, `World`, `WorldStorage`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, `EditorWorldGrid`, `GuideNpc`, `Inventory`, `Mossling`, `PlayerVitals`, `SwordCombat`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
+| Retain as a named boundary | `Main`, `GameInputFrames`, `ScenarioMessages`/`ScenarioMessageLookup`, `ScenarioParser`, and `ScenarioValidator` | The current name is an intentional application, factory, lookup, or public parsing/validation boundary. Revisit only with an API-focused reason, not to remove a class count. |
+| Retain pending replacement | `FirstPlayableCatalog`, `UiCatalog` | The data-driven localization work in `haxe_c-xge.19.7` removes or reshapes these hard-coded catalog owners; converting their present form first would be throwaway churn. |
+| Generated | none | Generated raylib bindings live outside this game-source audit and follow their generator contract. |
+| Blocked by a compiler gap | none known in the migrated slice | If a later module conversion exposes a real gap, reduce it to a compiler fixture and track it rather than restoring a wrapper silently. |
+
+Classes remain the right Haxe source model for values with instance state,
+identity, construction/lifetime rules, inheritance, or interface behavior.
+For example, editor sessions, histories, cursors, executors, and loaded resource
+owners remain real instances. This source decision is separate from C storage:
+haxe.c should choose the cheapest correct direct struct, stack value, specialized
+function, dispatch table, or managed reference instead of assigning a heap
+object and virtual table to every Haxe class automatically.
+
 The default `split` tree mirrors the Haxe module ownership under
 `include/hxc/modules/` and `src/modules/`. It exists so generated C is
 navigable, diffable, incrementally compilable, and easier to inspect beside

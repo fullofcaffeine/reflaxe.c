@@ -31,6 +31,23 @@ performance, packaging, and developer experience together.
   output shape, compile time, runtime cost, allocations, code size, diagnostics,
   and workflow friction where relevant. Turn a broadly useful improvement into
   a compiler capability rather than local game scaffolding.
+- Prefer a Haxe module-level function when a file only groups stateless
+  operations; import it directly (with a clear alias when useful) rather than
+  implying a packed module remains a `Module.call()` runtime namespace. Do not
+  add a class merely to hold static functions. Keep classes
+  for per-instance state, identity, lifetime, inheritance/interfaces, or a
+  documented framework, macro, generated/public API, entry-point, or nominal
+  boundary. Because module fields are a distinct pinned-Haxe source shape,
+  require focused production haxe.c evidence before migrating an existing
+  helper, and preserve behavior, generated-C readability, runtime/allocation
+  choices, and module ownership.
+- Treat Haxe classes as source semantics to preserve, not work for the
+  application author to manually rewrite into records. Choose the cheapest
+  correct C form from proven lifetime and dispatch facts: stack/scalar storage,
+  plain structs and typed functions, direct calls, minimal reachable tables, or
+  managed allocation only when escape requires it. Keep generated split C
+  source-shaped, readable, and measured; a source class must not automatically
+  pull in a heap, object header, virtual table, reflection, or generic runtime.
 - Preserve the accepted architecture and policy hierarchy while improving the
   workload: typed source and plans, HxcIR where C semantic gaps require it,
   structural CAST, explicit ownership/runtime decisions, formatting-only

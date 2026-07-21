@@ -504,6 +504,36 @@ def function_lowering_artifacts() -> list[Artifact]:
                 source,
             )
         )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-module-fields-snapshot-") as temporary:
+        output = Path(temporary) / "generated"
+        compiled = module.custom_target(
+            module.MODULE_FIELDS,
+            output,
+            layout="split",
+            main="ModuleFunctions",
+            defines=("reflaxe_c_typed_ast_report",),
+        )
+        lines = [
+            line
+            for line in compiled.stdout.splitlines()
+            if line.startswith("HXC_TYPED_AST_INVENTORY=")
+        ]
+        if compiled.returncode != 0 or compiled.stderr or len(lines) != 1:
+            raise SnapshotFailure(
+                "module-field snapshot compile failed or omitted its typed inventory"
+            )
+        inventory = json.loads(lines[0].split("=", 1)[1])
+        module_values = module.module_field_snapshot_values(output, inventory)
+        for snapshot_name, value_name in module.MODULE_FIELD_SNAPSHOTS.items():
+            value = module_values[value_name]
+            artifacts.append(
+                Artifact(
+                    Path("test/function_lowering/expected") / snapshot_name,
+                    "json" if snapshot_name.endswith(".json") else "c",
+                    value,
+                )
+            )
     return artifacts
 
 

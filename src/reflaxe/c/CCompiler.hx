@@ -160,7 +160,7 @@ class CCompiler {
 				CNSOrdinary("translation-unit"), CSVInternal, "main");
 			final initializationRequest:Null<CSymbolRequest> = staticInitialization.executionFunctionIds.length == 0 ? null : new CSymbolRequest(CSKStaticInitializer,
 				["compiler", "static-initialization", "hosted-executable", graph.entryFunctionId], CNSOrdinary("translation-unit"),
-				CSVInternal);
+				CSVInternal, null, [], [], null, input.readableDeclarationPath == null ? null : [input.readableDeclarationPath, "static-initialization"]);
 			final layoutPlanner = new CProjectLayoutPlanner();
 			final guardLayout = layoutPlanner.plan(configuration.projectLayout,
 				projectModulePaths(program, graph.functions, graph.globals, graph.constructors, staticInitialization.initializerInputs));
@@ -259,7 +259,7 @@ class CCompiler {
 				input.expression.pos, input.sourcePath);
 			final generatedFiles = new CProjectEmitter().emit({
 				schemaVersion: CProjectEmitter.SCHEMA_VERSION,
-				projectName: input.declarationPath,
+				projectName: input.readableDeclarationPath == null ? input.declarationPath : input.readableDeclarationPath,
 				compilationStatus: lowered.aggregates.length == 0
 				&& lowered.enums.length == 0
 				&& lowered.classes.length == 0
@@ -605,6 +605,7 @@ class CCompiler {
 		return {
 			modulePath: target.modulePath,
 			declarationPath: target.declarationPath,
+			readableDeclarationPath: target.readableDeclarationPath,
 			sourcePath: target.sourcePath,
 			fieldName: target.fieldName,
 			sourceOrder: target.sourceOrder,
@@ -623,6 +624,7 @@ class CCompiler {
 			return {
 				modulePath: declaration.ownerModulePath,
 				declarationPath: declaration.path,
+				readableDeclarationPath: declaration.classKind == "module-fields" ? declaration.ownerModulePath : null,
 				sourcePath: declaration.sourcePath,
 				fieldName: field.name,
 				sourceOrder: field.sourceOrder,

@@ -34,6 +34,35 @@ Default, optional, and rest parameters are not silently approximated. Until
 their complete Haxe semantics are implemented, each has a distinct scoped
 `HXC1001` detail naming the affected parameter, and the build owns no output.
 
+## Module-level functions and fields
+
+Haxe lets a module contain functions and values directly, without wrapping
+them in a class. This is the clearest source shape when a file groups stateless
+operations. A caller imports the field directly and may give it a descriptive
+local alias, for example `import gameplay.Recovery.decide as decideRecovery;`
+followed by `decideRecovery(...)`. Unlike a static class, a packed Haxe module
+is not a runtime namespace object, so code should not pretend that
+`Recovery.decide(...)` remains a class-style call.
+
+The Haxe compiler represents these fields internally as a synthetic (hidden)
+static class with `KModuleFields`. haxe.c keeps that full hidden path as the
+semantic identity used for reachability, collision detection, reports, and
+determinism. Generated C uses the source module as its separate readable name.
+For example, an internal identity such as
+`_Recovery.Recovery_Fields_.decide` emits as `hxc_Recovery_decide`, not as a
+machine-shaped copy of the hidden class name. Static globals and their startup
+functions follow the same rule. This separation is important: shortening the
+display name must never make two distinct Haxe declarations become the same
+compiler entity.
+
+The focused `ModuleFunctions.hx` fixture covers a module constant, public and
+private functions, an inline helper, startup initialization, the Haxe entry
+function, split project ownership, Eval parity, and strict native C. Its typed
+inventory, symbol table, project plan, header, module source, and entry source
+are registered snapshots. A module function using a not-yet-supported optional
+argument proves that unsupported module fields still stop at the source with
+`HXC1001` and leave no output.
+
 ## Closed generic functions
 
 E3.T03 specializes reachable direct static generic functions for closed
@@ -162,8 +191,9 @@ npm run snapshots:check
 The suite renders twice, reverses discovery order, compares portable and metal,
 checks exact HxcIR/header/C-source-set/symbol snapshots, proves explicit
 argument conversion order, verifies direct and mutual recursion planning, and
-exercises the scoped
-default/optional/rest plus non-hosted-entry diagnostics. It also runs portable,
+checks readable module-level fields under Eval, generated C, and a strict native
+compiler. It also exercises the scoped
+default/optional/rest plus non-hosted-entry diagnostics, then runs portable,
 metal, and explicit `hxc_runtime=none` production builds, compares isolated
 output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and

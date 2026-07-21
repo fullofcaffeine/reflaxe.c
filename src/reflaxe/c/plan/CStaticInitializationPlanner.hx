@@ -325,6 +325,7 @@ class CStaticInitializationPlanner {
 			id: id,
 			modulePath: node.declaration.ownerModulePath,
 			declarationPath: node.id,
+			readableDeclarationPath: readableDeclarationPath(node.declaration),
 			sourcePath: node.declaration.sourcePath,
 			displayName: "class-init",
 			sourceOrder: 0,
@@ -351,6 +352,7 @@ class CStaticInitializationPlanner {
 			id: id,
 			modulePath: node.declaration.ownerModulePath,
 			declarationPath: node.id,
+			readableDeclarationPath: readableDeclarationPath(node.declaration),
 			sourcePath: node.declaration.sourcePath,
 			displayName: 'static-field-${field.name}',
 			sourceOrder: field.sourceOrder + 1,
@@ -400,6 +402,9 @@ class CStaticInitializationPlanner {
 		});
 		return result;
 	}
+
+	static function readableDeclarationPath(declaration:TypedAstDeclaration):Null<String>
+		return declaration.classKind == "module-fields" ? declaration.ownerModulePath : null;
 
 	function sortedNodeIds():Array<String> {
 		final result = [for (id in nodesById.keys()) id];

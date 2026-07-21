@@ -33,6 +33,8 @@ HXML = Path(__file__).with_name("function_lowering.hxml")
 FIXTURES = Path(__file__).with_name("fixtures")
 POSITIVE = FIXTURES / "positive"
 SPLIT_RECURSIVE = FIXTURES / "split_recursive"
+MODULE_FIELDS = FIXTURES / "module_fields"
+MODULE_FIELDS_UNSUPPORTED = FIXTURES / "module_fields_unsupported"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
@@ -41,6 +43,14 @@ SOURCE_SNAPSHOTS = {
     "nonreturn_0001.c": "src/nonreturn_0001.c",
     "nonreturn_0002.c": "src/nonreturn_0002.c",
     "program.c": "src/program.c",
+}
+MODULE_FIELD_SNAPSHOTS = {
+    "module-fields-inventory.json": "inventory",
+    "module-fields-project.json": "project",
+    "module-fields-symbols.json": "symbols",
+    "module-fields.h": "header",
+    "module-fields.c": "source",
+    "module-fields-main.c": "mainSource",
 }
 STRICT_FLAGS = (
     "-std=c11",
@@ -545,6 +555,7 @@ def custom_target(
     environment: str | None = None,
     layout: str = "unity",
     main: str | None = None,
+    defines: tuple[str, ...] = (),
 ) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
@@ -565,6 +576,8 @@ def custom_target(
         command.extend(["-D", f"hxc_project_layout={layout}"])
     elif layout != "split":
         raise FunctionLoweringFailure(f"unknown function project layout {layout!r}")
+    for define in defines:
+        command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
@@ -692,6 +705,209 @@ def check_production() -> None:
         )
         if ran.returncode != 0 or ran.stdout or ran.stderr:
             raise FunctionLoweringFailure("production executable did not exit silently with 0")
+
+
+def module_field_snapshot_values(
+    output: Path, inventory: dict[str, object]
+) -> dict[str, object]:
+    modules = inventory.get("modules")
+    declarations = [
+        declaration
+        for module in modules
+        if isinstance(module, dict) and isinstance(module.get("declarations"), list)
+        for declaration in module["declarations"]
+    ] if isinstance(modules, list) else []
+    module_declarations = [
+        declaration
+        for declaration in declarations
+        if isinstance(declaration, dict)
+        and declaration.get("classKind") == "module-fields"
+        and declaration.get("ownerModulePath") == "ModuleFunctions"
+    ] if isinstance(declarations, list) else []
+    if len(module_declarations) != 1:
+        raise FunctionLoweringFailure(
+            "typed inventory did not contain exactly one module-fields declaration"
+        )
+    manifest = json.loads((output / "hxc.manifest.json").read_text(encoding="utf-8"))
+    symbols_document = json.loads((output / "hxc.symbols.json").read_text(encoding="utf-8"))
+    symbols = symbols_document.get("symbols")
+    module_symbols = [
+        symbol
+        for symbol in symbols
+        if isinstance(symbol, dict)
+        and isinstance(symbol.get("readableName"), list)
+        and "ModuleFunctions" in symbol["readableName"]
+    ] if isinstance(symbols, list) else []
+    return {
+        "inventory": module_declarations[0],
+        "project": {
+            "projectName": manifest.get("projectName"),
+            "configuration": manifest.get("configuration"),
+            "build": manifest.get("build"),
+        },
+        "symbols": module_symbols,
+        "header": (output / "include/hxc/modules/ModuleFunctions.h").read_text(encoding="utf-8"),
+        "source": (output / "src/modules/ModuleFunctions.c").read_text(encoding="utf-8"),
+        "mainSource": (output / "src/hxc/main.c").read_text(encoding="utf-8"),
+    }
+
+
+def check_module_field_snapshots(values: dict[str, object]) -> None:
+    for snapshot_name, value_name in MODULE_FIELD_SNAPSHOTS.items():
+        actual = values[value_name]
+        expected_path = EXPECTED / snapshot_name
+        if snapshot_name.endswith(".json"):
+            expected = json.loads(expected_path.read_text(encoding="utf-8"))
+            if actual != expected:
+                raise FunctionLoweringFailure(
+                    f"{snapshot_name} semantic snapshot drifted"
+                )
+        else:
+            if not isinstance(actual, str):
+                raise FunctionLoweringFailure(
+                    f"{snapshot_name} snapshot source is not text"
+                )
+            expected = expected_path.read_text(encoding="utf-8")
+            if actual != expected:
+                raise FunctionLoweringFailure(
+                    f"{snapshot_name} drifted:\n"
+                    + difference(expected, actual, snapshot_name)
+                )
+
+
+def check_module_fields() -> None:
+    """Prove Haxe module functions without leaking Haxe's hidden static class."""
+    with tempfile.TemporaryDirectory(prefix="hxc-module-fields-") as temporary:
+        root = Path(temporary)
+        output = root / "generated"
+        compiled = custom_target(
+            MODULE_FIELDS,
+            output,
+            layout="split",
+            main="ModuleFunctions",
+            defines=("reflaxe_c_typed_ast_report",),
+        )
+        inventory_lines = [
+            line
+            for line in compiled.stdout.splitlines()
+            if line.startswith("HXC_TYPED_AST_INVENTORY=")
+        ]
+        if compiled.returncode != 0 or compiled.stderr or len(inventory_lines) != 1:
+            raise FunctionLoweringFailure(
+                "module-field production compile failed or omitted its typed inventory\n"
+                f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
+            )
+        inventory = json.loads(inventory_lines[0].split("=", 1)[1])
+        snapshots = module_field_snapshot_values(output, inventory)
+        typed_declaration = snapshots["inventory"]
+        if not isinstance(typed_declaration, dict) or typed_declaration.get("ownerModulePath") != "ModuleFunctions":
+            raise FunctionLoweringFailure(
+                "typed inventory did not retain the module-fields source identity"
+            )
+        check_module_field_snapshots(snapshots)
+
+        expected_paths = {
+            "include/hxc/modules/ModuleFunctions.h",
+            "src/hxc/main.c",
+            "src/modules/ModuleFunctions.c",
+        }
+        manifest = json.loads((output / "hxc.manifest.json").read_text(encoding="utf-8"))
+        build = manifest.get("build")
+        visible_paths = set(build.get("sources", [])) | set(build.get("privateHeaders", [])) if isinstance(build, dict) else set()
+        if manifest.get("projectName") != "ModuleFunctions" or not expected_paths.issubset(visible_paths):
+            raise FunctionLoweringFailure(
+                "module fields did not retain the source module's split-project ownership"
+            )
+
+        header = snapshots["header"]
+        source = snapshots["source"]
+        if not isinstance(header, str) or not isinstance(source, str):
+            raise FunctionLoweringFailure("module-field snapshots lost generated C text")
+        for spelling in (
+            "hxc_ModuleFunctions_base",
+            "hxc_ModuleFunctions_answer",
+            "hxc_ModuleFunctions_doubled",
+            "hxc_ModuleFunctions_main",
+            "hxc_ModuleFunctions_static_field_base",
+        ):
+            if spelling not in header or spelling not in source:
+                raise FunctionLoweringFailure(
+                    f"module-field C omitted readable source name {spelling}"
+                )
+        visible_c = "".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(output.rglob("*"))
+            if path.is_file() and path.suffix in (".c", ".h")
+        )
+        if "ModuleFunctions_Fields" in visible_c:
+            raise FunctionLoweringFailure(
+                "generated C leaked Haxe's hidden module-fields container"
+            )
+
+        oracle = subprocess.run(
+            [development_tool("haxe"), "-cp", str(MODULE_FIELDS), "-main", "ModuleFunctions", "--interp"],
+            cwd=ROOT,
+            env={**os.environ, "HAXE_NO_SERVER": "1"},
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+            raise FunctionLoweringFailure("module-field Eval oracle did not exit silently")
+
+        toolchain = available_compilers()[0]
+        executable = root / "module-fields"
+        native = subprocess.run(
+            [
+                toolchain.compiler,
+                *STRICT_FLAGS,
+                "-O2",
+                "-I",
+                str(output / "include"),
+                *(str(path) for path in sorted((output / "src").rglob("*.c"))),
+                "-o",
+                str(executable),
+            ],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if native.returncode != 0 or native.stdout or native.stderr:
+            raise FunctionLoweringFailure(
+                f"module-field generated C failed strict native compilation\n{native.stdout}{native.stderr}"
+            )
+        ran = subprocess.run(
+            [str(executable)],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if ran.returncode != 0 or ran.stdout or ran.stderr:
+            raise FunctionLoweringFailure("module-field native executable did not match Eval")
+
+        unsupported_output = root / "unsupported"
+        unsupported = custom_target(
+            MODULE_FIELDS_UNSUPPORTED,
+            unsupported_output,
+            main="UnsupportedModuleFunction",
+        )
+        unsupported_text = (unsupported.stdout + unsupported.stderr).replace("\\", "/")
+        if (
+            unsupported.returncode != 1
+            or "HXC1001" not in unsupported_text
+            or "TFunction(optional-argument:value)" not in unsupported_text
+            or "module_fields_unsupported/UnsupportedModuleFunction.hx:2:" not in unsupported_text
+            or list(unsupported_output.rglob("*"))
+        ):
+            raise FunctionLoweringFailure(
+                "unsupported module function did not fail closed at its source declaration\n"
+                f"stdout:\n{unsupported.stdout}stderr:\n{unsupported.stderr}"
+            )
 
 
 def check_recursive_partition(selected: str | None, layout: str) -> None:
@@ -888,6 +1104,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_snapshots(first)
         check_native(first, args.toolchain)
         check_production()
+        check_module_fields()
         check_nonreturn_partitions(args.toolchain)
         check_argument_diagnostics()
     except (
@@ -902,7 +1119,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed parameters/calls/conversions, recursive private "
-        "prototypes/unity+split+package source partitions, exact argument diagnostics, strict int main(void), "
+        "prototypes/unity+split+package source partitions, readable module-level functions, exact argument diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )
     return 0

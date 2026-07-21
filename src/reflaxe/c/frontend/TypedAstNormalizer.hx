@@ -92,6 +92,10 @@ class TypedAstNormalizer {
 					{
 						modulePath: owner.module,
 						declarationPath: declarationPath(owner),
+						readableDeclarationPath: switch owner.kind {
+							case KModuleFields(_): owner.module;
+							case _: null;
+						},
 						sourcePath: sourcePath(owner.module),
 						fieldName: field.name,
 						sourceOrder: sourceOrder,

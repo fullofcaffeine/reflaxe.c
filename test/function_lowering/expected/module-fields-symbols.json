@@ -1,0 +1,148 @@
+[
+  {
+    "overloadSignature": [],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": null,
+    "readableName": [
+      "ModuleFunctions",
+      "answer"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_answer",
+    "semanticKey": "6:method|28:ordinary:16:translation-unit|3:16:_ModuleFunctions23:ModuleFunctions_Fields_6:answer|0:|0:|0:",
+    "escapeReasons": [],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "method",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_answer",
+    "sourceSymbol": "_ModuleFunctions.ModuleFunctions_Fields_.answer"
+  },
+  {
+    "overloadSignature": [],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": null,
+    "readableName": [
+      "ModuleFunctions",
+      "base"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_base",
+    "semanticKey": "5:field|28:ordinary:16:translation-unit|3:16:_ModuleFunctions23:ModuleFunctions_Fields_4:base|0:|0:|0:",
+    "escapeReasons": [],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "field",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_base",
+    "sourceSymbol": "_ModuleFunctions.ModuleFunctions_Fields_.base"
+  },
+  {
+    "overloadSignature": [
+      "i32"
+    ],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": null,
+    "readableName": [
+      "ModuleFunctions",
+      "doubled"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_doubled",
+    "semanticKey": "6:method|28:ordinary:16:translation-unit|3:16:_ModuleFunctions23:ModuleFunctions_Fields_7:doubled|1:3:i32|0:|0:",
+    "escapeReasons": [],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "method",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_doubled",
+    "sourceSymbol": "_ModuleFunctions.ModuleFunctions_Fields_.doubled(i32)"
+  },
+  {
+    "overloadSignature": [],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": null,
+    "readableName": [
+      "ModuleFunctions",
+      "main"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_main",
+    "semanticKey": "6:method|28:ordinary:16:translation-unit|3:16:_ModuleFunctions23:ModuleFunctions_Fields_4:main|0:|0:|0:",
+    "escapeReasons": [],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "method",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_main",
+    "sourceSymbol": "_ModuleFunctions.ModuleFunctions_Fields_.main"
+  },
+  {
+    "overloadSignature": [],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": 1,
+    "readableName": [
+      "ModuleFunctions",
+      "static-field-base"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_static_field_base",
+    "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|5:8:compiler21:static-initialization16:_ModuleFunctions23:ModuleFunctions_Fields_17:static-field-base|0:|0:|1:1",
+    "escapeReasons": [
+      "non-c-identifier-byte",
+      "separator-normalized"
+    ],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "static-initializer",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_static_field_base",
+    "sourceSymbol": "compiler.static-initialization._ModuleFunctions.ModuleFunctions_Fields_.static-field-base#1"
+  },
+  {
+    "overloadSignature": [],
+    "collisionResolved": false,
+    "naming": "generated",
+    "sourceOrdinal": null,
+    "readableName": [
+      "ModuleFunctions",
+      "static-initialization"
+    ],
+    "requestedName": null,
+    "cName": "hxc_ModuleFunctions_static_initialization",
+    "semanticKey": "18:static-initializer|28:ordinary:16:translation-unit|4:8:compiler21:static-initialization17:hosted-executable54:function._ModuleFunctions.ModuleFunctions_Fields_.main|0:|0:|0:",
+    "escapeReasons": [
+      "non-c-identifier-byte",
+      "separator-normalized"
+    ],
+    "namespace": {
+      "scope": "translation-unit",
+      "kind": "ordinary"
+    },
+    "visibility": "internal",
+    "kind": "static-initializer",
+    "specializationArguments": [],
+    "baseName": "hxc_ModuleFunctions_static_initialization",
+    "sourceSymbol": "compiler.static-initialization.hosted-executable.function._ModuleFunctions.ModuleFunctions_Fields_.main"
+  }
+]

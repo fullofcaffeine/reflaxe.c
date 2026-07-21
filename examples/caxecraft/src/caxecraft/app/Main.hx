@@ -16,7 +16,10 @@ import caxecraft.gameplay.InventoryState;
 import caxecraft.app.CaxecraftAtlas.HotbarFrame;
 import caxecraft.app.CaxecraftAtlas.HudGlyph;
 import caxecraft.app.CaxecraftAtlas.WorldSprite;
-import caxecraft.gameplay.BerryDrop;
+import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
+import caxecraft.gameplay.BerryDrop.fromDefeatedMossling as berryDropFromDefeatedMossling;
+import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
+import caxecraft.gameplay.BerryDrop.none as emptyBerryDrop;
 import caxecraft.gameplay.BerryDropState;
 import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
@@ -25,11 +28,13 @@ import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.MosslingState;
-import caxecraft.gameplay.Mining;
+import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.PlayerVitalsState;
-import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
+import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
+import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.gameplay.SwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
@@ -135,7 +140,7 @@ final class Main {
 		#end
 		var vitals:PlayerVitalsState = PlayerVitals.startAt(initialHealth);
 		var swordCombat:SwordCombatState = SwordCombat.start();
-		var berryDrop:BerryDropState = BerryDrop.none();
+		var berryDrop:BerryDropState = emptyBerryDrop();
 		var lookX = 0.0;
 		var lookY = -0.18;
 		var lookZ = -1.0;
@@ -360,7 +365,7 @@ final class Main {
 							mossling = Mossling.strike(mossling);
 							strikeHitFrames = 16;
 							if (!Mossling.isAlive(mossling)) {
-								berryDrop = BerryDrop.fromDefeatedMossling(mossling);
+								berryDrop = berryDropFromDefeatedMossling(mossling);
 								enemyDefeatedFrames = 120;
 							}
 						}
@@ -381,7 +386,7 @@ final class Main {
 				if (!PlayerVitals.isDefeated(vitals)) {
 					if (selectedMode == GameMode.Adventure) {
 						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword) && hit.hit) {
-							final mining = Mining.attempt(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ), inventory);
+							final mining = attemptMining(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ), inventory);
 							inventory = mining.inventory;
 							if (mining.outcome == MiningOutcome.InventoryFull) {
 								inventoryFullReason = InventoryFullReason.BlockStack;
@@ -395,12 +400,12 @@ final class Main {
 			}
 			if (captured && secondaryPressed) {
 				if (!PlayerVitals.isDefeated(vitals)) {
-					final recoveryDecision = Recovery.decide(inventory, vitals);
+					final recoveryDecision = decideRecovery(inventory, vitals);
 					if (recoveryDecision != RecoveryDecision.NotRecoveryItem) {
 						recoveryFeedback = recoveryDecision;
 						recoveryFeedbackFrames = 90;
-						inventory = Recovery.applyInventory(recoveryDecision, inventory);
-						vitals = Recovery.applyVitals(recoveryDecision, vitals);
+						inventory = applyRecoveryInventory(recoveryDecision, inventory);
+						vitals = applyRecoveryVitals(recoveryDecision, vitals);
 					} else if (hit.hit) {
 						final placement = World.coord(hit.previousX, hit.previousY, hit.previousZ);
 						final selectedBlock = Inventory.selectedBlock(inventory);
@@ -418,11 +423,11 @@ final class Main {
 			if (placementBlockedFrames > 0)
 				placementBlockedFrames--;
 			if (!paused) {
-				if (BerryDrop.isInRange(berryDrop, player.x, player.y, player.z)) {
+				if (berryDropIsInRange(berryDrop, player.x, player.y, player.z)) {
 					final acceptedDrop = Inventory.acceptedAmount(inventory, ItemKind.Berries, berryDrop.amount);
 					if (acceptedDrop > 0) {
 						inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedDrop);
-						berryDrop = BerryDrop.collectAmount(berryDrop, acceptedDrop);
+						berryDrop = collectBerryDropAmount(berryDrop, acceptedDrop);
 						pickupAmount = acceptedDrop;
 						pickupFrames = 90;
 					} else {

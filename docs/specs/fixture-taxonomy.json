@@ -593,6 +593,7 @@
       "assertions": [
         "typed primitive parameters, left-to-right direct-call arguments, and implicit conversions are explicit in validated HxcIR",
         "all reachable static functions receive deterministic prototypes before definitions; direct self-tail recursion uses typed temporaries and a loop while mutual cycles compile from deterministic private translation units with -Winfinite-recursion active",
+        "Haxe module-level constants and public/private/inline functions retain their hidden semantic identity while split generated C, startup functions, and the project name use readable source-module names under Eval and strict native parity",
         "default, optional, and rest parameters fail with exact source-positioned HXC1001, while non-hosted executable entry remains scoped HXC1000",
         "portable, metal, and explicit runtime-none production builds emit int main(void), analyzed empty runtime/ABI/stdlib plans, and no hxrt artifact or symbol"
       ]

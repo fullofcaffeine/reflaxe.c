@@ -201,7 +201,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "c4915e4d8d0cfceb0a292e8d2dce5bd6f2eae627ac89292f580f9bf72441dd52",
+      "sha256": "0a13fc6d7988bf410c406c32df398cd98122adfaf28476dc411fcdb8f188e543",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },

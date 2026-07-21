@@ -1,7 +1,7 @@
 package caxecraft.pilot;
 
 import caxecraft.gameplay.PlayerVitals;
-import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.Recovery.BERRY_HEALTH;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
@@ -187,7 +187,7 @@ final class PilotScript {
 
 	/** Initial fixture health; ordinary and release paths begin at full health. */
 	public static inline function initialHealth(name:PilotScriptName):Int
-		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
+		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
 
 	/**
 	 * Initial state owned by a deterministic native pilot, never release play.

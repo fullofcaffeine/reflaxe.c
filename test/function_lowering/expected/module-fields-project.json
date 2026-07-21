@@ -1,0 +1,40 @@
+{
+  "projectName": "ModuleFunctions",
+  "configuration": {
+    "profile": "portable",
+    "environment": "hosted",
+    "cStandard": "c11",
+    "runtimePolicy": "auto",
+    "projectLayout": "split",
+    "runtimeDiagnostics": "summary"
+  },
+  "build": {
+    "publicHeaders": [],
+    "sources": [
+      "src/hxc/main.c",
+      "src/modules/ModuleFunctions.c"
+    ],
+    "cStandard": "c11",
+    "definitions": [],
+    "extensions": false,
+    "schemaVersion": 1,
+    "privateHeaders": [
+      "include/hxc/detail/program_types.h",
+      "include/hxc/modules/ModuleFunctions.h",
+      "include/hxc/program.h"
+    ],
+    "frameworks": [],
+    "includeDirectories": [
+      "include"
+    ],
+    "requiredHeaders": [],
+    "libraries": [],
+    "runtimeHeaders": [],
+    "artifact": {
+      "targetName": "hxc_program",
+      "kind": "executable"
+    },
+    "pkgConfigPackages": [],
+    "warningPolicy": "strict"
+  }
+}

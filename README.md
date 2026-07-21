@@ -149,7 +149,9 @@ and labels. [Static function
 lowering](docs/function-lowering.md) collects the reachable typed graph, emits
 all prototypes before definitions, preserves ordered arguments with explicit
 temporaries, partitions compiler-proven closed recursion warning-cleanly, and
-packages the production primitive executable project. [Explicit evaluation
+packages the production primitive executable project. It also keeps ordinary
+Haxe module-level functions as readable source modules in split C instead of
+leaking Haxe's hidden module-fields class. [Explicit evaluation
 order](docs/evaluation-order.md) documents the stable-value proof and Eval/C
 differential boundary. [Fixed arrays and span-based
 iteration](docs/span-lowering.md) documents nonempty literals and compiler-known

@@ -4,15 +4,20 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
-import caxecraft.gameplay.BerryDrop;
+import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
+import caxecraft.gameplay.BerryDrop.fromDefeatedMossling as berryDropFromDefeatedMossling;
+import caxecraft.gameplay.BerryDrop.isInRange as berryDropIsInRange;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
-import caxecraft.gameplay.Mining;
+import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.PlayerVitals;
-import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.Recovery.BERRY_HEALTH;
+import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
+import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
+import caxecraft.gameplay.Recovery.decide as decideRecovery;
 import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.gameplay.SwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
@@ -33,7 +38,7 @@ final class GameplayProbe {
 		final minedCoordinate = World.coord(16, 4, 16);
 		var miningInventory = Inventory.starter();
 		final grassBeforeMining = miningInventory.grass;
-		var mining = Mining.attempt(cells, minedCoordinate, miningInventory);
+		var mining = attemptMining(cells, minedCoordinate, miningInventory);
 		miningInventory = mining.inventory;
 		require(mining.outcome == MiningOutcome.Collected
 			&& World.query(cells, minedCoordinate) == caxecraft.domain.BlockKind.Air
@@ -41,12 +46,12 @@ final class GameplayProbe {
 			"available capacity moves exactly one block into its matching stack");
 		require(World.replace(cells, minedCoordinate, caxecraft.domain.BlockKind.Grass), "mining fixture restores its grass block");
 		final fullMiningInventory = Inventory.make(0, Inventory.MAX_STACK, 0, 0, 0, 0, 0, 0, 0);
-		mining = Mining.attempt(cells, minedCoordinate, fullMiningInventory);
+		mining = attemptMining(cells, minedCoordinate, fullMiningInventory);
 		require(mining.outcome == MiningOutcome.InventoryFull
 			&& mining.inventory == fullMiningInventory
 			&& World.query(cells, minedCoordinate) == caxecraft.domain.BlockKind.Grass,
 			"full matching stack leaves both the block and inventory unchanged");
-		final bedrockMining = Mining.attempt(cells, World.coord(16, 0, 16), fullMiningInventory);
+		final bedrockMining = attemptMining(cells, World.coord(16, 0, 16), fullMiningInventory);
 		require(bedrockMining.outcome == MiningOutcome.BlockUnavailable
 			&& World.query(cells, World.coord(16, 0, 16)) == caxecraft.domain.BlockKind.Bedrock,
 			"immutable bedrock remains a separate non-capacity outcome");
@@ -143,24 +148,24 @@ final class GameplayProbe {
 		require(target.health == 0 && !Mossling.isAlive(target), "third strike defeats Mossling");
 		require(Mossling.step(cells, target, 10.5, 12.5, 0) == target, "defeated Mossling state is stable");
 
-		var drop = BerryDrop.fromDefeatedMossling(target);
+		var drop = berryDropFromDefeatedMossling(target);
 		require(drop.active && drop.amount == 2, "defeat creates one visible berry drop");
-		require(BerryDrop.isInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");
+		require(berryDropIsInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");
 		final berriesBeforeDrop = inventory.berries;
 		inventory = Inventory.collectItem(inventory, ItemKind.Berries, drop.amount);
-		drop = BerryDrop.collectAmount(drop, drop.amount);
+		drop = collectBerryDropAmount(drop, drop.amount);
 		require(!drop.active && inventory.berries == berriesBeforeDrop + 2, "drop collection is one-time and explicit");
 
-		var partialDrop = BerryDrop.fromDefeatedMossling(target);
+		var partialDrop = berryDropFromDefeatedMossling(target);
 		var nearlyFull = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK - 1, 0, 0);
 		final acceptedDrop = Inventory.acceptedAmount(nearlyFull, ItemKind.Berries, partialDrop.amount);
 		nearlyFull = Inventory.collectItem(nearlyFull, ItemKind.Berries, acceptedDrop);
-		partialDrop = BerryDrop.collectAmount(partialDrop, acceptedDrop);
+		partialDrop = collectBerryDropAmount(partialDrop, acceptedDrop);
 		require(acceptedDrop == 1 && nearlyFull.berries == Inventory.MAX_STACK && partialDrop.active && partialDrop.amount == 1,
 			"partial pickup leaves the uncollected berry visible");
 		final fullAcceptedDrop = Inventory.acceptedAmount(nearlyFull, ItemKind.Berries, partialDrop.amount);
 		require(fullAcceptedDrop == 0
-			&& BerryDrop.collectAmount(partialDrop, fullAcceptedDrop) == partialDrop, "full stack cannot destroy the remaining drop");
+			&& collectBerryDropAmount(partialDrop, fullAcceptedDrop) == partialDrop, "full stack cannot destroy the remaining drop");
 
 		var vitals = PlayerVitals.start();
 		vitals = PlayerVitals.applyAttack(vitals, true);
@@ -173,24 +178,23 @@ final class GameplayProbe {
 		require(vitals.safeTicks == PlayerVitals.ATTACK_SAFE_TICKS - 1, "safe period advances only on the fixed clock");
 
 		inventory = Inventory.select(inventory, 5);
-		vitals = PlayerVitals.startAt(PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH);
+		vitals = PlayerVitals.startAt(PlayerVitals.MAX_HEALTH - BERRY_HEALTH);
 		final berriesBeforeRecovery = inventory.berries;
 		final safeTicksBeforeRecovery = vitals.safeTicks;
-		var recoveryDecision = Recovery.decide(inventory, vitals);
+		var recoveryDecision = decideRecovery(inventory, vitals);
 		require(recoveryDecision == RecoveryDecision.UseBerries, "damaged player can use selected berries");
-		inventory = Recovery.applyInventory(recoveryDecision, inventory);
-		vitals = Recovery.applyVitals(recoveryDecision, vitals);
+		inventory = applyRecoveryInventory(recoveryDecision, inventory);
+		vitals = applyRecoveryVitals(recoveryDecision, vitals);
 		require(inventory.berries == berriesBeforeRecovery - 1
 			&& vitals.health == PlayerVitals.MAX_HEALTH
 			&& vitals.safeTicks == safeTicksBeforeRecovery,
 			"berries restore one heart without changing damage safety");
-		recoveryDecision = Recovery.decide(inventory, vitals);
-		require(recoveryDecision == RecoveryDecision.HealthAlreadyFull
-			&& Recovery.applyInventory(recoveryDecision, inventory) == inventory,
+		recoveryDecision = decideRecovery(inventory, vitals);
+		require(recoveryDecision == RecoveryDecision.HealthAlreadyFull && applyRecoveryInventory(recoveryDecision, inventory) == inventory,
 			"full health preserves the berry stack");
 		final emptyRecovery = Inventory.make(5, 0, 0, 0, 0, 0, 0, 0, 0);
-		require(Recovery.decide(emptyRecovery, PlayerVitals.startAt(2)) == RecoveryDecision.RecoveryStackEmpty, "empty berry stack is explicit");
-		require(Recovery.decide(Inventory.select(inventory, 0), PlayerVitals.startAt(2)) == RecoveryDecision.NotRecoveryItem,
+		require(decideRecovery(emptyRecovery, PlayerVitals.startAt(2)) == RecoveryDecision.RecoveryStackEmpty, "empty berry stack is explicit");
+		require(decideRecovery(Inventory.select(inventory, 0), PlayerVitals.startAt(2)) == RecoveryDecision.NotRecoveryItem,
 			"block placement remains a separate secondary action");
 
 		while (!PlayerVitals.isDefeated(vitals)) {
@@ -200,7 +204,7 @@ final class GameplayProbe {
 		}
 		require(PlayerVitals.revive(vitals).health == PlayerVitals.MAX_HEALTH, "return prompt restores full health");
 
-		require(Recovery.decide(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
+		require(decideRecovery(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
 
 		Sys.println("caxecraft-gameplay: lossless mining/items, paced Mossling encounter, berry recovery, and bounded player health passed");
 	}

@@ -177,6 +177,36 @@ performance, packaging, and developer experience together.
   unavoidable target or ABI detail behind a narrow typed adapter and explain
   why it exists. Compiler limitations must not force unrelated shared gameplay
   code into a low-level style; fix or track the general compiler gap instead.
+- Prefer a Haxe module-level function when a source file only groups stateless
+  operations. “Module-level” means the function is declared directly in the
+  `.hx` file and imported from that module, optionally under a clear local
+  alias, without a wrapper class whose only members are static. A packed Haxe
+  module is not a runtime namespace object; do not imply that `Module.call()`
+  remains available after removing its class. Keep a real class when values
+  need per-instance state, identity, ownership/lifetime, inheritance or
+  interfaces, or when a framework, macro, generated/public API, entry-point
+  contract, or deliberate
+  nominal boundary requires a class. Do not apply this mechanically: haxe.c
+  must first have focused production evidence for every admitted module-field
+  shape, and a migration must preserve behavior, generated-C readability,
+  allocation/runtime selection, and source-module ownership. Until that
+  evidence exists, track the blocked cleanup rather than adding more static-only
+  classes by habit or disguising unsupported module fields with raw C.
+- Treat ordinary Haxe classes as a source-language contract, not as syntax that
+  application authors must manually translate into C-shaped records. Preserve
+  construction, initialization, identity, mutation, inheritance, interfaces,
+  dispatch, nullability, ownership, cleanup, and failure behavior, then choose
+  the least costly correct C representation from typed whole-program facts. A
+  source class does not automatically require heap allocation, an object header,
+  a virtual table, reflection data, or a generic runtime wrapper: use automatic
+  storage, scalar replacement, plain structs plus typed functions, direct calls,
+  and minimal reachable tables whenever proven; select managed allocation and
+  exact roots only for values whose escape/lifetime semantics require it. Keep
+  split C recognizable by source module, type, field, and method, and measure
+  allocations, code size, C compile time, and runtime against reviewed
+  hand-written C baselines. Current bounded class support is a capability stage,
+  not the design ceiling; track missing general semantics instead of forcing
+  Caxecraft or another flagship into an unnatural low-level source model.
 - Preserve the accepted architecture and policy hierarchy while improving the
   workload: typed source and plans, HxcIR where C semantic gaps require it,
   structural CAST, explicit ownership/runtime decisions, formatting-only

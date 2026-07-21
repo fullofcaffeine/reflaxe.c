@@ -1,0 +1,91 @@
+{
+  "fields": [
+    {
+      "typeKind": "abstract",
+      "name": "base",
+      "sourceOrder": 0,
+      "typeDisplay": "Int",
+      "isPublic": true,
+      "isExtern": false,
+      "kind": "variable",
+      "hasExpression": true,
+      "metadata": [
+        {
+          "arguments": [
+            "7"
+          ],
+          "name": ":value"
+        }
+      ],
+      "role": "static"
+    },
+    {
+      "typeKind": "function",
+      "name": "increment",
+      "sourceOrder": 1,
+      "typeDisplay": "(value : Int) -> Int",
+      "isPublic": false,
+      "isExtern": false,
+      "kind": "method-inline",
+      "hasExpression": true,
+      "metadata": [],
+      "role": "static"
+    },
+    {
+      "typeKind": "function",
+      "name": "doubled",
+      "sourceOrder": 2,
+      "typeDisplay": "(value : Int) -> Int",
+      "isPublic": true,
+      "isExtern": false,
+      "kind": "method-normal",
+      "hasExpression": true,
+      "metadata": [],
+      "role": "static"
+    },
+    {
+      "typeKind": "function",
+      "name": "answer",
+      "sourceOrder": 3,
+      "typeDisplay": "() -> Int",
+      "isPublic": false,
+      "isExtern": false,
+      "kind": "method-normal",
+      "hasExpression": true,
+      "metadata": [],
+      "role": "static"
+    },
+    {
+      "typeKind": "function",
+      "name": "main",
+      "sourceOrder": 4,
+      "typeDisplay": "() -> Void",
+      "isPublic": true,
+      "isExtern": false,
+      "kind": "method-normal",
+      "hasExpression": true,
+      "metadata": [
+        {
+          "arguments": [],
+          "name": ":keep"
+        }
+      ],
+      "role": "static"
+    }
+  ],
+  "classKind": "module-fields",
+  "isAbstract": false,
+  "ownerModulePath": "ModuleFunctions",
+  "isPrivate": true,
+  "path": "_ModuleFunctions.ModuleFunctions_Fields_",
+  "isFinal": true,
+  "name": "ModuleFunctions_Fields_",
+  "isInterface": false,
+  "representedTypeDisplay": null,
+  "representedTypeKind": null,
+  "isExtern": false,
+  "kind": "class",
+  "metadata": [],
+  "sourcePath": "ModuleFunctions.hx",
+  "ownership": "secondary"
+}

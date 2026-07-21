@@ -83,6 +83,7 @@ class CStaticFunctionGraphCollector {
 				final initializerCaller:CBodyFunctionInput = {
 					modulePath: initializer.modulePath,
 					declarationPath: initializer.declarationPath,
+					readableDeclarationPath: initializer.readableDeclarationPath,
 					sourcePath: initializer.sourcePath,
 					fieldName: initializer.displayName,
 					sourceOrder: initializer.sourceOrder,
@@ -275,6 +276,7 @@ class CStaticFunctionGraphCollector {
 		return {
 			modulePath: base.modulePath,
 			declarationPath: base.declarationPath,
+			readableDeclarationPath: base.readableDeclarationPath,
 			sourcePath: base.sourcePath,
 			fieldName: base.fieldName,
 			sourceOrder: base.sourceOrder,
@@ -318,6 +320,7 @@ class CStaticFunctionGraphCollector {
 						final input:CBodyFunctionInput = {
 							modulePath: declaration.ownerModulePath,
 							declarationPath: declaration.path,
+							readableDeclarationPath: readableDeclarationPath(declaration),
 							sourcePath: declaration.sourcePath,
 							fieldName: field.name,
 							sourceOrder: field.sourceOrder,
@@ -508,6 +511,7 @@ class CStaticFunctionGraphCollector {
 						result.push({
 							modulePath: declaration.ownerModulePath,
 							declarationPath: declaration.path,
+							readableDeclarationPath: readableDeclarationPath(declaration),
 							sourcePath: declaration.sourcePath,
 							fieldName: field.name,
 							sourceOrder: field.sourceOrder,
@@ -526,6 +530,14 @@ class CStaticFunctionGraphCollector {
 		});
 		return result;
 	}
+
+	/**
+		Haxe stores module-level fields in a hidden static class. Keep that hidden
+		path as semantic identity, but spell generated C with the module the user
+		actually wrote so implementation details such as `Module_Fields_` do not leak.
+	**/
+	static function readableDeclarationPath(declaration:TypedAstDeclaration):Null<String>
+		return declaration.classKind == "module-fields" ? declaration.ownerModulePath : null;
 
 	static function add(input:CBodyFunctionInput, byId:Map<String, CBodyFunctionInput>, pending:Array<CBodyFunctionInput>):Void {
 		final id = CBodyLowering.functionInputId(input);

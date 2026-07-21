@@ -74,6 +74,7 @@ typedef TypedAstExpressionRoot = {
 typedef TypedAstEntryFunction = {
 	final modulePath:String;
 	final declarationPath:String;
+	final ?readableDeclarationPath:String;
 	final sourcePath:String;
 	final fieldName:String;
 	final sourceOrder:Int;
