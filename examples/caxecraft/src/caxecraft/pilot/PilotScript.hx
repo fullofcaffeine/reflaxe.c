@@ -16,6 +16,7 @@ enum abstract PilotScriptName(Int) {
 	var RecoveryUse = 4;
 	var FullInventoryGift = 5;
 	var FullInventoryMining = 6;
+	var ResizeLayout = 7;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -58,6 +59,8 @@ final class PilotScript {
 			return 40;
 		if (name == FullInventoryMining)
 			return 7;
+		if (name == ResizeLayout)
+			return 6;
 		return 4;
 	}
 
@@ -74,7 +77,9 @@ final class PilotScript {
 			return "recovery-use";
 		if (name == FullInventoryGift)
 			return "full-inventory-gift";
-		return "full-inventory-mining";
+		if (name == FullInventoryMining)
+			return "full-inventory-mining";
+		return "resize-layout";
 	}
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
@@ -161,8 +166,24 @@ final class PilotScript {
 				frameNumber == 2 ? new PilotCheckpoint("full-inventory-gift.frame", CaptureScreenshot) : null;
 			case FullInventoryMining:
 				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
+			case ResizeLayout:
+				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot) : null;
 		};
 	}
+
+	/**
+	 * Requests a logical window width for a presentation test.
+	 *
+	 * Zero means "keep the current size". The application adapter performs the
+	 * actual Raylib call, so this target-neutral script never imports a windowing
+	 * API and release builds contain no scripted resize channel.
+	 */
+	public static inline function requestedWindowWidth(name:PilotScriptName, frameNumber:Int):Int
+		return name == ResizeLayout && frameNumber == 1 ? 960 : 0;
+
+	/** Logical height paired with `requestedWindowWidth`. */
+	public static inline function requestedWindowHeight(name:PilotScriptName, frameNumber:Int):Int
+		return name == ResizeLayout && frameNumber == 1 ? 540 : 0;
 
 	/** Initial fixture health; ordinary and release paths begin at full health. */
 	public static inline function initialHealth(name:PilotScriptName):Int

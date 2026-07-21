@@ -23,7 +23,7 @@ from run import (  # noqa: E402
 )
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 7 named scripts, 76 deterministic frames, 9 checkpoints; "
+    "caxecraft-pilot: 8 named scripts, 82 deterministic frames, 10 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (

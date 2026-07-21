@@ -21,6 +21,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryMining, 7);
+		sampledFrames += checkBounded(PilotScriptName.ResizeLayout, 6);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -28,9 +29,10 @@ final class PilotProbe {
 		checkpoints += checkRecovery();
 		checkpoints += checkFullInventory();
 		checkpoints += checkFullInventoryMining();
+		checkpoints += checkResize();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 7 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 8 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -144,6 +146,21 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 5);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "full-inventory-mining.frame",
 			"full-mining screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkResize():Int {
+		final name = PilotScriptName.ResizeLayout;
+		require(PilotScript.stableName(name) == "resize-layout", "resize script lost its stable name");
+		require(PilotScript.requestedWindowWidth(name, 0) == 0
+			&& PilotScript.requestedWindowHeight(name, 0) == 0, "resize script changed the initial window");
+		require(PilotScript.requestedWindowWidth(name, 1) == 960 && PilotScript.requestedWindowHeight(name, 1) == 540,
+			"resize script lost its logical viewport request");
+		require(PilotScript.requestedWindowWidth(name, 2) == 0 && PilotScript.requestedWindowHeight(name, 2) == 0,
+			"resize script repeated its one-shot request");
+		final screenshot = PilotScript.checkpoint(name, 3);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "resize-layout.frame",
+			"resize screenshot checkpoint changed");
 		return 1;
 	}
 

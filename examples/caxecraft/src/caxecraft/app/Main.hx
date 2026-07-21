@@ -103,6 +103,8 @@ final class Main {
 		final pilotName:PilotScriptName = PilotScriptName.FullInventoryGift;
 		#elseif caxecraft_pilot_full_inventory_mining
 		final pilotName:PilotScriptName = PilotScriptName.FullInventoryMining;
+		#elseif caxecraft_pilot_resize_layout
+		final pilotName:PilotScriptName = PilotScriptName.ResizeLayout;
 		#end
 
 		var player:PlayerState = spawnPlayer(cells);
@@ -139,7 +141,7 @@ final class Main {
 		#end
 		var language:GameLanguage = GameLanguage.English;
 		#if caxecraft_pilot
-		var onTitle = pilotName == PilotScriptName.LaunchSmoke;
+		var onTitle = pilotName == PilotScriptName.LaunchSmoke || pilotName == PilotScriptName.ResizeLayout;
 		var paused = onTitle;
 		var captured = !onTitle;
 		if (captured)
@@ -166,6 +168,12 @@ final class Main {
 		while (!quit && !Raylib.WindowShouldClose()) {
 			var recapturedThisFrame = false;
 			#if caxecraft_pilot
+			final requestedWindowWidth = PilotScript.requestedWindowWidth(pilotName, frameCount);
+			// Keep both conditional results stable before the native call. haxe_c-af1
+			// owns the compiler fix that will make this explicit local unnecessary.
+			final requestedWindowHeight = PilotScript.requestedWindowHeight(pilotName, frameCount);
+			if (requestedWindowWidth > 0)
+				Raylib.SetWindowSize(requestedWindowWidth, requestedWindowHeight);
 			final focused = true;
 			final pilotAction = PilotScript.actionAt(pilotName, frameCount);
 			final moveForward = PilotScript.moveForward(pilotAction);
@@ -461,6 +469,8 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-full-inventory.png");
 			if (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
 				Raylib.TakeScreenshot("caxecraft-pilot-full-mining.png");
+			if (pilotName == PilotScriptName.ResizeLayout && frameCount == 3)
+				Raylib.TakeScreenshot("caxecraft-pilot-resize.png");
 			#end
 			frameCount++;
 		}

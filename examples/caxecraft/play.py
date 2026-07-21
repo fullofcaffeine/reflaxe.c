@@ -188,6 +188,7 @@ def validate_smoke_screenshot(
     path: Path,
     *,
     platform_name: str,
+    expected_logical_size: tuple[int, int] = (1280, 720),
     expected_title: bool = True,
     expected_drop: bool = False,
     expected_attack: bool = False,
@@ -202,12 +203,12 @@ def validate_smoke_screenshot(
     if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
         raise PlayFailure("Caxecraft smoke screenshot is not a structurally valid PNG")
     width, height = struct.unpack(">II", data[16:24])
-    expected_dimensions = {(1280, 720)}
+    expected_dimensions = {expected_logical_size}
     if platform_name == "macos":
-        expected_dimensions.add((2560, 1440))
+        expected_dimensions.add((expected_logical_size[0] * 2, expected_logical_size[1] * 2))
     if (width, height) not in expected_dimensions:
         raise PlayFailure(
-            f"Caxecraft smoke screenshot must match its logical 1280x720 window at an admitted pixel scale, "
+            f"Caxecraft smoke screenshot must match its logical {expected_logical_size[0]}x{expected_logical_size[1]} window at an admitted pixel scale, "
             f"found {width}x{height}; "
             "this can indicate a broken high-DPI framebuffer"
         )
@@ -509,6 +510,7 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str
             "recovery-use": "caxecraft_pilot_recovery_use",
             "full-inventory-gift": "caxecraft_pilot_full_inventory_gift",
             "full-inventory-mining": "caxecraft_pilot_full_inventory_mining",
+            "resize-layout": "caxecraft_pilot_resize_layout",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -568,6 +570,8 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     # choice. Normal playable builds must still prove the real input path.
     if pilot is None and "GetMouseDelta(" not in app:
         raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
+    if pilot == "resize-layout" and "SetWindowSize(" not in app:
+        raise PlayFailure("generated Caxecraft resize pilot omitted direct Raylib call SetWindowSize(")
     # This first slice draws wire geometry only for the block under the
     # crosshair. A second call site would permit per-block fill/wire switching,
     # which previously made raylib flush thousands of tiny GPU batches before
@@ -879,7 +883,16 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
         "--pilot",
-        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop", "recovery-use", "full-inventory-gift", "full-inventory-mining"),
+        choices=(
+            "launch-smoke",
+            "move-jump-edit",
+            "pause-recapture",
+            "combat-drop",
+            "recovery-use",
+            "full-inventory-gift",
+            "full-inventory-mining",
+            "resize-layout",
+        ),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib archive download")
@@ -974,19 +987,29 @@ def main(argv: list[str]) -> int:
                 "recovery-use": "caxecraft-pilot-recovery.png",
                 "full-inventory-gift": "caxecraft-pilot-full-inventory.png",
                 "full-inventory-mining": "caxecraft-pilot-full-mining.png",
+                "resize-layout": "caxecraft-pilot-resize.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             if screenshot.exists():
                 screenshot.unlink()
             run([str(executable)], cwd=executable.parent, timeout=15, label=f"Caxecraft {selected_pilot} graphical pilot")
-            width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name) if selected_pilot == "launch-smoke" else validate_presented_screenshot(
-                screenshot,
-                platform_name=platform_name,
-                expected_drop=selected_pilot == "combat-drop",
-                expected_attack=selected_pilot == "combat-drop",
-                expected_recovery=selected_pilot == "recovery-use",
-                expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
-            )
+            if selected_pilot == "launch-smoke":
+                width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
+            elif selected_pilot == "resize-layout":
+                width, height = validate_smoke_screenshot(
+                    screenshot,
+                    platform_name=platform_name,
+                    expected_logical_size=(960, 540),
+                )
+            else:
+                width, height = validate_presented_screenshot(
+                    screenshot,
+                    platform_name=platform_name,
+                    expected_drop=selected_pilot == "combat-drop",
+                    expected_attack=selected_pilot == "combat-drop",
+                    expected_recovery=selected_pilot == "recovery-use",
+                    expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
+                )
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "
                 f"({width}x{height} presented framebuffer and bounded exit within 15 seconds)"

@@ -71,14 +71,18 @@ npm run caxecraft:play -- --pilot full-inventory-gift
 
 # Fill all block stacks, try to mine, prove the block is not discarded, and quit.
 npm run caxecraft:play -- --pilot full-inventory-mining
+
+# Resize the real native window to 960x540, prove the title reflows, and quit.
+npm run caxecraft:play -- --pilot resize-layout
 ```
 
-The seven closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+The eight closed script names are `LaunchSmoke`, `MoveJumpEdit`,
 `PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
-`FullInventoryMining`. Each has a small fixed frame limit below the absolute
-120-frame policy. Its final and every later action is `Quit`, which protects
-against a script accidentally becoming an unattended interactive session. The
-Python runner adds an independent 15-second wall-clock timeout.
+`FullInventoryMining`, plus `ResizeLayout`. Each has a small fixed frame limit
+below the absolute 120-frame policy. Its final and every later action is
+`Quit`, which protects against a script accidentally becoming an unattended
+interactive session. The Python runner adds an independent 15-second
+wall-clock timeout.
 
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent sky, terrain,
@@ -115,6 +119,13 @@ before it changes the world. The renderer-free test proves that free capacity
 moves exactly one block, while a full matching stack leaves both the block and
 inventory unchanged. Creative mode still removes blocks directly because its
 building inventory is intentionally unlimited.
+
+The resize pilot makes one target-neutral logical-size request. The C/raylib
+application adapter performs the actual window call, waits for later presented
+frames, and captures the title at exactly 960x540 (or its admitted 2x Retina
+framebuffer). The same responsive title layout and asset ownership code runs at
+both sizes; the scripted request and screenshot path are absent from release
+builds.
 
 ## Why the native path has one compile-time condition
 
