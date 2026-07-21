@@ -45,13 +45,13 @@
   "inputs": [
     {
       "path": "program.c",
-      "sha256": "628f5bdf4d7ec57f44074514794df4b7c5fe630170efad0c80a73245d255f8c4"
+      "sha256": "f86dcfd67766a6d85adb744fb4538d89092dfdf4cbad9ab64e9a371a7a9b5e3b"
     }
   ],
   "summary": {
     "artifactCount": 1,
-    "physicalLineCount": 320,
-    "codeLineCount": 302,
+    "physicalLineCount": 337,
+    "codeLineCount": 319,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -64,16 +64,16 @@
     "lineMappedFunctionBasisPoints": 0,
     "ownerMappedArtifactCount": 1,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 34,
-    "temporaryDeclarationCount": 47,
-    "temporaryReferenceCount": 67,
-    "temporaryDeclarationsPerKFunctionCodeLines": 160,
+    "branchCount": 36,
+    "temporaryDeclarationCount": 54,
+    "temporaryReferenceCount": 77,
+    "temporaryDeclarationsPerKFunctionCodeLines": 174,
     "maxIdentifier": {
       "name": "hxc_EvaluationFixture_overwriteBarrierValue",
       "bytes": 43,
       "coordinate": {
         "path": "program.c",
-        "line": 38,
+        "line": 41,
         "column": 9,
         "functionId": null
       }
@@ -120,47 +120,47 @@
       "collisionResolved": true,
       "coordinate": {
         "path": "program.c",
+        "line": 240,
+        "column": 11,
+        "functionId": null
+      }
+    },
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_symbol_h73c8af38b72c",
+      "bytes": 24,
+      "explained": true,
+      "sourceSymbols": [
+        "EvaluationFixture.run.`#26"
+      ],
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "program.c",
+        "line": 256,
+        "column": 11,
+        "functionId": null
+      }
+    },
+    {
+      "category": "hash-suffix",
+      "identifier": "hxc_symbol_habfcdbf4fca5",
+      "bytes": 24,
+      "explained": true,
+      "sourceSymbols": [
+        "EvaluationFixture.run.`#22"
+      ],
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "collisionResolved": true,
+      "coordinate": {
+        "path": "program.c",
         "line": 239,
-        "column": 11,
-        "functionId": null
-      }
-    },
-    {
-      "category": "hash-suffix",
-      "identifier": "hxc_symbol_h9dc820c6c711",
-      "bytes": 24,
-      "explained": true,
-      "sourceSymbols": [
-        "EvaluationFixture.run.`#19"
-      ],
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "collisionResolved": true,
-      "coordinate": {
-        "path": "program.c",
-        "line": 222,
-        "column": 11,
-        "functionId": null
-      }
-    },
-    {
-      "category": "hash-suffix",
-      "identifier": "hxc_symbol_hff91343ee89b",
-      "bytes": 24,
-      "explained": true,
-      "sourceSymbols": [
-        "EvaluationFixture.run.`#20"
-      ],
-      "escapeReasons": [
-        "non-c-identifier-byte",
-        "separator-normalized"
-      ],
-      "collisionResolved": true,
-      "coordinate": {
-        "path": "program.c",
-        "line": 223,
         "column": 11,
         "functionId": null
       }
@@ -170,27 +170,27 @@
   "files": [
     {
       "path": "program.c",
-      "sha256": "628f5bdf4d7ec57f44074514794df4b7c5fe630170efad0c80a73245d255f8c4",
+      "sha256": "f86dcfd67766a6d85adb744fb4538d89092dfdf4cbad9ab64e9a371a7a9b5e3b",
       "owner": {
         "kind": "amalgamation",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 320,
-      "codeLineCount": 302,
+      "physicalLineCount": 337,
+      "codeLineCount": 319,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 471,
+      "identifierCount": 503,
       "maxIdentifier": {
         "name": "hxc_EvaluationFixture_overwriteBarrierValue",
         "bytes": 43,
-        "line": 38,
+        "line": 41,
         "column": 9
       },
-      "temporaryDeclarationCount": 47,
-      "temporaryReferenceCount": 67,
+      "temporaryDeclarationCount": 54,
+      "temporaryReferenceCount": 77,
       "functions": [
         {
           "functionId": "function.EvaluationFixture.consumePair",
@@ -201,31 +201,31 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 14,
-              "startColumn": 60,
-              "endLine": 17,
-              "endColumn": 3
+              "startLine": 16,
+              "startColumn": 3,
+              "endLine": 16,
+              "endColumn": 26
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 14,
-            "startColumn": 60,
-            "endLine": 17,
-            "endColumn": 3
+            "startLine": 16,
+            "startColumn": 3,
+            "endLine": 16,
+            "endColumn": 26
           },
           "startLine": 15,
-          "endLine": 20,
-          "physicalLineCount": 6,
-          "codeLineCount": 6,
-          "bodyCodeLineCount": 3,
+          "endLine": 23,
+          "physicalLineCount": 9,
+          "codeLineCount": 9,
+          "bodyCodeLineCount": 6,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 0,
-          "maxNestingDepth": 0,
-          "temporaryDeclarationCount": 0,
-          "temporaryReferenceCount": 0,
-          "temporaryDeclarationsPerKCodeLines": 0
+          "branchCount": 1,
+          "maxNestingDepth": 1,
+          "temporaryDeclarationCount": 1,
+          "temporaryReferenceCount": 2,
+          "temporaryDeclarationsPerKCodeLines": 112
         },
         {
           "functionId": "function.EvaluationFixture.finish",
@@ -236,21 +236,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 33,
+              "startLine": 32,
               "startColumn": 42,
-              "endLine": 35,
+              "endLine": 34,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 33,
+            "startLine": 32,
             "startColumn": 42,
-            "endLine": 35,
+            "endLine": 34,
             "endColumn": 3
           },
-          "startLine": 22,
-          "endLine": 25,
+          "startLine": 25,
+          "endLine": 28,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -271,21 +271,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 24,
+              "startLine": 23,
               "startColumn": 37,
-              "endLine": 26,
+              "endLine": 25,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 24,
+            "startLine": 23,
             "startColumn": 37,
-            "endLine": 26,
+            "endLine": 25,
             "endColumn": 3
           },
-          "startLine": 27,
-          "endLine": 30,
+          "startLine": 30,
+          "endLine": 33,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -306,21 +306,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 135,
+              "startLine": 134,
               "startColumn": 30,
-              "endLine": 141,
+              "endLine": 140,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 135,
+            "startLine": 134,
             "startColumn": 30,
-            "endLine": 141,
+            "endLine": 140,
             "endColumn": 3
           },
-          "startLine": 32,
-          "endLine": 36,
+          "startLine": 35,
+          "endLine": 39,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -341,21 +341,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 42,
+              "startLine": 41,
               "startColumn": 46,
-              "endLine": 45,
+              "endLine": 44,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 42,
+            "startLine": 41,
             "startColumn": 46,
-            "endLine": 45,
+            "endLine": 44,
             "endColumn": 3
           },
-          "startLine": 38,
-          "endLine": 42,
+          "startLine": 41,
+          "endLine": 45,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -376,21 +376,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 47,
+              "startLine": 46,
               "startColumn": 45,
-              "endLine": 52,
+              "endLine": 51,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 47,
+            "startLine": 46,
             "startColumn": 45,
-            "endLine": 52,
+            "endLine": 51,
             "endColumn": 3
           },
-          "startLine": 44,
-          "endLine": 51,
+          "startLine": 47,
+          "endLine": 54,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -411,31 +411,31 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 54,
+              "startLine": 53,
               "startColumn": 29,
-              "endLine": 134,
+              "endLine": 133,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 54,
+            "startLine": 53,
             "startColumn": 29,
-            "endLine": 134,
+            "endLine": 133,
             "endColumn": 3
           },
-          "startLine": 53,
-          "endLine": 289,
-          "physicalLineCount": 237,
-          "codeLineCount": 237,
-          "bodyCodeLineCount": 234,
+          "startLine": 56,
+          "endLine": 306,
+          "physicalLineCount": 251,
+          "codeLineCount": 251,
+          "bodyCodeLineCount": 248,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 34,
+          "branchCount": 35,
           "maxNestingDepth": 5,
-          "temporaryDeclarationCount": 45,
-          "temporaryReferenceCount": 65,
-          "temporaryDeclarationsPerKCodeLines": 190
+          "temporaryDeclarationCount": 51,
+          "temporaryReferenceCount": 73,
+          "temporaryDeclarationsPerKCodeLines": 204
         },
         {
           "functionId": "function.EvaluationFixture.setCallFlag",
@@ -459,8 +459,8 @@
             "endLine": 12,
             "endColumn": 3
           },
-          "startLine": 291,
-          "endLine": 295,
+          "startLine": 308,
+          "endLine": 312,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -481,21 +481,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 19,
+              "startLine": 18,
               "startColumn": 43,
-              "endLine": 22,
+              "endLine": 21,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 19,
+            "startLine": 18,
             "startColumn": 43,
-            "endLine": 22,
+            "endLine": 21,
             "endColumn": 3
           },
-          "startLine": 297,
-          "endLine": 301,
+          "startLine": 314,
+          "endLine": 318,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -516,21 +516,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 28,
+              "startLine": 27,
               "startColumn": 38,
-              "endLine": 31,
+              "endLine": 30,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 28,
+            "startLine": 27,
             "startColumn": 38,
-            "endLine": 31,
+            "endLine": 30,
             "endColumn": 3
           },
-          "startLine": 303,
-          "endLine": 307,
+          "startLine": 320,
+          "endLine": 324,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,
@@ -551,21 +551,21 @@
             "modulePath": "EvaluationFixture",
             "source": {
               "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-              "startLine": 37,
+              "startLine": 36,
               "startColumn": 47,
-              "endLine": 40,
+              "endLine": 39,
               "endColumn": 3
             }
           },
           "source": {
             "path": "test/evaluation_order/fixtures/EvaluationFixture.hx",
-            "startLine": 37,
+            "startLine": 36,
             "startColumn": 47,
-            "endLine": 40,
+            "endLine": 39,
             "endColumn": 3
           },
-          "startLine": 309,
-          "endLine": 314,
+          "startLine": 326,
+          "endLine": 331,
           "physicalLineCount": 6,
           "codeLineCount": 6,
           "bodyCodeLineCount": 3,
@@ -587,8 +587,8 @@
             "source": null
           },
           "source": null,
-          "startLine": 316,
-          "endLine": 320,
+          "startLine": 333,
+          "endLine": 337,
           "physicalLineCount": 5,
           "codeLineCount": 5,
           "bodyCodeLineCount": 2,

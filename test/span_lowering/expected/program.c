@@ -68,6 +68,7 @@ void hxc_SpanFixture_main(void)
   hxc_SpanFixture_checkedAt(2);
   uint8_t hxc_tmp_call_result_n0 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_parameterRoundTrip(hxc_tmp_call_result_n0);
+  hxc_SpanFixture_spanBeforeConditionalArgument(true);
   hxc_SpanFixture_zeroedGridCell();
   uint8_t hxc_tmp_call_result_n1 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_mutatedGridCell(hxc_tmp_call_result_n1);
@@ -181,6 +182,27 @@ uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_
   }
   uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_borrow[(size_t)hxc_index];
   return hxc_tmp_collection_index_load_result_n0;
+}
+
+uint8_t hxc_SpanFixture_spanBeforeConditionalArgument(bool hxc_selectThird)
+{
+  uint8_t hxc_values[4] = { (uint8_t)2, (uint8_t)4, (uint8_t)8, (uint8_t)16 };
+  const uint8_t *hxc_readOnly = hxc_values;
+  size_t hxc_tmp_length_n2 = sizeof(hxc_values) / sizeof(hxc_values[0]);
+  const uint8_t *hxc_tmp_static_call_argument_0_n3 = hxc_readOnly;
+  size_t hxc_tmp_length_n3 = hxc_tmp_length_n2;
+  int32_t hxc_tmp_conditional_result_n4 = 0;
+  if (hxc_selectThird)
+  {
+    hxc_tmp_conditional_result_n4 = 2;
+  }
+  else
+  {
+    hxc_tmp_conditional_result_n4 = 1;
+  }
+  int32_t hxc_tmp_conditional_load_result_n0 = hxc_tmp_conditional_result_n4;
+  uint8_t hxc_tmp_call_result_n2 = hxc_SpanFixture_readAt(hxc_tmp_static_call_argument_0_n3, hxc_tmp_length_n3, hxc_tmp_conditional_load_result_n0);
+  return hxc_tmp_call_result_n2;
 }
 
 uint8_t hxc_SpanFixture_zeroedGridCell(void)

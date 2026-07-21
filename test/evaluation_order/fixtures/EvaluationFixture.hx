@@ -11,10 +11,9 @@ class EvaluationFixture {
 		return value;
 	}
 
-	static function consumePair(first:Bool, second:Bool):Void {
-		first;
-		second;
-	}
+	/** Prove both left-to-right call arguments reached their intended values. */
+	static function consumePair(first:Bool, second:Bool):Bool
+		return first && !second;
 
 	static function spoilShortCircuit():Bool {
 		shortCircuitIntact = false;
@@ -53,9 +52,9 @@ class EvaluationFixture {
 
 	static function run():UInt {
 		callFlag = false;
-		consumePair(setCallFlag(true), setCallFlag(false));
+		var callArgumentsIntact = consumePair(setCallFlag(true), callFlag ? setCallFlag(false) : setCallFlag(true));
 
-		shortCircuitIntact = true;
+		shortCircuitIntact = callArgumentsIntact;
 		false
 		&& spoilShortCircuit();
 		true

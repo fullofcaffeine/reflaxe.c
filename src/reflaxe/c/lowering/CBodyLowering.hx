@@ -695,6 +695,13 @@ private typedef LoweredValue = {
 	final mapping:CBodyValueType;
 }
 
+/** One left-to-right call value, optionally saved across later argument flow. */
+private typedef StagedCallArgument = {
+	final value:LoweredValue;
+	final localId:Null<String>;
+	final position:Position;
+}
+
 private typedef LoweredPlace = {
 	final place:HxcIRPlace;
 	final mapping:CBodyValueType;
@@ -3664,7 +3671,7 @@ private class FunctionBuilder {
 		if (call.arguments.length != target.parameters.length) {
 			return unsupported(expression, 'TCall(argument-count=${call.arguments.length},expected=${target.parameters.length},target=$targetId)');
 		}
-		final arguments:Array<String> = [];
+		final stagedArguments:Array<StagedCallArgument> = [];
 		for (index in 0...call.arguments.length) {
 			final argumentExpression = call.arguments[index];
 			if (referencesStackConstructedValue(argumentExpression)) {
@@ -3672,8 +3679,10 @@ private class FunctionBuilder {
 			}
 			final value = lowerValue(argumentExpression);
 			final converted = coerce(value, target.parameters[index].mapping, argumentExpression.pos, 'TCall(argument:$index,target=$targetId)');
-			arguments.push(converted.id);
+			stagedArguments.push(stageCallArgument(converted, argumentExpression, laterExpressionCreatesFlow(call.arguments, index),
+				'static-call-argument-$index'));
 		}
+		final arguments = restoreCallArguments(stagedArguments, "static-call-argument");
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		final returnType = target.returnMapping.irType;
 		if (returnType == IRTVoid) {
@@ -3829,14 +3838,15 @@ private class FunctionBuilder {
 		if (argumentExpressions.length != target.parameters.length)
 			return invalidAbi(expression,
 				'Imported C function `${target.haxePath}` expects ${target.parameters.length} argument(s), received ${argumentExpressions.length}.');
-		final arguments:Array<String> = [];
+		final stagedArguments:Array<StagedCallArgument> = [];
 		for (index in 0...argumentExpressions.length) {
 			final argument = argumentExpressions[index];
 			final expected = target.parameters[index];
 			final value = expected.isCString() ? lowerCStringLiteral(argument, target,
 				index) : coerce(lowerValue(argument, expected), expected, argument.pos, 'native-call:${target.id}:argument:$index');
-			arguments.push(value.id);
+			stagedArguments.push(stageCallArgument(value, argument, laterExpressionCreatesFlow(argumentExpressions, index), 'native-call-argument-$index'));
 		}
+		final arguments = restoreCallArguments(stagedArguments, "native-call-argument");
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
 		if (target.returnType.irType == IRTVoid) {
 			appendInstruction(null, IRIOCall({
@@ -4145,6 +4155,15 @@ private class FunctionBuilder {
 		temporaryRequests.set(valueId, request);
 	}
 
+	/**
+	 * Preserve one lowered value across a branch or join in automatic storage.
+	 *
+	 * An HxcIR temporary belongs to the basic block that computed it, so a later
+	 * branch cannot safely name it from its join block. This helper creates a
+	 * typed local, records its deterministic C name, and initializes it before
+	 * control leaves the current block. Span values also reserve the paired
+	 * length name because their C representation is a pointer plus a length.
+	 */
 	function createFlowLocal(mapping:CBodyValueType, initialValueId:String, source:HxcSourceSpan, role:String):String {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
@@ -4159,6 +4178,18 @@ private class FunctionBuilder {
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 		context.symbols.register(request);
 		localRequests.set(localId, request);
+		switch mapping.kind {
+			case CBVKSpan(_, _):
+				// A C span is emitted as two values: its pointer and its length.
+				// Register both names when control flow saves the span, just as we
+				// do for source locals and parameters. The matching HxcIR
+				// initializer carries both values across the join.
+				final lengthRequest = new CSymbolRequest(CSKTemporary, input.declarationPath.split(".").concat([input.fieldName, role, "length"]),
+					CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
+				context.symbols.register(lengthRequest);
+				spanLengthRequests.set(localId, lengthRequest);
+			case _:
+		}
 		appendInstruction(null, IRIOInitialize(IRPLocal(localId), initialValueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
 		return localId;
 	}
@@ -4350,6 +4381,46 @@ private class FunctionBuilder {
 			case TReturn(value): value != null && expressionCreatesFlow(value);
 			case _: false;
 		};
+	}
+
+	/** True when an argument to the right can move lowering into another block. */
+	function laterExpressionCreatesFlow(expressions:Array<TypedExpr>, index:Int):Bool {
+		var candidate = index + 1;
+		while (candidate < expressions.length) {
+			if (expressionCreatesFlow(expressions[candidate]))
+				return true;
+			candidate++;
+		}
+		return false;
+	}
+
+	/**
+	 * Save a completed argument before a later argument introduces control flow.
+	 *
+	 * Haxe evaluates call arguments from left to right. HxcIR values belong to
+	 * one basic block, so a value computed before a conditional cannot be named
+	 * directly in the conditional's join block. An automatic local preserves the
+	 * value and its order; `restoreCallArguments` reloads it only after every
+	 * later argument has completed.
+	 */
+	function stageCallArgument(value:LoweredValue, expression:TypedExpr, crossesFlow:Bool, role:String):StagedCallArgument {
+		final localId = crossesFlow ? createFlowLocal(value.mapping, value.id, HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), role) : null;
+		return {value: value, localId: localId, position: expression.pos};
+	}
+
+	/** Reload staged arguments in the final block without changing source effects. */
+	function restoreCallArguments(arguments:Array<StagedCallArgument>, role:String):Array<String> {
+		final restored:Array<String> = [];
+		for (index => argument in arguments) {
+			if (argument.localId == null) {
+				restored.push(argument.value.id);
+			} else {
+				final value = loadPlace({place: IRPLocal(argument.localId), mapping: argument.value.mapping, mutable: true}, argument.position,
+					'$role-$index-load');
+				restored.push(value.id);
+			}
+		}
+		return restored;
 	}
 
 	function anyExpressionCreatesFlow(expressions:Array<TypedExpr>):Bool {

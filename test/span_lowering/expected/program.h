@@ -47,6 +47,8 @@ uint8_t hxc_SpanFixture_readAt(const uint8_t *hxc_values, size_t hxc_length, int
 
 uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
 
+uint8_t hxc_SpanFixture_spanBeforeConditionalArgument(bool hxc_selectThird);
+
 uint8_t hxc_SpanFixture_zeroedGridCell(void);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

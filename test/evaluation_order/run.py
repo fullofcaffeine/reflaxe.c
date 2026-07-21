@@ -479,6 +479,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     call_markers = (
         'direct("function.EvaluationFixture.setCallFlag")',
         'direct("function.EvaluationFixture.setCallFlag")',
+        'direct("function.EvaluationFixture.setCallFlag")',
         'direct("function.EvaluationFixture.consumePair")',
     )
     positions: list[int] = []
@@ -495,6 +496,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "short-circuit-store",
         "conditional-true-store",
         "conditional-false-store",
+        "static-call-argument-0-initialize",
+        "static-call-argument-0-load",
         "terminator switch",
         "while-condition",
         "do-condition",
@@ -507,8 +510,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise EvaluationOrderFailure(f"HxcIR lost explicit sequencing marker {marker!r}")
     if len(re.findall(r'^    block "[^"]+\.while-condition"', run_ir, re.MULTILINE)) != 2:
         raise EvaluationOrderFailure("source while and range-for condition blocks drifted")
-    if run_ir.count('direct("function.EvaluationFixture.setCallFlag")') != 4:
-        raise EvaluationOrderFailure("required short-circuit RHS calls drifted")
+    if run_ir.count('direct("function.EvaluationFixture.setCallFlag")') != 5:
+        raise EvaluationOrderFailure("required sequenced conditional and short-circuit calls drifted")
     if re.search(
         r'instruction "[^"]+\.store" result=- store place=local\(', run_ir
     ) is None:
@@ -563,8 +566,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     ]
     if -1 in c_calls or c_calls != sorted(c_calls):
         raise EvaluationOrderFailure("generated C did not materialize call arguments left-to-right")
-    if run_c.count(f"{set_flag_name}(") != 4:
-        raise EvaluationOrderFailure("generated C lost a required short-circuit RHS call")
+    if run_c.count(f"{set_flag_name}(") != 5:
+        raise EvaluationOrderFailure("generated C lost a required sequenced RHS call")
     if "global_load_result" not in run_c:
         raise EvaluationOrderFailure("generated C lost stable loads")
 

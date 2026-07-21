@@ -1,5 +1,5 @@
 hxcir schema=10
-module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-95:3
+module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-108:3
   function "function.SpanFixture.checkedAt" name="SpanFixture.checkedAt" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":32:43-36:3
     parameter "parameter.0" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":32:43-36:3
     local "local.1" type=fixed-array(length=4,witness="Length4",element=i32) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":33:3-33:51
@@ -84,32 +84,34 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-95:3
       terminator return value="value.0" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":52:3-52:47
     end block "entry"
   end function "function.SpanFixture.forwardReplace"
-  function "function.SpanFixture.linearIndex" name="SpanFixture.linearIndex" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":63:55-65:3
-    parameter "parameter.0" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":63:55-65:3
-    parameter "parameter.1" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":63:55-65:3
-    parameter "parameter.2" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":63:55-65:3
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":63:55-65:3
-      instruction "instruction.0.constant" result="value.0":i32 constant value=int(32) @"test/span_lowering/fixtures/SpanFixture.hx":64:14-64:24
-      instruction "instruction.1.constant" result="value.1":i32 constant value=int(16) @"test/span_lowering/fixtures/SpanFixture.hx":64:32-64:43
-      instruction "instruction.2.binary" result="value.2":i32 binary operation="haxe.i32.multiply" left="value.1" right="parameter.2" implementation=program-local("hxc.i32.multiply.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":64:32-64:47
-      instruction "instruction.3.binary" result="value.3":i32 binary operation="haxe.i32.add" left="parameter.1" right="value.2" implementation=program-local("hxc.i32.add.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":64:28-64:47
-      instruction "instruction.4.binary" result="value.4":i32 binary operation="haxe.i32.multiply" left="value.0" right="value.3" implementation=program-local("hxc.i32.multiply.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":64:14-64:48
-      instruction "instruction.5.binary" result="value.5":i32 binary operation="haxe.i32.add" left="parameter.0" right="value.4" implementation=program-local("hxc.i32.add.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":64:10-64:48
-      terminator return value="value.5" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":64:3-64:48
+  function "function.SpanFixture.linearIndex" name="SpanFixture.linearIndex" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":75:55-77:3
+    parameter "parameter.0" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":75:55-77:3
+    parameter "parameter.1" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":75:55-77:3
+    parameter "parameter.2" type=i32 @"test/span_lowering/fixtures/SpanFixture.hx":75:55-77:3
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":75:55-77:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(32) @"test/span_lowering/fixtures/SpanFixture.hx":76:14-76:24
+      instruction "instruction.1.constant" result="value.1":i32 constant value=int(16) @"test/span_lowering/fixtures/SpanFixture.hx":76:32-76:43
+      instruction "instruction.2.binary" result="value.2":i32 binary operation="haxe.i32.multiply" left="value.1" right="parameter.2" implementation=program-local("hxc.i32.multiply.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":76:32-76:47
+      instruction "instruction.3.binary" result="value.3":i32 binary operation="haxe.i32.add" left="parameter.1" right="value.2" implementation=program-local("hxc.i32.add.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":76:28-76:47
+      instruction "instruction.4.binary" result="value.4":i32 binary operation="haxe.i32.multiply" left="value.0" right="value.3" implementation=program-local("hxc.i32.multiply.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":76:14-76:48
+      instruction "instruction.5.binary" result="value.5":i32 binary operation="haxe.i32.add" left="parameter.0" right="value.4" implementation=program-local("hxc.i32.add.wrapping") @"test/span_lowering/fixtures/SpanFixture.hx":76:10-76:48
+      terminator return value="value.5" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":76:3-76:48
     end block "entry"
   end function "function.SpanFixture.linearIndex"
-  function "function.SpanFixture.main" name="SpanFixture.main" returns=void failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":88:30-95:3
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":88:30-95:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.SpanFixture.mutableSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":89:3-89:15
-      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.SpanFixture.constSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":90:3-90:13
-      instruction "instruction.2.constant" result="value.2":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":91:13-91:14
-      instruction "instruction.3.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.checkedAt") arguments=["value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":91:3-91:15
-      instruction "instruction.4.call" result="value.4":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":92:22-92:38
-      instruction "instruction.5.call" result="value.5":u8 call dispatch=direct("function.SpanFixture.parameterRoundTrip") arguments=["value.4"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":92:3-92:39
-      instruction "instruction.6.call" result="value.6":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":93:3-93:19
-      instruction "instruction.7.call" result="value.7":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":94:19-94:35
-      instruction "instruction.8.call" result="value.8":u8 call dispatch=direct("function.SpanFixture.mutatedGridCell") arguments=["value.7"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":94:3-94:36
-      terminator return value=none cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":88:30-95:3
+  function "function.SpanFixture.main" name="SpanFixture.main" returns=void failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":100:30-108:3
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":100:30-108:3
+      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.SpanFixture.mutableSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":101:3-101:15
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.SpanFixture.constSum") arguments=[] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":102:3-102:13
+      instruction "instruction.2.constant" result="value.2":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":103:13-103:14
+      instruction "instruction.3.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.checkedAt") arguments=["value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":103:3-103:15
+      instruction "instruction.4.call" result="value.4":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":104:22-104:38
+      instruction "instruction.5.call" result="value.5":u8 call dispatch=direct("function.SpanFixture.parameterRoundTrip") arguments=["value.4"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":104:3-104:39
+      instruction "instruction.6.constant" result="value.6":bool constant value=bool(true) @"test/span_lowering/fixtures/SpanFixture.hx":105:33-105:37
+      instruction "instruction.7.call" result="value.7":u8 call dispatch=direct("function.SpanFixture.spanBeforeConditionalArgument") arguments=["value.6"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":105:3-105:38
+      instruction "instruction.8.call" result="value.8":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":106:3-106:19
+      instruction "instruction.9.call" result="value.9":u8 call dispatch=direct("function.SpanFixture.zeroedGridCell") arguments=[] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":107:19-107:35
+      instruction "instruction.10.call" result="value.10":u8 call dispatch=direct("function.SpanFixture.mutatedGridCell") arguments=["value.9"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":107:3-107:36
+      terminator return value=none cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":100:30-108:3
     end block "entry"
   end function "function.SpanFixture.main"
   function "function.SpanFixture.mutableSum" name="SpanFixture.mutableSum" returns=i32 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-20:3
@@ -161,82 +163,82 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-95:3
       terminator return value="value.18" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":19:3-19:15
     end block "block.3.span-loop-exit"
   end function "function.SpanFixture.mutableSum"
-  function "function.SpanFixture.mutatedGridCell" name="SpanFixture.mutatedGridCell" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":73:59-86:3
-    parameter "parameter.0" type=u8 @"test/span_lowering/fixtures/SpanFixture.hx":73:59-86:3
-    local "local.1" type=fixed-array(length=16384,witness="GridVolume",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":74:3-74:93
-    local "local.2" type=i32 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":75:3-75:43
-    local "local.3" type=span(mutable,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":77:3-77:43
-    local "local.4" type=u8 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":79:3-79:34
-    local "local.5" type=abi-int(size) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-    local "local.6" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":83:3-83:54
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":73:59-86:3
-      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":74:3-74:93
-      instruction "instruction.1.constant" result="value.0":i32 constant value=int(31) @"test/span_lowering/fixtures/SpanFixture.hx":75:31-75:33
-      instruction "instruction.2.constant" result="value.1":i32 constant value=int(15) @"test/span_lowering/fixtures/SpanFixture.hx":75:35-75:37
-      instruction "instruction.3.constant" result="value.2":i32 constant value=int(31) @"test/span_lowering/fixtures/SpanFixture.hx":75:39-75:41
-      instruction "instruction.4.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.linearIndex") arguments=["value.0","value.1","value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":75:19-75:42
-      instruction "instruction.5.initialize" result=- initialize place=local("local.2") value="value.3" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":75:3-75:43
-      instruction "instruction.6.load" result="value.4":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":76:10-76:15
-      instruction "instruction.7.collection-bounds" result=- bounds-check collection=local("local.1") index="value.4" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":76:3-76:30
-      instruction "instruction.8.store" result=- store place=index(local("local.1"),"value.4") value="parameter.0" @"test/span_lowering/fixtures/SpanFixture.hx":76:3-76:30
-      instruction "instruction.9.span-initialize" result=- initialize-span place=local("local.3") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":77:3-77:43
-      instruction "instruction.10.load" result="value.5":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":78:11-78:16
-      instruction "instruction.11.collection-bounds" result=- bounds-check collection=local("local.3") index="value.5" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":78:3-78:31
-      instruction "instruction.12.store" result=- store place=index(local("local.3"),"value.5") value="parameter.0" @"test/span_lowering/fixtures/SpanFixture.hx":78:3-78:31
-      instruction "instruction.13.constant" result="value.6":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":79:31-79:32
-      instruction "instruction.14.collection-bounds" result=- bounds-check collection=local("local.1") index="value.6" policy=static-proof(length=16384,index=0) @"test/span_lowering/fixtures/SpanFixture.hx":79:24-79:33
-      instruction "instruction.15.collection-index-load" result="value.7":u8 load place=index(local("local.1"),"value.6") @"test/span_lowering/fixtures/SpanFixture.hx":79:24-79:33
-      instruction "instruction.16.initialize" result=- initialize place=local("local.4") value="value.7" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":79:3-79:34
-      instruction "instruction.17.span-loop-zero" result="value.8":abi-int(size) constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.18.span-loop-index-initialize" result=- initialize place=local("local.5") value="value.8" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      terminator jump edge(target="block.0.span-loop-condition",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
+  function "function.SpanFixture.mutatedGridCell" name="SpanFixture.mutatedGridCell" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":85:59-98:3
+    parameter "parameter.0" type=u8 @"test/span_lowering/fixtures/SpanFixture.hx":85:59-98:3
+    local "local.1" type=fixed-array(length=16384,witness="GridVolume",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":86:3-86:93
+    local "local.2" type=i32 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":87:3-87:43
+    local "local.3" type=span(mutable,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":89:3-89:43
+    local "local.4" type=u8 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":91:3-91:34
+    local "local.5" type=abi-int(size) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+    local "local.6" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":95:3-95:54
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":85:59-98:3
+      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":86:3-86:93
+      instruction "instruction.1.constant" result="value.0":i32 constant value=int(31) @"test/span_lowering/fixtures/SpanFixture.hx":87:31-87:33
+      instruction "instruction.2.constant" result="value.1":i32 constant value=int(15) @"test/span_lowering/fixtures/SpanFixture.hx":87:35-87:37
+      instruction "instruction.3.constant" result="value.2":i32 constant value=int(31) @"test/span_lowering/fixtures/SpanFixture.hx":87:39-87:41
+      instruction "instruction.4.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.linearIndex") arguments=["value.0","value.1","value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":87:19-87:42
+      instruction "instruction.5.initialize" result=- initialize place=local("local.2") value="value.3" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":87:3-87:43
+      instruction "instruction.6.load" result="value.4":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":88:10-88:15
+      instruction "instruction.7.collection-bounds" result=- bounds-check collection=local("local.1") index="value.4" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":88:3-88:30
+      instruction "instruction.8.store" result=- store place=index(local("local.1"),"value.4") value="parameter.0" @"test/span_lowering/fixtures/SpanFixture.hx":88:3-88:30
+      instruction "instruction.9.span-initialize" result=- initialize-span place=local("local.3") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":89:3-89:43
+      instruction "instruction.10.load" result="value.5":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":90:11-90:16
+      instruction "instruction.11.collection-bounds" result=- bounds-check collection=local("local.3") index="value.5" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":90:3-90:31
+      instruction "instruction.12.store" result=- store place=index(local("local.3"),"value.5") value="parameter.0" @"test/span_lowering/fixtures/SpanFixture.hx":90:3-90:31
+      instruction "instruction.13.constant" result="value.6":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":91:31-91:32
+      instruction "instruction.14.collection-bounds" result=- bounds-check collection=local("local.1") index="value.6" policy=static-proof(length=16384,index=0) @"test/span_lowering/fixtures/SpanFixture.hx":91:24-91:33
+      instruction "instruction.15.collection-index-load" result="value.7":u8 load place=index(local("local.1"),"value.6") @"test/span_lowering/fixtures/SpanFixture.hx":91:24-91:33
+      instruction "instruction.16.initialize" result=- initialize place=local("local.4") value="value.7" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":91:3-91:34
+      instruction "instruction.17.span-loop-zero" result="value.8":abi-int(size) constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.18.span-loop-index-initialize" result=- initialize place=local("local.5") value="value.8" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      terminator jump edge(target="block.0.span-loop-condition",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
     end block "entry"
-    block "block.0.span-loop-condition" @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.19.span-loop-condition-index" result="value.9":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.20.span-loop-length" result="value.10":abi-int(size) constant value=int(16384) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.21.span-loop-condition" result="value.11":bool binary operation="hxc.size.less.span-index" left="value.9" right="value.10" implementation=static @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      terminator branch condition="value.11" true=edge(target="block.1.span-loop-body",arguments=[],cleanup=[]) false=edge(target="block.3.span-loop-exit",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
+    block "block.0.span-loop-condition" @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.19.span-loop-condition-index" result="value.9":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.20.span-loop-length" result="value.10":abi-int(size) constant value=int(16384) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.21.span-loop-condition" result="value.11":bool binary operation="hxc.size.less.span-index" left="value.9" right="value.10" implementation=static @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      terminator branch condition="value.11" true=edge(target="block.1.span-loop-body",arguments=[],cleanup=[]) false=edge(target="block.3.span-loop-exit",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
     end block "block.0.span-loop-condition"
-    block "block.1.span-loop-body" @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.22.span-loop-body-index" result="value.12":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.23.span-loop-bounds" result=- bounds-check collection=local("local.3") index="value.12" policy=loop-guarded(guard="instruction.21.span-loop-condition",index-local="local.5",length=16384) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.24.span-loop-element" result="value.13":u8 load place=index(local("local.3"),"value.12") @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.25.store" result=- store place=local("local.4") value="value.13" @"test/span_lowering/fixtures/SpanFixture.hx":81:4-81:20
-      terminator jump edge(target="block.2.span-loop-increment",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
+    block "block.1.span-loop-body" @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.22.span-loop-body-index" result="value.12":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.23.span-loop-bounds" result=- bounds-check collection=local("local.3") index="value.12" policy=loop-guarded(guard="instruction.21.span-loop-condition",index-local="local.5",length=16384) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.24.span-loop-element" result="value.13":u8 load place=index(local("local.3"),"value.12") @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.25.store" result=- store place=local("local.4") value="value.13" @"test/span_lowering/fixtures/SpanFixture.hx":93:4-93:20
+      terminator jump edge(target="block.2.span-loop-increment",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
     end block "block.1.span-loop-body"
-    block "block.2.span-loop-increment" @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.26.span-loop-increment-index" result="value.14":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.27.span-loop-one" result="value.15":abi-int(size) constant value=int(1) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.28.span-loop-increment" result="value.16":abi-int(size) binary operation="hxc.size.add-one.span-index-proven" left="value.14" right="value.15" implementation=static @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.29.span-loop-increment-store" result=- store place=local("local.5") value="value.16" @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      terminator jump edge(target="block.0.span-loop-condition",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
+    block "block.2.span-loop-increment" @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.26.span-loop-increment-index" result="value.14":abi-int(size) load place=local("local.5") @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.27.span-loop-one" result="value.15":abi-int(size) constant value=int(1) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.28.span-loop-increment" result="value.16":abi-int(size) binary operation="hxc.size.add-one.span-index-proven" left="value.14" right="value.15" implementation=static @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.29.span-loop-increment-store" result=- store place=local("local.5") value="value.16" @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      terminator jump edge(target="block.0.span-loop-condition",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
     end block "block.2.span-loop-increment"
-    block "block.3.span-loop-exit" @"test/span_lowering/fixtures/SpanFixture.hx":80:17-80:24
-      instruction "instruction.30.span-initialize" result=- initialize-span place=local("local.6") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":83:3-83:54
-      instruction "instruction.31.load" result="value.17":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":84:23-84:28
-      instruction "instruction.32.collection-bounds" result=- bounds-check collection=local("local.6") index="value.17" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":84:14-84:29
-      instruction "instruction.33.collection-index-load" result="value.18":u8 load place=index(local("local.6"),"value.17") @"test/span_lowering/fixtures/SpanFixture.hx":84:14-84:29
-      instruction "instruction.34.store" result=- store place=local("local.4") value="value.18" @"test/span_lowering/fixtures/SpanFixture.hx":84:3-84:29
-      instruction "instruction.35.load" result="value.19":u8 load place=local("local.4") @"test/span_lowering/fixtures/SpanFixture.hx":85:10-85:18
-      terminator return value="value.19" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":85:3-85:18
+    block "block.3.span-loop-exit" @"test/span_lowering/fixtures/SpanFixture.hx":92:17-92:24
+      instruction "instruction.30.span-initialize" result=- initialize-span place=local("local.6") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":95:3-95:54
+      instruction "instruction.31.load" result="value.17":i32 load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":96:23-96:28
+      instruction "instruction.32.collection-bounds" result=- bounds-check collection=local("local.6") index="value.17" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":96:14-96:29
+      instruction "instruction.33.collection-index-load" result="value.18":u8 load place=index(local("local.6"),"value.17") @"test/span_lowering/fixtures/SpanFixture.hx":96:14-96:29
+      instruction "instruction.34.store" result=- store place=local("local.4") value="value.18" @"test/span_lowering/fixtures/SpanFixture.hx":96:3-96:29
+      instruction "instruction.35.load" result="value.19":u8 load place=local("local.4") @"test/span_lowering/fixtures/SpanFixture.hx":97:10-97:18
+      terminator return value="value.19" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":97:3-97:18
     end block "block.3.span-loop-exit"
   end function "function.SpanFixture.mutatedGridCell"
-  function "function.SpanFixture.parameterRoundTrip" name="SpanFixture.parameterRoundTrip" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":55:62-61:3
-    parameter "parameter.0" type=u8 @"test/span_lowering/fixtures/SpanFixture.hx":55:62-61:3
-    local "local.1" type=fixed-array(length=4,witness="Length4",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":56:3-56:54
-    local "local.2" type=span(mutable,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":57:3-57:43
-    local "local.3" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":59:3-59:54
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":55:62-61:3
-      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":56:3-56:54
-      instruction "instruction.1.span-initialize" result=- initialize-span place=local("local.2") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":57:3-57:43
-      instruction "instruction.2.load-span-borrow" result="value.0":span(mutable,u8) load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":58:18-58:25
-      instruction "instruction.3.constant" result="value.1":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":58:27-58:28
-      instruction "instruction.4.call" result="value.2":u8 call dispatch=direct("function.SpanFixture.forwardReplace") arguments=["value.0","value.1","parameter.0"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":58:3-58:42
-      instruction "instruction.5.span-initialize" result=- initialize-span place=local("local.3") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":59:3-59:54
-      instruction "instruction.6.load-span-borrow" result="value.3":span(const,u8) load place=local("local.3") @"test/span_lowering/fixtures/SpanFixture.hx":60:22-60:30
-      instruction "instruction.7.constant" result="value.4":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":60:32-60:33
-      instruction "instruction.8.call" result="value.5":u8 call dispatch=direct("function.SpanFixture.forwardRead") arguments=["value.3","value.4"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":60:10-60:34
-      terminator return value="value.5" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":60:3-60:34
+  function "function.SpanFixture.parameterRoundTrip" name="SpanFixture.parameterRoundTrip" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":67:62-73:3
+    parameter "parameter.0" type=u8 @"test/span_lowering/fixtures/SpanFixture.hx":67:62-73:3
+    local "local.1" type=fixed-array(length=4,witness="Length4",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":68:3-68:54
+    local "local.2" type=span(mutable,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":69:3-69:43
+    local "local.3" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":71:3-71:54
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":67:62-73:3
+      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":68:3-68:54
+      instruction "instruction.1.span-initialize" result=- initialize-span place=local("local.2") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":69:3-69:43
+      instruction "instruction.2.load-span-borrow" result="value.0":span(mutable,u8) load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":70:18-70:25
+      instruction "instruction.3.constant" result="value.1":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":70:27-70:28
+      instruction "instruction.4.call" result="value.2":u8 call dispatch=direct("function.SpanFixture.forwardReplace") arguments=["value.0","value.1","parameter.0"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":70:3-70:42
+      instruction "instruction.5.span-initialize" result=- initialize-span place=local("local.3") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":71:3-71:54
+      instruction "instruction.6.load-span-borrow" result="value.3":span(const,u8) load place=local("local.3") @"test/span_lowering/fixtures/SpanFixture.hx":72:22-72:30
+      instruction "instruction.7.constant" result="value.4":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":72:32-72:33
+      instruction "instruction.8.call" result="value.5":u8 call dispatch=direct("function.SpanFixture.forwardRead") arguments=["value.3","value.4"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":72:10-72:34
+      terminator return value="value.5" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":72:3-72:34
     end block "entry"
   end function "function.SpanFixture.parameterRoundTrip"
   function "function.SpanFixture.readAt" name="SpanFixture.readAt" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":38:67-40:3
@@ -264,19 +266,59 @@ module "SpanFixture" @"test/span_lowering/fixtures/SpanFixture.hx":11:35-95:3
       terminator return value="value.0" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":44:3-44:23
     end block "entry"
   end function "function.SpanFixture.replaceAt"
-  function "function.SpanFixture.zeroedGridCell" name="SpanFixture.zeroedGridCell" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":67:41-71:3
-    local "local.0" type=fixed-array(length=16384,witness="GridVolume",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":68:3-68:93
-    local "local.1" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":69:3-69:50
-    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":67:41-71:3
-      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.0") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":68:3-68:93
-      instruction "instruction.1.span-initialize" result=- initialize-span place=local("local.1") source=local("local.0") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":69:3-69:50
-      instruction "instruction.2.constant" result="value.0":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":70:27-70:28
-      instruction "instruction.3.constant" result="value.1":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":70:30-70:31
-      instruction "instruction.4.constant" result="value.2":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":70:33-70:34
-      instruction "instruction.5.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.linearIndex") arguments=["value.0","value.1","value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":70:15-70:35
-      instruction "instruction.6.collection-bounds" result=- bounds-check collection=local("local.1") index="value.3" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":70:10-70:36
-      instruction "instruction.7.collection-index-load" result="value.4":u8 load place=index(local("local.1"),"value.3") @"test/span_lowering/fixtures/SpanFixture.hx":70:10-70:36
-      terminator return value="value.4" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":70:3-70:36
+  function "function.SpanFixture.spanBeforeConditionalArgument" name="SpanFixture.spanBeforeConditionalArgument" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":56:72-65:3
+    parameter "parameter.0" type=bool @"test/span_lowering/fixtures/SpanFixture.hx":56:72-65:3
+    local "local.1" type=fixed-array(length=4,witness="Length4",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":57:3-62:5
+    local "local.2" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":63:3-63:54
+    local "local.3" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":64:17-64:25
+    local "local.4" type=i32 storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":56:72-65:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":58:24-58:25
+      instruction "instruction.1.integer-conversion-modulo" result="value.1":u8 convert value="value.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/span_lowering/fixtures/SpanFixture.hx":58:4-58:26
+      instruction "instruction.2.constant" result="value.2":i32 constant value=int(4) @"test/span_lowering/fixtures/SpanFixture.hx":59:24-59:25
+      instruction "instruction.3.integer-conversion-modulo" result="value.3":u8 convert value="value.2" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/span_lowering/fixtures/SpanFixture.hx":59:4-59:26
+      instruction "instruction.4.constant" result="value.4":i32 constant value=int(8) @"test/span_lowering/fixtures/SpanFixture.hx":60:24-60:25
+      instruction "instruction.5.integer-conversion-modulo" result="value.5":u8 convert value="value.4" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/span_lowering/fixtures/SpanFixture.hx":60:4-60:26
+      instruction "instruction.6.constant" result="value.6":i32 constant value=int(16) @"test/span_lowering/fixtures/SpanFixture.hx":61:24-61:26
+      instruction "instruction.7.integer-conversion-modulo" result="value.7":u8 convert value="value.6" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/span_lowering/fixtures/SpanFixture.hx":61:4-61:27
+      instruction "instruction.8.fixed-array-initialize" result=- initialize-fixed-array place=local("local.1") values=["value.1","value.3","value.5","value.7"] transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":57:3-62:5
+      instruction "instruction.9.span-initialize" result=- initialize-span place=local("local.2") source=local("local.1") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":63:3-63:54
+      instruction "instruction.10.load-span-borrow" result="value.8":span(const,u8) load place=local("local.2") @"test/span_lowering/fixtures/SpanFixture.hx":64:17-64:25
+      instruction "instruction.11.static-call-argument-0-initialize" result=- initialize place=local("local.3") value="value.8" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":64:17-64:25
+      instruction "instruction.12.conditional-default" result="value.9":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      instruction "instruction.13.conditional-result-initialize" result=- initialize place=local("local.4") value="value.9" transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      terminator branch condition="parameter.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+    end block "entry"
+    block "block.0.conditional-true" @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      instruction "instruction.14.constant" result="value.10":i32 constant value=int(2) @"test/span_lowering/fixtures/SpanFixture.hx":64:41-64:42
+      instruction "instruction.15.conditional-true-store" result=- store place=local("local.4") value="value.10" @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+    end block "block.0.conditional-true"
+    block "block.1.conditional-false" @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      instruction "instruction.16.constant" result="value.11":i32 constant value=int(1) @"test/span_lowering/fixtures/SpanFixture.hx":64:45-64:46
+      instruction "instruction.17.conditional-false-store" result=- store place=local("local.4") value="value.11" @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+    end block "block.1.conditional-false"
+    block "block.2.conditional-join" @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      instruction "instruction.18.conditional-load" result="value.12":i32 load place=local("local.4") @"test/span_lowering/fixtures/SpanFixture.hx":64:27-64:46
+      instruction "instruction.19.static-call-argument-0-load" result="value.13":span(const,u8) load place=local("local.3") @"test/span_lowering/fixtures/SpanFixture.hx":64:17-64:25
+      instruction "instruction.20.call" result="value.14":u8 call dispatch=direct("function.SpanFixture.readAt") arguments=["value.13","value.12"] returns=u8 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":64:10-64:47
+      terminator return value="value.14" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":64:3-64:47
+    end block "block.2.conditional-join"
+  end function "function.SpanFixture.spanBeforeConditionalArgument"
+  function "function.SpanFixture.zeroedGridCell" name="SpanFixture.zeroedGridCell" returns=u8 failure=infallible entry="entry" @"test/span_lowering/fixtures/SpanFixture.hx":79:41-83:3
+    local "local.0" type=fixed-array(length=16384,witness="GridVolume",element=u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":80:3-80:93
+    local "local.1" type=span(const,u8) storage=automatic state=uninitialized @"test/span_lowering/fixtures/SpanFixture.hx":81:3-81:50
+    block "entry" @"test/span_lowering/fixtures/SpanFixture.hx":79:41-83:3
+      instruction "instruction.0.fixed-array-zero-initialize" result=- zero-initialize-fixed-array place=local("local.0") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":80:3-80:93
+      instruction "instruction.1.span-initialize" result=- initialize-span place=local("local.1") source=local("local.0") transition=uninitialized->initialized @"test/span_lowering/fixtures/SpanFixture.hx":81:3-81:50
+      instruction "instruction.2.constant" result="value.0":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":82:27-82:28
+      instruction "instruction.3.constant" result="value.1":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":82:30-82:31
+      instruction "instruction.4.constant" result="value.2":i32 constant value=int(0) @"test/span_lowering/fixtures/SpanFixture.hx":82:33-82:34
+      instruction "instruction.5.call" result="value.3":i32 call dispatch=direct("function.SpanFixture.linearIndex") arguments=["value.0","value.1","value.2"] returns=i32 failure=none @"test/span_lowering/fixtures/SpanFixture.hx":82:15-82:35
+      instruction "instruction.6.collection-bounds" result=- bounds-check collection=local("local.1") index="value.3" policy=checked-abort(profile="portable",build="debug") @"test/span_lowering/fixtures/SpanFixture.hx":82:10-82:36
+      instruction "instruction.7.collection-index-load" result="value.4":u8 load place=index(local("local.1"),"value.3") @"test/span_lowering/fixtures/SpanFixture.hx":82:10-82:36
+      terminator return value="value.4" cleanup=[] @"test/span_lowering/fixtures/SpanFixture.hx":82:3-82:36
     end block "entry"
   end function "function.SpanFixture.zeroedGridCell"
 end module "SpanFixture"

@@ -59,6 +59,7 @@ class SpanLoweringProbe {
 			"parameterRoundTrip",
 			"readAt",
 			"replaceAt",
+			"spanBeforeConditionalArgument",
 			"zeroedGridCell"
 		];
 		final inputs:Array<CBodyFunctionInput> = [];

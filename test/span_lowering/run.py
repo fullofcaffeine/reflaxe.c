@@ -497,6 +497,7 @@ def function_names(symbols: dict[str, object]) -> dict[str, str]:
         "parameterRoundTrip",
         "readAt",
         "replaceAt",
+        "spanBeforeConditionalArgument",
         "zeroedGridCell",
     }:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
@@ -522,11 +523,11 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
             raise SpanLoweringFailure(f"HxcIR retained iterator machinery {forbidden!r}")
     expected_counts = {
         "type=fixed-array(length=4,witness=\"Length4\",element=i32)": 3,
-        "type=fixed-array(length=4,witness=\"Length4\",element=u8)": 1,
+        "type=fixed-array(length=4,witness=\"Length4\",element=u8)": 2,
         "type=fixed-array(length=16384,witness=\"GridVolume\",element=u8)": 2,
-        " result=- initialize-fixed-array place=": 3,
+        " result=- initialize-fixed-array place=": 4,
         "zero-initialize-fixed-array": 3,
-        "initialize-span": 8,
+        "initialize-span": 9,
         "span-parameter-borrow": 4,
         "bounds-check": 14,
         "static-proof": 3,
@@ -534,6 +535,8 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
         'index-local="local.3",length=4': 2,
         "checked-abort": 8,
         'operation="hxc.size.add-one.span-index-proven"': 3,
+        "static-call-argument-0-initialize": 1,
+        "static-call-argument-0-load": 1,
     }
     for marker, expected in expected_counts.items():
         actual = hxcir.count(marker)
@@ -555,7 +558,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
             raise SpanLoweringFailure(f"direct span loop lost {marker!r}")
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 12:
+    if not isinstance(functions, list) or len(functions) != 13:
         raise SpanLoweringFailure("span function inventory drifted")
     fields = [item.get("field") for item in functions if isinstance(item, dict)]
     if fields != [
@@ -570,6 +573,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
         "parameterRoundTrip",
         "readAt",
         "replaceAt",
+        "spanBeforeConditionalArgument",
         "zeroedGridCell",
     ]:
         raise SpanLoweringFailure(f"span function order drifted: {fields!r}")
@@ -587,7 +591,7 @@ def validate(report: dict[str, object], *, profile: str, build: str) -> None:
                 f"span length identifiers are not unique inside {item.get('field')!r}"
             )
         length_name_count += len(names)
-    if length_name_count != 16:
+    if length_name_count != 18:
         raise SpanLoweringFailure("span length identifier inventory is incomplete")
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
@@ -708,9 +712,9 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "modules": 1,
             "typeInstances": 0,
-            "functions": 12,
-            "blocks": 24,
-            "instructions": 142,
+            "functions": 13,
+            "blocks": 28,
+            "instructions": 165,
             "cleanupActions": 0,
             "runtimeIntents": 0,
         }
@@ -762,12 +766,13 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         raise SpanLoweringFailure("an unreachable String-typed declaration entered generated output")
     if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
+        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 2
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 2
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 7
+        or source.count("const uint8_t *") != 9
         or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 4
-        or source.count(" = sizeof(") != 8
+        or source.count(" = sizeof(") != 9
         or source.count("bounds") != 0
         or source.count("abort();") != 8
         or source.count("[(size_t)") != 14
@@ -936,6 +941,7 @@ int main(void)
   if ({names["zeroedGridCell"]}() != UINT8_C(0)) return 5;
   if ({names["mutatedGridCell"]}(UINT8_C(201)) != UINT8_C(201)) return 6;
   if ({names["parameterRoundTrip"]}(UINT8_C(201)) != UINT8_C(201)) return 7;
+  if ({names["spanBeforeConditionalArgument"]}(true) != UINT8_C(8)) return 8;
   return 0;
 }}
 '''

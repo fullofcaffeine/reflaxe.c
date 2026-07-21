@@ -52,6 +52,18 @@ class SpanFixture {
 		return replaceAt(values, index, replacement);
 	}
 
+	/** Prove a span's pointer and length survive later argument control flow. */
+	static function spanBeforeConditionalArgument(selectThird:Bool):UInt8 {
+		var values:CArray<UInt8, Length4> = [
+			c.IntConvert.modulo(2),
+			c.IntConvert.modulo(4),
+			c.IntConvert.modulo(8),
+			c.IntConvert.modulo(16)
+		];
+		var readOnly:ConstSpan<UInt8> = values.constSpan();
+		return readAt(readOnly, selectThird ? 2 : 1);
+	}
+
 	static function parameterRoundTrip(replacement:UInt8):UInt8 {
 		var values:CArray<UInt8, Length4> = CArray.zero(4);
 		var mutable:Span<UInt8> = values.span();
@@ -90,6 +102,7 @@ class SpanFixture {
 		constSum();
 		checkedAt(2);
 		parameterRoundTrip(zeroedGridCell());
+		spanBeforeConditionalArgument(true);
 		zeroedGridCell();
 		mutatedGridCell(zeroedGridCell());
 	}

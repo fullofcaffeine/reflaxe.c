@@ -30,7 +30,7 @@ extern uint32_t hxc_EvaluationFixture_switchCalls;
 
 extern bool hxc_EvaluationFixture_ternaryIntact;
 
-void hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second);
+bool hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second);
 
 uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value);
 
