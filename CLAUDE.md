@@ -70,6 +70,12 @@ performance, packaging, and developer experience together.
   permission to infer general language support from one game. Conversely, a
   focused compiler fixture passing is not enough to claim the flagship is
   playable, attractive, fast, or portable.
+- Do not document an idea, roadmap item, intended architecture, or partial seed
+  as behavior that exists today. Verify present-tense claims against the current
+  checkout and point to executable evidence. Label unimplemented behavior as
+  planned and name its durable Beads owner; without evidence or an accepted
+  plan, call it a proposal or question. The nearby text must make the current
+  boundary understandable without requiring the reader to inspect Beads.
 
 The long-term intent is a constructive flywheel: Caxecraft finds real pressure,
 haxe.c gains a reusable principled capability, focused tests make the fix fast

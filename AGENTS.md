@@ -66,6 +66,15 @@ and pleasant.
 - Preserve precision. Plain language must not blur a normative distinction,
   weaken a safety rule, or overstate support. Give the simple explanation first,
   then state the exact bounded contract and unsupported cases.
+- Do not describe an idea, intended architecture, roadmap item, or partial seed
+  as behavior the repository already has. Before making a present-tense claim,
+  check the current checkout and cite the nearest executable evidence: a test,
+  generated artifact, validated schema, working command, or implemented source
+  path. If the behavior is not implemented and checked, label it clearly as
+  planned and name its durable Beads owner. If neither evidence nor an accepted
+  plan exists, describe it only as a proposal or question; do not turn it into
+  documentation fact. Keep these distinctions local and readable so a reader
+  does not have to inspect the issue tracker to learn what works today.
 - Structure longer material from overview to example to implementation details
   to evidence. Use headings, short paragraphs, and terminology consistently so
   the document can be read as a tutorial as well as a reference.
