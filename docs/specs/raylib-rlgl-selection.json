@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "constant": {
+    "name": "RL_QUADS",
+    "value": 7
+  },
+  "functions": [
+    "rlBegin",
+    "rlColor4ub",
+    "rlEnd",
+    "rlNormal3f",
+    "rlSetTexture",
+    "rlTexCoord2f",
+    "rlVertex3f"
+  ],
+  "omissions": [
+    {
+      "family": "remaining-rlgl-api",
+      "reason": "Caxecraft needs only one texture-bound quad batch; matrices, shaders, buffers, framebuffers, and raw graphics state remain outside this reviewed slice.",
+      "owner": "haxe_c-xge.10"
+    }
+  ]
+}

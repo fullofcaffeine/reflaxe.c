@@ -14,9 +14,10 @@
       "src/hxc/main.c",
       "src/hxc/support.c",
       "src/modules/caxecraft/app/CaxecraftAtlas.c",
-      "src/modules/caxecraft/app/CaxecraftPalette.c",
       "src/modules/caxecraft/app/HudDigits.c",
       "src/modules/caxecraft/app/Main.c",
+      "src/modules/caxecraft/app/TerrainAtlas.c",
+      "src/modules/caxecraft/app/TerrainRenderer.c",
       "src/modules/caxecraft/app/TitleMenu.c",
       "src/modules/caxecraft/domain/PlayerPhysics.c",
       "src/modules/caxecraft/domain/VoxelRaycast.c",
@@ -40,9 +41,10 @@
     "privateHeaders": [
       "include/hxc/detail/program_types.h",
       "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
-      "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
       "include/hxc/modules/caxecraft/app/HudDigits.h",
       "include/hxc/modules/caxecraft/app/Main.h",
+      "include/hxc/modules/caxecraft/app/TerrainAtlas.h",
+      "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "include/hxc/modules/caxecraft/domain/AxisMove.h",
       "include/hxc/modules/caxecraft/domain/BlockCoord.h",
@@ -88,6 +90,13 @@
     ],
     "requiredHeaders": [
       {
+        "path": "rlgl.h",
+        "ownerModulePaths": [
+          "raylib.raw.Rlgl"
+        ],
+        "kind": "system"
+      },
+      {
         "path": "raylib.h",
         "ownerModulePaths": [
           "raylib.raw.Camera",
@@ -106,43 +115,50 @@
     "libraries": [
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "m"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "GL"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "dl"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "rt"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "X11"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "raylib"
       },
       {
         "ownerModulePaths": [
-          "raylib.raw.Raylib"
+          "raylib.raw.Raylib",
+          "raylib.raw.Rlgl"
         ],
         "name": "pthread"
       }
@@ -160,7 +176,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "baffdc2fa566f35e09c4a4afaab81930817e284fef1562f4078964b3bfcd1df1",
+      "sha256": "3b170c9a3e9467c27fd335e1727dc47808450337ba7215c0fc96c369c439238d",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -175,7 +191,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "ff68109df4f8e5d73c0b42c3585054eed04b842adaf22eaf55dd0a5c0a5de644",
+      "sha256": "9185e4b3c1eff8dc905315cc543921c2e96e1217db99220b18b9c332b9ceada2",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -185,12 +201,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "093f4c3fc38c1e9bd1930f8729b5dec9a484c76b35c0f42b70a1d5e4905f7515",
+      "sha256": "c4915e4d8d0cfceb0a292e8d2dce5bd6f2eae627ac89292f580f9bf72441dd52",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "b4547e315059c34bc0ef151daef13a21ccd8e6fb731d508bb5c9f480af354953",
+      "sha256": "9cd0bab5c53ae62f8ac44f813e071616a025333000bbbde6253350c954f63d46",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -200,18 +216,23 @@
       "kind": "private-header"
     },
     {
-      "sha256": "11ee557bccff79db994d70d22b66f09647103a65651ac37a759d8b55aaf35f38",
-      "path": "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
-      "kind": "private-header"
-    },
-    {
       "sha256": "5218391c13c2a774b6d611eb8f980ba77d5727c5a9aa646cbeafe863083ca808",
       "path": "include/hxc/modules/caxecraft/app/HudDigits.h",
       "kind": "private-header"
     },
     {
-      "sha256": "62bc50f3013679fff4e8821db5830887f30ba96fed390a905dcf57c9f9e3f161",
+      "sha256": "cac211f2c0d54ce2d9afdab503725e36fb203652183340efec69836ceb0cc7da",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "9b7e465dc593ac6d7959a1f283ed16d7d0bba1efe27ae99f895472db801bfadb",
+      "path": "include/hxc/modules/caxecraft/app/TerrainAtlas.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "ac4e032f4415cf12bc7b33dab8efb96866c73e6e267b41331efd5eeab9e59c04",
+      "path": "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "kind": "private-header"
     },
     {
@@ -400,12 +421,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "3601ac9a38aa5387a9a60963755325974ac3c6a04fc74c995a2e73194d8af778",
+      "sha256": "0917b87d0b89d013cfd36ff252cabeb3d30713614ccea668f0cb35cc1c84319d",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "6f8623d24e8be2e34c570515d890a8bc20740a1ac65c19ad46587d64822b15e5",
+      "sha256": "81e19290891186120c61ef5cb93f91f06f9153ed3de9a27881d7145f3c9cdbe1",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -415,7 +436,7 @@
       "kind": "source"
     },
     {
-      "sha256": "1ff47d4e4b64a2d0d55973d19c573870cb556b61136f21919b2bfe5708eafc99",
+      "sha256": "59d58769d48748b1a5c3977c20a325f24a2532c4cfcfc5fdd514d54aae835b01",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -425,18 +446,23 @@
       "kind": "source"
     },
     {
-      "sha256": "62284e2a1887bdde194823b65c300b377685024f10c6de384ec9df1c1e73e841",
-      "path": "src/modules/caxecraft/app/CaxecraftPalette.c",
-      "kind": "source"
-    },
-    {
       "sha256": "26c199b6be413b891ff1ad3753939881f504ee3d0749cbf6a207f4234e2a3afe",
       "path": "src/modules/caxecraft/app/HudDigits.c",
       "kind": "source"
     },
     {
-      "sha256": "c66cd90596ec3ccb0498c16589f0e5c717d9342890a594221d1a9c4855875fa2",
+      "sha256": "663dfdf0046624bb69665065d8c2a56c455143dd3cb858ca07cdc2066fa7ebfb",
       "path": "src/modules/caxecraft/app/Main.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "ef5569472113dcfc101a0b5ceb741cd0d8d52cb76f970e7656a559772fd7fa33",
+      "path": "src/modules/caxecraft/app/TerrainAtlas.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "ded46c3a0af73673ed8c846d42ad526f74a3a3c8505920059849a39e372720f8",
+      "path": "src/modules/caxecraft/app/TerrainRenderer.c",
       "kind": "source"
     },
     {

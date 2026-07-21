@@ -22,6 +22,10 @@ SELECTION_PATH = ROOT / "docs/specs/raylib-core-selection.json"
 LOCK_PATH = ROOT / "docs/specs/raylib-core-binding-lock.json"
 PROVISIONING_LOCK_PATH = ROOT / "docs/specs/raylib-provisioning-lock.json"
 RAW_ROOT = ROOT / "src/raylib/raw"
+# rlgl.h is a distinct upstream API with its own selection, lock, and
+# generator. Core refreshes must preserve that separately verified namespace,
+# while every other unexpected raw file still fails closed.
+SEPARATE_GENERATED_FILES = frozenset({"Rlgl.hx"})
 PINNED_COMMIT = "dbc56a87da87d973a9c5baa4e7438a9d20121d28"
 PINNED_HEADER_SHA256 = (
     "047e7255f93f8c34039cab906ad76136706b5c7b4c5b5b065d84141963ee9b6b"
@@ -1292,14 +1296,18 @@ def write_rendered(output_root: Path, rendered: Mapping[str, str]) -> None:
     output_root.mkdir(parents=True, exist_ok=True)
     expected = set(rendered)
     for existing in output_root.glob("*.hx"):
-        if existing.name not in expected:
+        if existing.name not in expected and existing.name not in SEPARATE_GENERATED_FILES:
             existing.unlink()
     for name, value in rendered.items():
         (output_root / name).write_text(value, encoding="utf-8", newline="\n")
 
 
 def check_rendered(output_root: Path, rendered: Mapping[str, str]) -> None:
-    actual_names = sorted(path.name for path in output_root.glob("*.hx"))
+    actual_names = sorted(
+        path.name
+        for path in output_root.glob("*.hx")
+        if path.name not in SEPARATE_GENERATED_FILES
+    )
     expected_names = sorted(rendered)
     if actual_names != expected_names:
         raise BindingFailure(

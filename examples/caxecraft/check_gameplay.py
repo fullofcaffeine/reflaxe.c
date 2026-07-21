@@ -23,6 +23,7 @@ from run import (  # noqa: E402
 )
 
 EXPECTED = "caxecraft-gameplay: lossless mining/items, paced Mossling encounter, berry recovery, and bounded player health passed\n"
+EXPECTED_TERRAIN = "caxecraft-terrain-atlas: typed faces, material cells, and inset UV bounds passed\n"
 FORBIDDEN = tuple(
     re.compile(pattern)
     for pattern in (r"#if\b", r"\bDynamic\b", r"\bAny\b", r"\bReflect\b", r"\buntyped\b", r"\b__c__\b", r"\bc\.", r"\braylib\.")
@@ -44,12 +45,19 @@ def check_boundary() -> None:
                 raise GameplayFailure(
                     f"{source.relative_to(ROOT)} crosses the target-neutral gameplay boundary: {pattern.pattern}"
                 )
+    atlas = CASE / "src/caxecraft/app/TerrainAtlas.hx"
+    atlas_text = atlas.read_text(encoding="utf-8")
+    for pattern in FORBIDDEN:
+        if pattern.search(atlas_text):
+            raise GameplayFailure(
+                f"{atlas.relative_to(ROOT)} crosses the target-neutral atlas boundary: {pattern.pattern}"
+            )
 
 
-def run_probe(locale: str) -> str:
+def run_probe(locale: str, hxml: str = "gameplay.hxml", expected: str = EXPECTED) -> str:
     installation = pinned_haxe_installation()
     verify_pinned_haxe(installation)
-    arguments = resolve_haxe_arguments(("gameplay.hxml",), locale=locale)
+    arguments = resolve_haxe_arguments((hxml,), locale=locale)
     result = subprocess.run(
         [str(installation.compiler), *arguments],
         cwd=CASE,
@@ -60,7 +68,7 @@ def run_probe(locale: str) -> str:
         encoding="utf-8",
         timeout=30,
     )
-    if result.returncode != 0 or result.stdout != EXPECTED or result.stderr:
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
         raise GameplayFailure(
             f"{locale} gameplay probe changed:\nexit: {result.returncode}\nstdout: {result.stdout!r}\nstderr: {result.stderr!r}"
         )
@@ -75,6 +83,8 @@ def main() -> int:
             raise GameplayFailure("no alternate locale is installed for the gameplay lane")
         if run_probe("C") != run_probe(locale):
             raise GameplayFailure("C and alternate-locale gameplay traces did not converge")
+        if run_probe("C", "terrain-atlas.hxml", EXPECTED_TERRAIN) != run_probe(locale, "terrain-atlas.hxml", EXPECTED_TERRAIN):
+            raise GameplayFailure("C and alternate-locale terrain-atlas traces did not converge")
     except (CaxecraftFailure, GameplayFailure, OSError, subprocess.TimeoutExpired, UnicodeError) as error:
         print(f"caxecraft-gameplay: ERROR: {error}", file=sys.stderr)
         return 1

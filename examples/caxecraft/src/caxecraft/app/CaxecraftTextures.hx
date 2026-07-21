@@ -35,6 +35,10 @@ final class CaxecraftTextures {
 	public static inline function loadEntityAtlas():Texture2D
 		return RawRaylib.LoadTexture("assets/atlases/entities.png");
 
+	/** Load the reviewed 4x4 material atlas used by the base voxel renderer. */
+	public static inline function loadTerrainAtlas():Texture2D
+		return RawRaylib.LoadTexture("assets/atlases/terrain.png");
+
 	public static inline function isValid(texture:Texture2D):Bool
 		return RawRaylib.IsTextureValid(texture);
 

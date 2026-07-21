@@ -220,6 +220,24 @@ def raylib_provisioning_artifacts() -> list[Artifact]:
             probe_first,
         )
     )
+    rlgl = load_module("raylib_rlgl_binding", "scripts/raylib/rlgl_binding.py")
+    rlgl_lock = rlgl.load_lock()
+    rlgl_raw_first = rlgl.render_raw(rlgl_lock)
+    rlgl_raw_second = rlgl.render_raw(rlgl_lock)
+    if rlgl_raw_first != rlgl_raw_second:
+        raise SnapshotFailure("two raylib rlgl raw-binding renders were not byte-identical")
+    artifacts.append(Artifact(Path("src/raylib/raw/Rlgl.hx"), "text", rlgl_raw_first))
+    rlgl_probe_first = rlgl.render_abi_probe(rlgl_lock)
+    rlgl_probe_second = rlgl.render_abi_probe(rlgl_lock)
+    if rlgl_probe_first != rlgl_probe_second:
+        raise SnapshotFailure("two raylib rlgl ABI-probe renders were not byte-identical")
+    artifacts.append(
+        Artifact(
+            Path("test/raylib_provisioning/native/rlgl_abi_probe.c"),
+            "c",
+            rlgl_probe_first,
+        )
+    )
     return artifacts
 
 

@@ -1100,7 +1100,8 @@
           "test/raylib_provisioning/expected/semantic/src/program.c",
           "test/raylib_provisioning/expected/semantic/hxc.runtime-plan.json",
           "src/raylib/raw",
-          "test/raylib_provisioning/native/core_abi_probe.c"
+          "test/raylib_provisioning/native/core_abi_probe.c",
+          "test/raylib_provisioning/native/rlgl_abi_probe.c"
         ],
         "formats": [
           "c",

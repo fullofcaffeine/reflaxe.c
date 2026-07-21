@@ -22,6 +22,7 @@ FIXTURE = SUITE / "fixtures/smoke"
 SEMANTIC_FIXTURE = SUITE / "fixtures/semantic"
 SUPPORT_INCLUDE = SUITE / "support/include"
 ABI_PROBE = SUITE / "native/core_abi_probe.c"
+RLGL_ABI_PROBE = SUITE / "native/rlgl_abi_probe.c"
 EXPECTED = SUITE / "expected"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -51,6 +52,11 @@ from scripts.raylib.core_binding import (  # noqa: E402
     load_lock as load_core_lock,
     load_selection as load_core_selection,
     parse_clang_ast as parse_core_clang_ast,
+)
+from scripts.raylib.rlgl_binding import (  # noqa: E402
+    extract_lock as extract_rlgl_lock,
+    load_lock as load_rlgl_lock,
+    verification_projection as rlgl_verification_projection,
 )
 
 
@@ -88,6 +94,7 @@ STRICT_CLANG_CL_FLAGS = (
 CLANG_CL_RUNTIME_FLAG = "/MD"
 EXPECTED_HEADLESS_STDOUT = "INFO: RLSW: Software renderer initialized successfully\n"
 EXPECTED_ABI_STDOUT = "raylib-core-abi: OK\n"
+EXPECTED_RLGL_ABI_STDOUT = "raylib-rlgl-abi: OK\n"
 VARIANTS = (
     ("linux-memory", "linux", "memory-software", False),
     ("linux-desktop", "linux", "desktop", False),
@@ -597,7 +604,7 @@ def gcc_like_abi_compile_arguments(
     include_directory: Path,
     native_root: Path,
 ) -> tuple[list[str], Path]:
-    object_file = native_root / "core_abi_probe.o"
+    object_file = native_root / f"{source.stem}.o"
     arguments = [
         compiler,
         "-std=c11",
@@ -619,7 +626,7 @@ def clang_cl_abi_compile_arguments(
     include_directory: Path,
     native_root: Path,
 ) -> tuple[list[str], Path]:
-    object_file = native_root / "core_abi_probe.obj"
+    object_file = native_root / f"{source.stem}.obj"
     arguments = [
         compiler,
         "/nologo",
@@ -715,6 +722,12 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
             "raylib raw binding changed with Clang declaration discovery order"
         )
     current_core_clang = core_clang_identity(clang)
+    rlgl_lock = load_rlgl_lock()
+    current_rlgl_lock = extract_rlgl_lock(source_build.source_root, clang)
+    if rlgl_verification_projection(current_rlgl_lock) != rlgl_verification_projection(rlgl_lock):
+        raise RaylibTestFailure(
+            "pinned raylib rlgl declarations differ from the checked rlgl binding lock"
+        )
     work_root = source_build.build_root.parent
     generated_root = work_root / f"{source_build.build_root.name}-generated-haxe"
     native_root = work_root / f"{source_build.build_root.name}-generated-native"
@@ -904,6 +917,87 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "stderrText": abi_stderr,
             }
         )
+
+    rlgl_abi_source = native_root / "rlgl_abi_probe.c"
+    rlgl_abi_source.write_bytes(RLGL_ABI_PROBE.read_bytes())
+    if family == "clang-cl":
+        rlgl_abi_compile_arguments, rlgl_abi_object = clang_cl_abi_compile_arguments(
+            args.cc,
+            rlgl_abi_source,
+            source_build.include_directory,
+            native_root,
+        )
+    else:
+        rlgl_abi_compile_arguments, rlgl_abi_object = gcc_like_abi_compile_arguments(
+            args.cc,
+            rlgl_abi_source,
+            source_build.include_directory,
+            native_root,
+        )
+    rlgl_abi_compile_result = run_command(
+        rlgl_abi_compile_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="strict raylib rlgl ABI probe compile",
+    )
+    rlgl_abi_executable = native_root / (
+        "raylib-rlgl-abi.exe" if args.platform == "windows" else "raylib-rlgl-abi"
+    )
+    if family == "clang-cl":
+        rlgl_abi_link_arguments = clang_cl_link_arguments(
+            args.cc,
+            rlgl_abi_object,
+            source_build.library_file,
+            libraries,
+            rlgl_abi_executable,
+        )
+    else:
+        rlgl_abi_link_arguments = gcc_like_link_arguments(
+            args.cc,
+            rlgl_abi_object,
+            source_build.library_file,
+            libraries,
+            frameworks,
+            rlgl_abi_executable,
+        )
+    rlgl_abi_link_result = run_command(
+        rlgl_abi_link_arguments,
+        cwd=native_root,
+        replacements=replacements,
+        timeout=120,
+        label="raylib rlgl ABI probe link",
+    )
+    rlgl_abi_run_evidence: dict[str, object] = {"exercised": False}
+    if args.run:
+        rlgl_abi_run_result = run_command(
+            [str(rlgl_abi_executable)],
+            cwd=native_root,
+            replacements=replacements,
+            timeout=30,
+            label="raylib rlgl ABI probe run",
+        )
+        rlgl_abi_stdout = normalize_text(
+            rlgl_abi_run_result.process.stdout.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        rlgl_abi_stderr = normalize_text(
+            rlgl_abi_run_result.process.stderr.decode("utf-8", errors="replace"),
+            replacements,
+        )
+        if rlgl_abi_stdout != EXPECTED_RLGL_ABI_STDOUT or rlgl_abi_stderr != "":
+            raise RaylibTestFailure(
+                f"raylib rlgl ABI probe output drifted: stdout={rlgl_abi_stdout!r}, "
+                f"stderr={rlgl_abi_stderr!r}"
+            )
+        rlgl_abi_run_evidence = dict(rlgl_abi_run_result.evidence)
+        rlgl_abi_run_evidence.update(
+            {
+                "exercised": True,
+                "stdoutText": rlgl_abi_stdout,
+                "stderrText": rlgl_abi_stderr,
+            }
+        )
     run_evidence: dict[str, object] = {"exercised": False}
     if args.run:
         if args.configuration != "memory-software":
@@ -957,6 +1051,13 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
             "requestedTarget": core_lock["extraction"]["requestedTarget"],
             "sourceOrderIndependent": True,
         },
+        "rlglBinding": {
+            "declarationSha256": rlgl_lock["declarationSha256"],
+            "selectedCounts": rlgl_lock["selection"]["counts"],
+            "clang": current_rlgl_lock["extraction"]["clang"],
+            "requestedTarget": rlgl_lock["extraction"]["requestedTarget"],
+            "coverageState": rlgl_lock["selection"]["coverageState"],
+        },
         "nativeConsumer": {
             "compiler": compiler_info,
             "compilerIdentity": compiler_commands,
@@ -990,11 +1091,28 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "sizeBytes": abi_executable.stat().st_size,
             },
         },
+        "rlglAbiProbe": {
+            "sourceSha256": sha256_file(rlgl_abi_source),
+            "compile": rlgl_abi_compile_result.evidence,
+            "link": rlgl_abi_link_result.evidence,
+            "run": rlgl_abi_run_evidence,
+            "object": {
+                "path": normalize_text(str(rlgl_abi_object), replacements),
+                "sha256": sha256_file(rlgl_abi_object),
+                "sizeBytes": rlgl_abi_object.stat().st_size,
+            },
+            "executable": {
+                "path": normalize_text(str(rlgl_abi_executable), replacements),
+                "sha256": sha256_file(rlgl_abi_executable),
+                "sizeBytes": rlgl_abi_executable.stat().st_size,
+            },
+        },
         "claims": {
             "cacheAuthorityExplicit": True,
             "networkAfterProvision": False,
             "generatedCCompiled": True,
             "coreAbiVerified": True,
+            "rlglAbiVerified": True,
             "linked": True,
             "executed": bool(args.run),
             "runConfiguration": args.configuration if args.run else None,
@@ -1084,7 +1202,7 @@ def main(argv: Iterable[str] = ()) -> int:
             if args.print_report:
                 print(canonical_json(report), end="")
             print(
-                "raylib-provisioning: OK: raw declarations and ABI probe verified; "
+                "raylib-provisioning: OK: raw core/rlgl declarations and ABI probes verified; "
                 "generated Haxe compiled and linked against "
                 f"raylib 6.0 ({args.platform}/{args.configuration}); executed={str(args.run).lower()}"
             )
@@ -1117,8 +1235,8 @@ def main(argv: Iterable[str] = ()) -> int:
         validate_expected(values)
         print(
             "raylib-provisioning: OK: provisioning/raw locks, fail-closed authorities, "
-            "deterministic raw and semantic Haxe/C, five neutral plans, ABI fixtures, "
-            "and zero-hxrt evidence"
+            "deterministic raw and semantic Haxe/C, five neutral plans, core/rlgl ABI "
+            "fixtures, and zero-hxrt evidence"
         )
         return 0
     except (

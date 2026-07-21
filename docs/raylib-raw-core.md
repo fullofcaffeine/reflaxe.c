@@ -26,6 +26,27 @@ The raw Haxe files under `src/raylib/raw` and the native ABI probe at
 views. Change the selection or generator and use the registered snapshot
 updater; do not repair those outputs by hand.
 
+### A separate, precise `rlgl` slice
+
+`rlgl.h` is Raylib's low-level drawing API, not another part of `raylib.h`.
+Caxecraft needs only one texture-bound quad region for its first terrain
+renderer, so the repository gives that surface a separate selection, lock,
+generator, raw namespace, and ABI probe:
+
+- [`raylib-rlgl-selection.json`](specs/raylib-rlgl-selection.json) admits
+  `RL_QUADS` and exactly seven `rl*` functions;
+- [`raylib-rlgl-binding-lock.json`](specs/raylib-rlgl-binding-lock.json) records
+  the pinned `rlgl.h` hash, Clang AST and preprocessor facts, and declaration
+  digest; and
+- `raylib.raw.Rlgl` plus `native/rlgl_abi_probe.c` are registered generated
+  snapshots rather than handwritten ABI claims.
+
+The semantic `raylib.Rlgl` facade can begin/end a quad region and submit color,
+normal, texture-coordinate, and vertex values. It allocates nothing and does
+not expose matrices, shaders, buffers, framebuffers, or general graphics-state
+control. Caxecraft owns when that narrow region is used; RaylibHx does not hide
+a voxel engine in the binding.
+
 The selection digest treats its repository-owned JSON as UTF-8 text and
 normalizes LF, CRLF, and legacy CR separators to LF before hashing. This makes
 the same closed selection portable across Git checkout policies without
@@ -51,6 +72,12 @@ python3 scripts/raylib/core_binding.py verify \
   --clang clang
 
 python3 scripts/raylib/core_binding.py render --check
+
+python3 scripts/raylib/rlgl_binding.py verify \
+  --source-root /explicit/raylib-6.0-source \
+  --clang clang
+
+python3 scripts/raylib/rlgl_binding.py render --check
 ```
 
 To intentionally create a replacement lock for review, write it outside the
@@ -126,7 +153,7 @@ The generator records this relationship in both the reviewed selection and
 the binding lock, and it puts short ownership instructions beside the raw
 functions. This does not make arbitrary raw resource use automatically safe.
 Caxecraft keeps all five operations in one typed `CaxecraftTextures` adapter,
-checks every load, and unloads five admitted image owners in reverse order.
+checks every load, and unloads six admitted image owners in reverse order.
 The higher-level facade deliberately does not expose an owning `LoadTexture`
 helper yet because haxe.c cannot prove cleanup on every return or failure edge.
 
@@ -153,8 +180,9 @@ Native integration additionally:
 1. provisions the exact raylib source and library;
 2. re-extracts the selected declarations with Clang;
 3. compiles the generated Haxe consumer through the production C target;
-4. compiles and links the independent native ABI probe; and
-5. in the memory/software lane, runs both executables and checks exact output.
+4. compiles and links the independent core and `rlgl` native ABI probes; and
+5. in the memory/software lane, runs both probes and the generated executable
+   and checks exact output.
 
 The probe asserts C `bool`, `float`, and `int` assumptions; every selected
 record size, alignment, and field offset; both aliases; all 143 constant

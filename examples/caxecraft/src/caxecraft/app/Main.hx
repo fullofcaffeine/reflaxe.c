@@ -3,7 +3,6 @@ package caxecraft.app;
 #if c
 import c.CArray;
 import c.UInt8;
-import caxecraft.domain.BlockKind;
 import caxecraft.domain.PlayerPhysics;
 import caxecraft.domain.PlayerState;
 import caxecraft.domain.RaycastHit;
@@ -58,7 +57,6 @@ final class Main {
 	static inline final FIXED_SECONDS:Float = 0.05;
 	static inline final MAX_FRAME_SECONDS:Float = 0.25;
 	static inline final PICK_DISTANCE:Float = 7.0;
-	static inline final RENDER_RADIUS:Int = 9;
 	static inline final SPAWN_X:Float = 16.5;
 	static inline final SPAWN_Z:Float = 16.5;
 
@@ -97,6 +95,8 @@ final class Main {
 		final itemTextureReady = CaxecraftTextures.isValid(itemTexture);
 		final entityTexture:Texture2D = CaxecraftTextures.loadEntityAtlas();
 		final entityTextureReady = CaxecraftTextures.isValid(entityTexture);
+		final terrainTexture:Texture2D = CaxecraftTextures.loadTerrainAtlas();
+		final terrainTextureReady = CaxecraftTextures.isValid(terrainTexture);
 		#if caxecraft_pilot_secondary_locale
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
 		#elseif caxecraft_pilot_launch_smoke
@@ -454,8 +454,13 @@ final class Main {
 				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale);
 			} else {
 				Raylib.ClearBackground(CaxecraftPalette.sky());
+				// The sun is a screen-space backdrop, so it remains calm and legible
+				// while the camera moves. Terrain and actors are drawn over it below.
+				final sunX = Raylib.GetScreenWidth() - 260;
+				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(42.0), CaxecraftPalette.sunGlow());
+				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(30.0), CaxecraftPalette.sunCore());
 				Raylib.BeginMode3D(camera);
-				final renderCounters = drawWorld(cells, player.x, player.z);
+				final renderCounters = TerrainRenderer.draw(cells, terrainTexture, terrainTextureReady, player.x, player.z);
 				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
@@ -495,6 +500,8 @@ final class Main {
 		}
 
 		Raylib.EnableCursor();
+		if (terrainTextureReady)
+			CaxecraftTextures.unload(terrainTexture);
 		if (entityTextureReady)
 			CaxecraftTextures.unload(entityTexture);
 		if (itemTextureReady)
@@ -512,62 +519,6 @@ final class Main {
 	static function spawnPlayer(cells:WorldCells):PlayerState {
 		final spawnY = World.surfaceY(cells, 16, 16) + 1.0;
 		return PlayerPhysics.recoverSpawn(cells, PlayerPhysics.player(SPAWN_X, spawnY, SPAWN_Z));
-	}
-
-	static function drawWorld(cells:WorldCells, playerX:Float, playerZ:Float):RenderCounters {
-		// Submit ordinary terrain as one kind of primitive. Alternating a filled
-		// cube and a wire cube for every block makes raylib flush its GPU batch
-		// thousands of times before the first frame can appear. The separately
-		// drawn selection outline still gives the player precise block feedback.
-		//
-		// This first immediate-mode renderer also bounds drawing to nearby world
-		// columns. Collision, edits, and storage still cover the complete world;
-		// only individual GPU submissions are culled. The later chunk-mesh task
-		// will replace this simple, readable bridge without changing game rules.
-		var visible = 0;
-		var drawCalls = 0;
-		var minimumX = Std.int(playerX) - RENDER_RADIUS;
-		if (minimumX < 0)
-			minimumX = 0;
-		var maximumX = Std.int(playerX) + RENDER_RADIUS;
-		if (maximumX >= World.WIDTH)
-			maximumX = World.WIDTH - 1;
-		var minimumZ = Std.int(playerZ) - RENDER_RADIUS;
-		if (minimumZ < 0)
-			minimumZ = 0;
-		var maximumZ = Std.int(playerZ) + RENDER_RADIUS;
-		if (maximumZ >= World.DEPTH)
-			maximumZ = World.DEPTH - 1;
-
-		var z = minimumZ;
-		while (z <= maximumZ) {
-			var y = 0;
-			while (y < World.HEIGHT) {
-				var x = minimumX;
-				while (x <= maximumX) {
-					final kind = World.query(cells, World.coord(x, y, z));
-					if (World.isSolid(kind) && isExposed(cells, x, y, z)) {
-						visible++;
-						drawCalls++;
-						Raylib.DrawCube(Vector3.fromFloat(x + 0.5, y + 0.5, z + 0.5), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0),
-							c.Float32.fromFloat(1.0), CaxecraftPalette.block(kind));
-					}
-					x++;
-				}
-				y++;
-			}
-			z++;
-		}
-		return {visible: visible, drawCalls: drawCalls};
-	}
-
-	static function isExposed(cells:WorldCells, x:Int, y:Int, z:Int):Bool {
-		return !World.isSolid(World.query(cells, World.coord(x - 1, y, z)))
-			|| !World.isSolid(World.query(cells, World.coord(x + 1, y, z)))
-			|| !World.isSolid(World.query(cells, World.coord(x, y - 1, z)))
-			|| !World.isSolid(World.query(cells, World.coord(x, y + 1, z)))
-			|| !World.isSolid(World.query(cells, World.coord(x, y, z - 1)))
-			|| !World.isSolid(World.query(cells, World.coord(x, y, z + 1)));
 	}
 
 	/** Original atlas sprites with code-drawn fallbacks; actor rules remain in gameplay/. */
@@ -749,10 +700,5 @@ final class Main {
 			slot++;
 		}
 	}
-}
-
-private typedef RenderCounters = {
-	final visible:Int;
-	final drawCalls:Int;
 }
 #end

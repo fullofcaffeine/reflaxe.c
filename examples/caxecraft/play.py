@@ -64,8 +64,9 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/include/hxc/modules/caxecraft/gameplay/MiningResult.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/Mining.h": "header",
     "playable/src/modules/caxecraft/app/CaxecraftAtlas.c": "c",
-    "playable/src/modules/caxecraft/app/CaxecraftPalette.c": "c",
     "playable/src/modules/caxecraft/app/HudDigits.c": "c",
+    "playable/src/modules/caxecraft/app/TerrainAtlas.c": "c",
+    "playable/src/modules/caxecraft/app/TerrainRenderer.c": "c",
     "playable/src/modules/caxecraft/app/Main.c": "c",
     "playable/src/modules/caxecraft/gameplay/Inventory.c": "c",
     "playable/src/modules/caxecraft/gameplay/GuideNpc.c": "c",
@@ -78,7 +79,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/localization/UiCatalog.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
-RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "entities")
+RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "entities", "terrain")
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
 RUNTIME_CONTENT_FILES = (
     "locales/ui.json",
@@ -328,6 +329,7 @@ def validate_smoke_screenshot(
     warm_scene_pixels = 0
     green_scene_pixels = 0
     sky_scene_pixels = 0
+    sun_scene_pixels = 0
     dark_panel_pixels = 0
     light_ui_pixels = 0
     nia_entity_pixels = 0
@@ -370,6 +372,7 @@ def validate_smoke_screenshot(
             decoded[index] = (value + predictor) & 0xFF
         for index in range(0, stride, bytes_per_pixel):
             red, green, blue = decoded[index : index + 3]
+            column = index // bytes_per_pixel
             quantized_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
             if red > 20 or green > 20 or blue > 20:
                 non_dark_pixels += 1
@@ -379,6 +382,8 @@ def validate_smoke_screenshot(
                 green_scene_pixels += 1
             if 80 < red < 180 and 130 < green < 220 and 140 < blue < 235:
                 sky_scene_pixels += 1
+            if row < height // 3 and column > width * 3 // 4 and red > 240 and green > 210 and blue < 225:
+                sun_scene_pixels += 1
             if red < 45 and green < 55 and blue < 65:
                 dark_panel_pixels += 1
             if red > 210 and green > 210 and blue > 200:
@@ -395,7 +400,6 @@ def validate_smoke_screenshot(
                 inventory_full_pixels += 1
             if (red, green, blue) == (218, 65, 72):
                 damage_pixels += 1
-            column = index // bytes_per_pixel
             if row < height // 4 and width * 3 // 10 <= column < width * 7 // 10:
                 if red < 80 and green > 120 and blue > 140:
                     brand_cyan_pixels += 1
@@ -418,22 +422,24 @@ def validate_smoke_screenshot(
             f"brandWhite={brand_white_pixels}, warmScene={warm_scene_pixels}, "
             f"greenScene={green_scene_pixels}, colorBuckets={len(quantized_colors)})"
         )
-    # The first playable renderer deliberately uses a small flat-color palette;
-    # color-count thresholds would confuse clean voxel shading with a blank
-    # frame. Instead prove the scene's independent visual roles: broad sky,
-    # terrain, a dark heads-up-display panel, and light text/crosshair pixels.
+    # Prove independent visual roles and enough color variety to distinguish
+    # the reviewed terrain atlas from the old flat-color cube fallback. The
+    # threshold remains deliberately broad across graphics drivers; it is a
+    # missing-texture/stalled-frame check, not a pixel-perfect art golden.
     if not expected_title and (
         non_dark_pixels < width * height // 3
         # A fifth of the complete framebuffer is still a broad independent sky
         # region after opaque HUD panels, actors, and text cover scene pixels.
         or sky_scene_pixels < width * height // 5
+        or sun_scene_pixels < 1_000
         or green_scene_pixels < width * height // 20
         or dark_panel_pixels < 2_000
         or light_ui_pixels < 250
+        or len(quantized_colors) < 120
     ):
         raise PlayFailure(
             "Caxecraft pilot framebuffer is blank or lacks a presented game scene "
-            f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
+            f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, sun={sun_scene_pixels}, green={green_scene_pixels}, "
             f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, niaEntity={nia_entity_pixels}, "
             f"mosslingEntity={mossling_entity_pixels}, berries={berry_pixels}, recovery={recovery_pixels}, "
             f"inventoryFull={inventory_full_pixels}, damage={damage_pixels}, colorBuckets={len(quantized_colors)})"
@@ -671,6 +677,25 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     # the first frame could appear.
     if app.count("DrawCubeWires(") != 1:
         raise PlayFailure("generated Caxecraft app must contain exactly one selected-block wire-outline call site")
+    terrain_relative = {
+        "split": "src/modules/caxecraft/app/TerrainRenderer.c",
+        "package": "src/packages/caxecraft/app/package.c",
+        "unity": "src/program.c",
+    }[layout]
+    terrain_source = generated.joinpath(terrain_relative).read_text(encoding="utf-8")
+    if "DrawCube(" in terrain_source:
+        raise PlayFailure("generated terrain renderer regressed to one native DrawCube call per visible block")
+    for required in (
+        "rlSetTexture(",
+        "rlBegin(",
+        "rlEnd(",
+        "rlNormal3f(",
+        "rlColor4ub(",
+        "rlTexCoord2f(",
+        "rlVertex3f(",
+    ):
+        if required not in terrain_source:
+            raise PlayFailure(f"generated terrain renderer omitted selected direct rlgl call {required}")
     mining_relative = {
         "split": "src/modules/caxecraft/gameplay/Mining.c",
         "package": "src/packages/caxecraft/gameplay/package.c",
@@ -695,13 +720,13 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure(
             "generated Caxecraft mining must check capacity before removal, collect after removal, and retain closed full/collected outcomes"
         )
-    # Five reviewed image owners enter the application, are checked before
+    # Six reviewed image owners enter the application, are checked before
     # use, and leave in reverse order before CloseWindow. Exact counts make a
     # missing unload or an accidental hidden resource registry fail locally.
     for function_name, expected_count in (
-        ("LoadTexture", 5),
-        ("IsTextureValid", 5),
-        ("UnloadTexture", 5),
+        ("LoadTexture", 6),
+        ("IsTextureValid", 6),
+        ("UnloadTexture", 6),
     ):
         actual_count = app.count(f"{function_name}(")
         if actual_count != expected_count:
@@ -1028,10 +1053,16 @@ def main(argv: list[str]) -> int:
             raise PlayFailure("--authority offline-source requires --source")
         if args.authority == "pinned-source" and args.source is not None:
             raise PlayFailure("--source is accepted only with --authority offline-source")
-        output_root = prepare_output_root(args.output_root.resolve())
+        selected_pilot = "launch-smoke" if args.smoke else args.pilot
+        output_base = prepare_output_root(args.output_root.resolve())
+        variants = output_base / "variants"
+        if variants.exists() and (not variants.is_dir() or variants.is_symlink()):
+            raise PlayFailure(f"Caxecraft variant root must be a real directory: {variants}")
+        variants.mkdir(exist_ok=True)
+        profile = "interactive" if selected_pilot is None else f"pilot-{selected_pilot}"
+        output_root = prepare_output_root(variants / f"{platform_name}-{args.layout}-{profile}")
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
-        selected_pilot = "launch-smoke" if args.smoke else args.pilot
         manifest = compile_haxe(generated, layout=args.layout, platform_name=platform_name, pilot=selected_pilot)
         print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:

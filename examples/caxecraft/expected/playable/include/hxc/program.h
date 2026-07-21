@@ -2,9 +2,10 @@
 #define HXC_PROGRAM_H_INCLUDED
 
 #include "hxc/modules/caxecraft/app/CaxecraftAtlas.h"
-#include "hxc/modules/caxecraft/app/CaxecraftPalette.h"
 #include "hxc/modules/caxecraft/app/HudDigits.h"
 #include "hxc/modules/caxecraft/app/Main.h"
+#include "hxc/modules/caxecraft/app/TerrainAtlas.h"
+#include "hxc/modules/caxecraft/app/TerrainRenderer.h"
 #include "hxc/modules/caxecraft/app/TitleMenu.h"
 #include "hxc/modules/caxecraft/domain/AxisMove.h"
 #include "hxc/modules/caxecraft/domain/BlockCoord.h"

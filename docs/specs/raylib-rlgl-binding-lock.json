@@ -1,0 +1,258 @@
+{
+  "declarationSha256": "9299c73507c430b668cb6d96f0fc04daf8dc02ce9d8568ff93a13759fdefd76f",
+  "declarations": {
+    "constant": {
+      "name": "RL_QUADS",
+      "value": 7
+    },
+    "functions": [
+      {
+        "name": "rlBegin",
+        "parameters": [
+          {
+            "name": "mode",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 618
+      },
+      {
+        "name": "rlColor4ub",
+        "parameters": [
+          {
+            "name": "r",
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "g",
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "b",
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          },
+          {
+            "name": "a",
+            "type": {
+              "cType": "unsigned char",
+              "canonicalCType": "unsigned char",
+              "haxeType": "c.UInt8"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 625
+      },
+      {
+        "name": "rlEnd",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 619
+      },
+      {
+        "name": "rlNormal3f",
+        "parameters": [
+          {
+            "name": "x",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "z",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 624
+      },
+      {
+        "name": "rlSetTexture",
+        "parameters": [
+          {
+            "name": "id",
+            "type": {
+              "cType": "unsigned int",
+              "canonicalCType": "unsigned int",
+              "haxeType": "c.UInt32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 731
+      },
+      {
+        "name": "rlTexCoord2f",
+        "parameters": [
+          {
+            "name": "x",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 623
+      },
+      {
+        "name": "rlVertex3f",
+        "parameters": [
+          {
+            "name": "x",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "z",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 622
+      }
+    ]
+  },
+  "extraction": {
+    "arguments": [
+      "--target=x86_64-unknown-linux-gnu",
+      "-x",
+      "c",
+      "-std=c11",
+      "-ffreestanding",
+      "-I",
+      "${RAYLIB_INCLUDE}",
+      "-Xclang",
+      "-ast-dump=json",
+      "-fsyntax-only",
+      "${RLGL_HEADER}"
+    ],
+    "authority": "clang-ast-and-preprocessor",
+    "clang": {
+      "dumpMachine": "arm64-apple-darwin24.4.0",
+      "family": "clang",
+      "version": "Apple clang version 17.0.0 (clang-1700.0.13.3)"
+    },
+    "requestedTarget": "x86_64-unknown-linux-gnu"
+  },
+  "generatedPaths": [
+    "src/raylib/raw/Rlgl.hx",
+    "test/raylib_provisioning/native/rlgl_abi_probe.c"
+  ],
+  "generator": {
+    "algorithm": "hxc-raylib-clang-rlgl-v1",
+    "path": "scripts/raylib/rlgl_binding.py"
+  },
+  "schemaVersion": 1,
+  "selection": {
+    "counts": {
+      "constants": 1,
+      "functions": 7,
+      "omittedFamilies": 1
+    },
+    "coverageState": "caxecraft-quad-batch-only",
+    "omissions": [
+      {
+        "family": "remaining-rlgl-api",
+        "owner": "haxe_c-xge.10",
+        "reason": "Caxecraft needs only one texture-bound quad batch; matrices, shaders, buffers, framebuffers, and raw graphics state remain outside this reviewed slice."
+      }
+    ],
+    "path": "docs/specs/raylib-rlgl-selection.json",
+    "sha256": "14dd273ff89f8e96591135a59cf26de357a0969a6a07a62a2efab9faac476904"
+  },
+  "upstream": {
+    "commit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+    "header": {
+      "path": "src/rlgl.h",
+      "sha256": "1c9b802c219971dbf2ba9725fb8cea3f14616c039891810a2d31aa442aea4be3"
+    },
+    "licenseExpression": "Zlib",
+    "licenseUrl": "https://github.com/raysan5/raylib/blob/dbc56a87da87d973a9c5baa4e7438a9d20121d28/LICENSE",
+    "name": "raylib",
+    "release": "6.0"
+  }
+}
