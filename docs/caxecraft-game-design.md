@@ -533,10 +533,26 @@ coexist for accessibility; important state does not depend on color alone.
 An **Advanced** disclosure expands the same rule—not a second toy format—to
 show nested predicates, typed local/map/player/quest variables, fixed-tick
 delays, reusable parameterized action sequences, signals, and seeded choices.
-Developer-defined mechanics are ordinary typed Haxe conditions/actions
-registered at compile time. Version 1 maps never embed arbitrary Lua, native
-code, shell commands, or downloaded scripts, which keeps shared child-created
-content substantially safer and keeps C emission inspectable.
+Planned developer-defined mechanics will be ordinary typed Haxe
+conditions/actions admitted through a reviewed compile-time catalog change.
+The current catalog is closed and explicit; it does not yet provide a public
+extension API or macro. Version 1 maps never embed arbitrary Lua, native code,
+shell commands, or downloaded scripts, which keeps shared child-created content
+substantially safer and keeps C emission inspectable.
+
+The first action-catalog foundation is now executable under the pinned Eval
+oracle, with a deliberately narrow scope. Each of the 18 existing `FlowAction`
+constructors has one stable CAXEMAP ID, a closed ordered argument schema, a
+world/presentation/control family, editor label/help message IDs, and an
+explicit consumer-authority record. Parsing, canonical writing, registry
+validation, and the renderer-independent editor palette query use that catalog.
+Engine execution does not come from the catalog: it remains an exhaustive typed
+switch, so a data file cannot install behavior. Only CaxeFlow document authoring
+is enabled today. The planned cutscene, console, and CaxeTest integrations
+remain denied until their individual runtime, validation, localization, and QA
+owners land; the presence of their consumer names is not evidence that those
+features ship. Generated-C/native registry evidence also remains blocked by
+the String and Array enum-payload owners `haxe_c-2ph` and `haxe_c-45z`.
 
 The editor itself supports bounded paint/erase/fill, selection, prefab stamps,
 entity and trigger placement, dialogue/objective editing, undo/redo, validation,

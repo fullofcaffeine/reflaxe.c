@@ -1,6 +1,7 @@
 package caxecraft.qa;
 
 import caxecraft.editor.EditorPolicy;
+import caxecraft.editor.EditorActionPalette.availableScenarioActions;
 import caxecraft.editor.EditorScenarioFactory;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorCommand;
@@ -16,6 +17,7 @@ import caxecraft.scenario.CaxeFlow.FlowAction;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionArgumentRoles;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.LocaleId;
@@ -62,6 +64,7 @@ final class EditorProbe {
 	static final OBJECTIVE_BODY_MESSAGE = new MessageId("objective.finish.body");
 
 	static function main():Void {
+		checkActionPalette();
 		final session = open(EditorPolicy.defaults());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
@@ -120,6 +123,38 @@ final class EditorProbe {
 		final finalBytes = expectValid(session, "final recovered scenario");
 		final trace = hash(finalBytes) ^ (commandChecks * 65537) ^ session.historyEntries();
 		Sys.println('caxemap-editor: $commandChecks command round trips, ${finalBytes.length} canonical bytes; bounded history/test-play/recovery; trace=$trace');
+	}
+
+	static function checkActionPalette():Void {
+		final descriptors = availableScenarioActions();
+		final expected = [
+			"dialogue",
+			"journal",
+			"set-flag",
+			"set-counter",
+			"add-counter",
+			"set-state",
+			"give-item",
+			"take-item",
+			"spawn",
+			"despawn",
+			"set-object-state",
+			"checkpoint",
+			"objective",
+			"effect",
+			"signal",
+			"schedule",
+			"call",
+			"choose"
+		];
+		require(descriptors.length == expected.length, "editor action palette lost constructor coverage");
+		for (index in 0...expected.length) {
+			final descriptor = descriptors[index];
+			require(descriptor.id.text() == expected[index], "editor action palette order drifted");
+			require(descriptor.editorLabel.text() == 'editor.action.${expected[index]}.label', "editor action label key drifted");
+			require(descriptor.editorHelp.text() == 'editor.action.${expected[index]}.help', "editor action help key drifted");
+			require(flowActionArgumentRoles(descriptor.schema).length > 0, "editor action lost its typed form fields");
+		}
 	}
 
 	static function checkTestPlayIsolation(session:EditorSession):Void {

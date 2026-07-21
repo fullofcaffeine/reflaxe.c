@@ -15,6 +15,20 @@ import caxecraft.scenario.CaxeFlow.FlowParameter;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlow.FlowValueKind;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionConsumer;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionDescriptor;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionConsumers;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionRegistryError;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionSchema;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowScenarioArgumentRole;
+import caxecraft.scenario.CaxeFlowActionRegistry.allFlowActionDescriptors;
+import caxecraft.scenario.CaxeFlowActionRegistry.allFlowActionIds;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionAllowed;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionArgumentRoles;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptorForSyntax;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionMatchesDescriptor;
+import caxecraft.scenario.CaxeFlowActionRegistry.validateFlowActionDescriptors;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
 import caxecraft.scenario.LocaleId;
@@ -47,6 +61,14 @@ import caxecraft.scenario.ScenarioWorld;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 import caxecraft.scenario.ScenarioWorld.VoxelRun;
+
+private enum RegistryErrorCode {
+	DuplicateCode;
+	MissingCode;
+	WrongSchemaCode;
+	MissingAuthorityCode;
+	OtherRegistryCode;
+}
 
 /** Eval-only construction probe for every closed CAXEMAP 1 model family. */
 final class ScenarioModelProbe {
@@ -163,6 +185,7 @@ final class ScenarioModelProbe {
 			CallSequence(otherId, arguments),
 			ChooseSeeded(objectId, [choice])
 		];
+		verifyActionRegistry(actions);
 
 		final variables:Array<FlowVariable> = [
 			{id: objectId, scope: FlowScope.Map, initial: FlowValue.Flag(false)},
@@ -378,6 +401,85 @@ final class ScenarioModelProbe {
 
 	static function point(x:Int, y:Int, z:Int):VoxelPoint
 		return {x: x, y: y, z: z};
+
+	static function verifyActionRegistry(actions:Array<FlowAction>):Void {
+		final ids = allFlowActionIds();
+		final descriptors = allFlowActionDescriptors();
+		require(ids.length == 18 && descriptors.length == actions.length, "action registry lost constructor coverage");
+		require(validateFlowActionDescriptors(descriptors).length == 0, "canonical action descriptors failed their own contract");
+
+		for (index in 0...descriptors.length) {
+			final descriptor = descriptors[index];
+			require(descriptor.id.text() == ids[index].text(), "action descriptor order drifted");
+			require(flowActionMatchesDescriptor(actions[index], descriptor), "typed action and descriptor shape diverged");
+			require(flowActionArgumentRoles(descriptor.schema).length > 0, "action descriptor lost its ordered arguments");
+			final parsed = flowActionDescriptorForSyntax(descriptor.id.text());
+			require(parsed != null && parsed.id.text() == descriptor.id.text(), "known action syntax did not resolve to its descriptor");
+			require(flowActionAllowed(descriptor, FlowActionConsumer.CaxeFlowDocument), "CaxeFlow action lost document authority");
+			for (consumer in [
+				FlowActionConsumer.CutsceneDocument,
+				FlowActionConsumer.DeveloperConsole,
+				FlowActionConsumer.CaxeTestSetup
+			])
+				require(!flowActionAllowed(descriptor, consumer), "an unimplemented action consumer gained authority");
+		}
+		require(flowActionDescriptorForSyntax("unknown-action") == null, "unknown action syntax did not fail closed");
+
+		final duplicate = descriptors.copy();
+		duplicate.push(descriptors[0]);
+		require(hasRegistryError(validateFlowActionDescriptors(duplicate), DuplicateCode, FlowActionId.DialogueAction), "duplicate action syntax was accepted");
+
+		final missing = descriptors.copy();
+		missing.pop();
+		require(hasRegistryError(validateFlowActionDescriptors(missing), MissingCode, FlowActionId.ChooseAction), "missing action descriptor was accepted");
+
+		final dialogue = descriptors[0];
+		final wrongSchema = copyDescriptor(dialogue, FlowActionSchema.OneScenario(FlowScenarioArgumentRole.ObjectReference), dialogue.consumers,
+			dialogue.editorLabel, dialogue.editorHelp, dialogue.traceName);
+		require(!flowActionMatchesDescriptor(actions[0], wrongSchema), "wrong action argument role matched a typed action");
+		require(hasRegistryError(validateFlowActionDescriptors([wrongSchema]), WrongSchemaCode, FlowActionId.DialogueAction),
+			"wrong action argument role passed registry validation");
+
+		final noAuthority = copyDescriptor(dialogue, dialogue.schema, {
+			caxeFlow: false,
+			cutscene: false,
+			console: false,
+			testSetup: false
+		}, dialogue.editorLabel, dialogue.editorHelp, dialogue.traceName);
+		require(hasRegistryError(validateFlowActionDescriptors([noAuthority]), MissingAuthorityCode, FlowActionId.DialogueAction),
+			"missing CaxeFlow authority passed registry validation");
+	}
+
+	static function copyDescriptor(source:FlowActionDescriptor, schema:FlowActionSchema, consumers:FlowActionConsumers, editorLabel:MessageId,
+			editorHelp:MessageId, traceName:String):FlowActionDescriptor
+		return {
+			id: source.id,
+			family: source.family,
+			schema: schema,
+			consumers: consumers,
+			editorLabel: editorLabel,
+			editorHelp: editorHelp,
+			traceName: traceName
+		};
+
+	static function hasRegistryError(errors:Array<FlowActionRegistryError>, code:RegistryErrorCode, id:FlowActionId):Bool {
+		for (error in errors) {
+			final matched = switch error {
+				case DuplicateActionId(actual): code == DuplicateCode && actual.text() == id.text();
+				case MissingActionId(actual): code == MissingCode && actual.text() == id.text();
+				case WrongActionSchema(actual): code == WrongSchemaCode && actual.text() == id.text();
+				case MissingCaxeFlowAuthority(actual): code == MissingAuthorityCode && actual.text() == id.text();
+				case _: code == OtherRegistryCode;
+			};
+			if (matched)
+				return true;
+		}
+		return false;
+	}
+
+	static function require(condition:Bool, message:String):Void
+		if (!condition)
+			throw message;
 
 	static function size(width:Int, height:Int, depth:Int):VoxelSize
 		return {width: width, height: height, depth: depth};

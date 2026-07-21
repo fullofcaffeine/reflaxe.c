@@ -5,6 +5,10 @@ import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionConsumer;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionAllowed;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionMatchesDescriptor;
 import caxecraft.scenario.CaxeFlowRuntime.FlowExecutionLimit;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.scenario.CaxeFlowRuntime.FlowRuntimeDiagnostic;
@@ -178,6 +182,11 @@ final class CaxeFlowExecutor {
 	}
 
 	function executeAction(action:FlowAction, frame:Null<CaxeFlowFrame>, owner:ScenarioId, depth:Int):Void {
+		final descriptor = flowActionDescriptor(action);
+		if (!flowActionAllowed(descriptor, FlowActionConsumer.CaxeFlowDocument) || !flowActionMatchesDescriptor(action, descriptor)) {
+			fail(InvalidRuntimeAction(owner));
+			return;
+		}
 		switch action {
 			case ShowDialogue(dialogue):
 				presentation.push(DialogueRequested(dialogue));

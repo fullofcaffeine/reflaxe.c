@@ -5,9 +5,13 @@ fixed-tick CaxeFlow executor, and renderer-independent editor semantics are
 implemented. Native persistence and the child-friendly Raylib editor remain
 later ordered `haxe_c-xge.19.*` slices.
 
-CAXEMAP is Caxecraft's public map and story format. Creative, Adventure, the
-in-game editor, Eval tests, and generated C all use the same typed model. Built-
-in content does not get a private source-code-only representation.
+CAXEMAP is Caxecraft's public map and story format. Today the target-neutral
+codec, validator, editor semantics, and first-playable authored source use the
+same typed model. The native first playable consumes a deterministic generated
+adapter derived from that source. Direct native CAXEMAP loading
+(`haxe_c-xge.19.4`), Creative mode (`haxe_c-xge.20`), and the visual in-game
+editor (`haxe_c-xge.19.6`) remain planned work. Built-in content does not get a
+private source-code-only representation.
 
 This reference uses a few technical terms:
 
@@ -30,9 +34,11 @@ load native code, access the network, name an arbitrary host path, or embed Lua,
 JavaScript, C, or Haxe code.
 
 The format carries data and CaxeFlow rules. Reusable game mechanics remain
-ordinary typed Haxe registered at compile time. Unknown required features make
-loading fail; unknown optional features may be reported and ignored only when
-their complete records use the extension envelope described below.
+ordinary typed Haxe. The current action catalog is a closed compile-time
+inventory, not a public plug-in API and not map-supplied code. Unknown required
+features make loading fail; unknown optional features may be reported and
+ignored only when their complete records use the extension envelope described
+below.
 
 ## Bytes, lines, and tokens
 
@@ -321,6 +327,38 @@ schedule <timer-id> <positive-ticks> <sequence-id> [<argument> ...]
 call <sequence-id> [<argument> ...]
 choose <seed-variable-id> <choice-count>
 ```
+
+The action vocabulary has one typed catalog in
+[`CaxeFlowActionRegistry.hx`](../examples/caxecraft/src/caxecraft/scenario/CaxeFlowActionRegistry.hx).
+An **action descriptor** is a data record that answers four questions: which
+CAXEMAP word names the action, which ordered fields it accepts, which broad
+engine family it belongs to, and which authoring surfaces may offer it. For
+example, `give-item` declares an object identity, then an item content ID, then
+a quantity. The parser uses the stable action ID for admission, the writer uses
+that same ID for canonical spelling, and the renderer-independent editor reads
+the same ordered roles through
+[`EditorActionPalette.hx`](../examples/caxecraft/src/caxecraft/editor/EditorActionPalette.hx).
+This prevents three independent string tables from quietly disagreeing.
+
+The descriptor is not executable code. `FlowAction` remains the closed typed
+payload, `CaxeFlowValidator` still validates scenario and content references,
+and `CaxeFlowExecutor` still exhaustively implements behavior. Content cannot
+register a callback, native function, script, or service through this catalog.
+All 18 descriptors are currently authorized only for CaxeFlow documents.
+Cutscene, developer-console, and CaxeTest consumers are represented so future
+work can request authority explicitly, but they remain denied because those
+integration and validation paths are not implemented. Editor label/help values
+are stable message IDs; translated visual-card copy remains part of the planned
+visual editor rather than a shipped UI claim.
+
+The current catalog, parser/writer parity, validator/executor guards, and editor
+palette are executable under the pinned Eval oracle. A production haxe.c probe
+fails closed before output because `FlowAction` carries nominal String IDs and
+Haxe Arrays inside enum payloads, two managed representations the compiler does
+not yet admit there. `haxe_c-2ph` owns String-backed enum payloads and
+`haxe_c-45z` owns Array-backed enum payloads. Until both land, this section is
+not evidence that the complete CaxeFlow registry or executor runs in generated
+C; unrelated DomainProbe output does not fill that gap.
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
 <content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object

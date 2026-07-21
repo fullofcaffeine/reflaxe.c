@@ -10,6 +10,8 @@ import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptorForSyntax;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
@@ -174,7 +176,10 @@ final class CaxeFlowReader {
 	function readActionRecord(record:ScenarioLexRecord, at:Int, choiceIndent:Int):ScenarioReadResult<FlowAction> {
 		if (at >= record.tokens.length)
 			return cursor.failAt(record, InvalidToken);
-		if (!ScenarioTokenGrammar.isBare(record.tokens[at], "choose")) {
+		final descriptor = flowActionDescriptorForSyntax(ScenarioTokenGrammar.bareText(record.tokens[at]));
+		if (descriptor == null)
+			return cursor.failAt(record, InvalidToken);
+		if (descriptor.id != FlowActionId.ChooseAction) {
 			final action = CaxeFlowValueReader.action(record, at);
 			if (action == null)
 				return cursor.failAt(record, InvalidToken);
@@ -207,10 +212,12 @@ final class CaxeFlowReader {
 			final actions:Array<FlowAction> = [];
 			while (cursor.hasRecord() && !ScenarioTokenGrammar.isEndAt(cursor.current(), "choice", choiceIndent)) {
 				final actionRecord = cursor.current();
+				final nestedDescriptor = actionRecord.tokens.length < 2 ? null : flowActionDescriptorForSyntax(ScenarioTokenGrammar.bareText(actionRecord.tokens[1]));
 				if (actionRecord.indent != choiceIndent + 2
 					|| ScenarioTokenGrammar.firstText(actionRecord) != "do"
 					|| actionRecord.tokens.length < 2
-					|| ScenarioTokenGrammar.isBare(actionRecord.tokens[1], "choose"))
+					|| nestedDescriptor == null
+					|| nestedDescriptor.id == FlowActionId.ChooseAction)
 					return cursor.failAt(actionRecord, UnexpectedRecord(ScenarioTokenGrammar.firstText(actionRecord)));
 				final action = CaxeFlowValueReader.action(actionRecord, 1);
 				if (action == null)

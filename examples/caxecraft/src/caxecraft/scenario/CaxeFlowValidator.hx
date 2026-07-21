@@ -8,6 +8,10 @@ import caxecraft.scenario.CaxeFlow.FlowSequence;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlow.FlowValueKind;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionConsumer;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionAllowed;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptor;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionMatchesDescriptor;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioCoordinate;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
@@ -143,6 +147,11 @@ final class CaxeFlowValidator {
 	}
 
 	function validateAction(owner:ScenarioId, coordinate:ScenarioCoordinate, value:FlowAction, insideChoice:Bool, sequenceOwner:Null<ScenarioId>):Void {
+		final descriptor = flowActionDescriptor(value);
+		if (!flowActionAllowed(descriptor, FlowActionConsumer.CaxeFlowDocument) || !flowActionMatchesDescriptor(value, descriptor)) {
+			context.addAtCoordinate(InvalidRule(owner), coordinate);
+			return;
+		}
 		switch value {
 			case ShowDialogue(id):
 				if (!context.hasDialogue(id))

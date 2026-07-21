@@ -8,6 +8,8 @@ import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowScope;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionId;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
@@ -292,14 +294,13 @@ final class ScenarioWriter {
 	static function appendAction(lines:Array<String>, prefix:String, value:FlowAction):Void {
 		switch value {
 			case ChooseSeeded(seed, choices):
-				lines.push(prefix + 'choose ${seed.text()} ${choices.length}');
+				lines.push(prefix + '${flowActionId(value).text()} ${seed.text()} ${choices.length}');
 				for (choice in choices) {
 					lines.push('  choice weight ${choice.weight}');
 					for (entry in choice.actions) {
-						switch entry {
-							case ChooseSeeded(_, _): throw "CAXEMAP 1 does not allow a choose action inside another choose action";
-							case _: lines.push("    do " + action(entry));
-						}
+						if (flowActionId(entry) == FlowActionId.ChooseAction)
+							throw "CAXEMAP 1 does not allow a choose action inside another choose action";
+						lines.push("    do " + action(entry));
 					}
 					lines.push("  end choice");
 				}
@@ -309,27 +310,28 @@ final class ScenarioWriter {
 	}
 
 	static function action(value:FlowAction):String {
+		final syntax = flowActionId(value).text();
 		return switch value {
-			case ShowDialogue(id): 'dialogue ${id.text()}';
-			case AddJournal(id): 'journal ${id.text()}';
-			case SetFlag(id, value): 'set-flag ${id.text()} $value';
-			case SetCounter(id, value): 'set-counter ${id.text()} $value';
-			case AddCounter(id, value): 'add-counter ${id.text()} $value';
-			case SetState(id, value): 'set-state ${id.text()} ${value.text()}';
-			case GiveItem(owner, item, quantity): 'give-item ${owner.text()} ${item.text()} $quantity';
-			case TakeItem(owner, item, quantity): 'take-item ${owner.text()} ${item.text()} $quantity';
-			case Spawn(id): 'spawn ${id.text()}';
-			case Despawn(id): 'despawn ${id.text()}';
-			case SetObjectState(id, value): 'set-object-state ${id.text()} ${value.text()}';
-			case SetCheckpoint(id): 'checkpoint ${id.text()}';
-			case SetObjective(id, value): 'objective ${id.text()} ${objectiveState(value)}';
-			case PlayEffect(effect, null): 'effect ${effect.text()}';
-			case PlayEffect(effect, objectId): 'effect ${effect.text()} at ${objectId.text()}';
-			case EmitSignal(signal): 'signal ${signal.text()}';
+			case ShowDialogue(id): '$syntax ${id.text()}';
+			case AddJournal(id): '$syntax ${id.text()}';
+			case SetFlag(id, value): '$syntax ${id.text()} $value';
+			case SetCounter(id, value): '$syntax ${id.text()} $value';
+			case AddCounter(id, value): '$syntax ${id.text()} $value';
+			case SetState(id, value): '$syntax ${id.text()} ${value.text()}';
+			case GiveItem(owner, item, quantity): '$syntax ${owner.text()} ${item.text()} $quantity';
+			case TakeItem(owner, item, quantity): '$syntax ${owner.text()} ${item.text()} $quantity';
+			case Spawn(id): '$syntax ${id.text()}';
+			case Despawn(id): '$syntax ${id.text()}';
+			case SetObjectState(id, value): '$syntax ${id.text()} ${value.text()}';
+			case SetCheckpoint(id): '$syntax ${id.text()}';
+			case SetObjective(id, value): '$syntax ${id.text()} ${objectiveState(value)}';
+			case PlayEffect(effect, null): '$syntax ${effect.text()}';
+			case PlayEffect(effect, objectId): '$syntax ${effect.text()} at ${objectId.text()}';
+			case EmitSignal(signal): '$syntax ${signal.text()}';
 			case Schedule(timer, ticks, sequence, arguments):
-				'schedule ${timer.text()} $ticks ${sequence.text()}${arguments.length == 0 ? "" : " " + [for (argument in arguments) argumentText(argument)].join(" ")}';
+				'$syntax ${timer.text()} $ticks ${sequence.text()}${arguments.length == 0 ? "" : " " + [for (argument in arguments) argumentText(argument)].join(" ")}';
 			case CallSequence(sequence, arguments):
-				'call ${sequence.text()}${arguments.length == 0 ? "" : " " + [for (argument in arguments) argumentText(argument)].join(" ")}';
+				'$syntax ${sequence.text()}${arguments.length == 0 ? "" : " " + [for (argument in arguments) argumentText(argument)].join(" ")}';
 			case ChooseSeeded(_, _): throw "choose is emitted as a block";
 		}
 	}

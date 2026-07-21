@@ -5,6 +5,8 @@ import caxecraft.scenario.CaxeFlow.FlowArgument;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowValue;
+import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
+import caxecraft.scenario.CaxeFlowActionRegistry.flowActionDescriptorForSyntax;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioLexToken;
@@ -161,29 +163,31 @@ final class CaxeFlowValueReader {
 	public static function action(record:ScenarioLexRecord, at:Int):Null<FlowAction> {
 		if (at >= record.tokens.length)
 			return null;
-		final name = ScenarioTokenGrammar.bareText(record.tokens[at]);
+		final descriptor = flowActionDescriptorForSyntax(ScenarioTokenGrammar.bareText(record.tokens[at]));
+		if (descriptor == null)
+			return null;
 		final remaining = record.tokens.length - at;
-		return switch name {
-			case "dialogue" if (remaining == 2): actionId(record.tokens[at + 1], ShowDialogue);
-			case "journal" if (remaining == 2): actionId(record.tokens[at + 1], AddJournal);
-			case "spawn" if (remaining == 2): actionId(record.tokens[at + 1], Spawn);
-			case "despawn" if (remaining == 2): actionId(record.tokens[at + 1], Despawn);
-			case "checkpoint" if (remaining == 2): actionId(record.tokens[at + 1], SetCheckpoint);
-			case "set-flag" if (remaining == 3): setFlagAction(record, at);
-			case "set-counter" if (remaining == 3): counterAction(record, at, SetCounter);
-			case "add-counter" if (remaining == 3): counterAction(record, at, AddCounter);
-			case "set-state" if (remaining == 3): stateAction(record, at, SetState);
-			case "set-object-state" if (remaining == 3): stateAction(record, at, SetObjectState);
-			case "objective" if (remaining == 3): objectiveAction(record, at);
-			case "give-item" if (remaining == 4): inventoryAction(record, at, GiveItem);
-			case "take-item" if (remaining == 4): inventoryAction(record, at, TakeItem);
-			case "signal" if (remaining == 2):
+		return switch descriptor.id {
+			case DialogueAction if (remaining == 2): actionId(record.tokens[at + 1], ShowDialogue);
+			case JournalAction if (remaining == 2): actionId(record.tokens[at + 1], AddJournal);
+			case SpawnAction if (remaining == 2): actionId(record.tokens[at + 1], Spawn);
+			case DespawnAction if (remaining == 2): actionId(record.tokens[at + 1], Despawn);
+			case CheckpointAction if (remaining == 2): actionId(record.tokens[at + 1], SetCheckpoint);
+			case SetFlagAction if (remaining == 3): setFlagAction(record, at);
+			case SetCounterAction if (remaining == 3): counterAction(record, at, SetCounter);
+			case AddCounterAction if (remaining == 3): counterAction(record, at, AddCounter);
+			case SetStateAction if (remaining == 3): stateAction(record, at, SetState);
+			case SetObjectStateAction if (remaining == 3): stateAction(record, at, SetObjectState);
+			case ObjectiveAction if (remaining == 3): objectiveAction(record, at);
+			case GiveItemAction if (remaining == 4): inventoryAction(record, at, GiveItem);
+			case TakeItemAction if (remaining == 4): inventoryAction(record, at, TakeItem);
+			case SignalAction if (remaining == 2):
 				final signal = ScenarioTokenGrammar.contentId(record.tokens[at + 1]);
 				signal == null ? null : EmitSignal(signal);
-			case "effect" if (remaining == 2 || (remaining == 4 && ScenarioTokenGrammar.isBare(record.tokens[at + 2], "at"))):
+			case EffectAction if (remaining == 2 || (remaining == 4 && ScenarioTokenGrammar.isBare(record.tokens[at + 2], "at"))):
 				effectAction(record, at);
-			case "schedule" if (remaining >= 4): scheduleAction(record, at);
-			case "call" if (remaining >= 2): callAction(record, at);
+			case ScheduleAction if (remaining >= 4): scheduleAction(record, at);
+			case CallAction if (remaining >= 2): callAction(record, at);
 			case _:
 				null;
 		}

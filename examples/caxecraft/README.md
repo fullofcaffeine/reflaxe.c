@@ -422,10 +422,13 @@ npm run test:caxecraft-scenario-model
 
 It compiles every closed scenario and CaxeFlow family under Eval, proves that
 object IDs cannot be mixed with registry content IDs, and rejects Raylib/C
-target leakage from the shared model. The same fast command now exercises the
-in-progress staged codec: bounded UTF-8/token decoding, syntax parsing, typed
-content-registry validation, byte-identical canonical writing, CRLF and input-
-order convergence, two readable fixtures, and fail-closed malformed families.
+target leakage from the shared model. It also verifies the 18-entry action
+catalog, ordered editor fields, unknown-syntax rejection, consumer authority,
+and negative duplicate/missing/wrong-schema cases without changing the model
+trace. The same fast command exercises the staged codec: bounded UTF-8/token
+decoding, syntax parsing, typed content-registry validation, byte-identical
+canonical writing, CRLF and input-order convergence, two readable fixtures,
+and fail-closed malformed families.
 The slower reference check keeps repeated compiler behavior out of that edit
 loop while proving the same complete codec probe twice from cold Haxe, once
 under an alternate installed locale, and twice through one exact-pin Haxe
