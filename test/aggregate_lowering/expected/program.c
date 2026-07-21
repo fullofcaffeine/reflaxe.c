@@ -1,5 +1,11 @@
 #include "hxc/program.h"
 
+_Static_assert(offsetof(struct hxc_SwitchRecord, hxc_state) == 0, "closed record hxc_SwitchRecord first field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_SwitchRecord) >= _Alignof(int32_t), "closed record hxc_SwitchRecord alignment admits field 0");
+
+_Static_assert(sizeof(struct hxc_SwitchRecord) >= offsetof(struct hxc_SwitchRecord, hxc_state) + sizeof(int32_t), "closed record hxc_SwitchRecord size contains its final field");
+
 _Static_assert(offsetof(struct hxc_OrderA, hxc_a) == 0, "closed record hxc_OrderA first field begins at offset zero");
 
 _Static_assert(_Alignof(struct hxc_OrderA) >= _Alignof(int32_t), "closed record hxc_OrderA alignment admits field 0");
@@ -82,7 +88,23 @@ void hxc_AggregateFixture_main(void)
       int32_t hxc_tmp_call_result_n10 = hxc_AggregateFixture_envelopeSum(hxc_nested);
       hxc_tmp_short_circuit_result_n4 = hxc_tmp_call_result_n10 == 7;
     }
-    if (!!hxc_tmp_short_circuit_result_n4)
+    bool hxc_tmp_short_circuit_load_result_n11 = hxc_tmp_short_circuit_result_n4;
+    bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_short_circuit_load_result_n11;
+    if (hxc_tmp_short_circuit_load_result_n11)
+    {
+      struct hxc_SwitchRecord hxc_tmp_call_result_n12 = hxc_AggregateFixture_makeSwitch(1);
+      bool hxc_tmp_call_result_n13 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n12);
+      hxc_tmp_short_circuit_result_n5 = hxc_tmp_call_result_n13;
+    }
+    bool hxc_tmp_short_circuit_load_result_n14 = hxc_tmp_short_circuit_result_n5;
+    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n14;
+    if (hxc_tmp_short_circuit_load_result_n14)
+    {
+      struct hxc_SwitchRecord hxc_tmp_call_result_n15 = hxc_AggregateFixture_makeSwitch(0);
+      bool hxc_tmp_call_result_n16 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n15);
+      hxc_tmp_short_circuit_result_n6 = !hxc_tmp_call_result_n16;
+    }
+    if (!!hxc_tmp_short_circuit_result_n6)
     {
       break;
     }
@@ -97,9 +119,19 @@ struct hxc_OrderA hxc_AggregateFixture_make(int32_t hxc_left, int32_t hxc_right)
   return (struct hxc_OrderA){ .hxc_a = hxc_tmp_call_result_n1, .hxc_z = hxc_tmp_call_result_n0 };
 }
 
+struct hxc_SwitchRecord hxc_AggregateFixture_makeSwitch(int32_t hxc_state)
+{
+  return (struct hxc_SwitchRecord){ .hxc_state = hxc_state };
+}
+
 int32_t hxc_AggregateFixture_sum(struct hxc_OrderA hxc_value)
 {
   return hxc_i32_add_wrapping(hxc_value.hxc_a, hxc_value.hxc_z);
+}
+
+bool hxc_AggregateFixture_switchIsOn(struct hxc_SwitchRecord hxc_value)
+{
+  return hxc_value.hxc_state == 1;
 }
 
 int main(void)

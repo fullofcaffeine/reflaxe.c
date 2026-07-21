@@ -1,155 +1,201 @@
 hxcir schema=10
-module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-52:3
+module "AggregateFixture" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-73:3
+  type "type.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0" name="SwitchRecord" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:1-23:2
+    field "state" type=i32 mutable=false @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":22:2-22:26
   type "type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" name="OrderA" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-4:2
     field "a" type=i32 mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":3:2-3:12
     field "z" type=i32 mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":2:2-2:12
   type "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" name="Envelope" kind=aggregate @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":11:1-14:2
     field "enabled" type=bool mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":13:2-13:19
     field "point" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") mutable=true @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":12:2-12:19
+  instance "instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0" declaration="type.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:1-23:2
   instance "instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" declaration="type.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":1:1-4:2
   instance "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" declaration="type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" arguments=[] representation=direct @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":11:1-14:2
-  function "function.AggregateFixture.copy" name="AggregateFixture.copy" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
-    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
-    local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:3-26:29
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":25:44-28:3
-      instruction "instruction.0.initialize" result=- initialize place=local("local.1") value="parameter.0" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:3-26:29
-      instruction "instruction.1.load" result="value.0":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":27:10-27:16
-      terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":27:3-27:16
+  function "function.AggregateFixture.copy" name="AggregateFixture.copy" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:44-37:3
+    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:44-37:3
+    local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:3-35:29
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:44-37:3
+      instruction "instruction.0.initialize" result=- initialize place=local("local.1") value="parameter.0" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:3-35:29
+      instruction "instruction.1.load" result="value.0":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:10-36:16
+      terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:3-36:16
     end block "entry"
   end function "function.AggregateFixture.copy"
-  function "function.AggregateFixture.envelope" name="AggregateFixture.envelope" returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:50-41:3
-    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:50-41:3
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:50-41:3
-      instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:34-40:38
-      instruction "instruction.1.construct-record" result="value.1":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") construct-aggregate instance="instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" fields=["enabled"="value.0","point"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:10-40:39
-      terminator return value="value.1" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:3-40:39
+  function "function.AggregateFixture.envelope" name="AggregateFixture.envelope" returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:50-50:3
+    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:50-50:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:50-50:3
+      instruction "instruction.0.constant" result="value.0":bool constant value=bool(true) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:34-49:38
+      instruction "instruction.1.construct-record" result="value.1":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") construct-aggregate instance="instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54" fields=["enabled"="value.0","point"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:10-49:39
+      terminator return value="value.1" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:3-49:39
     end block "entry"
   end function "function.AggregateFixture.envelope"
-  function "function.AggregateFixture.envelopeSum" name="AggregateFixture.envelopeSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:50-45:3
-    parameter "parameter.0" type=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:50-45:3
-    local "local.1" type=i32 storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:50-45:3
-      instruction "instruction.0.record-field-project" result="value.0":bool project value="parameter.0" field="enabled" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:23
-      instruction "instruction.1.conditional-default" result="value.1":i32 constant value=int(0) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      instruction "instruction.2.conditional-result-initialize" result=- initialize place=local("local.1") value="value.1" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      terminator branch condition="value.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
+  function "function.AggregateFixture.envelopeSum" name="AggregateFixture.envelopeSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":52:50-54:3
+    parameter "parameter.0" type=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":52:50-54:3
+    local "local.1" type=i32 storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":52:50-54:3
+      instruction "instruction.0.record-field-project" result="value.0":bool project value="parameter.0" field="enabled" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:23
+      instruction "instruction.1.conditional-default" result="value.1":i32 constant value=int(0) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      instruction "instruction.2.conditional-result-initialize" result=- initialize place=local("local.1") value="value.1" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      terminator branch condition="value.0" true=edge(target="block.0.conditional-true",arguments=[],cleanup=[]) false=edge(target="block.1.conditional-false",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
     end block "entry"
-    block "block.0.conditional-true" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      instruction "instruction.3.record-field-project" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") project value="parameter.0" field="point" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:26-44:37
-      instruction "instruction.4.record-field-project" result="value.3":i32 project value="value.2" field="a" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:26-44:39
-      instruction "instruction.5.record-field-project" result="value.4":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") project value="parameter.0" field="point" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:42-44:53
-      instruction "instruction.6.record-field-project" result="value.5":i32 project value="value.4" field="z" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:42-44:55
-      instruction "instruction.7.binary" result="value.6":i32 binary operation="haxe.i32.add" left="value.3" right="value.5" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:26-44:55
-      instruction "instruction.8.conditional-true-store" result=- store place=local("local.1") value="value.6" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
+    block "block.0.conditional-true" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      instruction "instruction.3.record-field-project" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") project value="parameter.0" field="point" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:26-53:37
+      instruction "instruction.4.record-field-project" result="value.3":i32 project value="value.2" field="a" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:26-53:39
+      instruction "instruction.5.record-field-project" result="value.4":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") project value="parameter.0" field="point" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-53:53
+      instruction "instruction.6.record-field-project" result="value.5":i32 project value="value.4" field="z" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:42-53:55
+      instruction "instruction.7.binary" result="value.6":i32 binary operation="haxe.i32.add" left="value.3" right="value.5" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:26-53:55
+      instruction "instruction.8.conditional-true-store" result=- store place=local("local.1") value="value.6" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
     end block "block.0.conditional-true"
-    block "block.1.conditional-false" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      instruction "instruction.9.constant" result="value.7":i32 constant value=int(0) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:58-44:59
-      instruction "instruction.10.conditional-false-store" result=- store place=local("local.1") value="value.7" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
+    block "block.1.conditional-false" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      instruction "instruction.9.constant" result="value.7":i32 constant value=int(0) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:58-53:59
+      instruction "instruction.10.conditional-false-store" result=- store place=local("local.1") value="value.7" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      terminator jump edge(target="block.2.conditional-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
     end block "block.1.conditional-false"
-    block "block.2.conditional-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      instruction "instruction.11.conditional-load" result="value.8":i32 load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:10-44:59
-      terminator return value="value.8" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:3-44:59
+    block "block.2.conditional-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      instruction "instruction.11.conditional-load" result="value.8":i32 load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:10-53:59
+      terminator return value="value.8" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":53:3-53:59
     end block "block.2.conditional-join"
   end function "function.AggregateFixture.envelopeSum"
-  function "function.AggregateFixture.identity" name="AggregateFixture.identity" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":17:42-19:3
-    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":17:42-19:3
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":17:42-19:3
-      terminator return value="parameter.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":18:3-18:15
+  function "function.AggregateFixture.identity" name="AggregateFixture.identity" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:42-28:3
+    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:42-28:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":26:42-28:3
+      terminator return value="parameter.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":27:3-27:15
     end block "entry"
   end function "function.AggregateFixture.identity"
-  function "function.AggregateFixture.localSum" name="AggregateFixture.localSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:52-37:3
-    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:52-37:3
-    parameter "parameter.1" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:52-37:3
-    local "local.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:3-35:40
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":34:52-37:3
-      instruction "instruction.0.call" result="value.0":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.make") arguments=["parameter.0","parameter.1"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:22-35:39
-      instruction "instruction.1.initialize" result=- initialize place=local("local.2") value="value.0" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":35:3-35:40
-      instruction "instruction.2.record-field-load" result="value.1":i32 load place=field(local("local.2"),"a") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:10-36:17
-      instruction "instruction.3.record-field-load" result="value.2":i32 load place=field(local("local.2"),"z") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:20-36:27
-      instruction "instruction.4.binary" result="value.3":i32 binary operation="haxe.i32.add" left="value.1" right="value.2" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:10-36:27
-      terminator return value="value.3" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":36:3-36:27
+  function "function.AggregateFixture.localSum" name="AggregateFixture.localSum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:52-46:3
+    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:52-46:3
+    parameter "parameter.1" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:52-46:3
+    local "local.2" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:3-44:40
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":43:52-46:3
+      instruction "instruction.0.call" result="value.0":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.make") arguments=["parameter.0","parameter.1"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:22-44:39
+      instruction "instruction.1.initialize" result=- initialize place=local("local.2") value="value.0" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":44:3-44:40
+      instruction "instruction.2.record-field-load" result="value.1":i32 load place=field(local("local.2"),"a") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":45:10-45:17
+      instruction "instruction.3.record-field-load" result="value.2":i32 load place=field(local("local.2"),"z") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":45:20-45:27
+      instruction "instruction.4.binary" result="value.3":i32 binary operation="haxe.i32.add" left="value.1" right="value.2" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":45:10-45:27
+      terminator return value="value.3" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":45:3-45:27
     end block "entry"
   end function "function.AggregateFixture.localSum"
-  function "function.AggregateFixture.main" name="AggregateFixture.main" returns=void failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":47:30-52:3
-    local "local.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:3-48:33
-    local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:3-49:35
-    local "local.2" type=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":50:3-50:42
-    local "local.3" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-    local "local.4" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":47:30-52:3
-      instruction "instruction.0.constant" result="value.0":i32 constant value=int(3) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:27-48:28
-      instruction "instruction.1.constant" result="value.1":i32 constant value=int(4) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:30-48:31
-      instruction "instruction.2.call" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.make") arguments=["value.0","value.1"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:22-48:32
-      instruction "instruction.3.initialize" result=- initialize place=local("local.0") value="value.2" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":48:3-48:33
-      instruction "instruction.4.load" result="value.3":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.0") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:28-49:33
-      instruction "instruction.5.call" result="value.4":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.copy") arguments=["value.3"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:23-49:34
-      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.4" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":49:3-49:35
-      instruction "instruction.7.load" result="value.5":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":50:34-50:40
-      instruction "instruction.8.call" result="value.6":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") call dispatch=direct("function.AggregateFixture.envelope") arguments=["value.5"] returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":50:25-50:41
-      instruction "instruction.9.initialize" result=- initialize place=local("local.2") value="value.6" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":50:3-50:42
-      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
+  function "function.AggregateFixture.main" name="AggregateFixture.main" returns=void failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":64:30-73:3
+    local "local.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":65:3-65:33
+    local "local.1" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:3-66:35
+    local "local.2" type=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":67:3-67:42
+    local "local.3" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+    local "local.4" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+    local "local.5" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+    local "local.6" type=bool storage=automatic state=uninitialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":64:30-73:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(3) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":65:27-65:28
+      instruction "instruction.1.constant" result="value.1":i32 constant value=int(4) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":65:30-65:31
+      instruction "instruction.2.call" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.make") arguments=["value.0","value.1"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":65:22-65:32
+      instruction "instruction.3.initialize" result=- initialize place=local("local.0") value="value.2" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":65:3-65:33
+      instruction "instruction.4.load" result="value.3":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.0") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:28-66:33
+      instruction "instruction.5.call" result="value.4":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") call dispatch=direct("function.AggregateFixture.copy") arguments=["value.3"] returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:23-66:34
+      instruction "instruction.6.initialize" result=- initialize place=local("local.1") value="value.4" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":66:3-66:35
+      instruction "instruction.7.load" result="value.5":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":67:34-67:40
+      instruction "instruction.8.call" result="value.6":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") call dispatch=direct("function.AggregateFixture.envelope") arguments=["value.5"] returns=instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":67:25-67:41
+      instruction "instruction.9.initialize" result=- initialize place=local("local.2") value="value.6" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":67:3-67:42
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
     end block "entry"
-    block "block.0.while-condition" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
-      instruction "instruction.10.load" result="value.7":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:16-51:22
-      instruction "instruction.11.call" result="value.8":i32 call dispatch=direct("function.AggregateFixture.sum") arguments=["value.7"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:23
-      instruction "instruction.12.constant" result="value.9":i32 constant value=int(7) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:27-51:28
-      instruction "instruction.13.binary" result="value.10":bool binary operation="haxe.i32.equal" left="value.8" right="value.9" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:28
-      instruction "instruction.14.short-circuit-result-initialize" result=- initialize place=local("local.3") value="value.10" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-      terminator branch condition="value.10" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
+    block "block.0.while-condition" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
+      instruction "instruction.10.load" result="value.7":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") load place=local("local.1") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:16-68:22
+      instruction "instruction.11.call" result="value.8":i32 call dispatch=direct("function.AggregateFixture.sum") arguments=["value.7"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-68:23
+      instruction "instruction.12.constant" result="value.9":i32 constant value=int(7) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:27-68:28
+      instruction "instruction.13.binary" result="value.10":bool binary operation="haxe.i32.equal" left="value.8" right="value.9" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-68:28
+      instruction "instruction.14.short-circuit-result-initialize" result=- initialize place=local("local.3") value="value.10" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+      terminator branch condition="value.10" true=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
     end block "block.0.while-condition"
-    block "block.1.while-body" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
-      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
+    block "block.1.while-body" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
     end block "block.1.while-body"
-    block "block.2.while-exit" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
-      terminator return value=none cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":47:30-52:3
+    block "block.10.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+      instruction "instruction.41.short-circuit-load" result="value.30":bool load place=local("local.6") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+      instruction "instruction.42.unary" result="value.31":bool unary operation="haxe.bool.not" value="value.30" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:10-72:48
+      terminator branch condition="value.31" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
+    end block "block.10.short-circuit-join"
+    block "block.2.while-exit" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:3-72:52
+      terminator return value=none cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":64:30-73:3
     end block "block.2.while-exit"
-    block "block.3.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-      instruction "instruction.15.constant" result="value.11":i32 constant value=int(5) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:41-51:42
-      instruction "instruction.16.constant" result="value.12":i32 constant value=int(6) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:44-51:45
-      instruction "instruction.17.call" result="value.13":i32 call dispatch=direct("function.AggregateFixture.localSum") arguments=["value.11","value.12"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:32-51:46
-      instruction "instruction.18.constant" result="value.14":i32 constant value=int(11) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:50-51:52
-      instruction "instruction.19.binary" result="value.15":bool binary operation="haxe.i32.equal" left="value.13" right="value.14" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:32-51:52
-      instruction "instruction.20.short-circuit-store" result=- store place=local("local.3") value="value.15" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
+    block "block.3.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+      instruction "instruction.15.constant" result="value.11":i32 constant value=int(5) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":69:16-69:17
+      instruction "instruction.16.constant" result="value.12":i32 constant value=int(6) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":69:19-69:20
+      instruction "instruction.17.call" result="value.13":i32 call dispatch=direct("function.AggregateFixture.localSum") arguments=["value.11","value.12"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":69:7-69:21
+      instruction "instruction.18.constant" result="value.14":i32 constant value=int(11) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":69:25-69:27
+      instruction "instruction.19.binary" result="value.15":bool binary operation="haxe.i32.equal" left="value.13" right="value.14" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":69:7-69:27
+      instruction "instruction.20.short-circuit-store" result=- store place=local("local.3") value="value.15" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
     end block "block.3.short-circuit-rhs"
-    block "block.4.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-      instruction "instruction.21.short-circuit-load" result="value.16":bool load place=local("local.3") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:52
-      instruction "instruction.22.short-circuit-result-initialize" result=- initialize place=local("local.4") value="value.16" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-      terminator branch condition="value.16" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
+    block "block.4.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+      instruction "instruction.21.short-circuit-load" result="value.16":bool load place=local("local.3") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-69:27
+      instruction "instruction.22.short-circuit-result-initialize" result=- initialize place=local("local.4") value="value.16" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+      terminator branch condition="value.16" true=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
     end block "block.4.short-circuit-join"
-    block "block.5.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-      instruction "instruction.23.load" result="value.17":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") load place=local("local.2") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:68-51:74
-      instruction "instruction.24.call" result="value.18":i32 call dispatch=direct("function.AggregateFixture.envelopeSum") arguments=["value.17"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:56-51:75
-      instruction "instruction.25.constant" result="value.19":i32 constant value=int(7) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:79-51:80
-      instruction "instruction.26.binary" result="value.20":bool binary operation="haxe.i32.equal" left="value.18" right="value.19" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:56-51:80
-      instruction "instruction.27.short-circuit-store" result=- store place=local("local.4") value="value.20" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
+    block "block.5.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+      instruction "instruction.23.load" result="value.17":instance("instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54") load place=local("local.2") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":70:19-70:25
+      instruction "instruction.24.call" result="value.18":i32 call dispatch=direct("function.AggregateFixture.envelopeSum") arguments=["value.17"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":70:7-70:26
+      instruction "instruction.25.constant" result="value.19":i32 constant value=int(7) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":70:30-70:31
+      instruction "instruction.26.binary" result="value.20":bool binary operation="haxe.i32.equal" left="value.18" right="value.19" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":70:7-70:31
+      instruction "instruction.27.short-circuit-store" result=- store place=local("local.4") value="value.20" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
     end block "block.5.short-circuit-rhs"
-    block "block.6.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-      instruction "instruction.28.short-circuit-load" result="value.21":bool load place=local("local.4") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:12-51:80
-      instruction "instruction.29.unary" result="value.22":bool unary operation="haxe.bool.not" value="value.21" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:10-51:81
-      terminator branch condition="value.22" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":51:3-51:85
+    block "block.6.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+      instruction "instruction.28.short-circuit-load" result="value.21":bool load place=local("local.4") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-70:31
+      instruction "instruction.29.short-circuit-result-initialize" result=- initialize place=local("local.5") value="value.21" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+      terminator branch condition="value.21" true=edge(target="block.7.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
     end block "block.6.short-circuit-join"
+    block "block.7.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+      instruction "instruction.30.constant" result="value.22":i32 constant value=int(1) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:29-71:43
+      instruction "instruction.31.call" result="value.23":instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") call dispatch=direct("function.AggregateFixture.makeSwitch") arguments=["value.22"] returns=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:18-71:44
+      instruction "instruction.32.call" result="value.24":bool call dispatch=direct("function.AggregateFixture.switchIsOn") arguments=["value.23"] returns=bool failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":71:7-71:45
+      instruction "instruction.33.short-circuit-store" result=- store place=local("local.5") value="value.24" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+      terminator jump edge(target="block.8.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+    end block "block.7.short-circuit-rhs"
+    block "block.8.short-circuit-join" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+      instruction "instruction.34.short-circuit-load" result="value.25":bool load place=local("local.5") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-71:45
+      instruction "instruction.35.short-circuit-result-initialize" result=- initialize place=local("local.6") value="value.25" transition=uninitialized->initialized @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+      terminator branch condition="value.25" true=edge(target="block.9.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+    end block "block.8.short-circuit-join"
+    block "block.9.short-circuit-rhs" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+      instruction "instruction.36.constant" result="value.26":i32 constant value=int(0) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:30-72:45
+      instruction "instruction.37.call" result="value.27":instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") call dispatch=direct("function.AggregateFixture.makeSwitch") arguments=["value.26"] returns=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:19-72:46
+      instruction "instruction.38.call" result="value.28":bool call dispatch=direct("function.AggregateFixture.switchIsOn") arguments=["value.27"] returns=bool failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:8-72:47
+      instruction "instruction.39.unary" result="value.29":bool unary operation="haxe.bool.not" value="value.28" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":72:7-72:47
+      instruction "instruction.40.short-circuit-store" result=- store place=local("local.6") value="value.29" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+      terminator jump edge(target="block.10.short-circuit-join",arguments=[],cleanup=[]) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":68:12-72:47
+    end block "block.9.short-circuit-rhs"
   end function "function.AggregateFixture.main"
-  function "function.AggregateFixture.make" name="AggregateFixture.make" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:51-23:3
-    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:51-23:3
-    parameter "parameter.1" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:51-23:3
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":21:51-23:3
-      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.AggregateFixture.identity") arguments=["parameter.0"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":22:14-22:28
-      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.AggregateFixture.identity") arguments=["parameter.1"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":22:33-22:48
-      instruction "instruction.2.construct-record" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") construct-aggregate instance="instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" fields=["a"="value.1","z"="value.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":22:10-22:49
-      terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":22:3-22:49
+  function "function.AggregateFixture.make" name="AggregateFixture.make" returns=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:51-32:3
+    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:51-32:3
+    parameter "parameter.1" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:51-32:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:51-32:3
+      instruction "instruction.0.call" result="value.0":i32 call dispatch=direct("function.AggregateFixture.identity") arguments=["parameter.0"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:14-31:28
+      instruction "instruction.1.call" result="value.1":i32 call dispatch=direct("function.AggregateFixture.identity") arguments=["parameter.1"] returns=i32 failure=none @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:33-31:48
+      instruction "instruction.2.construct-record" result="value.2":instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") construct-aggregate instance="instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367" fields=["a"="value.1","z"="value.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:10-31:49
+      terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:3-31:49
     end block "entry"
   end function "function.AggregateFixture.make"
-  function "function.AggregateFixture.sum" name="AggregateFixture.sum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:40-32:3
-    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:40-32:3
-    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":30:40-32:3
-      instruction "instruction.0.record-field-project" result="value.0":i32 project value="parameter.0" field="a" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:10-31:17
-      instruction "instruction.1.record-field-project" result="value.1":i32 project value="parameter.0" field="z" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:20-31:27
-      instruction "instruction.2.binary" result="value.2":i32 binary operation="haxe.i32.add" left="value.0" right="value.1" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:10-31:27
-      terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":31:3-31:27
+  function "function.AggregateFixture.makeSwitch" name="AggregateFixture.makeSwitch" returns=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":56:61-58:3
+    parameter "parameter.0" type=i32 @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":56:61-58:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":56:61-58:3
+      instruction "instruction.0.construct-record" result="value.0":instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") construct-aggregate instance="instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0" fields=["state"="parameter.0"] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":57:10-57:24
+      terminator return value="value.0" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":57:3-57:24
+    end block "entry"
+  end function "function.AggregateFixture.makeSwitch"
+  function "function.AggregateFixture.sum" name="AggregateFixture.sum" returns=i32 failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:40-41:3
+    parameter "parameter.0" type=instance("instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:40-41:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":39:40-41:3
+      instruction "instruction.0.record-field-project" result="value.0":i32 project value="parameter.0" field="a" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:10-40:17
+      instruction "instruction.1.record-field-project" result="value.1":i32 project value="parameter.0" field="z" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:20-40:27
+      instruction "instruction.2.binary" result="value.2":i32 binary operation="haxe.i32.add" left="value.0" right="value.1" implementation=program-local("hxc.i32.add.wrapping") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:10-40:27
+      terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":40:3-40:27
     end block "entry"
   end function "function.AggregateFixture.sum"
+  function "function.AggregateFixture.switchIsOn" name="AggregateFixture.switchIsOn" returns=bool failure=infallible entry="entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":60:54-62:3
+    parameter "parameter.0" type=instance("instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0") @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":60:54-62:3
+    block "entry" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":60:54-62:3
+      instruction "instruction.0.record-field-project" result="value.0":i32 project value="parameter.0" field="state" @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":61:10-61:21
+      instruction "instruction.1.constant" result="value.1":i32 constant value=int(1) @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":61:25-61:39
+      instruction "instruction.2.binary" result="value.2":bool binary operation="haxe.i32.equal" left="value.0" right="value.1" implementation=static @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":61:10-61:39
+      terminator return value="value.2" cleanup=[] @"test/aggregate_lowering/fixtures/positive/AggregateFixture.hx":61:3-61:39
+    end block "entry"
+  end function "function.AggregateFixture.switchIsOn"
 end module "AggregateFixture"

@@ -1,5 +1,18 @@
 [
   {
+    "instanceId": "instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0",
+    "cTag": "hxc_SwitchRecord",
+    "fields": [
+      {
+        "semanticName": "state",
+        "cName": "hxc_state",
+        "type": "i32"
+      }
+    ],
+    "declarationId": "type.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0",
+    "digest": "4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0"
+  },
+  {
     "instanceId": "instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367",
     "cTag": "hxc_OrderA",
     "fields": [

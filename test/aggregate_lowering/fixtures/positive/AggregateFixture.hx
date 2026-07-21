@@ -13,6 +13,15 @@ typedef Envelope = {
 	var enabled:Bool;
 }
 
+enum abstract SwitchState(Int) {
+	var Off = 0;
+	var On = 1;
+}
+
+typedef SwitchRecord = {
+	final state:SwitchState;
+}
+
 class AggregateFixture {
 	static function identity(value:Int):Int {
 		return value;
@@ -44,10 +53,22 @@ class AggregateFixture {
 		return value.enabled ? value.point.a + value.point.z : 0;
 	}
 
+	static function makeSwitch(state:SwitchState):SwitchRecord {
+		return {state: state};
+	}
+
+	static function switchIsOn(value:SwitchRecord):Bool {
+		return value.state == SwitchState.On;
+	}
+
 	static function main():Void {
 		var first:OrderA = make(3, 4);
 		var copied:OrderB = copy(first);
 		var nested:Envelope = envelope(copied);
-		while (!(sum(copied) == 7 && localSum(5, 6) == 11 && envelopeSum(nested) == 7)) {}
+		while (!(sum(copied) == 7
+			&& localSum(5, 6) == 11
+			&& envelopeSum(nested) == 7
+			&& switchIsOn(makeSwitch(SwitchState.On))
+			&& !switchIsOn(makeSwitch(SwitchState.Off)))) {}
 	}
 }

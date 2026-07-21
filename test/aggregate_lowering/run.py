@@ -172,18 +172,32 @@ def aggregate_records(report: dict[str, object]) -> list[dict[str, object]]:
 
 def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     records = aggregate_records(report)
-    if len(records) != 2:
+    if len(records) != 3:
         raise AggregateLoweringFailure(
-            "OrderA/OrderB did not deduplicate to one pair plus one envelope"
+            "OrderA/OrderB did not deduplicate to one pair plus the envelope and enum-abstract record"
         )
-    pair, envelope = records
+    by_fields = {
+        tuple(field.get("semanticName") for field in record.get("fields", [])): record
+        for record in records
+    }
+    pair = by_fields.get(("a", "z"))
+    envelope = by_fields.get(("enabled", "point"))
+    switch_record = by_fields.get(("state",))
+    if not all(isinstance(record, dict) for record in (pair, envelope, switch_record)):
+        raise AggregateLoweringFailure("aggregate records lost their three closed structural shapes")
+    assert isinstance(pair, dict)
+    assert isinstance(envelope, dict)
+    assert isinstance(switch_record, dict)
     pair_fields = pair.get("fields")
     envelope_fields = envelope.get("fields")
+    switch_fields = switch_record.get("fields")
     if (
         not isinstance(pair_fields, list)
         or not all(isinstance(field, dict) for field in pair_fields)
         or not isinstance(envelope_fields, list)
         or not all(isinstance(field, dict) for field in envelope_fields)
+        or not isinstance(switch_fields, list)
+        or not all(isinstance(field, dict) for field in switch_fields)
     ):
         raise AggregateLoweringFailure("aggregate field records are malformed")
     if [field.get("semanticName") for field in pair_fields] != ["a", "z"]:
@@ -195,6 +209,11 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
         "point",
     ]:
         raise AggregateLoweringFailure("nested fields are not in canonical UTF-8 order")
+    if (
+        [field.get("semanticName") for field in switch_fields] != ["state"]
+        or [field.get("type") for field in switch_fields] != ["i32"]
+    ):
+        raise AggregateLoweringFailure("enum-abstract field did not retain its direct Int representation")
     pair_instance = pair.get("instanceId")
     if (
         not isinstance(pair_instance, str)
@@ -209,6 +228,8 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
         "envelope_tag": envelope.get("cTag"),
         "envelope_enabled": envelope_fields[0].get("cName"),
         "envelope_point": envelope_fields[1].get("cName"),
+        "switch_tag": switch_record.get("cTag"),
+        "switch_state": switch_fields[0].get("cName"),
     }
     if not all(isinstance(value, str) and value for value in values.values()):
         raise AggregateLoweringFailure("aggregate report omitted finalized C identifiers")
@@ -246,11 +267,24 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
             raise AggregateLoweringFailure(f"{label} leaked a host path or runtime dependency")
 
-    pair_type = f'type "type.closed-record.{aggregate_records(report)[0]["digest"]}"'
-    envelope_type = f'type "type.closed-record.{aggregate_records(report)[1]["digest"]}"'
+    records = aggregate_records(report)
+    pair_record = next(
+        record
+        for record in records
+        if [field.get("semanticName") for field in record.get("fields", [])]
+        == ["a", "z"]
+    )
+    envelope_record = next(
+        record
+        for record in records
+        if [field.get("semanticName") for field in record.get("fields", [])]
+        == ["enabled", "point"]
+    )
+    pair_type = f'type "type.closed-record.{pair_record["digest"]}"'
+    envelope_type = f'type "type.closed-record.{envelope_record["digest"]}"'
     if hxcir.find(pair_type) == -1 or hxcir.find(pair_type) > hxcir.find(envelope_type):
         raise AggregateLoweringFailure("nested HxcIR declarations are not dependency-first")
-    if hxcir.count(" representation=direct ") != 2:
+    if hxcir.count(" representation=direct ") != 3:
         raise AggregateLoweringFailure("closed record instances lost direct representation")
 
     make = function_section(hxcir, "make")
@@ -283,9 +317,19 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     sum_section = function_section(hxcir, "sum")
     if sum_section.count('.record-field-project"') != 2:
         raise AggregateLoweringFailure("parameter field reads did not use value projection")
+    switch_section = function_section(hxcir, "switchIsOn")
+    if (
+        switch_section.count('.record-field-project"') != 1
+        or ':i32 project value="parameter.0" field="state"' not in switch_section
+        or "equal" not in switch_section
+    ):
+        raise AggregateLoweringFailure(
+            "enum-abstract record projection lost its direct scalar comparison"
+        )
 
     pair_definition = f"struct {names['pair_tag']} {{"
     envelope_definition = f"struct {names['envelope_tag']} {{"
+    switch_definition = f"struct {names['switch_tag']} {{"
     if (
         header.find(pair_definition) == -1
         or header.find(envelope_definition) == -1
@@ -294,14 +338,17 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or f"int32_t {names['pair_z']};" not in header
         or f"bool {names['envelope_enabled']};" not in header
         or f"struct {names['pair_tag']} {names['envelope_point']};" not in header
+        or header.find(switch_definition) == -1
+        or f"int32_t {names['switch_state']};" not in header
         or "#include <stddef.h>" not in header
     ):
         raise AggregateLoweringFailure("private dependency-first struct header drifted")
     if (
-        source.count("_Static_assert(") != 10
+        source.count("_Static_assert(") != 13
         or source.count("offsetof(") < 8
         or f"(struct {names['pair_tag']}){{" not in source
         or f"(struct {names['envelope_tag']}){{" not in source
+        or f"(struct {names['switch_tag']}){{" not in source
         or "int main(void)" not in source
     ):
         raise AggregateLoweringFailure("structural CAST construction/layout assertions drifted")
@@ -628,7 +675,7 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
         or proof.get("status") != "eligible"
         or proof.get("directDecisions") != runtime_plan.get("directDecisions")
         or reachability is None
-        or reachability.get("typeInstances") != 2
+        or reachability.get("typeInstances") != 3
         or reachability.get("runtimeIntents") != 0
     ):
         raise AggregateLoweringFailure(f"{profile}/{policy} lost its runtime-free aggregate proof")

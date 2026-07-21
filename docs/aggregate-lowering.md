@@ -2,10 +2,12 @@
 
 E3.T01 adds one bounded aggregate representation to the production compiler:
 closed anonymous Haxe records whose fields are direct `Bool`, `Int`, `UInt`, or
-`Float` values, or other admitted closed records. These values lower through
-typed HxcIR to private named C structs. The slice is available in both
-`portable` and `metal`, selects no `hxrt` feature, and does not establish a
-public C ABI.
+`Float` values, compile-time abstracts over those values, or other admitted
+closed records. This includes a closed `enum abstract ... (Int)` without making
+the Haxe program replace its meaningful type with a raw numeric tag. These
+values lower through typed HxcIR to private named C structs. The slice is
+available in both `portable` and `metal`, selects no `hxrt` feature, and does
+not establish a public C ABI.
 
 ## Structural identity and layout
 
@@ -22,6 +24,13 @@ field expressions become ordered HxcIR instructions in source order; the later
 `IRIOConstructAggregate` names each result by canonical field ID. C emission
 uses a typed compound literal with designated members, so it never relies on C
 initializer evaluation order or positional coincidence.
+
+A non-core Haxe abstract contributes its underlying representation to this
+structural identity. For example, an `enum abstract MiningOutcome(Int)` field
+is represented as one `Int` member in C. The Haxe type still restricts source
+values and supports named decisions; only its already-erased storage
+representation reaches HxcIR. Core abstracts and unsupported underlying
+representations still fail closed.
 
 Each generated private struct is followed in the C implementation by
 structural `_Static_assert` checks for its first offset, non-overlapping field

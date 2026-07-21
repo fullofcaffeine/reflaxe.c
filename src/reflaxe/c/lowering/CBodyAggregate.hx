@@ -487,6 +487,15 @@ class CBodyAggregateRegistry {
 		final resolved = unwrapAliases(type, position, fail, node);
 		return switch resolved {
 			case TAnonymous(reference): anonymousShape(reference, stack, position, fail, node);
+			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
+				// Haxe abstracts are compile-time types over another representation.
+				// Use that representation in the record's structural identity just as
+				// `valueType` does while preparing the field. In particular, an
+				// `enum abstract ... (Int)` remains a useful closed Haxe domain while
+				// occupying one ordinary Int field in generated C.
+				final definition = reference.get();
+				typeShape(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), stack, position, fail,
+					'$node.abstract-representation');
 			case _:
 				final mapping = admittedPrimitive(resolved, position, fail, node);
 				mapping.irType == IRTVoid ? rejected(fail, position, '$node:Void-not-an-object-type') : primitiveTypeKey(mapping.irType);

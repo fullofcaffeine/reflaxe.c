@@ -19,6 +19,10 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
+struct hxc_SwitchRecord {
+  int32_t hxc_state;
+};
+
 struct hxc_OrderA {
   int32_t hxc_a;
   int32_t hxc_z;
@@ -43,6 +47,10 @@ void hxc_AggregateFixture_main(void);
 
 struct hxc_OrderA hxc_AggregateFixture_make(int32_t hxc_left, int32_t hxc_right);
 
+struct hxc_SwitchRecord hxc_AggregateFixture_makeSwitch(int32_t hxc_state);
+
 int32_t hxc_AggregateFixture_sum(struct hxc_OrderA hxc_value);
+
+bool hxc_AggregateFixture_switchIsOn(struct hxc_SwitchRecord hxc_value);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */
