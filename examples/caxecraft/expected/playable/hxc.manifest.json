@@ -27,7 +27,8 @@
       "src/modules/caxecraft/gameplay/Inventory.c",
       "src/modules/caxecraft/gameplay/Mossling.c",
       "src/modules/caxecraft/gameplay/PlayerVitals.c",
-      "src/modules/caxecraft/gameplay/Recovery.c"
+      "src/modules/caxecraft/gameplay/Recovery.c",
+      "src/modules/caxecraft/gameplay/SwordCombat.c"
     ],
     "cStandard": "c11",
     "definitions": [],
@@ -62,6 +63,8 @@
       "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
       "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
       "include/hxc/modules/caxecraft/gameplay/Recovery.h",
+      "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
+      "include/hxc/modules/caxecraft/gameplay/SwordCombatState.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
       "include/hxc/modules/raylib/raw/Rectangle.h",
@@ -148,7 +151,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "56731f0b2aaf0e7a18ad3df1fbeeb5568046748266750d67ff54de81d1a1874f",
+      "sha256": "946bcd7477dcb07dcdb7294ee54480673d613db34d80304c662fca13477a512e",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -163,7 +166,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "2216cb209b2931acab7854bc00f8e793aa94a29a82d374050e517784da08c57a",
+      "sha256": "d735c380fac4d3df7e0c08a96de6f797a26ca6f0639dc79a9d5555db35a80f31",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -173,12 +176,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "da733def3d123491e9b6b76db64dd3d2a39f2e7bc56022921b9e8687fcbce76a",
+      "sha256": "d74695e04ef544a28b7f4c6ae7b7ca46608090d74f5f6683b553a66ade14570a",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "694be930565d9e6be6e1d8b793c48454d32a3976e5d34983ddf8b730066c984a",
+      "sha256": "ddd1fd67acef480108b83f0353a7ad6915c18e805c5aea25d2c959c6d0746135",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -198,7 +201,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "fddb4ea59bf047fdbd2f6b54d9ba913dd723d343e5de445a2e59bfbf909d554a",
+      "sha256": "4124c26f4cbf420d1b74d3a485e5bdbd2d506ce26fb8933ca85cc10bc478e158",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -293,17 +296,17 @@
       "kind": "private-header"
     },
     {
-      "sha256": "7ce16321ce01426f89ec4b108d1ebb06a3f27e04d17f3d2afabfc406f19a4725",
+      "sha256": "c77ddac526140894487f54f9575a5ca437e45780a261807fa00c22c6e691254a",
       "path": "include/hxc/modules/caxecraft/gameplay/Mossling.h",
       "kind": "private-header"
     },
     {
-      "sha256": "b922724c905f4e440cbd5ec220d537f86d72e5f758b9622cd1a1b8bf4df4e929",
+      "sha256": "a38f6ffd7c3bc631f24bf84ea851cddea9c6f31404fa575c4cf3c136caccf5aa",
       "path": "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "kind": "private-header"
     },
     {
-      "sha256": "fa4e75c97537dbb995a64065e659a52e82b832a7647d7e9616a637e86a0b7336",
+      "sha256": "34869b74f16b3bc8071cc2fc72dd4658093507185d33a9117eb62568dc7164aa",
       "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
       "kind": "private-header"
     },
@@ -315,6 +318,16 @@
     {
       "sha256": "4557329fd2094fc1e10a31414bd8754d5be8835f0e6f5f9a8b7bbcdc5df56128",
       "path": "include/hxc/modules/caxecraft/gameplay/Recovery.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4401562a1734295ba966cd3ad137c7f116e351fe66c88748cd972b8d2f41410f",
+      "path": "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c2111dc947fe94e432248654d676973b1e9a59aeac5b9a84b46f7fe227c1654d",
+      "path": "include/hxc/modules/caxecraft/gameplay/SwordCombatState.h",
       "kind": "private-header"
     },
     {
@@ -353,12 +366,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "7a322544786652f020098ed471d7d63942b46f5a7b6fe6b7ecf0438f855b7d64",
+      "sha256": "eec58a5ce4777824ee7d838bd24b835f984601a888f65d9fe0acd87a692e9659",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "1276a8e52f4b08539babcff5ebfaaf3f84705f4b3103c176d860ce3b728fbb92",
+      "sha256": "97a8eb649eab2982195ca6b0f45f6e04763ddd758cac927198ef28815fd1e447",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -368,7 +381,7 @@
       "kind": "source"
     },
     {
-      "sha256": "42dc0ebcca1743e2e268ea3631e89ffb23fb091df0df41d71e6e9d4ec37e6305",
+      "sha256": "721cedc2213d914f1061fc5878c8a0999174604ea5d05a13bea32e2adf416fbd",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -388,7 +401,7 @@
       "kind": "source"
     },
     {
-      "sha256": "cbdb40cf7d82f94c0a3bd49ea696b03f085b755e417ec4810ccb9aa1494e0483",
+      "sha256": "8697afb061fce1c9960a7da5bf91c24a4bd5667c56422e96c3520a88b4b97210",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -433,18 +446,23 @@
       "kind": "source"
     },
     {
-      "sha256": "abce13cb7c05aa352c1f7a98a4a4066ebb43cf44299529778ea0cd66c7a4a98d",
+      "sha256": "9e651f2c7270a0ab42b1efc4f8d42f36a7e1199c0b29063abfd207219945e32e",
       "path": "src/modules/caxecraft/gameplay/Mossling.c",
       "kind": "source"
     },
     {
-      "sha256": "65f9128e1e7a077da97a0101bfd13472fd82ecaa91ceb4c01ba9ef4c2266e92b",
+      "sha256": "ee3fd5cf6635859a30b44e1b05fa8173d32406a663425206d037c00336ad2b15",
       "path": "src/modules/caxecraft/gameplay/PlayerVitals.c",
       "kind": "source"
     },
     {
       "sha256": "7e5826c74cf6c16d44798f37f5944b13a3f1bd6dde36dfdff23679216ac6902a",
       "path": "src/modules/caxecraft/gameplay/Recovery.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "6da941f51abf314eaea9a8737b27389a4446c4ed5bb29f4c67674310e08707a9",
+      "path": "src/modules/caxecraft/gameplay/SwordCombat.c",
       "kind": "source"
     }
   ],

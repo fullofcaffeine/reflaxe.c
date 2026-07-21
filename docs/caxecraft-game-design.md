@@ -11,14 +11,16 @@ remove, and place colored blocks; it now has the textured title, a typed
 eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
 input pilots. A small authored spawn meadow now introduces Nia through a
 two-step welcome/berry gift and renders one fixed-step Mossling with bounded
-notice/chase/return behavior. Adventure now adds the first complete combat
-exchange: three aimed Copper Sword strikes defeat that Mossling, its visible
-berry drop can be collected, contact damage uses three half-step hearts, and a
-selected berry restores one heart without exceeding the health limit. A fallen
-player can return to the meadow. Full stacks preserve Nia's gift and any
-uncollected part of a world drop instead of silently deleting items. This is
-the first actor loop, not the
-planned finished game. The
+rest/wander/notice/chase/return behavior. Adventure now adds the first complete
+combat exchange. A nearby Mossling shows a red warning for eight 50 ms game
+ticks, produces at most one impact, then recovers for twelve ticks. Leaving its
+marked range cancels the pending hit. The Copper Sword likewise consumes queued
+input on that fixed game clock and has a four-tick cooldown; three aimed hits
+defeat the Mossling and create a visible berry drop. Health uses three
+half-step hearts, a selected berry restores one heart without exceeding the
+limit, and a fallen player can return to the meadow. Full stacks preserve Nia's
+gift and any uncollected part of a world drop instead of silently deleting
+items. This is the first actor loop, not the planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;
 the authored mode content does not run yet beyond that first encounter. Broader
@@ -245,6 +247,14 @@ deterministic phases: roar/space control, charge, tail sweep, a vulnerable
 stun, and an ending that cannot leave the arena locked. Powerups use compiler-
 themed names such as Bounds Ward, Inlining Spark, Zero-Cost Charm, and Cleanup
 Crest, but each has an obvious game effect without requiring compiler lore.
+
+The implemented Mossling is the small reference encounter for this rule. Its
+warning, one impact tick, recovery, cancellation, sword cooldown, and bounded
+square wander route depend only on fixed game ticks. Rendering may run faster
+or slower without granting extra attacks. The target-neutral gameplay probe
+checks those exact transitions, while the native `combat-drop` pilot waits for
+one warned impact, performs three paced sword actions, and requires both the
+damage-feedback color and the surviving berry drop in a presented framebuffer.
 
 ## One public authoring path
 

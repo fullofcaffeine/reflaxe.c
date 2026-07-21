@@ -16,7 +16,7 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.LaunchSmoke, 4);
 		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 10);
 		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
-		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 6);
+		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 40);
 		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
 		checkpoints += checkLaunch();
@@ -94,12 +94,13 @@ final class PilotProbe {
 
 	static function checkCombat():Int {
 		final name = PilotScriptName.CombatDrop;
-		require(PilotScript.sample(name, 0).hotbarSelection == 4, "combat script lost semantic sword selection");
-		require(PilotScript.sample(name, 1).primaryPressed
-			&& PilotScript.sample(name, 2).primaryPressed
-			&& PilotScript.sample(name, 3).primaryPressed,
-			"combat script lost its three bounded strikes");
-		final screenshot = PilotScript.checkpoint(name, 4);
+		require(PilotScript.sample(name, 28).hotbarSelection == 4, "combat script lost semantic sword selection");
+		require(PilotScript.sample(name, 29).primaryPressed
+			&& PilotScript.sample(name, 33).primaryPressed
+			&& PilotScript.sample(name, 37).primaryPressed,
+			"combat script lost its three fixed-step strikes");
+		require(!PilotScript.sample(name, 30).primaryPressed, "combat script stopped respecting the sword cooldown");
+		final screenshot = PilotScript.checkpoint(name, 38);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "combat-drop.frame",
 			"combat drop screenshot checkpoint changed");
 		return 1;

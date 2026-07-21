@@ -5,8 +5,7 @@ final class PlayerVitals {
 	/** Six health points are presented as three hearts with half-heart steps. */
 	public static inline final MAX_HEALTH:Int = 6;
 
-	public static inline final CONTACT_SAFE_TICKS:Int = 20;
-	public static inline final CONTACT_DISTANCE_SQUARED:Float = 1.44;
+	public static inline final ATTACK_SAFE_TICKS:Int = 20;
 
 	public static inline function start():PlayerVitalsState
 		return make(MAX_HEALTH, 0);
@@ -16,21 +15,22 @@ final class PlayerVitals {
 		return make(health, 0);
 
 	/**
-	 * Advance one 50 ms tick and apply at most one point of contact damage.
-	 * `safeTicks` prevents a nearby enemy from draining all health in one second.
+	 * Advance one 50 ms tick. `safeTicks` is the short protected period after a
+	 * hit, so a single enemy cannot drain every heart during one overlap.
 	 */
-	public static function step(state:PlayerVitalsState, playerX:Float, playerZ:Float, threatX:Float, threatZ:Float, threatActive:Bool):PlayerVitalsState {
+	public static function step(state:PlayerVitalsState):PlayerVitalsState {
 		if (isDefeated(state))
 			return state;
 		if (state.safeTicks > 0)
 			return make(state.health, state.safeTicks - 1);
-		if (!threatActive)
+		return state;
+	}
+
+	/** Apply one explicit enemy impact, respecting the fixed-step safe period. */
+	public static function applyAttack(state:PlayerVitalsState, attacked:Bool):PlayerVitalsState {
+		if (!attacked || isDefeated(state) || state.safeTicks > 0)
 			return state;
-		final dx = threatX - playerX;
-		final dz = threatZ - playerZ;
-		if (dx * dx + dz * dz > CONTACT_DISTANCE_SQUARED)
-			return state;
-		return make(state.health - 1, CONTACT_SAFE_TICKS);
+		return make(state.health - 1, ATTACK_SAFE_TICKS);
 	}
 
 	public static inline function isDefeated(state:PlayerVitalsState):Bool

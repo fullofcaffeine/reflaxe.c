@@ -28,6 +28,9 @@ import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.PlayerVitalsState;
 import caxecraft.gameplay.Recovery;
 import caxecraft.gameplay.RecoveryDecision;
+import caxecraft.gameplay.SwordCombat;
+import caxecraft.gameplay.SwordCombatDecision;
+import caxecraft.gameplay.SwordCombatState;
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
@@ -112,12 +115,14 @@ final class Main {
 		initialHealth = PilotScript.initialHealth(pilotName);
 		#end
 		var vitals:PlayerVitalsState = PlayerVitals.startAt(initialHealth);
+		var swordCombat:SwordCombatState = SwordCombat.start();
 		var berryDrop:BerryDropState = BerryDrop.none();
 		var lookX = 0.0;
 		var lookY = -0.18;
 		var lookZ = -1.0;
 		var accumulator = 0.0;
 		var jumpQueued = false;
+		var swordQueued = false;
 		var selectedMode:GameMode = GameMode.Creative;
 		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use || caxecraft_pilot_full_inventory_gift)
 		// A deterministic provider choice, not gameplay branching: this pilot
@@ -142,6 +147,7 @@ final class Main {
 		var placementBlockedFrames = 0;
 		var strikeHitFrames = 0;
 		var enemyDefeatedFrames = 0;
+		var enemyAttackFrames = 0;
 		var pickupFrames = 0;
 		var pickupAmount = 0;
 		var inventoryFullFrames = 0;
@@ -279,9 +285,21 @@ final class Main {
 					jumpQueued = true;
 			}
 
+			#if caxecraft_pilot
+			// A pilot supplies one exact 50 ms simulation step per rendered frame.
+			// Interactive builds still use Raylib's measured elapsed time.
+			var frameSeconds = FIXED_SECONDS;
+			#else
 			var frameSeconds = Raylib.GetFrameTime().toFloat();
+			#end
 			if (frameSeconds > MAX_FRAME_SECONDS)
 				frameSeconds = MAX_FRAME_SECONDS;
+			if (captured
+				&& !recapturedThisFrame
+				&& primaryPressed
+				&& selectedMode == GameMode.Adventure
+				&& Inventory.selectedIs(inventory, ItemKind.CopperSword))
+				swordQueued = true;
 			if (!paused)
 				accumulator += frameSeconds;
 			while (!paused && accumulator >= FIXED_SECONDS) {
@@ -295,8 +313,26 @@ final class Main {
 					player = PlayerPhysics.step(cells, player, PlayerPhysics.input(moveX, moveZ, jumpQueued));
 				if (selectedMode == GameMode.Adventure) {
 					if (!PlayerVitals.isDefeated(vitals)) {
-						mossling = Mossling.step(cells, mossling, player.x, player.z);
-						vitals = PlayerVitals.step(vitals, player.x, player.z, mossling.x, mossling.z, Mossling.isAlive(mossling));
+						vitals = PlayerVitals.step(vitals);
+						final mosslingAttacked = Mossling.attacksThisTick(mossling, player.x, player.z);
+						vitals = PlayerVitals.applyAttack(vitals, mosslingAttacked);
+						if (mosslingAttacked)
+							enemyAttackFrames = 120;
+						mossling = Mossling.step(cells, mossling, player.x, player.z, updateCount);
+					}
+					swordCombat = SwordCombat.step(swordCombat);
+					if (swordQueued) {
+						final swordDecision = SwordCombat.decide(swordCombat, inventory, vitals, mossling, player.x, player.z, lookX, lookZ);
+						if (swordDecision == SwordCombatDecision.Hit) {
+							mossling = Mossling.strike(mossling);
+							strikeHitFrames = 16;
+							if (!Mossling.isAlive(mossling)) {
+								berryDrop = BerryDrop.fromDefeatedMossling(mossling);
+								enemyDefeatedFrames = 120;
+							}
+						}
+						swordCombat = SwordCombat.after(swordDecision, swordCombat);
+						swordQueued = false;
 					}
 				}
 				jumpQueued = false;
@@ -311,18 +347,7 @@ final class Main {
 			if (captured && !recapturedThisFrame && primaryPressed) {
 				if (!PlayerVitals.isDefeated(vitals)) {
 					if (selectedMode == GameMode.Adventure) {
-						if (Inventory.selectedIs(inventory, ItemKind.CopperSword)) {
-							if (inventory.sword > 0) {
-								if (Mossling.canStrike(mossling, player.x, player.z, lookX, lookZ)) {
-									mossling = Mossling.strike(mossling);
-									strikeHitFrames = 16;
-									if (!Mossling.isAlive(mossling)) {
-										berryDrop = BerryDrop.fromDefeatedMossling(mossling);
-										enemyDefeatedFrames = 120;
-									}
-								}
-							}
-						} else if (hit.hit) {
+						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword) && hit.hit) {
 							final removedKind = World.query(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ));
 							if (World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ)))
 								inventory = Inventory.collectBlock(inventory, removedKind);
@@ -373,6 +398,8 @@ final class Main {
 				strikeHitFrames--;
 			if (enemyDefeatedFrames > 0)
 				enemyDefeatedFrames--;
+			if (enemyAttackFrames > 0)
+				enemyAttackFrames--;
 			if (pickupFrames > 0)
 				pickupFrames--;
 			if (inventoryFullFrames > 0)
@@ -396,8 +423,8 @@ final class Main {
 				Raylib.EndMode3D();
 				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
 					player.x, player.z, selectedMode, language, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
-					pickupFrames > 0, pickupAmount, inventoryFullFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture, hudTextureReady,
-					itemTexture, itemTextureReady);
+					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
+					hudTextureReady, itemTexture, itemTextureReady);
 			}
 			Raylib.EndDrawing();
 			#if caxecraft_pilot
@@ -409,7 +436,7 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-move.png");
 			if (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
 				Raylib.TakeScreenshot("caxecraft-pilot-pause.png");
-			if (pilotName == PilotScriptName.CombatDrop && frameCount == 4)
+			if (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
 				Raylib.TakeScreenshot("caxecraft-pilot-combat.png");
 			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
 				Raylib.TakeScreenshot("caxecraft-pilot-recovery.png");
@@ -506,6 +533,9 @@ final class Main {
 				c.Float32.fromFloat(0.70), CaxecraftPalette.mosslingBody());
 			Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.66, mossling.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
 				c.Float32.fromFloat(0.50), CaxecraftPalette.mosslingCrown());
+			if (Mossling.mode(mossling) == MosslingMode.Windup)
+				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 1.02, mossling.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),
+					c.Float32.fromFloat(0.20), CaxecraftPalette.damage());
 		}
 		if (berryDrop.active) {
 			Raylib.DrawCube(Vector3.fromFloat(berryDrop.x - 0.12, berryDrop.y, berryDrop.z), c.Float32.fromFloat(0.18), c.Float32.fromFloat(0.18),
@@ -517,7 +547,7 @@ final class Main {
 
 	static function drawHud(visible:Int, drawCalls:Int, frames:Int, updates:Int, paused:Bool, captured:Bool, placementBlocked:Bool, hit:RaycastHit,
 			playerX:Float, playerZ:Float, mode:GameMode, language:GameLanguage, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
-			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, pickedUp:Bool, pickupAmount:Int, inventoryFull:Bool,
+			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, enemyAttacked:Bool, pickedUp:Bool, pickupAmount:Int, inventoryFull:Bool,
 			recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D,
 			itemTextureReady:Bool):Void {
 		final width = Raylib.GetScreenWidth();
@@ -569,7 +599,12 @@ final class Main {
 				Raylib.DrawText("NIA: BERRIES FOR THE ROAD, HAXIRIO", centerX - 205, centerY + 74, 16, text);
 		}
 		if (Mossling.isAlive(mossling)) {
-			if (Mossling.mode(mossling) == MosslingMode.Chasing) {
+			if (Mossling.mode(mossling) == MosslingMode.Windup) {
+				if (language == GameLanguage.Spanish)
+					Raylib.DrawText("MUSGUITO CARGANDO: ESQUIVA", width - 300, 28, 16, CaxecraftPalette.damage());
+				else
+					Raylib.DrawText("MOSSLING WINDUP: DODGE", width - 265, 28, 16, CaxecraftPalette.damage());
+			} else if (Mossling.mode(mossling) == MosslingMode.Chasing) {
 				if (language == GameLanguage.Spanish)
 					Raylib.DrawText("MUSGUITO ALERTA", width - 180, 28, 16, CaxecraftPalette.selection());
 				else
@@ -587,6 +622,12 @@ final class Main {
 				Raylib.DrawText("EL MUSGUITO SOLTO BAYAS", width - 275, 54, 16, CaxecraftPalette.selection());
 			else
 				Raylib.DrawText("MOSSLING DROPPED BERRIES", width - 270, 54, 16, CaxecraftPalette.selection());
+		}
+		if (enemyAttacked) {
+			if (language == GameLanguage.Spanish)
+				Raylib.DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", width - 330, 82, 16, CaxecraftPalette.damage());
+			else
+				Raylib.DrawText("TELEGRAPHED HIT: DODGE THE NEXT", width - 315, 82, 16, CaxecraftPalette.damage());
 		}
 		if (pickedUp) {
 			// Each imported call receives a direct literal with static C lifetime.

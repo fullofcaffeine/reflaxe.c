@@ -8,6 +8,7 @@ struct hxc_caxecraft_gameplay_MosslingState {
   double hxc_homeX;
   double hxc_homeZ;
   int32_t hxc_modeCode;
+  int32_t hxc_phaseTicks;
   double hxc_x;
   double hxc_y;
   double hxc_z;

@@ -28,6 +28,8 @@
 #include "hxc/modules/caxecraft/gameplay/PlayerVitals.h"
 #include "hxc/modules/caxecraft/gameplay/PlayerVitalsState.h"
 #include "hxc/modules/caxecraft/gameplay/Recovery.h"
+#include "hxc/modules/caxecraft/gameplay/SwordCombat.h"
+#include "hxc/modules/caxecraft/gameplay/SwordCombatState.h"
 #include "hxc/modules/raylib/raw/Camera3D.h"
 #include "hxc/modules/raylib/raw/Color.h"
 #include "hxc/modules/raylib/raw/Rectangle.h"

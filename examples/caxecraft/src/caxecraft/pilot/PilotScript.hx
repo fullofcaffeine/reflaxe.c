@@ -53,7 +53,7 @@ final class PilotScript {
 		if (name == PauseRecapture)
 			return 7;
 		if (name == CombatDrop)
-			return 6;
+			return 40;
 		return 4;
 	}
 
@@ -146,7 +146,7 @@ final class PilotScript {
 			case PauseRecapture:
 				pauseCheckpoint(frameNumber);
 			case CombatDrop:
-				frameNumber == 4 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
+				frameNumber == 38 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
 			case RecoveryUse:
 				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
 			case FullInventoryGift:
@@ -192,8 +192,8 @@ final class PilotScript {
 
 	static function combatAction(frameNumber:Int):PilotAction {
 		return switch frameNumber {
-			case 0: SelectSword;
-			case 1 | 2 | 3: Strike;
+			case 28: SelectSword;
+			case 29 | 33 | 37: Strike;
 			case _: Idle;
 		};
 	}

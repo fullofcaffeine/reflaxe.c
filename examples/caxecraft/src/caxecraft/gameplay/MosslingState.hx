@@ -5,6 +5,7 @@ package caxecraft.gameplay;
  *
  * `Mossling.mode` is the typed API. The explicit carrier is temporary evidence
  * for the same haxe_c-49y nominal-record compiler gap as `GuideState`.
+ * `phaseTicks` is nonzero only while an attack is winding up or recovering.
  */
 typedef MosslingState = {
 	final x:Float;
@@ -13,5 +14,6 @@ typedef MosslingState = {
 	final homeX:Float;
 	final homeZ:Float;
 	final modeCode:Int;
+	final phaseTicks:Int;
 	final health:Int;
 }

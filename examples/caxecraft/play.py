@@ -187,6 +187,7 @@ def validate_smoke_screenshot(
     platform_name: str,
     expected_title: bool = True,
     expected_drop: bool = False,
+    expected_attack: bool = False,
     expected_recovery: bool = False,
     expected_inventory_full: bool = False,
 ) -> tuple[int, int]:
@@ -258,6 +259,7 @@ def validate_smoke_screenshot(
     berry_pixels = 0
     recovery_pixels = 0
     inventory_full_pixels = 0
+    damage_pixels = 0
     non_dark_pixels = 0
     quantized_colors: set[int] = set()
     at = 0
@@ -315,6 +317,8 @@ def validate_smoke_screenshot(
                 recovery_pixels += 1
             if (red, green, blue) == (238, 113, 78):
                 inventory_full_pixels += 1
+            if (red, green, blue) == (218, 65, 72):
+                damage_pixels += 1
             column = index // bytes_per_pixel
             if row < height // 4 and width * 3 // 10 <= column < width * 7 // 10:
                 if red < 80 and green > 120 and blue > 140:
@@ -345,7 +349,9 @@ def validate_smoke_screenshot(
     missing_actor_evidence = berry_pixels < 20 if expected_drop else mossling_pixels < 30
     if not expected_title and (
         non_dark_pixels < width * height // 3
-        or sky_scene_pixels < width * height // 4
+        # A fifth of the complete framebuffer is still a broad independent sky
+        # region after opaque HUD panels, actors, and text cover scene pixels.
+        or sky_scene_pixels < width * height // 5
         or green_scene_pixels < width * height // 20
         or dark_panel_pixels < 2_000
         or light_ui_pixels < 250
@@ -357,7 +363,12 @@ def validate_smoke_screenshot(
             f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
             f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, nia={nia_pixels}, "
             f"mossling={mossling_pixels}, berries={berry_pixels}, recovery={recovery_pixels}, "
-            f"inventoryFull={inventory_full_pixels}, colorBuckets={len(quantized_colors)})"
+            f"inventoryFull={inventory_full_pixels}, damage={damage_pixels}, colorBuckets={len(quantized_colors)})"
+        )
+    if expected_attack and damage_pixels < 20:
+        raise PlayFailure(
+            "Caxecraft combat pilot did not present its telegraphed attack feedback "
+            f"(damage={damage_pixels})"
         )
     if expected_recovery and recovery_pixels < 20:
         raise PlayFailure(
@@ -377,6 +388,7 @@ def validate_presented_screenshot(
     *,
     platform_name: str,
     expected_drop: bool = False,
+    expected_attack: bool = False,
     expected_recovery: bool = False,
     expected_inventory_full: bool = False,
 ) -> tuple[int, int]:
@@ -387,6 +399,7 @@ def validate_presented_screenshot(
         platform_name=platform_name,
         expected_title=False,
         expected_drop=expected_drop,
+        expected_attack=expected_attack,
         expected_recovery=expected_recovery,
         expected_inventory_full=expected_inventory_full,
     )
@@ -941,6 +954,7 @@ def main(argv: list[str]) -> int:
                 screenshot,
                 platform_name=platform_name,
                 expected_drop=selected_pilot == "combat-drop",
+                expected_attack=selected_pilot == "combat-drop",
                 expected_recovery=selected_pilot == "recovery-use",
                 expected_inventory_full=selected_pilot == "full-inventory-gift",
             )

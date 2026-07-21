@@ -28,6 +28,12 @@ Raylib adapter samples keyboard and mouse once per rendered frame. A pilot
 selects one closed `PilotAction` for that frame. After that small provider
 choice, both paths use the same gameplay and presentation code.
 
+Pilot builds also provide exactly one 50 ms game step per rendered frame.
+Interactive builds use Raylib's measured elapsed time and may run zero or
+several fixed steps to catch up. The exact pilot clock makes enemy warnings,
+damage, weapon cooldowns, and screenshots repeatable even when the host or GPU
+is busy; it changes only the time source, not the gameplay transition code.
+
 This is **Playwright-like** in one limited sense. Playwright drives a program
 through named actions and inspects deliberate checkpoints. Caxecraft does the
 same for a native game: it compiles a named action script into a test build,
@@ -54,7 +60,7 @@ npm run caxecraft:play -- --pilot move-jump-edit
 # Pause, recapture without click-through mining, scene capture, and quit.
 npm run caxecraft:play -- --pilot pause-recapture
 
-# Select the Copper Sword, defeat the Mossling, prove its visible drop, and quit.
+# Survive one warned attack, pace three sword hits, prove the drop, and quit.
 npm run caxecraft:play -- --pilot combat-drop
 
 # Start one heart below full, consume berries, prove recovery feedback, and quit.
@@ -65,10 +71,11 @@ npm run caxecraft:play -- --pilot full-inventory-gift
 ```
 
 The six closed script names are `LaunchSmoke`, `MoveJumpEdit`,
-`PauseRecapture`, `CombatDrop`, `RecoveryUse`, and `FullInventoryGift`. Each has a small fixed frame
-limit below the absolute 120-frame policy. Its final and every later action is `Quit`, which
-protects against a script accidentally becoming an unattended interactive
-session. The Python runner adds an independent 15-second wall-clock timeout.
+`PauseRecapture`, `CombatDrop`, `RecoveryUse`, and `FullInventoryGift`. Each has
+a small fixed frame limit below the absolute 120-frame policy. Its final and
+every later action is `Quit`, which protects against a script accidentally
+becoming an unattended interactive session. The Python runner adds an
+independent 15-second wall-clock timeout.
 
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent sky, terrain,
@@ -79,9 +86,11 @@ byte-for-byte because drivers and platforms may rasterize the same scene
 differently. Exact pixel goldens belong to the separately pinned software
 renderer.
 
-The combat pilot intentionally has a different actor check. It requires Nia
-and the exact berry-drop color after three sword actions, while requiring the
-Mossling crown would prove that the defeat failed. This makes the screenshot a
+The combat pilot intentionally has a different actor check. Its 40 fixed
+frames let the Mossling warn and land one bounded attack, then space three
+sword actions across the four-tick cooldown. The captured frame requires Nia,
+the exact damage-feedback color, and the exact berry-drop color. Requiring the
+Mossling crown would prove that defeat failed. This makes the screenshot a
 small state assertion rather than merely another nonblack frame.
 
 The recovery pilot begins at two of three hearts through a typed fixture fact,

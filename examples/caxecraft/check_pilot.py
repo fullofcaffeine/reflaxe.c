@@ -23,7 +23,7 @@ from run import (  # noqa: E402
 )
 
 EXPECTED_TRACE = (
-    "caxecraft-pilot: 6 named scripts, 35 deterministic frames, 8 checkpoints; "
+    "caxecraft-pilot: 6 named scripts, 69 deterministic frames, 8 checkpoints; "
     "bounded quit and shared input interface\n"
 )
 FORBIDDEN_PILOT_TEXT = (
@@ -104,7 +104,7 @@ def main() -> int:
 
     print(
         "caxecraft-pilot: OK: named semantic input, exact checkpoints, "
-        f"bounded quit, and C/{locale} determinism"
+        f"bounded quit, and POSIX C/{locale} locale determinism"
     )
     return 0
 

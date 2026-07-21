@@ -8,9 +8,11 @@ slice: a finite voxel world, seeded terrain, block edits, voxel raycasting,
 fixed-step first-person collision, and a C-specific Raylib window/input/render
 adapter. Its authored spawn meadow now contains a friendly Nia interaction,
 one-time berry gift, and a Mossling that notices, chases, and returns on the
-fixed clock. Adventure can strike that Mossling with the Copper Sword, collect
-its visible berry drop, take bounded contact damage, and return to the meadow
-after defeat. Selecting berries and using the secondary action consumes one
+fixed clock. It also wanders on a deterministic home route, warns before one
+bounded attack, and pauses to recover afterward. Adventure can strike that
+Mossling with a fixed-step Copper Sword, collect its visible berry drop, and
+return to the meadow after defeat. Selecting berries and using the secondary
+action consumes one
 bundle only when it can restore one heart. A full stack preserves Nia's gift
 and any uncollected part of a world drop. The complete
 Creative/Adventure/editor/Ivvy direction and its honest
@@ -194,8 +196,9 @@ This is a finite playable feasibility slice with a textured title, typed
 eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
 bounded collect/consume/place rules. Nia provides the first two-step friendly
 interaction and one-time gift; one original Mossling provides bounded
-rest/chase/return movement, aimed sword combat, contact damage, health, defeat,
-revive, one visible collectible drop, bounded berry recovery, and clear
+rest/wander/chase/return movement, a warned attack and recovery cycle, aimed
+fixed-step sword combat, health, defeat, revive, one visible collectible drop,
+bounded berry recovery, and clear
 full/empty feedback. It still has no finished Adventure, broader enemy roster,
 broader consumable catalog, visual editor, persistence, complete
 localization, audio, terrain textures/chunk meshes, or controller support.
@@ -322,9 +325,10 @@ npm run test:caxecraft-gameplay
 ```
 
 It checks the authored meadow height, Nia's bounded welcome/gift states,
-one-time berry collection, and the Mossling's notice/chase/return movement in
-two locales. The native movement pilot then requires exact Nia and Mossling
-palette evidence in the real presented framebuffer.
+lossless berry collection, deterministic Mossling wandering and pursuit, its
+warned one-impact/recovery cycle, paced sword decisions, health, and recovery
+in two locales. The native movement and combat pilots then require exact actor,
+damage-feedback, and drop evidence in real presented framebuffers.
 
 The CAXEMAP 1 authoring foundation has a separate fast model contract:
 
