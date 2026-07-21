@@ -87,6 +87,47 @@ RUNTIME_CONTENT_FILES = (
     "scenarios/first-playable/map.caxemap",
 )
 
+
+def remove_owned_stale_stage_files(
+    destination: Path,
+    stage_root: Path,
+    stale_files: list[str],
+    *,
+    unowned_error: str,
+) -> None:
+    """Remove obsolete launcher output only below a verified owned variant.
+
+    `destination` is the variant's `bin` directory, whose parent is created by
+    `prepare_output_root`. The marker proves that Caxecraft owns that bounded
+    build directory. Without it, an unexpected staged file may belong to the
+    user, so the same condition remains a hard error.
+    """
+
+    if not stale_files:
+        return
+    marker = destination.parent / OUTPUT_MARKER
+    if marker.is_symlink() or not marker.is_file():
+        raise PlayFailure(unowned_error)
+    state = load_object(marker, "Caxecraft output ownership marker")
+    if state != {"kind": "caxecraft-play-output", "schemaVersion": 1}:
+        raise PlayFailure(f"Caxecraft output ownership marker is invalid: {marker}")
+
+    candidate_directories: set[Path] = set()
+    for raw_path in stale_files:
+        relative = validated_relative(raw_path, f"stale staged file {raw_path}")
+        target = stage_root.joinpath(*relative.parts)
+        if not target.is_symlink() and not target.is_file():
+            raise PlayFailure(f"stale Caxecraft stage entry is not a file: {target}")
+        target.unlink()
+        parent = target.parent
+        while parent != stage_root:
+            candidate_directories.add(parent)
+            parent = parent.parent
+
+    for directory in sorted(candidate_directories, key=lambda path: len(path.parts), reverse=True):
+        if directory.is_dir() and not directory.is_symlink() and not any(directory.iterdir()):
+            directory.rmdir()
+
 # Exact full-opacity colors sampled from the reviewed front-facing entity cells.
 # We count a small family instead of one pixel so a driver may interpolate
 # sprite edges without making a present, recognizable actor disappear from the
@@ -212,7 +253,12 @@ def stage_runtime_assets(destination: Path) -> None:
         }
         unexpected = sorted(existing_files - expected_files)
         if unexpected:
-            raise PlayFailure(f"unowned files occupy the Caxecraft staged asset root: {unexpected}")
+            remove_owned_stale_stage_files(
+                destination,
+                stage_root,
+                unexpected,
+                unowned_error=f"unowned files occupy the Caxecraft staged asset root: {unexpected}",
+            )
     stage_root.mkdir(parents=True, exist_ok=True)
     for record in selected:
         relative = validated_relative(record["path"], f"runtime asset {record['id']} path")
@@ -255,7 +301,12 @@ def stage_content_catalogs(destination: Path) -> None:
         }
         unexpected = sorted(existing - expected)
         if unexpected:
-            raise PlayFailure(f"unowned files occupy the Caxecraft staged content root: {unexpected}")
+            remove_owned_stale_stage_files(
+                destination,
+                stage_root,
+                unexpected,
+                unowned_error=f"unowned files occupy the Caxecraft staged content root: {unexpected}",
+            )
     for raw_path in RUNTIME_CONTENT_FILES:
         relative = validated_relative(raw_path, f"runtime content {raw_path}")
         source = CASE.joinpath(*relative.parts)

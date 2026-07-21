@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 
 import localization_catalog as catalog
-from play import PlayFailure, stage_content_catalogs
+from play import PlayFailure, prepare_output_root, stage_content_catalogs
 
 
 CASE = Path(__file__).resolve().parent
@@ -109,6 +109,29 @@ def check_native_package_boundary() -> None:
             packaged = destination / "content" / relative
             if not packaged.is_file() or packaged.read_bytes() != source.read_bytes():
                 raise LocalizationCheckFailure(f"native package lost exact catalog bytes: {relative}")
+
+    with tempfile.TemporaryDirectory(prefix="caxecraft-localization-stale-") as temporary:
+        output = prepare_output_root(Path(temporary) / "owned-variant")
+        destination = output / "bin"
+        stale = destination / "content/scenarios/first-playable/messages.json"
+        stale.parent.mkdir(parents=True)
+        stale.write_text("obsolete generated catalog\n", encoding="utf-8", newline="\n")
+        stage_content_catalogs(destination)
+        if stale.exists():
+            raise LocalizationCheckFailure("owned stale content survived restaging")
+
+    with tempfile.TemporaryDirectory(prefix="caxecraft-localization-unowned-") as temporary:
+        destination = Path(temporary)
+        foreign = destination / "content/foreign.txt"
+        foreign.parent.mkdir(parents=True)
+        foreign.write_text("user file\n", encoding="utf-8", newline="\n")
+        try:
+            stage_content_catalogs(destination)
+        except PlayFailure as error:
+            if "unowned files occupy" not in str(error):
+                raise LocalizationCheckFailure(f"unowned content produced the wrong diagnostic: {error}") from error
+        else:
+            raise LocalizationCheckFailure("unowned staged content was deleted or accepted")
 
 
 def main() -> int:
