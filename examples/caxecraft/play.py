@@ -75,8 +75,39 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/Mining.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
-RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items")
+RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "entities")
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
+
+# Exact full-opacity colors sampled from the reviewed front-facing entity cells.
+# We count a small family instead of one pixel so a driver may interpolate
+# sprite edges without making a present, recognizable actor disappear from the
+# test. The structural generated-C check independently requires the billboard
+# borrow; together the two checks prove that the original atlas reached a real
+# presented frame.
+NIA_ENTITY_COLORS = {
+    (130, 68, 28),
+    (130, 67, 27),
+    (132, 68, 27),
+    (129, 66, 27),
+    (129, 69, 29),
+    (129, 68, 29),
+    (133, 69, 28),
+    (132, 69, 28),
+    (131, 68, 28),
+    (128, 67, 28),
+}
+MOSSLING_ENTITY_COLORS = {
+    (25, 29, 22),
+    (21, 24, 18),
+    (17, 22, 16),
+    (159, 139, 110),
+    (35, 39, 30),
+    (124, 107, 86),
+    (28, 32, 24),
+    (167, 146, 114),
+    (165, 144, 112),
+    (147, 128, 100),
+}
 
 
 class PlayFailure(RuntimeError):
@@ -194,6 +225,7 @@ def validate_smoke_screenshot(
     expected_attack: bool = False,
     expected_recovery: bool = False,
     expected_inventory_full: bool = False,
+    expected_entities: bool = False,
 ) -> tuple[int, int]:
     """Prove the captured title frame contains staged art and readable UI."""
     try:
@@ -258,8 +290,8 @@ def validate_smoke_screenshot(
     sky_scene_pixels = 0
     dark_panel_pixels = 0
     light_ui_pixels = 0
-    nia_pixels = 0
-    mossling_pixels = 0
+    nia_entity_pixels = 0
+    mossling_entity_pixels = 0
     berry_pixels = 0
     recovery_pixels = 0
     inventory_full_pixels = 0
@@ -311,10 +343,10 @@ def validate_smoke_screenshot(
                 dark_panel_pixels += 1
             if red > 210 and green > 210 and blue > 200:
                 light_ui_pixels += 1
-            if (red, green, blue) == (42, 150, 160):
-                nia_pixels += 1
-            if (red, green, blue) == (157, 190, 82):
-                mossling_pixels += 1
+            if (red, green, blue) in NIA_ENTITY_COLORS:
+                nia_entity_pixels += 1
+            if (red, green, blue) in MOSSLING_ENTITY_COLORS:
+                mossling_entity_pixels += 1
             if (red, green, blue) == (174, 78, 136):
                 berry_pixels += 1
             if (red, green, blue) == (94, 212, 136):
@@ -350,7 +382,6 @@ def validate_smoke_screenshot(
     # color-count thresholds would confuse clean voxel shading with a blank
     # frame. Instead prove the scene's independent visual roles: broad sky,
     # terrain, a dark heads-up-display panel, and light text/crosshair pixels.
-    missing_actor_evidence = berry_pixels < 20 if expected_drop else mossling_pixels < 30
     if not expected_title and (
         non_dark_pixels < width * height // 3
         # A fifth of the complete framebuffer is still a broad independent sky
@@ -359,15 +390,23 @@ def validate_smoke_screenshot(
         or green_scene_pixels < width * height // 20
         or dark_panel_pixels < 2_000
         or light_ui_pixels < 250
-        or nia_pixels < 50
-        or missing_actor_evidence
     ):
         raise PlayFailure(
             "Caxecraft pilot framebuffer is blank or lacks a presented game scene "
             f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
-            f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, nia={nia_pixels}, "
-            f"mossling={mossling_pixels}, berries={berry_pixels}, recovery={recovery_pixels}, "
+            f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, niaEntity={nia_entity_pixels}, "
+            f"mosslingEntity={mossling_entity_pixels}, berries={berry_pixels}, recovery={recovery_pixels}, "
             f"inventoryFull={inventory_full_pixels}, damage={damage_pixels}, colorBuckets={len(quantized_colors)})"
+        )
+    if expected_entities and (nia_entity_pixels < 40 or mossling_entity_pixels < 20):
+        raise PlayFailure(
+            "Caxecraft actor pilot did not present both reviewed entity-atlas cells "
+            f"(niaEntity={nia_entity_pixels}, mosslingEntity={mossling_entity_pixels})"
+        )
+    if expected_drop and berry_pixels < 20:
+        raise PlayFailure(
+            "Caxecraft combat pilot did not present its berry drop "
+            f"(berries={berry_pixels})"
         )
     if expected_attack and damage_pixels < 20:
         raise PlayFailure(
@@ -395,6 +434,7 @@ def validate_presented_screenshot(
     expected_attack: bool = False,
     expected_recovery: bool = False,
     expected_inventory_full: bool = False,
+    expected_entities: bool = False,
 ) -> tuple[int, int]:
     """Require a real, nonblank presented frame without prescribing its scene."""
 
@@ -406,6 +446,7 @@ def validate_presented_screenshot(
         expected_attack=expected_attack,
         expected_recovery=expected_recovery,
         expected_inventory_full=expected_inventory_full,
+        expected_entities=expected_entities,
     )
 
 
@@ -602,13 +643,13 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure(
             "generated Caxecraft mining must check capacity before removal, collect after removal, and retain closed full/collected outcomes"
         )
-    # Four reviewed image owners enter the application, are checked before
+    # Five reviewed image owners enter the application, are checked before
     # use, and leave in reverse order before CloseWindow. Exact counts make a
     # missing unload or an accidental hidden resource registry fail locally.
     for function_name, expected_count in (
-        ("LoadTexture", 4),
-        ("IsTextureValid", 4),
-        ("UnloadTexture", 4),
+        ("LoadTexture", 5),
+        ("IsTextureValid", 5),
+        ("UnloadTexture", 5),
     ):
         actual_count = app.count(f"{function_name}(")
         if actual_count != expected_count:
@@ -621,6 +662,11 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     if draw_texture_count != 5:
         raise PlayFailure(
             f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 5"
+        )
+    billboard_count = combined.count("DrawBillboardRec(")
+    if billboard_count != 1:
+        raise PlayFailure(
+            f"generated Caxecraft sources contain {billboard_count} direct DrawBillboardRec call sites; expected one typed atlas borrow"
         )
     for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\(", r"\bhxrt_"):
         if re.search(forbidden, combined):
@@ -1009,6 +1055,7 @@ def main(argv: list[str]) -> int:
                     expected_attack=selected_pilot == "combat-drop",
                     expected_recovery=selected_pilot == "recovery-use",
                     expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
+                    expected_entities=selected_pilot == "full-inventory-gift",
                 )
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "

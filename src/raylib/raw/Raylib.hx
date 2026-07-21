@@ -41,6 +41,11 @@ extern class Raylib {
 
 	public static function DisableCursor():Void;
 
+	/**
+	 * Borrows `Texture2D` only while this call executes.
+	 */
+	public static function DrawBillboardRec(camera:Camera, texture:Texture2D, source:Rectangle, position:Vector3, size:Vector2, tint:Color):Void;
+
 	public static function DrawCircle(centerX:c.Int32, centerY:c.Int32, radius:c.Float32, color:Color):Void;
 
 	public static function DrawCube(position:Vector3, width:c.Float32, height:c.Float32, length:c.Float32, color:Color):Void;

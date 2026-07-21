@@ -2,9 +2,11 @@ package caxecraft.app;
 
 #if c
 import raylib.Color;
+import raylib.Camera3D;
 import raylib.Rectangle;
 import raylib.Texture2D;
 import raylib.Vector2;
+import raylib.Vector3;
 import raylib.raw.Raylib as RawRaylib;
 
 /**
@@ -29,6 +31,9 @@ final class CaxecraftTextures {
 
 	public static inline function loadItemAtlas():Texture2D
 		return RawRaylib.LoadTexture("assets/atlases/items.png");
+
+	public static inline function loadEntityAtlas():Texture2D
+		return RawRaylib.LoadTexture("assets/atlases/entities.png");
 
 	public static inline function isValid(texture:Texture2D):Bool
 		return RawRaylib.IsTextureValid(texture);
@@ -71,6 +76,15 @@ final class CaxecraftTextures {
 		final sourceHeight = texture.height / rows;
 		RawRaylib.DrawTexturePro(texture, Rectangle.fromFloat(column * sourceWidth, row * sourceHeight, sourceWidth, sourceHeight),
 			Rectangle.fromFloat(x + 0.0, y + 0.0, width + 0.0, height + 0.0), Vector2.fromFloat(0.0, 0.0), c.Float32.fromFloat(0.0), tint);
+	}
+
+	/** Draw one atlas cell as a camera-facing world sprite. */
+	public static inline function drawAtlasBillboard(camera:Camera3D, texture:Texture2D, column:Int, row:Int, columns:Int, rows:Int, position:Vector3,
+			width:Float, height:Float, tint:Color):Void {
+		final sourceWidth = texture.width / columns;
+		final sourceHeight = texture.height / rows;
+		RawRaylib.DrawBillboardRec(camera, texture, Rectangle.fromFloat(column * sourceWidth, row * sourceHeight, sourceWidth, sourceHeight), position,
+			Vector2.fromFloat(width, height), tint);
 	}
 
 	public static inline function unload(texture:Texture2D):Void

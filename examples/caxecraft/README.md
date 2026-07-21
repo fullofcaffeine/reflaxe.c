@@ -288,7 +288,8 @@ The playable app has registered generated-C snapshots too. They cover its
 manifest, empty runtime plan, generated program header, palette, inventory HUD,
 and Raylib application module. The check rejects generated `goto`, `hxrt`, and
 allocation calls; requires direct window, input, texture, and draw calls; and
-pins four load/check/unload ownership sites. The snapshot manifest uses Linux as its explicit
+pins five load/check/unload ownership sites plus one typed world-billboard
+borrow. The snapshot manifest uses Linux as its explicit
 canonical link platform so its bytes do not depend on the updater's host;
 native CI separately validates each admitted desktop's real link facts:
 
@@ -306,8 +307,9 @@ That command proves exact offline primary-source PNG bytes, dimensions, alpha
 contracts, semantic atlas-cell order, a complete no-sidecar file inventory,
 minimal PNG metadata, and repository-scoped generation/privacy records. The
 domain runner invokes the same validator before compiling.
-The playable currently packages the panorama, wordmark, HUD, and item atlas as
-exact verified primary bytes. The other six atlases remain design-only, so the
+The playable currently packages the panorama, wordmark, HUD, item, and entity
+atlases as exact verified primary bytes. The other five atlases remain
+design-only, so the
 asset gate alone is still not gameplay or visual-polish evidence. See
 [`assets/README.md`](assets/README.md) for the exact boundary.
 

@@ -16,6 +16,7 @@ import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.app.CaxecraftAtlas.HotbarFrame;
 import caxecraft.app.CaxecraftAtlas.HudGlyph;
+import caxecraft.app.CaxecraftAtlas.WorldSprite;
 import caxecraft.gameplay.BerryDrop;
 import caxecraft.gameplay.BerryDropState;
 import caxecraft.gameplay.GuideNpc;
@@ -89,6 +90,8 @@ final class Main {
 		final hudTextureReady = CaxecraftTextures.isValid(hudTexture);
 		final itemTexture:Texture2D = CaxecraftTextures.loadItemAtlas();
 		final itemTextureReady = CaxecraftTextures.isValid(itemTexture);
+		final entityTexture:Texture2D = CaxecraftTextures.loadEntityAtlas();
+		final entityTextureReady = CaxecraftTextures.isValid(entityTexture);
 		#if caxecraft_pilot_launch_smoke
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
 		#elseif caxecraft_pilot_move_jump_edit
@@ -441,7 +444,7 @@ final class Main {
 				Raylib.ClearBackground(CaxecraftPalette.sky());
 				Raylib.BeginMode3D(camera);
 				final renderCounters = drawWorld(cells, player.x, player.z);
-				drawActors(guide, mossling, berryDrop);
+				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
 						c.Float32.fromFloat(1.04), c.Float32.fromFloat(1.04), CaxecraftPalette.selection());
@@ -476,6 +479,8 @@ final class Main {
 		}
 
 		Raylib.EnableCursor();
+		if (entityTextureReady)
+			CaxecraftTextures.unload(entityTexture);
 		if (itemTextureReady)
 			CaxecraftTextures.unload(itemTexture);
 		if (hudTextureReady)
@@ -549,19 +554,29 @@ final class Main {
 			|| !World.isSolid(World.query(cells, World.coord(x, y, z + 1)));
 	}
 
-	/** Original low-poly voxel silhouettes; actor rules remain in gameplay/. */
-	static function drawActors(guide:GuideState, mossling:MosslingState, berryDrop:BerryDropState):Void {
-		Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 0.54, guide.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86), c.Float32.fromFloat(0.42),
-			CaxecraftPalette.niaCoat());
-		Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.18, guide.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
-			CaxecraftPalette.niaSkin());
-		Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.41, guide.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16), c.Float32.fromFloat(0.48),
-			CaxecraftPalette.niaHair());
+	/** Original atlas sprites with code-drawn fallbacks; actor rules remain in gameplay/. */
+	static function drawActors(camera:Camera3D, entityTexture:Texture2D, entityTextureReady:Bool, guide:GuideState, mossling:MosslingState,
+			berryDrop:BerryDropState):Void {
+		if (entityTextureReady)
+			CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.NiaFront, Vector3.fromFloat(guide.x, guide.y + 0.76, guide.z), 0.95, 1.52);
+		else {
+			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 0.54, guide.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.86),
+				c.Float32.fromFloat(0.42), CaxecraftPalette.niaCoat());
+			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.18, guide.z), c.Float32.fromFloat(0.44), c.Float32.fromFloat(0.44),
+				c.Float32.fromFloat(0.44), CaxecraftPalette.niaSkin());
+			Raylib.DrawCube(Vector3.fromFloat(guide.x, guide.y + 1.41, guide.z), c.Float32.fromFloat(0.48), c.Float32.fromFloat(0.16),
+				c.Float32.fromFloat(0.48), CaxecraftPalette.niaHair());
+		}
 		if (Mossling.isAlive(mossling)) {
-			Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.30, mossling.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
-				c.Float32.fromFloat(0.70), CaxecraftPalette.mosslingBody());
-			Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.66, mossling.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
-				c.Float32.fromFloat(0.50), CaxecraftPalette.mosslingCrown());
+			if (entityTextureReady)
+				CaxecraftAtlas.drawWorldSprite(camera, entityTexture, WorldSprite.MosslingFront, Vector3.fromFloat(mossling.x, mossling.y + 0.48, mossling.z),
+					1.05, 0.96);
+			else {
+				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.30, mossling.z), c.Float32.fromFloat(0.70), c.Float32.fromFloat(0.54),
+					c.Float32.fromFloat(0.70), CaxecraftPalette.mosslingBody());
+				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 0.66, mossling.z), c.Float32.fromFloat(0.50), c.Float32.fromFloat(0.34),
+					c.Float32.fromFloat(0.50), CaxecraftPalette.mosslingCrown());
+			}
 			if (Mossling.mode(mossling) == MosslingMode.Windup)
 				Raylib.DrawCube(Vector3.fromFloat(mossling.x, mossling.y + 1.02, mossling.z), c.Float32.fromFloat(0.20), c.Float32.fromFloat(0.20),
 					c.Float32.fromFloat(0.20), CaxecraftPalette.damage());

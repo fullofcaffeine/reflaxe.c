@@ -93,7 +93,7 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "f064b51c2a674c35e858a0e0b8fe03b69f0421b6abc7e7860aa5720801f9bf51",
+  "declarationSha256": "fb88590483ce662be79453e5e32c343efcae4c6d801b869e19f50bd758b5197d",
   "declarations": {
     "aliases": [
       {
@@ -954,6 +954,65 @@
           "haxeType": "Void"
         },
         "sourceLine": 1041
+      },
+      {
+        "name": "DrawBillboardRec",
+        "parameters": [
+          {
+            "name": "camera",
+            "type": {
+              "cType": "Camera",
+              "canonicalCType": "struct Camera3D",
+              "haxeType": "raylib.raw.Camera"
+            }
+          },
+          {
+            "name": "texture",
+            "type": {
+              "cType": "Texture2D",
+              "canonicalCType": "struct Texture",
+              "haxeType": "raylib.raw.Texture2D"
+            }
+          },
+          {
+            "name": "source",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "position",
+            "type": {
+              "cType": "Vector3",
+              "canonicalCType": "struct Vector3",
+              "haxeType": "raylib.raw.Vector3"
+            }
+          },
+          {
+            "name": "size",
+            "type": {
+              "cType": "Vector2",
+              "canonicalCType": "struct Vector2",
+              "haxeType": "raylib.raw.Vector2"
+            }
+          },
+          {
+            "name": "tint",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1604
       },
       {
         "name": "DrawCircle",
@@ -2740,7 +2799,7 @@
       "aliases": 2,
       "enumConstants": 143,
       "enums": 5,
-      "functions": 59,
+      "functions": 60,
       "omittedFamilies": 6,
       "records": 9
     },
@@ -2781,6 +2840,7 @@
     "resourceContracts": [
       {
         "borrow": [
+          "DrawBillboardRec",
           "DrawTexturePro"
         ],
         "failure": "LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.",
@@ -2793,7 +2853,7 @@
         "validate": "IsTextureValid"
       }
     ],
-    "sha256": "d383d97e7982c59f7c9383bc175d00defe41a14558c7cd2251b0e756996201f2"
+    "sha256": "46d7d50e077ff2191ec795dc237db643547e344a0033aff68bb9d4d66c96349f"
   },
   "upstream": {
     "apiVersion": 600,

@@ -111,20 +111,22 @@ fields identify image data owned by raylib and usually backed by the graphics
 device. Copying the struct copies the handle; it does not create a second
 texture or a second owner.
 
-The selected raw slice therefore treats four calls as one closed resource
+The selected raw slice therefore treats five calls as one closed resource
 contract:
 
 1. `LoadTexture` returns one caller-owned handle;
 2. `IsTextureValid` proves whether that load produced a usable resource;
-3. `DrawTexturePro` borrows the handle for one draw and never retains it; and
-4. `UnloadTexture` consumes the one valid owner exactly once, on the render
+3. `DrawTexturePro` borrows the handle for one screen-space draw;
+4. `DrawBillboardRec` borrows it for one camera-facing world draw; neither draw
+   retains the handle; and
+5. `UnloadTexture` consumes the one valid owner exactly once, on the render
    thread, before `CloseWindow`.
 
 The generator records this relationship in both the reviewed selection and
 the binding lock, and it puts short ownership instructions beside the raw
 functions. This does not make arbitrary raw resource use automatically safe.
-Caxecraft keeps all four operations in one typed `CaxecraftTextures` adapter,
-checks every load, and unloads four admitted image owners in reverse order.
+Caxecraft keeps all five operations in one typed `CaxecraftTextures` adapter,
+checks every load, and unloads five admitted image owners in reverse order.
 The higher-level facade deliberately does not expose an owning `LoadTexture`
 helper yet because haxe.c cannot prove cleanup on every return or failure edge.
 
@@ -156,7 +158,7 @@ Native integration additionally:
 
 The probe asserts C `bool`, `float`, and `int` assumptions; every selected
 record size, alignment, and field offset; both aliases; all 143 constant
-values; and typed function-pointer compatibility for all 59 functions. This is
+values; and typed function-pointer compatibility for all 60 functions. This is
 ABI evidence for the selected target/configuration lanes, not a promise for an
 unprobed platform.
 

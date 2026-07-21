@@ -388,7 +388,7 @@
         "the immutable raylib 6.0 archive, full source tree, reviewed build inputs, configurations, and per-platform link facts are checksum locked",
         "pinned-source, explicit offline-source, and exact-version system pkg-config authorities fail closed instead of silently switching provenance",
         "generated Haxe emits deterministic strict C and five reviewable neutral build plans with exact argument-array libraries, frameworks, headers, and pkg-config facts",
-        "the checked Clang-derived raw core lock renders 9 records, 2 struct aliases, 5 enum domains with 143 constants, and 59 functions byte-identically from the pinned header",
+        "the checked Clang-derived raw core lock renders 9 records, 2 struct aliases, 5 enum domains with 143 constants, and 60 functions byte-identically from the pinned header",
         "an independent native probe verifies every selected layout, alias, constant, and function signature while the generated smoke consumes the public raylib.raw package",
         "a separate semantic smoke proves typed enum domains, imported struct constructors, aggregate color macros, and inline forwarding emit the same direct raylib calls with no allocation, reflection, virtual dispatch, or hxrt",
         "the reviewed Texture2D resource family records one load owner, validity check, non-retaining draw borrow, render-thread restriction, and exactly-once unload while the semantic owning load remains deliberately omitted",

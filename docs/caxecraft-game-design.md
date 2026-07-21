@@ -10,8 +10,10 @@ feasibility slice exist today. That slice can move, collide, jump, select,
 remove, and place colored blocks; it now has the textured title, a typed
 eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
 input pilots. A small authored spawn meadow now introduces Nia through a
-two-step welcome/berry gift and renders one fixed-step Mossling with bounded
-rest/wander/notice/chase/return behavior. Adventure now adds the first complete
+two-step welcome/berry gift and renders Nia and one fixed-step Mossling from
+their reviewed original entity-atlas cells, with code-drawn fallbacks if the
+GPU texture cannot load. The Mossling has bounded rest/wander/notice/chase/
+return behavior. Adventure now adds the first complete
 combat exchange. A nearby Mossling shows a red warning for eight 50 ms game
 ticks, produces at most one impact, then recovers for twelve ticks. Leaving its
 marked range cancels the pending hit. The Copper Sword likewise consumes queued
@@ -27,7 +29,7 @@ target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;
 the authored mode content does not run yet beyond that first encounter. Broader
 combat and enemies, broader item recovery, NPC dialogue, persistence, complete
-localization, Ivvy behavior, terrain/entity art, audio, and the authored
+localization, Ivvy behavior, terrain and Adventure-cast art, audio, and the authored
 campaign remain unimplemented. Do not describe
 concept art, semantic editor tests, or the remaining design-only atlases as
 evidence that those broader capabilities run.

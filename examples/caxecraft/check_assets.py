@@ -352,15 +352,14 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
         "derivation",
     }:
         fail("runtimeIntegration must remain a closed, reviewable policy")
-    if runtime.get("owner") != "haxe_c-xge.33":
+    if runtime.get("owner") != "haxe_c-xge.15.1":
         fail("runtime integration must retain its focused Beads owner")
-    if runtime.get("packagedPrimaryAssets") != ["caxecraft-wordmark", "title-panorama", "hud", "items"]:
-        fail("only the exact title, wordmark, HUD, and item sources are runtime-integrated")
+    if runtime.get("packagedPrimaryAssets") != ["caxecraft-wordmark", "title-panorama", "hud", "items", "entities"]:
+        fail("only the exact title, wordmark, HUD, item, and entity sources are runtime-integrated")
     if runtime.get("designOnlyAssets") != [
         "adventure-characters",
         "adventure-items",
         "adventure-terrain",
-        "entities",
         "ivvy",
         "terrain",
     ]:

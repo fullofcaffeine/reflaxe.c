@@ -10,27 +10,27 @@
     "derivedRuntimeAssets": "remaining-atlases-require-deterministic-regeneration",
     "gitStorage": "ordinary-git-v1-reassess-before-expanded-runtime-integration",
     "owner": "haxe_c-xge.15",
-    "note": "These reviewed PNG bytes are primary design-source inputs, not build-generated artifacts. The title panorama and wordmark are packaged byte-for-byte with no derived conversion. Interactive creation history is provenance only and cannot recreate the selected bytes. Any resized, packed, compressed, or otherwise derived runtime asset must have a deterministic source-to-byte command before it is checked in."
+    "note": "These reviewed PNG bytes are primary design-source inputs, not build-generated artifacts. Every runtime-selected file is packaged byte-for-byte with no derived conversion. Interactive creation history is provenance only and cannot recreate the selected bytes. Any resized, packed, compressed, or otherwise derived runtime asset must have a deterministic source-to-byte command before it is checked in."
   },
   "runtimeIntegration": {
-    "owner": "haxe_c-xge.33",
+    "owner": "haxe_c-xge.15.1",
     "packagedPrimaryAssets": [
       "caxecraft-wordmark",
       "title-panorama",
       "hud",
-      "items"
+      "items",
+      "entities"
     ],
     "designOnlyAssets": [
       "adventure-characters",
       "adventure-items",
       "adventure-terrain",
-      "entities",
       "ivvy",
       "terrain"
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
     "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The four packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "derivation": "The five packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {

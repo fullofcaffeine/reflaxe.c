@@ -29,6 +29,7 @@
     "ClearBackground",
     "CloseWindow",
     "DisableCursor",
+    "DrawBillboardRec",
     "DrawCircle",
     "DrawCube",
     "DrawCubeV",
@@ -89,6 +90,7 @@
       "load": "LoadTexture",
       "validate": "IsTextureValid",
       "borrow": [
+        "DrawBillboardRec",
         "DrawTexturePro"
       ],
       "unload": "UnloadTexture",

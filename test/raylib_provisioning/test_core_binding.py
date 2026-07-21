@@ -72,7 +72,7 @@ class RaylibCoreBindingTests(unittest.TestCase):
         self.assertEqual(contract["resource"], "Texture2D")
         self.assertEqual(contract["load"], "LoadTexture")
         self.assertEqual(contract["validate"], "IsTextureValid")
-        self.assertEqual(contract["borrow"], ["DrawTexturePro"])
+        self.assertEqual(contract["borrow"], ["DrawBillboardRec", "DrawTexturePro"])
         self.assertEqual(contract["unload"], "UnloadTexture")
         self.assertEqual(
             contract["semanticStatus"],

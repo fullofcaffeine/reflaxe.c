@@ -68,6 +68,7 @@
       "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombatState.h",
+      "include/hxc/modules/raylib/raw/Camera.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
       "include/hxc/modules/raylib/raw/Rectangle.h",
@@ -85,6 +86,7 @@
       {
         "path": "raylib.h",
         "ownerModulePaths": [
+          "raylib.raw.Camera",
           "raylib.raw.Camera3D",
           "raylib.raw.Color",
           "raylib.raw.Raylib",
@@ -169,7 +171,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "0c76d2a36d4a523c558ef9a99be492eab6a617986c82cf4a500e276eef4b5dc7",
+      "sha256": "c16acc235eb6cbe62ab0c7036cdbcd1b039e81b29cebd7a884203aca1b2d7612",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -179,7 +181,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "324abbfbe826e88f0ad1703cc8f0fc7d36f6de471c2ce513317bc9b0ec25efa0",
+      "sha256": "3aef52ff2527d317a9f2a798b91b2f2019225ca25449cb00dd8f9f2b260f9d6c",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -189,7 +191,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "5a4d2f595294c5b59970a430a790dd38c83c4de0a6b05ee21456869af364c436",
+      "sha256": "ed5e1668e78d240f5e40dd2fc9c67b7b5b4a12f75e76519f01b5b5244128189a",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "kind": "private-header"
     },
@@ -204,7 +206,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "e178b646b454cd2d0bbe2dcbbacd4be6bce67028d9b2c6d88218906f19e50e03",
+      "sha256": "5d35221f3e072fcfc3542bbeb5467c084a8259878a6ee7e08459055d27d7af48",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -344,6 +346,11 @@
       "kind": "private-header"
     },
     {
+      "sha256": "b6bc2a7d4ebe11c2fcba5200cc07b49c94b7979f0fddb60ec38bff1b4f10fd69",
+      "path": "include/hxc/modules/raylib/raw/Camera.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "5c3dfb7f2257343c0cb19c8c4379f7bcda9d280d7e229018097d42eef2da0518",
       "path": "include/hxc/modules/raylib/raw/Camera3D.h",
       "kind": "private-header"
@@ -379,7 +386,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d6f593fc69987a9ec92742d87c0877f73c5a4d8b320a3fe6faaa12880a96f377",
+      "sha256": "c3500d559a6f4655b391f47f824ee8b4ba2050c9bfa5c279e40d14d01d9ab805",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
@@ -394,12 +401,12 @@
       "kind": "source"
     },
     {
-      "sha256": "3f3c21ea96f306495d5bda6c7971f23a9a412551c64dc29e1ccf02be973c1aec",
+      "sha256": "1ff47d4e4b64a2d0d55973d19c573870cb556b61136f21919b2bfe5708eafc99",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
     {
-      "sha256": "539c452cf6b51a5a78590d4f88eddb5cc23a78fc1568fc6268821ebff4f87377",
+      "sha256": "dbe7b65b4ea77fe3c70f30f52896aff7e45da0f021c6782845a41328e31382b3",
       "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "kind": "source"
     },
@@ -414,7 +421,7 @@
       "kind": "source"
     },
     {
-      "sha256": "63222ac4956c89886718ca96848154fbff87688153c3f2d6121dc7e5f282321b",
+      "sha256": "09e9e8db52b8ecd53ce118656ee6ca62cac0eb707264f46e8dbaac2afe35e185",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },

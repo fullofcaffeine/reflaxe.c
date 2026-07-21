@@ -86,19 +86,20 @@ wall-clock timeout.
 
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent sky, terrain,
-heads-up display, light UI, Nia-coat, and Mossling-crown pixels. These actor
-colors are deliberate semantic evidence that the native renderer submitted
-both original silhouettes, not a whole-image golden. The checks do not compare whole GPU images
-byte-for-byte because drivers and platforms may rasterize the same scene
-differently. Exact pixel goldens belong to the separately pinned software
-renderer.
+heads-up display, and light UI. The stationary full-inventory interaction also
+requires small color fingerprints from Nia's and the Mossling's reviewed atlas
+cells. That is semantic evidence that the native billboard path presented both
+original actors, not a whole-image golden. The checks do not compare whole GPU
+images byte-for-byte because drivers and platforms may rasterize the same
+scene differently. Exact pixel goldens belong to the separately pinned
+software renderer.
 
 The combat pilot intentionally has a different actor check. Its 40 fixed
 frames let the Mossling warn and land one bounded attack, then space three
-sword actions across the four-tick cooldown. The captured frame requires Nia,
-the exact damage-feedback color, and the exact berry-drop color. Requiring the
-Mossling crown would prove that defeat failed. This makes the screenshot a
-small state assertion rather than merely another nonblack frame.
+sword actions across the four-tick cooldown. The captured frame requires the
+exact damage-feedback and berry-drop colors, while the defeated Mossling must
+be absent. This makes the screenshot a small state assertion rather than
+merely another nonblack frame.
 
 The recovery pilot begins at two of three hearts through a typed fixture fact,
 selects berries, performs the same secondary action as a real right click, and
@@ -108,7 +109,8 @@ the screenshot proves the shared recovery transition reached the renderer.
 
 The full-inventory pilot begins with exactly 64 berries, advances Nia to the
 gift step, and tries the interaction again. Its frame must show both the unique
-capacity-warning color and Nia still offering the gift. The renderer-free test
+capacity-warning color and Nia still offering the gift. It is also the stable
+native frame that proves both original actor sprites. The renderer-free test
 separately proves that partial world pickup leaves the remainder active.
 
 The full-inventory mining pilot is deliberately separate. It begins with all
