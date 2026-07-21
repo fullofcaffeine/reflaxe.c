@@ -260,6 +260,19 @@ target leakage from the shared model. The same fast command now exercises the
 in-progress staged codec: bounded UTF-8/token decoding, syntax parsing, typed
 content-registry validation, byte-identical canonical writing, CRLF and input-
 order convergence, two readable fixtures, and fail-closed malformed families.
+The slower reference check keeps repeated compiler behavior out of that edit
+loop while proving the same complete codec probe twice from cold Haxe, once
+under an alternate installed locale, and twice through one exact-pin Haxe
+compilation server:
+
+```sh
+npm run test:caxecraft-scenario-determinism
+```
+
+Each request still performs the byte-identical fixture, repeated-write, CRLF,
+reverse-order, exact diagnostic, and bounded-work assertions inside Haxe; a
+matching one-line trace is therefore evidence that all five requests reached
+the same checked result, not merely that they printed the same fixture size.
 It is not native persistence, the rule executor, or the visual editor; those
 remain ordered `haxe_c-xge.19.*` slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.

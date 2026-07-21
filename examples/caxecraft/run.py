@@ -1404,7 +1404,18 @@ def alternate_locale() -> str:
         ["locale", "-a"], check=False, capture_output=True, text=True, timeout=10
     )
     available = {line.strip() for line in result.stdout.splitlines()}
-    for candidate in ("C.UTF-8", "C.utf8", "en_US.UTF-8", "en_US.utf8"):
+    # Prefer a language locale whose collation and formatting differ visibly
+    # from C. Minimal CI images commonly provide only C.UTF-8, which remains a
+    # useful fallback because it still exercises an explicit UTF-8 locale.
+    for candidate in (
+        "es_MX.UTF-8",
+        "de_DE.UTF-8",
+        "fr_FR.UTF-8",
+        "en_US.UTF-8",
+        "en_US.utf8",
+        "C.UTF-8",
+        "C.utf8",
+    ):
         if candidate in available:
             return candidate
     return "C"

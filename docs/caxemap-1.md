@@ -418,6 +418,13 @@ missing chunks, duplicate IDs/tags, unresolved references, type-mismatched
 variables/arguments, impossible placements, invalid rule graphs, and unknown
 required features.
 
+`npm run test:caxecraft-scenario-model` is the fast edit-time proof for this
+pipeline. `npm run test:caxecraft-scenario-determinism` is its separate
+reference lane: it runs the complete codec probe twice from cold Haxe, once
+under an alternate installed locale, and twice through one pinned compilation
+server. Keeping the five-request proof separate makes compiler-cache and locale
+drift visible without making every parser edit pay for repeated compiler setup.
+
 The planned map-file persistence layer (`haxe_c-xge.19.4`) will write these
 canonical bytes to a validated sibling temporary, flush as required by the
 platform adapter, and then replace the destination atomically where the
