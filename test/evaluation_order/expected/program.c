@@ -1,5 +1,15 @@
 #include "hxc/program.h"
 
+_Static_assert(offsetof(struct hxc_EvaluationFixture_EvaluationChoiceRecord, hxc_amount) == 0, "closed record hxc_EvaluationFixture_EvaluationChoiceRecord first field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_EvaluationFixture_EvaluationChoiceRecord) >= _Alignof(int32_t), "closed record hxc_EvaluationFixture_EvaluationChoiceRecord alignment admits field 0");
+
+_Static_assert(offsetof(struct hxc_EvaluationFixture_EvaluationChoiceRecord, hxc_enabled) >= offsetof(struct hxc_EvaluationFixture_EvaluationChoiceRecord, hxc_amount) + sizeof(int32_t), "closed record hxc_EvaluationFixture_EvaluationChoiceRecord field 1 follows the prior field without overlap");
+
+_Static_assert(_Alignof(struct hxc_EvaluationFixture_EvaluationChoiceRecord) >= _Alignof(bool), "closed record hxc_EvaluationFixture_EvaluationChoiceRecord alignment admits field 1");
+
+_Static_assert(sizeof(struct hxc_EvaluationFixture_EvaluationChoiceRecord) >= offsetof(struct hxc_EvaluationFixture_EvaluationChoiceRecord, hxc_enabled) + sizeof(bool), "closed record hxc_EvaluationFixture_EvaluationChoiceRecord size contains its final field");
+
 int32_t hxc_EvaluationFixture_barrierValue = 0;
 
 bool hxc_EvaluationFixture_callFlag = false;
@@ -20,6 +30,61 @@ bool hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second)
     hxc_tmp_short_circuit_result_n2 = !hxc_second;
   }
   return hxc_tmp_short_circuit_result_n2;
+}
+
+struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_EvaluationFixture_exhaustiveAbstractRecord(int32_t hxc_value)
+{
+  struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_tmp_switch_result_n2 = { 0 };
+  switch (hxc_value) {
+    case 0:
+      {
+        hxc_tmp_switch_result_n2 = (struct hxc_EvaluationFixture_EvaluationChoiceRecord){ .hxc_amount = 4, .hxc_enabled = false };
+        break;
+      }
+    case 1:
+      {
+        hxc_tmp_switch_result_n2 = (struct hxc_EvaluationFixture_EvaluationChoiceRecord){ .hxc_amount = 7, .hxc_enabled = true };
+        break;
+      }
+    case 2:
+      {
+        hxc_tmp_switch_result_n2 = (struct hxc_EvaluationFixture_EvaluationChoiceRecord){ .hxc_amount = 9, .hxc_enabled = false };
+        break;
+      }
+    default:
+      {
+        abort();
+      }
+  }
+  struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_selected = hxc_tmp_switch_result_n2;
+  return hxc_selected;
+}
+
+int32_t hxc_EvaluationFixture_exhaustiveAbstractReturn(int32_t hxc_value)
+{
+  int32_t hxc_tmp_switch_result_n1 = 0;
+  switch (hxc_value) {
+    case 0:
+      {
+        hxc_tmp_switch_result_n1 = 11;
+        break;
+      }
+    case 1:
+      {
+        hxc_tmp_switch_result_n1 = 22;
+        break;
+      }
+    case 2:
+      {
+        hxc_tmp_switch_result_n1 = 33;
+        break;
+      }
+    default:
+      {
+        abort();
+      }
+  }
+  return hxc_tmp_switch_result_n1;
 }
 
 uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value)
@@ -288,8 +353,25 @@ uint32_t hxc_EvaluationFixture_run(void)
   {
     hxc_controlIntact = false;
   }
-  int32_t hxc_tmp_call_result_n62 = hxc_EvaluationFixture_readGlobalBeforeCall();
-  if (hxc_tmp_call_result_n62 != 5)
+  int32_t hxc_tmp_call_result_n62 = hxc_EvaluationFixture_exhaustiveAbstractReturn(2);
+  if (hxc_tmp_call_result_n62 != 33)
+  {
+    hxc_controlIntact = false;
+  }
+  struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_tmp_call_result_n63 = hxc_EvaluationFixture_exhaustiveAbstractRecord(1);
+  struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_abstractRecord = hxc_tmp_call_result_n63;
+  int32_t hxc_tmp_record_field_load_result_n64 = hxc_abstractRecord.hxc_amount;
+  bool hxc_tmp_short_circuit_result_n30 = hxc_tmp_record_field_load_result_n64 != 7;
+  if (!(hxc_tmp_record_field_load_result_n64 != 7))
+  {
+    hxc_tmp_short_circuit_result_n30 = !hxc_abstractRecord.hxc_enabled;
+  }
+  if (hxc_tmp_short_circuit_result_n30)
+  {
+    hxc_controlIntact = false;
+  }
+  int32_t hxc_tmp_call_result_n67 = hxc_EvaluationFixture_readGlobalBeforeCall();
+  if (hxc_tmp_call_result_n67 != 5)
   {
     hxc_controlIntact = false;
   }
@@ -301,8 +383,8 @@ uint32_t hxc_EvaluationFixture_run(void)
   {
     hxc_result = 96;
   }
-  uint32_t hxc_tmp_call_result_n66 = hxc_EvaluationFixture_finish(hxc_result);
-  return hxc_tmp_call_result_n66;
+  uint32_t hxc_tmp_call_result_n71 = hxc_EvaluationFixture_finish(hxc_result);
+  return hxc_tmp_call_result_n71;
 }
 
 bool hxc_EvaluationFixture_setCallFlag(bool hxc_value)

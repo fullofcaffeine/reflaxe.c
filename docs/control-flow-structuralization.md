@@ -61,6 +61,13 @@ The node family is closed and typed:
 - `CFNSwitch` and `CFNTagSwitch` own grouped labels, arm regions, and a join or
   closed-arm proof.
 
+An HxcIR `unreachable` completion is not printed as a compiler-specific
+intrinsic or left to C undefined behavior. When it is reachable only through a
+compiler-proven impossible edge, such as the default of an exhaustive closed
+enum-abstract switch, structural C emits `abort()` from `<stdlib.h>`. This is a
+fail-stop realization of the validated semantic boundary; printers do not add
+it speculatively to ordinary switches.
+
 Each reachable HxcIR block must occur exactly once in a structured plan. A
 missing block, duplicate block, unknown target, mismatched terminator, stale
 condition value, invalid loop fact, unlabeled switch arm, or unowned

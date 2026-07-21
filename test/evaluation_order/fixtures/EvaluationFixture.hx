@@ -38,6 +38,24 @@ class EvaluationFixture {
 		return value;
 	}
 
+	/** Return directly from every value of a closed integer-backed Haxe type. */
+	static function exhaustiveAbstractReturn(value:EvaluationChoice):Int
+		return switch (value) {
+			case First: 11;
+			case Second: 22;
+			case Third: 33;
+		};
+
+	/** Carry a direct record through the temporary produced by Haxe's optimizer. */
+	static function exhaustiveAbstractRecord(value:EvaluationChoice):EvaluationChoiceRecord {
+		final selected:EvaluationChoiceRecord = switch (value) {
+			case First: {amount: 4, enabled: false};
+			case Second: {amount: 7, enabled: true};
+			case Third: {amount: 9, enabled: false};
+		};
+		return selected;
+	}
+
 	static function overwriteBarrierValue():Int {
 		barrierValue = 41;
 		return 0;
@@ -123,6 +141,11 @@ class EvaluationFixture {
 			controlIntact = false;
 		if (switchCalls != 1)
 			controlIntact = false;
+		if (exhaustiveAbstractReturn(Third) != 33)
+			controlIntact = false;
+		final abstractRecord = exhaustiveAbstractRecord(Second);
+		if (abstractRecord.amount != 7 || !abstractRecord.enabled)
+			controlIntact = false;
 		if (readGlobalBeforeCall() != 5)
 			controlIntact = false;
 		if (controlIntact)
@@ -138,4 +161,15 @@ class EvaluationFixture {
 		run();
 		#end
 	}
+}
+
+private enum abstract EvaluationChoice(Int) {
+	var First = 0;
+	var Second = 1;
+	var Third = 2;
+}
+
+private typedef EvaluationChoiceRecord = {
+	final amount:Int;
+	final enabled:Bool;
 }

@@ -191,7 +191,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "90c0bd0a45dce1e59bd0edd09c4b8be9a09589ef0625b02518d62ee357cdb131",
+      "sha256": "ea200e7beca4628467b91946acfc20f2c211d43274cc84ad1da74479e1aebd52",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -201,7 +201,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "0833f70acbe0078164181206e8f16137dea216e705ce326426ba770f98cee307",
+      "sha256": "f000a5ea6ada237f859f17d873b483dbd7d1a9039c4874e028db29aa0b1272cb",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -531,12 +531,12 @@
       "kind": "source"
     },
     {
-      "sha256": "21fd418fe8a0afa51bc4db9d6d8b38675765c3bd855e6a97b7f7018f2cc30d43",
+      "sha256": "d58573ea8fb3e11a7fc35834b3bb55b633b5c3f82269bd23ac9cac49568b6118",
       "path": "src/modules/caxecraft/localization/FirstPlayableCatalog.c",
       "kind": "source"
     },
     {
-      "sha256": "58980ac5b4c1c6db30fbb0700cb5541785099bd4547baf712a08253b0bde251e",
+      "sha256": "8105cd62849bda8e9ab75c4fc7776e5f03af56459a7eafa5e098fe628535fae5",
       "path": "src/modules/caxecraft/localization/UiCatalog.c",
       "kind": "source"
     }

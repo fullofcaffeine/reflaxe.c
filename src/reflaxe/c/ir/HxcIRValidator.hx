@@ -896,9 +896,9 @@ private class HxcIRValidationState {
 				validatePlace(place, '$path.place', instruction.source, available, locals, nullProofs);
 				final initializedType = knownPlaceType(place, available, locals);
 				switch initializedType {
-					case IRTInstance(instanceId) if (isClassInstance(instanceId)):
+					case IRTInstance(instanceId) if (isClassInstance(instanceId) || isDirectAggregateInstance(instanceId)):
 					case _:
-						add(path, "default object initialization requires a direct concrete-class place", instruction.source);
+						add(path, "default initialization requires a direct record or concrete-class place", instruction.source);
 				}
 				validateTransition(from, to, '$path.transition', instruction.source);
 				if (from != IRISUninitialized || to != IRISInitializing && to != IRISInitialized) {
@@ -1598,6 +1598,15 @@ private class HxcIRValidationState {
 		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
 		return declaration != null && switch declaration.kind {
 			case IRTKClass(_): true;
+			case _: false;
+		};
+	}
+
+	function isDirectAggregateInstance(instanceId:String):Bool {
+		final instance = typeInstances.get(instanceId);
+		final declaration = instance == null ? null : typeDeclarations.get(instance.declarationId);
+		return instance != null && instance.representation == IRRDirect && declaration != null && switch declaration.kind {
+			case IRTKAggregate(_): true;
 			case _: false;
 		};
 	}

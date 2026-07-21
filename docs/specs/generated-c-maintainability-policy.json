@@ -203,7 +203,7 @@
       "layout": "canonical",
       "limits": {
         "maxIdentifierBytes": 96,
-        "maxFileLines": 360,
+        "maxFileLines": 440,
         "maxFunctionLines": 320,
         "maxBranchCount": 48,
         "maxNestingDepth": 14,

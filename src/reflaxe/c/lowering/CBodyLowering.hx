@@ -427,7 +427,7 @@ class CBodyLowering {
 					}
 					if (block.terminator != null) {
 						switch block.terminator.kind {
-							case IRTThrow(_, {target: IRFTAbort}):
+							case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable:
 								final request = new CSymbolRequest(CSKMethod, ["c-standard-library", "abort"], CNSOrdinary("translation-unit"), CSVExternal,
 									"abort");
 								context.symbols.register(request);
@@ -1728,16 +1728,24 @@ private class FunctionBuilder {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
-		final value:LoweredValue = switch initializer {
+		final value:Null<LoweredValue> = switch initializer {
 			case null if (compilerFlowCarrier):
 				// Reflaxe can expose a value-producing if/switch as a temporary followed
 				// by exhaustive control flow that assigns it. The structural recognition
 				// below proves every arm assigns; this defensive value prevents C
 				// uninitialized storage without becoming observable on an admitted path.
-				final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
-				appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')), source,
-					"flow-carrier-default");
-				{id: result.id, type: result.type, mapping: localMapping};
+				switch localMapping.kind {
+					case CBVKAggregate(_):
+						// Strict C can safely declare a record carrier as `{0}`. Every
+						// admitted source path overwrites it before the later load, while
+						// a forged enum-abstract value takes the fail-stop switch edge.
+						null;
+					case _:
+						final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
+						appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')),
+							source, "flow-carrier-default");
+						{id: result.id, type: result.type, mapping: localMapping};
+				}
 			case null:
 				unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
 			case expression:
@@ -1754,7 +1762,11 @@ private class FunctionBuilder {
 			CNSOrdinary(prepared.functionRequest.stableKey()), CSVInternal, null, [], [], ordinal);
 		context.symbols.register(request);
 		localRequests.set(localId, request);
-		appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
+		if (value == null) {
+			appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source, "flow-carrier-default-initialize");
+		} else {
+			appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
+		}
 		localIdsByCompilerId.set(variable.id, localId);
 		localTypesByCompilerId.set(variable.id, localMapping);
 	}
@@ -2227,7 +2239,7 @@ private class FunctionBuilder {
 		return switch expression.expr {
 			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
 					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
-			case TSwitch(_, cases, defaultExpression): switchArmsAssignLocal(cases, defaultExpression, compilerId);
+			case TSwitch(subject, cases, defaultExpression): switchArmsAssignLocal(subject, cases, defaultExpression, compilerId);
 			case TParenthesis(inner) | TMeta(_, inner): followingFlowInitializesLocal(inner, compilerId);
 			case _: false;
 		};
@@ -2240,14 +2252,18 @@ private class FunctionBuilder {
 			case TBlock(expressions): expressions.length > 0 && definitelyAssignsLocal(expressions[expressions.length - 1], compilerId);
 			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
 					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
-			case TSwitch(_, cases, defaultExpression): switchArmsAssignLocal(cases, defaultExpression, compilerId);
+			case TSwitch(subject, cases, defaultExpression): switchArmsAssignLocal(subject, cases, defaultExpression, compilerId);
 			case TParenthesis(inner) | TMeta(_, inner): definitelyAssignsLocal(inner, compilerId);
 			case _: false;
 		};
 	}
 
-	function switchArmsAssignLocal(cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>, compilerId:Int):Bool {
-		if (defaultExpression == null || !definitelyAssignsLocal(defaultExpression, compilerId)) {
+	function switchArmsAssignLocal(subject:TypedExpr, cases:Array<TypedSwitchArm>, defaultExpression:Null<TypedExpr>, compilerId:Int):Bool {
+		if (defaultExpression == null) {
+			if (!isExhaustiveEnumAbstractSwitch(subject, cases)) {
+				return false;
+			}
+		} else if (!definitelyAssignsLocal(defaultExpression, compilerId)) {
 			return false;
 		}
 		for (item in cases) {
@@ -2256,6 +2272,97 @@ private class FunctionBuilder {
 			}
 		}
 		return true;
+	}
+
+	/**
+	 * Prove that a default-free value switch covers a closed enum abstract.
+	 *
+	 * An enum abstract is stored as its underlying integer or Boolean, but Haxe
+	 * still treats its declared `var` values as a finite set during exhaustiveness
+	 * checking. The typed switch no longer carries that proof explicitly, so this
+	 * compiler boundary rebuilds it from the abstract's `@:enum` fields. This is
+	 * deliberately narrower than asking whether all visible integer literals
+	 * happen to be present: ordinary integers are open-ended and must retain a
+	 * real default or fall-through path.
+	 */
+	function isExhaustiveEnumAbstractSwitch(subject:TypedExpr, cases:Array<TypedSwitchArm>):Bool {
+		final expected = enumAbstractConstantKeys(subject.t);
+		if (expected == null || expected.length == 0) {
+			return false;
+		}
+		final covered:Map<String, Bool> = [];
+		for (item in cases) {
+			for (value in item.values) {
+				final key = typedSwitchConstantKey(value);
+				if (key == null) {
+					return false;
+				}
+				covered.set(key, true);
+			}
+		}
+		for (key in expected) {
+			if (!covered.exists(key)) {
+				return false;
+			}
+		}
+		return true;
+	}
+
+	/** Return the distinct runtime constants declared by one enum abstract. */
+	function enumAbstractConstantKeys(type:Type):Null<Array<String>> {
+		return switch applyCurrentSpecialization(type) {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? null : enumAbstractConstantKeys(resolved);
+			case TLazy(resolve): enumAbstractConstantKeys(resolve());
+			case TType(reference, parameters):
+				final definition = reference.get();
+				enumAbstractConstantKeys(TypeTools.applyTypeParameters(definition.type, definition.params, parameters));
+			case TAbstract(reference, _) if (reference.get().meta.has(":enum")):
+				final implementation = reference.get().impl;
+				if (implementation == null) {
+					null;
+				} else {
+					final result:Array<String> = [];
+					final seen:Map<String, Bool> = [];
+					for (field in implementation.get().statics.get()) {
+						if (!field.meta.has(":enum")) {
+							continue;
+						}
+						final expression = field.expr();
+						if (expression == null) {
+							return null;
+						}
+						final key = typedSwitchConstantKey(expression);
+						if (key == null) {
+							return null;
+						}
+						if (!seen.exists(key)) {
+							seen.set(key, true);
+							result.push(key);
+						}
+					}
+					result;
+				}
+			case _: null;
+		};
+	}
+
+	/** Read only the integral constant forms that strict C switches can own. */
+	static function typedSwitchConstantKey(expression:TypedExpr, depth:Int = 0):Null<String> {
+		if (depth > 8) {
+			return null;
+		}
+		return switch expression.expr {
+			case TConst(TInt(value)): 'int:$value';
+			case TConst(TBool(value)): 'bool:${value ? "true" : "false"}';
+			case TUnop(OpNeg, _, inner): final value = constantInt(inner); value == null || value == -2147483648 ? null : 'int:${- value}';
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): typedSwitchConstantKey(inner, depth + 1);
+			case TField(_, FStatic(_, field)):
+				final value = field.get().expr();
+				value == null ? null : typedSwitchConstantKey(value, depth + 1);
+			case _: null;
+		};
 	}
 
 	function isLocalTarget(expression:TypedExpr, compilerId:Int):Bool {
@@ -2714,7 +2821,8 @@ private class FunctionBuilder {
 		for (index in 0...cases.length) {
 			caseBlocks.push(createGeneratedBlock('switch-case-$index', source));
 		}
-		final defaultBlock = defaultExpression == null ? null : createGeneratedBlock("switch-default", source);
+		final exhaustiveEnumAbstract = defaultExpression == null && isExhaustiveEnumAbstractSwitch(subject, cases);
+		final defaultBlock = defaultExpression == null && !exhaustiveEnumAbstract ? null : createGeneratedBlock("switch-default", source);
 		final openEnds:Array<MutableBodyBlock> = [];
 
 		for (index in 0...cases.length) {
@@ -2730,9 +2838,14 @@ private class FunctionBuilder {
 			if (currentBlock.terminator == null) {
 				openEnds.push(currentBlock);
 			}
+		} else if (exhaustiveEnumAbstract && defaultBlock != null) {
+			// The type checker proved every declared abstract value covered. Keep an
+			// explicit fail-stop edge for a forged underlying value instead of
+			// inventing a Haxe result or falling out of a non-Void C function.
+			defaultBlock.terminator = {kind: IRTUnreachable, source: source};
 		}
 
-		final needsExit = defaultExpression == null || openEnds.length > 0;
+		final needsExit = defaultExpression == null && !exhaustiveEnumAbstract || openEnds.length > 0;
 		final exitBlock = needsExit ? createGeneratedBlock("switch-exit", source) : null;
 		if (exitBlock != null) {
 			for (end in openEnds) {
@@ -2807,19 +2920,29 @@ private class FunctionBuilder {
 		if (enumSubject != null) {
 			return lowerValueEnumSwitch(expression, enumSubject, cases, defaultExpression, expectedMapping);
 		}
-		if (defaultExpression == null) {
+		final exhaustiveEnumAbstract = defaultExpression == null && isExhaustiveEnumAbstractSwitch(subject, cases);
+		if (defaultExpression == null && !exhaustiveEnumAbstract) {
 			return unsupported(expression, "TSwitch(value-without-default)");
 		}
 		final subjectValue = lowerSwitchSubject(subject);
 		final resultMapping = expectedMapping == null ? bodyValueType(expression.t, expression.pos, "TSwitch(result-type)") : expectedMapping;
-		requirePrimitive(resultMapping, expression.pos, "TSwitch(result-type)");
+		switch resultMapping.kind {
+			case CBVKPrimitive(_) | CBVKAggregate(_):
+			case _:
+				return unsupported(expression, 'TSwitch(result-type:${resultMapping.cSpelling})');
+		}
 		if (resultMapping.irType == IRTVoid) {
 			return unsupported(expression, "TSwitch(Void-as-value)");
 		}
 		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
-		final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
-		appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch")), source, "switch-default-result");
-		final resultLocalId = createFlowLocal(resultMapping, initialResult.id, source, "switch-result");
+		final initialResultId:Null<String> = switch resultMapping.kind {
+			case CBVKAggregate(_): null;
+			case _:
+				final initialResult:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+				appendInstruction(initialResult, IRIOConstant(defaultConstant(resultMapping.irType, expression, "TSwitch")), source, "switch-default-result");
+				initialResult.id;
+		}
+		final resultLocalId = createFlowLocal(resultMapping, initialResultId, source, "switch-result");
 		final dispatchBlock = currentBlock;
 		final caseBlocks:Array<MutableBodyBlock> = [];
 		for (index in 0...cases.length) {
@@ -2835,11 +2958,14 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
 		}
 
-		final resolvedDefault:TypedExpr = defaultExpression;
 		currentBlock = defaultBlock;
-		final defaultValue = coerce(lowerValue(resolvedDefault, resultMapping), resultMapping, resolvedDefault.pos, "TSwitch(default-value)");
-		appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "switch-default-store");
-		currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		if (defaultExpression == null) {
+			currentBlock.terminator = {kind: IRTUnreachable, source: source};
+		} else {
+			final defaultValue = coerce(lowerValue(defaultExpression, resultMapping), resultMapping, defaultExpression.pos, "TSwitch(default-value)");
+			appendInstruction(null, IRIOStore(IRPLocal(resultLocalId), defaultValue.id), source, "switch-default-store");
+			currentBlock.terminator = {kind: IRTJump(edge(joinBlock.id)), source: source};
+		}
 
 		dispatchBlock.terminator = {
 			kind: IRTSwitch(subjectValue.id, switchCases(cases, caseBlocks, requirePrimitive(subjectValue.mapping, expression.pos, "TSwitch(subject)")),
@@ -4164,7 +4290,7 @@ private class FunctionBuilder {
 	 * control leaves the current block. Span values also reserve the paired
 	 * length name because their C representation is a pointer plus a length.
 	 */
-	function createFlowLocal(mapping:CBodyValueType, initialValueId:String, source:HxcSourceSpan, role:String):String {
+	function createFlowLocal(mapping:CBodyValueType, initialValueId:Null<String>, source:HxcSourceSpan, role:String):String {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		locals.push({
@@ -4190,7 +4316,17 @@ private class FunctionBuilder {
 				spanLengthRequests.set(localId, lengthRequest);
 			case _:
 		}
-		appendInstruction(null, IRIOInitialize(IRPLocal(localId), initialValueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
+		if (initialValueId == null) {
+			switch mapping.kind {
+				case CBVKAggregate(_):
+					appendInstruction(null, IRIODefaultInitialize(IRPLocal(localId), IRISUninitialized, IRISInitialized), source, role
+						+ "-default-initialize");
+				case _:
+					throw new CBodyEmissionError('flow local `$localId` in `${prepared.irId}` omitted a required initial value');
+			}
+		} else {
+			appendInstruction(null, IRIOInitialize(IRPLocal(localId), initialValueId, IRISUninitialized, IRISInitialized), source, role + "-initialize");
+		}
 		return localId;
 	}
 

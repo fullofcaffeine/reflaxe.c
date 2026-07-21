@@ -28,7 +28,9 @@ The current source-backed slice covers:
   and replaced by compiler-owned condition/body/increment/exit blocks, with no
   iterator operation reaching HxcIR;
 - `Int` statement and value switches whose subject is evaluated once and
-  whose ordered constant cases target explicit blocks; and
+  whose ordered constant cases target explicit blocks, including a
+  default-free switch over every declared value of a closed integer-backed
+  `enum abstract`; and
 - prefix/postfix primitive increment/decrement as load, constant, typed UB-safe
   operation, store, then selection of the new or old value; and
 - compound arithmetic assignment as one stable destination load, left-to-right
@@ -56,8 +58,9 @@ one value out of several control-flow paths. It is safe only because every path
 of the immediately following `if` assigns it. The lowerer now recognizes that
 closed shape for exhaustive `if` and `switch` expressions, creates the typed
 local, and then lowers the assignments and later lazy operation normally. A
-missing `else`, missing switch default, or arm that does not assign the exact
-local remains the source-positioned `HXC1001` uninitialized-local error.
+missing `else`, an open-ended switch without a default, or an arm that does not
+assign the exact local remains the source-positioned `HXC1001`
+uninitialized-local error.
 
 The local receives a defensive type-correct default before its exhaustive
 branches. That value cannot be observed on an admitted path because each branch
@@ -65,6 +68,33 @@ overwrites it, but it also means emitted C never contains uninitialized storage
 if a later compiler pass changes the structure incorrectly. Validation and the
 ordinary short-circuit blocks still decide whether the right-hand helper runs;
 the printer does not repair or rediscover this rule.
+
+### Closed enum-abstract switches
+
+An `enum abstract Choice(Int)` is a closed Haxe choice whose C storage is still
+one ordinary integer. Haxe therefore permits this familiar value switch:
+
+```haxe
+return switch choice {
+	case First: 11;
+	case Second: 22;
+};
+```
+
+The typed expression does not retain a separate “exhaustive” flag. Haxe.c
+rebuilds that proof by reading the abstract's declared enum constants and
+checking that the switch covers every distinct stored value. It applies this
+rule only to an actual enum abstract; seeing a convenient set of cases on an
+ordinary `Int` is not proof because more integers remain possible.
+
+Primitive and direct-record results use a defensive initialized C local before
+the switch. Every valid Haxe value overwrites that local. The generated C also
+contains `default: abort();`: this is a fail-stop check for a value forged
+outside the closed Haxe domain, not a source-level fallback result. `abort()` is
+the ISO C library operation, requires no `hxrt` runtime, and prevents a forged
+value from becoming an uninitialized read or a non-`Void` function falling off
+its end. The compiler records the path as HxcIR `unreachable`; the C emitter may
+realize that already-validated completion only as this structural fail-stop.
 
 Static-field declarations and initializers come from the `TypedProgramInput`
 captured inside `filterTypes`. Lowering never asks a mutable `ClassField` for a

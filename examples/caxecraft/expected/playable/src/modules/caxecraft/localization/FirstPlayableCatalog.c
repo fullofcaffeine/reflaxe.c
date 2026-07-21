@@ -122,7 +122,7 @@ void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale0(int32_t hxc_mes
       }
     default:
       {
-        break;
+        abort();
       }
   }
   return;
@@ -228,7 +228,7 @@ void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale1(int32_t hxc_mes
       }
     default:
       {
-        break;
+        abort();
       }
   }
   return;

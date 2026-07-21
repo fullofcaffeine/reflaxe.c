@@ -51,7 +51,8 @@ the stable-value and control-flow proof.
   loop graphs;
 - nested loop `break`/`continue` through explicit target-owned jump edges;
 - `Int` statement/value switches with typed integer cases and a value-form
-  `default`;
+  `default`, plus default-free exhaustive switches over closed integer-backed
+  enum abstracts;
 - `Int`/`UInt`/`Float` arithmetic and comparisons, Haxe division, integer and
   floating modulo, masked integer shifts, and integer bit operations;
 - arithmetic compound assignment plus prefix/postfix numeric increment and
@@ -90,9 +91,13 @@ pure operators produce immutable values.
 The pinned Reflaxe pass may expose a value switch as an uninitialized temporary
 followed by a switch that assigns it. The frontend admits that carrier only
 after structurally proving that every case and `default` assigns the same typed
-local. It emits a defensive typed initialization before those stores, so no C
-path can read indeterminate storage and general uninitialized Haxe locals remain
-fail-closed.
+local, or after independently proving that the subject is a closed enum
+abstract and every declared value assigns it. It emits a defensive typed
+initialization before those stores, including structural `{0}` initialization
+for a direct record. The compiler-only default of an exhaustive enum-abstract
+switch calls ISO C `abort()` if an invalid underlying value was forged. Thus no
+C path reads indeterminate storage, while general uninitialized Haxe locals and
+open integer switches remain fail-closed.
 
 Return validity is checked twice. Frontend lowering maps the typed function and
 return expression independently, then `HxcIRValidator` rejects missing values,

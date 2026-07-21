@@ -2,7 +2,9 @@
 #define HXC_PROGRAM_H_INCLUDED
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 static inline int32_t hxc_u32_to_i32_bits(uint32_t hxc_value)
 {
@@ -18,6 +20,11 @@ static inline int32_t hxc_i32_add_wrapping(int32_t hxc_left, int32_t hxc_right)
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left + (uint64_t)(uint32_t)hxc_right));
 }
 
+struct hxc_EvaluationFixture_EvaluationChoiceRecord {
+  int32_t hxc_amount;
+  bool hxc_enabled;
+};
+
 extern int32_t hxc_EvaluationFixture_barrierValue;
 
 extern bool hxc_EvaluationFixture_callFlag;
@@ -31,6 +38,10 @@ extern uint32_t hxc_EvaluationFixture_switchCalls;
 extern bool hxc_EvaluationFixture_ternaryIntact;
 
 bool hxc_EvaluationFixture_consumePair(bool hxc_first, bool hxc_second);
+
+struct hxc_EvaluationFixture_EvaluationChoiceRecord hxc_EvaluationFixture_exhaustiveAbstractRecord(int32_t hxc_value);
+
+int32_t hxc_EvaluationFixture_exhaustiveAbstractReturn(int32_t hxc_value);
 
 uint32_t hxc_EvaluationFixture_finish(uint32_t hxc_value);
 

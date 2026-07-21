@@ -112,7 +112,7 @@ void hxc_caxecraft_localization_UiCatalog_drawLocale0(int32_t hxc_message, int32
       }
     default:
       {
-        break;
+        abort();
       }
   }
   return;
@@ -208,7 +208,7 @@ void hxc_caxecraft_localization_UiCatalog_drawLocale1(int32_t hxc_message, int32
       }
     default:
       {
-        break;
+        abort();
       }
   }
   return;

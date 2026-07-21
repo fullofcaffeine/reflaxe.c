@@ -508,7 +508,9 @@ class CBodyEmitter {
 				addLineDirective(statements, terminator.source, state.lineDirectives);
 				emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName);
 			case CFCUnreachable(ownerBlockId):
-				fail('unreachable completion in `${fn.id}` block `$ownerBlockId` has no admitted strict-C realization');
+				final block = requireBlock(fn, ownerBlockId);
+				addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
+				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(state.boundsAbortName, "unreachable", fn.id)), [])));
 			case CFCBreak(ownerBlockId, _):
 				addTerminatorLineDirective(statements, requireBlock(fn, ownerBlockId), state.lineDirectives, fn.id);
 				statements.push(SBreak);
@@ -1015,9 +1017,9 @@ class CBodyEmitter {
 		}
 		final local = requireLocal(fn, localId);
 		switch local.type {
-			case IRTInstance(instanceId) if (classTags.exists(instanceId)):
+			case IRTInstance(instanceId) if (classTags.exists(instanceId) || aggregateTags.exists(instanceId)):
 			case _:
-				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct concrete-class storage');
+				return fail('default initializer `${instruction.id}` in `${fn.id}` does not target direct record or concrete-class storage');
 		}
 		final declaration = typedDeclarator(local.type, DName(requireLocalName(localNames, localId, fn.id)));
 		addLineDirective(statements, instruction.source, lineDirectives);
@@ -1344,8 +1346,8 @@ class CBodyEmitter {
 				statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, valueId, functionId))));
 				emitCleanupSteps(statements, failure.cleanup, fn);
 				emitFailureTarget(statements, failure, fn, boundsAbortName, "throw");
-			case _:
-				fail('function `$functionId` has a terminator outside the sequenced direct-value subset');
+			case IRTUnreachable:
+				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, "unreachable", functionId)), [])));
 		}
 	}
 
@@ -1677,7 +1679,7 @@ class CBodyEmitter {
 			}
 			if (block.terminator != null) {
 				switch block.terminator.kind {
-					case IRTThrow(_, {target: IRFTAbort}):
+					case IRTThrow(_, {target: IRFTAbort}) | IRTUnreachable:
 						addUnique(headers, "stdlib.h");
 					case _:
 				}
