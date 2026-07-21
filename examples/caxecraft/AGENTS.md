@@ -5,21 +5,32 @@ apply to every file under `examples/caxecraft`.
 
 ## Engine Mechanics and Authored Content
 
-Caxecraft engine code implements reusable mechanics. Content packs, levels,
-and campaigns decide which concrete content uses those mechanics. Do not put a
+Caxecraft engine code implements reusable mechanics. Validated levels and their
+resolved content registries decide which concrete content uses those mechanics;
+campaign data will connect levels once that planned format exists. Do not put a
 character, location, quest, encounter, reward, dialogue, visual identity, or
 story progression directly in a reusable gameplay system or the application
-loop when the public CaxeMap, CaxeFlow, localization, asset-pack, or campaign
-model can own it.
+loop when the public CaxeMap, CaxeFlow, localization, asset, or campaign model
+can own it.
+
+Keep this rule evidence-bounded. CAXEMAP 1 already stores an `asset-pack`
+logical path, `ScenarioContentRegistry` is the typed validation boundary, and
+`assets/manifest.json` validates reviewed visual bytes and provenance. A
+general content-pack manifest and loader do not exist yet; `haxe_c-xge.20.4.1`
+owns that planned capability. Until it closes, call the current layer a
+compile-time content registry or asset manifest as appropriate, never a shipped
+content-pack system. Generated adapters may bridge the gap only from validated
+canonical data.
 
 - A validated CaxeMap owns placed object identity, type, transform, tags,
   dialogue and message references, objectives, initial state, and rule wiring.
   CaxeFlow owns deterministic authored orchestration such as interaction,
-  gifts, state transitions, signals, and encounter progression. Content packs
-  own logical visual, animation, audio, and other presentation identities.
-  Campaign data owns level membership and typed transitions. Saved state keeps
-  stable IDs and mutable progress; it never stores translated prose or native
-  pointers.
+  gifts, state transitions, signals, and encounter progression. The resolved
+  content registry owns logical mechanic and presentation identities; the
+  reviewed asset manifest owns actual visual bytes and provenance. Planned
+  campaign data will own level membership and typed transitions. Saved state
+  keeps stable IDs and mutable progress; it never stores translated prose or
+  native pointers.
 - Haxe owns reusable mechanics: movement, interaction distance, inventory
   transfer, combat, navigation, dialogue playback, rule execution, and other
   validated capabilities. When authored content needs a new mechanic, add one
