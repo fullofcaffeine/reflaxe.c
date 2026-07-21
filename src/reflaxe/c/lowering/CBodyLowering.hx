@@ -1501,16 +1501,29 @@ private class FunctionBuilder {
 	}
 
 	function lowerStatementBlock(expressions:Array<TypedExpr>):Void {
+		lowerStatementSequence(expressions, expressions.length);
+	}
+
+	/**
+	 * Lower the statement prefix of a block through one shared sequence rule.
+	 *
+	 * Reflaxe can represent one value-producing expression as a block whose
+	 * early entries declare and fill a compiler temporary. Value blocks need the
+	 * same checked temporary recognition as ordinary statement blocks; otherwise
+	 * a helper call inside `&&` or `||` can look like an unsafe uninitialized
+	 * source local even though every generated branch assigns it.
+	 */
+	function lowerStatementSequence(expressions:Array<TypedExpr>, endExclusive:Int):Void {
 		var index = 0;
-		while (index < expressions.length) {
-			if (index + 1 < expressions.length && tryLowerSpanLoop(expressions[index], expressions[index + 1])) {
+		while (index < endExclusive) {
+			if (index + 1 < endExclusive && tryLowerSpanLoop(expressions[index], expressions[index + 1])) {
 				index += 2;
 				continue;
 			}
 			final nested = expressions[index];
 			switch nested.expr {
-				case TVar(variable, null) if (index + 1 < expressions.length
-					&& followingSwitchInitializesLocal(expressions[index + 1], variable.id)):
+				case TVar(variable, null) if (index + 1 < endExclusive
+					&& followingFlowInitializesLocal(expressions[index + 1], variable.id)):
 					if (currentBlock.terminator != null) {
 						unsupported(nested, 'unreachable ${nodeName(nested)}');
 					}
@@ -1669,7 +1682,7 @@ private class FunctionBuilder {
 		};
 	}
 
-	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerSwitchCarrier:Bool = false):Void {
+	function lowerVariable(variable:TVar, initializer:Null<TypedExpr>, position:Position, compilerFlowCarrier:Bool = false):Void {
 		final ordinal = localOrdinal++;
 		final localId = 'local.$ordinal';
 		if (initializer != null) {
@@ -1693,14 +1706,14 @@ private class FunctionBuilder {
 		}
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
 		final value:LoweredValue = switch initializer {
-			case null if (compilerSwitchCarrier):
-				// Reflaxe exposes a value switch as a temporary followed by a switch
-				// that assigns it. The structural recognition below proves every arm
-				// assigns; this defensive value prevents C uninitialized storage without
-				// becoming observable on an admitted path.
+			case null if (compilerFlowCarrier):
+				// Reflaxe can expose a value-producing if/switch as a temporary followed
+				// by exhaustive control flow that assigns it. The structural recognition
+				// below proves every arm assigns; this defensive value prevents C
+				// uninitialized storage without becoming observable on an admitted path.
 				final result:HxcIRResult = {id: nextValueId(), type: localMapping.irType};
-				appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:switch-carrier)')), source,
-					"switch-carrier-default");
+				appendInstruction(result, IRIOConstant(defaultConstantAt(localMapping.irType, position, 'TVar(${variable.name}:flow-carrier)')), source,
+					"flow-carrier-default");
 				{id: result.id, type: result.type, mapping: localMapping};
 			case null:
 				unsupportedAt(position, 'TVar(${variable.name}:uninitialized)');
@@ -2187,10 +2200,12 @@ private class FunctionBuilder {
 		};
 	}
 
-	function followingSwitchInitializesLocal(expression:TypedExpr, compilerId:Int):Bool {
+	function followingFlowInitializesLocal(expression:TypedExpr, compilerId:Int):Bool {
 		return switch expression.expr {
+			case TIf(_, whenTrue, whenFalse): whenFalse != null && definitelyAssignsLocal(whenTrue,
+					compilerId) && definitelyAssignsLocal(whenFalse, compilerId);
 			case TSwitch(_, cases, defaultExpression): switchArmsAssignLocal(cases, defaultExpression, compilerId);
-			case TParenthesis(inner) | TMeta(_, inner): followingSwitchInitializesLocal(inner, compilerId);
+			case TParenthesis(inner) | TMeta(_, inner): followingFlowInitializesLocal(inner, compilerId);
 			case _: false;
 		};
 	}
@@ -2960,9 +2975,7 @@ private class FunctionBuilder {
 			return unsupported(expression, "TBlock(empty-as-value)");
 		}
 		final lastIndex = expressions.length - 1;
-		for (index in 0...lastIndex) {
-			lowerStatement(expressions[index]);
-		}
+		lowerStatementSequence(expressions, lastIndex);
 		return lowerValue(expressions[lastIndex], expectedMapping);
 	}
 

@@ -14,6 +14,7 @@ import sys
 import tempfile
 from collections import Counter
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -23,6 +24,7 @@ HXML = Path(__file__).with_name("evaluation_order.hxml")
 ORACLE_HXML = Path(__file__).with_name("oracle.hxml")
 INDEX_ORACLE_HXML = ROOT / "test/hxc_ir/oracle.hxml"
 FIXTURE = Path(__file__).with_name("fixtures")
+FLOW_CARRIER_MAIN = "FlowCarrierFixture"
 EXPECTED = Path(__file__).with_name("expected")
 MAINTAINABILITY_POLICY = ROOT / "docs/specs/generated-c-maintainability-policy.json"
 REPORT_PREFIX = "HXC_EVALUATION_ORDER="
@@ -1172,17 +1174,21 @@ def compile_and_run_project(
     symbols: dict[str, object],
     toolchain: NativeToolchain,
     optimization: str,
+    *,
+    run_source_symbol: str = "EvaluationFixture.run",
+    expected_result: int = 2,
 ) -> None:
-    run_name = function_c_name(symbols, "EvaluationFixture.run")
+    run_name = function_c_name(symbols, run_source_symbol)
     renamed_entry_header = root / "renamed_entry.h"
     renamed_entry_header.write_text(
         "int hxc_generated_main(void);\n", encoding="utf-8", newline="\n"
     )
     harness = root / "evaluation_harness.c"
     harness.write_text(
-        '#include "hxc/program.h"\n\n'
+        "#include <stdint.h>\n\n"
+        f"extern uint32_t {run_name}(void);\n\n"
         "int main(void)\n{\n"
-        f"  return {run_name}() == UINT32_C(2) ? 0 : 1;\n"
+        f"  return {run_name}() == UINT32_C({expected_result}) ? 0 : 1;\n"
         "}\n",
         encoding="utf-8",
         newline="\n",
@@ -1269,7 +1275,14 @@ def write_report_project(report: dict[str, object], root: Path) -> tuple[list[Pa
     return sources, symbols
 
 
-def custom_target(output: Path, *, profile: str = "portable", runtime: str | None = None) -> subprocess.CompletedProcess[str]:
+def custom_target(
+    output: Path,
+    *,
+    profile: str = "portable",
+    runtime: str | None = None,
+    layout: str = "unity",
+    main: str = "EvaluationFixture",
+) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
         "-cp",
@@ -1277,13 +1290,17 @@ def custom_target(output: Path, *, profile: str = "portable", runtime: str | Non
         "-lib",
         "reflaxe.c",
         "-main",
-        "EvaluationFixture",
+        main,
     ]
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    if layout in ("package", "unity"):
+        command.extend(["-D", f"hxc_project_layout={layout}"])
+    elif layout != "split":
+        raise EvaluationOrderFailure(f"unknown evaluation-order layout {layout!r}")
+    command.extend(["--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["HAXE_NO_SERVER"] = "1"
     return subprocess.run(
@@ -1358,6 +1375,133 @@ def check_production(selected: str | None = None) -> None:
         for toolchain in available_compilers(selected):
             for optimization in ("-O0", "-O2"):
                 compile_and_run_project(portable, sources, symbols, toolchain, optimization)
+
+
+def generated_c_sources(root: Path) -> list[Path]:
+    return sorted(
+        root.joinpath("src").rglob("*.c"),
+        key=lambda path: path.as_posix().encode(),
+    )
+
+
+def generated_c_function(source: str, c_name: str) -> str:
+    pattern = re.compile(
+        rf"(?m)^(?:bool|uint32_t) {re.escape(c_name)}\([^;\n]*\)\n\{{"
+    )
+    match = pattern.search(source)
+    if match is None:
+        raise EvaluationOrderFailure(
+            f"flow-carrier C lost function definition {c_name!r}"
+        )
+    end = source.find("\n}\n", match.start())
+    if end < 0:
+        raise EvaluationOrderFailure(
+            f"flow-carrier C lost the end of function {c_name!r}"
+        )
+    return source[match.start() : end + 3]
+
+
+def check_flow_carrier_production(selected: str | None = None) -> None:
+    """Keep Haxe's optimized if-assigned Boolean carriers lazy and initialized."""
+
+    layouts = ("split", "package", "unity")
+    with tempfile.TemporaryDirectory(prefix="hxc-flow-carrier-") as temporary:
+        root = Path(temporary)
+        jobs = [
+            (layout, repetition, root / f"{layout}-{repetition}")
+            for layout in layouts
+            for repetition in ("first", "repeat")
+        ]
+
+        def compile_job(
+            job: tuple[str, str, Path],
+        ) -> tuple[str, str, Path, subprocess.CompletedProcess[str]]:
+            layout, repetition, output = job
+            return (
+                layout,
+                repetition,
+                output,
+                custom_target(output, layout=layout, main=FLOW_CARRIER_MAIN),
+            )
+
+        # Every compiler process owns a different output root and has server
+        # reuse disabled, so these determinism builds are safe to run together.
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            results = list(executor.map(compile_job, jobs))
+        outputs: dict[tuple[str, str], Path] = {}
+        for layout, repetition, output, result in results:
+            if result.returncode != 0 or result.stdout or result.stderr:
+                raise EvaluationOrderFailure(
+                    f"flow-carrier {layout} {repetition} compile failed\n"
+                    f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+                )
+            outputs[(layout, repetition)] = output
+
+        for layout in layouts:
+            first = outputs[(layout, "first")]
+            repeat = outputs[(layout, "repeat")]
+            if generated_tree(first) != generated_tree(repeat):
+                raise EvaluationOrderFailure(
+                    f"flow-carrier {layout} output changed across isolated builds"
+                )
+            runtime_plan = json.loads(
+                first.joinpath("hxc.runtime-plan.json").read_text(encoding="utf-8")
+            )
+            if (
+                runtime_plan.get("status") != "analyzed-runtime-free"
+                or runtime_plan.get("features") != []
+                or not runtime_plan.get("noRuntimeProof")
+            ):
+                raise EvaluationOrderFailure(
+                    f"flow-carrier {layout} selected a runtime feature"
+                )
+
+        unity = outputs[("unity", "first")]
+        c_sources = generated_c_sources(unity)
+        if not c_sources:
+            raise EvaluationOrderFailure("flow-carrier unity build emitted no C source")
+        source = "\n".join(path.read_text(encoding="utf-8") for path in c_sources)
+        lowered_source = source.lower()
+        for forbidden in ("goto ", "malloc(", "calloc(", "realloc(", "hxrt"):
+            if forbidden in lowered_source:
+                raise EvaluationOrderFailure(
+                    f"flow-carrier direct C unexpectedly contains {forbidden!r}"
+                )
+        symbols = json.loads(
+            unity.joinpath("hxc.symbols.json").read_text(encoding="utf-8")
+        )
+        observe_name = symbol_name(symbols, "FlowCarrierFixture.observe")
+        for source_symbol in (
+            "FlowCarrierFixture.carrierOr",
+            "FlowCarrierFixture.carrierAnd",
+        ):
+            function = generated_c_function(
+                source, symbol_name(symbols, source_symbol)
+            )
+            call_index = function.find(f"{observe_name}(")
+            if (
+                call_index < 0
+                or function.count(f"{observe_name}(") != 1
+                or function.find("if (") < 0
+                or function.find("if (") >= call_index
+                or " && " in function
+                or " || " in function
+            ):
+                raise EvaluationOrderFailure(
+                    f"{source_symbol} lost its structural lazy helper call"
+                )
+
+        for toolchain in available_compilers(selected):
+            for optimization in ("-O0", "-O2"):
+                compile_and_run_project(
+                    unity,
+                    c_sources,
+                    symbols,
+                    toolchain,
+                    optimization,
+                    run_source_symbol="FlowCarrierFixture.run",
+                    expected_result=2,
+                )
 
 
 def check_native_snapshot(report: dict[str, object], selected: str | None = None) -> None:
@@ -1479,6 +1623,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_native_snapshot(first, args.toolchain)
         check_synthetic_control_flow_native(first, args.toolchain)
         check_production(args.toolchain)
+        check_flow_carrier_production(args.toolchain)
     except (
         EvaluationOrderFailure,
         MaintainabilityError,
@@ -1491,7 +1636,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "evaluation-order: OK: explicit calls/assignments/lazy values, nested loops/jumps, non-fallthrough switches, "
-        "Eval differential, and zero-runtime strict C passed"
+        "optimized flow carriers, Eval differential, and zero-runtime strict C passed"
     )
     return 0
 

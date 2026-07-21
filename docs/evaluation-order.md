@@ -34,6 +34,38 @@ The current source-backed slice covers:
 - compound arithmetic assignment as one stable destination load, left-to-right
   operand evaluation, one typed operation, and one store.
 
+### Compiler-generated flow carriers
+
+Haxe sometimes simplifies a lazy Boolean before haxe.c receives it. Source such
+as `alive(state) && mode(state) == Windup && helper(state)` can arrive as this
+equivalent typed shape:
+
+```haxe
+var condition;
+if (alive(state))
+	condition = mode(state) == Windup;
+else
+	condition = false;
+if (condition && helper(state)) {
+	// ...
+}
+```
+
+Here `condition` is a **flow carrier**: a compiler-created local that carries
+one value out of several control-flow paths. It is safe only because every path
+of the immediately following `if` assigns it. The lowerer now recognizes that
+closed shape for exhaustive `if` and `switch` expressions, creates the typed
+local, and then lowers the assignments and later lazy operation normally. A
+missing `else`, missing switch default, or arm that does not assign the exact
+local remains the source-positioned `HXC1001` uninitialized-local error.
+
+The local receives a defensive type-correct default before its exhaustive
+branches. That value cannot be observed on an admitted path because each branch
+overwrites it, but it also means emitted C never contains uninitialized storage
+if a later compiler pass changes the structure incorrectly. Validation and the
+ordinary short-circuit blocks still decide whether the right-hand helper runs;
+the printer does not repair or rediscover this rule.
+
 Static-field declarations and initializers come from the `TypedProgramInput`
 captured inside `filterTypes`. Lowering never asks a mutable `ClassField` for a
 later expression after Reflaxe preprocessing. Referenced primitive fields
@@ -183,6 +215,12 @@ and production-generated C
 with required GCC and Clang lanes at `-O0` and `-O2` under warning-clean strict
 C11. The arithmetic suite extends that proof to signed updates, compound
 assignment, boundary arithmetic, and eligible UBSan execution.
+The focused `FlowCarrierFixture` retains both `||` and `&&` versions of Haxe's
+optimized if-assigned carrier. Its native result proves that skipped helpers do
+not run and evaluated helpers run in order. Isolated split, package, and unity
+builds must be byte-identical on repetition; the direct generated C must remain
+free of `goto`, allocation calls, and `hxrt` before strict `-O0`/`-O2` native
+execution.
 The span suite adds the six-way profile/build bounds-policy matrix, direct
 element-scaled indexing, fail-stop out-of-bounds execution, and linked
 zero-`hxrt` evidence.
