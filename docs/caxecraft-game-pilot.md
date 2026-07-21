@@ -21,8 +21,9 @@ pilot build:    fixed script -----------------------------> named intent
 ```
 
 `GameInputFrame` describes intent rather than hardware buttons: move, look,
-jump, use the selected item's primary world action, place, interact, pause,
-recapture, quit, and hotbar selection. The real
+jump, use the selected item's primary or secondary action, interact, pause,
+recapture, quit, and hotbar selection. A secondary action places a block or
+uses a selected consumable. The real
 Raylib adapter samples keyboard and mouse once per rendered frame. A pilot
 selects one closed `PilotAction` for that frame. After that small provider
 choice, both paths use the same gameplay and presentation code.
@@ -55,11 +56,14 @@ npm run caxecraft:play -- --pilot pause-recapture
 
 # Select the Copper Sword, defeat the Mossling, prove its visible drop, and quit.
 npm run caxecraft:play -- --pilot combat-drop
+
+# Start one heart below full, consume berries, prove recovery feedback, and quit.
+npm run caxecraft:play -- --pilot recovery-use
 ```
 
-The four closed script names are `LaunchSmoke`, `MoveJumpEdit`,
-`PauseRecapture`, and `CombatDrop`. Each has a small fixed frame limit below the
-absolute 120-frame policy. Its final and every later action is `Quit`, which
+The five closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+`PauseRecapture`, `CombatDrop`, and `RecoveryUse`. Each has a small fixed frame
+limit below the absolute 120-frame policy. Its final and every later action is `Quit`, which
 protects against a script accidentally becoming an unattended interactive
 session. The Python runner adds an independent 15-second wall-clock timeout.
 
@@ -77,6 +81,12 @@ and the exact berry-drop color after three sword actions, while requiring the
 Mossling crown would prove that the defeat failed. This makes the screenshot a
 small state assertion rather than merely another nonblack frame.
 
+The recovery pilot begins at two of three hearts through a typed fixture fact,
+selects berries, performs the same secondary action as a real right click, and
+requires the unique successful-recovery color in the presented framebuffer.
+Because a full-health or empty-stack decision cannot produce that feedback,
+the screenshot proves the shared recovery transition reached the renderer.
+
 ## Why the native path has one compile-time condition
 
 Interactive releases must contain no scripted-input channel. The application
@@ -84,13 +94,15 @@ therefore makes one compile-time provider choice:
 
 - an ordinary build samples `RaylibGameInput` into `GameInputFrame`;
 - a build with the internal `caxecraft_pilot` define asks `PilotScript` for
-  the current closed action.
+  the current closed action and any explicitly declared initial fixture fact.
 
 Haxe removes the inactive branch before haxe.c sees the program. This is an
 appropriate `#if` boundary: it selects a test adapter with different external
 inputs; it does not duplicate movement, world, inventory, or rendering rules,
-and there is no per-frame target test in generated C. The provider immediately
-projects to common scalar intent so the native loop adds neither an allocated
+and there is no per-frame target test in generated C. The damaged recovery
+fixture is selected at this same boundary and is removed from ordinary builds;
+it is not a hidden user command or duplicated health rule. The provider
+immediately projects to common scalar intent so the native loop adds neither an allocated
 input object nor interface dispatch.
 
 The broader conditional-light adapter experiment is tracked by

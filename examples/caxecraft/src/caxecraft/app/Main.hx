@@ -26,6 +26,8 @@ import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.MosslingState;
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.PlayerVitalsState;
+import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
@@ -81,18 +83,6 @@ final class Main {
 		final hudTextureReady = CaxecraftTextures.isValid(hudTexture);
 		final itemTexture:Texture2D = CaxecraftTextures.loadItemAtlas();
 		final itemTextureReady = CaxecraftTextures.isValid(itemTexture);
-
-		var player:PlayerState = spawnPlayer(cells);
-		var inventory:InventoryState = Inventory.starter();
-		var guide:GuideState = GuideNpc.start(cells, 17.5, 13.5);
-		var mossling:MosslingState = Mossling.start(cells, 15.5, 13.8);
-		var vitals:PlayerVitalsState = PlayerVitals.start();
-		var berryDrop:BerryDropState = BerryDrop.none();
-		var lookX = 0.0;
-		var lookY = -0.18;
-		var lookZ = -1.0;
-		var accumulator = 0.0;
-		var jumpQueued = false;
 		#if caxecraft_pilot_launch_smoke
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
 		#elseif caxecraft_pilot_move_jump_edit
@@ -101,10 +91,29 @@ final class Main {
 		final pilotName:PilotScriptName = PilotScriptName.PauseRecapture;
 		#elseif caxecraft_pilot_combat_drop
 		final pilotName:PilotScriptName = PilotScriptName.CombatDrop;
+		#elseif caxecraft_pilot_recovery_use
+		final pilotName:PilotScriptName = PilotScriptName.RecoveryUse;
 		#end
 
+		var player:PlayerState = spawnPlayer(cells);
+		var inventory:InventoryState = Inventory.starter();
+		var guide:GuideState = GuideNpc.start(cells, 17.5, 13.5);
+		var mossling:MosslingState = Mossling.start(cells, 15.5, 13.8);
+		var initialHealth = PlayerVitals.MAX_HEALTH;
+		#if caxecraft_pilot
+		// Only the deterministic provider may select fixture state. The release
+		// build contains neither this branch nor a way to alter starting health.
+		initialHealth = PilotScript.initialHealth(pilotName);
+		#end
+		var vitals:PlayerVitalsState = PlayerVitals.startAt(initialHealth);
+		var berryDrop:BerryDropState = BerryDrop.none();
+		var lookX = 0.0;
+		var lookY = -0.18;
+		var lookZ = -1.0;
+		var accumulator = 0.0;
+		var jumpQueued = false;
 		var selectedMode:GameMode = GameMode.Creative;
-		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop)
+		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use)
 		// A deterministic provider choice, not gameplay branching: this pilot
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
@@ -128,6 +137,8 @@ final class Main {
 		var strikeHitFrames = 0;
 		var enemyDefeatedFrames = 0;
 		var pickupFrames = 0;
+		var recoveryFeedback = RecoveryDecision.NotRecoveryItem;
+		var recoveryFeedbackFrames = 0;
 
 		while (!quit && !Raylib.WindowShouldClose()) {
 			var recapturedThisFrame = false;
@@ -140,7 +151,7 @@ final class Main {
 			final lookPitch = PilotScript.lookPitch(pilotAction);
 			final jumpPressed = PilotScript.jumpPressed(pilotAction);
 			final primaryPressed = PilotScript.primaryPressed(pilotAction);
-			final placePressed = PilotScript.placePressed(pilotAction);
+			final secondaryPressed = PilotScript.secondaryPressed(pilotAction);
 			final interactPressed = PilotScript.interactPressed(pilotAction);
 			final pausePressed = PilotScript.pausePressed(pilotAction);
 			final capturePressed = PilotScript.capturePressed(pilotAction);
@@ -158,7 +169,7 @@ final class Main {
 			final lookPitch = frameInput.lookPitch;
 			final jumpPressed = frameInput.jumpPressed;
 			final primaryPressed = frameInput.primaryPressed;
-			final placePressed = frameInput.placePressed;
+			final secondaryPressed = frameInput.secondaryPressed;
 			final interactPressed = frameInput.interactPressed;
 			final pausePressed = frameInput.pausePressed;
 			final capturePressed = frameInput.capturePressed;
@@ -305,18 +316,26 @@ final class Main {
 					}
 				}
 			}
-			if (captured && hit.hit && placePressed) {
-				final placement = World.coord(hit.previousX, hit.previousY, hit.previousZ);
-				final selectedBlock = Inventory.selectedBlock(inventory);
-				final hasItem = Inventory.countAt(inventory, inventory.selected) > 0;
+			if (captured && secondaryPressed) {
 				if (!PlayerVitals.isDefeated(vitals)) {
-					if (!hasItem
-						|| !World.isPlaceable(selectedBlock)
-						|| !PlayerPhysics.canPlaceAt(player, placement)
-						|| !World.place(cells, placement, selectedBlock))
-						placementBlockedFrames = 60;
-					else if (selectedMode == GameMode.Adventure)
-						inventory = Inventory.consumeSelected(inventory);
+					final recoveryDecision = Recovery.decide(inventory, vitals);
+					if (recoveryDecision != RecoveryDecision.NotRecoveryItem) {
+						recoveryFeedback = recoveryDecision;
+						recoveryFeedbackFrames = 90;
+						inventory = Recovery.applyInventory(recoveryDecision, inventory);
+						vitals = Recovery.applyVitals(recoveryDecision, vitals);
+					} else if (hit.hit) {
+						final placement = World.coord(hit.previousX, hit.previousY, hit.previousZ);
+						final selectedBlock = Inventory.selectedBlock(inventory);
+						final hasItem = Inventory.countAt(inventory, inventory.selected) > 0;
+						if (!hasItem
+							|| !World.isPlaceable(selectedBlock)
+							|| !PlayerPhysics.canPlaceAt(player, placement)
+							|| !World.place(cells, placement, selectedBlock))
+							placementBlockedFrames = 60;
+						else if (selectedMode == GameMode.Adventure)
+							inventory = Inventory.consumeSelected(inventory);
+					}
 				}
 			}
 			if (placementBlockedFrames > 0)
@@ -334,6 +353,8 @@ final class Main {
 				enemyDefeatedFrames--;
 			if (pickupFrames > 0)
 				pickupFrames--;
+			if (recoveryFeedbackFrames > 0)
+				recoveryFeedbackFrames--;
 
 			final camera = Camera3D.make(Vector3.fromFloat(eyeX, eyeY, eyeZ), Vector3.fromFloat(eyeX + lookX, eyeY + lookY, eyeZ + lookZ),
 				Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(70.0), CameraProjection.Perspective);
@@ -351,7 +372,7 @@ final class Main {
 				Raylib.EndMode3D();
 				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
 					player.x, player.z, selectedMode, language, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
-					pickupFrames > 0, hudTexture, hudTextureReady, itemTexture, itemTextureReady);
+					pickupFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture, hudTextureReady, itemTexture, itemTextureReady);
 			}
 			Raylib.EndDrawing();
 			#if caxecraft_pilot
@@ -365,6 +386,8 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-pause.png");
 			if (pilotName == PilotScriptName.CombatDrop && frameCount == 4)
 				Raylib.TakeScreenshot("caxecraft-pilot-combat.png");
+			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
+				Raylib.TakeScreenshot("caxecraft-pilot-recovery.png");
 			#end
 			frameCount++;
 		}
@@ -467,8 +490,8 @@ final class Main {
 
 	static function drawHud(visible:Int, drawCalls:Int, frames:Int, updates:Int, paused:Bool, captured:Bool, placementBlocked:Bool, hit:RaycastHit,
 			playerX:Float, playerZ:Float, mode:GameMode, language:GameLanguage, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
-			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, pickedUp:Bool, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D,
-			itemTextureReady:Bool):Void {
+			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, pickedUp:Bool, recoveryFeedback:RecoveryDecision, recoveryVisible:Bool,
+			hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
@@ -542,6 +565,24 @@ final class Main {
 				Raylib.DrawText("+2 BAYAS", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
 			else
 				Raylib.DrawText("+2 BERRIES", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
+		}
+		if (recoveryVisible) {
+			if (recoveryFeedback == RecoveryDecision.UseBerries) {
+				if (language == GameLanguage.Spanish)
+					Raylib.DrawText("BAYAS: +1 CORAZON", centerX - 86, centerY + 24, 18, CaxecraftPalette.recovery());
+				else
+					Raylib.DrawText("BERRIES: +1 HEART", centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
+			} else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull) {
+				if (language == GameLanguage.Spanish)
+					Raylib.DrawText("SALUD COMPLETA", centerX - 72, centerY + 24, 18, CaxecraftPalette.selection());
+				else
+					Raylib.DrawText("HEALTH ALREADY FULL", centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
+			} else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty) {
+				if (language == GameLanguage.Spanish)
+					Raylib.DrawText("NO QUEDAN BAYAS", centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
+				else
+					Raylib.DrawText("NO BERRIES LEFT", centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
+			}
 		}
 		if (vitals.safeTicks > 15)
 			Raylib.DrawRectangleLines(4, 4, width - 8, height - 8, CaxecraftPalette.damage());

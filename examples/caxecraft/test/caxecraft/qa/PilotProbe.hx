@@ -17,13 +17,15 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 10);
 		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
 		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 6);
+		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
 		checkpoints += checkCombat();
+		checkpoints += checkRecovery();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 4 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 5 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -63,7 +65,7 @@ final class PilotProbe {
 		require(PilotScript.sample(name, 3).moveRight == 1.0
 			&& PilotScript.sample(name, 3).lookPitch == 0.04, "movement script lost strafe/look input");
 		require(PilotScript.sample(name, 4).primaryPressed, "movement script lost its primary world action");
-		require(PilotScript.sample(name, 5).placePressed, "movement script lost place input");
+		require(PilotScript.sample(name, 5).secondaryPressed, "movement script lost its secondary world action");
 		require(PilotScript.sample(name, 6).hotbarCycle == 1, "movement script lost hotbar input");
 		require(PilotScript.sample(name, 7).interactPressed, "movement script lost guide interaction input");
 		final state = PilotScript.checkpoint(name, 7);
@@ -98,6 +100,18 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 4);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "combat-drop.frame",
 			"combat drop screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkRecovery():Int {
+		final name = PilotScriptName.RecoveryUse;
+		require(PilotScript.initialHealth(name) == 4, "recovery fixture no longer starts one heart below full");
+		require(PilotScript.sample(name, 0).hotbarSelection == 5, "recovery script lost semantic berry selection");
+		require(PilotScript.sample(name, 1).secondaryPressed && !PilotScript.sample(name, 1).primaryPressed,
+			"recovery script lost its selected-item use action");
+		final screenshot = PilotScript.checkpoint(name, 2);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "recovery-use.frame",
+			"recovery screenshot checkpoint changed");
 		return 1;
 	}
 

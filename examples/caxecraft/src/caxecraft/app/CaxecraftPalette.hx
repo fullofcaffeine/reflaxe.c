@@ -46,6 +46,10 @@ final class CaxecraftPalette {
 	public static inline function damage():Color
 		return Color.rgba(218, 65, 72);
 
+	/** Unique positive-feedback green used by deterministic recovery checks. */
+	public static inline function recovery():Color
+		return Color.rgba(94, 212, 136);
+
 	public static function block(kind:BlockKind):Color {
 		return switch (kind) {
 			case Air: Color.rgba(0, 0, 0, 0);

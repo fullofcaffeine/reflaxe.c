@@ -69,6 +69,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/Mossling.c": "c",
     "playable/src/modules/caxecraft/gameplay/BerryDrop.c": "c",
     "playable/src/modules/caxecraft/gameplay/PlayerVitals.c": "c",
+    "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
 RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items")
@@ -186,6 +187,7 @@ def validate_smoke_screenshot(
     platform_name: str,
     expected_title: bool = True,
     expected_drop: bool = False,
+    expected_recovery: bool = False,
 ) -> tuple[int, int]:
     """Prove the captured title frame contains staged art and readable UI."""
     try:
@@ -253,6 +255,7 @@ def validate_smoke_screenshot(
     nia_pixels = 0
     mossling_pixels = 0
     berry_pixels = 0
+    recovery_pixels = 0
     non_dark_pixels = 0
     quantized_colors: set[int] = set()
     at = 0
@@ -306,6 +309,8 @@ def validate_smoke_screenshot(
                 mossling_pixels += 1
             if (red, green, blue) == (174, 78, 136):
                 berry_pixels += 1
+            if (red, green, blue) == (94, 212, 136):
+                recovery_pixels += 1
             column = index // bytes_per_pixel
             if row < height // 4 and width * 3 // 10 <= column < width * 7 // 10:
                 if red < 80 and green > 120 and blue > 140:
@@ -347,15 +352,33 @@ def validate_smoke_screenshot(
             "Caxecraft pilot framebuffer is blank or lacks a presented game scene "
             f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
             f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, nia={nia_pixels}, "
-            f"mossling={mossling_pixels}, berries={berry_pixels}, colorBuckets={len(quantized_colors)})"
+            f"mossling={mossling_pixels}, berries={berry_pixels}, recovery={recovery_pixels}, "
+            f"colorBuckets={len(quantized_colors)})"
+        )
+    if expected_recovery and recovery_pixels < 20:
+        raise PlayFailure(
+            "Caxecraft recovery pilot did not present its successful semantic feedback "
+            f"(recovery={recovery_pixels})"
         )
     return width, height
 
 
-def validate_presented_screenshot(path: Path, *, platform_name: str, expected_drop: bool = False) -> tuple[int, int]:
+def validate_presented_screenshot(
+    path: Path,
+    *,
+    platform_name: str,
+    expected_drop: bool = False,
+    expected_recovery: bool = False,
+) -> tuple[int, int]:
     """Require a real, nonblank presented frame without prescribing its scene."""
 
-    return validate_smoke_screenshot(path, platform_name=platform_name, expected_title=False, expected_drop=expected_drop)
+    return validate_smoke_screenshot(
+        path,
+        platform_name=platform_name,
+        expected_title=False,
+        expected_drop=expected_drop,
+        expected_recovery=expected_recovery,
+    )
 
 
 def host_platform() -> str:
@@ -456,6 +479,7 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str
             "move-jump-edit": "caxecraft_pilot_move_jump_edit",
             "pause-recapture": "caxecraft_pilot_pause_recapture",
             "combat-drop": "caxecraft_pilot_combat_drop",
+            "recovery-use": "caxecraft_pilot_recovery_use",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -802,7 +826,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
         "--pilot",
-        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop"),
+        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop", "recovery-use"),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib archive download")
@@ -894,6 +918,7 @@ def main(argv: list[str]) -> int:
                 "move-jump-edit": "caxecraft-pilot-move.png",
                 "pause-recapture": "caxecraft-pilot-pause.png",
                 "combat-drop": "caxecraft-pilot-combat.png",
+                "recovery-use": "caxecraft-pilot-recovery.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             if screenshot.exists():
@@ -903,6 +928,7 @@ def main(argv: list[str]) -> int:
                 screenshot,
                 platform_name=platform_name,
                 expected_drop=selected_pilot == "combat-drop",
+                expected_recovery=selected_pilot == "recovery-use",
             )
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "

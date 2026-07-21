@@ -26,7 +26,8 @@
       "src/modules/caxecraft/gameplay/GuideNpc.c",
       "src/modules/caxecraft/gameplay/Inventory.c",
       "src/modules/caxecraft/gameplay/Mossling.c",
-      "src/modules/caxecraft/gameplay/PlayerVitals.c"
+      "src/modules/caxecraft/gameplay/PlayerVitals.c",
+      "src/modules/caxecraft/gameplay/Recovery.c"
     ],
     "cStandard": "c11",
     "definitions": [],
@@ -60,6 +61,7 @@
       "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
       "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
+      "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
       "include/hxc/modules/raylib/raw/Rectangle.h",
@@ -146,7 +148,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "dae8b65490816f315000b9c6deffd91b6c580e9f59c429576c0f7b677e6045ae",
+      "sha256": "56731f0b2aaf0e7a18ad3df1fbeeb5568046748266750d67ff54de81d1a1874f",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -161,7 +163,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "7a3f7dc0dcffa8011dab157dbea4c8ca37708d414ec45ddef22e77de7ae5dc1f",
+      "sha256": "10246923d9675ac7678b9e4755af7ff359b2d4d54976a2b534a99d87affe978d",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -171,7 +173,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "315190ec4041e355622cc947e495396f90eab8eb55b7099d328edff8ad3834dc",
+      "sha256": "dcdaf550dfc81a38487ba7f30dc693af4e6607a425fbc7a91a190b3d0c45e9d2",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -196,7 +198,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "dfcdff484791b31500477e9f940fe8f1e39b589511d5da81e0594199edaf6c04",
+      "sha256": "bb0a2cb8f76141812d76929e4ac2b33a955ac17ef3ee5127e676fa0abcd9b1f8",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -301,13 +303,18 @@
       "kind": "private-header"
     },
     {
-      "sha256": "7e8f1412c854ed243ffc79765ab352b759a819048ecde679f7d6e7f81ec85c40",
+      "sha256": "fa4e75c97537dbb995a64065e659a52e82b832a7647d7e9616a637e86a0b7336",
       "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
       "kind": "private-header"
     },
     {
       "sha256": "bbaff31a6bc22d24c8a0601383c38b3fda2a730c0ca4c626e405e408c412c030",
       "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4557329fd2094fc1e10a31414bd8754d5be8835f0e6f5f9a8b7bbcdc5df56128",
+      "path": "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "kind": "private-header"
     },
     {
@@ -346,12 +353,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "6b5eeb3aece010617e49a10e3374442221e3c452634c7ebdb884a62313a987e4",
+      "sha256": "7a322544786652f020098ed471d7d63942b46f5a7b6fe6b7ecf0438f855b7d64",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "5c10bcb4d77c1acb318e25845423fad04b1ede10a86aa3e16e01271ca76b3fb8",
+      "sha256": "1276a8e52f4b08539babcff5ebfaaf3f84705f4b3103c176d860ce3b728fbb92",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -381,7 +388,7 @@
       "kind": "source"
     },
     {
-      "sha256": "99ff270619fb2e175853ac5878ef07425fa43b292f74a5698322133ef214cacd",
+      "sha256": "e6f65a179d261c355fe4f1930af5b35e19fd1d1801c7f3224a04620b6c5d47b7",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -431,8 +438,13 @@
       "kind": "source"
     },
     {
-      "sha256": "4e213878d2a7080ccccf1ef88b66f7be125f099d5c081c795fdd463b230200b3",
+      "sha256": "65f9128e1e7a077da97a0101bfd13472fd82ecaa91ceb4c01ba9ef4c2266e92b",
       "path": "src/modules/caxecraft/gameplay/PlayerVitals.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "7e5826c74cf6c16d44798f37f5944b13a3f1bd6dde36dfdff23679216ac6902a",
+      "path": "src/modules/caxecraft/gameplay/Recovery.c",
       "kind": "source"
     }
   ],

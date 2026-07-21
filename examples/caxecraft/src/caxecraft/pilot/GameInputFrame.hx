@@ -24,7 +24,9 @@ typedef GameInputFrame = {
 	/** Primary world action: mine with a block selected, strike with a sword. */
 	final primaryPressed:Bool;
 
-	final placePressed:Bool;
+	/** Secondary item action: place a block or use a selected consumable. */
+	final secondaryPressed:Bool;
+
 	final interactPressed:Bool;
 	final pausePressed:Bool;
 	final capturePressed:Bool;
@@ -36,7 +38,7 @@ typedef GameInputFrame = {
 /** Allocation-free constructors and comparisons for `GameInputFrame`. */
 final class GameInputFrames {
 	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
-			placePressed:Bool, interactPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool, hotbarSelection:Int = -1,
+			secondaryPressed:Bool, interactPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool, hotbarSelection:Int = -1,
 			hotbarCycle:Int = 0):GameInputFrame
 		return {
 			moveForward: moveForward,
@@ -45,7 +47,7 @@ final class GameInputFrames {
 			lookPitch: lookPitch,
 			jumpPressed: jumpPressed,
 			primaryPressed: primaryPressed,
-			placePressed: placePressed,
+			secondaryPressed: secondaryPressed,
 			interactPressed: interactPressed,
 			pausePressed: pausePressed,
 			capturePressed: capturePressed,
@@ -66,7 +68,7 @@ final class GameInputFrames {
 	public static inline function mine():GameInputFrame
 		return make(0.0, 0.0, 0.0, 0.0, false, true, false, false, false, false, false);
 
-	public static inline function place():GameInputFrame
+	public static inline function secondary():GameInputFrame
 		return make(0.0, 0.0, 0.0, 0.0, false, false, true, false, false, false, false);
 
 	public static inline function interact():GameInputFrame
@@ -86,7 +88,7 @@ final class GameInputFrames {
 			&& left.lookPitch == right.lookPitch
 			&& left.jumpPressed == right.jumpPressed
 			&& left.primaryPressed == right.primaryPressed
-			&& left.placePressed == right.placePressed
+			&& left.secondaryPressed == right.secondaryPressed
 			&& left.interactPressed == right.interactPressed
 			&& left.pausePressed == right.pausePressed
 			&& left.capturePressed == right.capturePressed

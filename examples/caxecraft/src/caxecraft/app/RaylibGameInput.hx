@@ -34,6 +34,9 @@ final class RaylibGameInput {
 		}
 
 		final leftPressed = Raylib.IsMouseButtonPressed(MouseButton.Left);
+		final primaryPressed = captured && leftPressed;
+		final secondaryPressed = captured && Raylib.IsMouseButtonPressed(MouseButton.Right);
+		final interactPressed = captured && Raylib.IsKeyPressed(KeyboardKey.E);
 		var hotbarSelection = -1;
 		if (Raylib.IsKeyPressed(KeyboardKey.One))
 			hotbarSelection = 0;
@@ -57,10 +60,8 @@ final class RaylibGameInput {
 			hotbarCycle = -1;
 		if (wheel < 0.0)
 			hotbarCycle = 1;
-		return GameInputFrames.make(forward, right, lookYaw, lookPitch,
-			Raylib.IsKeyPressed(KeyboardKey.Space), captured && leftPressed, captured && Raylib.IsMouseButtonPressed(MouseButton.Right), captured
-			&& Raylib.IsKeyPressed(KeyboardKey.E),
-			Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q), hotbarSelection, hotbarCycle);
+		return GameInputFrames.make(forward, right, lookYaw, lookPitch, Raylib.IsKeyPressed(KeyboardKey.Space), primaryPressed, secondaryPressed,
+			interactPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q), hotbarSelection, hotbarCycle);
 	}
 }
 #end

@@ -1,5 +1,7 @@
 package caxecraft.pilot;
 
+import caxecraft.gameplay.PlayerVitals;
+import caxecraft.gameplay.Recovery;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 
@@ -9,6 +11,7 @@ enum abstract PilotScriptName(Int) {
 	var MoveJumpEdit = 1;
 	var PauseRecapture = 2;
 	var CombatDrop = 3;
+	var RecoveryUse = 4;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -27,6 +30,8 @@ enum abstract PilotAction(Int) {
 	var Interact = 11;
 	var SelectSword = 12;
 	var Strike = 13;
+	var SelectBerries = 14;
+	var EatBerries = 15;
 }
 
 /**
@@ -45,7 +50,9 @@ final class PilotScript {
 			return 10;
 		if (name == PauseRecapture)
 			return 7;
-		return 6;
+		if (name == CombatDrop)
+			return 6;
+		return 4;
 	}
 
 	public static function stableName(name:PilotScriptName):String {
@@ -55,7 +62,9 @@ final class PilotScript {
 			return "move-jump-edit";
 		if (name == PauseRecapture)
 			return "pause-recapture";
-		return "combat-drop";
+		if (name == CombatDrop)
+			return "combat-drop";
+		return "recovery-use";
 	}
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
@@ -67,13 +76,15 @@ final class PilotScript {
 			return moveJumpAction(frameNumber);
 		if (name == PauseRecapture)
 			return pauseAction(frameNumber);
-		return combatAction(frameNumber);
+		if (name == CombatDrop)
+			return combatAction(frameNumber);
+		return recoveryAction(frameNumber);
 	}
 
 	public static function sample(name:PilotScriptName, frameNumber:Int):GameInputFrame {
 		final action = actionAt(name, frameNumber);
 		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
-			placePressed(action), interactPressed(action), pausePressed(action), capturePressed(action), quitPressed(action), hotbarSelection(action),
+			secondaryPressed(action), interactPressed(action), pausePressed(action), capturePressed(action), quitPressed(action), hotbarSelection(action),
 			hotbarCycle(action));
 	}
 
@@ -95,8 +106,8 @@ final class PilotScript {
 	public static inline function primaryPressed(action:PilotAction):Bool
 		return action == Mine || action == Strike;
 
-	public static inline function placePressed(action:PilotAction):Bool
-		return action == Place;
+	public static inline function secondaryPressed(action:PilotAction):Bool
+		return action == Place || action == EatBerries;
 
 	public static inline function interactPressed(action:PilotAction):Bool
 		return action == Interact;
@@ -110,8 +121,11 @@ final class PilotScript {
 	public static inline function quitPressed(action:PilotAction):Bool
 		return action == Quit;
 
-	public static inline function hotbarSelection(action:PilotAction):Int
-		return action == SelectSword ? 4 : -1;
+	public static inline function hotbarSelection(action:PilotAction):Int {
+		if (action == SelectSword)
+			return 4;
+		return action == SelectBerries ? 5 : -1;
+	}
 
 	public static inline function hotbarCycle(action:PilotAction):Int
 		return action == SelectNext ? 1 : 0;
@@ -127,8 +141,14 @@ final class PilotScript {
 				pauseCheckpoint(frameNumber);
 			case CombatDrop:
 				frameNumber == 4 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
+			case RecoveryUse:
+				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
 		};
 	}
+
+	/** Initial fixture health; ordinary and release paths begin at full health. */
+	public static inline function initialHealth(name:PilotScriptName):Int
+		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
 
 	public static inline function complete(name:PilotScriptName, frameNumber:Int):Bool
 		return frameNumber >= frameLimit(name) - 1;
@@ -159,6 +179,14 @@ final class PilotScript {
 		return switch frameNumber {
 			case 0: SelectSword;
 			case 1 | 2 | 3: Strike;
+			case _: Idle;
+		};
+	}
+
+	static function recoveryAction(frameNumber:Int):PilotAction {
+		return switch frameNumber {
+			case 0: SelectBerries;
+			case 1: EatBerries;
 			case _: Idle;
 		};
 	}

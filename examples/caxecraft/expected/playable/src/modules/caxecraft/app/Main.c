@@ -164,7 +164,7 @@ void hxc_caxecraft_app_Main_drawHotbar(struct hxc_caxecraft_gameplay_InventorySt
   return;
 }
 
-void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, int32_t hxc_frames, int32_t hxc_updates, bool hxc_paused, bool hxc_captured, bool hxc_placementBlocked, struct hxc_caxecraft_domain_RaycastHit hxc_hit, double hxc_playerX, double hxc_playerZ, int32_t hxc_mode, int32_t hxc_language, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory, struct hxc_caxecraft_gameplay_GuideState hxc_guide, struct hxc_caxecraft_gameplay_MosslingState hxc_mossling, struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_vitals, bool hxc_strikeHit, bool hxc_enemyDefeated, bool hxc_pickedUp, struct Texture hxc_hudTexture, bool hxc_hudTextureReady, struct Texture hxc_itemTexture, bool hxc_itemTextureReady)
+void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, int32_t hxc_frames, int32_t hxc_updates, bool hxc_paused, bool hxc_captured, bool hxc_placementBlocked, struct hxc_caxecraft_domain_RaycastHit hxc_hit, double hxc_playerX, double hxc_playerZ, int32_t hxc_mode, int32_t hxc_language, struct hxc_caxecraft_gameplay_InventoryState hxc_inventory, struct hxc_caxecraft_gameplay_GuideState hxc_guide, struct hxc_caxecraft_gameplay_MosslingState hxc_mossling, struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_vitals, bool hxc_strikeHit, bool hxc_enemyDefeated, bool hxc_pickedUp, int32_t hxc_recoveryFeedback, bool hxc_recoveryVisible, struct Texture hxc_hudTexture, bool hxc_hudTextureReady, struct Texture hxc_itemTexture, bool hxc_itemTextureReady)
 {
   int32_t hxc_tmp_native_call_result_n0 = GetScreenWidth();
   int32_t hxc_width = (int32_t)hxc_tmp_native_call_result_n0;
@@ -193,10 +193,10 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
   int32_t hxc_tmp_load_result_n22 = hxc_centerX;
   int32_t hxc_tmp_load_result_n23 = hxc_centerY;
   DrawLine((int32_t)hxc_tmp_load_result_n20, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n21, 3), (int32_t)hxc_tmp_load_result_n22, (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n23, 8), hxc_text);
-  struct Color hxc_this1_h32050098c249 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
-  DrawRectangle((int32_t)18, (int32_t)18, (int32_t)460, (int32_t)108, hxc_this1_h32050098c249);
-  struct Color hxc_this1_he27fefe95eaf = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-  DrawRectangleLines((int32_t)18, (int32_t)18, (int32_t)460, (int32_t)108, hxc_this1_he27fefe95eaf);
+  struct Color hxc_this1_hd89476e43ea4 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
+  DrawRectangle((int32_t)18, (int32_t)18, (int32_t)460, (int32_t)108, hxc_this1_hd89476e43ea4);
+  struct Color hxc_this1_hf7190421da1b = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+  DrawRectangleLines((int32_t)18, (int32_t)18, (int32_t)460, (int32_t)108, hxc_this1_hf7190421da1b);
   DrawText("CAXECRAFT  //  C + HAXE", (int32_t)32, (int32_t)28, (int32_t)20, hxc_text);
   DrawText("CELLS", (int32_t)32, (int32_t)58, (int32_t)14, hxc_text);
   hxc_caxecraft_app_HudDigits_drawNumber(16384, 82, 59, 5, (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 });
@@ -217,44 +217,44 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
   {
     if (hxc_language == 1)
     {
-      struct Color hxc_this1_h6ea3c8179546 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      DrawText("AVENTURA: PROLOGO EN CONSTRUCCION", (int32_t)32, (int32_t)110, (int32_t)14, hxc_this1_h6ea3c8179546);
+      struct Color hxc_this1_hdb58de3efebe = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      DrawText("AVENTURA: PROLOGO EN CONSTRUCCION", (int32_t)32, (int32_t)110, (int32_t)14, hxc_this1_hdb58de3efebe);
     }
     else
     {
-      struct Color hxc_this1_hd37d68c43b00 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      DrawText("ADVENTURE: PROLOGUE IN PROGRESS", (int32_t)32, (int32_t)110, (int32_t)14, hxc_this1_hd37d68c43b00);
+      struct Color hxc_this1_he23c5d72ffd1 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      DrawText("ADVENTURE: PROLOGUE IN PROGRESS", (int32_t)32, (int32_t)110, (int32_t)14, hxc_this1_he23c5d72ffd1);
     }
   }
   bool hxc_tmp_call_result_n49 = hxc_caxecraft_gameplay_GuideNpc_isInRange(hxc_guide, hxc_playerX, hxc_playerZ);
   if (hxc_tmp_call_result_n49)
   {
-    struct Color hxc_this1_h374d17360ee4 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
+    struct Color hxc_this1_h7af923e856ba = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
     int32_t hxc_tmp_load_result_n51 = hxc_centerX;
     int32_t hxc_tmp_load_result_n52 = hxc_centerY;
-    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n51, 260), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n52, 54), (int32_t)520, (int32_t)60, hxc_this1_h374d17360ee4);
-    int32_t hxc_code_hf67506cdc7cf = hxc_guide.hxc_phaseCode;
-    int32_t hxc_tmp_load_result_n55 = hxc_code_hf67506cdc7cf;
-    int32_t hxc_tmp_conditional_result_n34 = 0;
+    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n51, 260), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n52, 54), (int32_t)520, (int32_t)60, hxc_this1_h7af923e856ba);
+    int32_t hxc_code_hcdb5898043c2 = hxc_guide.hxc_phaseCode;
+    int32_t hxc_tmp_load_result_n55 = hxc_code_hcdb5898043c2;
+    int32_t hxc_tmp_conditional_result_n36 = 0;
     if (hxc_tmp_load_result_n55 == 1)
     {
-      hxc_tmp_conditional_result_n34 = 1;
+      hxc_tmp_conditional_result_n36 = 1;
     }
     else
     {
-      int32_t hxc_tmp_load_result_n56 = hxc_code_hf67506cdc7cf;
-      int32_t hxc_tmp_conditional_result_n35 = 0;
+      int32_t hxc_tmp_load_result_n56 = hxc_code_hcdb5898043c2;
+      int32_t hxc_tmp_conditional_result_n37 = 0;
       if (hxc_tmp_load_result_n56 == 2)
       {
-        hxc_tmp_conditional_result_n35 = 2;
+        hxc_tmp_conditional_result_n37 = 2;
       }
       else
       {
-        hxc_tmp_conditional_result_n35 = 0;
+        hxc_tmp_conditional_result_n37 = 0;
       }
-      hxc_tmp_conditional_result_n34 = hxc_tmp_conditional_result_n35;
+      hxc_tmp_conditional_result_n36 = hxc_tmp_conditional_result_n37;
     }
-    if (hxc_tmp_conditional_result_n34 == 0)
+    if (hxc_tmp_conditional_result_n36 == 0)
     {
       if (hxc_language == 1)
       {
@@ -271,28 +271,28 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
     }
     else
     {
-      int32_t hxc_code_h21049e5cb078 = hxc_guide.hxc_phaseCode;
-      int32_t hxc_tmp_load_result_n66 = hxc_code_h21049e5cb078;
-      int32_t hxc_tmp_conditional_result_n37 = 0;
+      int32_t hxc_code_hf59e061683f7 = hxc_guide.hxc_phaseCode;
+      int32_t hxc_tmp_load_result_n66 = hxc_code_hf59e061683f7;
+      int32_t hxc_tmp_conditional_result_n39 = 0;
       if (hxc_tmp_load_result_n66 == 1)
       {
-        hxc_tmp_conditional_result_n37 = 1;
+        hxc_tmp_conditional_result_n39 = 1;
       }
       else
       {
-        int32_t hxc_tmp_load_result_n67 = hxc_code_h21049e5cb078;
-        int32_t hxc_tmp_conditional_result_n38 = 0;
+        int32_t hxc_tmp_load_result_n67 = hxc_code_hf59e061683f7;
+        int32_t hxc_tmp_conditional_result_n40 = 0;
         if (hxc_tmp_load_result_n67 == 2)
         {
-          hxc_tmp_conditional_result_n38 = 2;
+          hxc_tmp_conditional_result_n40 = 2;
         }
         else
         {
-          hxc_tmp_conditional_result_n38 = 0;
+          hxc_tmp_conditional_result_n40 = 0;
         }
-        hxc_tmp_conditional_result_n37 = hxc_tmp_conditional_result_n38;
+        hxc_tmp_conditional_result_n39 = hxc_tmp_conditional_result_n40;
       }
-      if (hxc_tmp_conditional_result_n37 == 1)
+      if (hxc_tmp_conditional_result_n39 == 1)
       {
         if (hxc_language == 1)
         {
@@ -326,40 +326,40 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
   }
   if (hxc_mossling.hxc_health > 0)
   {
-    int32_t hxc_code_h6ce3d1edb9e0 = hxc_mossling.hxc_modeCode;
-    int32_t hxc_tmp_load_result_n84 = hxc_code_h6ce3d1edb9e0;
-    int32_t hxc_tmp_conditional_result_n40 = 0;
+    int32_t hxc_code_he8a643d5c2b7 = hxc_mossling.hxc_modeCode;
+    int32_t hxc_tmp_load_result_n84 = hxc_code_he8a643d5c2b7;
+    int32_t hxc_tmp_conditional_result_n42 = 0;
     if (hxc_tmp_load_result_n84 == 1)
     {
-      hxc_tmp_conditional_result_n40 = 1;
+      hxc_tmp_conditional_result_n42 = 1;
     }
     else
     {
-      int32_t hxc_tmp_load_result_n85 = hxc_code_h6ce3d1edb9e0;
-      int32_t hxc_tmp_conditional_result_n41 = 0;
+      int32_t hxc_tmp_load_result_n85 = hxc_code_he8a643d5c2b7;
+      int32_t hxc_tmp_conditional_result_n43 = 0;
       if (hxc_tmp_load_result_n85 == 2)
       {
-        hxc_tmp_conditional_result_n41 = 2;
+        hxc_tmp_conditional_result_n43 = 2;
       }
       else
       {
-        hxc_tmp_conditional_result_n41 = 0;
+        hxc_tmp_conditional_result_n43 = 0;
       }
-      hxc_tmp_conditional_result_n40 = hxc_tmp_conditional_result_n41;
+      hxc_tmp_conditional_result_n42 = hxc_tmp_conditional_result_n43;
     }
-    if (hxc_tmp_conditional_result_n40 == 1)
+    if (hxc_tmp_conditional_result_n42 == 1)
     {
       if (hxc_language == 1)
       {
-        struct Color hxc_this1_hac7d99ff5a89 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+        struct Color hxc_this1_hc58fa1497b86 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
         int32_t hxc_tmp_load_result_n89 = hxc_width;
-        DrawText("MUSGUITO ALERTA", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n89, 180), (int32_t)28, (int32_t)16, hxc_this1_hac7d99ff5a89);
+        DrawText("MUSGUITO ALERTA", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n89, 180), (int32_t)28, (int32_t)16, hxc_this1_hc58fa1497b86);
       }
       else
       {
-        struct Color hxc_this1_h5d31e73bdb49 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+        struct Color hxc_this1_hc1bd1e72c042 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
         int32_t hxc_tmp_load_result_n92 = hxc_width;
-        DrawText("MOSSLING ALERT", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n92, 180), (int32_t)28, (int32_t)16, hxc_this1_h5d31e73bdb49);
+        DrawText("MOSSLING ALERT", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n92, 180), (int32_t)28, (int32_t)16, hxc_this1_hc1bd1e72c042);
       }
     }
   }
@@ -367,130 +367,190 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
   {
     if (hxc_language == 1)
     {
-      struct Color hxc_this1_h3f800ed25b5a = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      struct Color hxc_this1_h86c190906b0c = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
       int32_t hxc_tmp_load_result_n95 = hxc_centerX;
       int32_t hxc_tmp_load_result_n96 = hxc_centerY;
-      DrawText("GOLPE DE COBRE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n95, 70), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n96, 54), (int32_t)18, hxc_this1_h3f800ed25b5a);
+      DrawText("GOLPE DE COBRE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n95, 70), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n96, 54), (int32_t)18, hxc_this1_h86c190906b0c);
     }
     else
     {
-      struct Color hxc_this1_h020d92720e66 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      struct Color hxc_this1_hc43cec510ebe = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
       int32_t hxc_tmp_load_result_n99 = hxc_centerX;
       int32_t hxc_tmp_load_result_n100 = hxc_centerY;
-      DrawText("COPPER STRIKE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n99, 70), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n100, 54), (int32_t)18, hxc_this1_h020d92720e66);
+      DrawText("COPPER STRIKE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n99, 70), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n100, 54), (int32_t)18, hxc_this1_hc43cec510ebe);
     }
   }
   if (hxc_enemyDefeated)
   {
     if (hxc_language == 1)
     {
-      struct Color hxc_this1_ha7f146f4508f = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      struct Color hxc_this1_hd8d753eae913 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
       int32_t hxc_tmp_load_result_n103 = hxc_width;
-      DrawText("EL MUSGUITO SOLTO BAYAS", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n103, 275), (int32_t)54, (int32_t)16, hxc_this1_ha7f146f4508f);
+      DrawText("EL MUSGUITO SOLTO BAYAS", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n103, 275), (int32_t)54, (int32_t)16, hxc_this1_hd8d753eae913);
     }
     else
     {
-      struct Color hxc_this1_h4822667117c8 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      struct Color hxc_this1_h52962b754abe = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
       int32_t hxc_tmp_load_result_n106 = hxc_width;
-      DrawText("MOSSLING DROPPED BERRIES", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n106, 270), (int32_t)54, (int32_t)16, hxc_this1_h4822667117c8);
+      DrawText("MOSSLING DROPPED BERRIES", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n106, 270), (int32_t)54, (int32_t)16, hxc_this1_h52962b754abe);
     }
   }
   if (hxc_pickedUp)
   {
     if (hxc_language == 1)
     {
-      struct Color hxc_this1_hf44ea768c254 = (struct Color){ .r = 174, .g = 78, .b = 136, .a = 255 };
+      struct Color hxc_this1_he99ec2a6e941 = (struct Color){ .r = 174, .g = 78, .b = 136, .a = 255 };
       int32_t hxc_tmp_load_result_n109 = hxc_centerX;
       int32_t hxc_tmp_load_result_n110 = hxc_centerY;
-      DrawText("+2 BAYAS", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n109, 42), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n110, 24), (int32_t)18, hxc_this1_hf44ea768c254);
+      DrawText("+2 BAYAS", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n109, 42), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n110, 24), (int32_t)18, hxc_this1_he99ec2a6e941);
     }
     else
     {
-      struct Color hxc_this1_h7dd34c34b14d = (struct Color){ .r = 174, .g = 78, .b = 136, .a = 255 };
+      struct Color hxc_this1_hc93c31ee53d1 = (struct Color){ .r = 174, .g = 78, .b = 136, .a = 255 };
       int32_t hxc_tmp_load_result_n113 = hxc_centerX;
       int32_t hxc_tmp_load_result_n114 = hxc_centerY;
-      DrawText("+2 BERRIES", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n113, 48), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n114, 24), (int32_t)18, hxc_this1_h7dd34c34b14d);
+      DrawText("+2 BERRIES", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n113, 48), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n114, 24), (int32_t)18, hxc_this1_hc93c31ee53d1);
+    }
+  }
+  if (hxc_recoveryVisible)
+  {
+    if (hxc_recoveryFeedback == 1)
+    {
+      if (hxc_language == 1)
+      {
+        struct Color hxc_this1_ha2174812eb7a = (struct Color){ .r = 94, .g = 212, .b = 136, .a = 255 };
+        int32_t hxc_tmp_load_result_n117 = hxc_centerX;
+        int32_t hxc_tmp_load_result_n118 = hxc_centerY;
+        DrawText("BAYAS: +1 CORAZON", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n117, 86), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n118, 24), (int32_t)18, hxc_this1_ha2174812eb7a);
+      }
+      else
+      {
+        struct Color hxc_this1_hf801f4b7a3a0 = (struct Color){ .r = 94, .g = 212, .b = 136, .a = 255 };
+        int32_t hxc_tmp_load_result_n121 = hxc_centerX;
+        int32_t hxc_tmp_load_result_n122 = hxc_centerY;
+        DrawText("BERRIES: +1 HEART", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n121, 88), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n122, 24), (int32_t)18, hxc_this1_hf801f4b7a3a0);
+      }
+    }
+    else
+    {
+      if (hxc_recoveryFeedback == 2)
+      {
+        if (hxc_language == 1)
+        {
+          struct Color hxc_this1_h5b9db85f17ba = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+          int32_t hxc_tmp_load_result_n125 = hxc_centerX;
+          int32_t hxc_tmp_load_result_n126 = hxc_centerY;
+          DrawText("SALUD COMPLETA", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n125, 72), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n126, 24), (int32_t)18, hxc_this1_h5b9db85f17ba);
+        }
+        else
+        {
+          struct Color hxc_this1_h797c33fccfa4 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+          int32_t hxc_tmp_load_result_n129 = hxc_centerX;
+          int32_t hxc_tmp_load_result_n130 = hxc_centerY;
+          DrawText("HEALTH ALREADY FULL", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n129, 96), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n130, 24), (int32_t)18, hxc_this1_h797c33fccfa4);
+        }
+      }
+      else
+      {
+        if (hxc_recoveryFeedback == 3)
+        {
+          if (hxc_language == 1)
+          {
+            struct Color hxc_this1_h60b5437b1b94 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+            int32_t hxc_tmp_load_result_n133 = hxc_centerX;
+            int32_t hxc_tmp_load_result_n134 = hxc_centerY;
+            DrawText("NO QUEDAN BAYAS", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n133, 76), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n134, 24), (int32_t)18, hxc_this1_h60b5437b1b94);
+          }
+          else
+          {
+            struct Color hxc_this1_hf3186c77aede = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+            int32_t hxc_tmp_load_result_n137 = hxc_centerX;
+            int32_t hxc_tmp_load_result_n138 = hxc_centerY;
+            DrawText("NO BERRIES LEFT", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n137, 76), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n138, 24), (int32_t)18, hxc_this1_hf3186c77aede);
+          }
+        }
+      }
     }
   }
   if (hxc_vitals.hxc_safeTicks > 15)
   {
-    struct Color hxc_this1_ha1cb09db5615 = (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 };
-    int32_t hxc_tmp_load_result_n118 = hxc_width;
-    int32_t hxc_tmp_load_result_n119 = hxc_height;
-    DrawRectangleLines((int32_t)4, (int32_t)4, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n118, 8), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n119, 8), hxc_this1_ha1cb09db5615);
+    struct Color hxc_this1_hf85691db48df = (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 };
+    int32_t hxc_tmp_load_result_n142 = hxc_width;
+    int32_t hxc_tmp_load_result_n143 = hxc_height;
+    DrawRectangleLines((int32_t)4, (int32_t)4, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n142, 8), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n143, 8), hxc_this1_hf85691db48df);
   }
   if (hxc_vitals.hxc_health <= 0)
   {
-    struct Color hxc_this1_hf52665e46f38 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
-    int32_t hxc_tmp_load_result_n123 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n124 = hxc_centerY;
-    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n123, 250), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n124, 74), (int32_t)500, (int32_t)148, hxc_this1_hf52665e46f38);
-    struct Color hxc_this1_hf7a3d8dfe303 = (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 };
-    int32_t hxc_tmp_load_result_n127 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n128 = hxc_centerY;
-    DrawRectangleLines((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n127, 250), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n128, 74), (int32_t)500, (int32_t)148, hxc_this1_hf7a3d8dfe303);
+    struct Color hxc_this1_hafef3e127380 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
+    int32_t hxc_tmp_load_result_n147 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n148 = hxc_centerY;
+    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n147, 250), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n148, 74), (int32_t)500, (int32_t)148, hxc_this1_hafef3e127380);
+    struct Color hxc_this1_h69b16996cd81 = (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 };
+    int32_t hxc_tmp_load_result_n151 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n152 = hxc_centerY;
+    DrawRectangleLines((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n151, 250), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n152, 74), (int32_t)500, (int32_t)148, hxc_this1_h69b16996cd81);
     if (hxc_language == 1)
     {
-      int32_t hxc_tmp_load_result_n130 = hxc_centerX;
-      int32_t hxc_tmp_load_result_n131 = hxc_centerY;
-      DrawText("HAXIRIO HA CAIDO", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n130, 112), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n131, 42), (int32_t)24, hxc_text);
-      struct Color hxc_this1_h70634aa469c9 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      int32_t hxc_tmp_load_result_n134 = hxc_centerX;
-      int32_t hxc_tmp_load_result_n135 = hxc_centerY;
-      DrawText("E  VOLVER AL PRADO", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n134, 105), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n135, 10), (int32_t)18, hxc_this1_h70634aa469c9);
+      int32_t hxc_tmp_load_result_n154 = hxc_centerX;
+      int32_t hxc_tmp_load_result_n155 = hxc_centerY;
+      DrawText("HAXIRIO HA CAIDO", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n154, 112), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n155, 42), (int32_t)24, hxc_text);
+      struct Color hxc_this1_h9e7ddbf4858a = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      int32_t hxc_tmp_load_result_n158 = hxc_centerX;
+      int32_t hxc_tmp_load_result_n159 = hxc_centerY;
+      DrawText("E  VOLVER AL PRADO", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n158, 105), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n159, 10), (int32_t)18, hxc_this1_h9e7ddbf4858a);
     }
     else
     {
-      int32_t hxc_tmp_load_result_n137 = hxc_centerX;
-      int32_t hxc_tmp_load_result_n138 = hxc_centerY;
-      DrawText("HAXIRIO HAS FALLEN", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n137, 122), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n138, 42), (int32_t)24, hxc_text);
-      struct Color hxc_this1_h5de87faffce9 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      int32_t hxc_tmp_load_result_n141 = hxc_centerX;
-      int32_t hxc_tmp_load_result_n142 = hxc_centerY;
-      DrawText("E  RETURN TO THE MEADOW", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n141, 125), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n142, 10), (int32_t)18, hxc_this1_h5de87faffce9);
+      int32_t hxc_tmp_load_result_n161 = hxc_centerX;
+      int32_t hxc_tmp_load_result_n162 = hxc_centerY;
+      DrawText("HAXIRIO HAS FALLEN", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n161, 122), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n162, 42), (int32_t)24, hxc_text);
+      struct Color hxc_this1_h6c17c8cc4d2d = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      int32_t hxc_tmp_load_result_n165 = hxc_centerX;
+      int32_t hxc_tmp_load_result_n166 = hxc_centerY;
+      DrawText("E  RETURN TO THE MEADOW", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n165, 125), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n166, 10), (int32_t)18, hxc_this1_h6c17c8cc4d2d);
     }
   }
   if (hxc_paused)
   {
-    struct Color hxc_this1_h758606c2c8f0 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
-    int32_t hxc_tmp_load_result_n145 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n146 = hxc_centerY;
-    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n145, 170), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n146, 48), (int32_t)340, (int32_t)96, hxc_this1_h758606c2c8f0);
-    struct Color hxc_this1_h6c434134faa6 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-    int32_t hxc_tmp_load_result_n149 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n150 = hxc_centerY;
-    DrawRectangleLines((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n149, 170), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n150, 48), (int32_t)340, (int32_t)96, hxc_this1_h6c434134faa6);
-    int32_t hxc_tmp_load_result_n152 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n153 = hxc_centerY;
-    DrawText("PAUSED", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n152, 48), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n153, 30), (int32_t)24, hxc_text);
-    int32_t hxc_tmp_load_result_n155 = hxc_centerX;
-    int32_t hxc_tmp_load_result_n156 = hxc_centerY;
-    DrawText("CLICK TO CAPTURE  //  Q TO QUIT", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n155, 145), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n156, 8), (int32_t)16, hxc_text);
+    struct Color hxc_this1_habc8f1419da5 = (struct Color){ .r = 15, .g = 27, .b = 39, .a = 220 };
+    int32_t hxc_tmp_load_result_n169 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n170 = hxc_centerY;
+    DrawRectangle((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n169, 170), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n170, 48), (int32_t)340, (int32_t)96, hxc_this1_habc8f1419da5);
+    struct Color hxc_this1_hfd4763b95ed5 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+    int32_t hxc_tmp_load_result_n173 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n174 = hxc_centerY;
+    DrawRectangleLines((int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n173, 170), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n174, 48), (int32_t)340, (int32_t)96, hxc_this1_hfd4763b95ed5);
+    int32_t hxc_tmp_load_result_n176 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n177 = hxc_centerY;
+    DrawText("PAUSED", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n176, 48), (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n177, 30), (int32_t)24, hxc_text);
+    int32_t hxc_tmp_load_result_n179 = hxc_centerX;
+    int32_t hxc_tmp_load_result_n180 = hxc_centerY;
+    DrawText("CLICK TO CAPTURE  //  Q TO QUIT", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n179, 145), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n180, 8), (int32_t)16, hxc_text);
   }
   else
   {
     if (hxc_placementBlocked)
     {
-      struct Color hxc_this1_h45d100ccbb4f = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
-      int32_t hxc_tmp_load_result_n159 = hxc_centerX;
-      int32_t hxc_tmp_load_result_n160 = hxc_centerY;
-      DrawText("PLACE BLOCKED: PLAYER OR WORLD EDGE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n159, 150), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n160, 26), (int32_t)14, hxc_this1_h45d100ccbb4f);
+      struct Color hxc_this1_h7db4a9dd62b8 = (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 };
+      int32_t hxc_tmp_load_result_n183 = hxc_centerX;
+      int32_t hxc_tmp_load_result_n184 = hxc_centerY;
+      DrawText("PLACE BLOCKED: PLAYER OR WORLD EDGE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n183, 150), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n184, 26), (int32_t)14, hxc_this1_h7db4a9dd62b8);
     }
     else
     {
       if (!hxc_captured)
       {
-        int32_t hxc_tmp_load_result_n162 = hxc_centerX;
-        int32_t hxc_tmp_load_result_n163 = hxc_centerY;
-        DrawText("CLICK TO CAPTURE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n162, 74), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n163, 26), (int32_t)14, hxc_text);
+        int32_t hxc_tmp_load_result_n186 = hxc_centerX;
+        int32_t hxc_tmp_load_result_n187 = hxc_centerY;
+        DrawText("CLICK TO CAPTURE", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n186, 74), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n187, 26), (int32_t)14, hxc_text);
       }
       else
       {
         if (!hxc_hit.hxc_hit)
         {
-          int32_t hxc_tmp_load_result_n166 = hxc_centerX;
-          int32_t hxc_tmp_load_result_n167 = hxc_centerY;
-          DrawText("NO BLOCK IN REACH", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n166, 78), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n167, 26), (int32_t)14, hxc_text);
+          int32_t hxc_tmp_load_result_n190 = hxc_centerX;
+          int32_t hxc_tmp_load_result_n191 = hxc_centerY;
+          DrawText("NO BLOCK IN REACH", (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n190, 78), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n191, 26), (int32_t)14, hxc_text);
         }
       }
     }
@@ -678,8 +738,9 @@ void hxc_caxecraft_app_Main_main(void)
   struct hxc_caxecraft_gameplay_GuideState hxc_guide = hxc_tmp_call_result_n16;
   struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n17 = hxc_caxecraft_gameplay_Mossling_start(hxc_cells, hxc_tmp_length_n1, 15.5, 13.8);
   struct hxc_caxecraft_gameplay_MosslingState hxc_mossling = hxc_tmp_call_result_n17;
-  struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n18 = hxc_caxecraft_gameplay_PlayerVitals_make(6, 0);
-  struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_vitals = hxc_tmp_call_result_n18;
+  int32_t hxc_initialHealth = 6;
+  struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n19 = hxc_caxecraft_gameplay_PlayerVitals_make(hxc_initialHealth, 0);
+  struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_vitals = hxc_tmp_call_result_n19;
   struct hxc_caxecraft_gameplay_BerryDropState hxc_berryDrop = (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = 0.0, .hxc_y = 0.0, .hxc_z = 0.0 };
   double hxc_lookX = 0.0;
   double hxc_lookY = -0.18;
@@ -698,275 +759,278 @@ void hxc_caxecraft_app_Main_main(void)
   int32_t hxc_strikeHitFrames = 0;
   int32_t hxc_enemyDefeatedFrames = 0;
   int32_t hxc_pickupFrames = 0;
+  int32_t hxc_recoveryFeedback = 0;
+  int32_t hxc_recoveryFeedbackFrames = 0;
   while (1)
   {
-    bool hxc_tmp_load_result_n20 = hxc_quit;
-    bool hxc_tmp_short_circuit_result_n34 = !hxc_tmp_load_result_n20;
-    if (!hxc_tmp_load_result_n20)
+    bool hxc_tmp_load_result_n21 = hxc_quit;
+    bool hxc_tmp_short_circuit_result_n37 = !hxc_tmp_load_result_n21;
+    if (!hxc_tmp_load_result_n21)
     {
-      bool hxc_tmp_native_call_result_n21 = WindowShouldClose();
-      hxc_tmp_short_circuit_result_n34 = !hxc_tmp_native_call_result_n21;
+      bool hxc_tmp_native_call_result_n22 = WindowShouldClose();
+      hxc_tmp_short_circuit_result_n37 = !hxc_tmp_native_call_result_n22;
     }
-    if (!hxc_tmp_short_circuit_result_n34)
+    if (!hxc_tmp_short_circuit_result_n37)
     {
       break;
     }
     bool hxc_recapturedThisFrame = false;
-    bool hxc_tmp_native_call_result_n23 = IsWindowFocused();
-    bool hxc_focused = hxc_tmp_native_call_result_n23;
+    bool hxc_tmp_native_call_result_n24 = IsWindowFocused();
+    bool hxc_focused = hxc_tmp_native_call_result_n24;
     double hxc_forward = 0.0;
     double hxc_right = 0.0;
-    bool hxc_tmp_native_call_result_n24 = IsKeyDown((int32_t)87);
-    if (hxc_tmp_native_call_result_n24)
+    bool hxc_tmp_native_call_result_n25 = IsKeyDown((int32_t)87);
+    if (hxc_tmp_native_call_result_n25)
     {
       hxc_forward = hxc_forward + 1.0;
     }
-    bool hxc_tmp_native_call_result_n26 = IsKeyDown((int32_t)83);
-    if (hxc_tmp_native_call_result_n26)
+    bool hxc_tmp_native_call_result_n27 = IsKeyDown((int32_t)83);
+    if (hxc_tmp_native_call_result_n27)
     {
       hxc_forward = hxc_forward - 1.0;
     }
-    bool hxc_tmp_native_call_result_n28 = IsKeyDown((int32_t)68);
-    if (hxc_tmp_native_call_result_n28)
+    bool hxc_tmp_native_call_result_n29 = IsKeyDown((int32_t)68);
+    if (hxc_tmp_native_call_result_n29)
     {
       hxc_right = hxc_right + 1.0;
     }
-    bool hxc_tmp_native_call_result_n30 = IsKeyDown((int32_t)65);
-    if (hxc_tmp_native_call_result_n30)
+    bool hxc_tmp_native_call_result_n31 = IsKeyDown((int32_t)65);
+    if (hxc_tmp_native_call_result_n31)
     {
       hxc_right = hxc_right - 1.0;
     }
-    double hxc_lookYaw_h51b88c281041 = 0.0;
-    double hxc_lookPitch_h3f8b406de94f = 0.0;
+    double hxc_lookYaw_h588b142be2e3 = 0.0;
+    double hxc_lookPitch_hdd80ca5aa736 = 0.0;
     if (hxc_captured)
     {
-      struct Vector2 hxc_tmp_native_call_result_n33 = GetMouseDelta();
-      struct Vector2 hxc_mouse = hxc_tmp_native_call_result_n33;
-      hxc_lookYaw_h51b88c281041 = -(double)hxc_mouse.x * 0.0025;
-      hxc_lookPitch_h3f8b406de94f = -(double)hxc_mouse.y * 0.0025;
+      struct Vector2 hxc_tmp_native_call_result_n34 = GetMouseDelta();
+      struct Vector2 hxc_mouse = hxc_tmp_native_call_result_n34;
+      hxc_lookYaw_h588b142be2e3 = -(double)hxc_mouse.x * 0.0025;
+      hxc_lookPitch_hdd80ca5aa736 = -(double)hxc_mouse.y * 0.0025;
     }
-    bool hxc_tmp_native_call_result_n38 = IsMouseButtonPressed((int32_t)0);
-    bool hxc_leftPressed = hxc_tmp_native_call_result_n38;
-    int32_t hxc_hotbarSelection_hb710617603e6 = -1;
-    bool hxc_tmp_native_call_result_n39 = IsKeyPressed((int32_t)49);
-    if (hxc_tmp_native_call_result_n39)
+    bool hxc_tmp_native_call_result_n39 = IsMouseButtonPressed((int32_t)0);
+    bool hxc_leftPressed = hxc_tmp_native_call_result_n39;
+    bool hxc_tmp_load_result_n40 = hxc_captured;
+    bool hxc_tmp_short_circuit_result_n47 = hxc_tmp_load_result_n40;
+    if (hxc_tmp_load_result_n40)
     {
-      hxc_hotbarSelection_hb710617603e6 = 0;
+      hxc_tmp_short_circuit_result_n47 = hxc_leftPressed;
     }
-    bool hxc_tmp_native_call_result_n40 = IsKeyPressed((int32_t)50);
-    if (hxc_tmp_native_call_result_n40)
+    bool hxc_primaryPressed_h36b30f56e49a = hxc_tmp_short_circuit_result_n47;
+    bool hxc_tmp_load_result_n43 = hxc_captured;
+    bool hxc_tmp_short_circuit_result_n49 = hxc_tmp_load_result_n43;
+    if (hxc_tmp_load_result_n43)
     {
-      hxc_hotbarSelection_hb710617603e6 = 1;
+      bool hxc_tmp_native_call_result_n44 = IsMouseButtonPressed((int32_t)1);
+      hxc_tmp_short_circuit_result_n49 = hxc_tmp_native_call_result_n44;
     }
-    bool hxc_tmp_native_call_result_n41 = IsKeyPressed((int32_t)51);
-    if (hxc_tmp_native_call_result_n41)
+    bool hxc_secondaryPressed_h847ea36d088d = hxc_tmp_short_circuit_result_n49;
+    bool hxc_tmp_load_result_n46 = hxc_captured;
+    bool hxc_tmp_short_circuit_result_n51 = hxc_tmp_load_result_n46;
+    if (hxc_tmp_load_result_n46)
     {
-      hxc_hotbarSelection_hb710617603e6 = 2;
+      bool hxc_tmp_native_call_result_n47 = IsKeyPressed((int32_t)69);
+      hxc_tmp_short_circuit_result_n51 = hxc_tmp_native_call_result_n47;
     }
-    bool hxc_tmp_native_call_result_n42 = IsKeyPressed((int32_t)52);
-    if (hxc_tmp_native_call_result_n42)
+    bool hxc_interactPressed_h67f7f318449e = hxc_tmp_short_circuit_result_n51;
+    int32_t hxc_hotbarSelection_h24c4a4fc4cb5 = -1;
+    bool hxc_tmp_native_call_result_n49 = IsKeyPressed((int32_t)49);
+    if (hxc_tmp_native_call_result_n49)
     {
-      hxc_hotbarSelection_hb710617603e6 = 3;
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 0;
     }
-    bool hxc_tmp_native_call_result_n43 = IsKeyPressed((int32_t)53);
-    if (hxc_tmp_native_call_result_n43)
+    bool hxc_tmp_native_call_result_n50 = IsKeyPressed((int32_t)50);
+    if (hxc_tmp_native_call_result_n50)
     {
-      hxc_hotbarSelection_hb710617603e6 = 4;
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 1;
     }
-    bool hxc_tmp_native_call_result_n44 = IsKeyPressed((int32_t)54);
-    if (hxc_tmp_native_call_result_n44)
+    bool hxc_tmp_native_call_result_n51 = IsKeyPressed((int32_t)51);
+    if (hxc_tmp_native_call_result_n51)
     {
-      hxc_hotbarSelection_hb710617603e6 = 5;
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 2;
     }
-    bool hxc_tmp_native_call_result_n45 = IsKeyPressed((int32_t)55);
-    if (hxc_tmp_native_call_result_n45)
+    bool hxc_tmp_native_call_result_n52 = IsKeyPressed((int32_t)52);
+    if (hxc_tmp_native_call_result_n52)
     {
-      hxc_hotbarSelection_hb710617603e6 = 6;
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 3;
     }
-    bool hxc_tmp_native_call_result_n46 = IsKeyPressed((int32_t)56);
-    if (hxc_tmp_native_call_result_n46)
+    bool hxc_tmp_native_call_result_n53 = IsKeyPressed((int32_t)53);
+    if (hxc_tmp_native_call_result_n53)
     {
-      hxc_hotbarSelection_hb710617603e6 = 7;
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 4;
     }
-    float hxc_tmp_native_call_result_n47 = GetMouseWheelMove();
-    double hxc_wheel = (double)hxc_tmp_native_call_result_n47;
-    int32_t hxc_hotbarCycle_h055fcbac1032 = 0;
+    bool hxc_tmp_native_call_result_n54 = IsKeyPressed((int32_t)54);
+    if (hxc_tmp_native_call_result_n54)
+    {
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 5;
+    }
+    bool hxc_tmp_native_call_result_n55 = IsKeyPressed((int32_t)55);
+    if (hxc_tmp_native_call_result_n55)
+    {
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 6;
+    }
+    bool hxc_tmp_native_call_result_n56 = IsKeyPressed((int32_t)56);
+    if (hxc_tmp_native_call_result_n56)
+    {
+      hxc_hotbarSelection_h24c4a4fc4cb5 = 7;
+    }
+    float hxc_tmp_native_call_result_n57 = GetMouseWheelMove();
+    double hxc_wheel = (double)hxc_tmp_native_call_result_n57;
+    int32_t hxc_hotbarCycle_hceb3392a1b61 = 0;
     if (hxc_wheel > 0.0)
     {
-      hxc_hotbarCycle_h055fcbac1032 = -1;
+      hxc_hotbarCycle_hceb3392a1b61 = -1;
     }
     if (hxc_wheel < 0.0)
     {
-      hxc_hotbarCycle_h055fcbac1032 = 1;
+      hxc_hotbarCycle_hceb3392a1b61 = 1;
     }
-    bool hxc_tmp_native_call_result_n50 = IsKeyPressed((int32_t)32);
-    bool hxc_jumpPressed_h3ff8ff5a5f61 = hxc_tmp_native_call_result_n50;
-    bool hxc_tmp_load_result_n51 = hxc_captured;
-    bool hxc_tmp_short_circuit_result_n48 = hxc_tmp_load_result_n51;
-    if (hxc_tmp_load_result_n51)
-    {
-      bool hxc_tmp_native_call_result_n52 = IsMouseButtonPressed((int32_t)1);
-      hxc_tmp_short_circuit_result_n48 = hxc_tmp_native_call_result_n52;
-    }
-    bool hxc_placePressed_hd8bb2a261abd = hxc_tmp_short_circuit_result_n48;
-    bool hxc_tmp_load_result_n54 = hxc_captured;
-    bool hxc_tmp_short_circuit_result_n50 = hxc_tmp_load_result_n54;
-    if (hxc_tmp_load_result_n54)
-    {
-      bool hxc_tmp_native_call_result_n55 = IsKeyPressed((int32_t)69);
-      hxc_tmp_short_circuit_result_n50 = hxc_tmp_native_call_result_n55;
-    }
-    bool hxc_interactPressed_h23e415747a66 = hxc_tmp_short_circuit_result_n50;
-    bool hxc_tmp_native_call_result_n57 = IsKeyPressed((int32_t)256);
-    bool hxc_pausePressed_hae4bd589d3ea = hxc_tmp_native_call_result_n57;
-    bool hxc_tmp_native_call_result_n58 = IsKeyPressed((int32_t)81);
-    bool hxc_quitPressed_hf086f16619d4 = hxc_tmp_native_call_result_n58;
+    bool hxc_tmp_native_call_result_n60 = IsKeyPressed((int32_t)32);
+    bool hxc_jumpPressed_hdcf1df9aeaa1 = hxc_tmp_native_call_result_n60;
+    bool hxc_tmp_native_call_result_n61 = IsKeyPressed((int32_t)256);
+    bool hxc_pausePressed_hb82c8b255c7c = hxc_tmp_native_call_result_n61;
+    bool hxc_tmp_native_call_result_n62 = IsKeyPressed((int32_t)81);
+    bool hxc_quitPressed_h3cb23639ab79 = hxc_tmp_native_call_result_n62;
     double hxc_frameInput_moveForward = hxc_forward;
     double hxc_frameInput_moveRight = hxc_right;
-    double hxc_frameInput_lookYaw = hxc_lookYaw_h51b88c281041;
-    double hxc_frameInput_lookPitch = hxc_lookPitch_h3f8b406de94f;
-    bool hxc_frameInput_jumpPressed = hxc_jumpPressed_h3ff8ff5a5f61;
-    bool hxc_tmp_load_result_n64 = hxc_captured;
-    bool hxc_tmp_short_circuit_result_n59 = hxc_tmp_load_result_n64;
-    if (hxc_tmp_load_result_n64)
+    double hxc_frameInput_lookYaw = hxc_lookYaw_h588b142be2e3;
+    double hxc_frameInput_lookPitch = hxc_lookPitch_hdd80ca5aa736;
+    bool hxc_frameInput_jumpPressed = hxc_jumpPressed_hdcf1df9aeaa1;
+    bool hxc_frameInput_primaryPressed = hxc_primaryPressed_h36b30f56e49a;
+    bool hxc_frameInput_secondaryPressed = hxc_secondaryPressed_h847ea36d088d;
+    bool hxc_frameInput_interactPressed = hxc_interactPressed_h67f7f318449e;
+    bool hxc_frameInput_pausePressed = hxc_pausePressed_hb82c8b255c7c;
+    bool hxc_tmp_load_result_n72 = hxc_paused;
+    bool hxc_tmp_short_circuit_result_n68 = hxc_tmp_load_result_n72;
+    if (hxc_tmp_load_result_n72)
     {
-      hxc_tmp_short_circuit_result_n59 = hxc_leftPressed;
+      hxc_tmp_short_circuit_result_n68 = hxc_leftPressed;
     }
-    bool hxc_frameInput_primaryPressed = hxc_tmp_short_circuit_result_n59;
-    bool hxc_frameInput_placePressed = hxc_placePressed_hd8bb2a261abd;
-    bool hxc_frameInput_interactPressed = hxc_interactPressed_h23e415747a66;
-    bool hxc_frameInput_pausePressed = hxc_pausePressed_hae4bd589d3ea;
-    bool hxc_tmp_load_result_n70 = hxc_paused;
-    bool hxc_tmp_short_circuit_result_n64 = hxc_tmp_load_result_n70;
-    if (hxc_tmp_load_result_n70)
-    {
-      hxc_tmp_short_circuit_result_n64 = hxc_leftPressed;
-    }
-    bool hxc_frameInput_capturePressed = hxc_tmp_short_circuit_result_n64;
-    bool hxc_frameInput_quitPressed = hxc_quitPressed_hf086f16619d4;
-    int32_t hxc_frameInput_hotbarSelection = hxc_hotbarSelection_hb710617603e6;
-    int32_t hxc_frameInput_hotbarCycle = hxc_hotbarCycle_h055fcbac1032;
+    bool hxc_frameInput_capturePressed = hxc_tmp_short_circuit_result_n68;
+    bool hxc_frameInput_quitPressed = hxc_quitPressed_h3cb23639ab79;
+    int32_t hxc_frameInput_hotbarSelection = hxc_hotbarSelection_h24c4a4fc4cb5;
+    int32_t hxc_frameInput_hotbarCycle = hxc_hotbarCycle_hceb3392a1b61;
     double hxc_moveForward = hxc_frameInput_moveForward;
     double hxc_moveRight = hxc_frameInput_moveRight;
-    double hxc_lookYaw_h085ea8e3070e = hxc_frameInput_lookYaw;
-    double hxc_lookPitch_h04af9d69d094 = hxc_frameInput_lookPitch;
-    bool hxc_jumpPressed_ha5d1d186b77d = hxc_frameInput_jumpPressed;
-    bool hxc_primaryPressed = hxc_frameInput_primaryPressed;
-    bool hxc_placePressed_h7fc691556e9b = hxc_frameInput_placePressed;
-    bool hxc_interactPressed_h2aa8097bf51e = hxc_frameInput_interactPressed;
-    bool hxc_pausePressed_h5303a21ea41a = hxc_frameInput_pausePressed;
+    double hxc_lookYaw_hc9c3902167f1 = hxc_frameInput_lookYaw;
+    double hxc_lookPitch_h17c6c0519fbe = hxc_frameInput_lookPitch;
+    bool hxc_jumpPressed_h6a6f2e35b6f8 = hxc_frameInput_jumpPressed;
+    bool hxc_primaryPressed_h9f9c138d17c0 = hxc_frameInput_primaryPressed;
+    bool hxc_secondaryPressed_h400b391dc5af = hxc_frameInput_secondaryPressed;
+    bool hxc_interactPressed_h9e53b893ba59 = hxc_frameInput_interactPressed;
+    bool hxc_pausePressed_h78002f09b1a9 = hxc_frameInput_pausePressed;
     bool hxc_capturePressed = hxc_frameInput_capturePressed;
-    bool hxc_quitPressed_h9f3f4cda1dec = hxc_frameInput_quitPressed;
-    int32_t hxc_hotbarSelection_hed96830dcc02 = hxc_frameInput_hotbarSelection;
-    int32_t hxc_hotbarCycle_h42c9ec69e121 = hxc_frameInput_hotbarCycle;
-    if (hxc_quitPressed_h9f3f4cda1dec)
+    bool hxc_quitPressed_haa26bcd5efc6 = hxc_frameInput_quitPressed;
+    int32_t hxc_hotbarSelection_h23c788af54d7 = hxc_frameInput_hotbarSelection;
+    int32_t hxc_hotbarCycle_h9c7ebc3323a4 = hxc_frameInput_hotbarCycle;
+    if (hxc_quitPressed_haa26bcd5efc6)
     {
       hxc_quit = true;
     }
-    if (hxc_hotbarSelection_hed96830dcc02 >= 0)
+    if (hxc_hotbarSelection_h23c788af54d7 >= 0)
     {
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n91 = hxc_inventory;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n93 = hxc_caxecraft_gameplay_Inventory_select(hxc_tmp_load_result_n91, hxc_hotbarSelection_hed96830dcc02);
-      hxc_inventory = hxc_tmp_call_result_n93;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n93 = hxc_inventory;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n95 = hxc_caxecraft_gameplay_Inventory_select(hxc_tmp_load_result_n93, hxc_hotbarSelection_h23c788af54d7);
+      hxc_inventory = hxc_tmp_call_result_n95;
     }
-    if (hxc_hotbarCycle_h42c9ec69e121 != 0)
+    if (hxc_hotbarCycle_h9c7ebc3323a4 != 0)
     {
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n95 = hxc_inventory;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n97 = hxc_caxecraft_gameplay_Inventory_cycle(hxc_tmp_load_result_n95, hxc_hotbarCycle_h42c9ec69e121);
-      hxc_inventory = hxc_tmp_call_result_n97;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n97 = hxc_inventory;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n99 = hxc_caxecraft_gameplay_Inventory_cycle(hxc_tmp_load_result_n97, hxc_hotbarCycle_h9c7ebc3323a4);
+      hxc_inventory = hxc_tmp_call_result_n99;
     }
-    bool hxc_tmp_load_result_n98 = hxc_onTitle;
-    bool hxc_tmp_short_circuit_result_n81 = !hxc_tmp_load_result_n98;
-    if (!hxc_tmp_load_result_n98)
+    bool hxc_tmp_load_result_n100 = hxc_onTitle;
+    bool hxc_tmp_short_circuit_result_n85 = !hxc_tmp_load_result_n100;
+    if (!hxc_tmp_load_result_n100)
     {
-      hxc_tmp_short_circuit_result_n81 = !hxc_paused;
+      hxc_tmp_short_circuit_result_n85 = !hxc_paused;
     }
-    bool hxc_tmp_short_circuit_load_result_n100 = hxc_tmp_short_circuit_result_n81;
-    bool hxc_tmp_short_circuit_result_n82 = hxc_tmp_short_circuit_load_result_n100;
-    if (hxc_tmp_short_circuit_load_result_n100)
+    bool hxc_tmp_short_circuit_load_result_n102 = hxc_tmp_short_circuit_result_n85;
+    bool hxc_tmp_short_circuit_result_n86 = hxc_tmp_short_circuit_load_result_n102;
+    if (hxc_tmp_short_circuit_load_result_n102)
     {
-      hxc_tmp_short_circuit_result_n82 = hxc_interactPressed_h2aa8097bf51e;
+      hxc_tmp_short_circuit_result_n86 = hxc_interactPressed_h9e53b893ba59;
     }
-    if (hxc_tmp_short_circuit_result_n82)
+    if (hxc_tmp_short_circuit_result_n86)
     {
       if (hxc_vitals.hxc_health <= 0)
       {
-        struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n104 = hxc_caxecraft_gameplay_PlayerVitals_make(6, 0);
-        hxc_vitals = hxc_tmp_call_result_n104;
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n105 = hxc_caxecraft_app_Main_spawnPlayer(hxc_cells, hxc_tmp_length_n1);
-        hxc_player = hxc_tmp_call_result_n105;
+        struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n106 = hxc_caxecraft_gameplay_PlayerVitals_make(6, 0);
+        hxc_vitals = hxc_tmp_call_result_n106;
+        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n107 = hxc_caxecraft_app_Main_spawnPlayer(hxc_cells, hxc_tmp_length_n1);
+        hxc_player = hxc_tmp_call_result_n107;
       }
       else
       {
-        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n106 = hxc_guide;
-        double hxc_tmp_record_field_load_result_n107 = hxc_player.hxc_x;
-        bool hxc_tmp_call_result_n109 = hxc_caxecraft_gameplay_GuideNpc_isInRange(hxc_tmp_load_result_n106, hxc_tmp_record_field_load_result_n107, hxc_player.hxc_z);
-        if (hxc_tmp_call_result_n109)
+        struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n108 = hxc_guide;
+        double hxc_tmp_record_field_load_result_n109 = hxc_player.hxc_x;
+        bool hxc_tmp_call_result_n111 = hxc_caxecraft_gameplay_GuideNpc_isInRange(hxc_tmp_load_result_n108, hxc_tmp_record_field_load_result_n109, hxc_player.hxc_z);
+        if (hxc_tmp_call_result_n111)
         {
-          bool hxc_tmp_call_result_n111 = hxc_caxecraft_gameplay_GuideNpc_sharesBerriesOnNextInteraction(hxc_guide);
-          bool hxc_sharesBerries = hxc_tmp_call_result_n111;
-          struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n113 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
-          hxc_guide = hxc_tmp_call_result_n113;
+          bool hxc_tmp_call_result_n113 = hxc_caxecraft_gameplay_GuideNpc_sharesBerriesOnNextInteraction(hxc_guide);
+          bool hxc_sharesBerries = hxc_tmp_call_result_n113;
+          struct hxc_caxecraft_gameplay_GuideState hxc_tmp_call_result_n115 = hxc_caxecraft_gameplay_GuideNpc_interact(hxc_guide);
+          hxc_guide = hxc_tmp_call_result_n115;
           if (hxc_sharesBerries)
           {
-            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n117 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_Berries, 2);
-            hxc_inventory = hxc_tmp_call_result_n117;
+            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n119 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_Berries, 2);
+            hxc_inventory = hxc_tmp_call_result_n119;
           }
         }
       }
     }
-    bool hxc_tmp_load_result_n118 = hxc_onTitle;
-    bool hxc_tmp_short_circuit_result_n84 = hxc_tmp_load_result_n118;
-    if (hxc_tmp_load_result_n118)
+    bool hxc_tmp_load_result_n120 = hxc_onTitle;
+    bool hxc_tmp_short_circuit_result_n88 = hxc_tmp_load_result_n120;
+    if (hxc_tmp_load_result_n120)
     {
-      hxc_tmp_short_circuit_result_n84 = hxc_focused;
+      hxc_tmp_short_circuit_result_n88 = hxc_focused;
     }
-    if (hxc_tmp_short_circuit_result_n84)
+    if (hxc_tmp_short_circuit_result_n88)
     {
-      bool hxc_tmp_native_call_result_n121 = IsKeyPressed((int32_t)76);
-      if (hxc_tmp_native_call_result_n121)
+      bool hxc_tmp_native_call_result_n123 = IsKeyPressed((int32_t)76);
+      if (hxc_tmp_native_call_result_n123)
       {
-        int32_t hxc_tmp_load_result_n122 = hxc_language;
-        int32_t hxc_tmp_conditional_result_n85 = 0;
-        if (hxc_tmp_load_result_n122 == 0)
+        int32_t hxc_tmp_load_result_n124 = hxc_language;
+        int32_t hxc_tmp_conditional_result_n89 = 0;
+        if (hxc_tmp_load_result_n124 == 0)
         {
-          hxc_tmp_conditional_result_n85 = 1;
+          hxc_tmp_conditional_result_n89 = 1;
         }
         else
         {
-          hxc_tmp_conditional_result_n85 = 0;
+          hxc_tmp_conditional_result_n89 = 0;
         }
-        hxc_language = hxc_tmp_conditional_result_n85;
+        hxc_language = hxc_tmp_conditional_result_n89;
       }
-      bool hxc_tmp_native_call_result_n124 = IsKeyPressed((int32_t)265);
-      bool hxc_tmp_short_circuit_result_n86 = hxc_tmp_native_call_result_n124;
-      if (!hxc_tmp_native_call_result_n124)
+      bool hxc_tmp_native_call_result_n126 = IsKeyPressed((int32_t)265);
+      bool hxc_tmp_short_circuit_result_n90 = hxc_tmp_native_call_result_n126;
+      if (!hxc_tmp_native_call_result_n126)
       {
-        bool hxc_tmp_native_call_result_n125 = IsKeyPressed((int32_t)264);
-        hxc_tmp_short_circuit_result_n86 = hxc_tmp_native_call_result_n125;
+        bool hxc_tmp_native_call_result_n127 = IsKeyPressed((int32_t)264);
+        hxc_tmp_short_circuit_result_n90 = hxc_tmp_native_call_result_n127;
       }
-      if (hxc_tmp_short_circuit_result_n86)
+      if (hxc_tmp_short_circuit_result_n90)
       {
-        int32_t hxc_tmp_load_result_n127 = hxc_selectedMode;
-        int32_t hxc_tmp_conditional_result_n87 = 0;
-        if (hxc_tmp_load_result_n127 == 0)
+        int32_t hxc_tmp_load_result_n129 = hxc_selectedMode;
+        int32_t hxc_tmp_conditional_result_n91 = 0;
+        if (hxc_tmp_load_result_n129 == 0)
         {
-          hxc_tmp_conditional_result_n87 = 1;
+          hxc_tmp_conditional_result_n91 = 1;
         }
         else
         {
-          hxc_tmp_conditional_result_n87 = 0;
+          hxc_tmp_conditional_result_n91 = 0;
         }
-        hxc_selectedMode = hxc_tmp_conditional_result_n87;
+        hxc_selectedMode = hxc_tmp_conditional_result_n91;
       }
-      struct Vector2 hxc_tmp_native_call_result_n129 = GetMousePosition();
-      struct Vector2 hxc_menuMouse = hxc_tmp_native_call_result_n129;
-      struct Vector2 hxc_tmp_load_result_n130 = hxc_menuMouse;
+      struct Vector2 hxc_tmp_native_call_result_n131 = GetMousePosition();
+      struct Vector2 hxc_menuMouse = hxc_tmp_native_call_result_n131;
       struct Vector2 hxc_tmp_load_result_n132 = hxc_menuMouse;
-      int32_t hxc_tmp_native_call_result_n134 = GetScreenWidth();
-      int32_t hxc_tmp_native_call_result_n135 = GetScreenHeight();
-      int32_t hxc_tmp_call_result_n136 = hxc_caxecraft_app_TitleMenu_selectionAt((double)hxc_tmp_load_result_n130.x, (double)hxc_tmp_load_result_n132.y, (int32_t)hxc_tmp_native_call_result_n134, (int32_t)hxc_tmp_native_call_result_n135);
-      int32_t hxc_hovered = hxc_tmp_call_result_n136;
+      struct Vector2 hxc_tmp_load_result_n134 = hxc_menuMouse;
+      int32_t hxc_tmp_native_call_result_n136 = GetScreenWidth();
+      int32_t hxc_tmp_native_call_result_n137 = GetScreenHeight();
+      int32_t hxc_tmp_call_result_n138 = hxc_caxecraft_app_TitleMenu_selectionAt((double)hxc_tmp_load_result_n132.x, (double)hxc_tmp_load_result_n134.y, (int32_t)hxc_tmp_native_call_result_n136, (int32_t)hxc_tmp_native_call_result_n137);
+      int32_t hxc_hovered = hxc_tmp_call_result_n138;
       if (hxc_hovered == 0)
       {
         hxc_selectedMode = 0;
@@ -975,22 +1039,22 @@ void hxc_caxecraft_app_Main_main(void)
       {
         hxc_selectedMode = 1;
       }
-      int32_t hxc_tmp_load_result_n139 = hxc_hovered;
-      bool hxc_tmp_short_circuit_result_n91 = hxc_tmp_load_result_n139 >= 0;
-      if (hxc_tmp_load_result_n139 >= 0)
+      int32_t hxc_tmp_load_result_n141 = hxc_hovered;
+      bool hxc_tmp_short_circuit_result_n95 = hxc_tmp_load_result_n141 >= 0;
+      if (hxc_tmp_load_result_n141 >= 0)
       {
-        bool hxc_tmp_native_call_result_n140 = IsMouseButtonPressed((int32_t)0);
-        hxc_tmp_short_circuit_result_n91 = hxc_tmp_native_call_result_n140;
+        bool hxc_tmp_native_call_result_n142 = IsMouseButtonPressed((int32_t)0);
+        hxc_tmp_short_circuit_result_n95 = hxc_tmp_native_call_result_n142;
       }
-      bool hxc_clickedChoice = hxc_tmp_short_circuit_result_n91;
-      bool hxc_tmp_load_result_n142 = hxc_clickedChoice;
-      bool hxc_tmp_short_circuit_result_n92 = hxc_tmp_load_result_n142;
-      if (!hxc_tmp_load_result_n142)
+      bool hxc_clickedChoice = hxc_tmp_short_circuit_result_n95;
+      bool hxc_tmp_load_result_n144 = hxc_clickedChoice;
+      bool hxc_tmp_short_circuit_result_n96 = hxc_tmp_load_result_n144;
+      if (!hxc_tmp_load_result_n144)
       {
-        bool hxc_tmp_native_call_result_n143 = IsKeyPressed((int32_t)257);
-        hxc_tmp_short_circuit_result_n92 = hxc_tmp_native_call_result_n143;
+        bool hxc_tmp_native_call_result_n145 = IsKeyPressed((int32_t)257);
+        hxc_tmp_short_circuit_result_n96 = hxc_tmp_native_call_result_n145;
       }
-      if (hxc_tmp_short_circuit_result_n92)
+      if (hxc_tmp_short_circuit_result_n96)
       {
         hxc_onTitle = false;
         hxc_paused = false;
@@ -999,38 +1063,38 @@ void hxc_caxecraft_app_Main_main(void)
         DisableCursor();
       }
     }
-    bool hxc_tmp_load_result_n145 = hxc_onTitle;
-    bool hxc_tmp_short_circuit_result_n93 = !hxc_tmp_load_result_n145;
-    if (!hxc_tmp_load_result_n145)
+    bool hxc_tmp_load_result_n147 = hxc_onTitle;
+    bool hxc_tmp_short_circuit_result_n97 = !hxc_tmp_load_result_n147;
+    if (!hxc_tmp_load_result_n147)
     {
-      hxc_tmp_short_circuit_result_n93 = !hxc_focused;
+      hxc_tmp_short_circuit_result_n97 = !hxc_focused;
     }
-    bool hxc_tmp_short_circuit_load_result_n147 = hxc_tmp_short_circuit_result_n93;
-    bool hxc_tmp_short_circuit_result_n94 = hxc_tmp_short_circuit_load_result_n147;
-    if (hxc_tmp_short_circuit_load_result_n147)
+    bool hxc_tmp_short_circuit_load_result_n149 = hxc_tmp_short_circuit_result_n97;
+    bool hxc_tmp_short_circuit_result_n98 = hxc_tmp_short_circuit_load_result_n149;
+    if (hxc_tmp_short_circuit_load_result_n149)
     {
-      hxc_tmp_short_circuit_result_n94 = hxc_captured;
+      hxc_tmp_short_circuit_result_n98 = hxc_captured;
     }
-    if (hxc_tmp_short_circuit_result_n94)
+    if (hxc_tmp_short_circuit_result_n98)
     {
       hxc_paused = true;
       hxc_captured = false;
       hxc_jumpQueued = false;
       EnableCursor();
     }
-    bool hxc_tmp_load_result_n150 = hxc_onTitle;
-    bool hxc_tmp_short_circuit_result_n95 = !hxc_tmp_load_result_n150;
-    if (!hxc_tmp_load_result_n150)
+    bool hxc_tmp_load_result_n152 = hxc_onTitle;
+    bool hxc_tmp_short_circuit_result_n99 = !hxc_tmp_load_result_n152;
+    if (!hxc_tmp_load_result_n152)
     {
-      hxc_tmp_short_circuit_result_n95 = hxc_focused;
+      hxc_tmp_short_circuit_result_n99 = hxc_focused;
     }
-    bool hxc_tmp_short_circuit_load_result_n152 = hxc_tmp_short_circuit_result_n95;
-    bool hxc_tmp_short_circuit_result_n96 = hxc_tmp_short_circuit_load_result_n152;
-    if (hxc_tmp_short_circuit_load_result_n152)
+    bool hxc_tmp_short_circuit_load_result_n154 = hxc_tmp_short_circuit_result_n99;
+    bool hxc_tmp_short_circuit_result_n100 = hxc_tmp_short_circuit_load_result_n154;
+    if (hxc_tmp_short_circuit_load_result_n154)
     {
-      hxc_tmp_short_circuit_result_n96 = hxc_pausePressed_h5303a21ea41a;
+      hxc_tmp_short_circuit_result_n100 = hxc_pausePressed_h78002f09b1a9;
     }
-    if (hxc_tmp_short_circuit_result_n96)
+    if (hxc_tmp_short_circuit_result_n100)
     {
       hxc_paused = !hxc_paused;
       hxc_captured = !hxc_paused;
@@ -1047,25 +1111,25 @@ void hxc_caxecraft_app_Main_main(void)
         EnableCursor();
       }
     }
-    bool hxc_tmp_load_result_n159 = hxc_onTitle;
-    bool hxc_tmp_short_circuit_result_n97 = !hxc_tmp_load_result_n159;
-    if (!hxc_tmp_load_result_n159)
+    bool hxc_tmp_load_result_n161 = hxc_onTitle;
+    bool hxc_tmp_short_circuit_result_n101 = !hxc_tmp_load_result_n161;
+    if (!hxc_tmp_load_result_n161)
     {
-      hxc_tmp_short_circuit_result_n97 = hxc_focused;
+      hxc_tmp_short_circuit_result_n101 = hxc_focused;
     }
-    bool hxc_tmp_short_circuit_load_result_n161 = hxc_tmp_short_circuit_result_n97;
-    bool hxc_tmp_short_circuit_result_n98 = hxc_tmp_short_circuit_load_result_n161;
-    if (hxc_tmp_short_circuit_load_result_n161)
-    {
-      hxc_tmp_short_circuit_result_n98 = hxc_paused;
-    }
-    bool hxc_tmp_short_circuit_load_result_n163 = hxc_tmp_short_circuit_result_n98;
-    bool hxc_tmp_short_circuit_result_n99 = hxc_tmp_short_circuit_load_result_n163;
+    bool hxc_tmp_short_circuit_load_result_n163 = hxc_tmp_short_circuit_result_n101;
+    bool hxc_tmp_short_circuit_result_n102 = hxc_tmp_short_circuit_load_result_n163;
     if (hxc_tmp_short_circuit_load_result_n163)
     {
-      hxc_tmp_short_circuit_result_n99 = hxc_capturePressed;
+      hxc_tmp_short_circuit_result_n102 = hxc_paused;
     }
-    if (hxc_tmp_short_circuit_result_n99)
+    bool hxc_tmp_short_circuit_load_result_n165 = hxc_tmp_short_circuit_result_n102;
+    bool hxc_tmp_short_circuit_result_n103 = hxc_tmp_short_circuit_load_result_n165;
+    if (hxc_tmp_short_circuit_load_result_n165)
+    {
+      hxc_tmp_short_circuit_result_n103 = hxc_capturePressed;
+    }
+    if (hxc_tmp_short_circuit_result_n103)
     {
       hxc_paused = false;
       hxc_captured = true;
@@ -1074,7 +1138,7 @@ void hxc_caxecraft_app_Main_main(void)
     }
     if (hxc_captured)
     {
-      double hxc_yawDelta = hxc_lookYaw_h085ea8e3070e;
+      double hxc_yawDelta = hxc_lookYaw_hc9c3902167f1;
       if (hxc_yawDelta > 0.25)
       {
         hxc_yawDelta = 0.25;
@@ -1083,23 +1147,23 @@ void hxc_caxecraft_app_Main_main(void)
       {
         hxc_yawDelta = -0.25;
       }
-      double hxc_tmp_load_result_n170 = hxc_lookX;
-      double hxc_tmp_load_result_n171 = hxc_yawDelta;
-      double hxc_candidateX = hxc_tmp_load_result_n170 + hxc_tmp_load_result_n171 * hxc_lookZ;
-      double hxc_tmp_load_result_n173 = hxc_lookZ;
-      double hxc_tmp_load_result_n174 = hxc_yawDelta;
-      double hxc_candidateZ = hxc_tmp_load_result_n173 - hxc_tmp_load_result_n174 * hxc_lookX;
-      double hxc_tmp_load_result_n176 = hxc_candidateX;
-      double hxc_tmp_load_result_n177 = hxc_candidateX;
-      double hxc_tmp_load_result_n178 = hxc_candidateZ;
-      double hxc_lengthSquared = hxc_tmp_load_result_n176 * hxc_tmp_load_result_n177 + hxc_tmp_load_result_n178 * hxc_candidateZ;
+      double hxc_tmp_load_result_n172 = hxc_lookX;
+      double hxc_tmp_load_result_n173 = hxc_yawDelta;
+      double hxc_candidateX = hxc_tmp_load_result_n172 + hxc_tmp_load_result_n173 * hxc_lookZ;
+      double hxc_tmp_load_result_n175 = hxc_lookZ;
+      double hxc_tmp_load_result_n176 = hxc_yawDelta;
+      double hxc_candidateZ = hxc_tmp_load_result_n175 - hxc_tmp_load_result_n176 * hxc_lookX;
+      double hxc_tmp_load_result_n178 = hxc_candidateX;
+      double hxc_tmp_load_result_n179 = hxc_candidateX;
+      double hxc_tmp_load_result_n180 = hxc_candidateZ;
+      double hxc_lengthSquared = hxc_tmp_load_result_n178 * hxc_tmp_load_result_n179 + hxc_tmp_load_result_n180 * hxc_candidateZ;
       double hxc_normalize = 1.5 - 0.5 * hxc_lengthSquared;
-      double hxc_tmp_load_result_n181 = hxc_candidateX;
-      hxc_lookX = hxc_tmp_load_result_n181 * hxc_normalize;
-      double hxc_tmp_load_result_n183 = hxc_candidateZ;
-      hxc_lookZ = hxc_tmp_load_result_n183 * hxc_normalize;
-      double hxc_tmp_compound_load_result_n185 = hxc_lookY;
-      hxc_lookY = hxc_tmp_compound_load_result_n185 + hxc_lookPitch_h04af9d69d094;
+      double hxc_tmp_load_result_n183 = hxc_candidateX;
+      hxc_lookX = hxc_tmp_load_result_n183 * hxc_normalize;
+      double hxc_tmp_load_result_n185 = hxc_candidateZ;
+      hxc_lookZ = hxc_tmp_load_result_n185 * hxc_normalize;
+      double hxc_tmp_compound_load_result_n187 = hxc_lookY;
+      hxc_lookY = hxc_tmp_compound_load_result_n187 + hxc_lookPitch_h17c6c0519fbe;
       if (hxc_lookY > 0.90)
       {
         hxc_lookY = 0.90;
@@ -1108,77 +1172,77 @@ void hxc_caxecraft_app_Main_main(void)
       {
         hxc_lookY = -0.90;
       }
-      if (hxc_jumpPressed_ha5d1d186b77d)
+      if (hxc_jumpPressed_h6a6f2e35b6f8)
       {
         hxc_jumpQueued = true;
       }
     }
-    float hxc_tmp_native_call_result_n190 = GetFrameTime();
-    double hxc_frameSeconds = (double)hxc_tmp_native_call_result_n190;
+    float hxc_tmp_native_call_result_n192 = GetFrameTime();
+    double hxc_frameSeconds = (double)hxc_tmp_native_call_result_n192;
     if (hxc_frameSeconds > 0.25)
     {
       hxc_frameSeconds = 0.25;
     }
     if (!hxc_paused)
     {
-      double hxc_tmp_compound_load_result_n193 = hxc_accumulator;
-      hxc_accumulator = hxc_tmp_compound_load_result_n193 + hxc_frameSeconds;
+      double hxc_tmp_compound_load_result_n195 = hxc_accumulator;
+      hxc_accumulator = hxc_tmp_compound_load_result_n195 + hxc_frameSeconds;
     }
     while (1)
     {
-      bool hxc_tmp_load_result_n195 = hxc_paused;
-      bool hxc_tmp_short_circuit_result_n106 = !hxc_tmp_load_result_n195;
-      if (!hxc_tmp_load_result_n195)
+      bool hxc_tmp_load_result_n197 = hxc_paused;
+      bool hxc_tmp_short_circuit_result_n110 = !hxc_tmp_load_result_n197;
+      if (!hxc_tmp_load_result_n197)
       {
-        hxc_tmp_short_circuit_result_n106 = hxc_accumulator >= 0.05;
+        hxc_tmp_short_circuit_result_n110 = hxc_accumulator >= 0.05;
       }
-      if (!hxc_tmp_short_circuit_result_n106)
+      if (!hxc_tmp_short_circuit_result_n110)
       {
         break;
       }
-      double hxc_tmp_load_result_n198 = hxc_moveForward;
-      double hxc_tmp_load_result_n199 = hxc_lookX;
-      double hxc_tmp_load_result_n200 = hxc_moveRight;
-      double hxc_moveX = hxc_tmp_load_result_n198 * hxc_tmp_load_result_n199 - hxc_tmp_load_result_n200 * hxc_lookZ;
-      double hxc_tmp_load_result_n202 = hxc_moveForward;
-      double hxc_tmp_load_result_n203 = hxc_lookZ;
-      double hxc_tmp_load_result_n204 = hxc_moveRight;
-      double hxc_moveZ = hxc_tmp_load_result_n202 * hxc_tmp_load_result_n203 + hxc_tmp_load_result_n204 * hxc_lookX;
-      double hxc_tmp_load_result_n206 = hxc_moveForward;
-      bool hxc_tmp_short_circuit_result_n109 = hxc_tmp_load_result_n206 != 0.0;
-      if (hxc_tmp_load_result_n206 != 0.0)
+      double hxc_tmp_load_result_n200 = hxc_moveForward;
+      double hxc_tmp_load_result_n201 = hxc_lookX;
+      double hxc_tmp_load_result_n202 = hxc_moveRight;
+      double hxc_moveX = hxc_tmp_load_result_n200 * hxc_tmp_load_result_n201 - hxc_tmp_load_result_n202 * hxc_lookZ;
+      double hxc_tmp_load_result_n204 = hxc_moveForward;
+      double hxc_tmp_load_result_n205 = hxc_lookZ;
+      double hxc_tmp_load_result_n206 = hxc_moveRight;
+      double hxc_moveZ = hxc_tmp_load_result_n204 * hxc_tmp_load_result_n205 + hxc_tmp_load_result_n206 * hxc_lookX;
+      double hxc_tmp_load_result_n208 = hxc_moveForward;
+      bool hxc_tmp_short_circuit_result_n113 = hxc_tmp_load_result_n208 != 0.0;
+      if (hxc_tmp_load_result_n208 != 0.0)
       {
-        hxc_tmp_short_circuit_result_n109 = hxc_moveRight != 0.0;
+        hxc_tmp_short_circuit_result_n113 = hxc_moveRight != 0.0;
       }
-      if (hxc_tmp_short_circuit_result_n109)
+      if (hxc_tmp_short_circuit_result_n113)
       {
         hxc_moveX = hxc_moveX * 0.7071067811865476;
         hxc_moveZ = hxc_moveZ * 0.7071067811865476;
       }
       if (hxc_vitals.hxc_health > 0)
       {
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n212 = hxc_player;
-        double hxc_tmp_load_result_n213 = hxc_moveX;
-        double hxc_tmp_load_result_n214 = hxc_moveZ;
-        struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n216 = hxc_caxecraft_domain_PlayerPhysics_input(hxc_tmp_load_result_n213, hxc_tmp_load_result_n214, hxc_jumpQueued);
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n217 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n212, hxc_tmp_call_result_n216);
-        hxc_player = hxc_tmp_call_result_n217;
+        struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n214 = hxc_player;
+        double hxc_tmp_load_result_n215 = hxc_moveX;
+        double hxc_tmp_load_result_n216 = hxc_moveZ;
+        struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n218 = hxc_caxecraft_domain_PlayerPhysics_input(hxc_tmp_load_result_n215, hxc_tmp_load_result_n216, hxc_jumpQueued);
+        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n219 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n214, hxc_tmp_call_result_n218);
+        hxc_player = hxc_tmp_call_result_n219;
       }
       if (hxc_selectedMode == 1)
       {
         if (hxc_vitals.hxc_health > 0)
         {
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n220 = hxc_mossling;
-          double hxc_tmp_record_field_load_result_n221 = hxc_player.hxc_x;
-          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n223 = hxc_caxecraft_gameplay_Mossling_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n220, hxc_tmp_record_field_load_result_n221, hxc_player.hxc_z);
-          hxc_mossling = hxc_tmp_call_result_n223;
-          struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_load_result_n224 = hxc_vitals;
-          double hxc_tmp_record_field_load_result_n225 = hxc_player.hxc_x;
-          double hxc_tmp_record_field_load_result_n226 = hxc_player.hxc_z;
-          double hxc_tmp_record_field_load_result_n227 = hxc_mossling.hxc_x;
-          double hxc_tmp_record_field_load_result_n228 = hxc_mossling.hxc_z;
-          struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n230 = hxc_caxecraft_gameplay_PlayerVitals_step(hxc_tmp_load_result_n224, hxc_tmp_record_field_load_result_n225, hxc_tmp_record_field_load_result_n226, hxc_tmp_record_field_load_result_n227, hxc_tmp_record_field_load_result_n228, hxc_mossling.hxc_health > 0);
-          hxc_vitals = hxc_tmp_call_result_n230;
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n222 = hxc_mossling;
+          double hxc_tmp_record_field_load_result_n223 = hxc_player.hxc_x;
+          struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n225 = hxc_caxecraft_gameplay_Mossling_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n222, hxc_tmp_record_field_load_result_n223, hxc_player.hxc_z);
+          hxc_mossling = hxc_tmp_call_result_n225;
+          struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_load_result_n226 = hxc_vitals;
+          double hxc_tmp_record_field_load_result_n227 = hxc_player.hxc_x;
+          double hxc_tmp_record_field_load_result_n228 = hxc_player.hxc_z;
+          double hxc_tmp_record_field_load_result_n229 = hxc_mossling.hxc_x;
+          double hxc_tmp_record_field_load_result_n230 = hxc_mossling.hxc_z;
+          struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n232 = hxc_caxecraft_gameplay_PlayerVitals_step(hxc_tmp_load_result_n226, hxc_tmp_record_field_load_result_n227, hxc_tmp_record_field_load_result_n228, hxc_tmp_record_field_load_result_n229, hxc_tmp_record_field_load_result_n230, hxc_mossling.hxc_health > 0);
+          hxc_vitals = hxc_tmp_call_result_n232;
         }
       }
       hxc_jumpQueued = false;
@@ -1188,50 +1252,50 @@ void hxc_caxecraft_app_Main_main(void)
     double hxc_eyeX = hxc_player.hxc_x;
     double hxc_eyeY = hxc_player.hxc_y + 1.62;
     double hxc_eyeZ = hxc_player.hxc_z;
-    double hxc_tmp_load_result_n236 = hxc_eyeX;
-    double hxc_tmp_load_result_n237 = hxc_eyeY;
-    double hxc_tmp_load_result_n238 = hxc_eyeZ;
-    double hxc_tmp_load_result_n239 = hxc_lookX;
-    double hxc_tmp_load_result_n240 = hxc_lookY;
-    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n242 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n236, hxc_tmp_load_result_n237, hxc_tmp_load_result_n238, hxc_tmp_load_result_n239, hxc_tmp_load_result_n240, hxc_lookZ, 7.0);
-    struct hxc_caxecraft_domain_RaycastHit hxc_hit = hxc_tmp_call_result_n242;
-    bool hxc_tmp_load_result_n243 = hxc_captured;
-    bool hxc_tmp_short_circuit_result_n114 = hxc_tmp_load_result_n243;
-    if (hxc_tmp_load_result_n243)
+    double hxc_tmp_load_result_n238 = hxc_eyeX;
+    double hxc_tmp_load_result_n239 = hxc_eyeY;
+    double hxc_tmp_load_result_n240 = hxc_eyeZ;
+    double hxc_tmp_load_result_n241 = hxc_lookX;
+    double hxc_tmp_load_result_n242 = hxc_lookY;
+    struct hxc_caxecraft_domain_RaycastHit hxc_tmp_call_result_n244 = hxc_caxecraft_domain_VoxelRaycast_trace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n238, hxc_tmp_load_result_n239, hxc_tmp_load_result_n240, hxc_tmp_load_result_n241, hxc_tmp_load_result_n242, hxc_lookZ, 7.0);
+    struct hxc_caxecraft_domain_RaycastHit hxc_hit = hxc_tmp_call_result_n244;
+    bool hxc_tmp_load_result_n245 = hxc_captured;
+    bool hxc_tmp_short_circuit_result_n118 = hxc_tmp_load_result_n245;
+    if (hxc_tmp_load_result_n245)
     {
-      hxc_tmp_short_circuit_result_n114 = !hxc_recapturedThisFrame;
+      hxc_tmp_short_circuit_result_n118 = !hxc_recapturedThisFrame;
     }
-    bool hxc_tmp_short_circuit_load_result_n245 = hxc_tmp_short_circuit_result_n114;
-    bool hxc_tmp_short_circuit_result_n115 = hxc_tmp_short_circuit_load_result_n245;
-    if (hxc_tmp_short_circuit_load_result_n245)
+    bool hxc_tmp_short_circuit_load_result_n247 = hxc_tmp_short_circuit_result_n118;
+    bool hxc_tmp_short_circuit_result_n119 = hxc_tmp_short_circuit_load_result_n247;
+    if (hxc_tmp_short_circuit_load_result_n247)
     {
-      hxc_tmp_short_circuit_result_n115 = hxc_primaryPressed;
+      hxc_tmp_short_circuit_result_n119 = hxc_primaryPressed_h9f9c138d17c0;
     }
-    if (hxc_tmp_short_circuit_result_n115)
+    if (hxc_tmp_short_circuit_result_n119)
     {
       if (hxc_vitals.hxc_health > 0)
       {
         if (hxc_selectedMode == 1)
         {
-          bool hxc_tmp_call_result_n252 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
-          if (hxc_tmp_call_result_n252)
+          bool hxc_tmp_call_result_n254 = hxc_caxecraft_gameplay_Inventory_selectedIs(hxc_inventory, hxc_caxecraft_gameplay_ItemKind_CopperSword);
+          if (hxc_tmp_call_result_n254)
           {
             if (hxc_inventory.hxc_sword > 0)
             {
-              struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n254 = hxc_mossling;
-              double hxc_tmp_record_field_load_result_n255 = hxc_player.hxc_x;
-              double hxc_tmp_record_field_load_result_n256 = hxc_player.hxc_z;
-              double hxc_tmp_load_result_n257 = hxc_lookX;
-              bool hxc_tmp_call_result_n259 = hxc_caxecraft_gameplay_Mossling_canStrike(hxc_tmp_load_result_n254, hxc_tmp_record_field_load_result_n255, hxc_tmp_record_field_load_result_n256, hxc_tmp_load_result_n257, hxc_lookZ);
-              if (hxc_tmp_call_result_n259)
+              struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n256 = hxc_mossling;
+              double hxc_tmp_record_field_load_result_n257 = hxc_player.hxc_x;
+              double hxc_tmp_record_field_load_result_n258 = hxc_player.hxc_z;
+              double hxc_tmp_load_result_n259 = hxc_lookX;
+              bool hxc_tmp_call_result_n261 = hxc_caxecraft_gameplay_Mossling_canStrike(hxc_tmp_load_result_n256, hxc_tmp_record_field_load_result_n257, hxc_tmp_record_field_load_result_n258, hxc_tmp_load_result_n259, hxc_lookZ);
+              if (hxc_tmp_call_result_n261)
               {
-                struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n261 = hxc_caxecraft_gameplay_Mossling_strike(hxc_mossling);
-                hxc_mossling = hxc_tmp_call_result_n261;
+                struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_call_result_n263 = hxc_caxecraft_gameplay_Mossling_strike(hxc_mossling);
+                hxc_mossling = hxc_tmp_call_result_n263;
                 hxc_strikeHitFrames = 16;
                 if (hxc_mossling.hxc_health <= 0)
                 {
-                  struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n264 = hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(hxc_mossling);
-                  hxc_berryDrop = hxc_tmp_call_result_n264;
+                  struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_call_result_n266 = hxc_caxecraft_gameplay_BerryDrop_fromDefeatedMossling(hxc_mossling);
+                  hxc_berryDrop = hxc_tmp_call_result_n266;
                   hxc_enemyDefeatedFrames = 120;
                 }
               }
@@ -1241,20 +1305,20 @@ void hxc_caxecraft_app_Main_main(void)
           {
             if (hxc_hit.hxc_hit)
             {
-              int32_t hxc_tmp_record_field_load_result_n266 = hxc_hit.hxc_cellX;
-              int32_t hxc_tmp_record_field_load_result_n267 = hxc_hit.hxc_cellY;
-              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n269 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n266, hxc_tmp_record_field_load_result_n267, hxc_hit.hxc_cellZ);
-              enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n270 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n269);
-              enum hxc_caxecraft_domain_BlockKind hxc_removedKind = hxc_tmp_call_result_n270;
-              int32_t hxc_tmp_record_field_load_result_n271 = hxc_hit.hxc_cellX;
-              int32_t hxc_tmp_record_field_load_result_n272 = hxc_hit.hxc_cellY;
-              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n274 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n271, hxc_tmp_record_field_load_result_n272, hxc_hit.hxc_cellZ);
-              bool hxc_tmp_call_result_n275 = hxc_caxecraft_domain_World_remove(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n274);
-              if (hxc_tmp_call_result_n275)
+              int32_t hxc_tmp_record_field_load_result_n268 = hxc_hit.hxc_cellX;
+              int32_t hxc_tmp_record_field_load_result_n269 = hxc_hit.hxc_cellY;
+              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n271 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n268, hxc_tmp_record_field_load_result_n269, hxc_hit.hxc_cellZ);
+              enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n272 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n271);
+              enum hxc_caxecraft_domain_BlockKind hxc_removedKind = hxc_tmp_call_result_n272;
+              int32_t hxc_tmp_record_field_load_result_n273 = hxc_hit.hxc_cellX;
+              int32_t hxc_tmp_record_field_load_result_n274 = hxc_hit.hxc_cellY;
+              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n276 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n273, hxc_tmp_record_field_load_result_n274, hxc_hit.hxc_cellZ);
+              bool hxc_tmp_call_result_n277 = hxc_caxecraft_domain_World_remove(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n276);
+              if (hxc_tmp_call_result_n277)
               {
-                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n276 = hxc_inventory;
-                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n278 = hxc_caxecraft_gameplay_Inventory_collectBlock(hxc_tmp_load_result_n276, hxc_removedKind);
-                hxc_inventory = hxc_tmp_call_result_n278;
+                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n278 = hxc_inventory;
+                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n280 = hxc_caxecraft_gameplay_Inventory_collectBlock(hxc_tmp_load_result_n278, hxc_removedKind);
+                hxc_inventory = hxc_tmp_call_result_n280;
               }
             }
           }
@@ -1263,72 +1327,86 @@ void hxc_caxecraft_app_Main_main(void)
         {
           if (hxc_hit.hxc_hit)
           {
-            int32_t hxc_tmp_record_field_load_result_n280 = hxc_hit.hxc_cellX;
-            int32_t hxc_tmp_record_field_load_result_n281 = hxc_hit.hxc_cellY;
-            struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n283 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n280, hxc_tmp_record_field_load_result_n281, hxc_hit.hxc_cellZ);
-            hxc_caxecraft_domain_World_remove(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n283);
+            int32_t hxc_tmp_record_field_load_result_n282 = hxc_hit.hxc_cellX;
+            int32_t hxc_tmp_record_field_load_result_n283 = hxc_hit.hxc_cellY;
+            struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n285 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n282, hxc_tmp_record_field_load_result_n283, hxc_hit.hxc_cellZ);
+            hxc_caxecraft_domain_World_remove(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n285);
           }
         }
       }
     }
-    bool hxc_tmp_load_result_n284 = hxc_captured;
-    bool hxc_tmp_short_circuit_result_n117 = hxc_tmp_load_result_n284;
-    if (hxc_tmp_load_result_n284)
+    bool hxc_tmp_load_result_n286 = hxc_captured;
+    bool hxc_tmp_short_circuit_result_n121 = hxc_tmp_load_result_n286;
+    if (hxc_tmp_load_result_n286)
     {
-      hxc_tmp_short_circuit_result_n117 = hxc_hit.hxc_hit;
+      hxc_tmp_short_circuit_result_n121 = hxc_secondaryPressed_h400b391dc5af;
     }
-    bool hxc_tmp_short_circuit_load_result_n286 = hxc_tmp_short_circuit_result_n117;
-    bool hxc_tmp_short_circuit_result_n118 = hxc_tmp_short_circuit_load_result_n286;
-    if (hxc_tmp_short_circuit_load_result_n286)
+    if (hxc_tmp_short_circuit_result_n121)
     {
-      hxc_tmp_short_circuit_result_n118 = hxc_placePressed_h7fc691556e9b;
-    }
-    if (hxc_tmp_short_circuit_result_n118)
-    {
-      int32_t hxc_tmp_record_field_load_result_n289 = hxc_hit.hxc_previousX;
-      int32_t hxc_tmp_record_field_load_result_n290 = hxc_hit.hxc_previousY;
-      struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n292 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n289, hxc_tmp_record_field_load_result_n290, hxc_hit.hxc_previousZ);
-      struct hxc_caxecraft_domain_BlockCoord hxc_placement = hxc_tmp_call_result_n292;
-      enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n294 = hxc_caxecraft_gameplay_Inventory_selectedBlock(hxc_inventory);
-      enum hxc_caxecraft_domain_BlockKind hxc_selectedBlock = hxc_tmp_call_result_n294;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n295 = hxc_inventory;
-      int32_t hxc_tmp_call_result_n297 = hxc_caxecraft_gameplay_Inventory_countAt(hxc_tmp_load_result_n295, hxc_inventory.hxc_selected);
-      bool hxc_hasItem = hxc_tmp_call_result_n297 > 0;
       if (hxc_vitals.hxc_health > 0)
       {
-        bool hxc_tmp_load_result_n299 = hxc_hasItem;
-        bool hxc_tmp_short_circuit_result_n122 = !hxc_tmp_load_result_n299;
-        if (!!hxc_tmp_load_result_n299)
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n290 = hxc_inventory;
+        int32_t hxc_tmp_call_result_n292 = hxc_caxecraft_gameplay_Recovery_decide(hxc_tmp_load_result_n290, hxc_vitals);
+        int32_t hxc_recoveryDecision = hxc_tmp_call_result_n292;
+        if (hxc_recoveryDecision != 0)
         {
-          bool hxc_tmp_call_result_n301 = hxc_caxecraft_domain_World_isPlaceable(hxc_selectedBlock);
-          hxc_tmp_short_circuit_result_n122 = !hxc_tmp_call_result_n301;
-        }
-        bool hxc_tmp_short_circuit_load_result_n302 = hxc_tmp_short_circuit_result_n122;
-        bool hxc_tmp_short_circuit_result_n123 = hxc_tmp_short_circuit_load_result_n302;
-        if (!hxc_tmp_short_circuit_load_result_n302)
-        {
-          struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n303 = hxc_player;
-          bool hxc_tmp_call_result_n305 = hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(hxc_tmp_load_result_n303, hxc_placement);
-          hxc_tmp_short_circuit_result_n123 = !hxc_tmp_call_result_n305;
-        }
-        bool hxc_tmp_short_circuit_load_result_n306 = hxc_tmp_short_circuit_result_n123;
-        bool hxc_tmp_short_circuit_result_n124 = hxc_tmp_short_circuit_load_result_n306;
-        if (!hxc_tmp_short_circuit_load_result_n306)
-        {
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_load_result_n307 = hxc_placement;
-          bool hxc_tmp_call_result_n309 = hxc_caxecraft_domain_World_place(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n307, hxc_selectedBlock);
-          hxc_tmp_short_circuit_result_n124 = !hxc_tmp_call_result_n309;
-        }
-        if (hxc_tmp_short_circuit_result_n124)
-        {
-          hxc_placementBlockedFrames = 60;
+          hxc_recoveryFeedback = hxc_recoveryDecision;
+          hxc_recoveryFeedbackFrames = 90;
+          int32_t hxc_tmp_load_result_n295 = hxc_recoveryDecision;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n297 = hxc_caxecraft_gameplay_Recovery_applyInventory(hxc_tmp_load_result_n295, hxc_inventory);
+          hxc_inventory = hxc_tmp_call_result_n297;
+          int32_t hxc_tmp_load_result_n298 = hxc_recoveryDecision;
+          struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_call_result_n300 = hxc_caxecraft_gameplay_Recovery_applyVitals(hxc_tmp_load_result_n298, hxc_vitals);
+          hxc_vitals = hxc_tmp_call_result_n300;
         }
         else
         {
-          if (hxc_selectedMode == 1)
+          if (hxc_hit.hxc_hit)
           {
-            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n313 = hxc_caxecraft_gameplay_Inventory_consumeSelected(hxc_inventory);
-            hxc_inventory = hxc_tmp_call_result_n313;
+            int32_t hxc_tmp_record_field_load_result_n302 = hxc_hit.hxc_previousX;
+            int32_t hxc_tmp_record_field_load_result_n303 = hxc_hit.hxc_previousY;
+            struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n305 = hxc_caxecraft_domain_World_coord(hxc_tmp_record_field_load_result_n302, hxc_tmp_record_field_load_result_n303, hxc_hit.hxc_previousZ);
+            struct hxc_caxecraft_domain_BlockCoord hxc_placement = hxc_tmp_call_result_n305;
+            enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n307 = hxc_caxecraft_gameplay_Inventory_selectedBlock(hxc_inventory);
+            enum hxc_caxecraft_domain_BlockKind hxc_selectedBlock = hxc_tmp_call_result_n307;
+            struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n308 = hxc_inventory;
+            int32_t hxc_tmp_call_result_n310 = hxc_caxecraft_gameplay_Inventory_countAt(hxc_tmp_load_result_n308, hxc_inventory.hxc_selected);
+            bool hxc_hasItem = hxc_tmp_call_result_n310 > 0;
+            bool hxc_tmp_load_result_n311 = hxc_hasItem;
+            bool hxc_tmp_short_circuit_result_n126 = !hxc_tmp_load_result_n311;
+            if (!!hxc_tmp_load_result_n311)
+            {
+              bool hxc_tmp_call_result_n313 = hxc_caxecraft_domain_World_isPlaceable(hxc_selectedBlock);
+              hxc_tmp_short_circuit_result_n126 = !hxc_tmp_call_result_n313;
+            }
+            bool hxc_tmp_short_circuit_load_result_n314 = hxc_tmp_short_circuit_result_n126;
+            bool hxc_tmp_short_circuit_result_n127 = hxc_tmp_short_circuit_load_result_n314;
+            if (!hxc_tmp_short_circuit_load_result_n314)
+            {
+              struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n315 = hxc_player;
+              bool hxc_tmp_call_result_n317 = hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(hxc_tmp_load_result_n315, hxc_placement);
+              hxc_tmp_short_circuit_result_n127 = !hxc_tmp_call_result_n317;
+            }
+            bool hxc_tmp_short_circuit_load_result_n318 = hxc_tmp_short_circuit_result_n127;
+            bool hxc_tmp_short_circuit_result_n128 = hxc_tmp_short_circuit_load_result_n318;
+            if (!hxc_tmp_short_circuit_load_result_n318)
+            {
+              struct hxc_caxecraft_domain_BlockCoord hxc_tmp_load_result_n319 = hxc_placement;
+              bool hxc_tmp_call_result_n321 = hxc_caxecraft_domain_World_place(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n319, hxc_selectedBlock);
+              hxc_tmp_short_circuit_result_n128 = !hxc_tmp_call_result_n321;
+            }
+            if (hxc_tmp_short_circuit_result_n128)
+            {
+              hxc_placementBlockedFrames = 60;
+            }
+            else
+            {
+              if (hxc_selectedMode == 1)
+              {
+                struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n325 = hxc_caxecraft_gameplay_Inventory_consumeSelected(hxc_inventory);
+                hxc_inventory = hxc_tmp_call_result_n325;
+              }
+            }
           }
         }
       }
@@ -1339,18 +1417,18 @@ void hxc_caxecraft_app_Main_main(void)
     }
     if (!hxc_paused)
     {
-      struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n317 = hxc_berryDrop;
-      double hxc_tmp_record_field_load_result_n318 = hxc_player.hxc_x;
-      double hxc_tmp_record_field_load_result_n319 = hxc_player.hxc_y;
-      bool hxc_tmp_call_result_n321 = hxc_caxecraft_gameplay_BerryDrop_isInRange(hxc_tmp_load_result_n317, hxc_tmp_record_field_load_result_n318, hxc_tmp_record_field_load_result_n319, hxc_player.hxc_z);
-      if (hxc_tmp_call_result_n321)
+      struct hxc_caxecraft_gameplay_BerryDropState hxc_tmp_load_result_n329 = hxc_berryDrop;
+      double hxc_tmp_record_field_load_result_n330 = hxc_player.hxc_x;
+      double hxc_tmp_record_field_load_result_n331 = hxc_player.hxc_y;
+      bool hxc_tmp_call_result_n333 = hxc_caxecraft_gameplay_BerryDrop_isInRange(hxc_tmp_load_result_n329, hxc_tmp_record_field_load_result_n330, hxc_tmp_record_field_load_result_n331, hxc_player.hxc_z);
+      if (hxc_tmp_call_result_n333)
       {
-        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n322 = hxc_inventory;
-        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n325 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n322, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_berryDrop.hxc_amount);
-        hxc_inventory = hxc_tmp_call_result_n325;
-        double hxc_tmp_record_field_load_result_n326 = hxc_berryDrop.hxc_x;
-        double hxc_tmp_record_field_load_result_n327 = hxc_berryDrop.hxc_y;
-        hxc_berryDrop = (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = hxc_tmp_record_field_load_result_n326, .hxc_y = hxc_tmp_record_field_load_result_n327, .hxc_z = hxc_berryDrop.hxc_z };
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n334 = hxc_inventory;
+        struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n337 = hxc_caxecraft_gameplay_Inventory_collectItem(hxc_tmp_load_result_n334, hxc_caxecraft_gameplay_ItemKind_Berries, hxc_berryDrop.hxc_amount);
+        hxc_inventory = hxc_tmp_call_result_n337;
+        double hxc_tmp_record_field_load_result_n338 = hxc_berryDrop.hxc_x;
+        double hxc_tmp_record_field_load_result_n339 = hxc_berryDrop.hxc_y;
+        hxc_berryDrop = (struct hxc_caxecraft_gameplay_BerryDropState){ .hxc_active = false, .hxc_amount = 0, .hxc_x = hxc_tmp_record_field_load_result_n338, .hxc_y = hxc_tmp_record_field_load_result_n339, .hxc_z = hxc_berryDrop.hxc_z };
         hxc_pickupFrames = 90;
       }
     }
@@ -1366,242 +1444,246 @@ void hxc_caxecraft_app_Main_main(void)
     {
       hxc_pickupFrames = hxc_i32_subtract_wrapping(hxc_pickupFrames, 1);
     }
-    double hxc_tmp_load_result_n336 = hxc_eyeX;
-    double hxc_tmp_load_result_n337 = hxc_eyeY;
-    double hxc_tmp_load_result_n338 = hxc_eyeZ;
-    double hxc_tmp_load_result_n340 = hxc_eyeX;
-    double hxc_tmp_load_result_n341 = hxc_lookX;
-    double hxc_tmp_load_result_n342 = hxc_eyeY;
-    double hxc_tmp_load_result_n343 = hxc_lookY;
-    double hxc_tmp_load_result_n344 = hxc_eyeZ;
-    struct Camera3D hxc_camera = (struct Camera3D){ .position = (struct Vector3){ .x = (float)hxc_tmp_load_result_n336, .y = (float)hxc_tmp_load_result_n337, .z = (float)hxc_tmp_load_result_n338 }, .target = (struct Vector3){ .x = (float)(hxc_tmp_load_result_n340 + hxc_tmp_load_result_n341), .y = (float)(hxc_tmp_load_result_n342 + hxc_tmp_load_result_n343), .z = (float)(hxc_tmp_load_result_n344 + hxc_lookZ) }, .up = (struct Vector3){ .x = (float)0.0, .y = (float)1.0, .z = (float)0.0 }, .fovy = (float)70.0, .projection = 0 };
+    if (hxc_recoveryFeedbackFrames > 0)
+    {
+      hxc_recoveryFeedbackFrames = hxc_i32_subtract_wrapping(hxc_recoveryFeedbackFrames, 1);
+    }
+    double hxc_tmp_load_result_n350 = hxc_eyeX;
+    double hxc_tmp_load_result_n351 = hxc_eyeY;
+    double hxc_tmp_load_result_n352 = hxc_eyeZ;
+    double hxc_tmp_load_result_n354 = hxc_eyeX;
+    double hxc_tmp_load_result_n355 = hxc_lookX;
+    double hxc_tmp_load_result_n356 = hxc_eyeY;
+    double hxc_tmp_load_result_n357 = hxc_lookY;
+    double hxc_tmp_load_result_n358 = hxc_eyeZ;
+    struct Camera3D hxc_camera = (struct Camera3D){ .position = (struct Vector3){ .x = (float)hxc_tmp_load_result_n350, .y = (float)hxc_tmp_load_result_n351, .z = (float)hxc_tmp_load_result_n352 }, .target = (struct Vector3){ .x = (float)(hxc_tmp_load_result_n354 + hxc_tmp_load_result_n355), .y = (float)(hxc_tmp_load_result_n356 + hxc_tmp_load_result_n357), .z = (float)(hxc_tmp_load_result_n358 + hxc_lookZ) }, .up = (struct Vector3){ .x = (float)0.0, .y = (float)1.0, .z = (float)0.0 }, .fovy = (float)70.0, .projection = 0 };
     BeginDrawing();
     if (hxc_onTitle)
     {
-      int32_t hxc_tmp_native_call_result_n350 = GetScreenWidth();
-      int32_t hxc_width_h4c39cc537e03 = (int32_t)hxc_tmp_native_call_result_n350;
-      int32_t hxc_tmp_native_call_result_n351 = GetScreenHeight();
-      int32_t hxc_height_h5d3d97c53946 = (int32_t)hxc_tmp_native_call_result_n351;
+      int32_t hxc_tmp_native_call_result_n364 = GetScreenWidth();
+      int32_t hxc_width_h1d135a3d7233 = (int32_t)hxc_tmp_native_call_result_n364;
+      int32_t hxc_tmp_native_call_result_n365 = GetScreenHeight();
+      int32_t hxc_height_h3e43d3a00fe8 = (int32_t)hxc_tmp_native_call_result_n365;
       if (hxc_titleTextureReady)
       {
-        struct Color hxc_this1_hff38116cc26f = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
-        struct Texture hxc_tmp_load_result_n354 = hxc_titleTexture;
-        double hxc_imageAspect = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n354.width, (double)(int32_t)hxc_titleTexture.height);
-        int32_t hxc_tmp_load_result_n358 = hxc_width_h4c39cc537e03;
-        double hxc_screenAspect = hxc_f64_divide_zero_safe((double)hxc_tmp_load_result_n358, (double)hxc_height_h5d3d97c53946);
+        struct Color hxc_this1_hcdc4da10d3a1 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+        struct Texture hxc_tmp_load_result_n368 = hxc_titleTexture;
+        double hxc_imageAspect = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n368.width, (double)(int32_t)hxc_titleTexture.height);
+        int32_t hxc_tmp_load_result_n372 = hxc_width_h1d135a3d7233;
+        double hxc_screenAspect = hxc_f64_divide_zero_safe((double)hxc_tmp_load_result_n372, (double)hxc_height_h3e43d3a00fe8);
         double hxc_sourceX = 0.0;
         double hxc_sourceY = 0.0;
         double hxc_sourceWidth = (double)(int32_t)hxc_titleTexture.width;
         double hxc_sourceHeight = (double)(int32_t)hxc_titleTexture.height;
-        double hxc_tmp_load_result_n364 = hxc_screenAspect;
-        if (hxc_tmp_load_result_n364 > hxc_imageAspect)
+        double hxc_tmp_load_result_n378 = hxc_screenAspect;
+        if (hxc_tmp_load_result_n378 > hxc_imageAspect)
         {
-          struct Texture hxc_tmp_load_result_n366 = hxc_titleTexture;
-          hxc_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n366.width, hxc_screenAspect);
-          struct Texture hxc_tmp_load_result_n369 = hxc_titleTexture;
-          hxc_sourceY = ((double)(int32_t)hxc_tmp_load_result_n369.height - hxc_sourceHeight) * 0.5;
+          struct Texture hxc_tmp_load_result_n380 = hxc_titleTexture;
+          hxc_sourceHeight = hxc_f64_divide_zero_safe((double)(int32_t)hxc_tmp_load_result_n380.width, hxc_screenAspect);
+          struct Texture hxc_tmp_load_result_n383 = hxc_titleTexture;
+          hxc_sourceY = ((double)(int32_t)hxc_tmp_load_result_n383.height - hxc_sourceHeight) * 0.5;
         }
         else
         {
-          struct Texture hxc_tmp_load_result_n372 = hxc_titleTexture;
-          hxc_sourceWidth = (double)(int32_t)hxc_tmp_load_result_n372.height * hxc_screenAspect;
-          struct Texture hxc_tmp_load_result_n375 = hxc_titleTexture;
-          hxc_sourceX = ((double)(int32_t)hxc_tmp_load_result_n375.width - hxc_sourceWidth) * 0.5;
+          struct Texture hxc_tmp_load_result_n386 = hxc_titleTexture;
+          hxc_sourceWidth = (double)(int32_t)hxc_tmp_load_result_n386.height * hxc_screenAspect;
+          struct Texture hxc_tmp_load_result_n389 = hxc_titleTexture;
+          hxc_sourceX = ((double)(int32_t)hxc_tmp_load_result_n389.width - hxc_sourceWidth) * 0.5;
         }
-        struct Texture hxc_tmp_load_result_n378 = hxc_titleTexture;
-        double hxc_tmp_load_result_n379 = hxc_sourceX;
-        double hxc_tmp_load_result_n380 = hxc_sourceY;
-        double hxc_tmp_load_result_n381 = hxc_sourceWidth;
-        double hxc_tmp_load_result_n382 = hxc_sourceHeight;
-        int32_t hxc_tmp_load_result_n384 = hxc_width_h4c39cc537e03;
-        int32_t hxc_tmp_load_result_n385 = hxc_height_h5d3d97c53946;
-        DrawTexturePro(hxc_tmp_load_result_n378, (struct Rectangle){ .x = (float)hxc_tmp_load_result_n379, .y = (float)hxc_tmp_load_result_n380, .width = (float)hxc_tmp_load_result_n381, .height = (float)hxc_tmp_load_result_n382 }, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)((double)hxc_tmp_load_result_n384 + 0.0), .height = (float)((double)hxc_tmp_load_result_n385 + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_hff38116cc26f);
+        struct Texture hxc_tmp_load_result_n392 = hxc_titleTexture;
+        double hxc_tmp_load_result_n393 = hxc_sourceX;
+        double hxc_tmp_load_result_n394 = hxc_sourceY;
+        double hxc_tmp_load_result_n395 = hxc_sourceWidth;
+        double hxc_tmp_load_result_n396 = hxc_sourceHeight;
+        int32_t hxc_tmp_load_result_n398 = hxc_width_h1d135a3d7233;
+        int32_t hxc_tmp_load_result_n399 = hxc_height_h3e43d3a00fe8;
+        DrawTexturePro(hxc_tmp_load_result_n392, (struct Rectangle){ .x = (float)hxc_tmp_load_result_n393, .y = (float)hxc_tmp_load_result_n394, .width = (float)hxc_tmp_load_result_n395, .height = (float)hxc_tmp_load_result_n396 }, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)((double)hxc_tmp_load_result_n398 + 0.0), .height = (float)((double)hxc_tmp_load_result_n399 + 0.0) }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_hcdc4da10d3a1);
       }
       else
       {
         ClearBackground((struct Color){ .r = 126, .g = 190, .b = 201, .a = 255 });
       }
-      struct Color hxc_this1_h15df3d82c263 = (struct Color){ .r = 4, .g = 14, .b = 23, .a = 132 };
-      int32_t hxc_tmp_load_result_n391 = hxc_width_h4c39cc537e03;
-      int32_t hxc_tmp_load_result_n392 = hxc_height_h5d3d97c53946;
-      DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n391, (int32_t)hxc_tmp_load_result_n392, hxc_this1_h15df3d82c263);
+      struct Color hxc_this1_h54b78bbe5a3d = (struct Color){ .r = 4, .g = 14, .b = 23, .a = 132 };
+      int32_t hxc_tmp_load_result_n405 = hxc_width_h1d135a3d7233;
+      int32_t hxc_tmp_load_result_n406 = hxc_height_h3e43d3a00fe8;
+      DrawRectangle((int32_t)0, (int32_t)0, (int32_t)hxc_tmp_load_result_n405, (int32_t)hxc_tmp_load_result_n406, hxc_this1_h54b78bbe5a3d);
       if (hxc_wordmarkTextureReady)
       {
-        int32_t hxc_centerX = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2));
-        struct Color hxc_this1_h58a1e48a2f21 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
+        int32_t hxc_centerX = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2));
+        struct Color hxc_this1_he1b0a11dbe20 = (struct Color){ .r = 255, .g = 255, .b = 255, .a = 255 };
         double hxc_scale = hxc_f64_divide_zero_safe((double)560, (double)(int32_t)hxc_wordmarkTexture.width);
         double hxc_heightScale = hxc_f64_divide_zero_safe((double)132, (double)(int32_t)hxc_wordmarkTexture.height);
-        double hxc_tmp_load_result_n401 = hxc_heightScale;
-        if (hxc_tmp_load_result_n401 < hxc_scale)
+        double hxc_tmp_load_result_n415 = hxc_heightScale;
+        if (hxc_tmp_load_result_n415 < hxc_scale)
         {
           hxc_scale = hxc_heightScale;
         }
-        struct Texture hxc_tmp_load_result_n404 = hxc_wordmarkTexture;
-        double hxc_width_h92fe29ffcd02 = (double)(int32_t)hxc_tmp_load_result_n404.width * hxc_scale;
-        struct Texture hxc_tmp_load_result_n407 = hxc_wordmarkTexture;
-        double hxc_height_h8f916b833931 = (double)(int32_t)hxc_tmp_load_result_n407.height * hxc_scale;
+        struct Texture hxc_tmp_load_result_n418 = hxc_wordmarkTexture;
+        double hxc_width_hcf44dec82322 = (double)(int32_t)hxc_tmp_load_result_n418.width * hxc_scale;
+        struct Texture hxc_tmp_load_result_n421 = hxc_wordmarkTexture;
+        double hxc_height_hc9f56c1b504a = (double)(int32_t)hxc_tmp_load_result_n421.height * hxc_scale;
         double hxc_width1 = (double)(int32_t)hxc_wordmarkTexture.width + 0.0;
         double hxc_height1 = (double)(int32_t)hxc_wordmarkTexture.height + 0.0;
-        struct Texture hxc_tmp_load_result_n414 = hxc_wordmarkTexture;
-        double hxc_tmp_load_result_n415 = hxc_width1;
-        double hxc_tmp_load_result_n416 = hxc_height1;
-        int32_t hxc_tmp_load_result_n418 = hxc_centerX;
-        double hxc_tmp_load_result_n419 = hxc_width_h92fe29ffcd02;
-        double hxc_tmp_load_result_n420 = hxc_width_h92fe29ffcd02;
-        double hxc_tmp_load_result_n421 = hxc_height_h8f916b833931;
-        DrawTexturePro(hxc_tmp_load_result_n414, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)hxc_tmp_load_result_n415, .height = (float)hxc_tmp_load_result_n416 }, (struct Rectangle){ .x = (float)((double)hxc_tmp_load_result_n418 - hxc_tmp_load_result_n419 * 0.5), .y = (float)28.0, .width = (float)hxc_tmp_load_result_n420, .height = (float)hxc_tmp_load_result_n421 }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_h58a1e48a2f21);
+        struct Texture hxc_tmp_load_result_n428 = hxc_wordmarkTexture;
+        double hxc_tmp_load_result_n429 = hxc_width1;
+        double hxc_tmp_load_result_n430 = hxc_height1;
+        int32_t hxc_tmp_load_result_n432 = hxc_centerX;
+        double hxc_tmp_load_result_n433 = hxc_width_hcf44dec82322;
+        double hxc_tmp_load_result_n434 = hxc_width_hcf44dec82322;
+        double hxc_tmp_load_result_n435 = hxc_height_hc9f56c1b504a;
+        DrawTexturePro(hxc_tmp_load_result_n428, (struct Rectangle){ .x = (float)0.0, .y = (float)0.0, .width = (float)hxc_tmp_load_result_n429, .height = (float)hxc_tmp_load_result_n430 }, (struct Rectangle){ .x = (float)((double)hxc_tmp_load_result_n432 - hxc_tmp_load_result_n433 * 0.5), .y = (float)28.0, .width = (float)hxc_tmp_load_result_n434, .height = (float)hxc_tmp_load_result_n435 }, (struct Vector2){ .x = (float)0.0, .y = (float)0.0 }, (float)0.0, hxc_this1_he1b0a11dbe20);
       }
       else
       {
-        int32_t hxc_x_hde7b0a698174 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 92);
-        struct Color hxc_this1_h15ba6270c219 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        int32_t hxc_tmp_load_result_n427 = hxc_x_hde7b0a698174;
-        DrawText("CAXECRAFT", (int32_t)hxc_tmp_load_result_n427, (int32_t)52, (int32_t)34, hxc_this1_h15ba6270c219);
+        int32_t hxc_x_h28b75e73ec4f = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 92);
+        struct Color hxc_this1_h76ebd527ca60 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        int32_t hxc_tmp_load_result_n441 = hxc_x_h28b75e73ec4f;
+        DrawText("CAXECRAFT", (int32_t)hxc_tmp_load_result_n441, (int32_t)52, (int32_t)34, hxc_this1_h76ebd527ca60);
       }
-      int32_t hxc_firstTop = hxc_i32_subtract_wrapping(hxc_height_h5d3d97c53946, 225);
+      int32_t hxc_firstTop = hxc_i32_subtract_wrapping(hxc_height_h3e43d3a00fe8, 225);
       if (hxc_language == 1)
       {
-        int32_t hxc_left_h4c339000052f = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 180);
+        int32_t hxc_left_h079519d17091 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 180);
         if (hxc_selectedMode == 0)
         {
-          struct Color hxc_this1_h1150cd733bd0 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-          int32_t hxc_tmp_load_result_n434 = hxc_left_h4c339000052f;
-          int32_t hxc_tmp_load_result_n435 = hxc_firstTop;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n434, (int32_t)hxc_tmp_load_result_n435, (int32_t)360, (int32_t)54, hxc_this1_h1150cd733bd0);
-          struct Color hxc_this1_h76ebd527ca60 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-          int32_t hxc_tmp_load_result_n438 = hxc_left_h4c339000052f;
-          int32_t hxc_tmp_load_result_n439 = hxc_firstTop;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n438, (int32_t)hxc_tmp_load_result_n439, (int32_t)360, (int32_t)54, hxc_this1_h76ebd527ca60);
+          struct Color hxc_this1_h84b4d4ef8ed6 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+          int32_t hxc_tmp_load_result_n448 = hxc_left_h079519d17091;
+          int32_t hxc_tmp_load_result_n449 = hxc_firstTop;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n448, (int32_t)hxc_tmp_load_result_n449, (int32_t)360, (int32_t)54, hxc_this1_h84b4d4ef8ed6);
+          struct Color hxc_this1_h002fc1f66805 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+          int32_t hxc_tmp_load_result_n452 = hxc_left_h079519d17091;
+          int32_t hxc_tmp_load_result_n453 = hxc_firstTop;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n452, (int32_t)hxc_tmp_load_result_n453, (int32_t)360, (int32_t)54, hxc_this1_h002fc1f66805);
         }
         else
         {
-          struct Color hxc_this1_he5197d02d4da = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-          int32_t hxc_tmp_load_result_n442 = hxc_left_h4c339000052f;
-          int32_t hxc_tmp_load_result_n443 = hxc_firstTop;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n442, (int32_t)hxc_tmp_load_result_n443, (int32_t)360, (int32_t)54, hxc_this1_he5197d02d4da);
-          struct Color hxc_this1_haed7460f78d4 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-          int32_t hxc_tmp_load_result_n446 = hxc_left_h4c339000052f;
-          int32_t hxc_tmp_load_result_n447 = hxc_firstTop;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n446, (int32_t)hxc_tmp_load_result_n447, (int32_t)360, (int32_t)54, hxc_this1_haed7460f78d4);
+          struct Color hxc_this1_h9f9078c8c23e = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+          int32_t hxc_tmp_load_result_n456 = hxc_left_h079519d17091;
+          int32_t hxc_tmp_load_result_n457 = hxc_firstTop;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n456, (int32_t)hxc_tmp_load_result_n457, (int32_t)360, (int32_t)54, hxc_this1_h9f9078c8c23e);
+          struct Color hxc_this1_hbe58d2c8ebc0 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+          int32_t hxc_tmp_load_result_n460 = hxc_left_h079519d17091;
+          int32_t hxc_tmp_load_result_n461 = hxc_firstTop;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n460, (int32_t)hxc_tmp_load_result_n461, (int32_t)360, (int32_t)54, hxc_this1_hbe58d2c8ebc0);
         }
-        struct Color hxc_this1_h84b4d4ef8ed6 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        int32_t hxc_tmp_load_result_n450 = hxc_left_h4c339000052f;
-        int32_t hxc_tmp_load_result_n451 = hxc_firstTop;
-        DrawText("MODO CREATIVO", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n450, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n451, 16), (int32_t)21, hxc_this1_h84b4d4ef8ed6);
-        int32_t hxc_top_hf39829239f55 = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
-        int32_t hxc_left_h37a232294f36 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 180);
+        struct Color hxc_this1_hd91a64420a0e = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        int32_t hxc_tmp_load_result_n464 = hxc_left_h079519d17091;
+        int32_t hxc_tmp_load_result_n465 = hxc_firstTop;
+        DrawText("MODO CREATIVO", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n464, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n465, 16), (int32_t)21, hxc_this1_hd91a64420a0e);
+        int32_t hxc_top_ha7de3c5f1ceb = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
+        int32_t hxc_left_h8b8ad2b1a707 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 180);
         if (hxc_selectedMode == 1)
         {
-          struct Color hxc_this1_hbe58d2c8ebc0 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-          int32_t hxc_tmp_load_result_n457 = hxc_left_h37a232294f36;
-          int32_t hxc_tmp_load_result_n458 = hxc_top_hf39829239f55;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n457, (int32_t)hxc_tmp_load_result_n458, (int32_t)360, (int32_t)54, hxc_this1_hbe58d2c8ebc0);
-          struct Color hxc_this1_hd91a64420a0e = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-          int32_t hxc_tmp_load_result_n461 = hxc_left_h37a232294f36;
-          int32_t hxc_tmp_load_result_n462 = hxc_top_hf39829239f55;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n461, (int32_t)hxc_tmp_load_result_n462, (int32_t)360, (int32_t)54, hxc_this1_hd91a64420a0e);
+          struct Color hxc_this1_h07780785cb2c = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+          int32_t hxc_tmp_load_result_n471 = hxc_left_h8b8ad2b1a707;
+          int32_t hxc_tmp_load_result_n472 = hxc_top_ha7de3c5f1ceb;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n471, (int32_t)hxc_tmp_load_result_n472, (int32_t)360, (int32_t)54, hxc_this1_h07780785cb2c);
+          struct Color hxc_this1_h17bbeb228c01 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+          int32_t hxc_tmp_load_result_n475 = hxc_left_h8b8ad2b1a707;
+          int32_t hxc_tmp_load_result_n476 = hxc_top_ha7de3c5f1ceb;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n475, (int32_t)hxc_tmp_load_result_n476, (int32_t)360, (int32_t)54, hxc_this1_h17bbeb228c01);
         }
         else
         {
-          struct Color hxc_this1_h6986c66fd29d = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-          int32_t hxc_tmp_load_result_n465 = hxc_left_h37a232294f36;
-          int32_t hxc_tmp_load_result_n466 = hxc_top_hf39829239f55;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n465, (int32_t)hxc_tmp_load_result_n466, (int32_t)360, (int32_t)54, hxc_this1_h6986c66fd29d);
-          struct Color hxc_this1_h742952063b58 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-          int32_t hxc_tmp_load_result_n469 = hxc_left_h37a232294f36;
-          int32_t hxc_tmp_load_result_n470 = hxc_top_hf39829239f55;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n469, (int32_t)hxc_tmp_load_result_n470, (int32_t)360, (int32_t)54, hxc_this1_h742952063b58);
+          struct Color hxc_this1_h6e409dfdcc67 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+          int32_t hxc_tmp_load_result_n479 = hxc_left_h8b8ad2b1a707;
+          int32_t hxc_tmp_load_result_n480 = hxc_top_ha7de3c5f1ceb;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n479, (int32_t)hxc_tmp_load_result_n480, (int32_t)360, (int32_t)54, hxc_this1_h6e409dfdcc67);
+          struct Color hxc_this1_h497240767d75 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+          int32_t hxc_tmp_load_result_n483 = hxc_left_h8b8ad2b1a707;
+          int32_t hxc_tmp_load_result_n484 = hxc_top_ha7de3c5f1ceb;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n483, (int32_t)hxc_tmp_load_result_n484, (int32_t)360, (int32_t)54, hxc_this1_h497240767d75);
         }
-        struct Color hxc_this1_h07780785cb2c = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        int32_t hxc_tmp_load_result_n473 = hxc_left_h37a232294f36;
-        int32_t hxc_tmp_load_result_n474 = hxc_top_hf39829239f55;
-        DrawText("AVENTURA", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n473, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n474, 16), (int32_t)21, hxc_this1_h07780785cb2c);
-        int32_t hxc_x_hbcd9bcbb8cd5 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 270);
-        struct Color hxc_this1_h6e409dfdcc67 = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
-        int32_t hxc_tmp_load_result_n478 = hxc_x_hbcd9bcbb8cd5;
-        int32_t hxc_tmp_load_result_n479 = hxc_height_h5d3d97c53946;
-        DrawText("FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH", (int32_t)hxc_tmp_load_result_n478, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n479, 58), (int32_t)16, hxc_this1_h6e409dfdcc67);
+        struct Color hxc_this1_hf8da672797dd = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        int32_t hxc_tmp_load_result_n487 = hxc_left_h8b8ad2b1a707;
+        int32_t hxc_tmp_load_result_n488 = hxc_top_ha7de3c5f1ceb;
+        DrawText("AVENTURA", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n487, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n488, 16), (int32_t)21, hxc_this1_hf8da672797dd);
+        int32_t hxc_x_h499f44f6f2a4 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 270);
+        struct Color hxc_this1_he648b63556d3 = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
+        int32_t hxc_tmp_load_result_n492 = hxc_x_h499f44f6f2a4;
+        int32_t hxc_tmp_load_result_n493 = hxc_height_h3e43d3a00fe8;
+        DrawText("FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH", (int32_t)hxc_tmp_load_result_n492, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n493, 58), (int32_t)16, hxc_this1_he648b63556d3);
       }
       else
       {
-        int32_t hxc_left_h59e66e62cca2 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 180);
+        int32_t hxc_left_h92384728143e = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 180);
         if (hxc_selectedMode == 0)
         {
-          struct Color hxc_this1_hf8da672797dd = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-          int32_t hxc_tmp_load_result_n484 = hxc_left_h59e66e62cca2;
-          int32_t hxc_tmp_load_result_n485 = hxc_firstTop;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n484, (int32_t)hxc_tmp_load_result_n485, (int32_t)360, (int32_t)54, hxc_this1_hf8da672797dd);
-          struct Color hxc_this1_h79577861e1b3 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-          int32_t hxc_tmp_load_result_n488 = hxc_left_h59e66e62cca2;
-          int32_t hxc_tmp_load_result_n489 = hxc_firstTop;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n488, (int32_t)hxc_tmp_load_result_n489, (int32_t)360, (int32_t)54, hxc_this1_h79577861e1b3);
+          struct Color hxc_this1_h3c3e9e95b1c8 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+          int32_t hxc_tmp_load_result_n498 = hxc_left_h92384728143e;
+          int32_t hxc_tmp_load_result_n499 = hxc_firstTop;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n498, (int32_t)hxc_tmp_load_result_n499, (int32_t)360, (int32_t)54, hxc_this1_h3c3e9e95b1c8);
+          struct Color hxc_this1_hf72bbf808c96 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+          int32_t hxc_tmp_load_result_n502 = hxc_left_h92384728143e;
+          int32_t hxc_tmp_load_result_n503 = hxc_firstTop;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n502, (int32_t)hxc_tmp_load_result_n503, (int32_t)360, (int32_t)54, hxc_this1_hf72bbf808c96);
         }
         else
         {
-          struct Color hxc_this1_he648b63556d3 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-          int32_t hxc_tmp_load_result_n492 = hxc_left_h59e66e62cca2;
-          int32_t hxc_tmp_load_result_n493 = hxc_firstTop;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n492, (int32_t)hxc_tmp_load_result_n493, (int32_t)360, (int32_t)54, hxc_this1_he648b63556d3);
-          struct Color hxc_this1_hc6235c1aaa0e = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-          int32_t hxc_tmp_load_result_n496 = hxc_left_h59e66e62cca2;
-          int32_t hxc_tmp_load_result_n497 = hxc_firstTop;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n496, (int32_t)hxc_tmp_load_result_n497, (int32_t)360, (int32_t)54, hxc_this1_hc6235c1aaa0e);
+          struct Color hxc_this1_h45e7cd6f2d61 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+          int32_t hxc_tmp_load_result_n506 = hxc_left_h92384728143e;
+          int32_t hxc_tmp_load_result_n507 = hxc_firstTop;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n506, (int32_t)hxc_tmp_load_result_n507, (int32_t)360, (int32_t)54, hxc_this1_h45e7cd6f2d61);
+          struct Color hxc_this1_h5ab6e6cdd588 = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+          int32_t hxc_tmp_load_result_n510 = hxc_left_h92384728143e;
+          int32_t hxc_tmp_load_result_n511 = hxc_firstTop;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n510, (int32_t)hxc_tmp_load_result_n511, (int32_t)360, (int32_t)54, hxc_this1_h5ab6e6cdd588);
         }
-        struct Color hxc_this1_h3c3e9e95b1c8 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        int32_t hxc_tmp_load_result_n500 = hxc_left_h59e66e62cca2;
-        int32_t hxc_tmp_load_result_n501 = hxc_firstTop;
-        DrawText("CREATIVE MODE", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n500, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n501, 16), (int32_t)21, hxc_this1_h3c3e9e95b1c8);
-        int32_t hxc_top_h362eb72bb915 = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
-        int32_t hxc_left_h01c37ab32b98 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 180);
+        struct Color hxc_this1_h922c566f2fec = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        int32_t hxc_tmp_load_result_n514 = hxc_left_h92384728143e;
+        int32_t hxc_tmp_load_result_n515 = hxc_firstTop;
+        DrawText("CREATIVE MODE", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n514, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n515, 16), (int32_t)21, hxc_this1_h922c566f2fec);
+        int32_t hxc_top_h6b7a7ae36359 = hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_firstTop, 54), 14);
+        int32_t hxc_left_h09350339afd4 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 180);
         if (hxc_selectedMode == 1)
         {
-          struct Color hxc_this1_h5ab6e6cdd588 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
-          int32_t hxc_tmp_load_result_n507 = hxc_left_h01c37ab32b98;
-          int32_t hxc_tmp_load_result_n508 = hxc_top_h362eb72bb915;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n507, (int32_t)hxc_tmp_load_result_n508, (int32_t)360, (int32_t)54, hxc_this1_h5ab6e6cdd588);
-          struct Color hxc_this1_h922c566f2fec = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
-          int32_t hxc_tmp_load_result_n511 = hxc_left_h01c37ab32b98;
-          int32_t hxc_tmp_load_result_n512 = hxc_top_h362eb72bb915;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n511, (int32_t)hxc_tmp_load_result_n512, (int32_t)360, (int32_t)54, hxc_this1_h922c566f2fec);
+          struct Color hxc_this1_hc18468f5e813 = (struct Color){ .r = 16, .g = 88, .b = 102, .a = 232 };
+          int32_t hxc_tmp_load_result_n521 = hxc_left_h09350339afd4;
+          int32_t hxc_tmp_load_result_n522 = hxc_top_h6b7a7ae36359;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n521, (int32_t)hxc_tmp_load_result_n522, (int32_t)360, (int32_t)54, hxc_this1_hc18468f5e813);
+          struct Color hxc_this1_hfe494e7f13a4 = (struct Color){ .r = 255, .g = 190, .b = 55, .a = 255 };
+          int32_t hxc_tmp_load_result_n525 = hxc_left_h09350339afd4;
+          int32_t hxc_tmp_load_result_n526 = hxc_top_h6b7a7ae36359;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n525, (int32_t)hxc_tmp_load_result_n526, (int32_t)360, (int32_t)54, hxc_this1_hfe494e7f13a4);
         }
         else
         {
-          struct Color hxc_this1_h40172815f085 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
-          int32_t hxc_tmp_load_result_n515 = hxc_left_h01c37ab32b98;
-          int32_t hxc_tmp_load_result_n516 = hxc_top_h362eb72bb915;
-          DrawRectangle((int32_t)hxc_tmp_load_result_n515, (int32_t)hxc_tmp_load_result_n516, (int32_t)360, (int32_t)54, hxc_this1_h40172815f085);
-          struct Color hxc_this1_h82029f00bf2f = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
-          int32_t hxc_tmp_load_result_n519 = hxc_left_h01c37ab32b98;
-          int32_t hxc_tmp_load_result_n520 = hxc_top_h362eb72bb915;
-          DrawRectangleLines((int32_t)hxc_tmp_load_result_n519, (int32_t)hxc_tmp_load_result_n520, (int32_t)360, (int32_t)54, hxc_this1_h82029f00bf2f);
+          struct Color hxc_this1_h00d59f9d7c58 = (struct Color){ .r = 6, .g = 26, .b = 36, .a = 218 };
+          int32_t hxc_tmp_load_result_n529 = hxc_left_h09350339afd4;
+          int32_t hxc_tmp_load_result_n530 = hxc_top_h6b7a7ae36359;
+          DrawRectangle((int32_t)hxc_tmp_load_result_n529, (int32_t)hxc_tmp_load_result_n530, (int32_t)360, (int32_t)54, hxc_this1_h00d59f9d7c58);
+          struct Color hxc_this1_h0ee879d5f97c = (struct Color){ .r = 92, .g = 194, .b = 188, .a = 255 };
+          int32_t hxc_tmp_load_result_n533 = hxc_left_h09350339afd4;
+          int32_t hxc_tmp_load_result_n534 = hxc_top_h6b7a7ae36359;
+          DrawRectangleLines((int32_t)hxc_tmp_load_result_n533, (int32_t)hxc_tmp_load_result_n534, (int32_t)360, (int32_t)54, hxc_this1_h0ee879d5f97c);
         }
-        struct Color hxc_this1_hc18468f5e813 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
-        int32_t hxc_tmp_load_result_n523 = hxc_left_h01c37ab32b98;
-        int32_t hxc_tmp_load_result_n524 = hxc_top_h362eb72bb915;
-        DrawText("ADVENTURE", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n523, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n524, 16), (int32_t)21, hxc_this1_hc18468f5e813);
-        int32_t hxc_x_haef0b7366c12 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 270);
-        struct Color hxc_this1_h00d59f9d7c58 = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
-        int32_t hxc_tmp_load_result_n528 = hxc_x_haef0b7366c12;
-        int32_t hxc_tmp_load_result_n529 = hxc_height_h5d3d97c53946;
-        DrawText("ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL", (int32_t)hxc_tmp_load_result_n528, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n529, 58), (int32_t)16, hxc_this1_h00d59f9d7c58);
+        struct Color hxc_this1_h8d4a171cde40 = (struct Color){ .r = 242, .g = 249, .b = 245, .a = 255 };
+        int32_t hxc_tmp_load_result_n537 = hxc_left_h09350339afd4;
+        int32_t hxc_tmp_load_result_n538 = hxc_top_h6b7a7ae36359;
+        DrawText("ADVENTURE", (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n537, 28), (int32_t)hxc_i32_add_wrapping(hxc_tmp_load_result_n538, 16), (int32_t)21, hxc_this1_h8d4a171cde40);
+        int32_t hxc_x_h4b5cecc841b9 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 270);
+        struct Color hxc_this1_hdf3d0dd71701 = (struct Color){ .r = 229, .g = 241, .b = 235, .a = 255 };
+        int32_t hxc_tmp_load_result_n542 = hxc_x_h4b5cecc841b9;
+        int32_t hxc_tmp_load_result_n543 = hxc_height_h3e43d3a00fe8;
+        DrawText("ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL", (int32_t)hxc_tmp_load_result_n542, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n543, 58), (int32_t)16, hxc_this1_hdf3d0dd71701);
       }
       if (hxc_selectedMode == 1)
       {
         if (hxc_language == 1)
         {
-          int32_t hxc_x_h580f0a1a1d61 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 210);
-          struct Color hxc_this1_h8d4a171cde40 = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
-          int32_t hxc_tmp_load_result_n535 = hxc_x_h580f0a1a1d61;
-          int32_t hxc_tmp_load_result_n536 = hxc_firstTop;
-          DrawText("SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.", (int32_t)hxc_tmp_load_result_n535, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n536, 36), (int32_t)17, hxc_this1_h8d4a171cde40);
+          int32_t hxc_x_hba336934bf60 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 210);
+          struct Color hxc_this1_hc32b20afb966 = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
+          int32_t hxc_tmp_load_result_n549 = hxc_x_hba336934bf60;
+          int32_t hxc_tmp_load_result_n550 = hxc_firstTop;
+          DrawText("SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.", (int32_t)hxc_tmp_load_result_n549, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n550, 36), (int32_t)17, hxc_this1_hc32b20afb966);
         }
         else
         {
-          int32_t hxc_x_h4b5cecc841b9 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h4c39cc537e03, (double)2)), 210);
-          struct Color hxc_this1_hdf3d0dd71701 = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
-          int32_t hxc_tmp_load_result_n540 = hxc_x_h4b5cecc841b9;
-          int32_t hxc_tmp_load_result_n541 = hxc_firstTop;
-          DrawText("SAVE CEESH. FIND IVVY. STOP BROWSER.", (int32_t)hxc_tmp_load_result_n540, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n541, 36), (int32_t)17, hxc_this1_hdf3d0dd71701);
+          int32_t hxc_x_hc162a90cba74 = hxc_i32_subtract_wrapping(hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_width_h1d135a3d7233, (double)2)), 210);
+          struct Color hxc_this1_hb9cd5bc2da99 = (struct Color){ .r = 255, .g = 205, .b = 91, .a = 255 };
+          int32_t hxc_tmp_load_result_n554 = hxc_x_hc162a90cba74;
+          int32_t hxc_tmp_load_result_n555 = hxc_firstTop;
+          DrawText("SAVE CEESH. FIND IVVY. STOP BROWSER.", (int32_t)hxc_tmp_load_result_n554, (int32_t)hxc_i32_subtract_wrapping(hxc_tmp_load_result_n555, 36), (int32_t)17, hxc_this1_hb9cd5bc2da99);
         }
       }
     }
@@ -1609,44 +1691,46 @@ void hxc_caxecraft_app_Main_main(void)
     {
       ClearBackground((struct Color){ .r = 126, .g = 190, .b = 201, .a = 255 });
       BeginMode3D(hxc_camera);
-      double hxc_tmp_record_field_load_result_n545 = hxc_player.hxc_x;
-      struct hxc_caxecraft_app_Main_RenderCounters hxc_tmp_call_result_n547 = hxc_caxecraft_app_Main_drawWorld(hxc_cells, hxc_tmp_length_n1, hxc_tmp_record_field_load_result_n545, hxc_player.hxc_z);
-      struct hxc_caxecraft_app_Main_RenderCounters hxc_renderCounters = hxc_tmp_call_result_n547;
-      struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n548 = hxc_guide;
-      struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n549 = hxc_mossling;
-      hxc_caxecraft_app_Main_drawActors(hxc_tmp_load_result_n548, hxc_tmp_load_result_n549, hxc_berryDrop);
+      double hxc_tmp_record_field_load_result_n559 = hxc_player.hxc_x;
+      struct hxc_caxecraft_app_Main_RenderCounters hxc_tmp_call_result_n561 = hxc_caxecraft_app_Main_drawWorld(hxc_cells, hxc_tmp_length_n1, hxc_tmp_record_field_load_result_n559, hxc_player.hxc_z);
+      struct hxc_caxecraft_app_Main_RenderCounters hxc_renderCounters = hxc_tmp_call_result_n561;
+      struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n562 = hxc_guide;
+      struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n563 = hxc_mossling;
+      hxc_caxecraft_app_Main_drawActors(hxc_tmp_load_result_n562, hxc_tmp_load_result_n563, hxc_berryDrop);
       if (hxc_hit.hxc_hit)
       {
         double hxc_y = (double)hxc_hit.hxc_cellY + 0.5;
         double hxc_z = (double)hxc_hit.hxc_cellZ + 0.5;
-        int32_t hxc_tmp_record_field_load_result_n554 = hxc_hit.hxc_cellX;
-        double hxc_tmp_load_result_n555 = hxc_y;
-        DrawCubeWires((struct Vector3){ .x = (float)((double)hxc_tmp_record_field_load_result_n554 + 0.5), .y = (float)hxc_tmp_load_result_n555, .z = (float)hxc_z }, (float)1.04, (float)1.04, (float)1.04, (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 });
+        int32_t hxc_tmp_record_field_load_result_n568 = hxc_hit.hxc_cellX;
+        double hxc_tmp_load_result_n569 = hxc_y;
+        DrawCubeWires((struct Vector3){ .x = (float)((double)hxc_tmp_record_field_load_result_n568 + 0.5), .y = (float)hxc_tmp_load_result_n569, .z = (float)hxc_z }, (float)1.04, (float)1.04, (float)1.04, (struct Color){ .r = 255, .g = 132, .b = 47, .a = 255 });
       }
       EndMode3D();
-      int32_t hxc_tmp_record_field_load_result_n559 = hxc_renderCounters.hxc_visible;
-      int32_t hxc_tmp_record_field_load_result_n560 = hxc_renderCounters.hxc_drawCalls;
-      int32_t hxc_tmp_load_result_n561 = hxc_frameCount;
-      int32_t hxc_tmp_load_result_n562 = hxc_updateCount;
-      bool hxc_tmp_load_result_n563 = hxc_paused;
-      bool hxc_tmp_load_result_n564 = hxc_captured;
-      int32_t hxc_tmp_load_result_n565 = hxc_placementBlockedFrames;
-      struct hxc_caxecraft_domain_RaycastHit hxc_tmp_load_result_n566 = hxc_hit;
-      double hxc_tmp_record_field_load_result_n567 = hxc_player.hxc_x;
-      double hxc_tmp_record_field_load_result_n568 = hxc_player.hxc_z;
-      int32_t hxc_tmp_load_result_n569 = hxc_selectedMode;
-      int32_t hxc_tmp_load_result_n570 = hxc_language;
-      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n571 = hxc_inventory;
-      struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n572 = hxc_guide;
-      struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n573 = hxc_mossling;
-      struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_load_result_n574 = hxc_vitals;
-      int32_t hxc_tmp_load_result_n575 = hxc_strikeHitFrames;
-      int32_t hxc_tmp_load_result_n576 = hxc_enemyDefeatedFrames;
-      int32_t hxc_tmp_load_result_n577 = hxc_pickupFrames;
-      struct Texture hxc_tmp_load_result_n578 = hxc_hudTexture;
-      bool hxc_tmp_load_result_n579 = hxc_hudTextureReady;
-      struct Texture hxc_tmp_load_result_n580 = hxc_itemTexture;
-      hxc_caxecraft_app_Main_drawHud(hxc_tmp_record_field_load_result_n559, hxc_tmp_record_field_load_result_n560, hxc_tmp_load_result_n561, hxc_tmp_load_result_n562, hxc_tmp_load_result_n563, hxc_tmp_load_result_n564, hxc_tmp_load_result_n565 > 0, hxc_tmp_load_result_n566, hxc_tmp_record_field_load_result_n567, hxc_tmp_record_field_load_result_n568, hxc_tmp_load_result_n569, hxc_tmp_load_result_n570, hxc_tmp_load_result_n571, hxc_tmp_load_result_n572, hxc_tmp_load_result_n573, hxc_tmp_load_result_n574, hxc_tmp_load_result_n575 > 0, hxc_tmp_load_result_n576 > 0, hxc_tmp_load_result_n577 > 0, hxc_tmp_load_result_n578, hxc_tmp_load_result_n579, hxc_tmp_load_result_n580, hxc_itemTextureReady);
+      int32_t hxc_tmp_record_field_load_result_n573 = hxc_renderCounters.hxc_visible;
+      int32_t hxc_tmp_record_field_load_result_n574 = hxc_renderCounters.hxc_drawCalls;
+      int32_t hxc_tmp_load_result_n575 = hxc_frameCount;
+      int32_t hxc_tmp_load_result_n576 = hxc_updateCount;
+      bool hxc_tmp_load_result_n577 = hxc_paused;
+      bool hxc_tmp_load_result_n578 = hxc_captured;
+      int32_t hxc_tmp_load_result_n579 = hxc_placementBlockedFrames;
+      struct hxc_caxecraft_domain_RaycastHit hxc_tmp_load_result_n580 = hxc_hit;
+      double hxc_tmp_record_field_load_result_n581 = hxc_player.hxc_x;
+      double hxc_tmp_record_field_load_result_n582 = hxc_player.hxc_z;
+      int32_t hxc_tmp_load_result_n583 = hxc_selectedMode;
+      int32_t hxc_tmp_load_result_n584 = hxc_language;
+      struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_load_result_n585 = hxc_inventory;
+      struct hxc_caxecraft_gameplay_GuideState hxc_tmp_load_result_n586 = hxc_guide;
+      struct hxc_caxecraft_gameplay_MosslingState hxc_tmp_load_result_n587 = hxc_mossling;
+      struct hxc_caxecraft_gameplay_PlayerVitalsState hxc_tmp_load_result_n588 = hxc_vitals;
+      int32_t hxc_tmp_load_result_n589 = hxc_strikeHitFrames;
+      int32_t hxc_tmp_load_result_n590 = hxc_enemyDefeatedFrames;
+      int32_t hxc_tmp_load_result_n591 = hxc_pickupFrames;
+      int32_t hxc_tmp_load_result_n592 = hxc_recoveryFeedback;
+      int32_t hxc_tmp_load_result_n593 = hxc_recoveryFeedbackFrames;
+      struct Texture hxc_tmp_load_result_n594 = hxc_hudTexture;
+      bool hxc_tmp_load_result_n595 = hxc_hudTextureReady;
+      struct Texture hxc_tmp_load_result_n596 = hxc_itemTexture;
+      hxc_caxecraft_app_Main_drawHud(hxc_tmp_record_field_load_result_n573, hxc_tmp_record_field_load_result_n574, hxc_tmp_load_result_n575, hxc_tmp_load_result_n576, hxc_tmp_load_result_n577, hxc_tmp_load_result_n578, hxc_tmp_load_result_n579 > 0, hxc_tmp_load_result_n580, hxc_tmp_record_field_load_result_n581, hxc_tmp_record_field_load_result_n582, hxc_tmp_load_result_n583, hxc_tmp_load_result_n584, hxc_tmp_load_result_n585, hxc_tmp_load_result_n586, hxc_tmp_load_result_n587, hxc_tmp_load_result_n588, hxc_tmp_load_result_n589 > 0, hxc_tmp_load_result_n590 > 0, hxc_tmp_load_result_n591 > 0, hxc_tmp_load_result_n592, hxc_tmp_load_result_n593 > 0, hxc_tmp_load_result_n594, hxc_tmp_load_result_n595, hxc_tmp_load_result_n596, hxc_itemTextureReady);
     }
     EndDrawing();
     hxc_frameCount = hxc_i32_add_wrapping(hxc_frameCount, 1);

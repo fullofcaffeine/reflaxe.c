@@ -11,6 +11,10 @@ final class PlayerVitals {
 	public static inline function start():PlayerVitalsState
 		return make(MAX_HEALTH, 0);
 
+	/** Restore a validated health value, as used by saves and deterministic pilots. */
+	public static inline function startAt(health:Int):PlayerVitalsState
+		return make(health, 0);
+
 	/**
 	 * Advance one 50 ms tick and apply at most one point of contact damage.
 	 * `safeTicks` prevents a nearby enemy from draining all health in one second.
@@ -31,6 +35,16 @@ final class PlayerVitals {
 
 	public static inline function isDefeated(state:PlayerVitalsState):Bool
 		return state.health <= 0;
+
+	public static inline function isFull(state:PlayerVitalsState):Bool
+		return state.health >= MAX_HEALTH;
+
+	/** Add a positive amount without exceeding the three-heart maximum. */
+	public static function recover(state:PlayerVitalsState, amount:Int):PlayerVitalsState {
+		if (amount <= 0 || isDefeated(state) || isFull(state))
+			return state;
+		return make(state.health + amount, state.safeTicks);
+	}
 
 	/** Start again with full health after the player accepts the return prompt. */
 	public static inline function revive(_state:PlayerVitalsState):PlayerVitalsState

@@ -10,6 +10,8 @@ import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.PlayerVitals;
+import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.RecoveryDecision;
 
 /** Renderer-independent proof for the first friendly and hostile actors. */
 final class GameplayProbe {
@@ -71,6 +73,28 @@ final class GameplayProbe {
 		vitals = PlayerVitals.step(vitals, 10.5, 12.5, 10.8, 12.5, true);
 		require(vitals.health == healthAfterContact
 			&& vitals.safeTicks == PlayerVitals.CONTACT_SAFE_TICKS - 1, "safe ticks prevent instant repeated damage");
+
+		inventory = Inventory.select(inventory, 5);
+		vitals = PlayerVitals.startAt(PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH);
+		final berriesBeforeRecovery = inventory.berries;
+		final safeTicksBeforeRecovery = vitals.safeTicks;
+		var recoveryDecision = Recovery.decide(inventory, vitals);
+		require(recoveryDecision == RecoveryDecision.UseBerries, "damaged player can use selected berries");
+		inventory = Recovery.applyInventory(recoveryDecision, inventory);
+		vitals = Recovery.applyVitals(recoveryDecision, vitals);
+		require(inventory.berries == berriesBeforeRecovery - 1
+			&& vitals.health == PlayerVitals.MAX_HEALTH
+			&& vitals.safeTicks == safeTicksBeforeRecovery,
+			"berries restore one heart without changing damage safety");
+		recoveryDecision = Recovery.decide(inventory, vitals);
+		require(recoveryDecision == RecoveryDecision.HealthAlreadyFull
+			&& Recovery.applyInventory(recoveryDecision, inventory) == inventory,
+			"full health preserves the berry stack");
+		final emptyRecovery = Inventory.make(5, 0, 0, 0, 0, 0, 0, 0, 0);
+		require(Recovery.decide(emptyRecovery, PlayerVitals.startAt(2)) == RecoveryDecision.RecoveryStackEmpty, "empty berry stack is explicit");
+		require(Recovery.decide(Inventory.select(inventory, 0), PlayerVitals.startAt(2)) == RecoveryDecision.NotRecoveryItem,
+			"block placement remains a separate secondary action");
+
 		while (!PlayerVitals.isDefeated(vitals)) {
 			while (vitals.safeTicks > 0)
 				vitals = PlayerVitals.step(vitals, 10.5, 12.5, 30.0, 30.0, false);
@@ -78,7 +102,9 @@ final class GameplayProbe {
 		}
 		require(PlayerVitals.revive(vitals).health == PlayerVitals.MAX_HEALTH, "return prompt restores full health");
 
-		Sys.println("caxecraft-gameplay: Nia gift, Mossling combat/drop, and bounded player health passed");
+		require(Recovery.decide(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
+
+		Sys.println("caxecraft-gameplay: Nia gift, Mossling combat/drop, berry recovery, and bounded player health passed");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {
