@@ -44,9 +44,11 @@ final class CaxeFlowValidator {
 			for (parameter in sequence.parameters) {
 				final parameterCoordinate = context.coordinateForIdentity(parameter.id, SequenceParameterIdentity(sequence.id));
 				validateFlowValue(parameter.initial, parameterCoordinate);
+				if (context.hasVariable(parameter.id))
+					context.addAtCoordinate(DuplicateId(parameter.id), parameterCoordinate);
 			}
 			for (actionIndex in 0...sequence.actions.length)
-				validateAction(sequence.id, context.coordinateForSequenceAction(sequence.id, actionIndex), sequence.actions[actionIndex], false);
+				validateAction(sequence.id, context.coordinateForSequenceAction(sequence.id, actionIndex), sequence.actions[actionIndex], false, sequence.id);
 		}
 		validateSequenceGraph();
 		final ruleIds:Map<String, Bool> = [];
@@ -65,7 +67,7 @@ final class CaxeFlowValidator {
 			validateEvent(rule.id, context.coordinateForRuleEvent(rule.id), rule.event);
 			validatePredicate(rule.id, context.coordinateForRulePredicate(rule.id), rule.predicate, 1);
 			for (actionIndex in 0...rule.actions.length)
-				validateAction(rule.id, context.coordinateForRuleAction(rule.id, actionIndex), rule.actions[actionIndex], false);
+				validateAction(rule.id, context.coordinateForRuleAction(rule.id, actionIndex), rule.actions[actionIndex], false, null);
 		}
 	}
 
@@ -96,7 +98,7 @@ final class CaxeFlowValidator {
 				if (!context.hasObjective(id))
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 			case StateChanged(id):
-				if (!context.hasVariable(id))
+				if (!context.hasPersistentVariable(id))
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 		}
 	}
@@ -114,11 +116,11 @@ final class CaxeFlowValidator {
 			case Not(child):
 				validatePredicate(owner, coordinate, child, depth + 1);
 			case FlagIs(id, _):
-				requireVariable(owner, coordinate, id, FlagValue);
+				requireVariable(owner, coordinate, id, FlagValue, null);
 			case CounterCompare(id, _, _):
-				requireVariable(owner, coordinate, id, CounterValue);
+				requireVariable(owner, coordinate, id, CounterValue, null);
 			case StateIs(id, state):
-				requireVariable(owner, coordinate, id, StateValue);
+				requireVariable(owner, coordinate, id, StateValue, null);
 				if (!context.registry.hasState(state))
 					context.addAtCoordinate(UnresolvedContent(state), coordinate);
 			case ObjectStateIs(id, state):
@@ -140,7 +142,7 @@ final class CaxeFlowValidator {
 		}
 	}
 
-	function validateAction(owner:ScenarioId, coordinate:ScenarioCoordinate, value:FlowAction, insideChoice:Bool):Void {
+	function validateAction(owner:ScenarioId, coordinate:ScenarioCoordinate, value:FlowAction, insideChoice:Bool, sequenceOwner:Null<ScenarioId>):Void {
 		switch value {
 			case ShowDialogue(id):
 				if (!context.hasDialogue(id))
@@ -149,11 +151,11 @@ final class CaxeFlowValidator {
 				if (!context.hasJournal(id))
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 			case SetFlag(id, _):
-				requireVariable(owner, coordinate, id, FlagValue);
+				requireVariable(owner, coordinate, id, FlagValue, sequenceOwner);
 			case SetCounter(id, _), AddCounter(id, _):
-				requireVariable(owner, coordinate, id, CounterValue);
+				requireVariable(owner, coordinate, id, CounterValue, sequenceOwner);
 			case SetState(id, state):
-				requireVariable(owner, coordinate, id, StateValue);
+				requireVariable(owner, coordinate, id, StateValue, sequenceOwner);
 				if (!context.registry.hasState(state))
 					context.addAtCoordinate(UnresolvedContent(state), coordinate);
 			case GiveItem(id, item, quantity), TakeItem(id, item, quantity):
@@ -189,30 +191,34 @@ final class CaxeFlowValidator {
 				if (ticks <= 0)
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 				for (argument in arguments)
-					validateArgument(owner, coordinate, argument);
-				validateSequenceCall(owner, coordinate, sequence, arguments);
+					validateArgument(owner, coordinate, argument, sequenceOwner);
+				validateSequenceCall(owner, coordinate, sequence, arguments, sequenceOwner);
 			case CallSequence(sequence, arguments):
 				for (argument in arguments)
-					validateArgument(owner, coordinate, argument);
-				validateSequenceCall(owner, coordinate, sequence, arguments);
+					validateArgument(owner, coordinate, argument, sequenceOwner);
+				validateSequenceCall(owner, coordinate, sequence, arguments, sequenceOwner);
 			case ChooseSeeded(seed, choices):
 				if (insideChoice) {
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 					return;
 				}
-				requireVariable(owner, coordinate, seed, CounterValue);
+				requireVariable(owner, coordinate, seed, CounterValue, sequenceOwner);
 				if (choices.length == 0)
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
+				var totalWeight = 0;
 				for (choice in choices) {
-					if (choice.weight <= 0)
+					if (choice.weight <= 0 || totalWeight > 2147483647 - choice.weight)
 						context.addAtCoordinate(InvalidRule(owner), coordinate);
+					else
+						totalWeight += choice.weight;
 					for (entry in choice.actions)
-						validateAction(owner, coordinate, entry, true);
+						validateAction(owner, coordinate, entry, true, sequenceOwner);
 				}
 		}
 	}
 
-	function validateSequenceCall(owner:ScenarioId, coordinate:ScenarioCoordinate, id:ScenarioId, arguments:Array<FlowArgument>):Void {
+	function validateSequenceCall(owner:ScenarioId, coordinate:ScenarioCoordinate, id:ScenarioId, arguments:Array<FlowArgument>,
+			sequenceOwner:Null<ScenarioId>):Void {
 		final sequence = context.sequence(id);
 		if (sequence == null || sequence.parameters.length != arguments.length) {
 			context.addAtCoordinate(InvalidRule(owner), coordinate);
@@ -222,7 +228,7 @@ final class CaxeFlowValidator {
 			final expected = ScenarioValidationContext.flowValueKind(sequence.parameters[index].initial);
 			final actual = switch arguments[index] {
 				case Value(value): ScenarioValidationContext.flowValueKind(value);
-				case Variable(variable): context.variableKind(variable);
+				case Variable(variable): context.variableKindInScope(variable, sequenceOwner);
 			}
 			if (actual != expected)
 				context.addAtCoordinate(InvalidRule(owner), coordinate);
@@ -280,12 +286,12 @@ final class CaxeFlowValidator {
 		return maximum;
 	}
 
-	function validateArgument(owner:ScenarioId, coordinate:ScenarioCoordinate, value:FlowArgument):Void {
+	function validateArgument(owner:ScenarioId, coordinate:ScenarioCoordinate, value:FlowArgument, sequenceOwner:Null<ScenarioId>):Void {
 		switch value {
 			case Value(value):
 				validateFlowValue(value, coordinate);
 			case Variable(id):
-				if (!context.hasVariable(id))
+				if (context.variableKindInScope(id, sequenceOwner) == null)
 					context.addAtCoordinate(InvalidRule(owner), coordinate);
 		}
 	}
@@ -297,8 +303,8 @@ final class CaxeFlowValidator {
 			case _:
 		}
 
-	function requireVariable(owner:ScenarioId, coordinate:ScenarioCoordinate, id:ScenarioId, kind:FlowValueKind):Void
-		if (!context.hasVariable(id) || context.variableKind(id) != kind)
+	function requireVariable(owner:ScenarioId, coordinate:ScenarioCoordinate, id:ScenarioId, kind:FlowValueKind, sequenceOwner:Null<ScenarioId>):Void
+		if (context.variableKindInScope(id, sequenceOwner) != kind)
 			context.addAtCoordinate(InvalidRule(owner), coordinate);
 
 	function consumeActionBudget(actions:Array<FlowAction>, remaining:Int):Int {

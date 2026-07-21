@@ -83,7 +83,7 @@ GitHub Actions partitions that same sequence into four isolated shards:
 | `contracts` | pins, Beads plan, diagnostics, activation, typed boundaries, C import, AST/plans, runtime contracts, hello, HxcIR, primitive and stdlib contracts | separate hosted runner, checkout, process tree, and temporary roots |
 | `lowering-objects` | bodies, functions, aggregates, classes, constructors, dispatch, enums, and generics | no filesystem or process state is shared with another shard |
 | `lowering-semantics` | evaluation order, initialization, arithmetic, differential corpus, spans, and project layouts | native/compiler-server work remains serial inside this shard but isolated from the others |
-| `caxecraft` | the target-neutral CAXEMAP model contract; separate locale/cold/warm-server codec determinism; complete split/package/unity, oracle, native, optimized, and sanitizer showcase lane; then the snapshot ownership catalog | its long end-to-end proof receives its own resource budget; the fast model, repeated codec, and catalog checks stay separately visible |
+| `caxecraft` | the target-neutral CAXEMAP model and fixed-tick CaxeFlow contracts; separate locale/cold/warm-server codec determinism; complete split/package/unity, oracle, native, optimized, and sanitizer showcase lane; then the snapshot ownership catalog | its long end-to-end proof receives its own resource budget; the fast model/rule checks, repeated codec, and catalog checks stay separately visible |
 
 The matrix uses `fail-fast: false`, so one failure does not erase evidence from
 the other shards. A small `pinned-toolchain` aggregate job runs with `always()`

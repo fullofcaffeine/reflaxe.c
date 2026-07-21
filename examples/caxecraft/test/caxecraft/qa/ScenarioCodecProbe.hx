@@ -52,6 +52,7 @@ final class ScenarioCodecProbe {
 		checkSemanticLimitsAndContent(canonical);
 		checkDiagnosticPayloads(canonical, fullCanonical);
 		checkRoleSpecificReferences(canonical, fullCanonical);
+		checkFlowVariableScopes(fullCanonical);
 		checkFlowBoundsAndGrammar(canonical, fullCanonical);
 		checkBoundedFailures(canonical);
 
@@ -259,6 +260,17 @@ final class ScenarioCodecProbe {
 			96, 3, 96);
 		expectInvalidRule(replace(fullCanonical, "do checkpoint checkpoint.start", "do checkpoint npc.ivvy"), "npc-used-as-checkpoint", "rule.leave", 111, 3,
 			111);
+	}
+
+	static function checkFlowVariableScopes(fullCanonical:Bytes):Void {
+		expectCanonicalMutation(fullCanonical, "do set-flag map.ready true", "do set-flag enabled false");
+		expectCanonicalMutation(fullCanonical, "do set-flag map.ready true", "do set-flag local.choice false");
+		expectDuplicateId(replace(fullCanonical, "parameter enabled flag true", "parameter map.ready flag true"), "parameter-variable-collision", "map.ready",
+			75, 3, 75);
+		expectInvalidRule(replace(fullCanonical, "do call sequence.helper value flag true", "do call sequence.helper variable local.choice"),
+			"rule-cannot-read-sequence-local", "rule.signal", 122, 3, 122);
+		expectInvalidRule(replace(fullCanonical, "when state-changed map.ready", "when state-changed local.choice"), "local-change-cannot-cross-ticks",
+			"rule.state", 125, 3, 125);
 	}
 
 	static function checkFlowBoundsAndGrammar(canonical:Bytes, fullCanonical:Bytes):Void {

@@ -273,8 +273,22 @@ Each request still performs the byte-identical fixture, repeated-write, CRLF,
 reverse-order, exact diagnostic, and bounded-work assertions inside Haxe; a
 matching one-line trace is therefore evidence that all five requests reached
 the same checked result, not merely that they printed the same fixture size.
-It is not native persistence, the rule executor, or the visual editor; those
-remain ordered `haxe_c-xge.19.*` slices. The readable
+The fixed-tick rule executor has its own fast command:
+
+```sh
+npm run test:caxecraft-caxeflow
+```
+
+That probe executes all 10 events, 12 predicates, and 18 actions, plus
+priority/ID ordering, once/repeat/cooldown behavior, local and parameterized
+sequences, captured delays, deferred signals, explicit seeded choice, and every
+runtime budget. It runs the same result under C and Spanish process locales and
+compares normal versus reversed rule registration. It is target-neutral Eval
+evidence today, not yet proof that the complete executor compiles and runs in
+the playable generated-C application.
+
+Native persistence and the visual editor remain ordered `haxe_c-xge.19.*`
+slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
 To compile only the C project through the direct recovery path:

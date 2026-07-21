@@ -30,4 +30,11 @@ final class ScenarioLimits {
 	public static inline final MAX_PREDICATE_DEPTH:Int = 16;
 	public static inline final MAX_DEFERRED_EVENTS:Int = 4096;
 	public static inline final MAX_SEQUENCE_CALL_DEPTH:Int = 16;
+	public static inline final MAX_EVENTS_PER_TICK:Int = 256;
+	public static inline final MAX_RULE_EXECUTIONS_PER_TICK:Int = 2048;
+	public static inline final MAX_ACTIONS_PER_TICK:Int = 8192;
+	public static inline final MAX_SEQUENCE_CALLS_PER_TICK:Int = 1024;
+	public static inline final MAX_SPAWNED_OBJECTS_PER_TICK:Int = 512;
+	public static inline final MAX_SCHEDULED_WORK_PER_TICK:Int = 1024;
+	public static inline final MAX_PREDICATE_EVALUATIONS_PER_TICK:Int = 8192;
 }

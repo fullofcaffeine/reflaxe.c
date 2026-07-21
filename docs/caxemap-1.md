@@ -332,21 +332,96 @@ depth of 16; a static unconditional cycle is invalid.
 
 ## Deterministic execution
 
-One fixed simulation tick has these boundaries:
+`CaxeFlowExecutor` runs a previously validated `Scenario`. A **fixed tick** is
+one numbered simulation step, independent of rendering speed. Tick numbers
+begin at one and use Haxe's portable signed 64-bit `Int64`, so crossing the
+32-bit integer boundary cannot wrap a timer or cooldown. Authored delays remain
+positive 32-bit integers and are promoted before they are added to the current
+tick. A delay of one means “at the next fixed tick,” not “after some number of
+milliseconds.” No rule reads a wall clock.
 
-1. accept already queued input events in source order;
-2. advance physics and ordinary game state;
-3. evaluate matching rules by numeric priority, then stable rule ID;
-4. execute each admitted rule's actions in source order against the defined
-   tick state;
-5. commit deferred signals and scheduled work for a later boundary; and
-6. publish diagnostics and presentation events.
+One tick has these exact boundaries:
 
-Signals never re-enter the current action stack. Once/repeat/cooldown state is
-part of the saved scenario state. Per-tick events, deferred events, sequence
-calls, spawned objects, scheduled work, and predicate depth have hard limits.
-Exhausting a limit stops further rule work for that tick and produces a typed
-visible diagnostic; it never hangs or silently drops an unknown suffix.
+1. Copy the game-supplied object positions into scenario state.
+2. Collect due signals, state/objective notifications, and timers in the order
+   they were queued. Append the caller's new events in caller order.
+3. Find matching rules. Lower numeric priority runs first; equal priorities use
+   the rule ID's raw UTF-8 byte order. Within one rule, events keep their order.
+4. Evaluate every matching predicate before running any admitted rule action.
+   This is the **stable tick view**: all predicates see the state that existed
+   at the start of rule planning. An earlier rule cannot change what a later
+   rule observed.
+5. Run due sequence actions in queue order, then admitted rules in the order
+   planned above. Each action list keeps authored source order. Unlike
+   predicates, a later action sees changes made by an earlier action.
+6. Return typed presentation requests and, if work stopped, one typed runtime
+   diagnostic. The portable executor does not call Raylib, play audio, or draw
+   UI itself.
+
+Due work is removed from the queue only after rule planning succeeds. Once the
+action phase begins, however, that accepted due batch is consumed. If an action
+hits a limit or fails, its completed changes remain, later due sequences are
+skipped, and that batch is not automatically tried again on the next tick. The
+diagnostic identifies the exact sequence or rule that stopped, so the game can
+fail visibly instead of repeating a partially completed interaction.
+
+For example, if rule A sets `quest.bridge` and rule B tests that value in the
+same tick, B tests the old value. The change queues `StateChanged` for the next
+tick; B can respond then. This makes authoring predictable and prevents a
+signal from recursively running an unbounded stack of rules.
+
+`once` may fire only once for the lifetime of the executor. `repeat` may fire
+once per matching event. `cooldown N` may fire at most once in an eligible tick
+and becomes eligible again when exactly N fixed ticks have elapsed. Multiple
+matching events in one tick cannot bypass `once` or `cooldown`.
+
+Sequence calls receive positional typed arguments. Parameters and variables
+declared `local <sequence-id>` get a fresh call frame and disappear when that
+call returns; they cannot be read by ordinary rules or become next-tick
+`StateChanged` events. Map, player, and quest variables persist. A scheduled
+call captures argument values when the `schedule` action runs, so a later
+change to the source variable does not rewrite pending work.
+
+`choose` is deterministic weighted choice, not hidden randomness. The named
+counter is reduced modulo the sum of positive weights to select one alternative
+in source order, then incremented with explicit 32-bit wraparound. Replaying the
+same events and saved seed produces the same choice on every target and locale.
+
+### Runtime work limits
+
+The first executor keeps each tick bounded:
+
+| Work in one tick | Maximum |
+| --- | ---: |
+| input and ready events | 256 |
+| admitted rule executions | 2,048 |
+| actions, including selected choice actions | 8,192 |
+| sequence calls | 1,024 |
+| sequence call depth | 16 |
+| spawn actions | 512 |
+| new schedules | 1,024 |
+| predicate nodes evaluated | 8,192 |
+| queued deferred entries across ticks | 4,096 |
+
+A planning-limit failure happens before scenario actions run and leaves ready
+deferred work queued for inspection or a later tick. An action-limit failure
+keeps the already completed action prefix, stops the remaining sequences and
+rules in that accepted batch, and returns the first exact `LimitExceeded`
+diagnostic with its work kind, maximum, and owning rule or sequence where one
+exists. It never hangs, recursively re-enters the action stack, or pretends the
+unknown suffix ran. Save-game state must include persistent variables,
+inventory, object/objective state, once/cooldown history, the current fixed
+tick, explicit seeds, and deferred work; that persistence belongs to the
+separate save-game owner rather than `.caxemap` authoring files.
+
+The fast executable proof is `npm run test:caxecraft-caxeflow`. It executes all
+10 events, 12 predicates, and 18 actions, including reverse rule registration,
+sequence locals and captured arguments, fixed-tick delays, repeat policies,
+the maximum positive delay and the 32-bit tick boundary, every runtime work
+limit with its exact owner, the complete typed presentation payload sequence,
+and C versus Spanish-locale trace equality. The same source is intentionally
+target-neutral so a later generated-C integration uses the tested engine
+instead of a C-only copy.
 
 ## Feature extensions
 

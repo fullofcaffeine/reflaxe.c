@@ -132,11 +132,39 @@ final class ScenarioValidationContext {
 	public inline function hasVariable(id:ScenarioId):Bool
 		return variableKinds.exists(id.text());
 
+	/**
+		Return the value kind visible from a rule or one sequence call frame.
+
+		A null sequence means persistent rule scope, where only map, player, and
+		quest variables exist. Inside a sequence, that sequence's parameters and
+		locals are visible too. Validation rejects name collisions, so lookup order
+		is a defensive runtime rule rather than an authored shadowing feature.
+	**/
+	public function variableKindInScope(id:ScenarioId, sequenceOwner:Null<ScenarioId>):Null<FlowValueKind> {
+		if (sequenceOwner != null) {
+			final owner = sequence(sequenceOwner);
+			if (owner != null)
+				for (parameter in owner.parameters)
+					if (parameter.id.text() == id.text())
+						return flowValueKind(parameter.initial);
+		}
+		for (variable in scenario.flow.variables) {
+			if (variable.id.text() != id.text())
+				continue;
+			return switch variable.scope {
+				case Local(owner) if (sequenceOwner != null && owner.text() == sequenceOwner.text()): flowValueKind(variable.initial);
+				case Local(_): null;
+				case Map | Player | Quest: flowValueKind(variable.initial);
+			};
+		}
+		return null;
+	}
+
+	public inline function hasPersistentVariable(id:ScenarioId):Bool
+		return variableKindInScope(id, null) != null;
+
 	public inline function sequence(id:ScenarioId):Null<FlowSequence>
 		return sequenceTable.get(id.text());
-
-	public inline function variableKind(id:ScenarioId):Null<FlowValueKind>
-		return variableKinds.get(id.text());
 
 	public static function flowValueKind(value:FlowValue):FlowValueKind
 		return switch value {

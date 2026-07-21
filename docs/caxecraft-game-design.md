@@ -354,13 +354,14 @@ recipe, offline render tool/version, loop point, export setting, license, and
 output hash is recorded. A clean build never calls an online music service.
 
 Shared gameplay emits typed requests using stable content IDs; it does not
-load files or own a native audio handle. The raylib adapter resolves those IDs,
-streams music, limits simultaneous effects, applies master/music/effects/
-ambience volumes, and releases every resource. CaxeMap asset packs will map
-audio IDs to logical files. CaxeFlow will admit a small closed set of actions
-for playing an effect and selecting or stopping music after their ordering,
-restart, fade, and missing-asset behavior is specified. Scenario rules never
-contain host paths.
+load files or own a native audio handle. CaxeFlow's shipped `PlayEffect` action
+already produces a target-neutral `EffectRequested` value in deterministic
+action order. No sound is loaded or played by that semantic step. The future
+Raylib adapter will resolve the ID, stream music, limit simultaneous effects,
+apply master/music/effects/ambience volumes, and release every resource.
+CaxeMap asset packs will map audio IDs to logical files. Music selection,
+stopping, restart, fade, and missing-asset behavior remain unadmitted until
+their exact semantics are specified. Scenario rules never contain host paths.
 
 The editor will select and preview registered cues, stop preview immediately,
 author simple region music and trigger-driven effects, and validate missing or
@@ -370,10 +371,11 @@ hearing alone. Settings and captions support English and es-MX, while stored
 audio identity remains language-neutral.
 
 This is planned work under `haxe_c-bf3`. The current locked RaylibHx core
-deliberately omitted resource-owning audio APIs, and the current CAXEMAP codec
-has no audio records or actions. The audio issue owns that binding extension,
-the original source/runtime assets, typed game adapter, language/editor
-surface, packaging, native QA, and generated-C inspection.
+deliberately omitted resource-owning audio APIs, and CAXEMAP currently carries
+only the semantic effect ID—not audio files, buses, music policy, or native
+resources. The audio issue owns that binding extension, the original
+source/runtime assets, typed game adapter, language/editor surface, packaging,
+native QA, and generated-C inspection.
 
 ## UX, accessibility, and localization
 
