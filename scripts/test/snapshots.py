@@ -936,6 +936,7 @@ def span_lowering_artifacts() -> list[Artifact]:
         ("program.h", "header"),
         ("program.c", "c"),
         ("symbols.json", "json"),
+        ("program-symbols.json", "json"),
     ):
         value = values.get(name)
         if format_name == "json":

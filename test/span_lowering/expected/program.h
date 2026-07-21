@@ -25,9 +25,17 @@ static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_ri
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
 }
 
+struct hxc_SpanFixture_FinalSpanMutator;
+
+struct hxc_SpanFixture_FinalSpanMutator {
+  unsigned char hxc_storage;
+};
+
 int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index);
 
 int32_t hxc_SpanFixture_constSum(void);
+
+uint8_t hxc_SpanFixture_finalClassParameterRoundTrip(uint8_t hxc_replacement);
 
 uint8_t hxc_SpanFixture_forwardRead(const uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index);
 
@@ -50,5 +58,7 @@ uint8_t hxc_SpanFixture_replaceAt(uint8_t *hxc_values, size_t hxc_length, int32_
 uint8_t hxc_SpanFixture_spanBeforeConditionalArgument(bool hxc_selectThird);
 
 uint8_t hxc_SpanFixture_zeroedGridCell(void);
+
+uint8_t hxc_SpanFixture_FinalSpanMutator_replace(struct hxc_SpanFixture_FinalSpanMutator *hxc_self, uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

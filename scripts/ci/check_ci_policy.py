@@ -512,6 +512,7 @@ REQUIRED_GATE_FILES = (
     "test/span_lowering/expected/program.h",
     "test/span_lowering/expected/program.c",
     "test/span_lowering/expected/symbols.json",
+    "test/span_lowering/expected/program-symbols.json",
     "test/span_lowering/run.py",
     "test/positive/span-lowering/case.json",
     "test/negative/span-lowering/case.json",

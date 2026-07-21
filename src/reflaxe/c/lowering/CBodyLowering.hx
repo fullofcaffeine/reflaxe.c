@@ -978,7 +978,12 @@ private class FunctionPreparer {
 				unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:Void)');
 			}
 			if (mapping.spanElement() != null) {
-				if (input.instanceOwner != null) {
+				// A final class has no subclasses, so this method can only use the
+				// compiler-known body prepared here. That makes a span parameter a
+				// short-lived borrow for one direct call, just like a static helper.
+				// Keep overridable instance methods closed: an unknown override could
+				// retain the pointer after its caller-owned storage has gone away.
+				if (input.instanceOwner != null && !input.instanceOwner.get().isFinal) {
 					unsupported(input.expression.pos, 'TFunction(argument:${argument.v.name}:borrowed-span-requires-static-function)');
 				}
 				if (input.specialization != null) {

@@ -15,6 +15,7 @@
     "test/span_lowering/expected/program.h",
     "test/span_lowering/expected/program.c",
     "test/span_lowering/expected/symbols.json",
+    "test/span_lowering/expected/program-symbols.json",
     "test/span_lowering/run.py"
   ],
   "runner": {
@@ -49,6 +50,11 @@
       },
       {
         "path": "test/span_lowering/expected/symbols.json",
+        "format": "json",
+        "comparison": "semantic-json"
+      },
+      {
+        "path": "test/span_lowering/expected/program-symbols.json",
         "format": "json",
         "comparison": "semantic-json"
       }

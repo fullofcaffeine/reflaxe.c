@@ -1,6 +1,7 @@
 -cp test/span_lowering/
 -cp test/span_lowering/fixtures/
 -lib reflaxe.c
+-D span_lowering_report
 
 --macro SpanLoweringProbe.install()
 -main SpanFixture

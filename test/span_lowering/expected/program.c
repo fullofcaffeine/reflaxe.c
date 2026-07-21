@@ -1,5 +1,9 @@
 #include "hxc/program.h"
 
+_Static_assert(offsetof(struct hxc_SpanFixture_FinalSpanMutator, hxc_storage) == 0, "class hxc_SpanFixture_FinalSpanMutator strict-C empty-storage anchor begins at zero");
+
+_Static_assert(sizeof(struct hxc_SpanFixture_FinalSpanMutator) >= 1, "class hxc_SpanFixture_FinalSpanMutator strict-C empty-storage anchor occupies one byte");
+
 int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index)
 {
   int32_t hxc_values[4] = { 1, 3, 8, 21 };
@@ -34,6 +38,23 @@ int32_t hxc_SpanFixture_constSum(void)
     hxc_tmp_span_loop_index_n3 = hxc_tmp_span_loop_index_n3 + 1;
   }
   return hxc_total;
+}
+
+uint8_t hxc_SpanFixture_finalClassParameterRoundTrip(uint8_t hxc_replacement)
+{
+  uint8_t hxc_values[4] = { 0 };
+  uint8_t *hxc_view = hxc_values;
+  size_t hxc_tmp_length_n2 = sizeof(hxc_values) / sizeof(hxc_values[0]);
+  struct hxc_SpanFixture_FinalSpanMutator hxc_tmp_object_storage_n4 = { 0 };
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_tmp_class_object_address_n0 = &hxc_tmp_object_storage_n4;
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_mutator = hxc_tmp_class_object_address_n0;
+  struct hxc_SpanFixture_FinalSpanMutator *hxc_tmp_load_result_n1 = hxc_mutator;
+  if (hxc_tmp_load_result_n1 == NULL)
+  {
+    abort();
+  }
+  uint8_t hxc_tmp_instance_call_result_n2 = hxc_SpanFixture_FinalSpanMutator_replace(hxc_tmp_load_result_n1, hxc_view, hxc_tmp_length_n2, 2, hxc_replacement);
+  return hxc_tmp_instance_call_result_n2;
 }
 
 uint8_t hxc_SpanFixture_forwardRead(const uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index)
@@ -72,6 +93,7 @@ void hxc_SpanFixture_main(void)
   hxc_SpanFixture_zeroedGridCell();
   uint8_t hxc_tmp_call_result_n1 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_mutatedGridCell(hxc_tmp_call_result_n1);
+  hxc_SpanFixture_finalClassParameterRoundTrip((uint8_t)201);
   return;
 }
 
@@ -217,6 +239,24 @@ uint8_t hxc_SpanFixture_zeroedGridCell(void)
   }
   uint8_t hxc_tmp_collection_index_load_result_n1 = hxc_view[(size_t)hxc_tmp_call_result_n0];
   return hxc_tmp_collection_index_load_result_n1;
+}
+
+uint8_t hxc_SpanFixture_FinalSpanMutator_replace(struct hxc_SpanFixture_FinalSpanMutator *hxc_self, uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement)
+{
+  (void)hxc_self;
+  uint8_t *hxc_borrow = hxc_values;
+  size_t hxc_tmp_length_n4 = hxc_length;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n4)
+  {
+    abort();
+  }
+  hxc_borrow[(size_t)hxc_index] = hxc_replacement;
+  if (hxc_index < 0 || (size_t)hxc_index >= hxc_tmp_length_n4)
+  {
+    abort();
+  }
+  uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_borrow[(size_t)hxc_index];
+  return hxc_tmp_collection_index_load_result_n0;
 }
 
 int main(void)

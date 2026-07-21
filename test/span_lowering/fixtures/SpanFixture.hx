@@ -3,6 +3,16 @@ import c.ConstSpan;
 import c.Span;
 import c.UInt8;
 
+private final class FinalSpanMutator {
+	public function new() {}
+
+	/** Mutate a caller-owned span during one direct final-class method call. */
+	public function replace(values:Span<UInt8>, index:Int, replacement:UInt8):UInt8 {
+		values[index] = replacement;
+		return values[index];
+	}
+}
+
 class SpanFixture {
 	static inline final GRID_WIDTH = 32;
 	static inline final GRID_HEIGHT = 16;
@@ -51,6 +61,16 @@ class SpanFixture {
 	static function forwardReplace(values:Span<UInt8>, index:Int, replacement:UInt8):UInt8 {
 		return replaceAt(values, index, replacement);
 	}
+
+	#if !span_lowering_report
+	/** Exercise a transient span parameter on a direct final-class call. */
+	static function finalClassParameterRoundTrip(replacement:UInt8):UInt8 {
+		var values:CArray<UInt8, Length4> = CArray.zero(4);
+		var view:Span<UInt8> = values.span();
+		final mutator = new FinalSpanMutator();
+		return mutator.replace(view, 2, replacement);
+	}
+	#end
 
 	/** Prove a span's pointer and length survive later argument control flow. */
 	static function spanBeforeConditionalArgument(selectThird:Bool):UInt8 {
@@ -105,6 +125,9 @@ class SpanFixture {
 		spanBeforeConditionalArgument(true);
 		zeroedGridCell();
 		mutatedGridCell(zeroedGridCell());
+		#if !span_lowering_report
+		finalClassParameterRoundTrip(c.IntConvert.modulo(201));
+		#end
 	}
 
 	/** A seen but unreachable String signature must not become a runtime root. */

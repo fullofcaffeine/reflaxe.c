@@ -49,6 +49,7 @@ PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
+    "hxc.dispatch.json",
     "hxc.initialization-plan.json",
     "hxc.manifest.json",
     "hxc.runtime-plan.json",
@@ -472,7 +473,9 @@ def symbol_entries(symbols: dict[str, object]) -> list[dict[str, object]]:
     return value
 
 
-def function_names(symbols: dict[str, object]) -> dict[str, str]:
+def function_names(
+    symbols: dict[str, object], *, require_final_class_case: bool = False
+) -> dict[str, str]:
     names: dict[str, str] = {}
     for entry in symbol_entries(symbols):
         source = entry.get("sourceSymbol")
@@ -485,7 +488,7 @@ def function_names(symbols: dict[str, object]) -> dict[str, str]:
         ):
             field = source.removeprefix("SpanFixture.").split("(", 1)[0]
             names[field] = name
-    if set(names) != {
+    expected = {
         "checkedAt",
         "constSum",
         "forwardRead",
@@ -499,7 +502,10 @@ def function_names(symbols: dict[str, object]) -> dict[str, str]:
         "replaceAt",
         "spanBeforeConditionalArgument",
         "zeroedGridCell",
-    }:
+    }
+    if require_final_class_case:
+        expected.add("finalClassParameterRoundTrip")
+    if set(names) != expected:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
     return names
 
@@ -681,6 +687,8 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         (root / "hxc.initialization-plan.json").read_text(encoding="utf-8")
     )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
+    dispatch = json.loads((root / "hxc.dispatch.json").read_text(encoding="utf-8"))
+    symbols = json.loads((root / "hxc.symbols.json").read_text(encoding="utf-8"))
     proof = runtime_plan.get("noRuntimeProof")
     if not isinstance(proof, dict):
         raise SpanLoweringFailure(f"{profile}/{build} omitted its structured no-runtime proof")
@@ -711,11 +719,11 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or reachability
         != {
             "modules": 1,
-            "typeInstances": 0,
-            "functions": 13,
-            "blocks": 28,
-            "instructions": 165,
-            "cleanupActions": 0,
+            "typeInstances": 1,
+            "functions": 15,
+            "blocks": 30,
+            "instructions": 184,
+            "cleanupActions": 2,
             "runtimeIntents": 0,
         }
         or runtime_absence
@@ -739,6 +747,35 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or manifest_build.get("includeDirectories") != ["include"]
     ):
         raise SpanLoweringFailure(f"{profile}/{build} build plan retained an hxrt input")
+    calls = dispatch.get("calls")
+    if (
+        dispatch.get("schemaVersion") != 1
+        or dispatch.get("algorithm") != "hxc-closed-world-virtual-dispatch-v1"
+        or dispatch.get("runtimeFeatures") != []
+        or dispatch.get("slots") != []
+        or dispatch.get("layouts") != []
+        or dispatch.get("tables") != []
+        or dispatch.get("summary")
+        != {
+            "indirectCalls": 0,
+            "slots": 0,
+            "instanceCalls": 1,
+            "tables": 0,
+            "directCalls": 1,
+            "adapters": 0,
+            "layouts": 0,
+        }
+        or not isinstance(calls, list)
+        or len(calls) != 1
+        or not isinstance(calls[0], dict)
+        or calls[0].get("dispatch") != "direct"
+        or calls[0].get("reason") != "final-receiver-class"
+        or calls[0].get("slotId") is not None
+        or calls[0].get("methodFunctionId") != calls[0].get("targetFunctionId")
+    ):
+        raise SpanLoweringFailure(
+            f"{profile}/{build} final-class span call lost direct dispatch proof"
+        )
     combined = "\n".join(
         path.read_text(encoding="utf-8")
         for path in root.rglob("*")
@@ -766,16 +803,16 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         raise SpanLoweringFailure("an unreachable String-typed declaration entered generated output")
     if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
-        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 2
+        or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
         or source.count("const int32_t *") != 2
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
         or source.count("const uint8_t *") != 9
-        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 4
-        or source.count(" = sizeof(") != 9
+        or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 6
+        or source.count(" = sizeof(") != 10
         or source.count("bounds") != 0
-        or source.count("abort();") != 8
-        or source.count("[(size_t)") != 14
+        or source.count("abort();") != 11
+        or source.count("[(size_t)") != 16
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
     if (
@@ -784,7 +821,7 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count(" + 1;") != 3
     ):
         raise SpanLoweringFailure("span iteration stopped being a direct guarded index loop")
-    if source.count(" < 0 || (size_t)") != 8 or source.count(" >= ") != 8:
+    if source.count(" < 0 || (size_t)") != 10 or source.count(" >= ") != 11:
         raise SpanLoweringFailure("dynamic span access lost its signed/size_t bounds check")
     parameter_signatures = re.findall(
         r"(?m)^uint8_t [^(]+\((?:const )?uint8_t \*[^,]+, size_t [^,]+,",
@@ -794,7 +831,8 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         raise SpanLoweringFailure(
             "span parameters stopped lowering directly to pointer-plus-size_t signatures"
         )
-    return {"header": header, "source": source}
+    function_names(symbols, require_final_class_case=True)
+    return {"header": header, "source": source, "symbols": symbols}
 
 
 def production_snapshot(harness: HaxeHarness) -> dict[str, object]:
@@ -813,7 +851,11 @@ def production_snapshot(harness: HaxeHarness) -> dict[str, object]:
                 f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
             )
         project = validate_project(output, profile="portable", build="debug")
-        return {"program.h": project["header"], "program.c": project["source"]}
+        return {
+            "program.h": project["header"],
+            "program.c": project["source"],
+            "program-symbols.json": project["symbols"],
+        }
 
 
 def snapshot_artifacts() -> dict[str, object]:
@@ -927,7 +969,7 @@ def run_command(
 
 
 def harness_source(symbols: dict[str, object]) -> str:
-    names = function_names(symbols)
+    names = function_names(symbols, require_final_class_case=True)
     return f'''#include "hxc/program.h"
 
 #include <stdint.h>
@@ -942,6 +984,7 @@ int main(void)
   if ({names["mutatedGridCell"]}(UINT8_C(201)) != UINT8_C(201)) return 6;
   if ({names["parameterRoundTrip"]}(UINT8_C(201)) != UINT8_C(201)) return 7;
   if ({names["spanBeforeConditionalArgument"]}(true) != UINT8_C(8)) return 8;
+  if ({names["finalClassParameterRoundTrip"]}(UINT8_C(201)) != UINT8_C(201)) return 9;
   return 0;
 }}
 '''
@@ -1287,6 +1330,7 @@ def check_production(
                     canonical = {
                         "program.h": project["header"],
                         "program.c": project["source"],
+                        "program-symbols.json": project["symbols"],
                     }
                     canonical_header = project["header"]
                     canonical_source = project["source"]
@@ -1413,7 +1457,7 @@ def check_full_suite(args: argparse.Namespace, harness: HaxeHarness) -> None:
         }
         check_snapshots(snapshots)
 
-    symbols = canonical_report.get("symbols")
+    symbols = production.get("program-symbols.json")
     if not isinstance(symbols, dict):
         raise SpanLoweringFailure("canonical span symbols are missing")
     with harness.phase("native-toolchain-matrix"):
@@ -1437,7 +1481,9 @@ def main(arguments: Iterable[str] = ()) -> int:
                 "program.h": (EXPECTED / "program.h").read_text(encoding="utf-8"),
                 "program.c": (EXPECTED / "program.c").read_text(encoding="utf-8"),
             }
-            symbols = json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8"))
+            symbols = json.loads(
+                (EXPECTED / "program-symbols.json").read_text(encoding="utf-8")
+            )
             check_native_artifacts(artifacts, symbols, args.toolchain)
             print("span-lowering: OK: required strict-C native matrix passed")
             return 0
