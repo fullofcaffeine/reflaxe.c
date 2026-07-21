@@ -2917,13 +2917,18 @@ private class FunctionBuilder {
 	}
 
 	function lowerSwitchSubject(expression:TypedExpr):LoweredValue {
-		final mapping = primitiveMapping(expression.t, expression.pos, "TSwitch(subject-type)");
+		// `enum abstract Choice(Int)` is a closed Haxe type whose runtime value is
+		// still an ordinary Int. Ask the shared body-type planner for that proven
+		// representation instead of requiring the source type itself to be a core
+		// primitive. This is the same abstraction-preserving rule used for locals,
+		// parameters, record fields, and switch results.
+		final bodyType = bodyValueType(expression.t, expression.pos, "TSwitch(subject-type)");
+		final mapping = requirePrimitive(bodyType, expression.pos, "TSwitch(subject-type)");
 		switch mapping.irType {
 			case IRTBool | IRTInt(_, _):
 			case _:
 				unsupported(expression, 'TSwitch(non-integral-subject:${mapping.cSpelling})');
 		}
-		final bodyType = CBodyValueType.primitive(mapping);
 		return coerce(lowerValue(expression, bodyType), bodyType, expression.pos, "TSwitch(subject)");
 	}
 

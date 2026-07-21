@@ -1,0 +1,147 @@
+{
+  "schemaVersion": 1,
+  "catalogId": "caxecraft.ui",
+  "defaultLocale": "en",
+  "locales": [
+    "en",
+    "es-MX"
+  ],
+  "messages": [
+    {
+      "id": "brand",
+      "symbol": "Brand",
+      "text": {
+        "en": "CAXECRAFT  //  C + HAXE",
+        "es-MX": "CAXECRAFT  //  C + HAXE"
+      }
+    },
+    {
+      "id": "capture_prompt",
+      "symbol": "CapturePrompt",
+      "text": {
+        "en": "CLICK TO CAPTURE",
+        "es-MX": "CLIC PARA CAPTURAR"
+      }
+    },
+    {
+      "id": "controls",
+      "symbol": "Controls",
+      "text": {
+        "en": "WASD MOVE  1-8/WHEEL ITEMS  SPACE JUMP  E TALK  LMB MINE/STRIKE  RMB USE  ESC PAUSE  Q QUIT",
+        "es-MX": "WASD MOVER  1-8/RUEDA OBJETOS  ESPACIO SALTAR  E HABLAR  CLIC IZQ USAR  ESC PAUSA  Q SALIR"
+      }
+    },
+    {
+      "id": "debug_cells",
+      "symbol": "DebugCells",
+      "text": {
+        "en": "CELLS",
+        "es-MX": "CELDAS"
+      }
+    },
+    {
+      "id": "debug_draws",
+      "symbol": "DebugDraws",
+      "text": {
+        "en": "DRAWS",
+        "es-MX": "DIBUJOS"
+      }
+    },
+    {
+      "id": "debug_frame",
+      "symbol": "DebugFrame",
+      "text": {
+        "en": "FRAME",
+        "es-MX": "CUADRO"
+      }
+    },
+    {
+      "id": "debug_tick",
+      "symbol": "DebugTick",
+      "text": {
+        "en": "TICK",
+        "es-MX": "PASO"
+      }
+    },
+    {
+      "id": "debug_visible",
+      "symbol": "DebugVisible",
+      "text": {
+        "en": "VISIBLE",
+        "es-MX": "VISIBLES"
+      }
+    },
+    {
+      "id": "health_full",
+      "symbol": "HealthFull",
+      "text": {
+        "en": "HEALTH ALREADY FULL",
+        "es-MX": "SALUD COMPLETA"
+      }
+    },
+    {
+      "id": "menu_adventure",
+      "symbol": "MenuAdventure",
+      "text": {
+        "en": "ADVENTURE",
+        "es-MX": "AVENTURA"
+      }
+    },
+    {
+      "id": "menu_creative",
+      "symbol": "MenuCreative",
+      "text": {
+        "en": "CREATIVE MODE",
+        "es-MX": "MODO CREATIVO"
+      }
+    },
+    {
+      "id": "menu_instructions",
+      "symbol": "MenuInstructions",
+      "text": {
+        "en": "ARROWS / MOUSE TO CHOOSE   ENTER TO PLAY   L: ESPANOL",
+        "es-MX": "FLECHAS / RATON PARA ELEGIR   ENTER PARA JUGAR   L: ENGLISH"
+      }
+    },
+    {
+      "id": "no_block_in_reach",
+      "symbol": "NoBlockInReach",
+      "text": {
+        "en": "NO BLOCK IN REACH",
+        "es-MX": "NINGUN BLOQUE AL ALCANCE"
+      }
+    },
+    {
+      "id": "pause_help",
+      "symbol": "PauseHelp",
+      "text": {
+        "en": "CLICK TO CAPTURE  //  Q TO QUIT",
+        "es-MX": "CLIC PARA CAPTURAR  //  Q PARA SALIR"
+      }
+    },
+    {
+      "id": "pause_title",
+      "symbol": "PauseTitle",
+      "text": {
+        "en": "PAUSED",
+        "es-MX": "PAUSA"
+      }
+    },
+    {
+      "id": "place_blocked",
+      "symbol": "PlaceBlocked",
+      "text": {
+        "en": "PLACE BLOCKED: PLAYER OR WORLD EDGE",
+        "es-MX": "NO SE PUEDE COLOCAR: JUGADOR O BORDE"
+      }
+    },
+    {
+      "id": "title_fallback",
+      "symbol": "TitleFallback",
+      "text": {
+        "en": "CAXECRAFT",
+        "es-MX": "CAXECRAFT"
+      }
+    }
+  ]
+}

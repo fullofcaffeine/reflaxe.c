@@ -207,6 +207,50 @@ localization, audio, terrain textures/chunk meshes, or controller support.
 Passing this slice is integrated evidence, not a claim that the planned game
 is complete.
 
+## Localization and authored dialogue
+
+The renderer no longer selects English or Spanish with gameplay conditionals.
+It carries an opaque locale cursor and asks for typed message IDs. Reusable
+menus, controls, pause, and generic feedback live in
+[`locales/ui.json`](locales/ui.json). Nia's dialogue, Mossling feedback, the
+Adventure tagline, named items, and other authored prose live with the
+scenario in
+[`scenarios/first-playable/messages.json`](scenarios/first-playable/messages.json).
+
+That distinction matters: moving or sharing a scenario must also move the text
+that gives its characters and objectives meaning. A `.caxemap` refers to those
+strings by stable message ID, while saves and gameplay state remain independent
+of the chosen language. The future editor will edit the map and its catalog as
+one package.
+
+Today the native String/Bytes/filesystem path is not complete, so the build
+validates the JSON and generates a narrow Haxe rendering adapter. The adapter
+keeps direct string literals at raylib's borrowed C-string calls; application
+code never learns the supported locale names. The source catalogs are copied
+to `bin/content/` as part of native packaging, but the running binary still
+uses the validated embedded mirror. This is a documented transition, not a
+claim that runtime catalog loading or the complete bilingual game is finished.
+
+After editing either catalog, regenerate and check it with:
+
+```sh
+python3 examples/caxecraft/localization_catalog.py
+npm run test:caxecraft-localization
+```
+
+The focused check rejects incomplete locales, duplicate IDs or JSON keys,
+unknown fields, invalid UTF-8/control text, stale generated adapters, and any
+return of language-specific prose or branching to `Main.hx`/`TitleMenu.hx`.
+The deterministic secondary-locale graphical pilot is:
+
+```sh
+python3 examples/caxecraft/play.py --pilot secondary-locale
+```
+
+It selects the next catalog without naming its language in application code,
+presents the localized title screen, captures a real framebuffer, and exits
+within the normal 15-second bound.
+
 Collection is lossless at the fixed stack boundary. If only one slot remains,
 one berry enters the inventory and the rest stays visible in the world. If the
 stack is full, a Mossling drop remains available and Nia keeps her gift at the

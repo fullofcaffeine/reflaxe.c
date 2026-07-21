@@ -29,7 +29,9 @@
       "src/modules/caxecraft/gameplay/Mossling.c",
       "src/modules/caxecraft/gameplay/PlayerVitals.c",
       "src/modules/caxecraft/gameplay/Recovery.c",
-      "src/modules/caxecraft/gameplay/SwordCombat.c"
+      "src/modules/caxecraft/gameplay/SwordCombat.c",
+      "src/modules/caxecraft/localization/FirstPlayableCatalog.c",
+      "src/modules/caxecraft/localization/UiCatalog.c"
     ],
     "cStandard": "c11",
     "definitions": [],
@@ -68,6 +70,8 @@
       "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombatState.h",
+      "include/hxc/modules/caxecraft/localization/FirstPlayableCatalog.h",
+      "include/hxc/modules/caxecraft/localization/UiCatalog.h",
       "include/hxc/modules/raylib/raw/Camera.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
@@ -156,7 +160,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "19ca0d776a78d697828a8feaf5bc89c908adfc244a94963a8bce73a0a689abee",
+      "sha256": "baffdc2fa566f35e09c4a4afaab81930817e284fef1562f4078964b3bfcd1df1",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -171,7 +175,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "c16acc235eb6cbe62ab0c7036cdbcd1b039e81b29cebd7a884203aca1b2d7612",
+      "sha256": "ff68109df4f8e5d73c0b42c3585054eed04b842adaf22eaf55dd0a5c0a5de644",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -181,7 +185,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "3aef52ff2527d317a9f2a798b91b2f2019225ca25449cb00dd8f9f2b260f9d6c",
+      "sha256": "093f4c3fc38c1e9bd1930f8729b5dec9a484c76b35c0f42b70a1d5e4905f7515",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -206,7 +210,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "5d35221f3e072fcfc3542bbeb5467c084a8259878a6ee7e08459055d27d7af48",
+      "sha256": "62bc50f3013679fff4e8821db5830887f30ba96fed390a905dcf57c9f9e3f161",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -346,6 +350,16 @@
       "kind": "private-header"
     },
     {
+      "sha256": "7e246d489dad6529d077e819fdf3366c49e8bc0afb567c4a0a5762216beebe34",
+      "path": "include/hxc/modules/caxecraft/localization/FirstPlayableCatalog.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "cf1033b991b6c9b512142b2bb5f2282a5d3ec18437694bdf82ef0498d2b8f27b",
+      "path": "include/hxc/modules/caxecraft/localization/UiCatalog.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "b6bc2a7d4ebe11c2fcba5200cc07b49c94b7979f0fddb60ec38bff1b4f10fd69",
       "path": "include/hxc/modules/raylib/raw/Camera.h",
       "kind": "private-header"
@@ -386,12 +400,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "c3500d559a6f4655b391f47f824ee8b4ba2050c9bfa5c279e40d14d01d9ab805",
+      "sha256": "3601ac9a38aa5387a9a60963755325974ac3c6a04fc74c995a2e73194d8af778",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "287a5be08961020014afee322b7f04238fe07ff3be8189b578b54abe1b50b29d",
+      "sha256": "6f8623d24e8be2e34c570515d890a8bc20740a1ac65c19ad46587d64822b15e5",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -421,7 +435,7 @@
       "kind": "source"
     },
     {
-      "sha256": "09e9e8db52b8ecd53ce118656ee6ca62cac0eb707264f46e8dbaac2afe35e185",
+      "sha256": "c66cd90596ec3ccb0498c16589f0e5c717d9342890a594221d1a9c4855875fa2",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -488,6 +502,16 @@
     {
       "sha256": "6da941f51abf314eaea9a8737b27389a4446c4ed5bb29f4c67674310e08707a9",
       "path": "src/modules/caxecraft/gameplay/SwordCombat.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "c478c9540ca7ecbfefa4fd409ffaadbda0d8a3a7576fabee73d30a1463448e7d",
+      "path": "src/modules/caxecraft/localization/FirstPlayableCatalog.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "58980ac5b4c1c6db30fbb0700cb5541785099bd4547baf712a08253b0bde251e",
+      "path": "src/modules/caxecraft/localization/UiCatalog.c",
       "kind": "source"
     }
   ],

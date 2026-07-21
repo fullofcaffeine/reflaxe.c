@@ -35,6 +35,11 @@ import caxecraft.gameplay.RecoveryDecision;
 import caxecraft.gameplay.SwordCombat;
 import caxecraft.gameplay.SwordCombatDecision;
 import caxecraft.gameplay.SwordCombatState;
+import caxecraft.localization.FirstPlayableCatalog;
+import caxecraft.localization.FirstPlayableCatalog.ScenarioMessage;
+import caxecraft.localization.UiCatalog;
+import caxecraft.localization.UiCatalog.LocaleCursor;
+import caxecraft.localization.UiCatalog.UiMessage;
 import caxecraft.pilot.GameInputFrame;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
@@ -92,7 +97,9 @@ final class Main {
 		final itemTextureReady = CaxecraftTextures.isValid(itemTexture);
 		final entityTexture:Texture2D = CaxecraftTextures.loadEntityAtlas();
 		final entityTextureReady = CaxecraftTextures.isValid(entityTexture);
-		#if caxecraft_pilot_launch_smoke
+		#if caxecraft_pilot_secondary_locale
+		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
+		#elseif caxecraft_pilot_launch_smoke
 		final pilotName:PilotScriptName = PilotScriptName.LaunchSmoke;
 		#elseif caxecraft_pilot_move_jump_edit
 		final pilotName:PilotScriptName = PilotScriptName.MoveJumpEdit;
@@ -142,7 +149,12 @@ final class Main {
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
 		#end
-		var language:GameLanguage = GameLanguage.English;
+		var locale:LocaleCursor = UiCatalog.defaultLocale();
+		#if caxecraft_pilot_secondary_locale
+		// The graphical locale pilot selects the next validated catalog without
+		// teaching the application which human language that catalog contains.
+		locale = UiCatalog.nextLocale(locale);
+		#end
 		#if caxecraft_pilot
 		var onTitle = pilotName == PilotScriptName.LaunchSmoke || pilotName == PilotScriptName.ResizeLayout;
 		var paused = onTitle;
@@ -241,7 +253,7 @@ final class Main {
 			if (onTitle && focused) {
 				#if !caxecraft_pilot
 				if (Raylib.IsKeyPressed(KeyboardKey.L))
-					language = language == GameLanguage.English ? GameLanguage.Spanish : GameLanguage.English;
+					locale = UiCatalog.nextLocale(locale);
 				if (Raylib.IsKeyPressed(KeyboardKey.Up) || Raylib.IsKeyPressed(KeyboardKey.Down))
 					selectedMode = selectedMode == GameMode.Creative ? GameMode.Adventure : GameMode.Creative;
 
@@ -439,7 +451,7 @@ final class Main {
 				Vector3.fromFloat(0.0, 1.0, 0.0), c.Float32.fromFloat(70.0), CameraProjection.Perspective);
 			Raylib.BeginDrawing();
 			if (onTitle) {
-				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, language);
+				TitleMenu.draw(titleTexture, titleTextureReady, wordmarkTexture, wordmarkTextureReady, selectedMode, locale);
 			} else {
 				Raylib.ClearBackground(CaxecraftPalette.sky());
 				Raylib.BeginMode3D(camera);
@@ -450,7 +462,7 @@ final class Main {
 						c.Float32.fromFloat(1.04), c.Float32.fromFloat(1.04), CaxecraftPalette.selection());
 				Raylib.EndMode3D();
 				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
-					player.x, player.z, selectedMode, language, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
+					player.x, player.z, selectedMode, locale, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
 					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullReason, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
 					hudTextureReady, itemTexture, itemTextureReady);
 			}
@@ -459,9 +471,13 @@ final class Main {
 			// Checkpoints are handled after presentation, just as browser test
 			// tools capture a page only after the requested state is visible.
 			if (pilotName == PilotScriptName.LaunchSmoke && frameCount == 1)
+				#if caxecraft_pilot_secondary_locale
+				Raylib.TakeScreenshot("caxecraft-secondary-locale.png");
+				#else
 				Raylib.TakeScreenshot("caxecraft-smoke.png");
-			if (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 8)
-				Raylib.TakeScreenshot("caxecraft-pilot-move.png");
+				#end
+				if (pilotName == PilotScriptName.MoveJumpEdit && frameCount == 8)
+					Raylib.TakeScreenshot("caxecraft-pilot-move.png");
 			if (pilotName == PilotScriptName.PauseRecapture && frameCount == 4)
 				Raylib.TakeScreenshot("caxecraft-pilot-pause.png");
 			if (pilotName == PilotScriptName.CombatDrop && frameCount == 38)
@@ -590,7 +606,7 @@ final class Main {
 	}
 
 	static function drawHud(visible:Int, drawCalls:Int, frames:Int, updates:Int, paused:Bool, captured:Bool, placementBlocked:Bool, hit:RaycastHit,
-			playerX:Float, playerZ:Float, mode:GameMode, language:GameLanguage, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
+			playerX:Float, playerZ:Float, mode:GameMode, locale:LocaleCursor, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
 			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, enemyAttacked:Bool, pickedUp:Bool, pickupAmount:Int,
 			inventoryFullReason:InventoryFullReason, recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool,
 			itemTexture:Texture2D, itemTextureReady:Bool):Void {
@@ -605,141 +621,78 @@ final class Main {
 		Raylib.DrawLine(centerX, centerY + 3, centerX, centerY + 8, text);
 		Raylib.DrawRectangle(18, 18, 460, 108, CaxecraftPalette.hudPanel());
 		Raylib.DrawRectangleLines(18, 18, 460, 108, CaxecraftPalette.selection());
-		Raylib.DrawText("CAXECRAFT  //  C + HAXE", 32, 28, 20, text);
-		Raylib.DrawText("CELLS", 32, 58, 14, text);
+		UiCatalog.draw(locale, UiMessage.Brand, 32, 28, 20, text);
+		UiCatalog.draw(locale, UiMessage.DebugCells, 32, 58, 14, text);
 		HudDigits.drawNumber(World.VOLUME, 82, 59, 5, CaxecraftPalette.selection());
-		Raylib.DrawText("VISIBLE", 160, 58, 14, text);
+		UiCatalog.draw(locale, UiMessage.DebugVisible, 160, 58, 14, text);
 		HudDigits.drawNumber(visible, 230, 59, 5, CaxecraftPalette.selection());
-		Raylib.DrawText("DRAWS", 326, 58, 14, text);
+		UiCatalog.draw(locale, UiMessage.DebugDraws, 326, 58, 14, text);
 		HudDigits.drawNumber(drawCalls, 382, 59, 5, CaxecraftPalette.selection());
-		Raylib.DrawText("FRAME", 32, 86, 12, text);
+		UiCatalog.draw(locale, UiMessage.DebugFrame, 32, 86, 12, text);
 		HudDigits.drawNumber(frames, 82, 85, 6, text);
-		Raylib.DrawText("TICK", 174, 86, 12, text);
+		UiCatalog.draw(locale, UiMessage.DebugTick, 174, 86, 12, text);
 		HudDigits.drawNumber(updates, 216, 85, 6, text);
 		drawHotbar(inventory, hudTexture, hudTextureReady, itemTexture, itemTextureReady, width, height);
 		drawHealth(vitals, hudTexture, hudTextureReady, width);
-		Raylib.DrawText("WASD MOVE  1-8/WHEEL ITEMS  SPACE JUMP  E TALK  LMB MINE/STRIKE  RMB USE  ESC PAUSE  Q QUIT", 20, height - 22, 14, text);
-		if (mode == GameMode.Adventure) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("AVENTURA: PROLOGO EN CONSTRUCCION", 32, 110, 14, CaxecraftPalette.selection());
-			else
-				Raylib.DrawText("ADVENTURE: PROLOGUE IN PROGRESS", 32, 110, 14, CaxecraftPalette.selection());
-		}
+		UiCatalog.draw(locale, UiMessage.Controls, 20, height - 22, 14, text);
+		if (mode == GameMode.Adventure)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.AdventureProgress, 32, 110, 14, CaxecraftPalette.selection());
 		if (GuideNpc.isInRange(guide, playerX, playerZ)) {
 			Raylib.DrawRectangle(centerX - 260, centerY + 54, 520, 60, CaxecraftPalette.hudPanel());
-			if (GuideNpc.phase(guide) == GuidePhase.Waiting) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("E  HABLAR CON NIA", centerX - 92, centerY + 74, 18, text);
-				else
-					Raylib.DrawText("E  TALK TO NIA", centerX - 74, centerY + 74, 18, text);
-			} else if (GuideNpc.phase(guide) == GuidePhase.Welcomed) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("NIA: EL BOSQUE TE ESCUCHA. E: REGALO", centerX - 220, centerY + 74, 16, text);
-				else
-					Raylib.DrawText("NIA: THE GROVE LISTENS. E: A SMALL GIFT", centerX - 225, centerY + 74, 16, text);
-			} else if (language == GameLanguage.Spanish)
-				Raylib.DrawText("NIA: BAYAS PARA EL CAMINO, HAXIRIO", centerX - 205, centerY + 74, 16, text);
+			if (GuideNpc.phase(guide) == GuidePhase.Waiting)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.NiaTalk, centerX - 110, centerY + 74, 18, text);
+			else if (GuideNpc.phase(guide) == GuidePhase.Welcomed)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.NiaWelcome, centerX - 225, centerY + 74, 16, text);
 			else
-				Raylib.DrawText("NIA: BERRIES FOR THE ROAD, HAXIRIO", centerX - 205, centerY + 74, 16, text);
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.NiaGift, centerX - 205, centerY + 74, 16, text);
 		}
 		if (Mossling.isAlive(mossling)) {
-			if (Mossling.mode(mossling) == MosslingMode.Windup) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("MUSGUITO CARGANDO: ESQUIVA", width - 300, 28, 16, CaxecraftPalette.damage());
-				else
-					Raylib.DrawText("MOSSLING WINDUP: DODGE", width - 265, 28, 16, CaxecraftPalette.damage());
-			} else if (Mossling.mode(mossling) == MosslingMode.Chasing) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("MUSGUITO ALERTA", width - 180, 28, 16, CaxecraftPalette.selection());
-				else
-					Raylib.DrawText("MOSSLING ALERT", width - 180, 28, 16, CaxecraftPalette.selection());
-			}
+			if (Mossling.mode(mossling) == MosslingMode.Windup)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.MosslingWindup, width - 300, 28, 16, CaxecraftPalette.damage());
+			else if (Mossling.mode(mossling) == MosslingMode.Chasing)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.MosslingAlert, width - 180, 28, 16, CaxecraftPalette.selection());
 		}
-		if (strikeHit) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("GOLPE DE COBRE", centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
-			else
-				Raylib.DrawText("COPPER STRIKE", centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
-		}
-		if (enemyDefeated) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("EL MUSGUITO SOLTO BAYAS", width - 275, 54, 16, CaxecraftPalette.selection());
-			else
-				Raylib.DrawText("MOSSLING DROPPED BERRIES", width - 270, 54, 16, CaxecraftPalette.selection());
-		}
-		if (enemyAttacked) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", width - 330, 82, 16, CaxecraftPalette.damage());
-			else
-				Raylib.DrawText("TELEGRAPHED HIT: DODGE THE NEXT", width - 315, 82, 16, CaxecraftPalette.damage());
-		}
+		if (strikeHit)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.CopperStrike, centerX - 70, centerY - 54, 18, CaxecraftPalette.selection());
+		if (enemyDefeated)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.MosslingDroppedBerries, width - 285, 54, 16, CaxecraftPalette.selection());
+		if (enemyAttacked)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.TelegraphedHit, width - 330, 82, 16, CaxecraftPalette.damage());
 		if (pickedUp) {
-			// Each imported call receives a direct literal with static C lifetime.
-			// haxe_c-zcj.2 owns proving the same fact through a conditional value.
-			if (language == GameLanguage.Spanish) {
-				if (pickupAmount == 1)
-					Raylib.DrawText("+1 BAYA", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
-				else
-					Raylib.DrawText("+2 BAYAS", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
-			} else if (pickupAmount == 1) {
-				Raylib.DrawText("+1 BERRY", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
-			} else {
-				Raylib.DrawText("+2 BERRIES", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
-			}
+			final pickupMessage = pickupAmount == 1 ? ScenarioMessage.BerryPickupOne : ScenarioMessage.BerryPickupTwo;
+			FirstPlayableCatalog.draw(locale, pickupMessage, centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
 		}
-		if (inventoryFullReason == InventoryFullReason.BerryStack) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("BAYAS LLENAS: USA UNA PRIMERO", centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-			else
-				Raylib.DrawText("BERRIES FULL: USE ONE FIRST", centerX - 140, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-		} else if (inventoryFullReason == InventoryFullReason.BlockStack) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("PILA DE BLOQUES LLENA: USA UNO", centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-			else
-				Raylib.DrawText("BLOCK STACK FULL: USE ONE FIRST", centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
-		}
+		if (inventoryFullReason == InventoryFullReason.BerryStack)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.BerryStackFull, centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+		else if (inventoryFullReason == InventoryFullReason.BlockStack)
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.BlockStackFull, centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 		if (recoveryVisible) {
-			if (recoveryFeedback == RecoveryDecision.UseBerries) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("BAYAS: +1 CORAZON", centerX - 86, centerY + 24, 18, CaxecraftPalette.recovery());
-				else
-					Raylib.DrawText("BERRIES: +1 HEART", centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
-			} else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("SALUD COMPLETA", centerX - 72, centerY + 24, 18, CaxecraftPalette.selection());
-				else
-					Raylib.DrawText("HEALTH ALREADY FULL", centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
-			} else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty) {
-				if (language == GameLanguage.Spanish)
-					Raylib.DrawText("NO QUEDAN BAYAS", centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
-				else
-					Raylib.DrawText("NO BERRIES LEFT", centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
-			}
+			if (recoveryFeedback == RecoveryDecision.UseBerries)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.BerryRecovery, centerX - 88, centerY + 24, 18, CaxecraftPalette.recovery());
+			else if (recoveryFeedback == RecoveryDecision.HealthAlreadyFull)
+				UiCatalog.draw(locale, UiMessage.HealthFull, centerX - 96, centerY + 24, 18, CaxecraftPalette.selection());
+			else if (recoveryFeedback == RecoveryDecision.RecoveryStackEmpty)
+				FirstPlayableCatalog.draw(locale, ScenarioMessage.NoBerries, centerX - 76, centerY + 24, 18, CaxecraftPalette.selection());
 		}
 		if (vitals.safeTicks > 15)
 			Raylib.DrawRectangleLines(4, 4, width - 8, height - 8, CaxecraftPalette.damage());
 		if (PlayerVitals.isDefeated(vitals)) {
 			Raylib.DrawRectangle(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.hudPanel());
 			Raylib.DrawRectangleLines(centerX - 250, centerY - 74, 500, 148, CaxecraftPalette.damage());
-			if (language == GameLanguage.Spanish) {
-				Raylib.DrawText("HAXIRIO HA CAIDO", centerX - 112, centerY - 42, 24, text);
-				Raylib.DrawText("E  VOLVER AL PRADO", centerX - 105, centerY + 10, 18, CaxecraftPalette.selection());
-			} else {
-				Raylib.DrawText("HAXIRIO HAS FALLEN", centerX - 122, centerY - 42, 24, text);
-				Raylib.DrawText("E  RETURN TO THE MEADOW", centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
-			}
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.HaxirioFallen, centerX - 122, centerY - 42, 24, text);
+			FirstPlayableCatalog.draw(locale, ScenarioMessage.ReturnToMeadow, centerX - 125, centerY + 10, 18, CaxecraftPalette.selection());
 		}
 		if (paused) {
 			Raylib.DrawRectangle(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.hudPanel());
 			Raylib.DrawRectangleLines(centerX - 170, centerY - 48, 340, 96, CaxecraftPalette.selection());
-			Raylib.DrawText("PAUSED", centerX - 48, centerY - 30, 24, text);
-			Raylib.DrawText("CLICK TO CAPTURE  //  Q TO QUIT", centerX - 145, centerY + 8, 16, text);
+			UiCatalog.draw(locale, UiMessage.PauseTitle, centerX - 48, centerY - 30, 24, text);
+			UiCatalog.draw(locale, UiMessage.PauseHelp, centerX - 160, centerY + 8, 16, text);
 		} else if (placementBlocked) {
-			Raylib.DrawText("PLACE BLOCKED: PLAYER OR WORLD EDGE", centerX - 150, centerY + 26, 14, CaxecraftPalette.selection());
+			UiCatalog.draw(locale, UiMessage.PlaceBlocked, centerX - 170, centerY + 26, 14, CaxecraftPalette.selection());
 		} else if (!captured) {
-			Raylib.DrawText("CLICK TO CAPTURE", centerX - 74, centerY + 26, 14, text);
+			UiCatalog.draw(locale, UiMessage.CapturePrompt, centerX - 90, centerY + 26, 14, text);
 		} else if (!hit.hit) {
-			Raylib.DrawText("NO BLOCK IN REACH", centerX - 78, centerY + 26, 14, text);
+			UiCatalog.draw(locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
 		}
 	}
 

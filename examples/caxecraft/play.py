@@ -24,6 +24,7 @@ CASE = Path(__file__).resolve().parent
 PROVISION_DIR = ROOT / "scripts/raylib"
 sys.path.insert(0, str(PROVISION_DIR))
 import provision  # type: ignore  # noqa: E402
+from localization_catalog import expected_draw_call_count  # noqa: E402
 
 
 STRICT_FLAGS = (
@@ -73,10 +74,16 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/PlayerVitals.c": "c",
     "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
     "playable/src/modules/caxecraft/gameplay/Mining.c": "c",
+    "playable/src/modules/caxecraft/localization/FirstPlayableCatalog.c": "c",
+    "playable/src/modules/caxecraft/localization/UiCatalog.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
 RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items", "entities")
 RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
+RUNTIME_CONTENT_FILES = (
+    "locales/ui.json",
+    "scenarios/first-playable/messages.json",
+)
 
 # Exact full-opacity colors sampled from the reviewed front-facing entity cells.
 # We count a small family instead of one pixel so a driver may interpolate
@@ -187,6 +194,39 @@ def stage_runtime_assets(destination: Path) -> None:
         encoding="utf-8",
         newline="\n",
     )
+
+
+def stage_content_catalogs(destination: Path) -> None:
+    """Package validated source catalogs without claiming runtime loading yet.
+
+    The current C adapter embeds reviewed literals at build time. Keeping the
+    exact JSON beside the executable makes the intended package boundary real:
+    global UI text is separate, while Nia and other authored prose stays under
+    the first-playable scenario. Native catalog loading remains an explicit
+    later capability rather than an example-only filesystem shortcut.
+    """
+
+    stage_root = destination / "content"
+    expected = set(RUNTIME_CONTENT_FILES)
+    if stage_root.exists():
+        if stage_root.is_symlink() or not stage_root.is_dir():
+            raise PlayFailure("Caxecraft staged content root is not a real directory")
+        existing = {
+            path.relative_to(stage_root).as_posix()
+            for path in stage_root.rglob("*")
+            if path.is_file() or path.is_symlink()
+        }
+        unexpected = sorted(existing - expected)
+        if unexpected:
+            raise PlayFailure(f"unowned files occupy the Caxecraft staged content root: {unexpected}")
+    for raw_path in RUNTIME_CONTENT_FILES:
+        relative = validated_relative(raw_path, f"runtime content {raw_path}")
+        source = CASE.joinpath(*relative.parts)
+        if source.is_symlink() or not source.is_file():
+            raise PlayFailure(f"Caxecraft runtime content is missing or a symlink: {raw_path}")
+        target = stage_root.joinpath(*relative.parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source, target)
 
 
 def development_tool(name: str) -> str:
@@ -545,6 +585,7 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str
     if pilot is not None:
         pilot_defines = {
             "launch-smoke": "caxecraft_pilot_launch_smoke",
+            "secondary-locale": "caxecraft_pilot_secondary_locale",
             "move-jump-edit": "caxecraft_pilot_move_jump_edit",
             "pause-recapture": "caxecraft_pilot_pause_recapture",
             "combat-drop": "caxecraft_pilot_combat_drop",
@@ -601,10 +642,19 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "BeginMode3D(",
         "DrawCube(",
         "DrawCubeWires(",
-        "DrawText(",
     ):
         if required not in app:
             raise PlayFailure(f"generated Caxecraft app omitted direct Raylib call {required}")
+    # Player-visible prose is emitted by generated catalog adapters, not by the
+    # application controller. The exact count proves both validated locales and
+    # every catalog message reached C while keeping Main and TitleMenu free of
+    # language-specific branches.
+    expected_text_draws = expected_draw_call_count()
+    actual_text_draws = combined.count("DrawText(")
+    if actual_text_draws != expected_text_draws:
+        raise PlayFailure(
+            f"generated Caxecraft catalogs contain {actual_text_draws} direct DrawText call sites; expected {expected_text_draws}"
+        )
     # Pilot builds replace live keyboard and mouse sampling with a deterministic
     # in-process input provider. Requiring GetMouseDelta there would reject the
     # exact dead-code removal that makes the two providers a clean compile-time
@@ -613,6 +663,8 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
     if pilot == "resize-layout" and "SetWindowSize(" not in app:
         raise PlayFailure("generated Caxecraft resize pilot omitted direct Raylib call SetWindowSize(")
+    if pilot == "secondary-locale" and "UiCatalog_nextLocale(" not in app:
+        raise PlayFailure("generated Caxecraft secondary-locale pilot did not select the next validated catalog")
     # This first slice draws wire geometry only for the block under the
     # crosshair. A second call site would permit per-block fill/wire switching,
     # which previously made raylib flush thousands of tiny GPU batches before
@@ -931,6 +983,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--pilot",
         choices=(
             "launch-smoke",
+            "secondary-locale",
             "move-jump-edit",
             "pause-recapture",
             "combat-drop",
@@ -1021,12 +1074,14 @@ def main(argv: list[str]) -> int:
             optimization=args.optimization,
         )
         stage_runtime_assets(executable.parent)
+        stage_content_catalogs(executable.parent)
         print(f"caxecraft: built native executable at {executable}")
         if args.build_only:
             return 0
         if selected_pilot is not None:
             screenshot_names = {
                 "launch-smoke": "caxecraft-smoke.png",
+                "secondary-locale": "caxecraft-secondary-locale.png",
                 "move-jump-edit": "caxecraft-pilot-move.png",
                 "pause-recapture": "caxecraft-pilot-pause.png",
                 "combat-drop": "caxecraft-pilot-combat.png",
@@ -1039,7 +1094,7 @@ def main(argv: list[str]) -> int:
             if screenshot.exists():
                 screenshot.unlink()
             run([str(executable)], cwd=executable.parent, timeout=15, label=f"Caxecraft {selected_pilot} graphical pilot")
-            if selected_pilot == "launch-smoke":
+            if selected_pilot in ("launch-smoke", "secondary-locale"):
                 width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name)
             elif selected_pilot == "resize-layout":
                 width, height = validate_smoke_screenshot(

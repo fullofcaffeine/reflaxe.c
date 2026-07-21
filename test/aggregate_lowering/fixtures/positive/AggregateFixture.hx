@@ -61,6 +61,14 @@ class AggregateFixture {
 		return value.state == SwitchState.On;
 	}
 
+	static function switchStateValue(value:SwitchState):Int {
+		return switch value {
+			case Off: 3;
+			case On: 7;
+			case _: -1;
+		};
+	}
+
 	static function main():Void {
 		var first:OrderA = make(3, 4);
 		var copied:OrderB = copy(first);
@@ -68,6 +76,7 @@ class AggregateFixture {
 		while (!(sum(copied) == 7
 			&& localSum(5, 6) == 11
 			&& envelopeSum(nested) == 7
+			&& switchStateValue(SwitchState.On) == 7
 			&& switchIsOn(makeSwitch(SwitchState.On))
 			&& !switchIsOn(makeSwitch(SwitchState.Off)))) {}
 	}

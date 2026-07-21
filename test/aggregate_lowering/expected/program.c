@@ -92,19 +92,26 @@ void hxc_AggregateFixture_main(void)
     bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_short_circuit_load_result_n11;
     if (hxc_tmp_short_circuit_load_result_n11)
     {
-      struct hxc_SwitchRecord hxc_tmp_call_result_n12 = hxc_AggregateFixture_makeSwitch(1);
-      bool hxc_tmp_call_result_n13 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n12);
-      hxc_tmp_short_circuit_result_n5 = hxc_tmp_call_result_n13;
+      int32_t hxc_tmp_call_result_n12 = hxc_AggregateFixture_switchStateValue(1);
+      hxc_tmp_short_circuit_result_n5 = hxc_tmp_call_result_n12 == 7;
     }
-    bool hxc_tmp_short_circuit_load_result_n14 = hxc_tmp_short_circuit_result_n5;
-    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n14;
-    if (hxc_tmp_short_circuit_load_result_n14)
+    bool hxc_tmp_short_circuit_load_result_n13 = hxc_tmp_short_circuit_result_n5;
+    bool hxc_tmp_short_circuit_result_n6 = hxc_tmp_short_circuit_load_result_n13;
+    if (hxc_tmp_short_circuit_load_result_n13)
     {
-      struct hxc_SwitchRecord hxc_tmp_call_result_n15 = hxc_AggregateFixture_makeSwitch(0);
-      bool hxc_tmp_call_result_n16 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n15);
-      hxc_tmp_short_circuit_result_n6 = !hxc_tmp_call_result_n16;
+      struct hxc_SwitchRecord hxc_tmp_call_result_n14 = hxc_AggregateFixture_makeSwitch(1);
+      bool hxc_tmp_call_result_n15 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n14);
+      hxc_tmp_short_circuit_result_n6 = hxc_tmp_call_result_n15;
     }
-    if (!!hxc_tmp_short_circuit_result_n6)
+    bool hxc_tmp_short_circuit_load_result_n16 = hxc_tmp_short_circuit_result_n6;
+    bool hxc_tmp_short_circuit_result_n7 = hxc_tmp_short_circuit_load_result_n16;
+    if (hxc_tmp_short_circuit_load_result_n16)
+    {
+      struct hxc_SwitchRecord hxc_tmp_call_result_n17 = hxc_AggregateFixture_makeSwitch(0);
+      bool hxc_tmp_call_result_n18 = hxc_AggregateFixture_switchIsOn(hxc_tmp_call_result_n17);
+      hxc_tmp_short_circuit_result_n7 = !hxc_tmp_call_result_n18;
+    }
+    if (!!hxc_tmp_short_circuit_result_n7)
     {
       break;
     }
@@ -132,6 +139,29 @@ int32_t hxc_AggregateFixture_sum(struct hxc_OrderA hxc_value)
 bool hxc_AggregateFixture_switchIsOn(struct hxc_SwitchRecord hxc_value)
 {
   return hxc_value.hxc_state == 1;
+}
+
+int32_t hxc_AggregateFixture_switchStateValue(int32_t hxc_value)
+{
+  int32_t hxc_tmp_switch_result_n1 = 0;
+  switch (hxc_value) {
+    case 0:
+      {
+        hxc_tmp_switch_result_n1 = 3;
+        break;
+      }
+    case 1:
+      {
+        hxc_tmp_switch_result_n1 = 7;
+        break;
+      }
+    default:
+      {
+        hxc_tmp_switch_result_n1 = -1;
+        break;
+      }
+  }
+  return hxc_tmp_switch_result_n1;
 }
 
 int main(void)

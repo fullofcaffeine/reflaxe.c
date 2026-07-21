@@ -28,6 +28,12 @@ from check_assets import (  # noqa: E402
     negative_contracts,
     validate_asset_pack,
 )
+from check_localization import (  # noqa: E402
+    LocalizationCheckFailure,
+    check_app_boundary,
+    check_generated,
+    check_negative_contracts as check_localization_negative_contracts,
+)
 from play import (  # noqa: E402
     PLAYABLE_SNAPSHOT_FORMATS,
     snapshot_values as playable_snapshot_values,
@@ -2020,10 +2026,13 @@ def main(argv: Iterable[str] = ()) -> int:
     timing = TimingRecorder()
     timing_mode = "native-only" if args.native_only else ("full" if args.full else "quick")
     try:
-        progress("asset manifest + negative contracts")
+        progress("asset + localization contracts")
         with timing.phase("asset-contracts"):
             validate_asset_pack(CASE / "assets")
             negative_contracts()
+            check_generated()
+            check_app_boundary()
+            check_localization_negative_contracts()
         with tempfile.TemporaryDirectory(prefix="hxc-caxecraft-domain-") as temporary:
             root = Path(temporary)
             if args.native_only:
@@ -2125,6 +2134,7 @@ def main(argv: Iterable[str] = ()) -> int:
         AssetValidationError,
         CFixtureFailure,
         CaxecraftFailure,
+        LocalizationCheckFailure,
         MaintainabilityError,
         OSError,
         UnicodeError,

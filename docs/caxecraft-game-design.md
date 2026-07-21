@@ -290,6 +290,24 @@ A scenario contains:
 - dialogue, journal entries, objectives, routes, and mode settings;
 - CaxeFlow state declarations, rules, and reusable action sequences.
 
+The distributable unit is a **scenario package**, not a lone map file. The map
+stores language-neutral message IDs; a reviewed catalog beside it stores the
+complete text for every supported locale:
+
+```text
+first-playable/
+  map.caxemap
+  messages.json
+```
+
+This boundary keeps Nia's dialogue, objectives, location names, encounter
+feedback, and other authored prose with the content that uses them. Reusable
+interface text—menus, controls, pause, settings, and generic engine errors—uses
+a separate game-wide UI catalog. Gameplay code and saved state see only typed
+message IDs; neither contains English/Spanish branches or translated prose.
+The editor edits the map and scenario catalog as one package and validates that
+every referenced message is complete before test play or save.
+
 The canonical writer uses one ordering and escaping policy, writes no absolute
 paths or timestamps, and saves to a sibling temporary file before an atomic
 replace. Loading validates the complete scenario before it can replace a
@@ -447,6 +465,17 @@ including `á é í ó ú ü ñ Ñ ¿ ¡`, at every admitted UI scale. Layout sn
 exercise both languages, long strings, wrapping, input prompts, and small and
 large viewports. A native Spanish speaker and a child-oriented usability pass
 review the final copy before showcase closure.
+
+The current first playable establishes this ownership boundary before native
+catalog loading exists. [`examples/caxecraft/locales/ui.json`](../examples/caxecraft/locales/ui.json)
+owns reusable interface copy, while
+[`examples/caxecraft/scenarios/first-playable/messages.json`](../examples/caxecraft/scenarios/first-playable/messages.json)
+owns Nia, Mossling, and Adventure prose. A deterministic build step validates
+both files and emits a small typed C/raylib adapter whose direct literals have
+static C lifetime. The JSON files are also packaged beside the executable.
+This build-time embedding is an explicit bridge: CaxeMap/editor integration and
+native String/Bytes/filesystem support will replace it with ordinary validated
+scenario loading. It must not become a permanent alternate content path.
 
 ## Saves, recovery, and user content
 

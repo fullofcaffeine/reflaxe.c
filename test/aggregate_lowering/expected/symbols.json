@@ -512,6 +512,32 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
+      "sourceOrdinal": 12,
+      "readableName": [
+        "tmp",
+        "short-circuit-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_join_n12",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label18:short-circuit-join|0:|0:|2:12",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_join_n12",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-join#12"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
       "sourceOrdinal": 4,
       "readableName": [
         "tmp",
@@ -585,6 +611,32 @@
       "specializationArguments": [],
       "baseName": "hxc_tmp_short_circuit_join_n8",
       "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-join#8"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 11,
+      "readableName": [
+        "tmp",
+        "short-circuit-rhs"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_rhs_n11",
+      "semanticKey": "9:temporary|86:label:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|4:16:AggregateFixture4:main11:block-label17:short-circuit-rhs|0:|0:|2:11",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_rhs_n11",
+      "sourceSymbol": "AggregateFixture.main.block-label.short-circuit-rhs#11"
     },
     {
       "overloadSignature": [],
@@ -850,14 +902,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 13,
+      "sourceOrdinal": 14,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_call_result_n13",
-      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:13",
+      "cName": "hxc_tmp_call_result_n14",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:14",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -869,8 +921,8 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_call_result_n13",
-      "sourceSymbol": "AggregateFixture.main.call-result#13"
+      "baseName": "hxc_tmp_call_result_n14",
+      "sourceSymbol": "AggregateFixture.main.call-result#14"
     },
     {
       "overloadSignature": [],
@@ -902,14 +954,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 16,
+      "sourceOrdinal": 17,
       "readableName": [
         "tmp",
         "call-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_call_result_n16",
-      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:16",
+      "cName": "hxc_tmp_call_result_n17",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:17",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -921,8 +973,34 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_call_result_n16",
-      "sourceSymbol": "AggregateFixture.main.call-result#16"
+      "baseName": "hxc_tmp_call_result_n17",
+      "sourceSymbol": "AggregateFixture.main.call-result#17"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 18,
+      "readableName": [
+        "tmp",
+        "call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_call_result_n18",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main11:call-result|0:|0:|2:18",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_call_result_n18",
+      "sourceSymbol": "AggregateFixture.main.call-result#18"
     },
     {
       "overloadSignature": [],
@@ -1124,14 +1202,14 @@
       "overloadSignature": [],
       "collisionResolved": false,
       "naming": "generated",
-      "sourceOrdinal": 14,
+      "sourceOrdinal": 13,
       "readableName": [
         "tmp",
         "short-circuit-load-result"
       ],
       "requestedName": null,
-      "cName": "hxc_tmp_short_circuit_load_result_n14",
-      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main25:short-circuit-load-result|0:|0:|2:14",
+      "cName": "hxc_tmp_short_circuit_load_result_n13",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main25:short-circuit-load-result|0:|0:|2:13",
       "escapeReasons": [
         "non-c-identifier-byte",
         "separator-normalized"
@@ -1143,8 +1221,34 @@
       "visibility": "internal",
       "kind": "temporary",
       "specializationArguments": [],
-      "baseName": "hxc_tmp_short_circuit_load_result_n14",
-      "sourceSymbol": "AggregateFixture.main.short-circuit-load-result#14"
+      "baseName": "hxc_tmp_short_circuit_load_result_n13",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-load-result#13"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 16,
+      "readableName": [
+        "tmp",
+        "short-circuit-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_load_result_n16",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main25:short-circuit-load-result|0:|0:|2:16",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_load_result_n16",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-load-result#16"
     },
     {
       "overloadSignature": [],
@@ -1275,6 +1379,32 @@
       "specializationArguments": [],
       "baseName": "hxc_tmp_short_circuit_result_n6",
       "sourceSymbol": "AggregateFixture.main.short-circuit-result#6"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 7,
+      "readableName": [
+        "tmp",
+        "short-circuit-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_short_circuit_result_n7",
+      "semanticKey": "9:temporary|89:ordinary:77:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:|3:16:AggregateFixture4:main20:short-circuit-result|0:|0:|1:7",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture4:main|0:|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_short_circuit_result_n7",
+      "sourceSymbol": "AggregateFixture.main.short-circuit-result#7"
     },
     {
       "overloadSignature": [
@@ -1538,6 +1668,183 @@
       "specializationArguments": [],
       "baseName": "hxc_value",
       "sourceSymbol": "AggregateFixture.switchIsOn.value#0"
+    },
+    {
+      "overloadSignature": [
+        "i32"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "AggregateFixture",
+        "switchStateValue"
+      ],
+      "requestedName": null,
+      "cName": "hxc_AggregateFixture_switchStateValue",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_AggregateFixture_switchStateValue",
+      "sourceSymbol": "AggregateFixture.switchStateValue(i32)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "switch-value-case-0"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_switch_value_case_0_n0",
+      "semanticKey": "9:temporary|104:label:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|4:16:AggregateFixture16:switchStateValue11:block-label19:switch-value-case-0|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_switch_value_case_0_n0",
+      "sourceSymbol": "AggregateFixture.switchStateValue.block-label.switch-value-case-0#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "switch-value-case-1"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_switch_value_case_1_n1",
+      "semanticKey": "9:temporary|104:label:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|4:16:AggregateFixture16:switchStateValue11:block-label19:switch-value-case-1|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_switch_value_case_1_n1",
+      "sourceSymbol": "AggregateFixture.switchStateValue.block-label.switch-value-case-1#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "switch-value-default"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_switch_value_default_n2",
+      "semanticKey": "9:temporary|104:label:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|4:16:AggregateFixture16:switchStateValue11:block-label20:switch-value-default|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_switch_value_default_n2",
+      "sourceSymbol": "AggregateFixture.switchStateValue.block-label.switch-value-default#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "switch-value-join"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_switch_value_join_n3",
+      "semanticKey": "9:temporary|104:label:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|4:16:AggregateFixture16:switchStateValue11:block-label17:switch-value-join|0:|0:|1:3",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "label"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_switch_value_join_n3",
+      "sourceSymbol": "AggregateFixture.switchStateValue.block-label.switch-value-join#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "switch-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_switch_result_n1",
+      "semanticKey": "9:temporary|107:ordinary:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|3:16:AggregateFixture16:switchStateValue13:switch-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_switch_result_n1",
+      "sourceSymbol": "AggregateFixture.switchStateValue.switch-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "value"
+      ],
+      "requestedName": null,
+      "cName": "hxc_value",
+      "semanticKey": "5:local|107:ordinary:95:6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:|3:16:AggregateFixture16:switchStateValue5:value|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:16:AggregateFixture16:switchStateValue|1:3:i32|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_value",
+      "sourceSymbol": "AggregateFixture.switchStateValue.value#0"
     },
     {
       "overloadSignature": [],

@@ -53,4 +53,6 @@ int32_t hxc_AggregateFixture_sum(struct hxc_OrderA hxc_value);
 
 bool hxc_AggregateFixture_switchIsOn(struct hxc_SwitchRecord hxc_value);
 
+int32_t hxc_AggregateFixture_switchStateValue(int32_t hxc_value);
+
 #endif /* HXC_PROGRAM_H_INCLUDED */
