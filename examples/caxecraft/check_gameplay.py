@@ -22,7 +22,7 @@ from run import (  # noqa: E402
     verify_pinned_haxe,
 )
 
-EXPECTED = "caxecraft-gameplay: lossless items, paced Mossling encounter, berry recovery, and bounded player health passed\n"
+EXPECTED = "caxecraft-gameplay: lossless mining/items, paced Mossling encounter, berry recovery, and bounded player health passed\n"
 FORBIDDEN = tuple(
     re.compile(pattern)
     for pattern in (r"#if\b", r"\bDynamic\b", r"\bAny\b", r"\bReflect\b", r"\buntyped\b", r"\b__c__\b", r"\bc\.", r"\braylib\.")

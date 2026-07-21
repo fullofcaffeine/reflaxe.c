@@ -25,6 +25,7 @@
       "src/modules/caxecraft/gameplay/BerryDrop.c",
       "src/modules/caxecraft/gameplay/GuideNpc.c",
       "src/modules/caxecraft/gameplay/Inventory.c",
+      "src/modules/caxecraft/gameplay/Mining.c",
       "src/modules/caxecraft/gameplay/Mossling.c",
       "src/modules/caxecraft/gameplay/PlayerVitals.c",
       "src/modules/caxecraft/gameplay/Recovery.c",
@@ -58,6 +59,8 @@
       "include/hxc/modules/caxecraft/gameplay/Inventory.h",
       "include/hxc/modules/caxecraft/gameplay/InventoryState.h",
       "include/hxc/modules/caxecraft/gameplay/ItemKind.h",
+      "include/hxc/modules/caxecraft/gameplay/Mining.h",
+      "include/hxc/modules/caxecraft/gameplay/MiningResult.h",
       "include/hxc/modules/caxecraft/gameplay/Mossling.h",
       "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
@@ -151,7 +154,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "946bcd7477dcb07dcdb7294ee54480673d613db34d80304c662fca13477a512e",
+      "sha256": "19ca0d776a78d697828a8feaf5bc89c908adfc244a94963a8bce73a0a689abee",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -166,7 +169,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "d735c380fac4d3df7e0c08a96de6f797a26ca6f0639dc79a9d5555db35a80f31",
+      "sha256": "0c76d2a36d4a523c558ef9a99be492eab6a617986c82cf4a500e276eef4b5dc7",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -176,12 +179,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "d74695e04ef544a28b7f4c6ae7b7ca46608090d74f5f6683b553a66ade14570a",
+      "sha256": "324abbfbe826e88f0ad1703cc8f0fc7d36f6de471c2ce513317bc9b0ec25efa0",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "ddd1fd67acef480108b83f0353a7ad6915c18e805c5aea25d2c959c6d0746135",
+      "sha256": "b4547e315059c34bc0ef151daef13a21ccd8e6fb731d508bb5c9f480af354953",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -201,7 +204,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "4124c26f4cbf420d1b74d3a485e5bdbd2d506ce26fb8933ca85cc10bc478e158",
+      "sha256": "e178b646b454cd2d0bbe2dcbbacd4be6bce67028d9b2c6d88218906f19e50e03",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -296,6 +299,16 @@
       "kind": "private-header"
     },
     {
+      "sha256": "f519c2da862ede80ee1fe7dc6bdef4310f00a5d01b2ea70a8020c133eda9593c",
+      "path": "include/hxc/modules/caxecraft/gameplay/Mining.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "103a1db681f8adfb0ad3fa224e6f52a74ea68a5e464c0f3f3ae05e8095851936",
+      "path": "include/hxc/modules/caxecraft/gameplay/MiningResult.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "c77ddac526140894487f54f9575a5ca437e45780a261807fa00c22c6e691254a",
       "path": "include/hxc/modules/caxecraft/gameplay/Mossling.h",
       "kind": "private-header"
@@ -366,12 +379,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "eec58a5ce4777824ee7d838bd24b835f984601a888f65d9fe0acd87a692e9659",
+      "sha256": "d6f593fc69987a9ec92742d87c0877f73c5a4d8b320a3fe6faaa12880a96f377",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "97a8eb649eab2982195ca6b0f45f6e04763ddd758cac927198ef28815fd1e447",
+      "sha256": "287a5be08961020014afee322b7f04238fe07ff3be8189b578b54abe1b50b29d",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -381,7 +394,7 @@
       "kind": "source"
     },
     {
-      "sha256": "721cedc2213d914f1061fc5878c8a0999174604ea5d05a13bea32e2adf416fbd",
+      "sha256": "3f3c21ea96f306495d5bda6c7971f23a9a412551c64dc29e1ccf02be973c1aec",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -401,7 +414,7 @@
       "kind": "source"
     },
     {
-      "sha256": "8697afb061fce1c9960a7da5bf91c24a4bd5667c56422e96c3520a88b4b97210",
+      "sha256": "63222ac4956c89886718ca96848154fbff87688153c3f2d6121dc7e5f282321b",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -443,6 +456,11 @@
     {
       "sha256": "75a417cdb9417b145135d879cfa229c407e26aeab19900b6fb5bce7bd791e33f",
       "path": "src/modules/caxecraft/gameplay/Inventory.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "29a53867c740a2939bebd0ea86e3ffca1477b5f3b320963178333d5d99fbfde4",
+      "path": "src/modules/caxecraft/gameplay/Mining.c",
       "kind": "source"
     },
     {

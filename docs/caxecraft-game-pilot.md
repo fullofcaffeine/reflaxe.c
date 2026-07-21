@@ -68,14 +68,17 @@ npm run caxecraft:play -- --pilot recovery-use
 
 # Fill the berry stack, ask Nia for her gift, prove it remains retryable, and quit.
 npm run caxecraft:play -- --pilot full-inventory-gift
+
+# Fill all block stacks, try to mine, prove the block is not discarded, and quit.
+npm run caxecraft:play -- --pilot full-inventory-mining
 ```
 
-The six closed script names are `LaunchSmoke`, `MoveJumpEdit`,
-`PauseRecapture`, `CombatDrop`, `RecoveryUse`, and `FullInventoryGift`. Each has
-a small fixed frame limit below the absolute 120-frame policy. Its final and
-every later action is `Quit`, which protects against a script accidentally
-becoming an unattended interactive session. The Python runner adds an
-independent 15-second wall-clock timeout.
+The seven closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+`PauseRecapture`, `CombatDrop`, `RecoveryUse`, `FullInventoryGift`, and
+`FullInventoryMining`. Each has a small fixed frame limit below the absolute
+120-frame policy. Its final and every later action is `Quit`, which protects
+against a script accidentally becoming an unattended interactive session. The
+Python runner adds an independent 15-second wall-clock timeout.
 
 The launch image check requires the staged panorama and wordmark by semantic
 color/region evidence. Gameplay checks require independent sky, terrain,
@@ -103,6 +106,15 @@ The full-inventory pilot begins with exactly 64 berries, advances Nia to the
 gift step, and tries the interaction again. Its frame must show both the unique
 capacity-warning color and Nia still offering the gift. The renderer-free test
 separately proves that partial world pickup leaves the remainder active.
+
+The full-inventory mining pilot is deliberately separate. It begins with all
+three collectable block stacks at 64, follows the same approach and mining
+actions as the successful edit pilot, and requires the capacity warning in a
+presented native frame. The shared `Mining.attempt` operation checks capacity
+before it changes the world. The renderer-free test proves that free capacity
+moves exactly one block, while a full matching stack leaves both the block and
+inventory unchanged. Creative mode still removes blocks directly because its
+building inventory is intentionally unlimited.
 
 ## Why the native path has one compile-time condition
 

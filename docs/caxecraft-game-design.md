@@ -18,9 +18,11 @@ marked range cancels the pending hit. The Copper Sword likewise consumes queued
 input on that fixed game clock and has a four-tick cooldown; three aimed hits
 defeat the Mossling and create a visible berry drop. Health uses three
 half-step hearts, a selected berry restores one heart without exceeding the
-limit, and a fallen player can return to the meadow. Full stacks preserve Nia's
-gift and any uncollected part of a world drop instead of silently deleting
-items. This is the first actor loop, not the planned finished game. The
+limit, and a fallen player can return to the meadow. Full stacks preserve
+Nia's gift, any uncollected part of a world drop, and a mined block whose
+matching stack is full instead of silently deleting items. Adventure checks
+capacity before changing the world; Creative removal remains unlimited. This
+is the first actor loop, not the planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;
 the authored mode content does not run yet beyond that first encounter. Broader

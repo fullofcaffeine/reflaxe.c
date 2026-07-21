@@ -12,6 +12,7 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldVolume;
 import caxecraft.gameplay.Inventory;
+import caxecraft.gameplay.InventoryFullReason;
 import caxecraft.gameplay.InventoryState;
 import caxecraft.app.CaxecraftAtlas.HotbarFrame;
 import caxecraft.app.CaxecraftAtlas.HudGlyph;
@@ -24,6 +25,8 @@ import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.MosslingState;
+import caxecraft.gameplay.Mining;
+import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.PlayerVitalsState;
 import caxecraft.gameplay.Recovery;
@@ -98,13 +101,17 @@ final class Main {
 		final pilotName:PilotScriptName = PilotScriptName.RecoveryUse;
 		#elseif caxecraft_pilot_full_inventory_gift
 		final pilotName:PilotScriptName = PilotScriptName.FullInventoryGift;
+		#elseif caxecraft_pilot_full_inventory_mining
+		final pilotName:PilotScriptName = PilotScriptName.FullInventoryMining;
 		#end
 
 		var player:PlayerState = spawnPlayer(cells);
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
-		if (PilotScript.startsWithFullBerryStack(pilotName))
-			inventory = Inventory.collectItem(inventory, ItemKind.Berries, PilotScript.fullBerryStackCount());
+		// Only the deterministic provider may replace the ordinary starter kit.
+		// This keeps test setup out of release gameplay and lets native pilots
+		// exercise the same typed inventory transitions as a real player.
+		inventory = PilotScript.initialInventory(pilotName);
 		#end
 		var guide:GuideState = GuideNpc.start(cells, 17.5, 13.5);
 		var mossling:MosslingState = Mossling.start(cells, 15.5, 13.8);
@@ -124,7 +131,8 @@ final class Main {
 		var jumpQueued = false;
 		var swordQueued = false;
 		var selectedMode:GameMode = GameMode.Creative;
-		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use || caxecraft_pilot_full_inventory_gift)
+		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use || caxecraft_pilot_full_inventory_gift
+			|| caxecraft_pilot_full_inventory_mining)
 		// A deterministic provider choice, not gameplay branching: this pilot
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
@@ -151,6 +159,7 @@ final class Main {
 		var pickupFrames = 0;
 		var pickupAmount = 0;
 		var inventoryFullFrames = 0;
+		var inventoryFullReason = InventoryFullReason.None;
 		var recoveryFeedback = RecoveryDecision.NotRecoveryItem;
 		var recoveryFeedbackFrames = 0;
 
@@ -209,6 +218,7 @@ final class Main {
 							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
 							guide = GuideNpc.interact(guide);
 						} else {
+							inventoryFullReason = InventoryFullReason.BerryStack;
 							inventoryFullFrames = 90;
 						}
 					} else {
@@ -348,9 +358,12 @@ final class Main {
 				if (!PlayerVitals.isDefeated(vitals)) {
 					if (selectedMode == GameMode.Adventure) {
 						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword) && hit.hit) {
-							final removedKind = World.query(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ));
-							if (World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ)))
-								inventory = Inventory.collectBlock(inventory, removedKind);
+							final mining = Mining.attempt(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ), inventory);
+							inventory = mining.inventory;
+							if (mining.outcome == MiningOutcome.InventoryFull) {
+								inventoryFullReason = InventoryFullReason.BlockStack;
+								inventoryFullFrames = 90;
+							}
 						}
 					} else if (hit.hit) {
 						World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ));
@@ -390,6 +403,7 @@ final class Main {
 						pickupAmount = acceptedDrop;
 						pickupFrames = 90;
 					} else {
+						inventoryFullReason = InventoryFullReason.BerryStack;
 						inventoryFullFrames = 90;
 					}
 				}
@@ -402,8 +416,11 @@ final class Main {
 				enemyAttackFrames--;
 			if (pickupFrames > 0)
 				pickupFrames--;
-			if (inventoryFullFrames > 0)
+			if (inventoryFullFrames > 0) {
 				inventoryFullFrames--;
+				if (inventoryFullFrames == 0)
+					inventoryFullReason = InventoryFullReason.None;
+			}
 			if (recoveryFeedbackFrames > 0)
 				recoveryFeedbackFrames--;
 
@@ -423,7 +440,7 @@ final class Main {
 				Raylib.EndMode3D();
 				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
 					player.x, player.z, selectedMode, language, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
-					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
+					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullReason, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
 					hudTextureReady, itemTexture, itemTextureReady);
 			}
 			Raylib.EndDrawing();
@@ -442,6 +459,8 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-recovery.png");
 			if (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
 				Raylib.TakeScreenshot("caxecraft-pilot-full-inventory.png");
+			if (pilotName == PilotScriptName.FullInventoryMining && frameCount == 5)
+				Raylib.TakeScreenshot("caxecraft-pilot-full-mining.png");
 			#end
 			frameCount++;
 		}
@@ -547,9 +566,9 @@ final class Main {
 
 	static function drawHud(visible:Int, drawCalls:Int, frames:Int, updates:Int, paused:Bool, captured:Bool, placementBlocked:Bool, hit:RaycastHit,
 			playerX:Float, playerZ:Float, mode:GameMode, language:GameLanguage, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
-			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, enemyAttacked:Bool, pickedUp:Bool, pickupAmount:Int, inventoryFull:Bool,
-			recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D,
-			itemTextureReady:Bool):Void {
+			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, enemyAttacked:Bool, pickedUp:Bool, pickupAmount:Int,
+			inventoryFullReason:InventoryFullReason, recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool,
+			itemTexture:Texture2D, itemTextureReady:Bool):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
@@ -643,11 +662,16 @@ final class Main {
 				Raylib.DrawText("+2 BERRIES", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
 			}
 		}
-		if (inventoryFull) {
+		if (inventoryFullReason == InventoryFullReason.BerryStack) {
 			if (language == GameLanguage.Spanish)
 				Raylib.DrawText("BAYAS LLENAS: USA UNA PRIMERO", centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 			else
 				Raylib.DrawText("BERRIES FULL: USE ONE FIRST", centerX - 140, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+		} else if (inventoryFullReason == InventoryFullReason.BlockStack) {
+			if (language == GameLanguage.Spanish)
+				Raylib.DrawText("PILA DE BLOQUES LLENA: USA UNO", centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+			else
+				Raylib.DrawText("BLOCK STACK FULL: USE ONE FIRST", centerX - 155, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 		}
 		if (recoveryVisible) {
 			if (recoveryFeedback == RecoveryDecision.UseBerries) {

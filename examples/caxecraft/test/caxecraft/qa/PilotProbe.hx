@@ -6,6 +6,7 @@ import caxecraft.pilot.GameInputSource;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 import caxecraft.pilot.PilotScript;
 import caxecraft.pilot.PilotScript.PilotScriptName;
+import caxecraft.gameplay.Inventory;
 
 /** Focused acceptance proof for the target-neutral game-pilot contract. */
 final class PilotProbe {
@@ -19,15 +20,17 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 40);
 		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
+		sampledFrames += checkBounded(PilotScriptName.FullInventoryMining, 7);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
 		checkpoints += checkCombat();
 		checkpoints += checkRecovery();
 		checkpoints += checkFullInventory();
+		checkpoints += checkFullInventoryMining();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 6 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 7 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -120,13 +123,27 @@ final class PilotProbe {
 
 	static function checkFullInventory():Int {
 		final name = PilotScriptName.FullInventoryGift;
-		require(PilotScript.startsWithFullBerryStack(name)
-			&& PilotScript.fullBerryStackCount() == 64, "full-inventory fixture lost the exact berry cap");
+		require(PilotScript.initialInventory(name).berries == Inventory.MAX_STACK, "full-inventory fixture lost the exact berry cap");
 		require(PilotScript.sample(name, 0).interactPressed && PilotScript.sample(name, 1).interactPressed,
 			"full-inventory script lost Nia's two dialogue actions");
 		final screenshot = PilotScript.checkpoint(name, 2);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "full-inventory-gift.frame",
 			"full-inventory screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkFullInventoryMining():Int {
+		final name = PilotScriptName.FullInventoryMining;
+		final inventory = PilotScript.initialInventory(name);
+		require(inventory.grass == Inventory.MAX_STACK && inventory.dirt == Inventory.MAX_STACK && inventory.stone == Inventory.MAX_STACK,
+			"full-mining fixture lost its exact block-stack caps");
+		require(PilotScript.sample(name, 0).moveForward == 1.0
+			&& PilotScript.sample(name, 2).jumpPressed
+			&& PilotScript.sample(name, 4).primaryPressed,
+			"full-mining script lost its approach or mining action");
+		final screenshot = PilotScript.checkpoint(name, 5);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "full-inventory-mining.frame",
+			"full-mining screenshot checkpoint changed");
 		return 1;
 	}
 

@@ -3,6 +3,7 @@ package caxecraft.pilot;
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.Recovery;
 import caxecraft.gameplay.Inventory;
+import caxecraft.gameplay.InventoryState;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 
@@ -14,6 +15,7 @@ enum abstract PilotScriptName(Int) {
 	var CombatDrop = 3;
 	var RecoveryUse = 4;
 	var FullInventoryGift = 5;
+	var FullInventoryMining = 6;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -54,6 +56,8 @@ final class PilotScript {
 			return 7;
 		if (name == CombatDrop)
 			return 40;
+		if (name == FullInventoryMining)
+			return 7;
 		return 4;
 	}
 
@@ -68,7 +72,9 @@ final class PilotScript {
 			return "combat-drop";
 		if (name == RecoveryUse)
 			return "recovery-use";
-		return "full-inventory-gift";
+		if (name == FullInventoryGift)
+			return "full-inventory-gift";
+		return "full-inventory-mining";
 	}
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
@@ -84,7 +90,9 @@ final class PilotScript {
 			return combatAction(frameNumber);
 		if (name == RecoveryUse)
 			return recoveryAction(frameNumber);
-		return fullInventoryAction(frameNumber);
+		if (name == FullInventoryGift)
+			return fullInventoryGiftAction(frameNumber);
+		return fullInventoryMiningAction(frameNumber);
 	}
 
 	public static function sample(name:PilotScriptName, frameNumber:Int):GameInputFrame {
@@ -151,6 +159,8 @@ final class PilotScript {
 				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
 			case FullInventoryGift:
 				frameNumber == 2 ? new PilotCheckpoint("full-inventory-gift.frame", CaptureScreenshot) : null;
+			case FullInventoryMining:
+				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
 		};
 	}
 
@@ -158,12 +168,23 @@ final class PilotScript {
 	public static inline function initialHealth(name:PilotScriptName):Int
 		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
 
-	/** Whether the provider should begin with the berry stack at its exact cap. */
-	public static inline function startsWithFullBerryStack(name:PilotScriptName):Bool
-		return name == FullInventoryGift;
-
-	public static inline function fullBerryStackCount():Int
-		return Inventory.MAX_STACK;
+	/**
+	 * Initial state owned by a deterministic native pilot, never release play.
+	 *
+	 * Exact full stacks make rejection paths reproducible. The mining pilot fills
+	 * all three collectable block stacks because terrain material is a world fact,
+	 * not something an input script should duplicate or guess.
+	 */
+	public static function initialInventory(name:PilotScriptName):InventoryState {
+		final starter = Inventory.starter();
+		if (name == FullInventoryGift)
+			return Inventory.make(starter.selected, starter.grass, starter.dirt, starter.stone, starter.haxeforge, starter.sword, Inventory.MAX_STACK,
+				starter.bread, starter.lantern);
+		if (name == FullInventoryMining)
+			return Inventory.make(starter.selected, Inventory.MAX_STACK, Inventory.MAX_STACK, Inventory.MAX_STACK, starter.haxeforge, starter.sword,
+				starter.berries, starter.bread, starter.lantern);
+		return starter;
+	}
 
 	public static inline function complete(name:PilotScriptName, frameNumber:Int):Bool
 		return frameNumber >= frameLimit(name) - 1;
@@ -206,9 +227,20 @@ final class PilotScript {
 		};
 	}
 
-	static function fullInventoryAction(frameNumber:Int):PilotAction {
+	static function fullInventoryGiftAction(frameNumber:Int):PilotAction {
 		return switch frameNumber {
 			case 0 | 1: Interact;
+			case _: Idle;
+		};
+	}
+
+	static function fullInventoryMiningAction(frameNumber:Int):PilotAction {
+		return switch frameNumber {
+			case 0: Forward;
+			case 1: ForwardTurn;
+			case 2: ForwardJump;
+			case 3: RightLook;
+			case 4: Mine;
 			case _: Idle;
 		};
 	}

@@ -23,6 +23,8 @@
 #include "hxc/modules/caxecraft/gameplay/Inventory.h"
 #include "hxc/modules/caxecraft/gameplay/InventoryState.h"
 #include "hxc/modules/caxecraft/gameplay/ItemKind.h"
+#include "hxc/modules/caxecraft/gameplay/Mining.h"
+#include "hxc/modules/caxecraft/gameplay/MiningResult.h"
 #include "hxc/modules/caxecraft/gameplay/Mossling.h"
 #include "hxc/modules/caxecraft/gameplay/MosslingState.h"
 #include "hxc/modules/caxecraft/gameplay/PlayerVitals.h"

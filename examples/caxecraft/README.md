@@ -13,8 +13,9 @@ bounded attack, and pauses to recover afterward. Adventure can strike that
 Mossling with a fixed-step Copper Sword, collect its visible berry drop, and
 return to the meadow after defeat. Selecting berries and using the secondary
 action consumes one
-bundle only when it can restore one heart. A full stack preserves Nia's gift
-and any uncollected part of a world drop. The complete
+bundle only when it can restore one heart. A full stack preserves Nia's gift,
+any uncollected part of a world drop, and a mined block whose matching stack
+cannot accept it. The complete
 Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
 [game design document](../../docs/caxecraft-game-design.md).
@@ -150,7 +151,8 @@ full. Number keys `1` through `8` or the
 mouse wheel to select the hotbar, Escape to pause or release the cursor, and
 `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
-to them. Losing focus pauses and releases the cursor; clicking the paused
+to them. It checks room before removal, so a full matching stack leaves the
+block in the world and shows a capacity message. Losing focus pauses and releases the cursor; clicking the paused
 window captures it again without also mining. The window may be resized down
 to 800 by 450.
 
@@ -208,7 +210,9 @@ is complete.
 Collection is lossless at the fixed stack boundary. If only one slot remains,
 one berry enters the inventory and the rest stays visible in the world. If the
 stack is full, a Mossling drop remains available and Nia keeps her gift at the
-same dialogue step until the player uses a berry.
+same dialogue step until the player uses a berry. Mining follows the same
+lossless rule: a full Grass, Dirt, or Stone stack leaves the matching block in
+the world.
 
 It compares the same 38-line semantic trace under pinned Haxe Eval and all three
 generated-C layouts, checks the registered split/package/unity snapshots, and
@@ -316,7 +320,9 @@ npm run test:caxecraft-inventory
 It covers the fixed eight-slot catalog, exact selection/wrap behavior, finite
 stack clamping, collect/consume, empty/full edges, and target-neutral source
 boundary under two locales. The native movement pilot then proves that the
-same inventory selection reaches the real textured hotbar.
+same inventory selection reaches the real textured hotbar. The gameplay probe
+also exercises the complete lossless mining transition, and the dedicated
+full-inventory mining pilot proves its visible native-C feedback.
 
 The first actor loop has a separate sub-second renderer-independent proof:
 

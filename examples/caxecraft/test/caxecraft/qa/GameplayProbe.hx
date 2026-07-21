@@ -9,6 +9,8 @@ import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
+import caxecraft.gameplay.Mining;
+import caxecraft.gameplay.MiningOutcome;
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.Recovery;
 import caxecraft.gameplay.RecoveryDecision;
@@ -25,6 +27,29 @@ final class GameplayProbe {
 		require(World.surfaceY(cells, 16, 16) >= 3, "generated surface is discoverable");
 		require(World.surfaceY(cells, 16, 16) == 4, "authored spawn meadow is level");
 		require(World.surfaceY(cells, -1, 16) == -1, "outside columns have no surface");
+
+		// The same operation runs here under Eval and in the native Raylib pilot.
+		// Checking capacity before removal is what makes a rejected mine lossless.
+		final minedCoordinate = World.coord(16, 4, 16);
+		var miningInventory = Inventory.starter();
+		final grassBeforeMining = miningInventory.grass;
+		var mining = Mining.attempt(cells, minedCoordinate, miningInventory);
+		miningInventory = mining.inventory;
+		require(mining.outcome == MiningOutcome.Collected
+			&& World.query(cells, minedCoordinate) == caxecraft.domain.BlockKind.Air
+			&& miningInventory.grass == grassBeforeMining + 1,
+			"available capacity moves exactly one block into its matching stack");
+		require(World.replace(cells, minedCoordinate, caxecraft.domain.BlockKind.Grass), "mining fixture restores its grass block");
+		final fullMiningInventory = Inventory.make(0, Inventory.MAX_STACK, 0, 0, 0, 0, 0, 0, 0);
+		mining = Mining.attempt(cells, minedCoordinate, fullMiningInventory);
+		require(mining.outcome == MiningOutcome.InventoryFull
+			&& mining.inventory == fullMiningInventory
+			&& World.query(cells, minedCoordinate) == caxecraft.domain.BlockKind.Grass,
+			"full matching stack leaves both the block and inventory unchanged");
+		final bedrockMining = Mining.attempt(cells, World.coord(16, 0, 16), fullMiningInventory);
+		require(bedrockMining.outcome == MiningOutcome.BlockUnavailable
+			&& World.query(cells, World.coord(16, 0, 16)) == caxecraft.domain.BlockKind.Bedrock,
+			"immutable bedrock remains a separate non-capacity outcome");
 
 		var guide = GuideNpc.start(cells, 17.5, 13.5);
 		require(GuideNpc.phase(guide) == GuidePhase.Waiting, "guide starts ready to meet");
@@ -177,7 +202,7 @@ final class GameplayProbe {
 
 		require(Recovery.decide(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
 
-		Sys.println("caxecraft-gameplay: lossless items, paced Mossling encounter, berry recovery, and bounded player health passed");
+		Sys.println("caxecraft-gameplay: lossless mining/items, paced Mossling encounter, berry recovery, and bounded player health passed");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {

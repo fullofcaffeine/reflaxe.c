@@ -60,6 +60,8 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/include/hxc/modules/caxecraft/gameplay/MosslingState.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/BerryDropState.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/MiningResult.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/Mining.h": "header",
     "playable/src/modules/caxecraft/app/CaxecraftAtlas.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftPalette.c": "c",
     "playable/src/modules/caxecraft/app/HudDigits.c": "c",
@@ -70,6 +72,7 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/BerryDrop.c": "c",
     "playable/src/modules/caxecraft/gameplay/PlayerVitals.c": "c",
     "playable/src/modules/caxecraft/gameplay/Recovery.c": "c",
+    "playable/src/modules/caxecraft/gameplay/Mining.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
 RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items")
@@ -505,6 +508,7 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str
             "combat-drop": "caxecraft_pilot_combat_drop",
             "recovery-use": "caxecraft_pilot_recovery_use",
             "full-inventory-gift": "caxecraft_pilot_full_inventory_gift",
+            "full-inventory-mining": "caxecraft_pilot_full_inventory_mining",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -570,6 +574,30 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
     # the first frame could appear.
     if app.count("DrawCubeWires(") != 1:
         raise PlayFailure("generated Caxecraft app must contain exactly one selected-block wire-outline call site")
+    mining_relative = {
+        "split": "src/modules/caxecraft/gameplay/Mining.c",
+        "package": "src/packages/caxecraft/gameplay/package.c",
+        "unity": "src/program.c",
+    }[layout]
+    mining_source = generated.joinpath(mining_relative).read_text(encoding="utf-8")
+    # Start at the last spelling of the helper name: the earlier spelling is
+    # the call from `attempt`, while the last is the helper definition. This
+    # keeps the assertion valid in split, package, and unity layouts.
+    mining_start = mining_source.rfind("hxc_caxecraft_gameplay_Mining_collect(")
+    mining_section = mining_source[mining_start:] if mining_start >= 0 else ""
+    capacity_index = mining_section.find("hxc_caxecraft_gameplay_Inventory_acceptedAmount(")
+    removal_index = mining_section.find("hxc_caxecraft_domain_World_remove(")
+    collection_index = mining_section.find("hxc_caxecraft_gameplay_Inventory_collectBlock(")
+    if (
+        mining_start < 0
+        or min(capacity_index, removal_index, collection_index) < 0
+        or not capacity_index < removal_index < collection_index
+        or ".hxc_outcome = 1" not in mining_section
+        or ".hxc_outcome = 2" not in mining_section
+    ):
+        raise PlayFailure(
+            "generated Caxecraft mining must check capacity before removal, collect after removal, and retain closed full/collected outcomes"
+        )
     # Four reviewed image owners enter the application, are checked before
     # use, and leave in reverse order before CloseWindow. Exact counts make a
     # missing unload or an accidental hidden resource registry fail locally.
@@ -851,7 +879,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
         "--pilot",
-        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop", "recovery-use", "full-inventory-gift"),
+        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop", "recovery-use", "full-inventory-gift", "full-inventory-mining"),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib archive download")
@@ -945,6 +973,7 @@ def main(argv: list[str]) -> int:
                 "combat-drop": "caxecraft-pilot-combat.png",
                 "recovery-use": "caxecraft-pilot-recovery.png",
                 "full-inventory-gift": "caxecraft-pilot-full-inventory.png",
+                "full-inventory-mining": "caxecraft-pilot-full-mining.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             if screenshot.exists():
@@ -956,7 +985,7 @@ def main(argv: list[str]) -> int:
                 expected_drop=selected_pilot == "combat-drop",
                 expected_attack=selected_pilot == "combat-drop",
                 expected_recovery=selected_pilot == "recovery-use",
-                expected_inventory_full=selected_pilot == "full-inventory-gift",
+                expected_inventory_full=selected_pilot in ("full-inventory-gift", "full-inventory-mining"),
             )
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "
