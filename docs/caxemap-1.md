@@ -385,9 +385,16 @@ The implementation keeps those stages visible in the source tree:
 - `ScenarioTokenGrammar` owns context-free values such as IDs, integers,
   transforms, and localized text references. `CaxeFlowValueReader` does the
   same for events, predicates, arguments, and non-branching actions.
-- `ScenarioValidator` resolves references and checks meaning only after the
-  complete candidate exists. `ScenarioWriter` accepts only that validated
-  model and produces the one canonical byte spelling.
+- `ScenarioValidator` is the only semantic entry point. Its short, visible
+  pipeline preserves diagnostic order while delegating document features and
+  extensions, world geometry and placements, story references, and CaxeFlow
+  rules to collaborators named after those responsibilities.
+- `ScenarioValidationContext` builds the shared identity indexes and owns
+  source-coordinate lookup and diagnostic collection. This prevents the
+  smaller validators from disagreeing about whether an ID exists or which
+  source record should receive an error.
+- `ScenarioWriter` accepts only the validated model and produces the one
+  canonical byte spelling.
 
 The readers share a `ScenarioRecordCursor`. Here, a **cursor** is simply the
 current line plus the source locations collected so far. A successful reader
@@ -399,9 +406,11 @@ is checked before descending.
 
 Application and editor code should call `ScenarioLexer.read(...)`,
 `ScenarioParser.parse(...)`, `ScenarioValidator.validate(...)`, and
-`ScenarioWriter.write(...)`. The smaller reader classes are visible between
-Haxe source files so they can collaborate, but they are implementation details.
-Their `@:noCompletion` marker keeps them out of normal editor suggestions.
+`ScenarioWriter.write(...)`. The smaller reader and validator classes are
+visible between Haxe source files so they can collaborate, but they are
+implementation details. Their `@:noCompletion` marker keeps them out of normal
+editor suggestions; it does not make them private at runtime or change Haxe's
+type-safety rules.
 
 The validator rejects malformed UTF-8, invalid escapes, overflow, duplicate or
 missing singleton records, limit violations, invalid RLE totals, overlapping or
