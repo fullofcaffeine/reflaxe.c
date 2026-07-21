@@ -901,14 +901,26 @@ missing-metadata or missing-adapter assumptions.
 - Do not use `bd import` for normal synchronization. Use `bd dolt pull/push`
   only when a Dolt remote is actually configured and policy authorizes it.
 
-#### Local Beads 1.0.4 cautions
+#### Reviewed Beads 1.1.0 client and schema
 
-- `bd create --graph ... --dry-run` is not a safe preview in the installed
-  1.0.4 CLI: it writes graph nodes. Do not use it. Validate plan JSON with
-  read-only tooling and use the accepted idempotent materializer when one is
-  present.
-- `bd preflight` currently prints the Beads tool repository's Go checks, not
-  this Haxe/C project's quality gates. Do not report it as project validation.
+- The shared database is on schema v53 and requires Beads 1.1.0 from revision
+  `8e4e59d39`. Resolve it through `scripts/beads/resolve-reviewed.py`; do not
+  trust whichever `bd` happens to appear first on `PATH`.
+- Hooks and guarded publication must verify the reviewed client before any
+  Beads operation. A failure must leave `.beads/issues.jsonl`, the Git index,
+  the Dolt working set, and reusable test receipts unchanged.
+- The one authorized v32-to-v53 migration was completed and published on
+  2026-07-21. Other clones must adopt that remote database with `bd bootstrap`
+  after preserving any unpushed local issue work. Never set
+  `BD_ALLOW_REMOTE_MIGRATE` or independently migrate another clone.
+- A future schema change is a coordinated single-migrator operation: capture a
+  complete backup and semantic export, migrate once, validate issue and graph
+  parity, then publish immediately through `npm run beads:push`.
+- `bd preflight` prints the Beads tool repository's checks, not this Haxe/C
+  project's quality gates. Do not report it as project validation.
+
+The plain-language workflow, rationale, and recovery steps are in
+[`docs/beads-toolchain.md`](docs/beads-toolchain.md).
 
 ### Validation and evidence
 
@@ -966,6 +978,12 @@ visibility/publication change. Never broaden a
 secret-scan allowlist to a whole generated file when a path-and-match rule can
 identify deterministic non-secret bytes. Do not bypass a hook to publish a
 failing change; record and fix the underlying gate instead.
+
+Every tracked hook first selects the reviewed Beads 1.1.0 client. This happens
+outside Beads' marker-managed hook section, so `bd hooks install --beads` may
+upgrade its own integration without deleting the repository guard. The passive
+export writes temporary files beside `.beads/issues.jsonl` and stages the final
+file only after a complete successful export.
 
 Claim Haxe/Reflaxe source-graph type-checking only with the dedicated all-source
 gate. Do not claim generated-program runtime linking/execution, sanitizers,

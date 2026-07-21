@@ -8,23 +8,9 @@ if [ "${BD_GIT_HOOK:-}" = "1" ]; then
   exit 0
 fi
 
-if [ -d "$ROOT_DIR/.beads" ] && command -v bd >/dev/null 2>&1; then
-  if bd -C "$ROOT_DIR" context >/dev/null 2>&1; then
-    echo "[pre-commit] Exporting Beads issues to JSONL..."
-    BEADS_EXPORT_TMP="$(mktemp)"
-    BEADS_EXPORT_NORMALIZED="$(mktemp)"
-    trap 'rm -f "$BEADS_EXPORT_TMP" "$BEADS_EXPORT_NORMALIZED"' EXIT
-    bd -C "$ROOT_DIR" export > "$BEADS_EXPORT_TMP"
-    # Newer bd builds may append a blank record. JSONL permits no such record,
-    # and the repository whitespace guard intentionally rejects it.
-    awk 'NF { print }' "$BEADS_EXPORT_TMP" > "$BEADS_EXPORT_NORMALIZED"
-    mv -f "$BEADS_EXPORT_NORMALIZED" "$ROOT_DIR/.beads/issues.jsonl"
-    rm -f "$BEADS_EXPORT_TMP"
-    git -C "$ROOT_DIR" add .beads/issues.jsonl
-    trap - EXIT
-  else
-    echo "[pre-commit] WARN: Beads database is not bootstrapped; skipping export."
-  fi
+if [ -d "$ROOT_DIR/.beads" ]; then
+  echo "[pre-commit] Exporting Beads issues to JSONL..."
+  bash "$ROOT_DIR/scripts/beads/export-passive.sh"
 fi
 
 STAGED_HX_FILES=()

@@ -278,6 +278,13 @@ scanning, governance, and the native smoke lane remain outside this mechanism
 and run on every applicable hook invocation. GitHub runs `--run <shard>` in a
 clean job without `--resume`, so local evidence can never replace hosted CI.
 
+The staged tree is part of every receipt identity, so the passive Beads export
+must also be deterministic. Repository hooks resolve the exact reviewed Beads
+client before export and replace `.beads/issues.jsonl` only after a successful
+complete write. An incompatible client therefore cannot make valid compiler
+receipts appear stale by rewriting the export. The version and clone-recovery
+rules are explained in [Beads toolchain and shared database](beads-toolchain.md).
+
 ## Budgets and observability
 
 The first objective is a `p95` under 20 minutes for the aggregate required

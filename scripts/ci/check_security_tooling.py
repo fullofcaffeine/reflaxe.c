@@ -21,6 +21,9 @@ WORKFLOW = WORKFLOW_ROOT / "governance.yml"
 INSTALLER = ROOT / "scripts/ci/install-gitleaks.sh"
 GITLEAKS_CONFIG = ROOT / ".gitleaks.toml"
 PACKAGE = ROOT / "package.json"
+BEADS_RESOLVER = ROOT / "scripts/beads/resolve-reviewed.py"
+EXPECTED_BEADS_VERSION = "1.1.0"
+EXPECTED_BEADS_REVISION = "8e4e59d39"
 EXPECTED_ACTIONS = {
     "actions/checkout": "9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0",
     "actions/setup-node": "249970729cb0ef3589644e2896645e5dc5ba9c38",
@@ -97,8 +100,11 @@ def validate_hook_failure_propagation() -> None:
         checkout = Path(directory)
         fake_bin = checkout / "bin"
         repository_hooks = checkout / "scripts/hooks"
+        beads_scripts = checkout / "scripts/beads"
         fake_bin.mkdir()
         repository_hooks.mkdir(parents=True)
+        beads_scripts.mkdir(parents=True)
+        (beads_scripts / "resolve-reviewed.py").write_bytes(BEADS_RESOLVER.read_bytes())
 
         write_executable(
             fake_bin / "git",
@@ -113,6 +119,10 @@ exit 91
         write_executable(
             fake_bin / "bd",
             """#!/usr/bin/env sh
+if [ "$1" = "--version" ]; then
+  printf '%s\n' 'bd version 1.1.0 (8e4e59d39)'
+  exit 0
+fi
 printf '%s\n' "$*" >> "$HXC_BEADS_HOOK_MARKER"
 exit 0
 """,
@@ -322,7 +332,34 @@ def validate_config_and_hooks() -> None:
         raise SecurityToolingFailure("active Beads pre-commit wrapper lost repository checks")
     if "scripts/hooks/pre-push" not in beads_pre_push:
         raise SecurityToolingFailure("active Beads pre-push wrapper lost repository checks")
+    for hook_name in (
+        "pre-commit",
+        "pre-push",
+        "prepare-commit-msg",
+        "post-checkout",
+        "post-merge",
+    ):
+        hook = read_text(ROOT / f".beads/hooks/{hook_name}")
+        if "scripts/beads/resolve-reviewed.py" not in hook:
+            raise SecurityToolingFailure(
+                f"{hook_name} must verify the reviewed Beads client before integration"
+            )
+        if "BEADS INTEGRATION v1.1.0" not in hook:
+            raise SecurityToolingFailure(
+                f"{hook_name} must retain the Beads 1.1.0 managed integration"
+            )
+        if hook.index("resolve-reviewed.py") > hook.index("BEGIN BEADS INTEGRATION"):
+            raise SecurityToolingFailure(
+                f"{hook_name} resolves Beads too late to protect the managed hook"
+            )
     validate_hook_failure_propagation()
+
+    resolver = read_text(BEADS_RESOLVER)
+    for expected in (EXPECTED_BEADS_VERSION, EXPECTED_BEADS_REVISION, "HXC_BD_BIN"):
+        if expected not in resolver:
+            raise SecurityToolingFailure(
+                f"reviewed Beads resolver lost compatibility contract: {expected}"
+            )
 
     git_scan = read_text(ROOT / "scripts/security/run-gitleaks.sh")
     for required in (
@@ -346,10 +383,16 @@ def validate_config_and_hooks() -> None:
             raise SecurityToolingFailure(
                 f"decoded Beads history scan lost required behavior: {required}"
             )
+    if "resolve-reviewed.py" not in beads_scan or '"$BD_BIN"' not in beads_scan:
+        raise SecurityToolingFailure(
+            "decoded Beads history scan must use the reviewed client"
+        )
     safe_push = read_text(ROOT / "scripts/beads/push-safe.sh")
     if (
         "scripts/security/run-beads-gitleaks.sh" not in safe_push
         or 'dolt push "$@"' not in safe_push
+        or "resolve-reviewed.py" not in safe_push
+        or '"$BD_BIN"' not in safe_push
     ):
         raise SecurityToolingFailure(
             "Beads publication must scan decoded history before Dolt push"
@@ -357,6 +400,8 @@ def validate_config_and_hooks() -> None:
     installer = read_text(ROOT / "scripts/hooks/install.sh")
     if "core.hooksPath .beads/hooks" not in installer:
         raise SecurityToolingFailure("hook installer must preserve the Beads hook chain")
+    if "resolve-reviewed.py" not in installer or EXPECTED_BEADS_VERSION not in installer:
+        raise SecurityToolingFailure("hook installer must require the reviewed Beads client")
 
     ignored = {
         line.strip()
@@ -429,10 +474,15 @@ def validate_config_and_hooks() -> None:
     for relative in (
         ".beads/hooks/pre-commit",
         ".beads/hooks/pre-push",
+        ".beads/hooks/prepare-commit-msg",
+        ".beads/hooks/post-checkout",
+        ".beads/hooks/post-merge",
         "scripts/hooks/install.sh",
         "scripts/hooks/pre-commit",
         "scripts/hooks/pre-push",
         "scripts/beads/push-safe.sh",
+        "scripts/beads/export-passive.sh",
+        "scripts/beads/resolve-reviewed.py",
         "scripts/lint/hx_format_guard.sh",
         "scripts/security/run-beads-gitleaks.sh",
         "scripts/security/run-gitleaks.sh",
@@ -449,6 +499,7 @@ def main() -> int:
         print(
             "security-tooling: OK: "
             f"Gitleaks {version} ({digest}), {action_count} commit-pinned Action uses, "
+            f"reviewed Beads {EXPECTED_BEADS_VERSION} ({EXPECTED_BEADS_REVISION}), "
             "staged/Git/Dolt-history gates, fail-closed hook delegation, "
             "formatter 1.18.0, and credential ignores"
         )

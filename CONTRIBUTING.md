@@ -20,6 +20,11 @@ scripts/hooks/install.sh
 bd prime
 ```
 
+The issue database requires Beads 1.1.0 from revision `8e4e59d39`. The hooks
+verify that exact client before touching the database or its passive JSONL
+export. See [Beads toolchain and shared database](docs/beads-toolchain.md) for
+installation overrides, clone adoption, migration safety, and recovery.
+
 Read the active issue, its PRD references, relevant accepted ADRs, and every
 existing file in the area you will change. The checkout is deliberately
 partial, so verify paths with `rg --files` and do not turn aspirational
@@ -45,6 +50,9 @@ bd update <id> --claim --json
   edge only when the child genuinely needs the blocker.
 - Never hand-edit Beads database internals, use `bd init --force`, or use
   `bd import` for routine synchronization.
+- Never migrate a remote-backed clone independently. This repository's shared
+  database is already on schema v53; an older clone must adopt the migrated
+  remote as described in [the Beads toolchain guide](docs/beads-toolchain.md).
 
 ## Make typed, reviewable changes
 
