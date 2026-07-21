@@ -41,10 +41,14 @@ The durable work owners are:
 - `haxe_c-xge.17`: bounded inventory, items, creatures, and NPC loop;
 - `haxe_c-xge.19`: CaxeMap format, scenario editor, and CaxeFlow rules;
 - `haxe_c-xge.20`: Creative mode and the authored Adventure;
+- `haxe_c-xge.20.1`: broad, rewarding authored world and region traversal;
+- `haxe_c-xge.20.2`: multi-level campaign packages and typed transitions;
+- `haxe_c-xge.20.3`: simple data-driven cutscenes;
 - `haxe_c-xge.21`: English and Mexican Spanish localization;
 - `haxe_c-xge.22`: Ivvy companion behavior and presentation;
 - `haxe_c-xge.8`: measured chunked rendering;
-- `haxe_c-xge.12`: public showcase and release evidence.
+- `haxe_c-xge.12`: public showcase and release evidence;
+- `haxe_c-xge.35`: clean extraction into a standalone game repository.
 
 ## Product promise
 
@@ -62,6 +66,49 @@ a short adventure, or create a small scenario. The secondary audience is a
 programmer who wants to inspect the Haxe and generated C and understand where
 the ergonomics and costs come from. Neither audience should need compiler lore
 to enjoy or understand the game.
+
+### A real game incubated inside compiler QA
+
+Caxecraft lives in this repository today because a complete application finds
+compiler problems that isolated language examples miss. That location does not
+make it disposable sample code. The game, editor, content formats, assets, and
+player experience should be designed as a coherent product that can later move
+to its own repository without taking private haxe.c implementation code with
+it.
+
+The intended split is straightforward:
+
+```text
+ordinary Haxe game, editor, and content packages
+  -> public RaylibHx/RayguiHx and c.* surfaces
+  -> haxe.c in this repository today
+
+after extraction:
+standalone Caxecraft repository
+  -> the same public packages and compiler release
+  -> a small pinned integration workload retained in haxe.c
+```
+
+This separation protects both goals. Caxecraft can become a polished,
+customizable voxel game rather than an oversized test fixture, while haxe.c
+keeps a realistic end-to-end regression that proves the public integration
+still works. Product tests own playability, usability, save compatibility, and
+content safety. Compiler tests own generated-C shape, runtime selection, native
+toolchains, and language semantics. The integrated lane runs both boundaries
+together without duplicating the game.
+
+Creation is a central product feature. A child should be able to build a place,
+add a character or trigger, connect large visual condition/action cards, press
+**Test**, and understand the result from friendly English or Mexican-Spanish
+feedback. Advanced authors inspect and edit the same versioned CaxeMap and
+CaxeFlow data rather than graduating to an incompatible toy language. Shared
+content remains bounded and data-only: it cannot contain native code, shell
+commands, arbitrary file access, or downloaded scripts.
+
+The extraction owner is `haxe_c-xge.35`. Until its clean-checkout, dependency,
+licensing, packaging, privacy, accessibility, and usability gates pass,
+“standalone product” and “teaches programming” remain goals rather than shipped
+claims.
 
 ## Design pillars
 
@@ -91,11 +138,69 @@ to enjoy or understand the game.
 | Survive | dodge, strike, use item | telegraph, health/stamina response | clear bounded encounters and reach checkpoints |
 | Create | paint, place, connect rules, test | live overlay, validation, immediate test play | author and share a finite scenario |
 
-The target Adventure length is deliberately small: roughly 30 to 60 minutes
-for a first completion, with a shorter critical path and optional exploration.
-Creative and editor sessions are open-ended within explicit finite-world and
-entity limits. These are design targets, not shipped performance or content
-claims until their owning gates pass.
+The first playable and automated test maps stay deliberately small so a new
+mechanic can be understood and verified quickly. They are not the size target
+for the finished game. The complete authored world should feel broad enough
+for a player to choose a direction, recognize a distant destination, become
+curious about a side route, and return later with a new ability. Creative and
+editor sessions are open-ended within explicit finite-world and entity limits.
+These are design targets, not shipped performance or content claims until
+their owning gates pass.
+
+### A broad world without empty distance
+
+“Vast” means that the world offers many worthwhile places and route choices,
+not that it generates endless terrain. Caxecraft uses a large but finite,
+authored collection of connected regions. The critical Adventure route remains
+clear enough for a child to follow, while optional land, caves, water, ruins,
+high paths, and building sites make the world feel much larger than that route.
+
+Each region needs all of the following before added area counts as progress:
+
+- a silhouette or landmark that helps the player understand where they are;
+- a distinct material, weather, light, movement, or sound identity;
+- at least one meaningful activity, such as a secret, useful resource, NPC
+  moment, encounter, puzzle, shortcut, view, or strong Creative building site;
+- a reason to connect to another region or revisit it after gaining an item,
+  clue, route, or ability;
+- measured traversal and rendering behavior that does not introduce obvious
+  terrain pop-in, long stalls, lost edits, or unbounded memory use.
+
+Long empty corridors, repeated filler hills, and raw map dimensions do not
+satisfy this goal. Playtests should measure how long players travel without a
+new decision or discovery and shorten, enrich, or remove dull stretches. The
+first release can grow in authored stages, but every shipped boundary should
+look intentional and preserve room for later regions.
+
+### Worlds, regions, and levels
+
+These names describe different scales and must not become interchangeable:
+
+- a **chunk** is a small technical group of voxel cells used for storage,
+  rendering, and local rebuilds;
+- a **region** is a named area with a coherent identity inside one seamless
+  world, such as Evergrove or the Western Falls; it usually contains many
+  chunks and crossing its boundary does not load a different level;
+- a **level** is one independently loadable CaxeMap world with declared entry
+  points and exits;
+- a **campaign** is a validated set of levels and the typed transitions that
+  connect them.
+
+A Creative map or small child-authored story remains one level and needs no
+campaign boilerplate. Adventure may keep its broad outdoor route in one level
+while using separate levels for places that genuinely benefit from independent
+loading or reset rules, such as a castle interior, boss arena, challenge map,
+or a different minigame. A transition names an existing destination level and
+entry point; it is never an arbitrary file path hidden in gameplay code.
+
+Campaign, player, and quest progress can cross a level boundary. Level-local
+objects, timers, and temporary rule work cannot leak accidentally into another
+level. Save data records the current level and the required changes for every
+visited level without copying unchanged authored terrain. The editor presents
+the campaign as connected maps and validates every entrance, exit, reference,
+and persistence boundary before test play or save. This work is owned by
+`haxe_c-xge.20.2`; CAXEMAP 1 remains a focused one-level format until that
+separate capability is designed and implemented.
 
 The familiar block-building vocabulary is intentional, but the identity is
 original. Caxecraft must not copy Minecraft or another game's textures, mobs,
@@ -132,6 +237,23 @@ Adventure is a short authored minigame with a complete beginning and ending.
 It opens with a small, readable story window that can be advanced by mouse,
 keyboard, or controller, skipped immediately, and replayed later.
 
+The reference campaign begins in a compact village level. The village gives
+Haxirio a home, introduces Ivvy and friendly characters, and teaches the first
+interactions without pretending to be the full world. Leaving through its
+declared gate shows a branded loading screen and enters the definitive broad
+outdoor level. Later separate levels are admitted only when independent
+loading, reset, or presentation genuinely helps, such as a castle interior,
+boss arena, or self-contained challenge.
+
+A loading screen is a real transition state, not a frozen rendered frame. It
+names the destination, keeps the application responsive, allows a safe quit,
+and shows real bounded progress when the loader can measure it. It never uses
+a fake percentage to hide a hang. Its original art and bilingual tips follow
+the same asset and localization rules as the rest of the interface. The loader
+validates the destination, stages resources, releases the previous level at
+the declared ownership boundary, and installs the new level only after the
+complete candidate is valid.
+
 Haxirio is a young explorer who uses the Haxeforge. Princess Ceesh is a capable
 engineer-princess. Haxirio first showed her how Haxe and Caxe can produce
 beautiful, efficient, idiomatic C; she quickly became a collaborator, improved
@@ -150,6 +272,31 @@ but it should communicate this shape:
 > write the old boilerplate by hand. Haxirio follows the river toward the
 > castle with the Haxeforge and the better idea they discovered together:
 > express intent clearly in Haxe, then let Caxe shape careful C.
+
+### Simple authored cutscenes
+
+Cutscenes are short CaxeFlow-authored sequences, not videos or privileged Haxe
+branches. They can combine a bounded vocabulary of localized dialogue or
+narration, camera markers and smooth moves, actor facing or simple movement,
+fixed-tick waits or explicit player advance, fades, typed music/effect
+requests, objective or world-state changes, and a level transition. The editor
+shows these steps in order and previews the same stored data used by the game.
+
+Every cutscene declares when movement and camera controls are locked, whether
+the player advances each card, and whether it may be skipped or replayed.
+Skipping does not merely stop the visuals: it applies the same required final
+story, objective, reward, and world state exactly once, then restores the
+camera and controls at a declared safe point. Normal completion, skipping,
+pause/resume, and save/load therefore cannot duplicate a reward, lose a quest
+fact, strand Haxirio, or leave the game in cinematic mode.
+
+The first use is the village departure: a brief view establishes the road and
+distant world, Haxirio and Ivvy approach the gate, and control returns through
+the typed loading transition. Later moments can introduce Browser, reveal the
+castle, and let Ceesh participate in the finale. Essential information always
+has subtitles and a visible cue in both launch languages. This bounded system
+is owned by `haxe_c-xge.20.3`; it must not grow into an arbitrary scripting or
+timeline engine without demonstrated content pressure.
 
 ### Cast and emotional roles
 
@@ -210,8 +357,9 @@ and covered by C-versus-Eval traces.
 
 ## Authored route
 
-The map is compact enough to learn, but landmarks reveal two meaningful ways
-to reach Browser's castle:
+The critical route is compact enough to learn inside a much broader explorable
+world. Landmarks reveal two meaningful ways to reach Browser's castle, while
+optional paths branch outward and reconnect without obscuring this route:
 
 ```text
 Evergrove start and house
@@ -290,23 +438,26 @@ A scenario contains:
 - dialogue, journal entries, objectives, routes, and mode settings;
 - CaxeFlow state declarations, rules, and reusable action sequences.
 
-The distributable unit is a **scenario package**, not a lone map file. The map
-stores language-neutral message IDs; a reviewed catalog beside it stores the
-complete text for every supported locale:
+The distributable unit is a **scenario package**. CAXEMAP 1 keeps stable
+language-neutral message IDs and each complete locale catalog in the same
+human-diffable document:
 
 ```text
 first-playable/
   map.caxemap
-  messages.json
 ```
 
 This boundary keeps Nia's dialogue, objectives, location names, encounter
-feedback, and other authored prose with the content that uses them. Reusable
+feedback, and other authored prose atomically with the content that uses them.
+It also avoids a second synchronization rule between a map and a same-scope
+sidecar. Reusable
 interface text—menus, controls, pause, settings, and generic engine errors—uses
 a separate game-wide UI catalog. Gameplay code and saved state see only typed
 message IDs; neither contains English/Spanish branches or translated prose.
-The editor edits the map and scenario catalog as one package and validates that
-every referenced message is complete before test play or save.
+The editor edits the map and embedded scenario catalog through one typed model
+and validates that every referenced message is complete before test play or
+save. Larger asset files may still sit beside the map; “one document” applies
+to small structured scenario data, not images, music, or arbitrary binary data.
 
 The canonical writer uses one ordering and escaping policy, writes no absolute
 paths or timestamps, and saves to a sibling temporary file before an atomic
@@ -469,13 +620,14 @@ review the final copy before showcase closure.
 The current first playable establishes this ownership boundary before native
 catalog loading exists. [`examples/caxecraft/locales/ui.json`](../examples/caxecraft/locales/ui.json)
 owns reusable interface copy, while
-[`examples/caxecraft/scenarios/first-playable/messages.json`](../examples/caxecraft/scenarios/first-playable/messages.json)
-owns Nia, Mossling, and Adventure prose. A deterministic build step validates
-both files and emits a small typed C/raylib adapter whose direct literals have
-static C lifetime. The JSON files are also packaged beside the executable.
-This build-time embedding is an explicit bridge: CaxeMap/editor integration and
-native String/Bytes/filesystem support will replace it with ordinary validated
-scenario loading. It must not become a permanent alternate content path.
+[`examples/caxecraft/scenarios/first-playable/map.caxemap`](../examples/caxecraft/scenarios/first-playable/map.caxemap)
+owns Nia, Mossling, and Adventure prose together with scenario structure. A
+deterministic build step validates both sources and emits a small typed
+C/raylib adapter whose direct literals have static C lifetime. The UI JSON and
+complete CaxeMap are also packaged beside the executable. This build-time
+adapter is an explicit bridge: native String/Bytes/filesystem support will let
+the game load the already-shared CaxeMap model directly. It must not become a
+permanent alternate content path.
 
 ## Saves, recovery, and user content
 

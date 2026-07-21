@@ -154,6 +154,9 @@ final class ScenarioTokenGrammar {
 	public static function messageId(token:ScenarioLexToken):Null<MessageId>
 		return token.kind == BareToken && validId(token.text) ? new MessageId(token.text) : null;
 
+	public static function localeId(token:ScenarioLexToken):Null<LocaleId>
+		return token.kind == BareToken && validId(token.text) ? new LocaleId(token.text) : null;
+
 	public static function contentId(token:ScenarioLexToken):Null<ContentId> {
 		if (token.kind != BareToken)
 			return null;

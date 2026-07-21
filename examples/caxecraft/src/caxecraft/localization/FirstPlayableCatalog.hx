@@ -23,13 +23,14 @@ enum abstract ScenarioMessage(Int) {
 	var NiaWelcome = 14;
 	var NoBerries = 15;
 	var ReturnToMeadow = 16;
-	var TelegraphedHit = 17;
+	var ScenarioTitle = 17;
+	var TelegraphedHit = 18;
 }
 
 /**
- * C rendering adapter generated from `scenarios/first-playable/messages.json`.
+ * C rendering adapter generated from `scenarios/first-playable/map.caxemap`.
  *
- * The JSON catalog is the editable source of truth. Each branch keeps a
+ * The embedded CaxeMap catalog is the editable source of truth. Each branch keeps a
  * direct string literal at the raylib call so haxe.c can prove static C
  * lifetime. Gameplay and UI code choose only typed message IDs.
  */
@@ -82,12 +83,14 @@ final class FirstPlayableCatalog {
 				Raylib.DrawText("NO BERRIES LEFT", x, y, fontSize, color);
 			case ReturnToMeadow:
 				Raylib.DrawText("E  RETURN TO THE MEADOW", x, y, fontSize, color);
+			case ScenarioTitle:
+				Raylib.DrawText("Caxecraft: Evergrove Prologue", x, y, fontSize, color);
 			case TelegraphedHit:
 				Raylib.DrawText("TELEGRAPHED HIT: DODGE THE NEXT", x, y, fontSize, color);
 		}
 	}
 
-	/** Direct C literals for the validated `es-MX` catalog. */
+	/** Direct C literals for the validated `es-mx` catalog. */
 	static function drawLocale1(message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void {
 		switch (message) {
 			case AdventureProgress:
@@ -124,6 +127,8 @@ final class FirstPlayableCatalog {
 				Raylib.DrawText("NO QUEDAN BAYAS", x, y, fontSize, color);
 			case ReturnToMeadow:
 				Raylib.DrawText("E  VOLVER AL PRADO", x, y, fontSize, color);
+			case ScenarioTitle:
+				Raylib.DrawText("Caxecraft: Prologo de la Arboleda Eterna", x, y, fontSize, color);
 			case TelegraphedHit:
 				Raylib.DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", x, y, fontSize, color);
 		}

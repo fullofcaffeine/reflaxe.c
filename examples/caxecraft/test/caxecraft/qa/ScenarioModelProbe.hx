@@ -17,6 +17,7 @@ import caxecraft.scenario.CaxeFlow.FlowValueKind;
 import caxecraft.scenario.CaxeFlow.FlowVariable;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
+import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.Scenario.ScenarioMode;
@@ -115,6 +116,10 @@ final class ScenarioModelProbe {
 			Feature(content),
 			MapIdentity(objectId),
 			AssetPack,
+			DefaultLocale,
+			Locale(new LocaleId("en")),
+			LocaleMessage(new LocaleId("en"), new MessageId("sample.message")),
+			MessageReference(new MessageId("sample.message")),
 			Title,
 			Mode,
 			World,
@@ -215,6 +220,7 @@ final class ScenarioModelProbe {
 			optionalFeatures: [],
 			id: objectId,
 			assetPack: new LogicalPath("packs/caxecraft/base"),
+			messages: NoMessageCatalog,
 			title: ScenarioText.Message(new MessageId("sample.title")),
 			mode: ScenarioMode.Creative,
 			world: world,
@@ -245,6 +251,12 @@ final class ScenarioModelProbe {
 			DuplicatePaletteCode(1),
 			DuplicateId(objectId),
 			DuplicateTag(objectId, new ScenarioTag("sample")),
+			DuplicateLocale(new LocaleId("en")),
+			DuplicateMessage(new LocaleId("en"), new MessageId("sample.message")),
+			UnknownDefaultLocale(new LocaleId("fr")),
+			UnresolvedMessage(new MessageId("sample.message")),
+			MissingTranslation(new LocaleId("es-mx"), new MessageId("sample.message")),
+			UnknownTranslation(new LocaleId("es-mx"), new MessageId("sample.extra")),
 			UnresolvedReference(objectId),
 			UnresolvedContent(content),
 			ImpossiblePlacement(objectId),
@@ -259,6 +271,7 @@ final class ScenarioModelProbe {
 			EndMapRecord,
 			MapRecord,
 			AssetPackRecord,
+			DefaultLocaleRecord,
 			TitleRecord,
 			ModeRecord,
 			WorldRecord,
@@ -266,6 +279,7 @@ final class ScenarioModelProbe {
 			EndObjectRecord,
 			ObjectPlacementRecord,
 			EndDialogueRecord,
+			EndLocaleRecord,
 			JournalBodyRecord,
 			EndJournalRecord,
 			ObjectiveBodyRecord,
@@ -295,6 +309,8 @@ final class ScenarioModelProbe {
 			ObjectTags,
 			Dialogues,
 			DialogueLines,
+			Locales,
+			MessagesPerLocale,
 			Objectives,
 			Routes,
 			Sequences,
@@ -483,6 +499,10 @@ final class ScenarioModelProbe {
 			case Feature(_): 2;
 			case MapIdentity(_): 3;
 			case AssetPack: 4;
+			case DefaultLocale: 25;
+			case Locale(_): 26;
+			case LocaleMessage(_, _): 27;
+			case MessageReference(_): 28;
 			case Title: 5;
 			case Mode: 6;
 			case World: 7;
@@ -548,6 +568,12 @@ final class ScenarioModelProbe {
 			case DuplicatePaletteCode(_): 12;
 			case DuplicateId(_): 13;
 			case DuplicateTag(_, _): 14;
+			case DuplicateLocale(_): 23;
+			case DuplicateMessage(_, _): 24;
+			case UnknownDefaultLocale(_): 25;
+			case UnresolvedMessage(_): 26;
+			case MissingTranslation(_, _): 27;
+			case UnknownTranslation(_, _): 28;
 			case UnresolvedReference(_): 15;
 			case UnresolvedContent(_): 16;
 			case ImpossiblePlacement(_): 17;
@@ -564,6 +590,7 @@ final class ScenarioModelProbe {
 			case EndMapRecord: 2;
 			case MapRecord: 3;
 			case AssetPackRecord: 4;
+			case DefaultLocaleRecord: 27;
 			case TitleRecord: 5;
 			case ModeRecord: 6;
 			case WorldRecord: 7;
@@ -571,6 +598,7 @@ final class ScenarioModelProbe {
 			case EndObjectRecord: 9;
 			case ObjectPlacementRecord: 10;
 			case EndDialogueRecord: 11;
+			case EndLocaleRecord: 28;
 			case JournalBodyRecord: 12;
 			case EndJournalRecord: 13;
 			case ObjectiveBodyRecord: 14;
@@ -602,6 +630,8 @@ final class ScenarioModelProbe {
 			case ObjectTags: 10;
 			case Dialogues: 11;
 			case DialogueLines: 12;
+			case Locales: 20;
+			case MessagesPerLocale: 21;
 			case Objectives: 13;
 			case Routes: 14;
 			case Sequences: 15;

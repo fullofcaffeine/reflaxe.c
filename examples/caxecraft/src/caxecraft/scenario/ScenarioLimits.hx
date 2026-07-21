@@ -21,6 +21,8 @@ final class ScenarioLimits {
 	public static inline final MAX_TAGS_PER_OBJECT:Int = 16;
 	public static inline final MAX_DIALOGUES:Int = 1024;
 	public static inline final MAX_DIALOGUE_LINES:Int = 128;
+	public static inline final MAX_LOCALES:Int = 8;
+	public static inline final MAX_MESSAGES_PER_LOCALE:Int = 4096;
 	public static inline final MAX_OBJECTIVES:Int = 512;
 	public static inline final MAX_ROUTES:Int = 64;
 	public static inline final MAX_VARIABLES:Int = 1024;

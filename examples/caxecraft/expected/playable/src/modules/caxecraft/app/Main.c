@@ -493,7 +493,7 @@ void hxc_caxecraft_app_Main_drawHud(int32_t hxc_visible, int32_t hxc_drawCalls, 
   }
   if (hxc_enemyAttacked)
   {
-    hxc_caxecraft_localization_FirstPlayableCatalog_draw(hxc_locale, 17, hxc_i32_subtract_wrapping(hxc_width, 330), 82, 16, (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 });
+    hxc_caxecraft_localization_FirstPlayableCatalog_draw(hxc_locale, 18, hxc_i32_subtract_wrapping(hxc_width, 330), 82, 16, (struct Color){ .r = 218, .g = 65, .b = 72, .a = 255 });
   }
   if (hxc_pickedUp)
   {

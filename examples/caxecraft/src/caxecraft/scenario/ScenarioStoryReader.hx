@@ -1,9 +1,12 @@
 package caxecraft.scenario;
 
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
+import caxecraft.scenario.ScenarioCodecModel.ScenarioLexRecord;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
+import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
+import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogueLine;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
@@ -19,6 +22,38 @@ final class ScenarioStoryReader {
 
 	public function new(cursor:ScenarioRecordCursor)
 		this.cursor = cursor;
+
+	/** Read one complete locale block and retain authored message identities. */
+	public function readLocale():ScenarioReadResult<ScenarioLocaleCatalog> {
+		final header = cursor.current();
+		if (!ScenarioTokenGrammar.hasTokenCount(header, 2))
+			return cursor.failAt(header, InvalidToken);
+		final locale = ScenarioTokenGrammar.localeId(header.tokens[1]);
+		if (locale == null)
+			return cursor.failToken(header.tokens[1], InvalidToken);
+		cursor.locate(Locale(locale), header);
+		cursor.advance();
+
+		final messages:Array<ScenarioMessage> = [];
+		while (cursor.hasRecord() && !ScenarioTokenGrammar.isEnd(cursor.current(), "locale")) {
+			final record = cursor.current();
+			if (record.indent != 2
+				|| !ScenarioTokenGrammar.hasTokenCount(record, 3)
+				|| ScenarioTokenGrammar.firstText(record) != "message"
+				|| !ScenarioTokenGrammar.isQuoted(record.tokens[2]))
+				return cursor.failAt(record, UnexpectedRecord(ScenarioTokenGrammar.firstText(record)));
+			final message = ScenarioTokenGrammar.messageId(record.tokens[1]);
+			if (message == null)
+				return cursor.failToken(record.tokens[1], InvalidToken);
+			messages.push({id: message, text: record.tokens[2].text});
+			cursor.locate(LocaleMessage(locale, message), record);
+			cursor.advance();
+		}
+		if (!cursor.hasRecord())
+			return cursor.failAt(header, MissingRecord(EndLocaleRecord));
+		cursor.advance();
+		return ReadOk({id: locale, messages: messages});
+	}
 
 	public function readDialogue():ScenarioReadResult<ScenarioDialogue> {
 		final header = cursor.current();
@@ -48,6 +83,7 @@ final class ScenarioStoryReader {
 			if (parsed == null || parsed.next != record.tokens.length)
 				return cursor.failAt(record, InvalidToken);
 			lines.push({speaker: speaker, text: parsed.value});
+			locateText(parsed.value, record);
 			cursor.advance();
 		}
 		if (!cursor.hasRecord())
@@ -77,6 +113,8 @@ final class ScenarioStoryReader {
 		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "journal"))
 			return cursor.failAt(header, MissingRecord(EndJournalRecord));
 		cursor.advance();
+		locateText(title.value, header);
+		locateText(body.value, bodyRecord);
 		return ReadOk({id: id, title: title.value, body: body.value});
 	}
 
@@ -104,6 +142,8 @@ final class ScenarioStoryReader {
 		if (!cursor.hasRecord() || !ScenarioTokenGrammar.isEnd(cursor.current(), "objective"))
 			return cursor.failAt(header, MissingRecord(EndObjectiveRecord));
 		cursor.advance();
+		locateText(title.value, header);
+		locateText(body.value, bodyRecord);
 		return ReadOk({
 			id: id,
 			title: title.value,
@@ -139,6 +179,15 @@ final class ScenarioStoryReader {
 		if (!cursor.hasRecord())
 			return cursor.failAt(header, MissingRecord(EndRouteRecord));
 		cursor.advance();
+		locateText(title.value, header);
 		return ReadOk({id: id, title: title.value, objectives: objectives});
+	}
+
+	function locateText(text:ScenarioText, record:ScenarioLexRecord):Void {
+		switch text {
+			case Message(id):
+				cursor.locate(MessageReference(id), record);
+			case Literal(_):
+		}
 	}
 }

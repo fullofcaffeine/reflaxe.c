@@ -28,6 +28,12 @@ enum ScenarioDiagnosticKind {
 	DuplicatePaletteCode(code:Int);
 	DuplicateId(id:ScenarioId);
 	DuplicateTag(objectId:ScenarioId, tag:ScenarioTag);
+	DuplicateLocale(id:LocaleId);
+	DuplicateMessage(locale:LocaleId, message:MessageId);
+	UnknownDefaultLocale(id:LocaleId);
+	UnresolvedMessage(id:MessageId);
+	MissingTranslation(locale:LocaleId, message:MessageId);
+	UnknownTranslation(locale:LocaleId, message:MessageId);
 	UnresolvedReference(id:ScenarioId);
 	UnresolvedContent(id:ContentId);
 	ImpossiblePlacement(id:ScenarioId);
@@ -44,6 +50,7 @@ enum ScenarioExpectedRecord {
 	EndMapRecord;
 	MapRecord;
 	AssetPackRecord;
+	DefaultLocaleRecord;
 	TitleRecord;
 	ModeRecord;
 	WorldRecord;
@@ -51,6 +58,7 @@ enum ScenarioExpectedRecord {
 	EndObjectRecord;
 	ObjectPlacementRecord;
 	EndDialogueRecord;
+	EndLocaleRecord;
 	JournalBodyRecord;
 	EndJournalRecord;
 	ObjectiveBodyRecord;
@@ -82,6 +90,8 @@ enum ScenarioLimitKind {
 	ObjectTags;
 	Dialogues;
 	DialogueLines;
+	Locales;
+	MessagesPerLocale;
 	Objectives;
 	Routes;
 	Sequences;

@@ -11,6 +11,7 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioGeometry.VoxelSize;
+import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
@@ -59,6 +60,8 @@ final class ScenarioDocumentReader {
 		final optionalFeatures:Array<ContentId> = [];
 		var mapId:Null<ScenarioId> = null;
 		var assetPack:Null<LogicalPath> = null;
+		var defaultLocale:Null<LocaleId> = null;
+		final locales:Array<ScenarioLocaleCatalog> = [];
 		var title:Null<ScenarioText> = null;
 		var mode:Null<ScenarioMode> = null;
 		var worldSize:Null<VoxelSize> = null;
@@ -109,6 +112,19 @@ final class ScenarioDocumentReader {
 						return cursor.failToken(record.tokens[1], InvalidToken);
 					cursor.locate(AssetPack, record);
 					cursor.advance();
+				case "default-locale":
+					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || defaultLocale != null)
+						return cursor.failAt(record, InvalidToken);
+					defaultLocale = ScenarioTokenGrammar.localeId(record.tokens[1]);
+					if (defaultLocale == null)
+						return cursor.failToken(record.tokens[1], InvalidToken);
+					cursor.locate(DefaultLocale, record);
+					cursor.advance();
+				case "locale":
+					switch storyReader.readLocale() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(locale): locales.push(locale);
+					}
 				case "title":
 					if (title != null)
 						return cursor.failAt(record, InvalidToken);
@@ -117,6 +133,10 @@ final class ScenarioDocumentReader {
 						return cursor.failAt(record, InvalidToken);
 					title = parsed.value;
 					cursor.locate(Title, record);
+					switch parsed.value {
+						case Message(id): cursor.locate(MessageReference(id), record);
+						case Literal(_):
+					}
 					cursor.advance();
 				case "mode":
 					if (!ScenarioTokenGrammar.hasTokenCount(record, 2) || mode != null)
@@ -222,6 +242,8 @@ final class ScenarioDocumentReader {
 			return cursor.failAt(header, MissingRecord(ModeRecord));
 		if (worldSize == null)
 			return cursor.failAt(header, MissingRecord(WorldRecord));
+		if (locales.length != 0 && defaultLocale == null)
+			return cursor.failAt(header, MissingRecord(DefaultLocaleRecord));
 
 		return ReadOk({
 			candidate: {
@@ -230,6 +252,10 @@ final class ScenarioDocumentReader {
 				optionalFeatures: optionalFeatures,
 				id: mapId,
 				assetPack: assetPack,
+				messages: defaultLocale == null ? NoMessageCatalog : EmbeddedMessageCatalog({
+					defaultLocale: defaultLocale,
+					locales: locales
+				}),
 				title: title,
 				mode: mode,
 				world: {

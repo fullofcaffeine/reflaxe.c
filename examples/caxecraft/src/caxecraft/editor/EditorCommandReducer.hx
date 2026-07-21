@@ -7,6 +7,8 @@ import caxecraft.editor.EditorTypes.EditorSettings;
 import caxecraft.editor.EditorWorldGrid.EditorWorldResult;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
@@ -16,6 +18,9 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioMessages;
+import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
+import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
 
 /** Internal candidate state produced before a command is committed to history. */
@@ -84,9 +89,90 @@ final class EditorCommandReducer {
 				ready(withRules(scenario, putRule(scenario.flow.rules, rule)), selection, Rule);
 			case RemoveRule(id):
 				removeFlowRule(scenario, selection, id);
+			case SetDefaultLocale(locale):
+				setDefaultLocale(scenario, selection, locale);
+			case PutLocale(locale):
+				ready(withMessages(scenario, putLocale(scenario.messages, locale)), selection, Localization);
+			case RemoveLocale(locale):
+				removeLocale(scenario, selection, locale);
+			case PutMessage(locale, message):
+				putMessage(scenario, selection, locale, message);
+			case RemoveMessage(locale, message):
+				removeMessage(scenario, selection, locale, message);
 			case RestoreLastPlayable:
 				ReductionRejected(NoPlayableScenario);
 		}
+	}
+
+	static function setDefaultLocale(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId):EditorReductionResult {
+		return switch scenario.messages {
+			case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
+			case EmbeddedMessageCatalog(catalog):
+				if (!hasLocale(catalog.locales,
+					locale)) ReductionRejected(MissingLocale(locale)); else ready(withMessages(scenario,
+					EmbeddedMessageCatalog({defaultLocale: locale, locales: copyLocales(catalog.locales)})), selection,
+					Localization);
+		};
+	}
+
+	static function removeLocale(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId):EditorReductionResult {
+		return switch scenario.messages {
+			case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
+			case EmbeddedMessageCatalog(catalog):
+				if (!hasLocale(catalog.locales,
+					locale)) ReductionRejected(MissingLocale(locale)); else if (sameLocale(catalog.defaultLocale, locale)
+					&& catalog.locales.length > 1) ReductionRejected(CannotRemoveDefaultLocale(locale)); else {
+					final locales = [
+						for (value in catalog.locales)
+							if (!sameLocale(value.id, locale)) copyLocale(value)
+					];
+					final messages = locales.length == 0 ? NoMessageCatalog : EmbeddedMessageCatalog({
+						defaultLocale: catalog.defaultLocale,
+						locales: locales
+					});
+					ready(withMessages(scenario, messages), selection, Localization);
+				}
+		};
+	}
+
+	static function putMessage(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId, message:ScenarioMessage):EditorReductionResult {
+		return switch scenario.messages {
+			case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
+			case EmbeddedMessageCatalog(catalog):
+				if (!hasLocale(catalog.locales, locale)) ReductionRejected(MissingLocale(locale)); else {
+					final locales:Array<ScenarioLocaleCatalog> = [];
+					for (value in catalog.locales)
+						if (sameLocale(value.id, locale))
+							locales.push({id: value.id, messages: putMessageValue(value.messages, message)});
+						else
+							locales.push(copyLocale(value));
+					ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), selection, Localization);
+				}
+		};
+	}
+
+	static function removeMessage(scenario:Scenario, selection:Null<VoxelBounds>, locale:LocaleId, message:MessageId):EditorReductionResult {
+		return switch scenario.messages {
+			case NoMessageCatalog: ReductionRejected(MissingLocale(locale));
+			case EmbeddedMessageCatalog(catalog):
+				final found = findLocale(catalog.locales, locale);
+				if (found == null) ReductionRejected(MissingLocale(locale)); else if (!hasMessage(found.messages,
+					message)) ReductionRejected(MissingMessage(locale, message)); else {
+					final locales:Array<ScenarioLocaleCatalog> = [];
+					for (value in catalog.locales)
+						if (sameLocale(value.id, locale))
+							locales.push({
+								id: value.id,
+								messages: [
+									for (entry in value.messages)
+										if (!sameMessage(entry.id, message)) copyMessage(entry)
+								]
+							});
+						else
+							locales.push(copyLocale(value));
+					ready(withMessages(scenario, EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales})), selection, Localization);
+				}
+		};
 	}
 
 	static function setPaletteEntry(scenario:Scenario, selection:Null<VoxelBounds>, code:Int, blockType:ContentId):EditorReductionResult {
@@ -268,32 +354,91 @@ final class EditorCommandReducer {
 	static function removeRule(values:Array<FlowRule>, id:ScenarioId):Array<FlowRule>
 		return [for (value in values) if (!same(value.id, id)) value];
 
+	static function putLocale(source:ScenarioMessages, replacement:ScenarioLocaleCatalog):ScenarioMessages {
+		return switch source {
+			case NoMessageCatalog:
+				EmbeddedMessageCatalog({defaultLocale: replacement.id, locales: [copyLocale(replacement)]});
+			case EmbeddedMessageCatalog(catalog):
+				final locales = [
+					for (value in catalog.locales)
+						if (!sameLocale(value.id, replacement.id)) copyLocale(value)
+				];
+				locales.push(copyLocale(replacement));
+				EmbeddedMessageCatalog({defaultLocale: catalog.defaultLocale, locales: locales});
+		};
+	}
+
+	static function putMessageValue(values:Array<ScenarioMessage>, replacement:ScenarioMessage):Array<ScenarioMessage> {
+		final result = [
+			for (value in values)
+				if (!sameMessage(value.id, replacement.id)) copyMessage(value)
+		];
+		result.push(copyMessage(replacement));
+		return result;
+	}
+
+	static function findLocale(values:Array<ScenarioLocaleCatalog>, id:LocaleId):Null<ScenarioLocaleCatalog> {
+		for (value in values)
+			if (sameLocale(value.id, id))
+				return value;
+		return null;
+	}
+
+	static inline function hasLocale(values:Array<ScenarioLocaleCatalog>, id:LocaleId):Bool
+		return findLocale(values, id) != null;
+
+	static function hasMessage(values:Array<ScenarioMessage>, id:MessageId):Bool {
+		for (value in values)
+			if (sameMessage(value.id, id))
+				return true;
+		return false;
+	}
+
+	static function copyLocales(values:Array<ScenarioLocaleCatalog>):Array<ScenarioLocaleCatalog>
+		return [for (value in values) copyLocale(value)];
+
+	static function copyLocale(value:ScenarioLocaleCatalog):ScenarioLocaleCatalog
+		return {id: value.id, messages: [for (message in value.messages) copyMessage(message)]};
+
+	static inline function copyMessage(value:ScenarioMessage):ScenarioMessage
+		return {id: value.id, text: value.text};
+
+	static inline function sameLocale(left:LocaleId, right:LocaleId):Bool
+		return left.text() == right.text();
+
+	static inline function sameMessage(left:MessageId, right:MessageId):Bool
+		return left.text() == right.text();
+
 	static inline function same(left:ScenarioId, right:ScenarioId):Bool
 		return left.text() == right.text();
 
 	static function withWorld(scenario:Scenario, world:caxecraft.scenario.ScenarioWorld):Scenario
-		return copy(scenario, world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+		return copy(scenario, scenario.messages, world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
 
 	static function withObjects(scenario:Scenario, objects:Array<ScenarioObject>):Scenario
-		return copy(scenario, scenario.world, objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+		return copy(scenario, scenario.messages, scenario.world, objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
 
 	static function withDialogues(scenario:Scenario, dialogues:Array<ScenarioDialogue>):Scenario
-		return copy(scenario, scenario.world, scenario.objects, dialogues, scenario.story.objectives, scenario.flow.rules);
+		return copy(scenario, scenario.messages, scenario.world, scenario.objects, dialogues, scenario.story.objectives, scenario.flow.rules);
 
 	static function withObjectives(scenario:Scenario, objectives:Array<ScenarioObjective>):Scenario
-		return copy(scenario, scenario.world, scenario.objects, scenario.story.dialogues, objectives, scenario.flow.rules);
+		return copy(scenario, scenario.messages, scenario.world, scenario.objects, scenario.story.dialogues, objectives, scenario.flow.rules);
 
 	static function withRules(scenario:Scenario, rules:Array<FlowRule>):Scenario
-		return copy(scenario, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
+		return copy(scenario, scenario.messages, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, rules);
 
-	static function copy(scenario:Scenario, world:caxecraft.scenario.ScenarioWorld, objects:Array<ScenarioObject>, dialogues:Array<ScenarioDialogue>,
-			objectives:Array<ScenarioObjective>, rules:Array<FlowRule>):Scenario {
+	static function withMessages(scenario:Scenario, messages:ScenarioMessages):Scenario
+		return copy(scenario, messages, scenario.world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+
+	static function copy(scenario:Scenario, messages:ScenarioMessages, world:caxecraft.scenario.ScenarioWorld, objects:Array<ScenarioObject>,
+			dialogues:Array<ScenarioDialogue>, objectives:Array<ScenarioObjective>, rules:Array<FlowRule>):Scenario {
 		return {
 			formatVersion: scenario.formatVersion,
 			requiredFeatures: scenario.requiredFeatures.copy(),
 			optionalFeatures: scenario.optionalFeatures.copy(),
 			id: scenario.id,
 			assetPack: scenario.assetPack,
+			messages: messages,
 			title: scenario.title,
 			mode: scenario.mode,
 			world: world,

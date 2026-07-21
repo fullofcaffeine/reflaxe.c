@@ -23,8 +23,8 @@ from run import (  # noqa: E402
 )
 
 EXPECTED_TRACE = (
-    "caxemap-editor: 17 command round trips, 1038 canonical bytes; "
-    "bounded history/test-play/recovery; trace=530444322\n"
+    "caxemap-editor: 20 command round trips, 1794 canonical bytes; "
+    "bounded history/test-play/recovery; trace=-454002940\n"
 )
 FORBIDDEN_EDITOR_TEXT = (
     re.compile(r"#if\b"),

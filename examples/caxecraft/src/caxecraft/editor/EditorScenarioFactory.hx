@@ -6,17 +6,19 @@ import caxecraft.scenario.Scenario;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioText;
+import caxecraft.scenario.ScenarioMessages;
 
 /** Creates the smallest playable draft from ordinary typed Haxe values. */
 final class EditorScenarioFactory {
 	public static function create(mapId:ScenarioId, assetPack:LogicalPath, title:ScenarioText, mode:ScenarioMode, airBlock:ContentId,
-			playerSpawnId:ScenarioId):Scenario {
+			playerSpawnId:ScenarioId, ?messageCatalog:ScenarioMessages):Scenario {
 		return {
 			formatVersion: 1,
 			requiredFeatures: [new ContentId("caxecraft:core")],
 			optionalFeatures: [],
 			id: mapId,
 			assetPack: assetPack,
+			messages: messageCatalog == null ? NoMessageCatalog : messageCatalog,
 			title: title,
 			mode: mode,
 			world: {

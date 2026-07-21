@@ -1,6 +1,8 @@
 package caxecraft.qa;
 
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioCodecModel.ScenarioReadResult;
 import caxecraft.scenario.ScenarioContentRegistry;
 import caxecraft.scenario.ScenarioDiagnostic;
@@ -9,6 +11,8 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
 import caxecraft.scenario.ScenarioLexer;
 import caxecraft.scenario.ScenarioLimits;
+import caxecraft.scenario.ScenarioMessages;
+import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioValidator;
@@ -19,7 +23,7 @@ import sys.io.File;
 /** Executable Eval evidence for the staged codec and its fail-closed boundary. */
 final class ScenarioCodecProbe {
 	static function main():Void {
-		final canonical = File.getBytes("scenarios/minimal.caxemap");
+		final canonical = File.getBytes("test/fixtures/caxemap/minimal.caxemap");
 		final scenario = readValid(canonical);
 		final written = ScenarioWriter.write(scenario);
 		require(written.compare(canonical) == 0, "canonical fixture did not round-trip byte-identically");
@@ -28,9 +32,20 @@ final class ScenarioCodecProbe {
 		require(ScenarioWriter.write(crlfScenario).compare(canonical) == 0, "CRLF input did not converge on canonical LF bytes");
 		require(ScenarioWriter.write(reverseUnordered(scenario))
 			.compare(canonical) == 0, "reversed unordered collections did not converge on canonical bytes");
-		final fullCanonical = File.getBytes("scenarios/codec-full.caxemap");
+		final fullCanonical = File.getBytes("test/fixtures/caxemap/codec-full.caxemap");
 		final fullScenario = readValid(fullCanonical);
 		require(ScenarioWriter.write(fullScenario).compare(fullCanonical) == 0, "full grammar fixture did not round-trip byte-identically");
+		final localizedCanonical = File.getBytes("test/fixtures/caxemap/localized.caxemap");
+		final localizedScenario = readValid(localizedCanonical);
+		require(ScenarioWriter.write(localizedScenario).compare(localizedCanonical) == 0, "localized fixture did not round-trip byte-identically");
+		require(ScenarioWriter.write(reverseUnordered(localizedScenario)).compare(localizedCanonical) == 0,
+			"reversed locale and message catalogs did not converge on canonical bytes");
+		checkLocalizedCatalog(localizedCanonical, localizedScenario);
+		final shippedCanonical = File.getBytes("scenarios/first-playable/map.caxemap");
+		final shippedScenario = readValid(shippedCanonical);
+		require(ScenarioWriter.write(shippedScenario).compare(shippedCanonical) == 0, "shipped first-playable CaxeMap did not round-trip byte-identically");
+		require(resolveScenarioMessage(shippedScenario.messages, new LocaleId("es-mx"), new MessageId("nia_welcome")) == "NIA: EL BOSQUE TE ESCUCHA. E: REGALO",
+			"shipped Nia dialogue did not come from the embedded Spanish catalog");
 
 		final malformed = Bytes.alloc(10);
 		final malformedValues = [0x43, 0x41, 0x58, 0x45, 0x4d, 0x41, 0x50, 0x20, 0xc0, 0x0a];
@@ -57,7 +72,7 @@ final class ScenarioCodecProbe {
 		checkFlowBoundsAndGrammar(canonical, fullCanonical);
 		checkBoundedFailures(canonical);
 
-		Sys.println('scenario-codec: ${written.length} + ${fullCanonical.length} bytes, staged round-trip and exact malformed-input audit');
+		Sys.println('scenario-codec: ${written.length} + ${fullCanonical.length} + ${shippedCanonical.length} bytes, staged round-trip and exact malformed-input audit');
 	}
 
 	static function checkTokenKinds(canonical:Bytes, fullCanonical:Bytes):Void {
@@ -109,7 +124,7 @@ final class ScenarioCodecProbe {
 		for (missing in [
 			{label: "map", line: "map tutorial.first\n", expected: MapRecord},
 			{label: "asset-pack", line: "asset-pack packs/caxecraft/base\n", expected: AssetPackRecord},
-			{label: "title", line: "title message scenario.tutorial.title\n", expected: TitleRecord},
+			{label: "title", line: "title literal \"First map tutorial\"\n", expected: TitleRecord},
 			{label: "mode", line: "mode creative\n", expected: ModeRecord},
 			{label: "world", line: "world 4 4 4\n", expected: WorldRecord}
 		])
@@ -144,16 +159,42 @@ final class ScenarioCodecProbe {
 		});
 	}
 
+	static function checkLocalizedCatalog(canonical:Bytes, scenario:Scenario):Void {
+		final spanish = resolveScenarioMessage(scenario.messages, new LocaleId("es-mx"), new MessageId("dialogue.ivvy.hello"));
+		require(spanish == "¿Lista para construir?", "exact Spanish message lookup returned the wrong text");
+		final fallback = resolveScenarioMessage(scenario.messages, new LocaleId("fr"), new MessageId("dialogue.ivvy.hello"));
+		require(fallback == "Ready to build?", "unknown locale did not use the declared default catalog");
+		require(resolveScenarioMessage(scenario.messages, new LocaleId("en"), new MessageId("dialogue.missing")) == null,
+			"unknown message unexpectedly resolved");
+
+		expectFailure(replace(canonical, "default-locale en", "default-locale fr"), "unknown-default-locale", "unknown-default-locale", 5);
+		expectFailure(replace(canonical, "locale es-mx", "locale en"), "duplicate-locale", "duplicate-locale", 12);
+		expectFailure(replace(canonical, '  message scenario.tutorial.title "First map tutorial"',
+			'  message scenario.tutorial.title "First map tutorial"\n  message scenario.tutorial.title "Duplicate"'),
+			"duplicate-message", "duplicate-message", 11);
+		expectFailure(replace(canonical, '  message objective.meet-ivvy.body "Camina hacia Ivvy cerca del prado."\n', ""), "missing-translation",
+			"missing-translation", 12);
+		expectFailure(replace(canonical, '  message scenario.tutorial.title "Tutorial del primer mapa"',
+			'  message scenario.tutorial.title "Tutorial del primer mapa"\n  message scenario.extra "Extra"'),
+			"unknown-translation", "unknown-translation", 17);
+		expectFailure(replace(canonical, "title message scenario.tutorial.title", "title message scenario.missing"), "unresolved-message",
+			"unresolved-message", 18);
+		expectFailure(replace(canonical, "default-locale en\n", ""), "missing-default-locale", "missing-record", 1);
+		expectFailure(truncateAfterLast(canonical, '  message scenario.tutorial.title "Tutorial del primer mapa"\n'), "missing-end-locale", "missing-record",
+			12);
+	}
+
 	static function checkMissingBlockRecords(canonical:Bytes, fullCanonical:Bytes):Void {
 		expectMissing(truncateAfterLast(canonical, "  run 0 12\n"), "missing-end-chunk", EndChunkRecord, 10, 1, 10);
 		expectMissing(truncateAfterLast(canonical, "  placement checkpoint 1500 1000 1500 0\n"), "missing-end-object", EndObjectRecord, 20, 1, 20);
 		expectMissing(replace(canonical, "  placement checkpoint 1500 1000 1500 0\n", ""), "missing-object-placement", ObjectPlacementRecord, 20, 1, 20);
-		expectMissing(truncateAfterLast(canonical, "  line speaker guide.ivvy message dialogue.ivvy.hello\n"), "missing-end-dialogue", EndDialogueRecord, 36,
+		expectMissing(truncateAfterLast(canonical, "  line speaker guide.ivvy literal \"Ready to build?\"\n"), "missing-end-dialogue", EndDialogueRecord, 36,
 			1, 36);
 		expectMissing(replace(fullCanonical, "  body literal \"Lower the bridge.\"\n", ""), "missing-journal-body", JournalBodyRecord, 57, 1, 57);
-		expectMissing(truncateAfterLast(fullCanonical, "  body literal \"Lower the bridge.\"\n"), "missing-end-journal", EndJournalRecord, 57, 1, 57);
-		expectMissing(replace(canonical, "  body message objective.meet-ivvy.body\n", ""), "missing-objective-body", ObjectiveBodyRecord, 39, 1, 39);
-		expectMissing(truncateAfterLast(canonical, "  body message objective.meet-ivvy.body\n"), "missing-end-objective", EndObjectiveRecord, 39, 1, 39);
+		expectMissing(truncateAfterFirst(fullCanonical, "  body literal \"Lower the bridge.\"\n"), "missing-end-journal", EndJournalRecord, 57, 1, 57);
+		expectMissing(replace(canonical, "  body literal \"Walk to Ivvy near the meadow.\"\n", ""), "missing-objective-body", ObjectiveBodyRecord, 39, 1, 39);
+		expectMissing(truncateAfterLast(canonical, "  body literal \"Walk to Ivvy near the meadow.\"\n"), "missing-end-objective", EndObjectiveRecord, 39, 1,
+			39);
 		expectMissing(truncateAfterLast(fullCanonical, "  objective objective.bridge\n"), "missing-end-route", EndRouteRecord, 66, 1, 66);
 		expectMissing(truncateAfterLast(fullCanonical, "  do set-flag map.ready true\n"), "missing-end-sequence", EndSequenceRecord, 74, 1, 74);
 		expectMissing(truncateAfterLast(canonical, "  do objective objective.meet-ivvy complete\n"), "missing-end-rule", EndRuleRecord, 43, 1, 43);
@@ -183,13 +224,13 @@ final class ScenarioCodecProbe {
 				case DuplicateTag(objectId, tag): objectId.text() == "guide.ivvy" && tag.text() == "friend";
 				case _: false;
 			});
-		final dialogue = "dialogue dialogue.ivvy.hello\n  line speaker guide.ivvy message dialogue.ivvy.hello\nend dialogue\n";
+		final dialogue = "dialogue dialogue.ivvy.hello\n  line speaker guide.ivvy literal \"Ready to build?\"\nend dialogue\n";
 		expectDuplicateId(replace(canonical, dialogue, dialogue + dialogue), "duplicate-dialogue", "dialogue.ivvy.hello", 39, 1, 39);
-		final objective = "objective objective.meet-ivvy active title message objective.meet-ivvy.title\n  body message objective.meet-ivvy.body\nend objective\n";
+		final objective = "objective objective.meet-ivvy active title literal \"Meet Ivvy\"\n  body literal \"Walk to Ivvy near the meadow.\"\nend objective\n";
 		expectDuplicateId(replace(canonical, objective, objective + objective), "duplicate-objective", "objective.meet-ivvy", 42, 1, 42);
-		final journal = "journal journal.bridge title message journal.bridge.title\n  body literal \"Lower the bridge.\"\nend journal\n";
+		final journal = "journal journal.bridge title literal \"Bridge notes\"\n  body literal \"Lower the bridge.\"\nend journal\n";
 		expectDuplicateId(replace(fullCanonical, journal, journal + journal), "duplicate-journal", "journal.bridge", 60, 1, 60);
-		final route = "route route.castle title message route.castle.title\n  objective objective.ivvy\n  objective objective.bridge\nend route\n";
+		final route = "route route.castle title literal \"Road to the castle\"\n  objective objective.ivvy\n  objective objective.bridge\nend route\n";
 		expectDuplicateId(replace(fullCanonical, route, route + route), "duplicate-route", "route.castle", 70, 1, 70);
 		expectDuplicateId(replace(canonical, "variable quest.met-ivvy quest flag false\n",
 			"variable quest.met-ivvy quest flag false\nvariable quest.met-ivvy quest flag false\n"),
@@ -212,7 +253,7 @@ final class ScenarioCodecProbe {
 		for (duplicate in [
 			{label: "map", line: "map tutorial.first\n", expectedLine: 4},
 			{label: "asset-pack", line: "asset-pack packs/caxecraft/base\n", expectedLine: 5},
-			{label: "title", line: "title message scenario.tutorial.title\n", expectedLine: 6},
+			{label: "title", line: "title literal \"First map tutorial\"\n", expectedLine: 6},
 			{label: "mode", line: "mode creative\n", expectedLine: 7},
 			{label: "world", line: "world 4 4 4\n", expectedLine: 8}
 		])
@@ -476,6 +517,12 @@ final class ScenarioCodecProbe {
 			case DuplicatePaletteCode(_): "duplicate-palette-code";
 			case DuplicateId(_): "duplicate-id";
 			case DuplicateTag(_, _): "duplicate-tag";
+			case DuplicateLocale(_): "duplicate-locale";
+			case DuplicateMessage(_, _): "duplicate-message";
+			case UnknownDefaultLocale(_): "unknown-default-locale";
+			case UnresolvedMessage(_): "unresolved-message";
+			case MissingTranslation(_, _): "missing-translation";
+			case UnknownTranslation(_, _): "unknown-translation";
 			case UnresolvedReference(_): "unresolved-reference";
 			case UnresolvedContent(_): "unresolved-content";
 			case ImpossiblePlacement(_): "impossible-placement";
@@ -501,13 +548,35 @@ final class ScenarioCodecProbe {
 		return Bytes.ofString(text.substring(0, at + needle.length));
 	}
 
+	static function truncateAfterFirst(source:Bytes, needle:String):Bytes {
+		final text = source.toString();
+		final at = text.indexOf(needle);
+		require(at >= 0, 'truncation marker `$needle` was not found');
+		return Bytes.ofString(text.substring(0, at + needle.length));
+	}
+
 	static function reverseUnordered(source:Scenario):Scenario {
+		final messages = switch source.messages {
+			case NoMessageCatalog: NoMessageCatalog;
+			case EmbeddedMessageCatalog(catalog):
+				EmbeddedMessageCatalog({
+					defaultLocale: catalog.defaultLocale,
+					locales: [
+						for (locale in reversed(catalog.locales))
+							{
+								id: locale.id,
+								messages: reversed(locale.messages)
+							}
+					]
+				});
+		};
 		return {
 			formatVersion: source.formatVersion,
 			requiredFeatures: reversed(source.requiredFeatures),
 			optionalFeatures: reversed(source.optionalFeatures),
 			id: source.id,
 			assetPack: source.assetPack,
+			messages: messages,
 			title: source.title,
 			mode: source.mode,
 			world: {
@@ -566,7 +635,7 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:browser";
 
 	public function hasNpc(id:ContentId):Bool
-		return id.text() == "caxecraft:ivvy";
+		return id.text() == "caxecraft:ivvy" || id.text() == "caxecraft:nia";
 
 	public function hasPrefab(id:ContentId):Bool
 		return id.text() == "caxecraft:house";

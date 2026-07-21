@@ -34,6 +34,10 @@ enum ScenarioSourceSubject {
 	Feature(id:ContentId);
 	MapIdentity(id:ScenarioId);
 	AssetPack;
+	DefaultLocale;
+	Locale(id:LocaleId);
+	LocaleMessage(locale:LocaleId, message:MessageId);
+	MessageReference(id:MessageId);
 	Title;
 	Mode;
 	World;

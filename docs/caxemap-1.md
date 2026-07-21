@@ -84,17 +84,20 @@ The remaining top-level records appear in this canonical order:
 
 1. required features, sorted by content ID;
 2. optional features, sorted by content ID;
-3. `map`, `asset-pack`, `title`, `mode`, and `world` exactly once;
-4. palette entries sorted by numeric code;
-5. chunks sorted by origin `z`, then `y`, then `x`, then ID;
-6. objects sorted by ID;
-7. dialogues, journal entries, objectives, and routes, each sorted by ID;
-8. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
+3. `map` and `asset-pack` exactly once;
+4. when localized message IDs are used, one `default-locale` followed by locale
+   blocks sorted by locale ID and messages sorted by message ID;
+5. `title`, `mode`, and `world` exactly once;
+6. palette entries sorted by numeric code;
+7. chunks sorted by origin `z`, then `y`, then `x`, then ID;
+8. objects sorted by ID;
+9. dialogues, journal entries, objectives, and routes, each sorted by ID;
+10. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
    sequence ID) and then variable ID;
-9. sequences sorted by ID;
-10. rules sorted by ID;
-11. optional extension blocks sorted by feature content ID then record ID; and
-12. `end-map`.
+11. sequences sorted by ID;
+12. rules sorted by ID;
+13. optional extension blocks sorted by feature content ID then record ID; and
+14. `end-map`.
 
 Ordering that carries meaning is never sorted: voxel runs, object tags,
 dialogue lines, route objectives, predicate children, sequence parameters,
@@ -108,6 +111,10 @@ feature required <content-id>
 feature optional <content-id>
 map <id>
 asset-pack <logical-path>
+default-locale <locale-id>
+locale <locale-id>
+  message <message-id> "<complete translated text>"
+end locale
 title message <message-id>
 title literal "<user text>"
 mode creative
@@ -117,7 +124,27 @@ palette <code> <block-content-id>
 ```
 
 `feature required caxecraft:core` is mandatory in version 1. Duplicate feature
-records are invalid. World dimensions are positive and no larger than 128 by 64
+records are invalid.
+
+The locale records are optional for a literal-only map. Once the map uses a
+`message <message-id>` reference, it must embed one to eight locale blocks and
+name exactly one of them as the default. The default locale defines the complete
+message-ID set; every other locale translates exactly that set. There is no
+fallback chain: lookup tries the requested locale, then the declared default,
+so it cannot cycle. Duplicate locales/messages, a missing or extra translation,
+an unknown default, or a referenced message absent from the catalog rejects the
+scenario before it becomes live. Locale IDs use the same lowercase ID grammar
+(`en`, `es-mx`), while display/platform adapters may map them to conventional
+spellings such as `es-MX`.
+
+Keeping these small strings inside CaxeMap makes a map edit, message reference,
+and its translations one atomic, canonical change. Large binary assets remain
+external logical-path dependencies. The current native playable temporarily
+derives closed Haxe enum names from message IDs at build time (for example,
+`nia_welcome` becomes `NiaWelcome`) so raylib receives static C string literals;
+that bridge does not create a second content source.
+
+World dimensions are positive and no larger than 128 by 64
 by 128; their checked product is at most 1,048,576 cells. Palette codes are
 unique integers from 0 through 255. Code 0 must map to the registered air block.
 
@@ -543,7 +570,7 @@ work—without rewriting the source map.
 ## Canonical example
 
 The review fixture is
-[`minimal.caxemap`](../examples/caxecraft/scenarios/minimal.caxemap). It is small
+[`minimal.caxemap`](../examples/caxecraft/test/fixtures/caxemap/minimal.caxemap). It is small
 enough to read in one sitting while exercising a palette, RLE chunk, objects,
 dialogue, an objective, typed state, and one WHEN / IF / DO rule.
 

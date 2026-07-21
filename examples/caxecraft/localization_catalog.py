@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Validate Caxecraft catalogs and generate the narrow C rendering adapters.
+"""Validate Caxecraft text sources and generate narrow C rendering adapters.
 
-The JSON files are the human-edited source of truth. Generated Haxe keeps
-locale selection and C string-lifetime details out of gameplay and UI code.
+Reusable interface copy comes from one JSON catalog. Authored Adventure copy
+comes from the same CaxeMap that owns its world and story references. Generated
+Haxe keeps locale selection and C string-lifetime details out of gameplay code.
 """
 
 from __future__ import annotations
@@ -16,13 +17,14 @@ from pathlib import Path
 
 CASE = Path(__file__).resolve().parent
 UI_SOURCE = CASE / "locales/ui.json"
-SCENARIO_SOURCE = CASE / "scenarios/first-playable/messages.json"
+SCENARIO_SOURCE = CASE / "scenarios/first-playable/map.caxemap"
 UI_OUTPUT = CASE / "src/caxecraft/localization/UiCatalog.hx"
 SCENARIO_OUTPUT = CASE / "src/caxecraft/localization/FirstPlayableCatalog.hx"
 CATALOG_KEYS = {"schemaVersion", "catalogId", "defaultLocale", "locales", "messages"}
 MESSAGE_KEYS = {"id", "symbol", "text"}
 LOCALE_PATTERN = re.compile(r"^[a-z]{2}(?:-[A-Z]{2})?$")
-MESSAGE_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
+SCENARIO_LOCALE_PATTERN = re.compile(r"^[a-z]{2}(?:-[a-z]{2})?$")
+MESSAGE_PATTERN = re.compile(r"^[a-z][a-z0-9]*(?:[._-][a-z][a-z0-9]*)*$")
 SYMBOL_PATTERN = re.compile(r"^[A-Z][A-Za-z0-9]{0,63}$")
 
 
@@ -150,6 +152,137 @@ def load_catalog(path: Path, *, expected_id: str) -> Catalog:
     return validate_document(decode_document(text), expected_id=expected_id)
 
 
+def decode_caxemap_quoted(value: str, *, line: int) -> str:
+    """Decode the quoted-token subset defined by CAXEMAP 1."""
+
+    if not value.startswith('"'):
+        raise CatalogFailure(f"line {line}: message text must be quoted")
+    output: list[str] = []
+    index = 1
+    while index < len(value):
+        character = value[index]
+        if character == '"':
+            if index != len(value) - 1:
+                raise CatalogFailure(f"line {line}: text has trailing tokens")
+            return validate_text("".join(output), coordinate=f"line {line} message text")
+        if ord(character) < 32 or ord(character) == 127:
+            raise CatalogFailure(f"line {line}: text contains a control character")
+        if character != "\\":
+            output.append(character)
+            index += 1
+            continue
+        index += 1
+        if index >= len(value):
+            raise CatalogFailure(f"line {line}: unfinished escape")
+        escape = value[index]
+        simple = {'"': '"', "\\": "\\", "n": "\n", "r": "\r", "t": "\t"}
+        if escape in simple:
+            output.append(simple[escape])
+            index += 1
+            continue
+        if escape != "u" or index + 1 >= len(value) or value[index + 1] != "{":
+            raise CatalogFailure(f"line {line}: invalid escape")
+        close = value.find("}", index + 2)
+        digits = value[index + 2 : close] if close != -1 else ""
+        if close == -1 or not 1 <= len(digits) <= 6 or any(character not in "0123456789ABCDEF" for character in digits):
+            raise CatalogFailure(f"line {line}: invalid Unicode escape")
+        scalar = int(digits, 16)
+        if scalar == 0 or scalar > 0x10FFFF or 0xD800 <= scalar <= 0xDFFF:
+            raise CatalogFailure(f"line {line}: invalid Unicode scalar")
+        output.append(chr(scalar))
+        index = close + 1
+    raise CatalogFailure(f"line {line}: unterminated quoted text")
+
+
+def scenario_symbol(message_id: str) -> str:
+    symbol = "".join(part[0].upper() + part[1:] for part in re.split(r"[._-]", message_id))
+    if not SYMBOL_PATTERN.fullmatch(symbol):
+        raise CatalogFailure(f"message ID {message_id!r} cannot form a bounded Haxe symbol")
+    return symbol
+
+
+def load_scenario_catalog(path: Path, *, expected_id: str) -> Catalog:
+    """Extract one complete embedded catalog from a canonical CaxeMap."""
+
+    try:
+        raw = path.read_bytes()
+    except OSError as error:
+        raise CatalogFailure(f"cannot read {path.relative_to(CASE)}: {error}") from error
+    if raw.startswith(b"\xef\xbb\xbf") or b"\r" in raw or not raw.endswith(b"\n"):
+        raise CatalogFailure(f"{path.relative_to(CASE)} must use UTF-8 without BOM and canonical LF")
+    try:
+        lines = raw.decode("utf-8").splitlines()
+    except UnicodeDecodeError as error:
+        raise CatalogFailure(f"{path.relative_to(CASE)} is not valid UTF-8") from error
+    if not lines or lines[0] != "CAXEMAP 1":
+        raise CatalogFailure("scenario catalog source must start with CAXEMAP 1")
+
+    map_id: str | None = None
+    default_locale: str | None = None
+    locale_order: list[str] = []
+    locale_messages: dict[str, list[tuple[str, str]]] = {}
+    active_locale: str | None = None
+    for line_number, line in enumerate(lines[1:], start=2):
+        if active_locale is not None:
+            if line == "end locale":
+                active_locale = None
+                continue
+            match = re.fullmatch(r'  message ([a-z][a-z0-9]*(?:[._-][a-z][a-z0-9]*)*) (".*")', line)
+            if match is None:
+                raise CatalogFailure(f"line {line_number}: locale blocks contain only canonical message records")
+            message_id, quoted = match.groups()
+            if any(existing == message_id for existing, _ in locale_messages[active_locale]):
+                raise CatalogFailure(f"line {line_number}: duplicate message ID {message_id!r}")
+            locale_messages[active_locale].append((message_id, decode_caxemap_quoted(quoted, line=line_number)))
+            continue
+        if line.startswith("map "):
+            if map_id is not None:
+                raise CatalogFailure(f"line {line_number}: duplicate map record")
+            map_id = line[4:]
+        elif line.startswith("default-locale "):
+            if default_locale is not None:
+                raise CatalogFailure(f"line {line_number}: duplicate default locale")
+            default_locale = line[len("default-locale ") :]
+        elif line.startswith("locale "):
+            locale = line[len("locale ") :]
+            if not SCENARIO_LOCALE_PATTERN.fullmatch(locale):
+                raise CatalogFailure(f"line {line_number}: invalid scenario locale {locale!r}")
+            if locale in locale_messages:
+                raise CatalogFailure(f"line {line_number}: duplicate scenario locale {locale!r}")
+            locale_order.append(locale)
+            locale_messages[locale] = []
+            active_locale = locale
+    if active_locale is not None:
+        raise CatalogFailure(f"locale {active_locale!r} is missing end locale")
+    if map_id != expected_id:
+        raise CatalogFailure(f"map ID must be {expected_id!r}")
+    if default_locale is None or default_locale not in locale_messages:
+        raise CatalogFailure("default locale must name one embedded locale")
+    if not 1 <= len(locale_order) <= 8 or locale_order[0] != default_locale:
+        raise CatalogFailure("default locale must be the first of one to eight embedded locales")
+    if locale_order[1:] != sorted(locale_order[1:], key=lambda value: value.encode("utf-8")):
+        raise CatalogFailure("non-default locales must be ordered by UTF-8 locale ID")
+
+    base_ids = [message_id for message_id, _ in locale_messages[default_locale]]
+    if not base_ids or base_ids != sorted(base_ids, key=lambda value: value.encode("utf-8")):
+        raise CatalogFailure("default-locale messages must be non-empty and ordered by UTF-8 ID")
+    symbols = [scenario_symbol(message_id) for message_id in base_ids]
+    if len(set(symbols)) != len(symbols):
+        raise CatalogFailure("scenario message IDs produce duplicate Haxe symbols")
+    by_locale: dict[str, dict[str, str]] = {}
+    for locale in locale_order:
+        entries = locale_messages[locale]
+        ids = [message_id for message_id, _ in entries]
+        if ids != base_ids:
+            raise CatalogFailure(f"locale {locale!r} must translate exactly the default message IDs in the same order")
+        by_locale[locale] = dict(entries)
+    messages = tuple(
+        Message(message_id, symbol, tuple(by_locale[locale][message_id] for locale in locale_order))
+        for message_id, symbol in zip(base_ids, symbols, strict=True)
+    )
+    return Catalog(expected_id, default_locale, tuple(locale_order), messages)
+
+
 def haxe_string(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
     return f'"{escaped}"'
@@ -166,7 +299,7 @@ def enum_abstract(name: str, symbols: tuple[str, ...]) -> list[str]:
 def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
     class_name = "FirstPlayableCatalog" if scenario else "UiCatalog"
     message_type = "ScenarioMessage" if scenario else "UiMessage"
-    source_name = "scenarios/first-playable/messages.json" if scenario else "locales/ui.json"
+    source_name = "scenarios/first-playable/map.caxemap" if scenario else "locales/ui.json"
     lines = [
         "package caxecraft.localization;",
         "",
@@ -185,7 +318,7 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
             "/**",
             f" * C rendering adapter generated from `{source_name}`.",
             " *",
-            " * The JSON catalog is the editable source of truth. Each branch keeps a",
+            f" * The {'embedded CaxeMap catalog' if scenario else 'JSON catalog'} is the editable source of truth. Each branch keeps a",
             " * direct string literal at the raylib call so haxe.c can prove static C",
             " * lifetime. Gameplay and UI code choose only typed message IDs.",
             " */",
@@ -248,8 +381,8 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
 
 def rendered_catalogs() -> dict[Path, str]:
     ui = load_catalog(UI_SOURCE, expected_id="caxecraft.ui")
-    scenario = load_catalog(SCENARIO_SOURCE, expected_id="caxecraft.scenario.first-playable")
-    if ui.locales != scenario.locales or ui.default_locale != scenario.default_locale:
+    scenario = load_scenario_catalog(SCENARIO_SOURCE, expected_id="adventure.first-playable")
+    if tuple(locale.lower() for locale in ui.locales) != scenario.locales or ui.default_locale.lower() != scenario.default_locale:
         raise CatalogFailure("the built-in UI and first-playable catalogs must use the same locale order and default")
     return {
         UI_OUTPUT: render_catalog(ui, scenario=False),
@@ -261,7 +394,7 @@ def expected_draw_call_count() -> int:
     """Return the direct raylib literal calls required by the source catalogs."""
 
     ui = load_catalog(UI_SOURCE, expected_id="caxecraft.ui")
-    scenario = load_catalog(SCENARIO_SOURCE, expected_id="caxecraft.scenario.first-playable")
+    scenario = load_scenario_catalog(SCENARIO_SOURCE, expected_id="adventure.first-playable")
     return len(ui.locales) * len(ui.messages) + len(scenario.locales) * len(scenario.messages)
 
 

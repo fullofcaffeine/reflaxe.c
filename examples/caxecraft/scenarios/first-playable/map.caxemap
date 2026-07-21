@@ -1,0 +1,77 @@
+CAXEMAP 1
+feature required caxecraft:core
+map adventure.first-playable
+asset-pack packs/caxecraft/base
+default-locale en
+locale en
+  message adventure_progress "ADVENTURE: PROLOGUE IN PROGRESS"
+  message adventure_tagline "SAVE CEESH. FIND IVVY. STOP BROWSER."
+  message berry_pickup_one "+1 BERRY"
+  message berry_pickup_two "+2 BERRIES"
+  message berry_recovery "BERRIES: +1 HEART"
+  message berry_stack_full "BERRIES FULL: USE ONE FIRST"
+  message block_stack_full "BLOCK STACK FULL: USE ONE FIRST"
+  message copper_strike "COPPER STRIKE"
+  message haxirio_fallen "HAXIRIO HAS FALLEN"
+  message mossling_alert "MOSSLING ALERT"
+  message mossling_dropped_berries "MOSSLING DROPPED BERRIES"
+  message mossling_windup "MOSSLING WINDUP: DODGE"
+  message nia_gift "NIA: BERRIES FOR THE ROAD, HAXIRIO"
+  message nia_talk "E  TALK TO NIA"
+  message nia_welcome "NIA: THE GROVE LISTENS. E: A SMALL GIFT"
+  message no_berries "NO BERRIES LEFT"
+  message return_to_meadow "E  RETURN TO THE MEADOW"
+  message scenario_title "Caxecraft: Evergrove Prologue"
+  message telegraphed_hit "TELEGRAPHED HIT: DODGE THE NEXT"
+end locale
+locale es-mx
+  message adventure_progress "AVENTURA: PROLOGO EN CONSTRUCCION"
+  message adventure_tagline "SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER."
+  message berry_pickup_one "+1 BAYA"
+  message berry_pickup_two "+2 BAYAS"
+  message berry_recovery "BAYAS: +1 CORAZON"
+  message berry_stack_full "BAYAS LLENAS: USA UNA PRIMERO"
+  message block_stack_full "PILA DE BLOQUES LLENA: USA UNO"
+  message copper_strike "GOLPE DE COBRE"
+  message haxirio_fallen "HAXIRIO HA CAIDO"
+  message mossling_alert "MUSGUITO ALERTA"
+  message mossling_dropped_berries "EL MUSGUITO SOLTO BAYAS"
+  message mossling_windup "MUSGUITO CARGANDO: ESQUIVA"
+  message nia_gift "NIA: BAYAS PARA EL CAMINO, HAXIRIO"
+  message nia_talk "E  HABLAR CON NIA"
+  message nia_welcome "NIA: EL BOSQUE TE ESCUCHA. E: REGALO"
+  message no_berries "NO QUEDAN BAYAS"
+  message return_to_meadow "E  VOLVER AL PRADO"
+  message scenario_title "Caxecraft: Prologo de la Arboleda Eterna"
+  message telegraphed_hit "ATAQUE AVISADO: ESQUIVA EL PROXIMO"
+end locale
+title message scenario_title
+mode adventure
+world 4 4 4
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 4 4 4
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+end chunk
+object guide.nia
+  tag friend
+  placement npc caxecraft:nia dialogue.nia.welcome 2500 1000 1500 270
+end object
+object player.start
+  tag player
+  placement player-spawn 1500 1000 1500 0
+end object
+dialogue dialogue.nia.welcome
+  line speaker guide.nia message nia_welcome
+end dialogue
+objective objective.prologue active title message adventure_progress
+  body message adventure_tagline
+end objective
+end-map

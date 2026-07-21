@@ -62,6 +62,23 @@ def check_negative_contracts() -> None:
     else:
         raise LocalizationCheckFailure("duplicate JSON object key was accepted")
 
+    scenario = catalog.SCENARIO_SOURCE.read_text(encoding="utf-8")
+    malformed_scenarios = {
+        "missing translation": scenario.replace('  message nia_talk "E  HABLAR CON NIA"\n', "", 1),
+        "duplicate locale": scenario.replace("locale es-mx\n", "locale en\n", 1),
+        "unknown default locale": scenario.replace("default-locale en\n", "default-locale fr\n", 1),
+        "invalid CaxeMap escape": scenario.replace('"E  TALK TO NIA"', '"E  TALK \\q NIA"', 1),
+    }
+    for label, text in malformed_scenarios.items():
+        with tempfile.TemporaryDirectory(prefix="caxecraft-localization-negative-") as temporary:
+            path = Path(temporary) / "map.caxemap"
+            path.write_text(text, encoding="utf-8", newline="\n")
+            try:
+                catalog.load_scenario_catalog(path, expected_id="adventure.first-playable")
+            except catalog.CatalogFailure:
+                continue
+            raise LocalizationCheckFailure(f"malformed embedded scenario catalog was accepted: {label}")
+
 
 def check_app_boundary() -> None:
     forbidden = ("GameLanguage", "language ==", "GameLanguage.", 'Raylib.DrawText("')
@@ -87,7 +104,7 @@ def check_native_package_boundary() -> None:
     with tempfile.TemporaryDirectory(prefix="caxecraft-localization-package-") as temporary:
         destination = Path(temporary)
         stage_content_catalogs(destination)
-        for relative in ("locales/ui.json", "scenarios/first-playable/messages.json"):
+        for relative in ("locales/ui.json", "scenarios/first-playable/map.caxemap"):
             source = CASE / relative
             packaged = destination / "content" / relative
             if not packaged.is_file() or packaged.read_bytes() != source.read_bytes():

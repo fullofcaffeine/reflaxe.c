@@ -13,6 +13,7 @@ typedef Scenario = {
 	final optionalFeatures:Array<ContentId>;
 	final id:ScenarioId;
 	final assetPack:LogicalPath;
+	final messages:ScenarioMessages;
 	final title:ScenarioText;
 	final mode:ScenarioMode;
 	final world:ScenarioWorld;

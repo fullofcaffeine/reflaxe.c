@@ -245,7 +245,7 @@ menus, controls, pause, and generic feedback live in
 [`locales/ui.json`](locales/ui.json). Nia's dialogue, Mossling feedback, the
 Adventure tagline, named items, and other authored prose live with the
 scenario in
-[`scenarios/first-playable/messages.json`](scenarios/first-playable/messages.json).
+[`scenarios/first-playable/map.caxemap`](scenarios/first-playable/map.caxemap).
 
 That distinction matters: moving or sharing a scenario must also move the text
 that gives its characters and objectives meaning. A `.caxemap` refers to those
@@ -254,14 +254,16 @@ of the chosen language. The future editor will edit the map and its catalog as
 one package.
 
 Today the native String/Bytes/filesystem path is not complete, so the build
-validates the JSON and generates a narrow Haxe rendering adapter. The adapter
+validates the CaxeMap's embedded catalog and generates a narrow Haxe rendering adapter. The adapter
 keeps direct string literals at raylib's borrowed C-string calls; application
 code never learns the supported locale names. The source catalogs are copied
-to `bin/content/` as part of native packaging, but the running binary still
+to `bin/content/` as part of native packaging (the reusable UI JSON plus the
+complete scenario CaxeMap), but the running binary still
 uses the validated embedded mirror. This is a documented transition, not a
 claim that runtime catalog loading or the complete bilingual game is finished.
 
-After editing either catalog, regenerate and check it with:
+After editing the UI catalog or embedded CaxeMap messages, regenerate and check
+the temporary native adapter with:
 
 ```sh
 python3 examples/caxecraft/localization_catalog.py

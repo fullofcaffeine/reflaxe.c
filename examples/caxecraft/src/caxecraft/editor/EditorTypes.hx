@@ -3,6 +3,8 @@ package caxecraft.editor;
 import caxecraft.editor.EditorSession;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.ContentId;
+import caxecraft.scenario.LocaleId;
+import caxecraft.scenario.MessageId;
 import caxecraft.scenario.ScenarioDiagnostic;
 import caxecraft.scenario.ScenarioGeometry.ScenarioTransform;
 import caxecraft.scenario.ScenarioGeometry.VoxelBounds;
@@ -13,6 +15,8 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
+import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
 import haxe.io.Bytes;
 
 /** Resource limits selected when an editor session opens. */
@@ -42,6 +46,11 @@ enum EditorCommand {
 	RemoveObjective(id:ScenarioId);
 	PutRule(rule:FlowRule);
 	RemoveRule(id:ScenarioId);
+	SetDefaultLocale(locale:LocaleId);
+	PutLocale(locale:ScenarioLocaleCatalog);
+	RemoveLocale(locale:LocaleId);
+	PutMessage(locale:LocaleId, message:ScenarioMessage);
+	RemoveMessage(locale:LocaleId, message:MessageId);
 	RestoreLastPlayable;
 }
 
@@ -55,6 +64,7 @@ enum EditorCommandFamily {
 	Dialogue;
 	Objective;
 	Rule;
+	Localization;
 	Recovery;
 }
 
@@ -85,6 +95,9 @@ enum EditorError {
 	MissingDialogue(id:ScenarioId);
 	MissingObjective(id:ScenarioId);
 	MissingRule(id:ScenarioId);
+	MissingLocale(id:LocaleId);
+	MissingMessage(locale:LocaleId, message:MessageId);
+	CannotRemoveDefaultLocale(id:LocaleId);
 	HistoryEntryTooLarge(bytes:Int, maximum:Int);
 	NothingToUndo;
 	NothingToRedo;

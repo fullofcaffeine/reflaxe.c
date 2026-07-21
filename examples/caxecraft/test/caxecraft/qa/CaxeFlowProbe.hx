@@ -399,6 +399,7 @@ final class CaxeFlowProbe {
 			optionalFeatures: [],
 			id: id("probe.map"),
 			assetPack: new LogicalPath("packs/caxecraft/base"),
+			messages: NoMessageCatalog,
 			title: ScenarioText.Literal("CaxeFlow probe"),
 			mode: ScenarioMode.Adventure,
 			world: {

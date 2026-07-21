@@ -18,6 +18,7 @@ import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.LogicalPath;
+import caxecraft.scenario.LocaleId;
 import caxecraft.scenario.MessageId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.Scenario.ScenarioMode;
@@ -27,6 +28,10 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioLexer;
+import caxecraft.scenario.ScenarioMessages;
+import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
+import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
+import caxecraft.scenario.ScenarioMessages.resolveScenarioMessage;
 import caxecraft.scenario.ScenarioParser;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import caxecraft.scenario.ScenarioTag;
@@ -48,6 +53,13 @@ final class EditorProbe {
 	static final DIALOGUE = id("dialogue.ivvy");
 	static final OBJECTIVE = id("objective.finish");
 	static final RULE = id("rule.finish");
+	static final EN = new LocaleId("en");
+	static final ES_MX = new LocaleId("es-mx");
+	static final FR = new LocaleId("fr");
+	static final TITLE_MESSAGE = new MessageId("scenario.editor.title");
+	static final DIALOGUE_MESSAGE = new MessageId("dialogue.ivvy.hello");
+	static final OBJECTIVE_TITLE_MESSAGE = new MessageId("objective.finish.title");
+	static final OBJECTIVE_BODY_MESSAGE = new MessageId("objective.finish.body");
 
 	static function main():Void {
 		final session = open(EditorPolicy.defaults());
@@ -63,9 +75,13 @@ final class EditorProbe {
 		commandChecks += roundTrip(session, ClearSelection, Selection);
 		commandChecks += roundTrip(session, Select({origin: {x: 0, y: 0, z: 0}, size: {width: 1, height: 1, depth: 1}}), Selection);
 		commandChecks += roundTrip(session, StampPrefab(id("prefab.house"), PREFAB, [new ScenarioTag("landmark")], transform(2500, 0, 2500)), Prefab);
+		commandChecks += roundTrip(session, SetDefaultLocale(ES_MX), Localization);
+		commandChecks += roundTrip(session, PutMessage(EN, message(TITLE_MESSAGE, "Editor QA map, revised")), Localization);
+		commandChecks += roundTrip(session,
+			PutLocale(locale(FR, "Carte QA de l'editeur", "Bonjour, Haxirio.", "Reach the marker", "Use the checkpoint to finish.")), Localization);
 		commandChecks += roundTrip(session, PutDialogue({
 			id: DIALOGUE,
-			lines: [{speaker: null, text: Message(new MessageId("dialogue.ivvy.hello"))}]
+			lines: [{speaker: null, text: Message(DIALOGUE_MESSAGE)}]
 		}), Dialogue);
 		commandChecks += roundTrip(session, PutObject({id: CHECKPOINT, tags: [], placement: Checkpoint(transform(1500, 0, 1500))}), Placement);
 		commandChecks += roundTrip(session, PutObject({
@@ -76,8 +92,8 @@ final class EditorProbe {
 		commandChecks += roundTrip(session, PutObject({id: IVVY, tags: [], placement: Npc(NPC, DIALOGUE, transform(500, 0, 1500))}), Placement);
 		commandChecks += roundTrip(session, PutObjective({
 			id: OBJECTIVE,
-			title: Message(new MessageId("objective.finish.title")),
-			body: Message(new MessageId("objective.finish.body")),
+			title: Message(OBJECTIVE_TITLE_MESSAGE),
+			body: Message(OBJECTIVE_BODY_MESSAGE),
 			initialState: Active
 		}), Objective);
 		commandChecks += roundTrip(session, PutRule({
@@ -90,6 +106,7 @@ final class EditorProbe {
 		}), Rule);
 
 		final canonical = expectValid(session, "complete command-built scenario");
+		checkLocalization(session);
 		expectCodecRoundTrip(canonical);
 		checkTestPlayIsolation(session);
 		checkInvalidRecovery(session, canonical);
@@ -148,13 +165,31 @@ final class EditorProbe {
 		for (entry in [
 			{command: RemoveRule(RULE), family: Rule, label: "remove rule"},
 			{command: RemoveObjective(OBJECTIVE), family: Objective, label: "remove objective"},
-			{command: RemoveDialogue(DIALOGUE), family: Dialogue, label: "remove dialogue"}
+			{command: RemoveDialogue(DIALOGUE), family: Dialogue, label: "remove dialogue"},
+			{command: RemoveMessage(EN, TITLE_MESSAGE), family: Localization, label: "remove localized message"},
+			{command: RemoveLocale(FR), family: Localization, label: "remove locale"}
 		]) {
 			expectApplied(session.apply(entry.command), entry.family, entry.label);
 			expectHistory(session.undo(), entry.family, 'undo ${entry.label}');
 			expectHistory(session.redo(), entry.family, 'redo ${entry.label}');
 			expectHistory(session.undo(), entry.family, 'restore after ${entry.label}');
 		}
+	}
+
+	static function checkLocalization(session:EditorSession):Void {
+		final messages = session.draftSnapshot().messages;
+		require(resolveScenarioMessage(messages, EN, TITLE_MESSAGE) == "Editor QA map, revised", "editor did not retain an updated English message");
+		require(resolveScenarioMessage(messages, new LocaleId("de"), TITLE_MESSAGE) == "Mapa QA del editor",
+			"an unavailable locale did not fall back to the selected default");
+
+		expectApplied(session.apply(RemoveMessage(EN, OBJECTIVE_BODY_MESSAGE)), Localization, "make one locale incomplete");
+		final diagnostics = switch session.validate() {
+			case ValidationFailed(values): values;
+			case _: throw "an incomplete translation set unexpectedly validated";
+		};
+		require(hasMissingTranslation(diagnostics, EN, OBJECTIVE_BODY_MESSAGE), "incomplete translation lost its exact locale and message diagnostic");
+		expectHistory(session.undo(), Localization, "restore removed translation");
+		expectValid(session, "restored translation catalog");
 	}
 
 	static function checkHardBounds():Void {
@@ -272,6 +307,22 @@ final class EditorProbe {
 			case InvalidWorldSize(_): true;
 			case _: false;
 		}, "oversized world");
+		expectRejected(session.apply(SetDefaultLocale(new LocaleId("missing"))), error -> switch error {
+			case MissingLocale(_): true;
+			case _: false;
+		}, "unknown default locale");
+		expectRejected(session.apply(PutMessage(new LocaleId("missing"), message(TITLE_MESSAGE, "missing"))), error -> switch error {
+			case MissingLocale(_): true;
+			case _: false;
+		}, "message for unknown locale");
+		expectRejected(session.apply(RemoveMessage(EN, new MessageId("missing.message"))), error -> switch error {
+			case MissingMessage(_, _): true;
+			case _: false;
+		}, "remove unknown message");
+		expectRejected(session.apply(RemoveLocale(ES_MX)), error -> switch error {
+			case CannotRemoveDefaultLocale(_): true;
+			case _: false;
+		}, "remove current default locale");
 		expectRejected(session.apply(Select({
 			origin: {x: 1, y: 0, z: 0},
 			size: {width: 2147483647, height: 1, depth: 1}
@@ -378,6 +429,17 @@ final class EditorProbe {
 		return false;
 	}
 
+	static function hasMissingTranslation(values:Array<caxecraft.scenario.ScenarioDiagnostic>, locale:LocaleId, message:MessageId):Bool {
+		for (value in values)
+			switch value.kind {
+				case MissingTranslation(actualLocale, actualMessage):
+					if (actualLocale.text() == locale.text() && actualMessage.text() == message.text())
+						return true;
+				case _:
+			}
+		return false;
+	}
+
 	static function selectionKey(session:EditorSession):String {
 		final value = session.selectedBounds();
 		return value == null ? "none" : '${value.origin.x},${value.origin.y},${value.origin.z}:${value.size.width},${value.size.height},${value.size.depth}';
@@ -391,8 +453,28 @@ final class EditorProbe {
 	}
 
 	static function baseScenario():Scenario
-		return EditorScenarioFactory.create(id("editor.qa"), new LogicalPath("packs/caxecraft/base"), Message(new MessageId("scenario.editor.title")),
-			Creative, AIR, PLAYER);
+		return EditorScenarioFactory.create(id("editor.qa"), new LogicalPath("packs/caxecraft/base"), Message(TITLE_MESSAGE), Creative, AIR, PLAYER,
+			EmbeddedMessageCatalog({
+				defaultLocale: EN,
+				locales: [
+					locale(EN, "Editor QA map", "Hello, Haxirio.", "Reach the marker", "Use the checkpoint to finish."),
+					locale(ES_MX, "Mapa QA del editor", "Hola, Haxirio.", "Llega al marcador", "Usa el punto de control para terminar.")
+				]
+			}));
+
+	static function locale(id:LocaleId, title:String, dialogue:String, objectiveTitle:String, objectiveBody:String):ScenarioLocaleCatalog
+		return {
+			id: id,
+			messages: [
+				message(TITLE_MESSAGE, title),
+				message(DIALOGUE_MESSAGE, dialogue),
+				message(OBJECTIVE_TITLE_MESSAGE, objectiveTitle),
+				message(OBJECTIVE_BODY_MESSAGE, objectiveBody)
+			]
+		};
+
+	static inline function message(id:MessageId, text:String):ScenarioMessage
+		return {id: id, text: text};
 
 	static function withFormatVersion(source:Scenario, formatVersion:Int):Scenario
 		return {
@@ -401,6 +483,7 @@ final class EditorProbe {
 			optionalFeatures: source.optionalFeatures,
 			id: source.id,
 			assetPack: source.assetPack,
+			messages: source.messages,
 			title: source.title,
 			mode: source.mode,
 			world: source.world,

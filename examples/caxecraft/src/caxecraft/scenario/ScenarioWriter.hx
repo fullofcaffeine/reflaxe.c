@@ -37,6 +37,21 @@ final class ScenarioWriter {
 			lines.push('feature optional ${feature.text()}');
 		lines.push('map ${scenario.id.text()}');
 		lines.push('asset-pack ${scenario.assetPack.text()}');
+		switch scenario.messages {
+			case NoMessageCatalog:
+			case EmbeddedMessageCatalog(catalog):
+				lines.push('default-locale ${catalog.defaultLocale.text()}');
+				final locales = catalog.locales.copy();
+				locales.sort((left, right) -> compareUtf8(left.id.text(), right.id.text()));
+				for (locale in locales) {
+					lines.push('locale ${locale.id.text()}');
+					final messages = locale.messages.copy();
+					messages.sort((left, right) -> compareUtf8(left.id.text(), right.id.text()));
+					for (message in messages)
+						lines.push('  message ${message.id.text()} ${quoted(message.text)}');
+					lines.push("end locale");
+				}
+		}
 		lines.push('title ${text(scenario.title)}');
 		lines.push('mode ${mode(scenario.mode)}');
 		lines.push('world ${scenario.world.size.width} ${scenario.world.size.height} ${scenario.world.size.depth}');

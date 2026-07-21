@@ -1,0 +1,50 @@
+CAXEMAP 1
+feature required caxecraft:core
+map tutorial.first
+asset-pack packs/caxecraft/base
+title literal "First map tutorial"
+mode creative
+world 4 4 4
+palette 0 caxecraft:air
+palette 1 caxecraft:bedrock
+chunk world.base 0 0 0 4 4 4
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+  run 1 4
+  run 0 12
+end chunk
+object checkpoint.start
+  tag checkpoint
+  placement checkpoint 1500 1000 1500 0
+end object
+object guide.ivvy
+  tag friend
+  placement npc caxecraft:ivvy dialogue.ivvy.hello 2500 1000 1500 270
+end object
+object player.start
+  tag player
+  placement player-spawn 1500 1000 1500 0
+end object
+object zone.welcome
+  tag tutorial
+  placement trigger-zone 1 1 1 2 2 2
+end object
+dialogue dialogue.ivvy.hello
+  line speaker guide.ivvy literal "Ready to build?"
+end dialogue
+objective objective.meet-ivvy active title literal "Meet Ivvy"
+  body literal "Walk to Ivvy near the meadow."
+end objective
+variable quest.met-ivvy quest flag false
+rule rule.meet-ivvy priority 100 once
+  when enter-zone zone.welcome
+  if (flag quest.met-ivvy false)
+  do dialogue dialogue.ivvy.hello
+  do set-flag quest.met-ivvy true
+  do objective objective.meet-ivvy complete
+end rule
+end-map

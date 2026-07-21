@@ -51,19 +51,19 @@ object zone.test
   placement trigger-zone 1 1 1 2 2 2
 end object
 dialogue dialogue.ivvy
-  line narrator message dialogue.narrator
+  line narrator literal "The bridge waits."
   line speaker npc.ivvy literal "¡Vamos, Haxirio!"
 end dialogue
-journal journal.bridge title message journal.bridge.title
+journal journal.bridge title literal "Bridge notes"
   body literal "Lower the bridge."
 end journal
-objective objective.bridge hidden title message objective.bridge.title
-  body message objective.bridge.body
+objective objective.bridge hidden title literal "Restore the bridge"
+  body literal "Lower the bridge."
 end objective
-objective objective.ivvy active title message objective.ivvy.title
-  body message objective.ivvy.body
+objective objective.ivvy active title literal "Meet Ivvy"
+  body literal "Find Ivvy by the old path."
 end objective
-route route.castle title message route.castle.title
+route route.castle title literal "Road to the castle"
   objective objective.ivvy
   objective objective.bridge
 end route

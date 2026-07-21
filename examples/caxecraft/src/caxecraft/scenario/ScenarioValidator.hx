@@ -18,6 +18,7 @@ final class ScenarioValidator {
 		final world = new ScenarioWorldValidator(context);
 
 		document.validateFeatures();
+		new ScenarioMessageValidator(context).validate();
 		world.validateWorld();
 		context.indexIdentities();
 		world.validateObjects();

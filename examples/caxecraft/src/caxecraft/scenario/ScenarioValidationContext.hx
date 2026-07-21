@@ -202,6 +202,30 @@ final class ScenarioValidationContext {
 			case _: false;
 		});
 
+	public function coordinateForDefaultLocale():ScenarioCoordinate
+		return lastCoordinateMatching(subject -> switch subject {
+			case DefaultLocale: true;
+			case _: false;
+		});
+
+	public function coordinateForLocale(id:LocaleId):ScenarioCoordinate
+		return lastCoordinateMatching(subject -> switch subject {
+			case Locale(candidate): candidate.text() == id.text();
+			case _: false;
+		});
+
+	public function coordinateForLocaleMessage(locale:LocaleId, message:MessageId):ScenarioCoordinate
+		return lastCoordinateMatching(subject -> switch subject {
+			case LocaleMessage(candidateLocale, candidateMessage): candidateLocale.text() == locale.text() && candidateMessage.text() == message.text();
+			case _: false;
+		});
+
+	public function coordinateForMessageReference(id:MessageId):ScenarioCoordinate
+		return lastCoordinateMatching(subject -> switch subject {
+			case MessageReference(candidate): candidate.text() == id.text();
+			case _: false;
+		});
+
 	public function coordinateForTag(objectId:ScenarioId, tag:ScenarioTag):ScenarioCoordinate
 		return lastCoordinateMatching(subject -> switch subject {
 			case ObjectTag(candidateObject, candidateTag): candidateObject.text() == objectId.text() && candidateTag.text() == tag.text();

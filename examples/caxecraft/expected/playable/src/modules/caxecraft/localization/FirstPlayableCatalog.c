@@ -112,6 +112,11 @@ void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale0(int32_t hxc_mes
       }
     case 17:
       {
+        DrawText("Caxecraft: Evergrove Prologue", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
+        break;
+      }
+    case 18:
+      {
         DrawText("TELEGRAPHED HIT: DODGE THE NEXT", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
         break;
       }
@@ -212,6 +217,11 @@ void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale1(int32_t hxc_mes
         break;
       }
     case 17:
+      {
+        DrawText("Caxecraft: Prologo de la Arboleda Eterna", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
+        break;
+      }
+    case 18:
       {
         DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
         break;
