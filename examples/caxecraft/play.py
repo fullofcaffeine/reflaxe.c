@@ -11,9 +11,11 @@ import os
 import platform
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import tempfile
+import zlib
 from pathlib import Path, PurePosixPath
 
 
@@ -52,14 +54,100 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/hxc.manifest.json": "json",
     "playable/hxc.runtime-plan.json": "json",
     "playable/include/hxc/program.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/InventoryState.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/ItemKind.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/GuideState.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/MosslingState.h": "header",
+    "playable/src/modules/caxecraft/app/CaxecraftAtlas.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftPalette.c": "c",
     "playable/src/modules/caxecraft/app/HudDigits.c": "c",
     "playable/src/modules/caxecraft/app/Main.c": "c",
+    "playable/src/modules/caxecraft/gameplay/Inventory.c": "c",
+    "playable/src/modules/caxecraft/gameplay/GuideNpc.c": "c",
+    "playable/src/modules/caxecraft/gameplay/Mossling.c": "c",
+    "playable/src/modules/caxecraft/domain/World.c": "c",
 }
+RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items")
+RUNTIME_ASSET_REPORT = "caxecraft-runtime-assets.json"
 
 
 class PlayFailure(RuntimeError):
     """The playable could not be built without weakening its contracts."""
+
+
+def stage_runtime_assets(destination: Path) -> None:
+    """Copy only reviewed runtime assets beside the executable.
+
+    The game uses normalized relative paths, so an installed build behaves the
+    same as a checkout build. Exact source hashes are checked before copying;
+    the package report then records the same hashes without host paths.
+    """
+
+    source_root = CASE / "assets"
+    manifest = load_object(source_root / "manifest.json", "Caxecraft asset manifest")
+    if manifest.get("schemaVersion") != 1 or manifest.get("status") != "partially-runtime-integrated":
+        raise PlayFailure("Caxecraft asset manifest is not ready for reviewed partial runtime packaging")
+    raw_assets = manifest.get("assets")
+    if not isinstance(raw_assets, list):
+        raise PlayFailure("Caxecraft asset manifest omitted its asset inventory")
+    by_id: dict[str, dict[str, object]] = {}
+    for raw_asset in raw_assets:
+        if not isinstance(raw_asset, dict):
+            raise PlayFailure("Caxecraft asset manifest contains a malformed asset")
+        asset_id = raw_asset.get("id")
+        if not isinstance(asset_id, str) or asset_id in by_id:
+            raise PlayFailure("Caxecraft asset manifest contains a missing or duplicate asset ID")
+        by_id[asset_id] = raw_asset
+
+    stage_root = destination / "assets"
+    selected: list[dict[str, str]] = []
+    expected_files = {RUNTIME_ASSET_REPORT}
+    for asset_id in RUNTIME_ASSET_IDS:
+        asset = by_id.get(asset_id)
+        if asset is None:
+            raise PlayFailure(f"Caxecraft runtime asset {asset_id!r} is missing from the manifest")
+        raw_path = asset.get("path")
+        expected_hash = asset.get("sha256")
+        if not isinstance(raw_path, str) or not isinstance(expected_hash, str):
+            raise PlayFailure(f"Caxecraft runtime asset {asset_id!r} lost its path or hash")
+        relative = validated_relative(raw_path, f"runtime asset {asset_id} path")
+        source = source_root.joinpath(*relative.parts)
+        if source.is_symlink() or not source.is_file():
+            raise PlayFailure(f"Caxecraft runtime asset is missing or a symlink: {raw_path}")
+        actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        if actual_hash != expected_hash:
+            raise PlayFailure(f"Caxecraft runtime asset hash drifted: {raw_path}")
+        expected_files.add(raw_path)
+        selected.append({"id": asset_id, "path": raw_path, "sha256": expected_hash})
+
+    if stage_root.exists():
+        if stage_root.is_symlink() or not stage_root.is_dir():
+            raise PlayFailure("Caxecraft staged asset root is not a real directory")
+        existing_files = {
+            path.relative_to(stage_root).as_posix()
+            for path in stage_root.rglob("*")
+            if path.is_file() or path.is_symlink()
+        }
+        unexpected = sorted(existing_files - expected_files)
+        if unexpected:
+            raise PlayFailure(f"unowned files occupy the Caxecraft staged asset root: {unexpected}")
+    stage_root.mkdir(parents=True, exist_ok=True)
+    for record in selected:
+        relative = validated_relative(record["path"], f"runtime asset {record['id']} path")
+        target = stage_root.joinpath(*relative.parts)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(source_root.joinpath(*relative.parts), target)
+
+    report = {
+        "schemaVersion": 1,
+        "packId": manifest.get("packId"),
+        "assets": selected,
+    }
+    (stage_root / RUNTIME_ASSET_REPORT).write_text(
+        json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def development_tool(name: str) -> str:
@@ -86,6 +174,174 @@ def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subproc
         suffix = f"\n{detail}" if detail else ""
         raise PlayFailure(f"{label} failed with exit {result.returncode}{suffix}")
     return result
+
+
+def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title: bool = True) -> tuple[int, int]:
+    """Prove the captured title frame contains staged art and readable UI."""
+    try:
+        data = path.read_bytes()
+    except OSError as error:
+        raise PlayFailure(f"Caxecraft smoke did not produce its framebuffer screenshot: {error}") from error
+    if len(data) < 33 or data[:8] != b"\x89PNG\r\n\x1a\n" or data[12:16] != b"IHDR":
+        raise PlayFailure("Caxecraft smoke screenshot is not a structurally valid PNG")
+    width, height = struct.unpack(">II", data[16:24])
+    expected_dimensions = {(1280, 720)}
+    if platform_name == "macos":
+        expected_dimensions.add((2560, 1440))
+    if (width, height) not in expected_dimensions:
+        raise PlayFailure(
+            f"Caxecraft smoke screenshot must match its logical 1280x720 window at an admitted pixel scale, "
+            f"found {width}x{height}; "
+            "this can indicate a broken high-DPI framebuffer"
+        )
+    if data[24:29] != bytes((8, 6, 0, 0, 0)):
+        raise PlayFailure("Caxecraft smoke screenshot must be a non-interlaced 8-bit RGBA PNG")
+
+    compressed = bytearray()
+    offset = 8
+    saw_end = False
+    while offset < len(data):
+        if offset + 12 > len(data):
+            raise PlayFailure("Caxecraft smoke screenshot contains a truncated PNG chunk")
+        length = struct.unpack(">I", data[offset : offset + 4])[0]
+        chunk_end = offset + 12 + length
+        if chunk_end > len(data):
+            raise PlayFailure("Caxecraft smoke screenshot contains an out-of-bounds PNG chunk")
+        chunk_type = data[offset + 4 : offset + 8]
+        payload = data[offset + 8 : offset + 8 + length]
+        expected_crc = struct.unpack(">I", data[offset + 8 + length : chunk_end])[0]
+        if zlib.crc32(chunk_type + payload) & 0xFFFFFFFF != expected_crc:
+            raise PlayFailure("Caxecraft smoke screenshot contains a PNG checksum mismatch")
+        if chunk_type == b"IDAT":
+            compressed.extend(payload)
+        if chunk_type == b"IEND":
+            saw_end = True
+            break
+        offset = chunk_end
+    if not compressed or not saw_end:
+        raise PlayFailure("Caxecraft smoke screenshot omitted PNG image data or its end marker")
+
+    try:
+        filtered = zlib.decompress(bytes(compressed))
+    except zlib.error as error:
+        raise PlayFailure(f"Caxecraft smoke screenshot contains invalid compressed pixels: {error}") from error
+    bytes_per_pixel = 4
+    stride = width * bytes_per_pixel
+    expected_size = height * (stride + 1)
+    if len(filtered) != expected_size:
+        raise PlayFailure("Caxecraft smoke screenshot pixel payload has the wrong size")
+
+    previous = bytearray(stride)
+    brand_cyan_pixels = 0
+    brand_orange_pixels = 0
+    brand_white_pixels = 0
+    warm_scene_pixels = 0
+    green_scene_pixels = 0
+    sky_scene_pixels = 0
+    dark_panel_pixels = 0
+    light_ui_pixels = 0
+    nia_pixels = 0
+    mossling_pixels = 0
+    non_dark_pixels = 0
+    quantized_colors: set[int] = set()
+    at = 0
+    for row in range(height):
+        filter_kind = filtered[at]
+        at += 1
+        encoded = filtered[at : at + stride]
+        at += stride
+        decoded = bytearray(stride)
+        for index, value in enumerate(encoded):
+            left = decoded[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+            above = previous[index]
+            upper_left = previous[index - bytes_per_pixel] if index >= bytes_per_pixel else 0
+            if filter_kind == 0:
+                predictor = 0
+            elif filter_kind == 1:
+                predictor = left
+            elif filter_kind == 2:
+                predictor = above
+            elif filter_kind == 3:
+                predictor = (left + above) // 2
+            elif filter_kind == 4:
+                estimate = left + above - upper_left
+                left_distance = abs(estimate - left)
+                above_distance = abs(estimate - above)
+                upper_left_distance = abs(estimate - upper_left)
+                predictor = left if left_distance <= above_distance and left_distance <= upper_left_distance else (
+                    above if above_distance <= upper_left_distance else upper_left
+                )
+            else:
+                raise PlayFailure(f"Caxecraft smoke screenshot uses unknown PNG filter {filter_kind}")
+            decoded[index] = (value + predictor) & 0xFF
+        for index in range(0, stride, bytes_per_pixel):
+            red, green, blue = decoded[index : index + 3]
+            quantized_colors.add((red >> 4) << 8 | (green >> 4) << 4 | (blue >> 4))
+            if red > 20 or green > 20 or blue > 20:
+                non_dark_pixels += 1
+            if red > 80 and green > 60 and red > blue * 1.4 and green > blue * 1.2:
+                warm_scene_pixels += 1
+            if green > red * 0.9 and green > blue * 1.2 and green > 50:
+                green_scene_pixels += 1
+            if 80 < red < 180 and 130 < green < 220 and 140 < blue < 235:
+                sky_scene_pixels += 1
+            if red < 45 and green < 55 and blue < 65:
+                dark_panel_pixels += 1
+            if red > 210 and green > 210 and blue > 200:
+                light_ui_pixels += 1
+            if (red, green, blue) == (42, 150, 160):
+                nia_pixels += 1
+            if (red, green, blue) == (157, 190, 82):
+                mossling_pixels += 1
+            column = index // bytes_per_pixel
+            if row < height // 4 and width * 3 // 10 <= column < width * 7 // 10:
+                if red < 80 and green > 120 and blue > 140:
+                    brand_cyan_pixels += 1
+                if red > 180 and 60 < green < 190 and blue < 100:
+                    brand_orange_pixels += 1
+                if red > 220 and green > 220 and blue > 210:
+                    brand_white_pixels += 1
+        previous = decoded
+    if expected_title and (
+        brand_cyan_pixels < 200
+        or brand_orange_pixels < 100
+        or brand_white_pixels < 1_000
+        or warm_scene_pixels < 10_000
+        or green_scene_pixels < 10_000
+        or len(quantized_colors) < 300
+    ):
+        raise PlayFailure(
+            "Caxecraft smoke framebuffer is missing staged title art or readable UI "
+            f"(brandCyan={brand_cyan_pixels}, brandOrange={brand_orange_pixels}, "
+            f"brandWhite={brand_white_pixels}, warmScene={warm_scene_pixels}, "
+            f"greenScene={green_scene_pixels}, colorBuckets={len(quantized_colors)})"
+        )
+    # The first playable renderer deliberately uses a small flat-color palette;
+    # color-count thresholds would confuse clean voxel shading with a blank
+    # frame. Instead prove the scene's independent visual roles: broad sky,
+    # terrain, a dark heads-up-display panel, and light text/crosshair pixels.
+    if not expected_title and (
+        non_dark_pixels < width * height // 3
+        or sky_scene_pixels < width * height // 4
+        or green_scene_pixels < width * height // 20
+        or dark_panel_pixels < 2_000
+        or light_ui_pixels < 250
+        or nia_pixels < 50
+        or mossling_pixels < 30
+    ):
+        raise PlayFailure(
+            "Caxecraft pilot framebuffer is blank or lacks a presented game scene "
+            f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
+            f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, nia={nia_pixels}, "
+            f"mossling={mossling_pixels}, colorBuckets={len(quantized_colors)})"
+        )
+    return width, height
+
+
+def validate_presented_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+    """Require a real, nonblank presented frame without prescribing its scene."""
+
+    return validate_smoke_screenshot(path, platform_name=platform_name, expected_title=False)
 
 
 def host_platform() -> str:
@@ -165,7 +421,7 @@ def validated_relative(value: str, label: str) -> PurePosixPath:
     return path
 
 
-def compile_haxe(generated: Path, *, layout: str, platform_name: str) -> dict[str, object]:
+def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str | None = None) -> dict[str, object]:
     arguments = [
         development_tool("haxe"),
         "--cwd",
@@ -180,6 +436,16 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str) -> dict[st
     ]
     if layout != "split":
         arguments.extend(["-D", f"hxc_project_layout={layout}"])
+    if pilot is not None:
+        pilot_defines = {
+            "launch-smoke": "caxecraft_pilot_launch_smoke",
+            "move-jump-edit": "caxecraft_pilot_move_jump_edit",
+            "pause-recapture": "caxecraft_pilot_pause_recapture",
+        }
+        pilot_define = pilot_defines.get(pilot)
+        if pilot_define is None:
+            raise PlayFailure(f"unknown Caxecraft pilot script {pilot!r}")
+        arguments.extend(["-D", "caxecraft_pilot", "-D", pilot_define])
     arguments.extend(["--custom-target", f"c={generated}"])
     run(arguments, cwd=ROOT, timeout=120, label="Caxecraft Haxe-to-C compile")
 
@@ -197,11 +463,11 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str) -> dict[st
         raise PlayFailure("generated Caxecraft manifest does not describe a direct executable")
     if runtime_plan.get("selectedFeatures") != [] or runtime_plan.get("artifacts") != []:
         raise PlayFailure("Caxecraft unexpectedly selected hxrt")
-    validate_generated_playable(generated, layout=layout)
+    validate_generated_playable(generated, layout=layout, pilot=pilot)
     return manifest
 
 
-def validate_generated_playable(generated: Path, *, layout: str) -> None:
+def validate_generated_playable(generated: Path, *, layout: str, pilot: str | None) -> None:
     sources = sorted(generated.glob("src/**/*.c"), key=lambda path: path.as_posix().encode("utf-8"))
     if not sources:
         raise PlayFailure("Caxecraft emitted no C sources")
@@ -220,7 +486,6 @@ def validate_generated_playable(generated: Path, *, layout: str) -> None:
     for required in (
         "InitWindow(",
         "WindowShouldClose(",
-        "GetMouseDelta(",
         "BeginDrawing(",
         "BeginMode3D(",
         "DrawCube(",
@@ -229,6 +494,36 @@ def validate_generated_playable(generated: Path, *, layout: str) -> None:
     ):
         if required not in app:
             raise PlayFailure(f"generated Caxecraft app omitted direct Raylib call {required}")
+    # Pilot builds replace live keyboard and mouse sampling with a deterministic
+    # in-process input provider. Requiring GetMouseDelta there would reject the
+    # exact dead-code removal that makes the two providers a clean compile-time
+    # choice. Normal playable builds must still prove the real input path.
+    if pilot is None and "GetMouseDelta(" not in app:
+        raise PlayFailure("generated Caxecraft app omitted direct Raylib call GetMouseDelta(")
+    # This first slice draws wire geometry only for the block under the
+    # crosshair. A second call site would permit per-block fill/wire switching,
+    # which previously made raylib flush thousands of tiny GPU batches before
+    # the first frame could appear.
+    if app.count("DrawCubeWires(") != 1:
+        raise PlayFailure("generated Caxecraft app must contain exactly one selected-block wire-outline call site")
+    # Four reviewed image owners enter the application, are checked before
+    # use, and leave in reverse order before CloseWindow. Exact counts make a
+    # missing unload or an accidental hidden resource registry fail locally.
+    for function_name, expected_count in (
+        ("LoadTexture", 4),
+        ("IsTextureValid", 4),
+        ("UnloadTexture", 4),
+    ):
+        actual_count = app.count(f"{function_name}(")
+        if actual_count != expected_count:
+            raise PlayFailure(
+                f"generated Caxecraft app contains {actual_count} direct {function_name} call sites; expected {expected_count}"
+            )
+    draw_texture_count = combined.count("DrawTexturePro(")
+    if draw_texture_count != 4:
+        raise PlayFailure(
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 4"
+        )
     for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\(", r"\bhxrt_"):
         if re.search(forbidden, combined):
             raise PlayFailure(f"generated Caxecraft sources contain forbidden pattern {forbidden}")
@@ -279,6 +574,7 @@ def check_snapshots() -> None:
 def raylib_cache_key(
     *, authority: str, platform_name: str, source: Path | None, cc: str, cxx: str, cmake: str, generator: str
 ) -> str:
+    lock = provision.load_lock()
     identity = {
         "schemaVersion": 1,
         "authority": authority,
@@ -293,6 +589,10 @@ def raylib_cache_key(
         "cmakeVersion": tool_version(cmake),
         "generator": generator,
         "raylibCommit": provision.PINNED_COMMIT,
+        # The backend and every other reviewed CMake choice are build inputs.
+        # Including them prevents a lock change from reusing a native library
+        # that was compiled under an older configuration.
+        "cmakeDefinitions": list(provision.configuration_definitions(lock, platform_name, "desktop")),
     }
     encoded = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()[:16]
@@ -433,20 +733,25 @@ def compile_native(
         if not source_path.is_file():
             raise PlayFailure(f"generated source is missing: {source_value}")
         object_path = object_root / f"{index:03d}.o"
-        run(
+        compile_arguments = [
+            cc,
+            *STRICT_FLAGS,
+            f"-O{optimization}",
+            "-I",
+            str(generated / "include"),
+            "-I",
+            str(include_directory),
+        ]
+        compile_arguments.extend(
             [
-                cc,
-                *STRICT_FLAGS,
-                f"-O{optimization}",
-                "-I",
-                str(generated / "include"),
-                "-I",
-                str(include_directory),
                 "-c",
                 str(source_path),
                 "-o",
                 str(object_path),
-            ],
+            ]
+        )
+        run(
+            compile_arguments,
             cwd=ROOT,
             timeout=180,
             label=f"native compile of {source_value}",
@@ -477,6 +782,12 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--check-snapshots", action="store_true", help="compile once and compare the registered playable snapshots")
     parser.add_argument("--compile-only", action="store_true", help="emit and validate C without provisioning or linking Raylib")
     parser.add_argument("--build-only", action="store_true", help="link the native executable without opening a window")
+    parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
+    parser.add_argument(
+        "--pilot",
+        choices=("launch-smoke", "move-jump-edit", "pause-recapture"),
+        help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
+    )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib archive download")
     parser.add_argument("--authority", choices=("pinned-source", "offline-source"), default="pinned-source")
     parser.add_argument("--source", type=Path, help="exact Raylib 6.0 source tree for offline-source authority")
@@ -498,6 +809,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
 def main(argv: list[str]) -> int:
     try:
         args = parse_args(argv)
+        if args.smoke and args.pilot is not None:
+            raise PlayFailure("--smoke is the launch-smoke pilot alias and cannot be combined with --pilot")
+        if (args.smoke or args.pilot is not None) and (args.check_snapshots or args.compile_only or args.build_only):
+            raise PlayFailure("a running smoke/pilot cannot be combined with a non-running mode")
         if args.check_snapshots:
             check_snapshots()
             print("caxecraft: playable snapshots and direct-C invariants passed")
@@ -510,7 +825,8 @@ def main(argv: list[str]) -> int:
         output_root = prepare_output_root(args.output_root.resolve())
         generated = output_root / "generated"
         executable = output_root / "bin" / ("caxecraft.exe" if platform_name == "windows" else "caxecraft")
-        manifest = compile_haxe(generated, layout=args.layout, platform_name=platform_name)
+        selected_pilot = "launch-smoke" if args.smoke else args.pilot
+        manifest = compile_haxe(generated, layout=args.layout, platform_name=platform_name, pilot=selected_pilot)
         print(f"caxecraft: generated {args.layout} C project at {generated}")
         if args.compile_only:
             print("caxecraft: compile-only proof passed (direct C, empty hxrt plan)")
@@ -551,11 +867,30 @@ def main(argv: list[str]) -> int:
             cc=args.cc,
             optimization=args.optimization,
         )
+        stage_runtime_assets(executable.parent)
         print(f"caxecraft: built native executable at {executable}")
         if args.build_only:
             return 0
+        if selected_pilot is not None:
+            screenshot_names = {
+                "launch-smoke": "caxecraft-smoke.png",
+                "move-jump-edit": "caxecraft-pilot-move.png",
+                "pause-recapture": "caxecraft-pilot-pause.png",
+            }
+            screenshot = executable.parent / screenshot_names[selected_pilot]
+            if screenshot.exists():
+                screenshot.unlink()
+            run([str(executable)], cwd=executable.parent, timeout=15, label=f"Caxecraft {selected_pilot} graphical pilot")
+            width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name) if selected_pilot == "launch-smoke" else validate_presented_screenshot(
+                screenshot, platform_name=platform_name
+            )
+            print(
+                f"caxecraft: {selected_pilot} graphical pilot passed "
+                f"({width}x{height} presented framebuffer and bounded exit within 15 seconds)"
+            )
+            return 0
         print("caxecraft: launching; press Q to quit")
-        return subprocess.run([str(executable)], cwd=CASE, check=False).returncode
+        return subprocess.run([str(executable)], cwd=executable.parent, check=False).returncode
     except (OSError, UnicodeError, provision.ProvisionFailure, PlayFailure) as error:
         print(f"caxecraft: ERROR: {error}", file=sys.stderr)
         return 1

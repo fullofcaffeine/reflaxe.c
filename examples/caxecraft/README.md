@@ -6,7 +6,9 @@ reusable compiler and tooling improvements, not hide their absence behind
 game-only workarounds. The repository now contains a first playable feasibility
 slice: a finite voxel world, seeded terrain, block edits, voxel raycasting,
 fixed-step first-person collision, and a C-specific Raylib window/input/render
-adapter. The complete Creative/Adventure/editor/Ivvy direction and its honest
+adapter. Its authored spawn meadow now contains a friendly Nia interaction,
+one-time berry gift, and a Mossling that notices, chases, and returns on the
+fixed clock. The complete Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
 [game design document](../../docs/caxecraft-game-design.md).
 
@@ -121,6 +123,12 @@ npm run caxecraft:play -- --compile-only
 # Produce the native executable but do not open a window
 npm run caxecraft:play -- --build-only
 
+# Open the real Raylib renderer, capture the textured title, and exit automatically
+npm run caxecraft:play -- --smoke
+
+# Exercise movement/editing/hotbar input, capture the game view, and exit
+npm run caxecraft:play -- --pilot move-jump-edit
+
 # Verify every source byte in an already extracted Raylib tree
 npm run caxecraft:play -- \
   --authority offline-source \
@@ -128,10 +136,13 @@ npm run caxecraft:play -- \
 ```
 
 Use `WASD` to move, the mouse to look, Space to jump, left click to remove the
-selected block, right click to place dirt, Escape to pause or release the
-cursor, and `Q` to quit. Losing focus pauses and releases the cursor; clicking
-the paused window captures it again without also mining. The window may be
-resized down to 800 by 450.
+selected block, right click to use/place it, number keys `1` through `8` or the
+mouse wheel to select the hotbar, Escape to pause or release the cursor, and
+`Q` to quit. Creative mode does not consume placed blocks; the current
+Adventure feasibility path has finite stacks and returns eligible mined blocks
+to them. Losing focus pauses and releases the cursor; clicking the paused
+window captures it again without also mining. The window may be resized down
+to 800 by 450.
 
 Before closing the playable-slice Bead, record one human smoke pass with the
 OS, C compiler, window sizes, and pass/fail result. Check all of these behaviors:
@@ -143,14 +154,42 @@ OS, C compiler, window sizes, and pass/fail result. Check all of these behaviors
 - resizing at 800 by 450, 1280 by 720, and one larger comfortable size;
 - readable terrain edges, selection outline, crosshair, counters, and status text.
 
-Automation intentionally cannot substitute for this list: a successful native
-link does not prove how the window, mouse, or graphics feel in a real desktop
-session.
+The `--smoke` mode is the unattended title/presentation check. It runs the
+generated native executable, captures a completed framebuffer, and exits
+within a 15-second wall-clock limit plus the in-game frame limit. The validator
+checks PNG structure, the admitted logical/Retina dimensions, and independent
+wordmark/panorama color regions. The movement and pause pilots similarly
+require sky, terrain, HUD, and light UI regions without pretending GPU pixels
+are identical across drivers. Linux CI uses a virtual display—an in-memory
+desktop for graphical tests without a monitor. These checks catch renderer
+stalls, blank frames, missing assets/terrain/HUD, and framebuffer-size mistakes;
+they do not judge control feel or artistic quality. See the
+[game-pilot guide](../../docs/caxecraft-game-pilot.md).
 
-This is a finite, texture-free feasibility slice. It has no inventory,
-persistence, enemies, NPCs, Creative/Adventure modes, editor, localization,
-audio, or chunk renderer yet. Its original palette and crisp HUD are
-intentional, but the later visual/UX task owns flagship art integration.
+The pinned Raylib build uses its bundled GLFW backend on every desktop and its
+ordinary frame loop. In that mode `EndDrawing` puts the completed frame on
+screen, limits the frame rate, and polls window/input events. Raylib also offers
+custom frame control for applications that perform those three jobs manually;
+Caxecraft does not. The provisioning lock therefore disables that mode
+explicitly. Leaving it enabled produces a deceptive failure: Raylib can save a
+valid internal screenshot while the user sees a black, unresponsive window,
+because no frame is ever presented and no event is ever polled. The graphical
+smoke retains this behavior as a regression check.
+
+The adapter also omits Raylib 6.0's optional `WindowHighDpi` flag on macOS. On
+the pinned backend it double-applies Retina scaling, producing a 5120 by 2880
+framebuffer whose useful 1280 by 720 image occupies one quadrant. The visual
+smoke rejects that shape; ordinary resizing and the logical 1280 by 720 game
+remain available while high-DPI support is fixed separately.
+
+This is a finite playable feasibility slice with a textured title, typed
+eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
+bounded collect/consume/place rules. Nia provides the first two-step friendly
+interaction and one-time gift; one original Mossling provides bounded
+rest/chase/return movement. It still has no actor combat, drops, health,
+finished Adventure, visual editor, persistence, complete localization, audio,
+terrain textures/chunk meshes, or controller support. Passing this slice is
+integrated evidence, not a claim that the planned game is complete.
 
 It compares the same 38-line semantic trace under pinned Haxe Eval and all three
 generated-C layouts, checks the registered split/package/unity snapshots, and
@@ -223,10 +262,10 @@ re-emission. Generated bytes and the recursive-cycle behavior remain separately
 gated.
 
 The playable app has registered generated-C snapshots too. They cover its
-manifest, empty runtime plan, generated program header, palette,
-allocation-free counter HUD, and Raylib application module. The check also
-rejects generated `goto`, `hxrt`, and allocation calls and requires the direct
-window, input, and draw calls. The snapshot manifest uses Linux as its explicit
+manifest, empty runtime plan, generated program header, palette, inventory HUD,
+and Raylib application module. The check rejects generated `goto`, `hxrt`, and
+allocation calls; requires direct window, input, texture, and draw calls; and
+pins four load/check/unload ownership sites. The snapshot manifest uses Linux as its explicit
 canonical link platform so its bytes do not depend on the updater's host;
 native CI separately validates each admitted desktop's real link facts:
 
@@ -244,9 +283,32 @@ That command proves exact offline primary-source PNG bytes, dimensions, alpha
 contracts, semantic atlas-cell order, a complete no-sidecar file inventory,
 minimal PNG metadata, and repository-scoped generation/privacy records. The
 domain runner invokes the same validator before compiling.
-The images are not loaded by a playable renderer yet, so passing this gate is
-asset-inventory evidence rather than a gameplay or visual-polish claim. See
-[`assets/README.md`](assets/README.md) for the boundary.
+The playable currently packages the panorama, wordmark, HUD, and item atlas as
+exact verified primary bytes. The other six atlases remain design-only, so the
+asset gate alone is still not gameplay or visual-polish evidence. See
+[`assets/README.md`](assets/README.md) for the exact boundary.
+
+The bounded inventory has its own sub-second renderer-independent proof:
+
+```sh
+npm run test:caxecraft-inventory
+```
+
+It covers the fixed eight-slot catalog, exact selection/wrap behavior, finite
+stack clamping, collect/consume, empty/full edges, and target-neutral source
+boundary under two locales. The native movement pilot then proves that the
+same inventory selection reaches the real textured hotbar.
+
+The first actor loop has a separate sub-second renderer-independent proof:
+
+```sh
+npm run test:caxecraft-gameplay
+```
+
+It checks the authored meadow height, Nia's bounded welcome/gift states,
+one-time berry collection, and the Mossling's notice/chase/return movement in
+two locales. The native movement pilot then requires exact Nia and Mossling
+palette evidence in the real presented framebuffer.
 
 The CAXEMAP 1 authoring foundation has a separate fast model contract:
 

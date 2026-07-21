@@ -334,7 +334,9 @@ jobs:
             libxfixes-dev \
             libxi-dev \
             libxinerama-dev \
-            libxrandr-dev
+            libxrandr-dev \
+            xvfb \
+            xauth
 
       - name: Require native build tools
         shell: bash
@@ -387,17 +389,39 @@ jobs:
           raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
           raylib_build="$RUNNER_TEMP/raylib-desktop-build"
           raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
-          for optimization in 0 2; do
+          python3 examples/caxecraft/play.py \
+            --build-only \
+            --optimization 0 \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$raylib_cache" \
+            --prebuilt-raylib-build "$raylib_build" \
+            --prebuilt-raylib-report "$raylib_report" \
+            --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
+          if [ "${{ matrix.platform }}" = linux ]; then
+            # The O2 compile/link proof is also the graphical proof. Reusing
+            # one build avoids paying for the exact same Haxe compile twice.
+            xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" \
+              python3 examples/caxecraft/play.py \
+                --smoke \
+                --optimization 2 \
+                --cc "${{ matrix.cc }}" \
+                --cxx "${{ matrix.cxx }}" \
+                --prebuilt-raylib-cache "$raylib_cache" \
+                --prebuilt-raylib-build "$raylib_build" \
+                --prebuilt-raylib-report "$raylib_report" \
+                --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
+          else
             python3 examples/caxecraft/play.py \
               --build-only \
-              --optimization "$optimization" \
+              --optimization 2 \
               --cc "${{ matrix.cc }}" \
               --cxx "${{ matrix.cxx }}" \
               --prebuilt-raylib-cache "$raylib_cache" \
               --prebuilt-raylib-build "$raylib_build" \
               --prebuilt-raylib-report "$raylib_report" \
-              --output-root "$RUNNER_TEMP/caxecraft-playable-o$optimization"
-          done
+              --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
+          fi
 
       - name: Preserve normalized Raylib desktop evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

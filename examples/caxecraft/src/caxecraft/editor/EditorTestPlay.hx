@@ -2,13 +2,13 @@ package caxecraft.editor;
 
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowExecutor;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickInput;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.Scenario;
 import caxecraft.scenario.ScenarioId;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
-import haxe.Int64;
 
 /**
 	One disposable simulation created from a validated editor snapshot.
@@ -30,7 +30,7 @@ final class EditorTestPlay {
 	public inline function runTick(input:FlowTickInput):FlowTickResult
 		return executor.runTick(input);
 
-	public inline function tick():Int64
+	public inline function tick():FlowTick
 		return executor.tick();
 
 	public inline function variable(id:ScenarioId):Null<FlowValue>

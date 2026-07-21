@@ -54,11 +54,36 @@ literal whose storage lasts for the call.
 Begin/End calls stay explicit. A callback-style scope helper would need proven
 closure inlining and cleanup on every exit before making the same claim.
 
+### Texture ownership stays visible
+
+`raylib.Texture2D` and `raylib.Rectangle` are curated zero-cost views used to
+read dimensions and describe a draw rectangle. They do not turn a native GPU
+texture into a garbage-collected Haxe object. The owning calls remain in
+`raylib.raw.Raylib` for now, so a source review can see the exact load, validity
+check, draw borrow, and unload boundary.
+
+Caxecraft demonstrates the intended temporary pattern in one adapter rather
+than spreading raw calls through the game. A successful load has one owner;
+copies are non-owning aliases; every valid owner is unloaded once before the
+window closes. A future semantic resource wrapper requires haxe.c cleanup
+lowering that covers every admitted normal and exceptional exit. Until then,
+omitting the convenient owning helper is safer than providing a wrapper whose
+syntax suggests automatic cleanup that does not exist.
+
 ## Why the source uses `#if c`
 
-The current facade represents raylib's C ABI directly, so it exists only when
-Haxe selects the `c` custom target. Haxe removes the inactive branch while
-compiling; generated C contains no run-time target check.
+The current facade represents raylib's C application binary interface (ABI)—
+the exact values and function shapes exchanged with the native library. It
+therefore exists only when Haxe selects the `c` custom target. Haxe removes the
+inactive branch while compiling; generated C contains no run-time target check.
+On another target, `raylib.Rectangle` is deliberately absent instead of being
+a similar-looking type with different layout or lifetime rules.
+
+For example, `raylib.Rectangle.fromFloat(...)` creates a value containing four
+C `float` fields through `c.StructInit`. JavaScript does not have that C struct
+or binary32 field contract, so compiling this same adapter as JavaScript would
+be misleading. A JavaScript renderer should translate a portable game
+rectangle into the representation its graphics library expects.
 
 This guard is not an instruction to scatter target checks through game logic.
 It keeps one target adapter honest while portable Caxecraft code remains
@@ -78,10 +103,17 @@ schemas, localization, world rules, and tests stay above the adapter. This
 makes a future port smaller for a person or an LLM while preserving the close-
 to-C, performance-oriented path today.
 
+The current per-file guards are an honest incubation boundary, not necessarily
+the final package layout. `haxe_c-xge.34` owns a later comparison of
+target-specific source roots, one composition-root selection, and narrow
+conditional aliases. Its goal is to localize target choice without hiding the
+fact that native resources and application binary interfaces have genuinely
+different rules on different targets.
+
 ## Verification
 
 Run `npm run test:c-import`, `npm run test:raylib-provisioning`, and
 `npm run test:all-sources`. The suite keeps separate raw and semantic snapshots,
 rejects mixed enum domains, embedded-NUL titles, out-of-range color literals,
-invalid dimension types, and deliberately omitted resource APIs, and proves
-deterministic runtime-free output.
+invalid dimension types, and the deliberately omitted *semantic* owning
+resource API, and proves deterministic runtime-free output.

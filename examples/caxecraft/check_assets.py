@@ -329,18 +329,44 @@ def validate_asset_pack(asset_root: Path = ASSET_ROOT) -> int:
 
     if manifest.get("schemaVersion") != 1:
         fail("Caxecraft asset manifest schemaVersion must be 1")
-    if manifest.get("status") != "design-source-not-runtime-integrated":
-        fail("asset status must not claim runtime integration before haxe_c-xge.15 closes")
+    if manifest.get("status") != "partially-runtime-integrated":
+        fail("asset status must describe the exact partial title/wordmark integration")
     reproducibility = require_object(manifest.get("reproducibility"), "reproducibility")
     if (
         reproducibility.get("cleanBuildNetworkRequired") is not False
         or reproducibility.get("selectedOutputBytesPinned") is not True
         or reproducibility.get("sourceToByteRegeneration") != "not-applicable-primary-source"
-        or reproducibility.get("derivedRuntimeAssets") != "deterministic-regeneration-required"
-        or reproducibility.get("gitStorage") != "ordinary-git-v1-reassess-before-runtime-integration"
+        or reproducibility.get("derivedRuntimeAssets") != "remaining-atlases-require-deterministic-regeneration"
+        or reproducibility.get("gitStorage") != "ordinary-git-v1-reassess-before-expanded-runtime-integration"
         or reproducibility.get("owner") != "haxe_c-xge.15"
     ):
         fail("asset reproducibility policy drifted or overclaims the current design pack")
+
+    runtime = require_object(manifest.get("runtimeIntegration"), "runtimeIntegration")
+    if set(runtime) != {
+        "owner",
+        "packagedPrimaryAssets",
+        "designOnlyAssets",
+        "pathPolicy",
+        "lifetimePolicy",
+        "derivation",
+    }:
+        fail("runtimeIntegration must remain a closed, reviewable policy")
+    if runtime.get("owner") != "haxe_c-xge.33":
+        fail("runtime integration must retain its focused Beads owner")
+    if runtime.get("packagedPrimaryAssets") != ["caxecraft-wordmark", "title-panorama", "hud", "items"]:
+        fail("only the exact title, wordmark, HUD, and item sources are runtime-integrated")
+    if runtime.get("designOnlyAssets") != [
+        "adventure-characters",
+        "adventure-items",
+        "adventure-terrain",
+        "entities",
+        "ivvy",
+        "terrain",
+    ]:
+        fail("design-only atlas inventory drifted without runtime review")
+    for field in ("pathPolicy", "lifetimePolicy", "derivation"):
+        require_string(runtime.get(field), f"runtimeIntegration.{field}")
 
     rights = require_object(manifest.get("rights"), "rights")
     if set(rights) != {"caxecraft-original"}:

@@ -1459,17 +1459,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 101,
+              "startLine": 114,
               "startColumn": 67,
-              "endLine": 130,
+              "endLine": 143,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 101,
+            "startLine": 114,
             "startColumn": 67,
-            "endLine": 130,
+            "endLine": 143,
             "endColumn": 3
           },
           "startLine": 1025,
@@ -1669,17 +1669,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 91,
+              "startLine": 104,
               "startColumn": 88,
-              "endLine": 98,
+              "endLine": 111,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 91,
+            "startLine": 104,
             "startColumn": 88,
-            "endLine": 98,
+            "endLine": 111,
             "endColumn": 3
           },
           "startLine": 1212,
@@ -1704,17 +1704,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 65,
+              "startLine": 78,
               "startColumn": 77,
-              "endLine": 70,
+              "endLine": 83,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 65,
+            "startLine": 78,
             "startColumn": 77,
-            "endLine": 70,
+            "endLine": 83,
             "endColumn": 3
           },
           "startLine": 1241,
@@ -1739,17 +1739,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 82,
+              "startLine": 95,
               "startColumn": 73,
-              "endLine": 88,
+              "endLine": 101,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 82,
+            "startLine": 95,
             "startColumn": 73,
-            "endLine": 88,
+            "endLine": 101,
             "endColumn": 3
           },
           "startLine": 1258,
@@ -1774,17 +1774,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 73,
+              "startLine": 86,
               "startColumn": 90,
-              "endLine": 79,
+              "endLine": 92,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 73,
+            "startLine": 86,
             "startColumn": 90,
-            "endLine": 79,
+            "endLine": 92,
             "endColumn": 3
           },
           "startLine": 1283,
@@ -1809,17 +1809,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 133,
+              "startLine": 177,
               "startColumn": 57,
-              "endLine": 141,
+              "endLine": 185,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 133,
+            "startLine": 177,
             "startColumn": 57,
-            "endLine": 141,
+            "endLine": 185,
             "endColumn": 3
           },
           "startLine": 1301,
@@ -1844,17 +1844,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 143,
+              "startLine": 187,
               "startColumn": 59,
-              "endLine": 147,
+              "endLine": 191,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 143,
+            "startLine": 187,
             "startColumn": 59,
-            "endLine": 147,
+            "endLine": 191,
             "endColumn": 3
           },
           "startLine": 1323,

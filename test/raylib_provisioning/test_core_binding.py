@@ -40,7 +40,7 @@ class RaylibCoreBindingTests(unittest.TestCase):
         first = render_files(lock)
         second = render_files(lock)
         self.assertEqual(first, second)
-        self.assertEqual(len(first), 14)
+        self.assertEqual(len(first), 17)
         check_rendered(RAW_ROOT, first)
 
     def test_raw_layer_has_no_unsafe_or_target_foreign_shortcut(self) -> None:
@@ -63,6 +63,25 @@ class RaylibCoreBindingTests(unittest.TestCase):
         self.assertIn("extern class Camera3D", rendered)
         self.assertIn("public var position:Vector3", rendered)
         self.assertIn("public static function BeginDrawing():Void", rendered)
+
+    def test_texture_resource_contract_keeps_ownership_visible(self) -> None:
+        lock = load_lock()
+        contracts = lock["selection"]["resourceContracts"]
+        self.assertEqual(len(contracts), 1)
+        contract = contracts[0]
+        self.assertEqual(contract["resource"], "Texture2D")
+        self.assertEqual(contract["load"], "LoadTexture")
+        self.assertEqual(contract["validate"], "IsTextureValid")
+        self.assertEqual(contract["borrow"], ["DrawTexturePro"])
+        self.assertEqual(contract["unload"], "UnloadTexture")
+        self.assertEqual(
+            contract["semanticStatus"],
+            "raw-only-until-explicit-cleanup-edges",
+        )
+        rendered = render_files(lock)["Raylib.hx"]
+        self.assertIn("Returns one caller-owned `Texture2D`", rendered)
+        self.assertIn("Call `UnloadTexture` exactly once", rendered)
+        self.assertIn("Treat every copied value as an alias", rendered)
 
     def test_lock_rejects_stale_selection_hash(self) -> None:
         lock = copy.deepcopy(load_lock())

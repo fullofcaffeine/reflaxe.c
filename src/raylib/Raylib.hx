@@ -1,5 +1,10 @@
 package raylib;
 
+// The complete facade is intentionally absent on non-C targets. `#if c` is a
+// compile-time package boundary: it prevents another target from accidentally
+// treating C ABI types as portable Haxe values and emits no run-time test.
+// See docs/raylib-semantic-core.md for the cross-target adapter design.
+
 #if c
 /**
  * Zero-cost semantic facade for the reviewed raylib core slice.
@@ -118,6 +123,16 @@ class Raylib {
 
 	public static inline function EndDrawing():Void
 		raylib.raw.Raylib.EndDrawing();
+
+	/**
+	 * Save the current framebuffer to a file named by a static C string.
+	 *
+	 * Raylib reads `fileName` only during this call; it does not keep the
+	 * pointer. The current facade therefore admits the same embedded-NUL-free,
+	 * statically borrowed string literals as `InitWindow` and `DrawText`.
+	 */
+	public static inline function TakeScreenshot(fileName:c.CString):Void
+		raylib.raw.Raylib.TakeScreenshot(fileName);
 
 	public static inline function ClearBackground(color:Color):Void
 		raylib.raw.Raylib.ClearBackground(color);

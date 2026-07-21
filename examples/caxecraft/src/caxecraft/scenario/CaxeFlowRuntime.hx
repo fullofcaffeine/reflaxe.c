@@ -3,7 +3,18 @@ package caxecraft.scenario;
 import caxecraft.scenario.CaxeFlow.FlowEvent;
 import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
-import haxe.Int64;
+
+/**
+	An exact fixed-tick number built only from ordinary non-negative `Int` values.
+
+	`epoch` counts complete one-billion-tick groups and `offset` identifies one
+	tick inside that group. `CaxeFlowClock` constructs and compares these values;
+	callers should treat the fields as a readable saved-state representation.
+**/
+typedef FlowTick = {
+	final epoch:Int;
+	final offset:Int;
+}
 
 /** A game-supplied object position at the start of one fixed simulation tick. */
 typedef FlowPosition = {
@@ -26,6 +37,7 @@ typedef FlowTickInput = {
 
 /** Closed kinds of bounded work guarded by the version-1 executor. */
 enum FlowExecutionLimit {
+	FixedTickEpochs;
 	TickEvents;
 	RuleExecutions;
 	Actions;
@@ -65,7 +77,7 @@ enum FlowPresentationEvent {
 
 /** Complete observable result of one fixed CaxeFlow tick. */
 typedef FlowTickResult = {
-	final tick:Int64;
+	final tick:FlowTick;
 	final firedRules:Array<ScenarioId>;
 	final presentation:Array<FlowPresentationEvent>;
 	final diagnostics:Array<FlowRuntimeDiagnostic>;

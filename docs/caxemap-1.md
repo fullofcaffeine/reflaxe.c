@@ -338,11 +338,16 @@ depth of 16; a static unconditional cycle is invalid.
 
 `CaxeFlowExecutor` runs a previously validated `Scenario`. A **fixed tick** is
 one numbered simulation step, independent of rendering speed. Tick numbers
-begin at one and use Haxe's portable signed 64-bit `Int64`, so crossing the
-32-bit integer boundary cannot wrap a timer or cooldown. Authored delays remain
-positive 32-bit integers and are promoted before they are added to the current
-tick. A delay of one means “at the next fixed tick,” not “after some number of
-milliseconds.” No rule reads a wall clock.
+begin at one and use two ordinary non-negative `Int` fields: an epoch plus an
+offset inside a one-billion-tick epoch. Every carry is checked before addition,
+so crossing the 32-bit integer boundary cannot wrap a timer or cooldown. The
+final representable value is more than one billion years away at 60 ticks per
+second; reaching it stops with `LimitExceeded(FixedTickEpochs, 2147483647)`
+instead of corrupting time. Authored delays remain positive 32-bit integers and
+are split into epoch and offset parts before addition. A delay of one means “at
+the next fixed tick,” not “after some number of milliseconds.” No rule reads a
+wall clock, and this representation needs no currently unsupported `haxe.Int64`
+lowering in generated C.
 
 One tick has these exact boundaries:
 

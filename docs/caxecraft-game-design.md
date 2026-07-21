@@ -7,13 +7,20 @@ Audience: players, designers, contributors, compiler engineers, and reviewers
 Status: accepted product and technical direction; implementation is staged.
 The deterministic domain, first original art pack, and first native Raylib
 feasibility slice exist today. That slice can move, collide, jump, select,
-remove, and place colored blocks; it is not the planned finished game. The
+remove, and place colored blocks; it now has the textured title, a typed
+eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
+input pilots. A small authored spawn meadow now introduces Nia through a
+two-step welcome/berry gift and renders one fixed-step Mossling with bounded
+notice/chase/return behavior. This is the first actor loop, not the planned
+finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
-in-game Raylib interface does not. The modes, asset-integrated visual pass,
-inventory, creatures, NPC gameplay, persistence, localization, Ivvy behavior,
-and authored campaign are not yet implemented. Do not describe concept art,
-semantic editor tests, or asset atlases as evidence that those broader
-capabilities run.
+in-game Raylib interface does not. The menu can choose Creative or Adventure;
+the authored mode content does not run yet beyond that first encounter. Actor
+combat, drops, health, broader NPC dialogue, persistence, complete
+localization, Ivvy behavior, terrain/entity art, audio, and the authored
+campaign remain unimplemented. Do not describe
+concept art, semantic editor tests, or the remaining design-only atlases as
+evidence that those broader capabilities run.
 
 The durable work owners are:
 
@@ -524,11 +531,15 @@ existing game marks and characters, and the current pack contains no official
 Haxe logo binary. The exact selected PNGs are pinned and offline; online image
 generation is never a clean-build dependency. The registered validator checks
 their hashes, semantic atlas order, complete file inventory, and minimal PNG
-metadata. Before `haxe_c-xge.15` closes, derived runtime assets still need a
-deterministic conversion pipeline, runtime filtering/lifetime policy,
-software-render goldens, real-renderer screenshots, Git/LFS growth policy, and
-human visual review. The Haxeforge atlas is intentionally deferred until its
-original asymmetric design passes the same review.
+metadata. The title panorama, wordmark, HUD, and item atlas are now packaged as
+their exact verified primary bytes and owned by one explicit texture adapter;
+the game has native title and hotbar screenshots, but not pinned
+software-render goldens. Before `haxe_c-xge.15` closes, any derived runtime
+assets need a deterministic conversion pipeline, and the complete visual pass
+still needs filtering/lifetime review, software-render goldens, real-renderer
+screenshots, Git/LFS growth policy, and human visual review. The Haxeforge
+atlas is intentionally deferred until its original asymmetric design passes
+the same review.
 
 ### Visual reference board
 

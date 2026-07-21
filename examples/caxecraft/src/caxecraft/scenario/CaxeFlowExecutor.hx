@@ -8,13 +8,13 @@ import caxecraft.scenario.CaxeFlow.FlowValue;
 import caxecraft.scenario.CaxeFlowRuntime.FlowExecutionLimit;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.scenario.CaxeFlowRuntime.FlowRuntimeDiagnostic;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickInput;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
-import haxe.Int64;
 
 private enum DeferredFlowWork {
-	DeferredEvent(readyTick:Int64, event:FlowEvent);
-	DeferredSequence(readyTick:Int64, timer:ScenarioId, sequence:ScenarioId, arguments:Array<FlowValue>);
+	DeferredEvent(readyTick:FlowTick, event:FlowEvent);
+	DeferredSequence(readyTick:FlowTick, timer:ScenarioId, sequence:ScenarioId, arguments:Array<FlowValue>);
 }
 
 private final class ReadySequence {
@@ -46,7 +46,7 @@ final class CaxeFlowExecutor {
 	final state:CaxeFlowState;
 	final rulePlanner:CaxeFlowRulePlanner;
 	var deferred:Array<DeferredFlowWork> = [];
-	var currentTick:Int64 = 0;
+	var currentTick:FlowTick = CaxeFlowClock.start();
 
 	var presentation:Array<FlowPresentationEvent> = [];
 	var diagnostics:Array<FlowRuntimeDiagnostic> = [];
@@ -56,8 +56,20 @@ final class CaxeFlowExecutor {
 	var spawnCount:Int = 0;
 	var scheduledCount:Int = 0;
 
-	public function new(scenario:Scenario) {
+	/**
+	 * Create a rule executor, optionally at an exact validated saved tick.
+	 *
+	 * Normal play starts at zero. The optional value is the narrow restoration
+	 * seam used by future save-game loading and by boundary tests that cannot
+	 * advance a billion years one tick at a time.
+	 */
+	public function new(scenario:Scenario, ?restoredTick:FlowTick) {
 		this.scenario = scenario;
+		if (restoredTick != null) {
+			if (!CaxeFlowClock.isValid(restoredTick))
+				throw "CaxeFlow restored tick is outside the fixed clock";
+			currentTick = restoredTick;
+		}
 		state = new CaxeFlowState(scenario);
 		rulePlanner = new CaxeFlowRulePlanner(scenario, state);
 	}
@@ -70,8 +82,13 @@ final class CaxeFlowExecutor {
 		one fixed-tick boundary, without consulting wall-clock time.
 	**/
 	public function runTick(input:FlowTickInput):FlowTickResult {
-		currentTick = CaxeFlowClock.next(currentTick);
 		resetTickOutput();
+		final nextTick = CaxeFlowClock.next(currentTick);
+		if (nextTick == null) {
+			fail(LimitExceeded(FixedTickEpochs, CaxeFlowClock.MAX_EPOCH, null));
+			return result();
+		}
+		currentTick = nextTick;
 
 		final unknownPosition = state.updatePositions(input.positions);
 		if (unknownPosition != null) {
@@ -84,9 +101,9 @@ final class CaxeFlowExecutor {
 		final pending:Array<DeferredFlowWork> = [];
 		for (work in deferred)
 			switch work {
-				case DeferredEvent(readyTick, event) if (readyTick <= currentTick):
+				case DeferredEvent(readyTick, event) if (CaxeFlowClock.isDue(readyTick, currentTick)):
 					events.push(event);
-				case DeferredSequence(readyTick, timer, sequence, arguments) if (readyTick <= currentTick):
+				case DeferredSequence(readyTick, timer, sequence, arguments) if (CaxeFlowClock.isDue(readyTick, currentTick)):
 					events.push(TimerExpired(timer));
 					readySequences.push(new ReadySequence(sequence, arguments));
 				case _:
@@ -123,7 +140,7 @@ final class CaxeFlowExecutor {
 		return result();
 	}
 
-	public inline function tick():Int64
+	public inline function tick():FlowTick
 		return currentTick;
 
 	public inline function variable(id:ScenarioId):Null<FlowValue>
@@ -226,12 +243,12 @@ final class CaxeFlowExecutor {
 				}
 				if (previous != value) {
 					presentation.push(ObjectiveChanged(objective, value));
-					enqueue(DeferredEvent(CaxeFlowClock.dueTick(currentTick, 1), ObjectiveChanged(objective)), owner);
+					enqueueEventAfter(1, ObjectiveChanged(objective), owner);
 				}
 			case PlayEffect(effect, objectId):
 				presentation.push(EffectRequested(effect, objectId));
 			case EmitSignal(signal):
-				enqueue(DeferredEvent(CaxeFlowClock.dueTick(currentTick, 1), SignalReceived(signal)), owner);
+				enqueueEventAfter(1, SignalReceived(signal), owner);
 			case Schedule(timer, ticks, sequence, arguments):
 				if (ticks <= 0) {
 					fail(InvalidRuntimeAction(owner));
@@ -244,8 +261,13 @@ final class CaxeFlowExecutor {
 				final captured = resolveArguments(arguments, frame);
 				if (captured == null)
 					return;
+				final readyTick = CaxeFlowClock.dueTick(currentTick, ticks);
+				if (readyTick == null) {
+					fail(LimitExceeded(FixedTickEpochs, CaxeFlowClock.MAX_EPOCH, owner));
+					return;
+				}
 				scheduledCount++;
-				enqueue(DeferredSequence(CaxeFlowClock.dueTick(currentTick, ticks), timer, sequence, captured), owner);
+				enqueue(DeferredSequence(readyTick, timer, sequence, captured), owner);
 			case CallSequence(sequence, arguments):
 				final resolved = resolveArguments(arguments, frame);
 				if (resolved == null)
@@ -345,7 +367,16 @@ final class CaxeFlowExecutor {
 		}
 		presentation.push(VariableChanged(id, value));
 		if (!isLocal)
-			enqueue(DeferredEvent(CaxeFlowClock.dueTick(currentTick, 1), StateChanged(id)), owner);
+			enqueueEventAfter(1, StateChanged(id), owner);
+	}
+
+	function enqueueEventAfter(delay:Int, event:FlowEvent, owner:ScenarioId):Void {
+		final readyTick = CaxeFlowClock.dueTick(currentTick, delay);
+		if (readyTick == null) {
+			fail(LimitExceeded(FixedTickEpochs, CaxeFlowClock.MAX_EPOCH, owner));
+			return;
+		}
+		enqueue(DeferredEvent(readyTick, event), owner);
 	}
 
 	function enqueue(work:DeferredFlowWork, owner:ScenarioId):Void {

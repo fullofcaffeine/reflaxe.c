@@ -71,6 +71,11 @@ extern class Raylib {
 
 	public static function DrawText(text:c.CString, posX:c.Int32, posY:c.Int32, fontSize:c.Int32, color:Color):Void;
 
+	/**
+	 * Borrows `Texture2D` only while this call executes.
+	 */
+	public static function DrawTexturePro(texture:Texture2D, source:Rectangle, dest:Rectangle, origin:Vector2, rotation:c.Float32, tint:Color):Void;
+
 	public static function EnableCursor():Void;
 
 	public static function EndDrawing():Void;
@@ -117,11 +122,23 @@ extern class Raylib {
 
 	public static function IsMouseButtonReleased(button:c.Int32):Bool;
 
+	/**
+	 * Borrows `Texture2D` for this call and does not change ownership.
+	 */
+	public static function IsTextureValid(texture:Texture2D):Bool;
+
 	public static function IsWindowFocused():Bool;
 
 	public static function IsWindowReady():Bool;
 
 	public static function IsWindowResized():Bool;
+
+	/**
+	 * Returns one caller-owned `Texture2D` when valid.
+	 * LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.
+	 * Call `UnloadTexture` exactly once before closing the graphics device.
+	 */
+	public static function LoadTexture(fileName:c.CString):Texture2D;
 
 	public static function SetConfigFlags(flags:c.UInt32):Void;
 
@@ -134,6 +151,14 @@ extern class Raylib {
 	public static function SetWindowMinSize(width:c.Int32, height:c.Int32):Void;
 
 	public static function SetWindowSize(width:c.Int32, height:c.Int32):Void;
+
+	public static function TakeScreenshot(fileName:c.CString):Void;
+
+	/**
+	 * Releases the one native resource owned by `Texture2D`.
+	 * Treat every copied value as an alias; do not use or unload any alias afterward.
+	 */
+	public static function UnloadTexture(texture:Texture2D):Void;
 
 	public static function WindowShouldClose():Bool;
 }

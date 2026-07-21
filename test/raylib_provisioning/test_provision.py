@@ -22,6 +22,7 @@ from scripts.raylib.provision import (
     assert_report_redacted,
     build_source,
     canonical_tree_identity,
+    configuration_definitions,
     find_system_library,
     host_platform_key,
     load_lock,
@@ -101,6 +102,19 @@ def synthetic_source_lock(root: Path) -> dict[str, object]:
 
 
 class RaylibProvisioningTests(unittest.TestCase):
+    def test_desktop_backend_is_selected_once_for_each_host(self) -> None:
+        lock = load_lock()
+        expected = {
+            "linux": "PLATFORM=Desktop",
+            "macos": "PLATFORM=Desktop",
+            "windows": "PLATFORM=Desktop",
+        }
+        for platform_name, selected in expected.items():
+            with self.subTest(platform=platform_name):
+                definitions = configuration_definitions(lock, platform_name, "desktop")
+                backends = [value for value in definitions if value.startswith("PLATFORM=")]
+                self.assertEqual(backends, [selected])
+
     def test_clang_cl_consumer_matches_locked_dynamic_runtime(self) -> None:
         root = Path("/synthetic")
         compile_arguments, object_file = clang_cl_compile_arguments(

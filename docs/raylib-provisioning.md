@@ -97,11 +97,20 @@ headless system request fails instead of changing authority.
 | Configuration | Raylib platform / graphics API | Native evidence |
 | --- | --- | --- |
 | `memory-software` | `PLATFORM=Memory`, `OPENGL_VERSION=Software` | Compile, link, and deterministic execution in Linux CI |
-| `desktop` | `PLATFORM=Desktop`, `OPENGL_VERSION=3.3` | Compile and link on Linux, macOS, and Windows; no display-dependent run claim |
+| `desktop` | `PLATFORM=Desktop` (bundled GLFW), `OPENGL_VERSION=3.3` | Compile and link on all three hosts; Caxecraft also runs a bounded graphical smoke under Linux's virtual display |
 
-Both configurations are release static libraries with examples, audio, and
-external GLFW disabled. The desktop Linux build explicitly selects X11 and
-disables Wayland. Windows source builds explicitly select CMake's
+Both configurations are release static libraries with examples and audio
+disabled. Desktop builds use only the GLFW source bundled in the pinned Raylib
+archive; they never fetch a separate window dependency. The lock explicitly
+disables Raylib's custom frame-control mode. That mode is meant for programs
+that manually put each completed frame on screen, poll window events, and wait
+between frames. Caxecraft uses Raylib's ordinary `BeginDrawing`/`EndDrawing`
+loop, so enabling custom frame control would leave every frame off-screen,
+starve input events, and eventually fill the GPU work queue. The lock also
+disables full and partial busy waiting: ordinary frame limiting may sleep
+instead of consuming a CPU core while it waits.
+
+The desktop Linux build explicitly selects X11 and disables Wayland. Windows source builds explicitly select CMake's
 `MultiThreadedDLL` MSVC runtime, and the `clang-cl` integration consumer uses
 the matching `/MD` compile and link policy. This keeps Raylib and generated C
 on one CRT model without presenting toolchain runtime libraries as Raylib link

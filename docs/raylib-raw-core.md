@@ -6,10 +6,11 @@ facade and it is not a claim that the complete upstream header is supported.
 The first lock deliberately selects the coherent dependency closure needed by
 Caxecraft:
 
-- 7 by-value records and the direct `Camera`/`Camera3D` typedef alias;
+- 9 by-value records plus the direct `Camera`/`Camera3D` and
+  `Texture2D`/`Texture` typedef aliases;
 - 5 integer enum domains containing 143 constants; and
-- 54 window, timing, input, camera, collision, primitive drawing, and HUD
-  functions.
+- 59 window, timing, input, camera, collision, primitive drawing, texture,
+  HUD, and screenshot functions.
 
 The machine authorities are:
 
@@ -103,6 +104,30 @@ wrapper, copy, cast, allocation, or runtime helper. Only one-level aliases to
 an imported struct are admitted; alias chains, cycles, and aliases to another
 semantic family remain fail-closed.
 
+### The first owned resource
+
+Most raw values above are copied plain data. A `Texture2D` is different: its
+fields identify image data owned by raylib and usually backed by the graphics
+device. Copying the struct copies the handle; it does not create a second
+texture or a second owner.
+
+The selected raw slice therefore treats four calls as one closed resource
+contract:
+
+1. `LoadTexture` returns one caller-owned handle;
+2. `IsTextureValid` proves whether that load produced a usable resource;
+3. `DrawTexturePro` borrows the handle for one draw and never retains it; and
+4. `UnloadTexture` consumes the one valid owner exactly once, on the render
+   thread, before `CloseWindow`.
+
+The generator records this relationship in both the reviewed selection and
+the binding lock, and it puts short ownership instructions beside the raw
+functions. This does not make arbitrary raw resource use automatically safe.
+Caxecraft keeps all four operations in one typed `CaxecraftTextures` adapter,
+checks every load, and unloads four admitted image owners in reverse order.
+The higher-level facade deliberately does not expose an owning `LoadTexture`
+helper yet because haxe.c cannot prove cleanup on every return or failure edge.
+
 `raylib.raw.Raylib` owns the header and platform-specific logical link facts.
 Selecting a platform/configuration define changes only the neutral build plan;
 it must not change the generated call semantics or select `hxrt`. The reviewed
@@ -130,14 +155,14 @@ Native integration additionally:
 5. in the memory/software lane, runs both executables and checks exact output.
 
 The probe asserts C `bool`, `float`, and `int` assumptions; every selected
-record size, alignment, and field offset; the `Camera` alias; all 143 constant
-values; and typed function-pointer compatibility for all 54 functions. This is
+record size, alignment, and field offset; both aliases; all 143 constant
+values; and typed function-pointer compatibility for all 59 functions. This is
 ABI evidence for the selected target/configuration lanes, not a promise for an
 unprobed platform.
 
 ## Deliberate omissions
 
-Callbacks, variadics, borrowed or retained pointers, resource-owning APIs,
+Callbacks, variadics, borrowed or retained pointers, other resource-owning APIs,
 compound-literal color macros, and the rest of the public header remain
 explicitly omitted with stable Beads owners in the selection document. They
 must not be approximated with `Dynamic`, `cpp.*`, unchecked casts, raw C, hidden

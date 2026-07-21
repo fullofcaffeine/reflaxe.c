@@ -1,16 +1,19 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "records": [
     "BoundingBox",
     "Camera3D",
     "Color",
     "Ray",
     "RayCollision",
+    "Rectangle",
+    "Texture",
     "Vector2",
     "Vector3"
   ],
   "aliases": {
-    "Camera": "Camera3D"
+    "Camera": "Camera3D",
+    "Texture2D": "Texture"
   },
   "enums": [
     "CameraProjection",
@@ -41,6 +44,7 @@
     "DrawSphere",
     "DrawSphereWires",
     "DrawText",
+    "DrawTexturePro",
     "EnableCursor",
     "EndDrawing",
     "EndMode3D",
@@ -64,16 +68,35 @@
     "IsMouseButtonDown",
     "IsMouseButtonPressed",
     "IsMouseButtonReleased",
+    "IsTextureValid",
     "IsWindowFocused",
     "IsWindowReady",
     "IsWindowResized",
+    "LoadTexture",
     "SetConfigFlags",
     "SetExitKey",
     "SetTargetFPS",
     "SetTraceLogLevel",
     "SetWindowMinSize",
     "SetWindowSize",
+    "TakeScreenshot",
+    "UnloadTexture",
     "WindowShouldClose"
+  ],
+  "resourceContracts": [
+    {
+      "resource": "Texture2D",
+      "load": "LoadTexture",
+      "validate": "IsTextureValid",
+      "borrow": [
+        "DrawTexturePro"
+      ],
+      "unload": "UnloadTexture",
+      "ownership": "A successful load creates one caller-owned GPU resource; copying the value aliases that same resource and never creates another owner.",
+      "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
+      "failure": "LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.",
+      "semanticStatus": "raw-only-until-explicit-cleanup-edges"
+    }
   ],
   "canonicalAbi": {
     "target": "x86_64-unknown-linux-gnu",
@@ -129,6 +152,27 @@
           "point": 8
         }
       },
+      "Rectangle": {
+        "size": 16,
+        "alignment": 4,
+        "offsets": {
+          "height": 12,
+          "width": 8,
+          "x": 0,
+          "y": 4
+        }
+      },
+      "Texture": {
+        "size": 20,
+        "alignment": 4,
+        "offsets": {
+          "format": 16,
+          "height": 8,
+          "id": 0,
+          "mipmaps": 12,
+          "width": 4
+        }
+      },
       "Vector2": {
         "size": 8,
         "alignment": 4,
@@ -165,8 +209,8 @@
       "owner": "haxe_c-xge.10"
     },
     {
-      "family": "resource-owning-apis",
-      "reason": "Images, textures, fonts, models, shaders, audio, and file buffers need paired ownership and unload contracts.",
+      "family": "remaining-resource-owning-apis",
+      "reason": "The selected raw Texture2D load/draw/unload family now has an explicit owner contract; images, fonts, models, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof.",
       "owner": "haxe_c-xge.10"
     },
     {

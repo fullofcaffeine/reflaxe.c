@@ -136,16 +136,17 @@ def validate_selection(selection: Mapping[str, object]) -> None:
             "aliases",
             "enums",
             "functions",
+            "resourceContracts",
             "canonicalAbi",
             "omissions",
         ),
         "raylib core selection",
     )
-    if selection.get("schemaVersion") != 1:
-        raise BindingFailure("raylib core selection schemaVersion must be 1")
+    if selection.get("schemaVersion") != 2:
+        raise BindingFailure("raylib core selection schemaVersion must be 2")
     records = require_names(selection.get("records"), "selection.records")
     enums = require_names(selection.get("enums"), "selection.enums")
-    require_names(selection.get("functions"), "selection.functions")
+    functions = require_names(selection.get("functions"), "selection.functions")
 
     aliases = require_mapping(selection.get("aliases"), "selection.aliases")
     if not aliases:
@@ -155,6 +156,58 @@ def validate_selection(selection: Mapping[str, object]) -> None:
     for name, target in aliases.items():
         if not isinstance(name, str) or not isinstance(target, str) or target not in records:
             raise BindingFailure(f"selection alias {name!r} has unknown target {target!r}")
+
+    resource_contracts = selection.get("resourceContracts")
+    if not isinstance(resource_contracts, list) or not resource_contracts:
+        raise BindingFailure("selection.resourceContracts must be a non-empty array")
+    contracted_resources: set[str] = set()
+    contracted_functions: set[str] = set()
+    for index, raw in enumerate(resource_contracts):
+        contract = require_mapping(raw, f"selection.resourceContracts[{index}]")
+        require_exact_keys(
+            contract,
+            (
+                "resource",
+                "load",
+                "validate",
+                "borrow",
+                "unload",
+                "ownership",
+                "thread",
+                "failure",
+                "semanticStatus",
+            ),
+            f"selection.resourceContracts[{index}]",
+        )
+        resource = contract.get("resource")
+        load = contract.get("load")
+        validate = contract.get("validate")
+        unload = contract.get("unload")
+        borrow = contract.get("borrow")
+        if not isinstance(resource, str) or resource not in set(records) | set(aliases):
+            raise BindingFailure(f"resource contract {index} names an unknown resource")
+        if resource in contracted_resources:
+            raise BindingFailure(f"resource contract {resource} is duplicated")
+        if not isinstance(borrow, list) or not borrow:
+            raise BindingFailure(f"resource contract {resource}.borrow must be non-empty")
+        operations = [load, validate, *borrow, unload]
+        if any(not isinstance(name, str) or name not in functions for name in operations):
+            raise BindingFailure(f"resource contract {resource} names an unselected function")
+        if len(set(operations)) != len(operations):
+            raise BindingFailure(f"resource contract {resource} repeats an operation")
+        if borrow != sorted(set(borrow), key=lambda item: item.encode("utf-8")):
+            raise BindingFailure(f"resource contract {resource}.borrow must be unique and UTF-8 sorted")
+        overlap = contracted_functions & set(operations)
+        if overlap:
+            raise BindingFailure(f"resource functions have multiple contracts: {sorted(overlap)!r}")
+        for field in ("ownership", "thread", "failure"):
+            value = contract.get(field)
+            if not isinstance(value, str) or len(value) < 20:
+                raise BindingFailure(f"resource contract {resource}.{field} needs a concrete policy")
+        if contract.get("semanticStatus") != "raw-only-until-explicit-cleanup-edges":
+            raise BindingFailure(f"resource contract {resource} has an unsupported semantic status")
+        contracted_resources.add(resource)
+        contracted_functions.update(operations)
 
     abi = require_mapping(selection.get("canonicalAbi"), "selection.canonicalAbi")
     require_exact_keys(
@@ -636,10 +689,10 @@ def extract_lock(
         )
     ]
     lock: dict[str, object] = {
-        "schemaVersion": 1,
+        "schemaVersion": 2,
         "generator": {
             "path": GENERATOR_PATH,
-            "algorithm": "hxc-raylib-clang-core-v1",
+            "algorithm": "hxc-raylib-clang-core-v2",
         },
         "upstream": {
             "name": "raylib",
@@ -674,6 +727,7 @@ def extract_lock(
                 "omittedFamilies": len(selection["omissions"]),
             },
             "omissions": selection["omissions"],
+            "resourceContracts": selection["resourceContracts"],
         },
         "canonicalAbi": selection["canonicalAbi"],
         "declarations": declarations,
@@ -724,12 +778,12 @@ def validate_lock(
         ),
         "raylib core binding lock",
     )
-    if lock.get("schemaVersion") != 1:
-        raise BindingFailure("raylib core binding lock schemaVersion must be 1")
+    if lock.get("schemaVersion") != 2:
+        raise BindingFailure("raylib core binding lock schemaVersion must be 2")
     generator = require_mapping(lock.get("generator"), "lock.generator")
     if generator != {
         "path": GENERATOR_PATH,
-        "algorithm": "hxc-raylib-clang-core-v1",
+        "algorithm": "hxc-raylib-clang-core-v2",
     }:
         raise BindingFailure("raylib core binding generator identity drifted")
     upstream = require_mapping(lock.get("upstream"), "lock.upstream")
@@ -757,6 +811,11 @@ def validate_lock(
     )
     validate_selection(selected)
     selection_lock = require_mapping(lock.get("selection"), "lock.selection")
+    require_exact_keys(
+        selection_lock,
+        ("path", "sha256", "coverageState", "counts", "omissions", "resourceContracts"),
+        "lock.selection",
+    )
     if (
         check_selection_hash
         and selection_lock.get("sha256") != selection_sha256(selection_path)
@@ -766,6 +825,8 @@ def validate_lock(
         raise BindingFailure("raylib core coverage state drifted")
     if selection_lock.get("omissions") != selected.get("omissions"):
         raise BindingFailure("raylib core omission inventory is stale")
+    if selection_lock.get("resourceContracts") != selected.get("resourceContracts"):
+        raise BindingFailure("raylib core resource-contract inventory is stale")
     if lock.get("canonicalAbi") != selected.get("canonicalAbi"):
         raise BindingFailure("raylib core canonical ABI is stale")
 
@@ -976,9 +1037,45 @@ def raylib_metadata() -> list[str]:
     ]
 
 
-def render_raylib(functions: object) -> str:
+def render_raylib(functions: object, resource_contracts: object) -> str:
     if not isinstance(functions, list) or not functions:
         raise BindingFailure("Raylib render needs selected functions")
+    if not isinstance(resource_contracts, list):
+        raise BindingFailure("Raylib render needs reviewed resource contracts")
+    resource_docs: dict[str, list[str]] = {}
+    for raw_contract in resource_contracts:
+        contract = require_mapping(raw_contract, "Raylib resource contract")
+        resource = contract.get("resource")
+        load = contract.get("load")
+        validate = contract.get("validate")
+        borrow = contract.get("borrow")
+        unload = contract.get("unload")
+        if (
+            not isinstance(resource, str)
+            or not isinstance(load, str)
+            or not isinstance(validate, str)
+            or not isinstance(borrow, list)
+            or not isinstance(unload, str)
+        ):
+            raise BindingFailure("Raylib resource contract is malformed during render")
+        resource_docs[load] = [
+            f"Returns one caller-owned `{resource}` when valid.",
+            str(contract.get("failure")),
+            f"Call `{unload}` exactly once before closing the graphics device.",
+        ]
+        resource_docs[validate] = [
+            f"Borrows `{resource}` for this call and does not change ownership.",
+        ]
+        for function_name in borrow:
+            if not isinstance(function_name, str):
+                raise BindingFailure("Raylib resource borrow operation is malformed")
+            resource_docs[function_name] = [
+                f"Borrows `{resource}` only while this call executes.",
+            ]
+        resource_docs[unload] = [
+            f"Releases the one native resource owned by `{resource}`.",
+            "Treat every copied value as an alias; do not use or unload any alias afterward.",
+        ]
     first_line = min(
         require_mapping(raw, "function").get("sourceLine", 0) for raw in functions
     )
@@ -1009,6 +1106,9 @@ def render_raylib(functions: object) -> str:
             )
         if index:
             lines.append("")
+        documentation = resource_docs.get(name)
+        if documentation is not None:
+            lines.extend(["\t/**", *(f"\t * {line}" for line in documentation), "\t */"])
         lines.extend(
             [
                 f"\tpublic static function {name}({', '.join(rendered_parameters)}):{haxe_type(function.get('returnType'))};",
@@ -1036,7 +1136,10 @@ def render_files(lock: Mapping[str, object]) -> dict[str, str]:
             if not isinstance(name, str):
                 raise BindingFailure(f"lock.declarations.{kind} contains an unnamed item")
             rendered[f"{name}.hx"] = renderer(declaration)
-    rendered["Raylib.hx"] = render_raylib(declarations.get("functions"))
+    selection = require_mapping(lock.get("selection"), "lock.selection")
+    rendered["Raylib.hx"] = render_raylib(
+        declarations.get("functions"), selection.get("resourceContracts")
+    )
     expected = [Path(path).name for path in lock["generatedPaths"]]
     if sorted(rendered) != sorted(expected):
         raise BindingFailure("rendered raw files do not match the locked generated paths")

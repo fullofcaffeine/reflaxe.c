@@ -820,7 +820,7 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A version-locked public raylib.raw core is generated from Clang declaration facts and consumed directly by generated Haxe/C.",
-      "scope": "The coherent Caxecraft core covers 7 by-value records, the direct Camera/Camera3D struct alias, 5 integer enum domains with 143 constants, and 54 fixed-arity raylib 6.0 functions. A closed selection and binding lock retain upstream/header/Clang/target/declaration provenance; deterministic raw Haxe, five build-plan snapshots, a generated direct consumer, and a compiled independent ABI probe remain runtime-free.",
+      "scope": "The coherent Caxecraft core covers 7 by-value records, the direct Camera/Camera3D struct alias, 5 integer enum domains with 143 constants, and 55 fixed-arity raylib 6.0 functions. A closed selection and binding lock retain upstream/header/Clang/target/declaration provenance; deterministic raw Haxe, five build-plan snapshots, a generated direct consumer, and a compiled independent ABI probe remain runtime-free.",
       "evidence": [
         "docs/raylib-raw-core.md",
         "docs/specs/raylib-core-selection.json",

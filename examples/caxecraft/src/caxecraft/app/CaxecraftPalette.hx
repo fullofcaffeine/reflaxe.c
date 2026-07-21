@@ -21,6 +21,25 @@ final class CaxecraftPalette {
 	public static inline function hudText():Color
 		return Color.rgba(228, 239, 227);
 
+	/** Neutral tint keeps reviewed source texture colors unchanged. */
+	public static inline function textureTint():Color
+		return Color.rgba(255, 255, 255);
+
+	public static inline function niaCoat():Color
+		return Color.rgba(42, 150, 160);
+
+	public static inline function niaSkin():Color
+		return Color.rgba(205, 139, 88);
+
+	public static inline function niaHair():Color
+		return Color.rgba(62, 40, 47);
+
+	public static inline function mosslingBody():Color
+		return Color.rgba(74, 119, 67);
+
+	public static inline function mosslingCrown():Color
+		return Color.rgba(157, 190, 82);
+
 	public static function block(kind:BlockKind):Color {
 		return switch (kind) {
 			case Air: Color.rgba(0, 0, 0, 0);

@@ -239,7 +239,7 @@ cross-cutting test infrastructure such as `package.json`, the snapshot
 registry, shard runner, CI policy, or their governance tests. That avoids the
 old behavior where the same global file matched nearly every focused condition
 and serialized all owners one by one. It still runs governance and native
-smoke around the exact 40-command partition. Ordinary compiler edits continue
+smoke around the exact 45-command partition. Ordinary compiler edits continue
 to select only their narrower focused gates.
 
 ### Safe local resume
@@ -301,6 +301,12 @@ aggregate with `--timing-dir`. Reports deliberately contain no timestamp,
 checkout path, or log text. Do not compare developer laptop wall time directly
 with hosted CI, and do not label a change a performance improvement without a
 comparable before and after sample.
+
+The Caxecraft shard starts with three isolated sub-second Haxe contracts for
+inventory, actors, and deterministic pilot input before the broader scenario,
+editor, and full generated-C lanes. These focused commands make a local
+gameplay regression cheap to reproduce; the later full lane remains the
+integrated authority and is not replaced by them.
 
 The successful Caxecraft command embeds its own phase report, also described by
 [`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps

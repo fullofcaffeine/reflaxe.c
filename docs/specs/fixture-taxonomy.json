@@ -388,10 +388,11 @@
         "the immutable raylib 6.0 archive, full source tree, reviewed build inputs, configurations, and per-platform link facts are checksum locked",
         "pinned-source, explicit offline-source, and exact-version system pkg-config authorities fail closed instead of silently switching provenance",
         "generated Haxe emits deterministic strict C and five reviewable neutral build plans with exact argument-array libraries, frameworks, headers, and pkg-config facts",
-        "the checked Clang-derived raw core lock renders 7 records, 1 struct alias, 5 enum domains with 143 constants, and 54 functions byte-identically from the pinned header",
+        "the checked Clang-derived raw core lock renders 9 records, 2 struct aliases, 5 enum domains with 143 constants, and 59 functions byte-identically from the pinned header",
         "an independent native probe verifies every selected layout, alias, constant, and function signature while the generated smoke consumes the public raylib.raw package",
         "a separate semantic smoke proves typed enum domains, imported struct constructors, aggregate color macros, and inline forwarding emit the same direct raylib calls with no allocation, reflection, virtual dispatch, or hxrt",
-        "semantic negative fixtures reject mixed input domains, embedded-NUL strings, out-of-range color literals, invalid dimension types, and deliberately omitted resource APIs, and leave no output",
+        "the reviewed Texture2D resource family records one load owner, validity check, non-retaining draw borrow, render-thread restriction, and exactly-once unload while the semantic owning load remains deliberately omitted",
+        "semantic negative fixtures reject mixed input domains, embedded-NUL strings, out-of-range color literals, invalid dimension types, and the deliberately omitted semantic owning resource API, and leave no output",
         "Linux, macOS, and Windows source lanes compile and link generated C against real raylib while the Linux PLATFORM_MEMORY/software lane also runs with exact output",
         "normal compilation and post-provision builds are network-free, select no hxrt feature, and serialize no checkout, cache, or temporary path"
       ]
@@ -1003,13 +1004,13 @@
       ],
       "status": "active",
       "assertions": [
-        "the initial design art pack is offline and exact but not loaded by the first playable: its manifest owns every primary-source PNG hash, dimensions, alpha contract, semantic atlas cell, generation/privacy record, complete file inventory, and minimal metadata policy before any runtime-integration claim",
+        "the offline exact art manifest owns every primary-source PNG hash, dimension, alpha contract, semantic atlas cell, generation/privacy record, complete file inventory, and minimal metadata policy; the playable packages the title, wordmark, HUD, and item atlas bytes through one explicit texture owner while remaining atlases stay design-only",
         "ordinary shared Haxe implements a finite 32 by 16 by 32 voxel world, stable seeded terrain, checked edits, deterministic DDA ray traversal, fixed-step AABB player collision, and player-safe adjacent placement over a narrow fixed-array storage seam",
         "the exact Eval and generated-C traces contain one passing named edge-case corpus plus terrain, edit, ray, collision, aggregate, and 32 property-seed hashes without output normalization",
         "normal compiler artifacts remain byte-identical across isolated output roots, repeated cold builds, reversed typed-module input, an alternate locale, and repeated warm compiler-server requests",
         "the generated program matches centrally owned split, package, and unity header/C snapshots, schema-validated maintainability reports, runtime-plan, method-symbol, and oracle baselines while selecting no hxrt feature, stdlib surface, cleanup, allocation operation, or allocation symbol",
         "split, package, and unity reports preserve identical 54-function semantic metrics, map every function identity, reject all generated gotos, and bound names, temporary pressure, files, functions, branches, nesting, and source-span coverage with exact named package/QA/unity overrides",
-        "the separate first-playable snapshots preserve the generated manifest, empty runtime plan, program header, palette, HUD, and application module while requiring direct Raylib window/input/draw calls and rejecting goto, hxrt, and allocation calls",
+        "the separate first-playable snapshots preserve the generated manifest, empty runtime plan, program header, palette, inventory HUD, and application module while requiring direct Raylib window/input/texture/draw calls, exact load/validity/unload ownership counts, and rejecting goto, hxrt, and allocation calls",
         "required GCC and Clang lanes compile and run the checked-in generated baseline warning-clean at O0 and O2 and under address and undefined-behavior sanitizers"
       ]
     },

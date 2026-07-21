@@ -62,6 +62,19 @@ final class World {
 		};
 	}
 
+	/** Highest solid block in one column, or `-1` outside/above empty ground. */
+	public static function surfaceY(cells:WorldCells, x:Int, z:Int):Int {
+		if (x < 0 || x >= WIDTH || z < 0 || z >= DEPTH)
+			return -1;
+		var y = HEIGHT - 1;
+		while (y >= 0) {
+			if (isSolid(query(cells, coord(x, y, z))))
+				return y;
+			y--;
+		}
+		return -1;
+	}
+
 	public static function query(cells:WorldCells, coord:BlockCoord):BlockKind {
 		final index = indexOf(coord);
 		if (index < 0)
@@ -121,6 +134,37 @@ final class World {
 						replace(cells, coord(x, y, z), BlockKind.Dirt);
 					else
 						replace(cells, coord(x, y, z), BlockKind.Stone);
+					y++;
+				}
+				x++;
+			}
+			z++;
+		}
+	}
+
+	/**
+	 * Shape a small, level arrival meadow without changing the general seed.
+	 *
+	 * The first playable seconds need a safe place to learn movement, see Nia,
+	 * and recognize the Mossling silhouette. Keeping this authored edit in the
+	 * shared world layer makes Eval, C, future editors, and other renderers agree
+	 * on the same blocks; the Raylib adapter does not own hidden level geometry.
+	 */
+	public static function prepareSpawnMeadow(cells:WorldCells):Void {
+		var z = 10;
+		while (z <= 21) {
+			var x = 10;
+			while (x <= 21) {
+				var y = 0;
+				while (y < HEIGHT) {
+					var kind = BlockKind.Air;
+					if (y == 0)
+						kind = BlockKind.Bedrock;
+					else if (y < 4)
+						kind = BlockKind.Dirt;
+					else if (y == 4)
+						kind = BlockKind.Grass;
+					replace(cells, coord(x, y, z), kind);
 					y++;
 				}
 				x++;

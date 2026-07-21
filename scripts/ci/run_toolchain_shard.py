@@ -78,6 +78,9 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:project-layout",
     ),
     "caxecraft": (
+        "test:caxecraft-inventory",
+        "test:caxecraft-gameplay",
+        "test:caxecraft-pilot",
         "test:caxecraft-scenario-model",
         "test:caxecraft-caxeflow",
         "test:caxecraft-editor",

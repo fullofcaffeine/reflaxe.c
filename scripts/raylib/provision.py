@@ -78,7 +78,10 @@ EXPECTED_CONFIGURATION_DEFINITIONS = {
         "CUSTOMIZE_BUILD=ON",
         "OPENGL_VERSION=Software",
         "PLATFORM=Memory",
+        "SUPPORT_BUSY_WAIT_LOOP=OFF",
+        "SUPPORT_CUSTOM_FRAME_CONTROL=OFF",
         "SUPPORT_MODULE_RAUDIO=OFF",
+        "SUPPORT_PARTIALBUSY_WAIT_LOOP=OFF",
         "USE_EXTERNAL_GLFW=OFF",
     ),
     "desktop": (
@@ -88,8 +91,10 @@ EXPECTED_CONFIGURATION_DEFINITIONS = {
         "CMAKE_EXPORT_COMPILE_COMMANDS=ON",
         "CUSTOMIZE_BUILD=ON",
         "OPENGL_VERSION=3.3",
-        "PLATFORM=Desktop",
+        "SUPPORT_BUSY_WAIT_LOOP=OFF",
+        "SUPPORT_CUSTOM_FRAME_CONTROL=OFF",
         "SUPPORT_MODULE_RAUDIO=OFF",
+        "SUPPORT_PARTIALBUSY_WAIT_LOOP=OFF",
         "USE_EXTERNAL_GLFW=OFF",
     ),
 }
@@ -101,13 +106,13 @@ EXPECTED_LINK_FACTS = {
     ): (
         ("raylib", "m", "pthread", "GL", "X11", "dl", "rt"),
         (),
-        ("GLFW_BUILD_WAYLAND=OFF", "GLFW_BUILD_X11=ON"),
+        ("PLATFORM=Desktop", "GLFW_BUILD_WAYLAND=OFF", "GLFW_BUILD_X11=ON"),
     ),
     ("macos", "memory-software"): (("raylib",), (), ()),
     (
         "macos",
         "desktop",
-    ): (("raylib",), ("OpenGL", "Cocoa", "IOKit", "CoreFoundation"), ()),
+    ): (("raylib",), ("OpenGL", "Cocoa", "IOKit", "CoreFoundation"), ("PLATFORM=Desktop",)),
     (
         "windows",
         "memory-software",
@@ -122,7 +127,7 @@ EXPECTED_LINK_FACTS = {
     ): (
         ("raylib", "opengl32", "gdi32", "winmm", "shell32", "user32"),
         (),
-        ("CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL",),
+        ("PLATFORM=Desktop", "CMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL"),
     ),
 }
 EXPECTED_REPORT_PLACEHOLDERS = (
@@ -916,8 +921,9 @@ def configuration_definitions(
     result = list(validate_definitions(base.get("cmakeDefinitions"), f"configurations.{configuration}"))
     if "cmakeDefinitions" in facts:
         result.extend(validate_definitions(facts["cmakeDefinitions"], f"platforms.{platform_name}.{configuration}"))
-    if len(result) != len(set(result)):
-        raise ProvisionFailure(f"duplicate combined CMake definition for {platform_name}/{configuration}")
+    names = [definition.partition("=")[0] for definition in result]
+    if len(names) != len(set(names)):
+        raise ProvisionFailure(f"duplicate combined CMake definition name for {platform_name}/{configuration}")
     return tuple(result)
 
 

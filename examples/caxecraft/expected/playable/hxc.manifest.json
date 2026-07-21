@@ -13,13 +13,18 @@
     "sources": [
       "src/hxc/main.c",
       "src/hxc/support.c",
+      "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "src/modules/caxecraft/app/CaxecraftPalette.c",
       "src/modules/caxecraft/app/HudDigits.c",
       "src/modules/caxecraft/app/Main.c",
+      "src/modules/caxecraft/app/TitleMenu.c",
       "src/modules/caxecraft/domain/PlayerPhysics.c",
       "src/modules/caxecraft/domain/VoxelRaycast.c",
       "src/modules/caxecraft/domain/World.c",
-      "src/modules/caxecraft/domain/WorldStorage.c"
+      "src/modules/caxecraft/domain/WorldStorage.c",
+      "src/modules/caxecraft/gameplay/GuideNpc.c",
+      "src/modules/caxecraft/gameplay/Inventory.c",
+      "src/modules/caxecraft/gameplay/Mossling.c"
     ],
     "cStandard": "c11",
     "definitions": [],
@@ -27,9 +32,11 @@
     "schemaVersion": 1,
     "privateHeaders": [
       "include/hxc/detail/program_types.h",
+      "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
       "include/hxc/modules/caxecraft/app/HudDigits.h",
       "include/hxc/modules/caxecraft/app/Main.h",
+      "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "include/hxc/modules/caxecraft/domain/AxisMove.h",
       "include/hxc/modules/caxecraft/domain/BlockCoord.h",
       "include/hxc/modules/caxecraft/domain/BlockKind.h",
@@ -40,8 +47,18 @@
       "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
       "include/hxc/modules/caxecraft/domain/World.h",
       "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+      "include/hxc/modules/caxecraft/gameplay/GuideNpc.h",
+      "include/hxc/modules/caxecraft/gameplay/GuideState.h",
+      "include/hxc/modules/caxecraft/gameplay/Inventory.h",
+      "include/hxc/modules/caxecraft/gameplay/InventoryState.h",
+      "include/hxc/modules/caxecraft/gameplay/ItemKind.h",
+      "include/hxc/modules/caxecraft/gameplay/Mossling.h",
+      "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
+      "include/hxc/modules/raylib/raw/Rectangle.h",
+      "include/hxc/modules/raylib/raw/Texture.h",
+      "include/hxc/modules/raylib/raw/Texture2D.h",
       "include/hxc/modules/raylib/raw/Vector2.h",
       "include/hxc/modules/raylib/raw/Vector3.h",
       "include/hxc/program.h"
@@ -57,6 +74,9 @@
           "raylib.raw.Camera3D",
           "raylib.raw.Color",
           "raylib.raw.Raylib",
+          "raylib.raw.Rectangle",
+          "raylib.raw.Texture",
+          "raylib.raw.Texture2D",
           "raylib.raw.Vector2",
           "raylib.raw.Vector3"
         ],
@@ -120,7 +140,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "74b4ffa4f5d1a2a2a8cae25996d580919180263c5ad24967c0330d309e29f543",
+      "sha256": "47943258bb883c7b4d696aa02419d6ec0528043d70166c66bec8867c7cd10138",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -135,7 +155,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "42fd5901b4292affd796bb5d522359aa3b75b4ef543cb103b40feac1fc40f983",
+      "sha256": "269ee760432f86fc27237b2be8f5a0a1ff64fa0072aa012fb4cf19fb5171aacd",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -145,17 +165,22 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "4f9f3532c4b70c8a1bdc2d672614272c97cc70ca6eae1f38bac6a08dd0806b57",
+      "sha256": "fbea41cc3d9dff5e7ed98286b9bae41d4a31398d6fd145513f083ce57cf3e578",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "f1287bd021bf14c9ad86ab944b11b5f12a6b5644efbbbcfe324e4a27ff019370",
+      "sha256": "c1fe82f476910f86477370957293bb7c4cdb0eb2dfa7f9739db6c520cdcdf14b",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
     {
-      "sha256": "a64bd28fdd6b4b2976176497cadbdf478022d588c0b9b6fa12dcd326e0ac1545",
+      "sha256": "8a110d33a1f489bdd549a6b0cf1c0eb5b20090bb06d88aecf51aa54b55b5d866",
+      "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "11ee557bccff79db994d70d22b66f09647103a65651ac37a759d8b55aaf35f38",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftPalette.h",
       "kind": "private-header"
     },
@@ -165,8 +190,13 @@
       "kind": "private-header"
     },
     {
-      "sha256": "116d6f9fa0f95c3499a00dae061748f88402cfa2c8d8e810d94498dcca66d1ca",
+      "sha256": "115af616659b0ee6093e2276c884ed7f6d4b6af3b4af2c30f0cedc28e1232bef",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4f9b6a63fdf0f54a13ce149cd17480d6a53625fe0b185e1a5ec6d001b89b41d0",
+      "path": "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "kind": "private-header"
     },
     {
@@ -210,13 +240,48 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d1de0905cfea8bec84b8f83d1c5416148c5aee0a2320bf2919a69136ecf5cf36",
+      "sha256": "d60b5729de5b66029bb3fca2a848dcceee0a7f74de78d5b6bbf087da349acc31",
       "path": "include/hxc/modules/caxecraft/domain/World.h",
       "kind": "private-header"
     },
     {
       "sha256": "f05593f6cd4da79da515a5d96c28d534b87b865715eed25ed6c5b5ac74a501a6",
       "path": "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c13e800ff58dda718f9de9b039e41dabbed259fa92b09c1625524be4e80aedd6",
+      "path": "include/hxc/modules/caxecraft/gameplay/GuideNpc.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1598c017d301d355a2c3bc55bbf1a7d7d416c03210e918c8bcebab7d65d11a54",
+      "path": "include/hxc/modules/caxecraft/gameplay/GuideState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "13360afef224ce750868c90abaf8b68c74917c9a32aa77c447e4faf311d24456",
+      "path": "include/hxc/modules/caxecraft/gameplay/Inventory.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5ca912e0dd1b679e6ead0fe536ab99af83943f38bdc8e320591e446b6644ea38",
+      "path": "include/hxc/modules/caxecraft/gameplay/InventoryState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "b7299f62577a2200c67ee50b057d9fff9bf6d7eb68e3439f44d0a901004b5bde",
+      "path": "include/hxc/modules/caxecraft/gameplay/ItemKind.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "a41350d161c43160ecf8d6c5f969db8d1edfa4178044e2c5ae8eec4668b50d18",
+      "path": "include/hxc/modules/caxecraft/gameplay/Mossling.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "b22b872669bcdb7c4f7f6abe7b311b3d9f260b7f36e922335c4cc516c0c9df76",
+      "path": "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "kind": "private-header"
     },
     {
@@ -230,6 +295,21 @@
       "kind": "private-header"
     },
     {
+      "sha256": "66ccc9364790205f99322ecb69c0aab1e269b1c22d9db9058fd7da073aae95a7",
+      "path": "include/hxc/modules/raylib/raw/Rectangle.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "9eb702b5c7d798f3ccdeabe7947d5da000613b001d515b5876253e3edcd749af",
+      "path": "include/hxc/modules/raylib/raw/Texture.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "691254ed7acf487344be6151cea132afb3f3d4e32f50926ea85e06efe1f7e4f1",
+      "path": "include/hxc/modules/raylib/raw/Texture2D.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "640b2b8b0eef1ec5946dd9e2fc3d776aef9f9d715e28a84200fafdbbba7fa8ac",
       "path": "include/hxc/modules/raylib/raw/Vector2.h",
       "kind": "private-header"
@@ -240,12 +320,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "901af93899c35fdba9d23006928dd263e5c5e52736ef90054d7d1102ad571e32",
+      "sha256": "51c0879d11d1f6e3d18f2ac8664539ad761c9e1eaf62e3baab22d236f90aae55",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "16b274992293457bd71ba88d654145cb4118c3ebe3cedf2ad6349a8ab514fdae",
+      "sha256": "e9e615a36380acb13da9e1b5b4a61a9cf2d83f63ab9b426278f6fab108786b5c",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -255,12 +335,17 @@
       "kind": "source"
     },
     {
-      "sha256": "3aee1bc1de7c33c41800cb724f3f6b2e8124edaab621c78161c3a44de75f05bf",
+      "sha256": "63adcbec915d127de985c643166bca25804a83a31804ae457516333c9a55bd4c",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
     {
-      "sha256": "accccdef9461b3fddc71e3806888fd8dcb46ee1d5f3acf231bc32e81259e0e94",
+      "sha256": "678b6c02f734904ee4e2a8d911fc70ce1394825600f7feea5545ce4dca5f3a32",
+      "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "62284e2a1887bdde194823b65c300b377685024f10c6de384ec9df1c1e73e841",
       "path": "src/modules/caxecraft/app/CaxecraftPalette.c",
       "kind": "source"
     },
@@ -270,8 +355,13 @@
       "kind": "source"
     },
     {
-      "sha256": "9e01f82a052ea3ff5a903d3e856e10b5c3b2162942436d09a1305306cbae5555",
+      "sha256": "5b7d768ce4dce70e96745ddd41e25ded779a6d29f44f0ef9d78dbfa724d7f736",
       "path": "src/modules/caxecraft/app/Main.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "98ae574ed6998dafb1958ef357cebfd9d80345085b718d10fe2b3792f89ed84c",
+      "path": "src/modules/caxecraft/app/TitleMenu.c",
       "kind": "source"
     },
     {
@@ -285,13 +375,28 @@
       "kind": "source"
     },
     {
-      "sha256": "b7e1a6c62d1c021a07d7c37e82f8142e86e6b4c96194a2f5aa2b171e7db5b273",
+      "sha256": "f25376867e3cc0674397f97c9642ad7398e7e74b2d4b8b1f6bcbb651471bba07",
       "path": "src/modules/caxecraft/domain/World.c",
       "kind": "source"
     },
     {
       "sha256": "affb31b22326d7410314dcd7e04af2ac051f693816634e582a19ce03011981fd",
       "path": "src/modules/caxecraft/domain/WorldStorage.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "6c6a385361621fab559a82707b901eb03a4ffc490cec9dedc38ceb945927370e",
+      "path": "src/modules/caxecraft/gameplay/GuideNpc.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "e75565a24ca84624598d49b0e62ee24145c6d08ac9f2babfcb16009a4c4cb5d3",
+      "path": "src/modules/caxecraft/gameplay/Inventory.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "a01577a17b0816ca137818a15f5ebf02b677a3f1993f783a5753b8c05c07705b",
+      "path": "src/modules/caxecraft/gameplay/Mossling.c",
       "kind": "source"
     }
   ],

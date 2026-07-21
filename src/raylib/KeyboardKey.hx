@@ -5,6 +5,14 @@ package raylib;
 enum abstract KeyboardKey(Int) {
 	var Null = 0;
 	var Space = 32;
+	var One = 49;
+	var Two = 50;
+	var Three = 51;
+	var Four = 52;
+	var Five = 53;
+	var Six = 54;
+	var Seven = 55;
+	var Eight = 56;
 	var A = 65;
 	var B = 66;
 	var C = 67;

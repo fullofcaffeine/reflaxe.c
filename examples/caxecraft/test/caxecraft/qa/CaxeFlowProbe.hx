@@ -17,6 +17,7 @@ import caxecraft.scenario.CaxeFlowExecutor;
 import caxecraft.scenario.CaxeFlowRuntime.FlowExecutionLimit;
 import caxecraft.scenario.CaxeFlowRuntime.FlowPresentationEvent;
 import caxecraft.scenario.CaxeFlowRuntime.FlowRuntimeDiagnostic;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickInput;
 import caxecraft.scenario.CaxeFlowRuntime.FlowTickResult;
 import caxecraft.scenario.ContentId;
@@ -30,7 +31,6 @@ import caxecraft.scenario.ScenarioLimits;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import caxecraft.scenario.ScenarioText;
-import haxe.Int64;
 
 /** Eval evidence for deterministic fixed-tick CaxeFlow execution. */
 final class CaxeFlowProbe {
@@ -220,14 +220,35 @@ final class CaxeFlowProbe {
 		require(stateValue(delayed, STATE) == CLOSED.text(), "maximum positive delay wrapped and ran early");
 		require(countRule(next, "rule.maximum-delay-timer") == 0, "maximum positive delay emitted its timer early");
 
-		final beforeBoundary = Int64.ofInt(2147483647);
-		final atBoundary = CaxeFlowClock.next(beforeBoundary);
-		final afterBoundary = CaxeFlowClock.next(atBoundary);
-		final latestDueTick = CaxeFlowClock.dueTick(beforeBoundary, 2147483647);
-		require(Int64.toStr(atBoundary) == "2147483648", "fixed tick wrapped at the 32-bit boundary");
-		require(Int64.toStr(latestDueTick) == "4294967294", "maximum delay wrapped when added beyond the 32-bit boundary");
+		final beforeBoundary:FlowTick = {epoch: 2, offset: 147483647};
+		final atBoundary = requireTick(CaxeFlowClock.next(beforeBoundary), "32-bit boundary tick");
+		final afterBoundary = requireTick(CaxeFlowClock.next(atBoundary), "post-boundary tick");
+		final latestDueTick = requireTick(CaxeFlowClock.dueTick(beforeBoundary, 2147483647), "maximum delay");
+		require(atBoundary.epoch == 2 && atBoundary.offset == 147483648, "fixed tick wrapped at the 32-bit boundary");
+		require(latestDueTick.epoch == 4 && latestDueTick.offset == 294967294, "maximum delay wrapped when added beyond the 32-bit boundary");
 		require(!CaxeFlowClock.cooldownHasElapsed(atBoundary, beforeBoundary, 2), "boundary cooldown reopened one tick early");
 		require(CaxeFlowClock.cooldownHasElapsed(afterBoundary, beforeBoundary, 2), "boundary cooldown did not reopen after two ticks");
+
+		final last:FlowTick = {epoch: CaxeFlowClock.MAX_EPOCH, offset: CaxeFlowClock.TICKS_PER_EPOCH - 1};
+		final beforeLast:FlowTick = {epoch: CaxeFlowClock.MAX_EPOCH, offset: CaxeFlowClock.TICKS_PER_EPOCH - 2};
+		final exactLast = requireTick(CaxeFlowClock.next(beforeLast), "final clock tick");
+		require(CaxeFlowClock.isDue(exactLast, last), "final safe tick comparison changed");
+		require(CaxeFlowClock.next(last) == null, "fixed clock wrapped after its explicit final tick");
+		require(CaxeFlowClock.dueTick(last, 1) == null, "deferred clock addition wrapped after its explicit final tick");
+
+		// Reaching this boundary through ordinary ticks would take more than a
+		// billion years. The same validated restoration seam planned for save-game
+		// loading positions only the clock; scheduling and failure behavior still
+		// run through the public tick operation.
+		final edgeSequence:FlowSequence = {id: id("sequence.clock-edge"), parameters: [], actions: []};
+		final edgeRule = rule("rule.clock-edge", 0, Once, EnterZone(ZONE), Always, [Schedule(TIMER, 1, edgeSequence.id, [])]);
+		final edgeExecutor = new CaxeFlowExecutor(scenario({variables: [], sequences: [edgeSequence], rules: [edgeRule]}), beforeLast);
+		final scheduleFailure = edgeExecutor.runTick(oneEvent());
+		expectLimitResult(scheduleFailure, FixedTickEpochs, CaxeFlowClock.MAX_EPOCH, "rule.clock-edge");
+		require(scheduleFailure.presentation.length == 0, "clock-edge schedule published a partial presentation event");
+		final exhausted = edgeExecutor.runTick({events: [], positions: []});
+		expectLimitResult(exhausted, FixedTickEpochs, CaxeFlowClock.MAX_EPOCH);
+		require(exhausted.tick.epoch == last.epoch && exhausted.tick.offset == last.offset, "exhausted clock changed its last valid tick");
 	}
 
 	static function checkScheduledFailurePolicy():Void {
@@ -477,8 +498,8 @@ final class CaxeFlowProbe {
 	static function coverageHash(results:Array<FlowTickResult>, executor:CaxeFlowExecutor):String {
 		var hash = 17;
 		for (result in results) {
-			hash = mix(hash, result.tick.high);
-			hash = mix(hash, result.tick.low);
+			hash = mix(hash, result.tick.epoch);
+			hash = mix(hash, result.tick.offset);
 			for (ruleId in result.firedRules)
 				hash = mixText(hash, ruleId.text());
 			for (event in result.presentation)
@@ -518,6 +539,12 @@ final class CaxeFlowProbe {
 			case Complete: "complete";
 			case Failed: "failed";
 		};
+
+	static function requireTick(value:Null<FlowTick>, label:String):FlowTick {
+		if (value == null)
+			throw '$label unexpectedly exceeded the fixed clock';
+		return value;
+	}
 
 	static function counter(executor:CaxeFlowExecutor, variable:ScenarioId):Int
 		return switch executor.variable(variable) {

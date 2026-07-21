@@ -52,6 +52,27 @@
         },
         "size": 32
       },
+      "Rectangle": {
+        "alignment": 4,
+        "offsets": {
+          "height": 12,
+          "width": 8,
+          "x": 0,
+          "y": 4
+        },
+        "size": 16
+      },
+      "Texture": {
+        "alignment": 4,
+        "offsets": {
+          "format": 16,
+          "height": 8,
+          "id": 0,
+          "mipmaps": 12,
+          "width": 4
+        },
+        "size": 20
+      },
       "Vector2": {
         "alignment": 4,
         "offsets": {
@@ -72,13 +93,18 @@
     },
     "target": "x86_64-unknown-linux-gnu"
   },
-  "declarationSha256": "ec22d0aaec7a488991378a2efa4820ae0ee5c011f041050188e1680ade69f296",
+  "declarationSha256": "f064b51c2a674c35e858a0e0b8fe03b69f0421b6abc7e7860aa5720801f9bf51",
   "declarations": {
     "aliases": [
       {
         "name": "Camera",
         "sourceLine": 333,
         "target": "Camera3D"
+      },
+      {
+        "name": "Texture2D",
+        "sourceLine": 280,
+        "target": "Texture"
       }
     ],
     "enums": [
@@ -1559,6 +1585,65 @@
         "sourceLine": 1503
       },
       {
+        "name": "DrawTexturePro",
+        "parameters": [
+          {
+            "name": "texture",
+            "type": {
+              "cType": "Texture2D",
+              "canonicalCType": "struct Texture",
+              "haxeType": "raylib.raw.Texture2D"
+            }
+          },
+          {
+            "name": "source",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "dest",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "origin",
+            "type": {
+              "cType": "Vector2",
+              "canonicalCType": "struct Vector2",
+              "haxeType": "raylib.raw.Vector2"
+            }
+          },
+          {
+            "name": "rotation",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "tint",
+            "type": {
+              "cType": "Color",
+              "canonicalCType": "struct Color",
+              "haxeType": "raylib.raw.Color"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1462
+      },
+      {
         "name": "EnableCursor",
         "parameters": [],
         "returnType": {
@@ -1936,6 +2021,25 @@
         "sourceLine": 1224
       },
       {
+        "name": "IsTextureValid",
+        "parameters": [
+          {
+            "name": "texture",
+            "type": {
+              "cType": "Texture2D",
+              "canonicalCType": "struct Texture",
+              "haxeType": "raylib.raw.Texture2D"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 1445
+      },
+      {
         "name": "IsWindowFocused",
         "parameters": [],
         "returnType": {
@@ -1964,6 +2068,25 @@
           "haxeType": "Bool"
         },
         "sourceLine": 995
+      },
+      {
+        "name": "LoadTexture",
+        "parameters": [
+          {
+            "name": "fileName",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "Texture2D",
+          "canonicalCType": "Texture2D",
+          "haxeType": "raylib.raw.Texture2D"
+        },
+        "sourceLine": 1441
       },
       {
         "name": "SetConfigFlags",
@@ -2094,6 +2217,44 @@
           "haxeType": "Void"
         },
         "sourceLine": 1011
+      },
+      {
+        "name": "TakeScreenshot",
+        "parameters": [
+          {
+            "name": "fileName",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1112
+      },
+      {
+        "name": "UnloadTexture",
+        "parameters": [
+          {
+            "name": "texture",
+            "type": {
+              "cType": "Texture2D",
+              "canonicalCType": "struct Texture",
+              "haxeType": "raylib.raw.Texture2D"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 1446
       },
       {
         "name": "WindowShouldClose",
@@ -2341,6 +2502,120 @@
         "canonicalAbi": {
           "alignment": 4,
           "offsets": {
+            "height": 12,
+            "width": 8,
+            "x": 0,
+            "y": 4
+          },
+          "size": 16
+        },
+        "fields": [
+          {
+            "name": "x",
+            "sourceLine": 255,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "y",
+            "sourceLine": 256,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "width",
+            "sourceLine": 257,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          },
+          {
+            "name": "height",
+            "sourceLine": 258,
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "name": "Rectangle",
+        "sourceLine": 254
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
+            "format": 16,
+            "height": 8,
+            "id": 0,
+            "mipmaps": 12,
+            "width": 4
+          },
+          "size": 20
+        },
+        "fields": [
+          {
+            "name": "id",
+            "sourceLine": 272,
+            "type": {
+              "cType": "unsigned int",
+              "canonicalCType": "unsigned int",
+              "haxeType": "c.UInt32"
+            }
+          },
+          {
+            "name": "width",
+            "sourceLine": 273,
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "height",
+            "sourceLine": 274,
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "mipmaps",
+            "sourceLine": 275,
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "format",
+            "sourceLine": 276,
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "name": "Texture",
+        "sourceLine": 271
+      },
+      {
+        "canonicalAbi": {
+          "alignment": 4,
+          "offsets": {
             "x": 0,
             "y": 4
           },
@@ -2448,23 +2723,26 @@
     "src/raylib/raw/Ray.hx",
     "src/raylib/raw/RayCollision.hx",
     "src/raylib/raw/Raylib.hx",
+    "src/raylib/raw/Rectangle.hx",
+    "src/raylib/raw/Texture.hx",
+    "src/raylib/raw/Texture2D.hx",
     "src/raylib/raw/TraceLogLevel.hx",
     "src/raylib/raw/Vector2.hx",
     "src/raylib/raw/Vector3.hx"
   ],
   "generator": {
-    "algorithm": "hxc-raylib-clang-core-v1",
+    "algorithm": "hxc-raylib-clang-core-v2",
     "path": "scripts/raylib/core_binding.py"
   },
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "selection": {
     "counts": {
-      "aliases": 1,
+      "aliases": 2,
       "enumConstants": 143,
       "enums": 5,
-      "functions": 54,
+      "functions": 59,
       "omittedFamilies": 6,
-      "records": 7
+      "records": 9
     },
     "coverageState": "coherent-caxecraft-core",
     "omissions": [
@@ -2484,9 +2762,9 @@
         "reason": "Pointer depth, nullability, lifetime, and mutation authority need explicit machine-readable ownership before admission."
       },
       {
-        "family": "resource-owning-apis",
+        "family": "remaining-resource-owning-apis",
         "owner": "haxe_c-xge.10",
-        "reason": "Images, textures, fonts, models, shaders, audio, and file buffers need paired ownership and unload contracts."
+        "reason": "The selected raw Texture2D load/draw/unload family now has an explicit owner contract; images, fonts, models, shaders, audio, file buffers, and semantic owned-resource helpers still need their own paired lifetime and cleanup proof."
       },
       {
         "family": "compound-literal-color-macros",
@@ -2500,7 +2778,22 @@
       }
     ],
     "path": "docs/specs/raylib-core-selection.json",
-    "sha256": "e6cc4d768e784188118bc46633d7fa53f7303f313a2fe0d257e6810ef27e9318"
+    "resourceContracts": [
+      {
+        "borrow": [
+          "DrawTexturePro"
+        ],
+        "failure": "LoadTexture may return an invalid value; callers check IsTextureValid before drawing and do not unload a value that never became valid.",
+        "load": "LoadTexture",
+        "ownership": "A successful load creates one caller-owned GPU resource; copying the value aliases that same resource and never creates another owner.",
+        "resource": "Texture2D",
+        "semanticStatus": "raw-only-until-explicit-cleanup-edges",
+        "thread": "Load, validation, drawing, and unload run on the main render thread while the Raylib window and graphics device remain alive.",
+        "unload": "UnloadTexture",
+        "validate": "IsTextureValid"
+      }
+    ],
+    "sha256": "d383d97e7982c59f7c9383bc175d00defe41a14558c7cd2251b0e756996201f2"
   },
   "upstream": {
     "apiVersion": 600,

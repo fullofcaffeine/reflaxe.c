@@ -6,18 +6,18 @@ import caxecraft.scenario.CaxeFlow.FlowPredicate;
 import caxecraft.scenario.CaxeFlow.FlowRepeatPolicy;
 import caxecraft.scenario.CaxeFlow.FlowRule;
 import caxecraft.scenario.CaxeFlowRuntime.FlowRuntimeDiagnostic;
+import caxecraft.scenario.CaxeFlowRuntime.FlowTick;
 import haxe.io.Bytes;
-import haxe.Int64;
 
 private final class CaxeFlowRuleState {
 	public final id:ScenarioId;
 	public var hasFired:Bool;
-	public var lastTick:Int64;
+	public var lastTick:FlowTick;
 
 	public function new(id:ScenarioId) {
 		this.id = id;
 		hasFired = false;
-		lastTick = 0;
+		lastTick = CaxeFlowClock.start();
 	}
 }
 
@@ -52,7 +52,7 @@ final class CaxeFlowRulePlanner {
 			ruleStates.push(new CaxeFlowRuleState(rule.id));
 	}
 
-	public function admit(events:Array<FlowEvent>, tick:Int64):CaxeFlowAdmission {
+	public function admit(events:Array<FlowEvent>, tick:FlowTick):CaxeFlowAdmission {
 		predicateCount = 0;
 		diagnostic = null;
 		final admitted:Array<FlowRule> = [];
@@ -84,7 +84,7 @@ final class CaxeFlowRulePlanner {
 		return {rules: admitted, diagnostic: null};
 	}
 
-	public function markFired(rule:FlowRule, tick:Int64):Void {
+	public function markFired(rule:FlowRule, tick:FlowTick):Void {
 		final runtime = findRuleState(rule.id);
 		if (runtime != null) {
 			runtime.hasFired = true;
@@ -141,7 +141,7 @@ final class CaxeFlowRulePlanner {
 		}
 	}
 
-	function ruleCanFire(rule:FlowRule, tick:Int64):Bool {
+	function ruleCanFire(rule:FlowRule, tick:FlowTick):Bool {
 		final runtime = findRuleState(rule.id);
 		if (runtime == null)
 			return false;

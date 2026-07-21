@@ -47,6 +47,21 @@ _Static_assert(offsetof(RayCollision, distance) == 4U, "RayCollision.distance of
 _Static_assert(offsetof(RayCollision, point) == 8U, "RayCollision.point offset drifted");
 _Static_assert(offsetof(RayCollision, normal) == 20U, "RayCollision.normal offset drifted");
 
+_Static_assert(sizeof(Rectangle) == 16U, "Rectangle size drifted");
+_Static_assert(_Alignof(Rectangle) == 4U, "Rectangle alignment drifted");
+_Static_assert(offsetof(Rectangle, x) == 0U, "Rectangle.x offset drifted");
+_Static_assert(offsetof(Rectangle, y) == 4U, "Rectangle.y offset drifted");
+_Static_assert(offsetof(Rectangle, width) == 8U, "Rectangle.width offset drifted");
+_Static_assert(offsetof(Rectangle, height) == 12U, "Rectangle.height offset drifted");
+
+_Static_assert(sizeof(Texture) == 20U, "Texture size drifted");
+_Static_assert(_Alignof(Texture) == 4U, "Texture alignment drifted");
+_Static_assert(offsetof(Texture, id) == 0U, "Texture.id offset drifted");
+_Static_assert(offsetof(Texture, width) == 4U, "Texture.width offset drifted");
+_Static_assert(offsetof(Texture, height) == 8U, "Texture.height offset drifted");
+_Static_assert(offsetof(Texture, mipmaps) == 12U, "Texture.mipmaps offset drifted");
+_Static_assert(offsetof(Texture, format) == 16U, "Texture.format offset drifted");
+
 _Static_assert(sizeof(Vector2) == 8U, "Vector2 size drifted");
 _Static_assert(_Alignof(Vector2) == 4U, "Vector2 alignment drifted");
 _Static_assert(offsetof(Vector2, x) == 0U, "Vector2.x offset drifted");
@@ -61,6 +76,10 @@ _Static_assert(offsetof(Vector3, z) == 8U, "Vector3.z offset drifted");
 _Static_assert(sizeof(Camera) == sizeof(Camera3D), "Camera alias size drifted");
 _Static_assert(_Alignof(Camera) == _Alignof(Camera3D), "Camera alias alignment drifted");
 _Static_assert(_Generic((Camera){0}, Camera3D: 1, default: 0) == 1, "Camera must alias Camera3D");
+
+_Static_assert(sizeof(Texture2D) == sizeof(Texture), "Texture2D alias size drifted");
+_Static_assert(_Alignof(Texture2D) == _Alignof(Texture), "Texture2D alias alignment drifted");
+_Static_assert(_Generic((Texture2D){0}, Texture: 1, default: 0) == 1, "Texture2D must alias Texture");
 
 _Static_assert(sizeof(CameraProjection) == sizeof(int), "CameraProjection underlying ABI drifted");
 _Static_assert(CAMERA_PERSPECTIVE == 0, "CAMERA_PERSPECTIVE value drifted");
@@ -241,6 +260,7 @@ hxc_check_raylib_core_signatures(void)
     void (*const hxc_signature_DrawSphere)(Vector3, float, Color) = &DrawSphere;
     void (*const hxc_signature_DrawSphereWires)(Vector3, float, int, int, Color) = &DrawSphereWires;
     void (*const hxc_signature_DrawText)(const char *, int, int, int, Color) = &DrawText;
+    void (*const hxc_signature_DrawTexturePro)(Texture2D, Rectangle, Rectangle, Vector2, float, Color) = &DrawTexturePro;
     void (*const hxc_signature_EnableCursor)(void) = &EnableCursor;
     void (*const hxc_signature_EndDrawing)(void) = &EndDrawing;
     void (*const hxc_signature_EndMode3D)(void) = &EndMode3D;
@@ -264,15 +284,19 @@ hxc_check_raylib_core_signatures(void)
     bool (*const hxc_signature_IsMouseButtonDown)(int) = &IsMouseButtonDown;
     bool (*const hxc_signature_IsMouseButtonPressed)(int) = &IsMouseButtonPressed;
     bool (*const hxc_signature_IsMouseButtonReleased)(int) = &IsMouseButtonReleased;
+    bool (*const hxc_signature_IsTextureValid)(Texture2D) = &IsTextureValid;
     bool (*const hxc_signature_IsWindowFocused)(void) = &IsWindowFocused;
     bool (*const hxc_signature_IsWindowReady)(void) = &IsWindowReady;
     bool (*const hxc_signature_IsWindowResized)(void) = &IsWindowResized;
+    Texture2D (*const hxc_signature_LoadTexture)(const char *) = &LoadTexture;
     void (*const hxc_signature_SetConfigFlags)(unsigned int) = &SetConfigFlags;
     void (*const hxc_signature_SetExitKey)(int) = &SetExitKey;
     void (*const hxc_signature_SetTargetFPS)(int) = &SetTargetFPS;
     void (*const hxc_signature_SetTraceLogLevel)(int) = &SetTraceLogLevel;
     void (*const hxc_signature_SetWindowMinSize)(int, int) = &SetWindowMinSize;
     void (*const hxc_signature_SetWindowSize)(int, int) = &SetWindowSize;
+    void (*const hxc_signature_TakeScreenshot)(const char *) = &TakeScreenshot;
+    void (*const hxc_signature_UnloadTexture)(Texture2D) = &UnloadTexture;
     bool (*const hxc_signature_WindowShouldClose)(void) = &WindowShouldClose;
 
     (void)hxc_signature_BeginDrawing;
@@ -296,6 +320,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_DrawSphere;
     (void)hxc_signature_DrawSphereWires;
     (void)hxc_signature_DrawText;
+    (void)hxc_signature_DrawTexturePro;
     (void)hxc_signature_EnableCursor;
     (void)hxc_signature_EndDrawing;
     (void)hxc_signature_EndMode3D;
@@ -319,15 +344,19 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_IsMouseButtonDown;
     (void)hxc_signature_IsMouseButtonPressed;
     (void)hxc_signature_IsMouseButtonReleased;
+    (void)hxc_signature_IsTextureValid;
     (void)hxc_signature_IsWindowFocused;
     (void)hxc_signature_IsWindowReady;
     (void)hxc_signature_IsWindowResized;
+    (void)hxc_signature_LoadTexture;
     (void)hxc_signature_SetConfigFlags;
     (void)hxc_signature_SetExitKey;
     (void)hxc_signature_SetTargetFPS;
     (void)hxc_signature_SetTraceLogLevel;
     (void)hxc_signature_SetWindowMinSize;
     (void)hxc_signature_SetWindowSize;
+    (void)hxc_signature_TakeScreenshot;
+    (void)hxc_signature_UnloadTexture;
     (void)hxc_signature_WindowShouldClose;
 }
 
