@@ -40,11 +40,19 @@ that same registry. The exact JSON is also packaged with the executable. This
 is not yet arbitrary runtime mod loading—the generated adapter is a temporary
 bridge until native JSON and filesystem support can load the same format.
 
+The shared domain also contains the first deterministic water simulation:
+authored sources fall, spread with bounded strength, leak through openings,
+recede when removed, and repair after a dam closes. It already runs as the same
+ordinary Haxe under Eval and generated C, but it is not rendered or connected
+to the shipped map yet. Swimming, buoyancy, breath, underwater presentation,
+authored placement, and persistence are the next dependent slices.
+
 After editing the built-in pack, run:
 
 ```sh
 python3 examples/caxecraft/content_pack.py
 npm run test:caxecraft-content-pack
+npm run test:caxecraft-water
 ```
 
 ## Why the source contains `#if c`
@@ -90,7 +98,9 @@ The current conditionals are deliberately narrow:
 - `WorldStorage` performs the exact C integer conversions required by that
   carrier;
 - `CaxecraftTrace` and `DomainProbe` construct fixed C storage or ordinary Haxe
-  test storage and choose the appropriate output plumbing.
+  test storage and choose the appropriate output plumbing;
+- `WaterPendingCells`, its tiny storage adapter, and `WaterProbe` make the same
+  carrier choice for deterministic pending marks and water-test storage.
 
 Terrain generation, block rules, DDA picking, player collision, and trace
 hashing contain no target conditional. The non-C path is tested under pinned

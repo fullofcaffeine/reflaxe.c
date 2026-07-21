@@ -41,6 +41,9 @@ contract is documented in [configuration](configuration.md#target-activation-and
 | `WorldStorage.hx` | exact `UInt8` widening and explicit narrowing | direct `Int` array access | C ABI-width conversions must remain explicit without infecting algorithms. |
 | `CaxecraftTrace.hx` | fixed `CArray<UInt8, WorldVolume>` backing | freshly filled Haxe array | Each trace needs owned test storage, but all operations after construction stay shared. |
 | `DomainProbe.hx` | fixed storage and no Haxe `Sys` output | Haxe array and printed oracle lines | The C slice is runtime-free, so an independent fixture C consumer prints returned values. |
+| `WaterPendingCells.hx` | mutable `Span<UInt8>` queue marks | ordinary `Array<Int>` marks | The bounded scheduler needs one compact mark per world cell without changing its algorithm. |
+| `WaterPendingStorage.hx` | exact byte widening/narrowing | direct `Int` access | Only the storage adapter knows how the selected mark carrier is read and written. |
+| `WaterProbe.hx` | two fixed `CArray` buffers and retained scalar functions | two Haxe arrays and printed oracle lines | World and pending storage differ; every flow, leak, and repair rule after setup is shared. |
 
 The complete `caxecraft.app` source set is also guarded by `#if c`. That is a
 different kind of seam: the whole window/input/render adapter exists only for
@@ -155,6 +158,58 @@ experiment may supply another carrier, but the current authority is efficient,
 direct C. The portability value comes from keeping semantics in ordinary Haxe
 and isolating representation-specific operations, not from forcing every
 backend through one universal IR or one runtime container.
+
+## Bounded voxel water
+
+`WaterSimulation` is the first target-neutral fluid slice. It models water as
+cells in the same 16 KiB world buffer rather than as particles or renderer
+objects. A cell is one of these typed states:
+
+- `Source`: permanent until an authored edit removes it;
+- `Flowing(level, falling)`: temporary water with one of eight strengths and an
+  explicit falling bit;
+- `Empty` or `Blocked`; or
+- `InvalidStorage(code)`, which keeps a malformed byte visible and immovable.
+
+The byte codes are private to `WaterSimulation`; gameplay consumes
+`WaterCellState` and never compares magic numbers. Sources flow down before
+they spread sideways. A vertical fall remains full strength. Once supported by
+terrain, it spreads up to seven cells while losing one strength per horizontal
+step. Removing a source makes unsupported flow recede. Placing or removing a
+solid schedules the edited cell and its six face-sharing neighbors, so opening
+a one-cell dam leaks and closing it repairs the downstream water.
+
+The scheduler stores one queued/not-queued mark per world cell. It always takes
+the lowest marked linear index, so the order in which edits requested work
+cannot change the settled result. `tick` performs at most the caller's explicit
+cell budget and leaves remaining marks for later fixed simulation steps. This
+prevents a large release from freezing a rendered frame. `settle` is an
+offline/test helper with a second tick-count bound; the interactive loop should
+not use it every frame.
+
+Current limits are deliberate and executable:
+
+- world edges are sealed;
+- only authored sources are permanent—adjacent sources do not create a new
+  infinite source;
+- the simulation updates committed cells in its documented stable order rather
+  than calculating a whole second world buffer;
+- `World.query` and collision still treat water bytes as passable air, while
+  `WaterSimulation.cellState` preserves their exact fluid meaning;
+- rendering, transparent surface shape, swimming, buoyancy, breath, Tideweave,
+  CaxeMap placement, editor tools, and save/load integration are owned by the
+  following water slices, not claimed here.
+
+The focused `test:caxecraft-water` command checks falling, landing, lateral
+weakening, obstacle routing, leaking, recession, dam repair, malformed bytes,
+bounded continuation, and equal settled hashes across work budgets and enqueue
+orders. The assertions and expected states are ordinary Haxe. A shared Python
+host runner starts that same entry point on Eval and generated native C, checks
+their small result envelope, and coordinates the strict compiler and optional
+sanitizers; it does not contain a second water implementation. Eval and strict
+generated C must print the same trace. The generated program selects no `hxrt`;
+the native build is warning-clean and is also run under AddressSanitizer and
+UndefinedBehaviorSanitizer when the compiler offers them.
 
 The checked linear index is:
 

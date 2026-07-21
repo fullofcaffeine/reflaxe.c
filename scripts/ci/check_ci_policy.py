@@ -619,6 +619,17 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/expected/unity/include/hxc/program.h",
     "examples/caxecraft/expected/unity/src/program.c",
     "examples/caxecraft/expected/oracle.txt",
+    "examples/caxecraft/run_haxe_c_test.py",
+    "examples/caxecraft/water.hxml",
+    "examples/caxecraft/water-c.hxml",
+    "examples/caxecraft/src/caxecraft/domain/WaterCellState.hx",
+    "examples/caxecraft/src/caxecraft/domain/WaterLevel.hx",
+    "examples/caxecraft/src/caxecraft/domain/WaterPendingCells.hx",
+    "examples/caxecraft/src/caxecraft/domain/WaterPendingStorage.hx",
+    "examples/caxecraft/src/caxecraft/domain/WaterSimulation.hx",
+    "examples/caxecraft/src/caxecraft/domain/WaterTickResult.hx",
+    "examples/caxecraft/test/caxecraft/qa/WaterProbe.hx",
+    "examples/caxecraft/test/native/water_harness.c",
     "examples/caxecraft/expected/playable/hxc.manifest.json",
     "examples/caxecraft/expected/playable/hxc.runtime-plan.json",
     "examples/caxecraft/expected/playable/include/hxc/program.h",
@@ -1043,6 +1054,8 @@ def validate() -> list[str]:
         != "python3 examples/caxecraft/check_content_pack.py"
     ):
         errors.append("package.json must retain the validated Caxecraft content-pack gate")
+    if scripts.get("test:caxecraft-water") != "python3 examples/caxecraft/run_haxe_c_test.py water":
+        errors.append("package.json must retain the deterministic Caxecraft water gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
         errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
     if scripts.get("test:caxecraft-playable") != "python3 examples/caxecraft/play.py --check-snapshots":
@@ -1167,6 +1180,8 @@ def validate() -> list[str]:
         scripts.get("test:toolchain", "")
     ):
         errors.append("package.json test:toolchain must execute test:caxecraft-content-pack")
+    if "npm run test:caxecraft-water" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-water")
     if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-domain:full")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):

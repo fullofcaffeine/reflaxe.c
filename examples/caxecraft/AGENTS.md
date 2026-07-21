@@ -82,6 +82,47 @@ belong to the shipped map and CaxeFlow rules. A reusable NPC interaction system
 may be a class if it carries per-instance state, but `GuideNpc` must not remain
 a Nia-specific static API beside a second hardcoded copy in `Main.hx`.
 
+## Test Ownership and Automation
+
+Write the rule being tested in Haxe whenever the rule belongs to Caxecraft.
+This includes unit assertions for mechanics, parsers, content validation,
+simulation, save data, and CaxeFlow. When that Haxe code uses only the admitted
+target-neutral surface, run the same assertion entry point on Eval and through
+haxe.c. Eval is a quick independent behavior check; generated native C remains
+the product proof. The complete Raylib game does not currently run on Eval.
+
+Keep host automation deliberately thin. Python may start Haxe and native
+compilers, create isolated temporary directories, enforce timeouts, select an
+available C compiler, launch processes, capture screenshots, and check a small
+versioned result envelope. It must not calculate the expected water cells,
+inventory contents, quest state, movement, or other game semantics again.
+That would create a second implementation which could agree with itself while
+the shipped Haxe code is wrong. Add a case to the shared
+`run_haxe_c_test.py` runner instead of creating `check_<mechanic>.py` scripts.
+
+A native C harness is allowed only as a small independent consumer of the
+generated C boundary. It may call exported test functions and compare their
+result with the Haxe-produced envelope; it must not reimplement the mechanic.
+Direct C remains appropriate for independently authored ABI consumers, not for
+repository-owned game behavior.
+
+Use PilotScript for a small number of representative journeys through the real
+game: start a level, issue player or console actions, observe stable semantic
+state, and close cleanly. Pilots prove that loading, input, simulation,
+rendering, and presentation are connected. They do not duplicate every Haxe
+unit case or assert fragile individual pixels when semantic telemetry can state
+the invariant directly. A water pilot, for example, should prove that a player
+can enter authored water and that breath changes; the Haxe water tests own the
+complete spread and recession rule table.
+
+Use deterministic seeds, fixed simulation steps, explicit work budgets, and
+bounded timeouts. Generated-C snapshots own compiler output shape, not game
+correctness. Keep a fast focused command for each mechanic and retain the
+flagship native/pilot lane for integration. Every shipped mechanic must be
+reached by an appropriate combination of Haxe tests and representative native
+game evidence; a test does not become stronger merely because its orchestration
+is written in Python.
+
 ## Original Art and Audio Assets
 
 Create original visual and audio assets on demand when an implemented game or

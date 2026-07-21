@@ -121,6 +121,38 @@ Expected outputs are owned by the test case, not by generated-output caches.
 Generated scratch/output trees stay ignored. A snapshot asserts source shape;
 runtime or differential behavior requires its own lane assertion as well.
 
+## Test logic and host orchestration
+
+Put a product's correctness assertions in the language that implements the
+product. For Caxecraft, Haxe tests decide whether water spreads correctly,
+inventory transfers preserve items, a parser rejects malformed data, or a
+scenario reaches the intended state. Reachable target-neutral tests run on
+Eval and through haxe.c so the two executions can be compared without teaching
+the host runner the game rule a second time.
+
+A host runner coordinates tools that the program under test cannot yet own. It
+may create isolated temporary roots, invoke Haxe and native compilers, enforce
+timeouts, run sanitizers, capture process output, or drive a window. It checks
+a small closed result protocol and process-level facts; it does not recompute
+the expected product state. Caxecraft uses the shared
+`examples/caxecraft/run_haxe_c_test.py` runner for focused Haxe-authored cases
+instead of adding one Python semantics runner per mechanic.
+
+These roles provide different evidence:
+
+- a Haxe unit or property test proves the reusable rule directly;
+- Eval/native differential execution detects target disagreements;
+- a small independent C harness proves the generated calling boundary;
+- sanitizers detect invalid memory and undefined C behavior;
+- a PilotScript journey proves that representative behavior is connected in
+  the real interactive game;
+- a generated-C snapshot proves intended compiler structure, not gameplay.
+
+Do not require a full graphical build merely to diagnose a pure simulation
+rule, and do not claim a playable feature from a unit test. Keep both the fast
+owner test and the narrowest end-to-end path that proves the layers work
+together.
+
 ## Snapshot workflow
 
 The normal exhaustive toolchain runs each focused owner once, then validates
