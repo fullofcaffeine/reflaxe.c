@@ -58,6 +58,8 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/include/hxc/modules/caxecraft/gameplay/ItemKind.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/GuideState.h": "header",
     "playable/include/hxc/modules/caxecraft/gameplay/MosslingState.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/BerryDropState.h": "header",
+    "playable/include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h": "header",
     "playable/src/modules/caxecraft/app/CaxecraftAtlas.c": "c",
     "playable/src/modules/caxecraft/app/CaxecraftPalette.c": "c",
     "playable/src/modules/caxecraft/app/HudDigits.c": "c",
@@ -65,6 +67,8 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/gameplay/Inventory.c": "c",
     "playable/src/modules/caxecraft/gameplay/GuideNpc.c": "c",
     "playable/src/modules/caxecraft/gameplay/Mossling.c": "c",
+    "playable/src/modules/caxecraft/gameplay/BerryDrop.c": "c",
+    "playable/src/modules/caxecraft/gameplay/PlayerVitals.c": "c",
     "playable/src/modules/caxecraft/domain/World.c": "c",
 }
 RUNTIME_ASSET_IDS = ("caxecraft-wordmark", "title-panorama", "hud", "items")
@@ -176,7 +180,13 @@ def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subproc
     return result
 
 
-def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title: bool = True) -> tuple[int, int]:
+def validate_smoke_screenshot(
+    path: Path,
+    *,
+    platform_name: str,
+    expected_title: bool = True,
+    expected_drop: bool = False,
+) -> tuple[int, int]:
     """Prove the captured title frame contains staged art and readable UI."""
     try:
         data = path.read_bytes()
@@ -242,6 +252,7 @@ def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title:
     light_ui_pixels = 0
     nia_pixels = 0
     mossling_pixels = 0
+    berry_pixels = 0
     non_dark_pixels = 0
     quantized_colors: set[int] = set()
     at = 0
@@ -293,6 +304,8 @@ def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title:
                 nia_pixels += 1
             if (red, green, blue) == (157, 190, 82):
                 mossling_pixels += 1
+            if (red, green, blue) == (174, 78, 136):
+                berry_pixels += 1
             column = index // bytes_per_pixel
             if row < height // 4 and width * 3 // 10 <= column < width * 7 // 10:
                 if red < 80 and green > 120 and blue > 140:
@@ -320,6 +333,7 @@ def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title:
     # color-count thresholds would confuse clean voxel shading with a blank
     # frame. Instead prove the scene's independent visual roles: broad sky,
     # terrain, a dark heads-up-display panel, and light text/crosshair pixels.
+    missing_actor_evidence = berry_pixels < 20 if expected_drop else mossling_pixels < 30
     if not expected_title and (
         non_dark_pixels < width * height // 3
         or sky_scene_pixels < width * height // 4
@@ -327,21 +341,21 @@ def validate_smoke_screenshot(path: Path, *, platform_name: str, expected_title:
         or dark_panel_pixels < 2_000
         or light_ui_pixels < 250
         or nia_pixels < 50
-        or mossling_pixels < 30
+        or missing_actor_evidence
     ):
         raise PlayFailure(
             "Caxecraft pilot framebuffer is blank or lacks a presented game scene "
             f"(nonDark={non_dark_pixels}, sky={sky_scene_pixels}, green={green_scene_pixels}, "
             f"darkPanel={dark_panel_pixels}, lightUi={light_ui_pixels}, nia={nia_pixels}, "
-            f"mossling={mossling_pixels}, colorBuckets={len(quantized_colors)})"
+            f"mossling={mossling_pixels}, berries={berry_pixels}, colorBuckets={len(quantized_colors)})"
         )
     return width, height
 
 
-def validate_presented_screenshot(path: Path, *, platform_name: str) -> tuple[int, int]:
+def validate_presented_screenshot(path: Path, *, platform_name: str, expected_drop: bool = False) -> tuple[int, int]:
     """Require a real, nonblank presented frame without prescribing its scene."""
 
-    return validate_smoke_screenshot(path, platform_name=platform_name, expected_title=False)
+    return validate_smoke_screenshot(path, platform_name=platform_name, expected_title=False, expected_drop=expected_drop)
 
 
 def host_platform() -> str:
@@ -441,6 +455,7 @@ def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str
             "launch-smoke": "caxecraft_pilot_launch_smoke",
             "move-jump-edit": "caxecraft_pilot_move_jump_edit",
             "pause-recapture": "caxecraft_pilot_pause_recapture",
+            "combat-drop": "caxecraft_pilot_combat_drop",
         }
         pilot_define = pilot_defines.get(pilot)
         if pilot_define is None:
@@ -520,9 +535,11 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
                 f"generated Caxecraft app contains {actual_count} direct {function_name} call sites; expected {expected_count}"
             )
     draw_texture_count = combined.count("DrawTexturePro(")
-    if draw_texture_count != 4:
+    # Title, wordmark, hotbar frame, item, and health-glyph helpers each own one
+    # structural texture draw site. Runtime loops reuse those fixed helpers.
+    if draw_texture_count != 5:
         raise PlayFailure(
-            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 4"
+            f"generated Caxecraft sources contain {draw_texture_count} direct DrawTexturePro call sites; expected 5"
         )
     for forbidden in (r"\bgoto\b", r"\bmalloc\s*\(", r"\bcalloc\s*\(", r"\brealloc\s*\(", r"\bfree\s*\(", r"\bhxrt_"):
         if re.search(forbidden, combined):
@@ -785,7 +802,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--smoke", action="store_true", help="render three real frames, require timely exit, and do not wait for input")
     parser.add_argument(
         "--pilot",
-        choices=("launch-smoke", "move-jump-edit", "pause-recapture"),
+        choices=("launch-smoke", "move-jump-edit", "pause-recapture", "combat-drop"),
         help="run one deterministic in-process input script, capture its visual checkpoint, and quit",
     )
     parser.add_argument("--allow-network", action="store_true", help="allow the first checksum-pinned Raylib archive download")
@@ -876,13 +893,16 @@ def main(argv: list[str]) -> int:
                 "launch-smoke": "caxecraft-smoke.png",
                 "move-jump-edit": "caxecraft-pilot-move.png",
                 "pause-recapture": "caxecraft-pilot-pause.png",
+                "combat-drop": "caxecraft-pilot-combat.png",
             }
             screenshot = executable.parent / screenshot_names[selected_pilot]
             if screenshot.exists():
                 screenshot.unlink()
             run([str(executable)], cwd=executable.parent, timeout=15, label=f"Caxecraft {selected_pilot} graphical pilot")
             width, height = validate_smoke_screenshot(screenshot, platform_name=platform_name) if selected_pilot == "launch-smoke" else validate_presented_screenshot(
-                screenshot, platform_name=platform_name
+                screenshot,
+                platform_name=platform_name,
+                expected_drop=selected_pilot == "combat-drop",
             )
             print(
                 f"caxecraft: {selected_pilot} graphical pilot passed "

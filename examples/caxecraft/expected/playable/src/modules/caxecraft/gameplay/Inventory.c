@@ -451,6 +451,45 @@ enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_gameplay_Inventory_selectedBlo
   return hxc_caxecraft_domain_BlockKind_Grass;
 }
 
+bool hxc_caxecraft_gameplay_Inventory_selectedIs(struct hxc_caxecraft_gameplay_InventoryState hxc_state, enum hxc_caxecraft_gameplay_ItemKind hxc_item)
+{
+  switch (hxc_item) {
+    case hxc_caxecraft_gameplay_ItemKind_GrassBlock:
+      {
+        break;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_DirtBlock:
+      {
+        return hxc_state.hxc_selected == 1;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_StoneBlock:
+      {
+        return hxc_state.hxc_selected == 2;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Haxeforge:
+      {
+        return hxc_state.hxc_selected == 3;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_CopperSword:
+      {
+        return hxc_state.hxc_selected == 4;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Berries:
+      {
+        return hxc_state.hxc_selected == 5;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Bread:
+      {
+        return hxc_state.hxc_selected == 6;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Lantern:
+      {
+        return hxc_state.hxc_selected == 7;
+      }
+  }
+  return hxc_state.hxc_selected == 0;
+}
+
 struct hxc_caxecraft_gameplay_InventoryState hxc_caxecraft_gameplay_Inventory_starter(void)
 {
   struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n0 = hxc_caxecraft_gameplay_Inventory_make(0, 16, 24, 12, 1, 1, 6, 3, 1);

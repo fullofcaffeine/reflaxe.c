@@ -4,6 +4,7 @@
 #include "hxc/detail/program_types.h"
 
 struct hxc_caxecraft_gameplay_MosslingState {
+  int32_t hxc_health;
   double hxc_homeX;
   double hxc_homeZ;
   int32_t hxc_modeCode;

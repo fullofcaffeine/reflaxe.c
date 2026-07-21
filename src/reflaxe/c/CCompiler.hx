@@ -303,7 +303,10 @@ class CCompiler {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, error.position, context.profile);
 		} catch (error:HxcIRValidationError) {
 			final diagnostic = error.diagnostics[0];
-			CDiagnostic.fatal(diagnostic.id, diagnostic.message, input.expression.pos, context.profile);
+			// Keep the exact IR location even when the original macro Position is no
+			// longer available. Without it, a whole-function HXC9000 leaves the author
+			// guessing which generated instruction violated the compiler invariant.
+			CDiagnostic.fatal(diagnostic.id, diagnostic.compilerDetail(), input.expression.pos, context.profile);
 		} catch (error:CBodyEmissionError) {
 			CDiagnostic.fatal(error.diagnosticId, error.detail, input.expression.pos, context.profile);
 		} catch (error:RuntimeFeatureError) {

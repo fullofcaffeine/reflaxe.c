@@ -8,7 +8,9 @@ slice: a finite voxel world, seeded terrain, block edits, voxel raycasting,
 fixed-step first-person collision, and a C-specific Raylib window/input/render
 adapter. Its authored spawn meadow now contains a friendly Nia interaction,
 one-time berry gift, and a Mossling that notices, chases, and returns on the
-fixed clock. The complete Creative/Adventure/editor/Ivvy direction and its honest
+fixed clock. Adventure can strike that Mossling with the Copper Sword, collect
+its visible berry drop, take bounded contact damage, and return to the meadow
+after defeat. The complete Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
 [game design document](../../docs/caxecraft-game-design.md).
 
@@ -135,8 +137,10 @@ npm run caxecraft:play -- \
   --source /absolute/path/to/raylib-6.0
 ```
 
-Use `WASD` to move, the mouse to look, Space to jump, left click to remove the
-selected block, right click to use/place it, number keys `1` through `8` or the
+Use `WASD` to move, the mouse to look, Space to jump, and left click to use the
+selected item's primary action: remove a block normally or strike while the
+Copper Sword is selected. Right click uses/places a block; number keys `1`
+through `8` or the
 mouse wheel to select the hotbar, Escape to pause or release the cursor, and
 `Q` to quit. Creative mode does not consume placed blocks; the current
 Adventure feasibility path has finite stacks and returns eligible mined blocks
@@ -186,10 +190,12 @@ This is a finite playable feasibility slice with a textured title, typed
 eight-slot hotbar, original item/HUD art, Creative/Adventure menu choice, and
 bounded collect/consume/place rules. Nia provides the first two-step friendly
 interaction and one-time gift; one original Mossling provides bounded
-rest/chase/return movement. It still has no actor combat, drops, health,
-finished Adventure, visual editor, persistence, complete localization, audio,
-terrain textures/chunk meshes, or controller support. Passing this slice is
-integrated evidence, not a claim that the planned game is complete.
+rest/chase/return movement, aimed sword combat, contact damage, health, defeat,
+revive, and one visible collectible drop. It still has no finished Adventure,
+broader enemy roster, healing-item use, visual editor, persistence, complete
+localization, audio, terrain textures/chunk meshes, or controller support.
+Passing this slice is integrated evidence, not a claim that the planned game
+is complete.
 
 It compares the same 38-line semantic trace under pinned Haxe Eval and all three
 generated-C layouts, checks the registered split/package/unity snapshots, and

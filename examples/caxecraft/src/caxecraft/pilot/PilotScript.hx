@@ -8,6 +8,7 @@ enum abstract PilotScriptName(Int) {
 	var LaunchSmoke = 0;
 	var MoveJumpEdit = 1;
 	var PauseRecapture = 2;
+	var CombatDrop = 3;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -24,6 +25,8 @@ enum abstract PilotAction(Int) {
 	var Capture = 9;
 	var SelectNext = 10;
 	var Interact = 11;
+	var SelectSword = 12;
+	var Strike = 13;
 }
 
 /**
@@ -40,7 +43,9 @@ final class PilotScript {
 			return 4;
 		if (name == MoveJumpEdit)
 			return 10;
-		return 7;
+		if (name == PauseRecapture)
+			return 7;
+		return 6;
 	}
 
 	public static function stableName(name:PilotScriptName):String {
@@ -48,7 +53,9 @@ final class PilotScript {
 			return "launch-smoke";
 		if (name == MoveJumpEdit)
 			return "move-jump-edit";
-		return "pause-recapture";
+		if (name == PauseRecapture)
+			return "pause-recapture";
+		return "combat-drop";
 	}
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
@@ -58,12 +65,14 @@ final class PilotScript {
 			return Idle;
 		if (name == MoveJumpEdit)
 			return moveJumpAction(frameNumber);
-		return pauseAction(frameNumber);
+		if (name == PauseRecapture)
+			return pauseAction(frameNumber);
+		return combatAction(frameNumber);
 	}
 
 	public static function sample(name:PilotScriptName, frameNumber:Int):GameInputFrame {
 		final action = actionAt(name, frameNumber);
-		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), minePressed(action),
+		return GameInputFrames.make(moveForward(action), moveRight(action), lookYaw(action), lookPitch(action), jumpPressed(action), primaryPressed(action),
 			placePressed(action), interactPressed(action), pausePressed(action), capturePressed(action), quitPressed(action), hotbarSelection(action),
 			hotbarCycle(action));
 	}
@@ -83,8 +92,8 @@ final class PilotScript {
 	public static inline function jumpPressed(action:PilotAction):Bool
 		return action == ForwardJump;
 
-	public static inline function minePressed(action:PilotAction):Bool
-		return action == Mine;
+	public static inline function primaryPressed(action:PilotAction):Bool
+		return action == Mine || action == Strike;
 
 	public static inline function placePressed(action:PilotAction):Bool
 		return action == Place;
@@ -101,8 +110,8 @@ final class PilotScript {
 	public static inline function quitPressed(action:PilotAction):Bool
 		return action == Quit;
 
-	public static inline function hotbarSelection(_action:PilotAction):Int
-		return -1;
+	public static inline function hotbarSelection(action:PilotAction):Int
+		return action == SelectSword ? 4 : -1;
 
 	public static inline function hotbarCycle(action:PilotAction):Int
 		return action == SelectNext ? 1 : 0;
@@ -116,6 +125,8 @@ final class PilotScript {
 				moveJumpCheckpoint(frameNumber);
 			case PauseRecapture:
 				pauseCheckpoint(frameNumber);
+			case CombatDrop:
+				frameNumber == 4 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
 		};
 	}
 
@@ -140,6 +151,14 @@ final class PilotScript {
 		return switch frameNumber {
 			case 1: Pause;
 			case 3: Capture;
+			case _: Idle;
+		};
+	}
+
+	static function combatAction(frameNumber:Int):PilotAction {
+		return switch frameNumber {
+			case 0: SelectSword;
+			case 1 | 2 | 3: Strike;
 			case _: Idle;
 		};
 	}

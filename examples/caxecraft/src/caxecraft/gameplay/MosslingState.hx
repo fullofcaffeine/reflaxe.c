@@ -13,4 +13,5 @@ typedef MosslingState = {
 	final homeX:Float;
 	final homeZ:Float;
 	final modeCode:Int;
+	final health:Int;
 }

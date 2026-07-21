@@ -16,12 +16,14 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.LaunchSmoke, 4);
 		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 10);
 		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
+		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 6);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
+		checkpoints += checkCombat();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 3 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 4 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -60,7 +62,7 @@ final class PilotProbe {
 		require(PilotScript.sample(name, 2).jumpPressed, "movement script lost jump input");
 		require(PilotScript.sample(name, 3).moveRight == 1.0
 			&& PilotScript.sample(name, 3).lookPitch == 0.04, "movement script lost strafe/look input");
-		require(PilotScript.sample(name, 4).minePressed, "movement script lost mine input");
+		require(PilotScript.sample(name, 4).primaryPressed, "movement script lost its primary world action");
 		require(PilotScript.sample(name, 5).placePressed, "movement script lost place input");
 		require(PilotScript.sample(name, 6).hotbarCycle == 1, "movement script lost hotbar input");
 		require(PilotScript.sample(name, 7).interactPressed, "movement script lost guide interaction input");
@@ -76,7 +78,7 @@ final class PilotProbe {
 		final name = PilotScriptName.PauseRecapture;
 		require(PilotScript.sample(name, 1).pausePressed, "pause script lost its pause action");
 		require(PilotScript.sample(name, 3).capturePressed
-			&& !PilotScript.sample(name, 3).minePressed, "recapture became a mining action");
+			&& !PilotScript.sample(name, 3).primaryPressed, "recapture became a world action");
 		final paused = PilotScript.checkpoint(name, 2);
 		final captured = PilotScript.checkpoint(name, 4);
 		require(paused != null && paused.kind == ObserveState && paused.label == "pause-recapture.paused", "paused checkpoint changed");
@@ -84,6 +86,19 @@ final class PilotProbe {
 			&& captured.kind == ObserveState
 			&& captured.label == "pause-recapture.captured", "recaptured checkpoint changed");
 		return 2;
+	}
+
+	static function checkCombat():Int {
+		final name = PilotScriptName.CombatDrop;
+		require(PilotScript.sample(name, 0).hotbarSelection == 4, "combat script lost semantic sword selection");
+		require(PilotScript.sample(name, 1).primaryPressed
+			&& PilotScript.sample(name, 2).primaryPressed
+			&& PilotScript.sample(name, 3).primaryPressed,
+			"combat script lost its three bounded strikes");
+		final screenshot = PilotScript.checkpoint(name, 4);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "combat-drop.frame",
+			"combat drop screenshot checkpoint changed");
+		return 1;
 	}
 
 	static function checkSharedInterface():Void {

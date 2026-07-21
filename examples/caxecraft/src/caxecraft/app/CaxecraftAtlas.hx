@@ -10,6 +10,13 @@ enum HotbarFrame {
 	Selected;
 }
 
+/** Closed semantic names for the health cells used by the first HUD. */
+enum HudGlyph {
+	HealthFull;
+	HealthHalf;
+	HealthEmpty;
+}
+
 /**
  * Typed coordinates for the checked-in 4x4 HUD and item atlases.
  *
@@ -18,6 +25,18 @@ enum HotbarFrame {
  * inventory rules or game loop.
  */
 final class CaxecraftAtlas {
+	public static function drawHudGlyph(texture:Texture2D, glyph:HudGlyph, x:Int, y:Int, size:Int):Void {
+		var column = 0;
+		switch (glyph) {
+			case HealthFull:
+			case HealthHalf:
+				column = 1;
+			case HealthEmpty:
+				column = 2;
+		}
+		CaxecraftTextures.drawAtlasCell(texture, column, 0, 4, 4, x, y, size, size, CaxecraftPalette.textureTint());
+	}
+
 	public static function drawHotbarFrame(texture:Texture2D, frame:HotbarFrame, x:Int, y:Int, size:Int):Void {
 		// haxe_c's exhaustive value-switch carrier is tracked by haxe_c-c9i.
 		// An initialized local keeps the same closed mapping explicit today.

@@ -4,10 +4,12 @@ import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
+import caxecraft.gameplay.BerryDrop;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.ItemKind;
 import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
+import caxecraft.gameplay.PlayerVitals;
 
 /** Renderer-independent proof for the first friendly and hostile actors. */
 final class GameplayProbe {
@@ -41,7 +43,42 @@ final class GameplayProbe {
 		mossling = Mossling.step(cells, mossling, 30.5, 30.5);
 		require(Mossling.mode(mossling) == MosslingMode.Returning && mossling.x < chasedX, "far player releases creature toward home");
 
-		Sys.println("caxecraft-gameplay: Nia welcome/gift and Mossling rest/chase/return passed");
+		var target = Mossling.start(cells, 12.5, 12.5);
+		inventory = Inventory.select(inventory, 4);
+		require(Inventory.selectedIs(inventory, ItemKind.CopperSword), "combat asks for a semantic sword rather than a slot number");
+		require(Mossling.canStrike(target, 10.5, 12.5, 1.0, 0.0), "near aimed sword reaches Mossling");
+		require(!Mossling.canStrike(target, 10.5, 12.5, -1.0, 0.0), "sword does not strike behind player");
+		target = Mossling.strike(target);
+		target = Mossling.strike(target);
+		require(target.health == 1 && Mossling.isAlive(target), "two strikes leave one health");
+		target = Mossling.strike(target);
+		require(target.health == 0 && !Mossling.isAlive(target), "third strike defeats Mossling");
+		require(Mossling.step(cells, target, 10.5, 12.5) == target, "defeated Mossling state is stable");
+
+		var drop = BerryDrop.fromDefeatedMossling(target);
+		require(drop.active && drop.amount == 2, "defeat creates one visible berry drop");
+		require(BerryDrop.isInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");
+		final berriesBeforeDrop = inventory.berries;
+		inventory = Inventory.collectItem(inventory, ItemKind.Berries, drop.amount);
+		drop = BerryDrop.collect(drop);
+		require(!drop.active && inventory.berries == berriesBeforeDrop + 2, "drop collection is one-time and explicit");
+
+		var vitals = PlayerVitals.start();
+		vitals = PlayerVitals.step(vitals, 10.5, 12.5, 10.8, 12.5, true);
+		require(vitals.health == PlayerVitals.MAX_HEALTH - 1
+			&& vitals.safeTicks == PlayerVitals.CONTACT_SAFE_TICKS, "first contact deals one bounded point");
+		final healthAfterContact = vitals.health;
+		vitals = PlayerVitals.step(vitals, 10.5, 12.5, 10.8, 12.5, true);
+		require(vitals.health == healthAfterContact
+			&& vitals.safeTicks == PlayerVitals.CONTACT_SAFE_TICKS - 1, "safe ticks prevent instant repeated damage");
+		while (!PlayerVitals.isDefeated(vitals)) {
+			while (vitals.safeTicks > 0)
+				vitals = PlayerVitals.step(vitals, 10.5, 12.5, 30.0, 30.0, false);
+			vitals = PlayerVitals.step(vitals, 10.5, 12.5, 10.8, 12.5, true);
+		}
+		require(PlayerVitals.revive(vitals).health == PlayerVitals.MAX_HEALTH, "return prompt restores full health");
+
+		Sys.println("caxecraft-gameplay: Nia gift, Mossling combat/drop, and bounded player health passed");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {

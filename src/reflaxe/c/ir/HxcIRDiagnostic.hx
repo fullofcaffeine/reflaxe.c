@@ -52,4 +52,14 @@ class HxcIRDiagnostic {
 	public function render():String {
 		return '$id $severity [profile=$profile] ${source.display()} [$irPath] $message Remediation: $remediation';
 	}
+
+	/**
+	 * Detail retained when this record crosses into Haxe's macro diagnostic API.
+	 *
+	 * That API accepts one Haxe `Position`, while an internal failure belongs to
+	 * a generated IR instruction. Keeping both stable spellings in the message
+	 * makes a production HXC9000 actionable without exposing an absolute path.
+	 */
+	public function compilerDetail():String
+		return '$message [ir=$irPath; source=${source.display()}]';
 }

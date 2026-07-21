@@ -1401,6 +1401,12 @@ class HxcIRGolden {
 		if (diagnostics.length == 0) {
 			throw "invalid HxcIR fixture unexpectedly passed validation";
 		}
+		for (diagnostic in diagnostics) {
+			final detail = diagnostic.compilerDetail();
+			if (detail.indexOf('[ir=${diagnostic.irPath}; source=${diagnostic.source.display()}]') == -1) {
+				throw "compiler-facing HxcIR diagnostic discarded its stable IR path or source";
+			}
+		}
 		return diagnostics.map(diagnostic -> diagnostic.render());
 	}
 

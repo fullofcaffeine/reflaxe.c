@@ -22,7 +22,7 @@ from run import (  # noqa: E402
     verify_pinned_haxe,
 )
 
-EXPECTED = "caxecraft-gameplay: Nia welcome/gift and Mossling rest/chase/return passed\n"
+EXPECTED = "caxecraft-gameplay: Nia gift, Mossling combat/drop, and bounded player health passed\n"
 FORBIDDEN = tuple(
     re.compile(pattern)
     for pattern in (r"#if\b", r"\bDynamic\b", r"\bAny\b", r"\bReflect\b", r"\buntyped\b", r"\b__c__\b", r"\bc\.", r"\braylib\.")
@@ -78,7 +78,7 @@ def main() -> int:
     except (CaxecraftFailure, GameplayFailure, OSError, subprocess.TimeoutExpired, UnicodeError) as error:
         print(f"caxecraft-gameplay: ERROR: {error}", file=sys.stderr)
         return 1
-    print(f"caxecraft-gameplay: OK: target-neutral NPC and enemy state under C/{locale}")
+    print(f"caxecraft-gameplay: OK: target-neutral actor, combat, drop, and health state under C/{locale}")
     return 0
 
 

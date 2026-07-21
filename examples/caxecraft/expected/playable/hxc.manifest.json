@@ -22,9 +22,11 @@
       "src/modules/caxecraft/domain/VoxelRaycast.c",
       "src/modules/caxecraft/domain/World.c",
       "src/modules/caxecraft/domain/WorldStorage.c",
+      "src/modules/caxecraft/gameplay/BerryDrop.c",
       "src/modules/caxecraft/gameplay/GuideNpc.c",
       "src/modules/caxecraft/gameplay/Inventory.c",
-      "src/modules/caxecraft/gameplay/Mossling.c"
+      "src/modules/caxecraft/gameplay/Mossling.c",
+      "src/modules/caxecraft/gameplay/PlayerVitals.c"
     ],
     "cStandard": "c11",
     "definitions": [],
@@ -47,6 +49,8 @@
       "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
       "include/hxc/modules/caxecraft/domain/World.h",
       "include/hxc/modules/caxecraft/domain/WorldStorage.h",
+      "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
+      "include/hxc/modules/caxecraft/gameplay/BerryDropState.h",
       "include/hxc/modules/caxecraft/gameplay/GuideNpc.h",
       "include/hxc/modules/caxecraft/gameplay/GuideState.h",
       "include/hxc/modules/caxecraft/gameplay/Inventory.h",
@@ -54,6 +58,8 @@
       "include/hxc/modules/caxecraft/gameplay/ItemKind.h",
       "include/hxc/modules/caxecraft/gameplay/Mossling.h",
       "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
+      "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
+      "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
       "include/hxc/modules/raylib/raw/Camera3D.h",
       "include/hxc/modules/raylib/raw/Color.h",
       "include/hxc/modules/raylib/raw/Rectangle.h",
@@ -140,7 +146,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "47943258bb883c7b4d696aa02419d6ec0528043d70166c66bec8867c7cd10138",
+      "sha256": "dae8b65490816f315000b9c6deffd91b6c580e9f59c429576c0f7b677e6045ae",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -155,7 +161,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "269ee760432f86fc27237b2be8f5a0a1ff64fa0072aa012fb4cf19fb5171aacd",
+      "sha256": "7a3f7dc0dcffa8011dab157dbea4c8ca37708d414ec45ddef22e77de7ae5dc1f",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -165,17 +171,17 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "fbea41cc3d9dff5e7ed98286b9bae41d4a31398d6fd145513f083ce57cf3e578",
+      "sha256": "315190ec4041e355622cc947e495396f90eab8eb55b7099d328edff8ad3834dc",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "c1fe82f476910f86477370957293bb7c4cdb0eb2dfa7f9739db6c520cdcdf14b",
+      "sha256": "694be930565d9e6be6e1d8b793c48454d32a3976e5d34983ddf8b730066c984a",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
     {
-      "sha256": "8a110d33a1f489bdd549a6b0cf1c0eb5b20090bb06d88aecf51aa54b55b5d866",
+      "sha256": "5a4d2f595294c5b59970a430a790dd38c83c4de0a6b05ee21456869af364c436",
       "path": "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "kind": "private-header"
     },
@@ -190,7 +196,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "115af616659b0ee6093e2276c884ed7f6d4b6af3b4af2c30f0cedc28e1232bef",
+      "sha256": "dfcdff484791b31500477e9f940fe8f1e39b589511d5da81e0594199edaf6c04",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -250,6 +256,16 @@
       "kind": "private-header"
     },
     {
+      "sha256": "91e923ee0256c58baa43aea7546a65d803348ab72132f3e2fed8cde42d99691c",
+      "path": "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "81db6d7d6769ba281ca8071b4b2f42ac846662523f987fb72f977ca73ca7e067",
+      "path": "include/hxc/modules/caxecraft/gameplay/BerryDropState.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "c13e800ff58dda718f9de9b039e41dabbed259fa92b09c1625524be4e80aedd6",
       "path": "include/hxc/modules/caxecraft/gameplay/GuideNpc.h",
       "kind": "private-header"
@@ -260,7 +276,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "13360afef224ce750868c90abaf8b68c74917c9a32aa77c447e4faf311d24456",
+      "sha256": "53b831c09c378b2e03a38c25fd841191069a071315a34e6913290f47793073de",
       "path": "include/hxc/modules/caxecraft/gameplay/Inventory.h",
       "kind": "private-header"
     },
@@ -275,13 +291,23 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a41350d161c43160ecf8d6c5f969db8d1edfa4178044e2c5ae8eec4668b50d18",
+      "sha256": "7ce16321ce01426f89ec4b108d1ebb06a3f27e04d17f3d2afabfc406f19a4725",
       "path": "include/hxc/modules/caxecraft/gameplay/Mossling.h",
       "kind": "private-header"
     },
     {
-      "sha256": "b22b872669bcdb7c4f7f6abe7b311b3d9f260b7f36e922335c4cc516c0c9df76",
+      "sha256": "b922724c905f4e440cbd5ec220d537f86d72e5f758b9622cd1a1b8bf4df4e929",
       "path": "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "7e8f1412c854ed243ffc79765ab352b759a819048ecde679f7d6e7f81ec85c40",
+      "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "bbaff31a6bc22d24c8a0601383c38b3fda2a730c0ca4c626e405e408c412c030",
+      "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
       "kind": "private-header"
     },
     {
@@ -320,12 +346,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "51c0879d11d1f6e3d18f2ac8664539ad761c9e1eaf62e3baab22d236f90aae55",
+      "sha256": "6b5eeb3aece010617e49a10e3374442221e3c452634c7ebdb884a62313a987e4",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "e9e615a36380acb13da9e1b5b4a61a9cf2d83f63ab9b426278f6fab108786b5c",
+      "sha256": "5c10bcb4d77c1acb318e25845423fad04b1ede10a86aa3e16e01271ca76b3fb8",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -335,12 +361,12 @@
       "kind": "source"
     },
     {
-      "sha256": "63adcbec915d127de985c643166bca25804a83a31804ae457516333c9a55bd4c",
+      "sha256": "42dc0ebcca1743e2e268ea3631e89ffb23fb091df0df41d71e6e9d4ec37e6305",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
     {
-      "sha256": "678b6c02f734904ee4e2a8d911fc70ce1394825600f7feea5545ce4dca5f3a32",
+      "sha256": "539c452cf6b51a5a78590d4f88eddb5cc23a78fc1568fc6268821ebff4f87377",
       "path": "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "kind": "source"
     },
@@ -355,7 +381,7 @@
       "kind": "source"
     },
     {
-      "sha256": "5b7d768ce4dce70e96745ddd41e25ded779a6d29f44f0ef9d78dbfa724d7f736",
+      "sha256": "99ff270619fb2e175853ac5878ef07425fa43b292f74a5698322133ef214cacd",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -385,18 +411,28 @@
       "kind": "source"
     },
     {
+      "sha256": "53e390138540ee4691a8b2fc8f557ae48a547bdf16659819b036edc608a01073",
+      "path": "src/modules/caxecraft/gameplay/BerryDrop.c",
+      "kind": "source"
+    },
+    {
       "sha256": "6c6a385361621fab559a82707b901eb03a4ffc490cec9dedc38ceb945927370e",
       "path": "src/modules/caxecraft/gameplay/GuideNpc.c",
       "kind": "source"
     },
     {
-      "sha256": "e75565a24ca84624598d49b0e62ee24145c6d08ac9f2babfcb16009a4c4cb5d3",
+      "sha256": "fd5a92b76cb0f88d880e198e076b80af1bf7afe7286aae1f6d47b6f48b67ba6b",
       "path": "src/modules/caxecraft/gameplay/Inventory.c",
       "kind": "source"
     },
     {
-      "sha256": "a01577a17b0816ca137818a15f5ebf02b677a3f1993f783a5753b8c05c07705b",
+      "sha256": "abce13cb7c05aa352c1f7a98a4a4066ebb43cf44299529778ea0cd66c7a4a98d",
       "path": "src/modules/caxecraft/gameplay/Mossling.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "4e213878d2a7080ccccf1ef88b66f7be125f099d5c081c795fdd463b230200b3",
+      "path": "src/modules/caxecraft/gameplay/PlayerVitals.c",
       "kind": "source"
     }
   ],

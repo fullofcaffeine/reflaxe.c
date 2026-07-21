@@ -69,6 +69,20 @@ final class Inventory {
 		};
 	}
 
+	/** Ask about the selected semantic item without exposing its slot number. */
+	public static function selectedIs(state:InventoryState, item:ItemKind):Bool {
+		return switch (item) {
+			case GrassBlock: state.selected == 0;
+			case DirtBlock: state.selected == 1;
+			case StoneBlock: state.selected == 2;
+			case Haxeforge: state.selected == 3;
+			case CopperSword: state.selected == 4;
+			case Berries: state.selected == 5;
+			case Bread: state.selected == 6;
+			case Lantern: state.selected == 7;
+		};
+	}
+
 	public static function countAt(state:InventoryState, slot:Int):Int {
 		return switch (slot) {
 			case 0: state.grass;

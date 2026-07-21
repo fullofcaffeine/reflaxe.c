@@ -11,12 +11,15 @@ remove, and place colored blocks; it now has the textured title, a typed
 eight-slot inventory/hotbar, reviewed item/HUD art, and deterministic native
 input pilots. A small authored spawn meadow now introduces Nia through a
 two-step welcome/berry gift and renders one fixed-step Mossling with bounded
-notice/chase/return behavior. This is the first actor loop, not the planned
-finished game. The
+notice/chase/return behavior. Adventure now adds the first complete combat
+exchange: three aimed Copper Sword strikes defeat that Mossling, its visible
+berry drop can be collected, contact damage uses three half-step hearts, and a
+fallen player can return to the meadow. This is the first actor loop, not the
+planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;
-the authored mode content does not run yet beyond that first encounter. Actor
-combat, drops, health, broader NPC dialogue, persistence, complete
+the authored mode content does not run yet beyond that first encounter. Broader
+combat and enemies, item recovery, NPC dialogue, persistence, complete
 localization, Ivvy behavior, terrain/entity art, audio, and the authored
 campaign remain unimplemented. Do not describe
 concept art, semantic editor tests, or the remaining design-only atlases as

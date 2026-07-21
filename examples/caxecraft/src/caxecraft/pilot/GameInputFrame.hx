@@ -20,7 +20,10 @@ typedef GameInputFrame = {
 	final lookYaw:Float;
 	final lookPitch:Float;
 	final jumpPressed:Bool;
-	final minePressed:Bool;
+
+	/** Primary world action: mine with a block selected, strike with a sword. */
+	final primaryPressed:Bool;
+
 	final placePressed:Bool;
 	final interactPressed:Bool;
 	final pausePressed:Bool;
@@ -32,7 +35,7 @@ typedef GameInputFrame = {
 
 /** Allocation-free constructors and comparisons for `GameInputFrame`. */
 final class GameInputFrames {
-	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, minePressed:Bool,
+	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
 			placePressed:Bool, interactPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool, hotbarSelection:Int = -1,
 			hotbarCycle:Int = 0):GameInputFrame
 		return {
@@ -41,7 +44,7 @@ final class GameInputFrames {
 			lookYaw: lookYaw,
 			lookPitch: lookPitch,
 			jumpPressed: jumpPressed,
-			minePressed: minePressed,
+			primaryPressed: primaryPressed,
 			placePressed: placePressed,
 			interactPressed: interactPressed,
 			pausePressed: pausePressed,
@@ -82,7 +85,7 @@ final class GameInputFrames {
 			&& left.lookYaw == right.lookYaw
 			&& left.lookPitch == right.lookPitch
 			&& left.jumpPressed == right.jumpPressed
-			&& left.minePressed == right.minePressed
+			&& left.primaryPressed == right.primaryPressed
 			&& left.placePressed == right.placePressed
 			&& left.interactPressed == right.interactPressed
 			&& left.pausePressed == right.pausePressed
