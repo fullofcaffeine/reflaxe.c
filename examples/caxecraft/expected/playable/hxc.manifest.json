@@ -163,7 +163,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "10246923d9675ac7678b9e4755af7ff359b2d4d54976a2b534a99d87affe978d",
+      "sha256": "2216cb209b2931acab7854bc00f8e793aa94a29a82d374050e517784da08c57a",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -173,7 +173,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "dcdaf550dfc81a38487ba7f30dc693af4e6607a425fbc7a91a190b3d0c45e9d2",
+      "sha256": "da733def3d123491e9b6b76db64dd3d2a39f2e7bc56022921b9e8687fcbce76a",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -198,7 +198,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "bb0a2cb8f76141812d76929e4ac2b33a955ac17ef3ee5127e676fa0abcd9b1f8",
+      "sha256": "fddb4ea59bf047fdbd2f6b54d9ba913dd723d343e5de445a2e59bfbf909d554a",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -258,7 +258,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "91e923ee0256c58baa43aea7546a65d803348ab72132f3e2fed8cde42d99691c",
+      "sha256": "6d26b6fca41b2eefd435bc1b8fafeb98efbc76e2672bf868e97eca6794c96280",
       "path": "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
       "kind": "private-header"
     },
@@ -278,7 +278,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "53b831c09c378b2e03a38c25fd841191069a071315a34e6913290f47793073de",
+      "sha256": "1e54e673d3ff6af73e582d754b5459d07981e1fedb3465834e070cf844abfc49",
       "path": "include/hxc/modules/caxecraft/gameplay/Inventory.h",
       "kind": "private-header"
     },
@@ -388,7 +388,7 @@
       "kind": "source"
     },
     {
-      "sha256": "e6f65a179d261c355fe4f1930af5b35e19fd1d1801c7f3224a04620b6c5d47b7",
+      "sha256": "cbdb40cf7d82f94c0a3bd49ea696b03f085b755e417ec4810ccb9aa1494e0483",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -418,7 +418,7 @@
       "kind": "source"
     },
     {
-      "sha256": "53e390138540ee4691a8b2fc8f557ae48a547bdf16659819b036edc608a01073",
+      "sha256": "7676c668cfd457214a5f9c2deeedde8be06af6c808793e95e73ba94513247c87",
       "path": "src/modules/caxecraft/gameplay/BerryDrop.c",
       "kind": "source"
     },
@@ -428,7 +428,7 @@
       "kind": "source"
     },
     {
-      "sha256": "fd5a92b76cb0f88d880e198e076b80af1bf7afe7286aae1f6d47b6f48b67ba6b",
+      "sha256": "75a417cdb9417b145135d879cfa229c407e26aeab19900b6fb5bce7bd791e33f",
       "path": "src/modules/caxecraft/gameplay/Inventory.c",
       "kind": "source"
     },

@@ -2,6 +2,7 @@ package caxecraft.pilot;
 
 import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.Recovery;
+import caxecraft.gameplay.Inventory;
 import caxecraft.pilot.GameInputFrame.GameInputFrames;
 import caxecraft.pilot.PilotCheckpoint.PilotCheckpointKind;
 
@@ -12,6 +13,7 @@ enum abstract PilotScriptName(Int) {
 	var PauseRecapture = 2;
 	var CombatDrop = 3;
 	var RecoveryUse = 4;
+	var FullInventoryGift = 5;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -64,7 +66,9 @@ final class PilotScript {
 			return "pause-recapture";
 		if (name == CombatDrop)
 			return "combat-drop";
-		return "recovery-use";
+		if (name == RecoveryUse)
+			return "recovery-use";
+		return "full-inventory-gift";
 	}
 
 	public static function actionAt(name:PilotScriptName, frameNumber:Int):PilotAction {
@@ -78,7 +82,9 @@ final class PilotScript {
 			return pauseAction(frameNumber);
 		if (name == CombatDrop)
 			return combatAction(frameNumber);
-		return recoveryAction(frameNumber);
+		if (name == RecoveryUse)
+			return recoveryAction(frameNumber);
+		return fullInventoryAction(frameNumber);
 	}
 
 	public static function sample(name:PilotScriptName, frameNumber:Int):GameInputFrame {
@@ -143,12 +149,21 @@ final class PilotScript {
 				frameNumber == 4 ? new PilotCheckpoint("combat-drop.frame", CaptureScreenshot) : null;
 			case RecoveryUse:
 				frameNumber == 2 ? new PilotCheckpoint("recovery-use.frame", CaptureScreenshot) : null;
+			case FullInventoryGift:
+				frameNumber == 2 ? new PilotCheckpoint("full-inventory-gift.frame", CaptureScreenshot) : null;
 		};
 	}
 
 	/** Initial fixture health; ordinary and release paths begin at full health. */
 	public static inline function initialHealth(name:PilotScriptName):Int
 		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - Recovery.BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
+
+	/** Whether the provider should begin with the berry stack at its exact cap. */
+	public static inline function startsWithFullBerryStack(name:PilotScriptName):Bool
+		return name == FullInventoryGift;
+
+	public static inline function fullBerryStackCount():Int
+		return Inventory.MAX_STACK;
 
 	public static inline function complete(name:PilotScriptName, frameNumber:Int):Bool
 		return frameNumber >= frameLimit(name) - 1;
@@ -187,6 +202,13 @@ final class PilotScript {
 		return switch frameNumber {
 			case 0: SelectBerries;
 			case 1: EatBerries;
+			case _: Idle;
+		};
+	}
+
+	static function fullInventoryAction(frameNumber:Int):PilotAction {
+		return switch frameNumber {
+			case 0 | 1: Interact;
 			case _: Idle;
 		};
 	}

@@ -22,7 +22,7 @@ from run import (  # noqa: E402
     verify_pinned_haxe,
 )
 
-EXPECTED = "caxecraft-inventory: 8 typed slots; selection, wrap, consume, collect, empty, and full bounds passed\n"
+EXPECTED = "caxecraft-inventory: 8 typed slots; selection, wrap, consume, lossless collect, empty, and full bounds passed\n"
 FORBIDDEN = tuple(
     re.compile(pattern)
     for pattern in (r"#if\b", r"\bDynamic\b", r"\bAny\b", r"\bReflect\b", r"\buntyped\b", r"\b__c__\b", r"\bc\.", r"\braylib\.")

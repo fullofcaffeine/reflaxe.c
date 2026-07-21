@@ -97,6 +97,34 @@ final class Inventory {
 		};
 	}
 
+	/** Count one semantic item without asking callers to know its slot number. */
+	public static function countItem(state:InventoryState, item:ItemKind):Int {
+		return switch (item) {
+			case GrassBlock: state.grass;
+			case DirtBlock: state.dirt;
+			case StoneBlock: state.stone;
+			case Haxeforge: state.haxeforge;
+			case CopperSword: state.sword;
+			case Berries: state.berries;
+			case Bread: state.bread;
+			case Lantern: state.lantern;
+		};
+	}
+
+	/**
+	 * How much of one offered stack fits without discarding an existing item.
+	 *
+	 * Callers use this before changing a world drop or completing an NPC gift.
+	 */
+	public static function acceptedAmount(state:InventoryState, item:ItemKind, offered:Int):Int {
+		if (offered <= 0)
+			return 0;
+		final space = MAX_STACK - countItem(state, item);
+		if (space <= 0)
+			return 0;
+		return offered < space ? offered : space;
+	}
+
 	/** The selected material, or Air when the selected item cannot be placed. */
 	public static function selectedBlock(state:InventoryState):BlockKind {
 		return switch (state.selected) {
@@ -144,25 +172,27 @@ final class Inventory {
 
 	/** Add a bounded amount of one declared item, as used by NPC gifts/drops. */
 	public static function collectItem(state:InventoryState, kind:ItemKind, amount:Int):InventoryState {
-		if (amount <= 0)
+		final accepted = acceptedAmount(state, kind, amount);
+		if (accepted <= 0)
 			return state;
 		return switch (kind) {
-			case GrassBlock: make(state.selected, state.grass + amount, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
+			case GrassBlock: make(state.selected, state.grass + accepted, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
 					state.lantern);
-			case DirtBlock: make(state.selected, state.grass, state.dirt + amount, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
+			case DirtBlock: make(state.selected, state.grass, state.dirt + accepted, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
 					state.lantern);
-			case StoneBlock: make(state.selected, state.grass, state.dirt, state.stone + amount, state.haxeforge, state.sword, state.berries, state.bread,
+			case StoneBlock: make(state.selected, state.grass, state.dirt, state.stone + accepted, state.haxeforge, state.sword, state.berries, state.bread,
 					state.lantern);
-			case Haxeforge: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge + amount, state.sword, state.berries, state.bread,
+			case Haxeforge: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge + accepted, state.sword, state.berries, state.bread,
 					state.lantern);
-			case CopperSword: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword + amount, state.berries, state.bread,
+			case CopperSword: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword
+					+ accepted, state.berries, state.bread,
 					state.lantern);
-			case Berries: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries + amount, state.bread,
+			case Berries: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries + accepted, state.bread,
 					state.lantern);
-			case Bread: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread + amount,
+			case Bread: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread + accepted,
 					state.lantern);
 			case Lantern: make(state.selected, state.grass, state.dirt, state.stone, state.haxeforge, state.sword, state.berries, state.bread,
-					state.lantern + amount);
+					state.lantern + accepted);
 		};
 	}
 

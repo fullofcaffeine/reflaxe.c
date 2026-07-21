@@ -50,6 +50,10 @@ final class CaxecraftPalette {
 	public static inline function recovery():Color
 		return Color.rgba(94, 212, 136);
 
+	/** Unique warning orange used by deterministic full-inventory checks. */
+	public static inline function inventoryFull():Color
+		return Color.rgba(238, 113, 78);
+
 	public static function block(kind:BlockKind):Color {
 		return switch (kind) {
 			case Air: Color.rgba(0, 0, 0, 0);

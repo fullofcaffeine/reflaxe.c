@@ -11,7 +11,8 @@ one-time berry gift, and a Mossling that notices, chases, and returns on the
 fixed clock. Adventure can strike that Mossling with the Copper Sword, collect
 its visible berry drop, take bounded contact damage, and return to the meadow
 after defeat. Selecting berries and using the secondary action consumes one
-bundle only when it can restore one heart. The complete
+bundle only when it can restore one heart. A full stack preserves Nia's gift
+and any uncollected part of a world drop. The complete
 Creative/Adventure/editor/Ivvy direction and its honest
 present-versus-planned gates live in the
 [game design document](../../docs/caxecraft-game-design.md).
@@ -200,6 +201,11 @@ broader consumable catalog, visual editor, persistence, complete
 localization, audio, terrain textures/chunk meshes, or controller support.
 Passing this slice is integrated evidence, not a claim that the planned game
 is complete.
+
+Collection is lossless at the fixed stack boundary. If only one slot remains,
+one berry enters the inventory and the rest stays visible in the world. If the
+stack is full, a Mossling drop remains available and Nia keeps her gift at the
+same dialogue step until the player uses a berry.
 
 It compares the same 38-line semantic trace under pinned Haxe Eval and all three
 generated-C layouts, checks the registered split/package/unity snapshots, and

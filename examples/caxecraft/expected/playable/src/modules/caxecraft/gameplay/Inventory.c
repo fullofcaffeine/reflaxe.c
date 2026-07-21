@@ -1,5 +1,24 @@
 #include "hxc/program.h"
 
+int32_t hxc_caxecraft_gameplay_Inventory_acceptedAmount(struct hxc_caxecraft_gameplay_InventoryState hxc_state, enum hxc_caxecraft_gameplay_ItemKind hxc_item, int32_t hxc_offered)
+{
+  if (!(hxc_offered <= 0))
+  {
+    int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_gameplay_Inventory_countItem(hxc_state, hxc_item);
+    int32_t hxc_space = hxc_i32_subtract_wrapping(64, hxc_tmp_call_result_n0);
+    if (!(hxc_space <= 0))
+    {
+      if (!(hxc_offered < hxc_space))
+      {
+        return hxc_space;
+      }
+      return hxc_offered;
+    }
+    return 0;
+  }
+  return 0;
+}
+
 struct hxc_caxecraft_gameplay_InventoryState hxc_caxecraft_gameplay_Inventory_collectBlock(struct hxc_caxecraft_gameplay_InventoryState hxc_state, enum hxc_caxecraft_domain_BlockKind hxc_kind)
 {
   switch (hxc_kind) {
@@ -29,7 +48,9 @@ struct hxc_caxecraft_gameplay_InventoryState hxc_caxecraft_gameplay_Inventory_co
 
 struct hxc_caxecraft_gameplay_InventoryState hxc_caxecraft_gameplay_Inventory_collectItem(struct hxc_caxecraft_gameplay_InventoryState hxc_state, enum hxc_caxecraft_gameplay_ItemKind hxc_kind, int32_t hxc_amount)
 {
-  if (!(hxc_amount <= 0))
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_gameplay_Inventory_acceptedAmount(hxc_state, hxc_kind, hxc_amount);
+  int32_t hxc_accepted = hxc_tmp_call_result_n0;
+  if (!(hxc_accepted <= 0))
   {
     switch (hxc_kind) {
       case hxc_caxecraft_gameplay_ItemKind_GrassBlock:
@@ -38,42 +59,42 @@ struct hxc_caxecraft_gameplay_InventoryState hxc_caxecraft_gameplay_Inventory_co
         }
       case hxc_caxecraft_gameplay_ItemKind_DirtBlock:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n19 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_i32_add_wrapping(hxc_state.hxc_dirt, hxc_amount), hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n19;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n23 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_i32_add_wrapping(hxc_state.hxc_dirt, hxc_accepted), hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n23;
         }
       case hxc_caxecraft_gameplay_ItemKind_StoneBlock:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n29 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_i32_add_wrapping(hxc_state.hxc_stone, hxc_amount), hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n29;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n34 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_i32_add_wrapping(hxc_state.hxc_stone, hxc_accepted), hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n34;
         }
       case hxc_caxecraft_gameplay_ItemKind_Haxeforge:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n39 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_i32_add_wrapping(hxc_state.hxc_haxeforge, hxc_amount), hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n39;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n45 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_i32_add_wrapping(hxc_state.hxc_haxeforge, hxc_accepted), hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n45;
         }
       case hxc_caxecraft_gameplay_ItemKind_CopperSword:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n49 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_i32_add_wrapping(hxc_state.hxc_sword, hxc_amount), hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n49;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n56 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_i32_add_wrapping(hxc_state.hxc_sword, hxc_accepted), hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n56;
         }
       case hxc_caxecraft_gameplay_ItemKind_Berries:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n59 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_i32_add_wrapping(hxc_state.hxc_berries, hxc_amount), hxc_state.hxc_bread, hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n59;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n67 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_i32_add_wrapping(hxc_state.hxc_berries, hxc_accepted), hxc_state.hxc_bread, hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n67;
         }
       case hxc_caxecraft_gameplay_ItemKind_Bread:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n69 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_i32_add_wrapping(hxc_state.hxc_bread, hxc_amount), hxc_state.hxc_lantern);
-          return hxc_tmp_call_result_n69;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n78 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_i32_add_wrapping(hxc_state.hxc_bread, hxc_accepted), hxc_state.hxc_lantern);
+          return hxc_tmp_call_result_n78;
         }
       case hxc_caxecraft_gameplay_ItemKind_Lantern:
         {
-          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n79 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_i32_add_wrapping(hxc_state.hxc_lantern, hxc_amount));
-          return hxc_tmp_call_result_n79;
+          struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n89 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_state.hxc_grass, hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_i32_add_wrapping(hxc_state.hxc_lantern, hxc_accepted));
+          return hxc_tmp_call_result_n89;
         }
     }
-    struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n9 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_i32_add_wrapping(hxc_state.hxc_grass, hxc_amount), hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
-    return hxc_tmp_call_result_n9;
+    struct hxc_caxecraft_gameplay_InventoryState hxc_tmp_call_result_n12 = hxc_caxecraft_gameplay_Inventory_make(hxc_state.hxc_selected, hxc_i32_add_wrapping(hxc_state.hxc_grass, hxc_accepted), hxc_state.hxc_dirt, hxc_state.hxc_stone, hxc_state.hxc_haxeforge, hxc_state.hxc_sword, hxc_state.hxc_berries, hxc_state.hxc_bread, hxc_state.hxc_lantern);
+    return hxc_tmp_call_result_n12;
   }
   return hxc_state;
 }
@@ -172,6 +193,45 @@ int32_t hxc_caxecraft_gameplay_Inventory_countAt(struct hxc_caxecraft_gameplay_I
     default:
       {
         return 0;
+      }
+  }
+  return hxc_state.hxc_grass;
+}
+
+int32_t hxc_caxecraft_gameplay_Inventory_countItem(struct hxc_caxecraft_gameplay_InventoryState hxc_state, enum hxc_caxecraft_gameplay_ItemKind hxc_item)
+{
+  switch (hxc_item) {
+    case hxc_caxecraft_gameplay_ItemKind_GrassBlock:
+      {
+        break;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_DirtBlock:
+      {
+        return hxc_state.hxc_dirt;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_StoneBlock:
+      {
+        return hxc_state.hxc_stone;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Haxeforge:
+      {
+        return hxc_state.hxc_haxeforge;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_CopperSword:
+      {
+        return hxc_state.hxc_sword;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Berries:
+      {
+        return hxc_state.hxc_berries;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Bread:
+      {
+        return hxc_state.hxc_bread;
+      }
+    case hxc_caxecraft_gameplay_ItemKind_Lantern:
+      {
+        return hxc_state.hxc_lantern;
       }
   }
   return hxc_state.hxc_grass;

@@ -93,10 +93,16 @@ final class Main {
 		final pilotName:PilotScriptName = PilotScriptName.CombatDrop;
 		#elseif caxecraft_pilot_recovery_use
 		final pilotName:PilotScriptName = PilotScriptName.RecoveryUse;
+		#elseif caxecraft_pilot_full_inventory_gift
+		final pilotName:PilotScriptName = PilotScriptName.FullInventoryGift;
 		#end
 
 		var player:PlayerState = spawnPlayer(cells);
 		var inventory:InventoryState = Inventory.starter();
+		#if caxecraft_pilot
+		if (PilotScript.startsWithFullBerryStack(pilotName))
+			inventory = Inventory.collectItem(inventory, ItemKind.Berries, PilotScript.fullBerryStackCount());
+		#end
 		var guide:GuideState = GuideNpc.start(cells, 17.5, 13.5);
 		var mossling:MosslingState = Mossling.start(cells, 15.5, 13.8);
 		var initialHealth = PlayerVitals.MAX_HEALTH;
@@ -113,7 +119,7 @@ final class Main {
 		var accumulator = 0.0;
 		var jumpQueued = false;
 		var selectedMode:GameMode = GameMode.Creative;
-		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use)
+		#if (caxecraft_pilot_move_jump_edit || caxecraft_pilot_combat_drop || caxecraft_pilot_recovery_use || caxecraft_pilot_full_inventory_gift)
 		// A deterministic provider choice, not gameplay branching: this pilot
 		// exercises finite Adventure inventory and actor behavior from frame one.
 		selectedMode = GameMode.Adventure;
@@ -137,6 +143,8 @@ final class Main {
 		var strikeHitFrames = 0;
 		var enemyDefeatedFrames = 0;
 		var pickupFrames = 0;
+		var pickupAmount = 0;
+		var inventoryFullFrames = 0;
 		var recoveryFeedback = RecoveryDecision.NotRecoveryItem;
 		var recoveryFeedbackFrames = 0;
 
@@ -189,9 +197,17 @@ final class Main {
 					player = spawnPlayer(cells);
 				} else if (GuideNpc.isInRange(guide, player.x, player.z)) {
 					final sharesBerries = GuideNpc.sharesBerriesOnNextInteraction(guide);
-					guide = GuideNpc.interact(guide);
-					if (sharesBerries)
-						inventory = Inventory.collectItem(inventory, ItemKind.Berries, 2);
+					if (sharesBerries) {
+						final acceptedGift = Inventory.acceptedAmount(inventory, ItemKind.Berries, 2);
+						if (acceptedGift == 2) {
+							inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedGift);
+							guide = GuideNpc.interact(guide);
+						} else {
+							inventoryFullFrames = 90;
+						}
+					} else {
+						guide = GuideNpc.interact(guide);
+					}
 				}
 			}
 
@@ -342,9 +358,15 @@ final class Main {
 				placementBlockedFrames--;
 			if (!paused) {
 				if (BerryDrop.isInRange(berryDrop, player.x, player.y, player.z)) {
-					inventory = Inventory.collectItem(inventory, ItemKind.Berries, berryDrop.amount);
-					berryDrop = BerryDrop.collect(berryDrop);
-					pickupFrames = 90;
+					final acceptedDrop = Inventory.acceptedAmount(inventory, ItemKind.Berries, berryDrop.amount);
+					if (acceptedDrop > 0) {
+						inventory = Inventory.collectItem(inventory, ItemKind.Berries, acceptedDrop);
+						berryDrop = BerryDrop.collectAmount(berryDrop, acceptedDrop);
+						pickupAmount = acceptedDrop;
+						pickupFrames = 90;
+					} else {
+						inventoryFullFrames = 90;
+					}
 				}
 			}
 			if (strikeHitFrames > 0)
@@ -353,6 +375,8 @@ final class Main {
 				enemyDefeatedFrames--;
 			if (pickupFrames > 0)
 				pickupFrames--;
+			if (inventoryFullFrames > 0)
+				inventoryFullFrames--;
 			if (recoveryFeedbackFrames > 0)
 				recoveryFeedbackFrames--;
 
@@ -372,7 +396,8 @@ final class Main {
 				Raylib.EndMode3D();
 				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
 					player.x, player.z, selectedMode, language, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
-					pickupFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture, hudTextureReady, itemTexture, itemTextureReady);
+					pickupFrames > 0, pickupAmount, inventoryFullFrames > 0, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture, hudTextureReady,
+					itemTexture, itemTextureReady);
 			}
 			Raylib.EndDrawing();
 			#if caxecraft_pilot
@@ -388,6 +413,8 @@ final class Main {
 				Raylib.TakeScreenshot("caxecraft-pilot-combat.png");
 			if (pilotName == PilotScriptName.RecoveryUse && frameCount == 2)
 				Raylib.TakeScreenshot("caxecraft-pilot-recovery.png");
+			if (pilotName == PilotScriptName.FullInventoryGift && frameCount == 2)
+				Raylib.TakeScreenshot("caxecraft-pilot-full-inventory.png");
 			#end
 			frameCount++;
 		}
@@ -490,8 +517,9 @@ final class Main {
 
 	static function drawHud(visible:Int, drawCalls:Int, frames:Int, updates:Int, paused:Bool, captured:Bool, placementBlocked:Bool, hit:RaycastHit,
 			playerX:Float, playerZ:Float, mode:GameMode, language:GameLanguage, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
-			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, pickedUp:Bool, recoveryFeedback:RecoveryDecision, recoveryVisible:Bool,
-			hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D, itemTextureReady:Bool):Void {
+			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, pickedUp:Bool, pickupAmount:Int, inventoryFull:Bool,
+			recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool, itemTexture:Texture2D,
+			itemTextureReady:Bool):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
@@ -561,10 +589,24 @@ final class Main {
 				Raylib.DrawText("MOSSLING DROPPED BERRIES", width - 270, 54, 16, CaxecraftPalette.selection());
 		}
 		if (pickedUp) {
-			if (language == GameLanguage.Spanish)
-				Raylib.DrawText("+2 BAYAS", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
-			else
+			// Each imported call receives a direct literal with static C lifetime.
+			// haxe_c-zcj.2 owns proving the same fact through a conditional value.
+			if (language == GameLanguage.Spanish) {
+				if (pickupAmount == 1)
+					Raylib.DrawText("+1 BAYA", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
+				else
+					Raylib.DrawText("+2 BAYAS", centerX - 42, centerY + 24, 18, CaxecraftPalette.berry());
+			} else if (pickupAmount == 1) {
+				Raylib.DrawText("+1 BERRY", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
+			} else {
 				Raylib.DrawText("+2 BERRIES", centerX - 48, centerY + 24, 18, CaxecraftPalette.berry());
+			}
+		}
+		if (inventoryFull) {
+			if (language == GameLanguage.Spanish)
+				Raylib.DrawText("BAYAS LLENAS: USA UNA PRIMERO", centerX - 150, centerY + 48, 16, CaxecraftPalette.inventoryFull());
+			else
+				Raylib.DrawText("BERRIES FULL: USE ONE FIRST", centerX - 140, centerY + 48, 16, CaxecraftPalette.inventoryFull());
 		}
 		if (recoveryVisible) {
 			if (recoveryFeedback == RecoveryDecision.UseBerries) {

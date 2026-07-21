@@ -59,10 +59,13 @@ npm run caxecraft:play -- --pilot combat-drop
 
 # Start one heart below full, consume berries, prove recovery feedback, and quit.
 npm run caxecraft:play -- --pilot recovery-use
+
+# Fill the berry stack, ask Nia for her gift, prove it remains retryable, and quit.
+npm run caxecraft:play -- --pilot full-inventory-gift
 ```
 
-The five closed script names are `LaunchSmoke`, `MoveJumpEdit`,
-`PauseRecapture`, `CombatDrop`, and `RecoveryUse`. Each has a small fixed frame
+The six closed script names are `LaunchSmoke`, `MoveJumpEdit`,
+`PauseRecapture`, `CombatDrop`, `RecoveryUse`, and `FullInventoryGift`. Each has a small fixed frame
 limit below the absolute 120-frame policy. Its final and every later action is `Quit`, which
 protects against a script accidentally becoming an unattended interactive
 session. The Python runner adds an independent 15-second wall-clock timeout.
@@ -86,6 +89,11 @@ selects berries, performs the same secondary action as a real right click, and
 requires the unique successful-recovery color in the presented framebuffer.
 Because a full-health or empty-stack decision cannot produce that feedback,
 the screenshot proves the shared recovery transition reached the renderer.
+
+The full-inventory pilot begins with exactly 64 berries, advances Nia to the
+gift step, and tries the interaction again. Its frame must show both the unique
+capacity-warning color and Nia still offering the gift. The renderer-free test
+separately proves that partial world pickup leaves the remainder active.
 
 ## Why the native path has one compile-time condition
 

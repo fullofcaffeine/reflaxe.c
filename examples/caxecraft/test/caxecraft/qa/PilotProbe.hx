@@ -18,14 +18,16 @@ final class PilotProbe {
 		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
 		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 6);
 		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
+		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
 		checkpoints += checkCombat();
 		checkpoints += checkRecovery();
+		checkpoints += checkFullInventory();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 5 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 6 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -112,6 +114,18 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 2);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "recovery-use.frame",
 			"recovery screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkFullInventory():Int {
+		final name = PilotScriptName.FullInventoryGift;
+		require(PilotScript.startsWithFullBerryStack(name)
+			&& PilotScript.fullBerryStackCount() == 64, "full-inventory fixture lost the exact berry cap");
+		require(PilotScript.sample(name, 0).interactPressed && PilotScript.sample(name, 1).interactPressed,
+			"full-inventory script lost Nia's two dialogue actions");
+		final screenshot = PilotScript.checkpoint(name, 2);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "full-inventory-gift.frame",
+			"full-inventory screenshot checkpoint changed");
 		return 1;
 	}
 

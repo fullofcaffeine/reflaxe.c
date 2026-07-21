@@ -15,7 +15,9 @@ notice/chase/return behavior. Adventure now adds the first complete combat
 exchange: three aimed Copper Sword strikes defeat that Mossling, its visible
 berry drop can be collected, contact damage uses three half-step hearts, and a
 selected berry restores one heart without exceeding the health limit. A fallen
-player can return to the meadow. This is the first actor loop, not the
+player can return to the meadow. Full stacks preserve Nia's gift and any
+uncollected part of a world drop instead of silently deleting items. This is
+the first actor loop, not the
 planned finished game. The
 target-neutral editor command/history/test-play layer now exists, but the
 in-game Raylib interface does not. The menu can choose Creative or Adventure;

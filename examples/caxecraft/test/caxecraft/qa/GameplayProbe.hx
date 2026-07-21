@@ -36,6 +36,13 @@ final class GameplayProbe {
 		guide = GuideNpc.interact(guide);
 		require(GuideNpc.phase(guide) == GuidePhase.SharedBerries && inventory.berries == berriesBefore + 2, "one-time gift is explicit");
 		require(GuideNpc.phase(GuideNpc.interact(guide)) == GuidePhase.SharedBerries, "finished conversation is stable");
+		var waitingGift = GuideNpc.interact(GuideNpc.start(cells, 17.5, 13.5));
+		final fullBerries = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK, 0, 0);
+		final acceptedGift = Inventory.acceptedAmount(fullBerries, ItemKind.Berries, 2);
+		if (acceptedGift == 2)
+			waitingGift = GuideNpc.interact(waitingGift);
+		require(acceptedGift == 0
+			&& GuideNpc.phase(waitingGift) == GuidePhase.Welcomed, "full stack keeps Nia's gift available for retry");
 
 		var mossling = Mossling.start(cells, 12.5, 12.5);
 		final initialX = mossling.x;
@@ -62,8 +69,19 @@ final class GameplayProbe {
 		require(BerryDrop.isInRange(drop, drop.x, drop.y, drop.z), "near player can collect drop");
 		final berriesBeforeDrop = inventory.berries;
 		inventory = Inventory.collectItem(inventory, ItemKind.Berries, drop.amount);
-		drop = BerryDrop.collect(drop);
+		drop = BerryDrop.collectAmount(drop, drop.amount);
 		require(!drop.active && inventory.berries == berriesBeforeDrop + 2, "drop collection is one-time and explicit");
+
+		var partialDrop = BerryDrop.fromDefeatedMossling(target);
+		var nearlyFull = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK - 1, 0, 0);
+		final acceptedDrop = Inventory.acceptedAmount(nearlyFull, ItemKind.Berries, partialDrop.amount);
+		nearlyFull = Inventory.collectItem(nearlyFull, ItemKind.Berries, acceptedDrop);
+		partialDrop = BerryDrop.collectAmount(partialDrop, acceptedDrop);
+		require(acceptedDrop == 1 && nearlyFull.berries == Inventory.MAX_STACK && partialDrop.active && partialDrop.amount == 1,
+			"partial pickup leaves the uncollected berry visible");
+		final fullAcceptedDrop = Inventory.acceptedAmount(nearlyFull, ItemKind.Berries, partialDrop.amount);
+		require(fullAcceptedDrop == 0
+			&& BerryDrop.collectAmount(partialDrop, fullAcceptedDrop) == partialDrop, "full stack cannot destroy the remaining drop");
 
 		var vitals = PlayerVitals.start();
 		vitals = PlayerVitals.step(vitals, 10.5, 12.5, 10.8, 12.5, true);
@@ -104,7 +122,7 @@ final class GameplayProbe {
 
 		require(Recovery.decide(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
 
-		Sys.println("caxecraft-gameplay: Nia gift, Mossling combat/drop, berry recovery, and bounded player health passed");
+		Sys.println("caxecraft-gameplay: lossless gifts/drops, Mossling combat, berry recovery, and bounded player health passed");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {

@@ -35,7 +35,15 @@ final class InventoryProbe {
 		require(empty.stone == Inventory.MAX_STACK, "full stack stays bounded");
 		require(Inventory.collectBlock(empty, BlockKind.Bedrock).stone == Inventory.MAX_STACK, "bedrock is not an item drop");
 
-		Sys.println("caxecraft-inventory: 8 typed slots; selection, wrap, consume, collect, empty, and full bounds passed");
+		var partial = Inventory.make(5, 0, 0, 0, 0, 0, Inventory.MAX_STACK - 1, 0, 0);
+		require(Inventory.acceptedAmount(partial, ItemKind.Berries, 2) == 1, "partial stack reports exact remaining capacity");
+		partial = Inventory.collectItem(partial, ItemKind.Berries, 2);
+		require(partial.berries == Inventory.MAX_STACK, "collection accepts only the amount that fits");
+		require(Inventory.acceptedAmount(partial, ItemKind.Berries, 2) == 0
+			&& Inventory.collectItem(partial, ItemKind.Berries, 2) == partial,
+			"full item stack rejects collection without mutation");
+
+		Sys.println("caxecraft-inventory: 8 typed slots; selection, wrap, consume, lossless collect, empty, and full bounds passed");
 	}
 
 	static inline function require(condition:Bool, message:String):Void {
