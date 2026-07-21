@@ -58,7 +58,8 @@ class HxcIRDiagnostic {
 	 *
 	 * That API accepts one Haxe `Position`, while an internal failure belongs to
 	 * a generated IR instruction. Keeping both stable spellings in the message
-	 * makes a production HXC9000 actionable without exposing an absolute path.
+	 * makes an internal-compiler-error diagnostic actionable without exposing an
+	 * absolute path.
 	 */
 	public function compilerDetail():String
 		return '$message [ir=$irPath; source=${source.display()}]';

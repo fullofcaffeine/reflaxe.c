@@ -75,6 +75,12 @@ and pleasant.
   plan exists, describe it only as a proposal or question; do not turn it into
   documentation fact. Keep these distinctions local and readable so a reader
   does not have to inspect the issue tracker to learn what works today.
+- `AGENTS.md` is the only authored agent-instruction file. A compatibility
+  `CLAUDE.md` must be a Git-tracked relative symbolic link to the `AGENTS.md` in
+  the same directory; never copy, generate, or manually mirror the prose. Run
+  `npm run test:agent-instructions` after adding, moving, or changing either
+  path. The guard rejects regular-file copies, broken links, absolute or
+  escaping targets, and links to an untracked file.
 - Structure longer material from overview to example to implementation details
   to evidence. Use headings, short paragraphs, and terminology consistently so
   the document can be read as a tutorial as well as a reference.

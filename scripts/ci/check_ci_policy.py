@@ -45,10 +45,12 @@ REQUIRED_GATE_FILES = (
     "scripts/security/run-beads-gitleaks.sh",
     "scripts/ci/install-gitleaks.sh",
     "scripts/ci/check_security_tooling.py",
+    "scripts/ci/check_agent_instruction_links.py",
     "scripts/ci/run_toolchain_shard.py",
     ".github/workflows/snapshot-audit.yml",
     "test/governance/test_toolchain_shard.py",
     "test/governance/test_caxecraft_timing.py",
+    "test/governance/test_agent_instruction_links.py",
     "docs/specs/toolchain-timing.schema.json",
     "docs/specs/span-lowering-timing.schema.json",
     "docs/specs/caxecraft-timing.schema.json",
@@ -936,6 +938,11 @@ def validate() -> list[str]:
     ):
         errors.append("package.json must retain the security-tooling policy gate")
     if (
+        scripts.get("test:agent-instructions")
+        != "python3 scripts/ci/check_agent_instruction_links.py"
+    ):
+        errors.append("package.json must retain the agent-instruction symlink gate")
+    if (
         scripts.get("public:preflight")
         != PUBLIC_PREFLIGHT_COMMAND
     ):
@@ -1164,6 +1171,12 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:governance must execute the security-tooling guard"
         )
+    if "npm run test:agent-instructions" not in str(
+        scripts.get("test:governance", "")
+    ):
+        errors.append(
+            "package.json test:governance must execute the agent-instruction symlink guard"
+        )
     if "npm run test:fixture-policy" not in str(
         scripts.get("test:governance", "")
     ):
@@ -1246,6 +1259,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the native smoke harness for relevant changes")
     if "scripts/ci/check_ci_policy.py" not in pre_commit:
         errors.append("pre-commit must validate required CI wiring")
+    if "npm run test:agent-instructions" not in pre_commit:
+        errors.append("pre-commit must validate canonical agent-instruction links")
     if "test/c_ast/run.py" not in pre_commit:
         errors.append("pre-commit must run the structural C AST golden test")
     if "c_fixture_harness" not in pre_commit or "c-ast-roundtrip" not in pre_commit:
