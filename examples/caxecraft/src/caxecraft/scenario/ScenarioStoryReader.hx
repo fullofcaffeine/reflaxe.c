@@ -36,10 +36,15 @@ final class ScenarioStoryReader {
 			if (record.indent != 2 || record.tokens.length < 4 || ScenarioTokenGrammar.firstText(record) != "line")
 				return cursor.failAt(record, UnexpectedRecord(ScenarioTokenGrammar.firstText(record)));
 			final narrator = ScenarioTokenGrammar.isBare(record.tokens[1], "narrator");
-			final speaker = narrator ? null : ScenarioTokenGrammar.scenarioId(record.tokens[1]);
+			// The earlier spelling has four tokens (`line <id> <text>`), while
+			// the explicit spelling has five (`line speaker <id> <text>`). The
+			// count keeps an older object whose ID is literally `speaker`
+			// readable without making the two forms ambiguous.
+			final explicitSpeaker = ScenarioTokenGrammar.isBare(record.tokens[1], "speaker") && record.tokens.length == 5;
+			final speaker = narrator ? null : ScenarioTokenGrammar.scenarioId(record.tokens[explicitSpeaker ? 2 : 1]);
 			if (!narrator && speaker == null)
-				return cursor.failToken(record.tokens[1], InvalidToken);
-			final parsed = ScenarioTokenGrammar.text(record, 2);
+				return cursor.failToken(record.tokens[explicitSpeaker ? 2 : 1], InvalidToken);
+			final parsed = ScenarioTokenGrammar.text(record, explicitSpeaker ? 3 : 2);
 			if (parsed == null || parsed.next != record.tokens.length)
 				return cursor.failAt(record, InvalidToken);
 			lines.push({speaker: speaker, text: parsed.value});

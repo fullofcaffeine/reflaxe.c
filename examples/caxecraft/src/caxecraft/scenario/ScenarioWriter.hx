@@ -13,10 +13,20 @@ import caxecraft.scenario.ScenarioObject.ObjectPlacement;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import haxe.io.Bytes;
 
-/** Canonical, deterministic CAXEMAP 1 serializer. */
+/**
+	Canonical, deterministic CAXEMAP 1 serializer.
+
+	The editor also uses this structural spelling for in-memory undo of an
+	incomplete draft. Writing bytes does not declare a scenario playable or safe
+	to persist; those operations must first pass `ScenarioValidator`.
+**/
 final class ScenarioWriter {
+	public static inline final FORMAT_VERSION = 1;
+
 	public static function write(scenario:Scenario):Bytes {
-		final lines:Array<String> = ["CAXEMAP 1"];
+		if (scenario.formatVersion != FORMAT_VERSION)
+			throw 'ScenarioWriter supports CAXEMAP $FORMAT_VERSION, not ${scenario.formatVersion}';
+		final lines:Array<String> = ['CAXEMAP $FORMAT_VERSION'];
 		final required = scenario.requiredFeatures.copy();
 		final optional = scenario.optionalFeatures.copy();
 		required.sort((left, right) -> compareUtf8(left.text(), right.text()));
@@ -67,7 +77,7 @@ final class ScenarioWriter {
 		for (dialogue in dialogues) {
 			lines.push('dialogue ${dialogue.id.text()}');
 			for (entry in dialogue.lines)
-				lines.push('  line ${entry.speaker == null ? "narrator" : entry.speaker.text()} ${text(entry.text)}');
+				lines.push(entry.speaker == null ? '  line narrator ${text(entry.text)}' : '  line speaker ${entry.speaker.text()} ${text(entry.text)}');
 			lines.push("end dialogue");
 		}
 

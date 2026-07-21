@@ -1,8 +1,9 @@
 # CAXEMAP 1 scenario format
 
-Status: accepted format contract. The target-neutral Eval codec/validator is in
-progress under `haxe_c-xge.19.2`; native persistence, execution, and editor work
-remain later ordered `haxe_c-xge.19.*` slices.
+Status: accepted format contract. The target-neutral Eval codec/validator,
+fixed-tick CaxeFlow executor, and renderer-independent editor semantics are
+implemented. Native persistence and the child-friendly Raylib editor remain
+later ordered `haxe_c-xge.19.*` slices.
 
 CAXEMAP is Caxecraft's public map and story format. Creative, Adventure, the
 in-game editor, Eval tests, and generated C all use the same typed model. Built-
@@ -174,13 +175,14 @@ overlaps or locations disallowed by the registered placement kind.
 ## Story records
 
 Text is either `message <message-id>` or `literal "<user text>"`. Built-in
-English/Spanish content uses message IDs. A speaker is an object ID or
-`narrator`.
+English/Spanish content uses message IDs. `narrator` means that no world object
+is speaking. A world object uses the separate `speaker <object-id>` form, so an
+object whose ID is literally `narrator` remains unambiguous.
 
 ```text
 dialogue <id>
   line narrator message <message-id>
-  line <speaker-object-id> literal "<user text>"
+  line speaker <speaker-object-id> literal "<user text>"
 end dialogue
 
 journal <id> title <text>
@@ -197,8 +199,10 @@ end route
 ```
 
 Dialogue line and route objective order is semantic. All referenced speakers,
-dialogues, and objectives must exist. Version 1 admits at most 1,024 dialogues,
-128 lines per dialogue, 512 objectives, and 64 routes.
+dialogues, and objectives must exist. The reader still accepts the early
+`line <speaker-object-id> <text>` spelling and the canonical writer makes it
+explicit as `line speaker <speaker-object-id> <text>`. Version 1 admits at most
+1,024 dialogues, 128 lines per dialogue, 512 objectives, and 64 routes.
 
 ## CaxeFlow variables and values
 
@@ -423,6 +427,22 @@ and C versus Spanish-locale trace equality. The same source is intentionally
 target-neutral so a later generated-C integration uses the tested engine
 instead of a C-only copy.
 
+## Renderer-independent editing
+
+`EditorSession` applies a closed `EditorCommand` enum to a draft without
+importing Raylib or the C target API. Commands cover world resize, palette and
+voxel edits, bounded selection/fill, prefab stamps, placements, dialogue,
+objectives, rules, and explicit last-playable recovery. The draft may be
+temporarily invalid; a separate last-playable snapshot changes only when the
+complete model passes `ScenarioValidator`.
+
+Undo and redo store exact bounded in-memory CAXEMAP snapshots plus selection
+state. Both stacks share deterministic entry and byte limits, and an oversized
+entry is rejected before the draft changes. Test play validates and deep-copies
+the current draft into a disposable `CaxeFlowExecutor`; leaving test play drops
+all simulation changes. See [Caxecraft editor semantics](caxecraft-editor.md)
+for the command families, bounds, performance tradeoff, and focused proof.
+
 ## Feature extensions
 
 Core records above cannot be redefined. An optional extension is carried as:
@@ -468,8 +488,10 @@ The implementation keeps those stages visible in the source tree:
   source-coordinate lookup and diagnostic collection. This prevents the
   smaller validators from disagreeing about whether an ID exists or which
   source record should receive an error.
-- `ScenarioWriter` accepts only the validated model and produces the one
-  canonical byte spelling.
+- `ScenarioWriter` produces the one canonical byte spelling for a structurally
+  representable typed model. Saving or test-playing still requires the complete
+  candidate to pass `ScenarioValidator`; the editor may use the same bytes only
+  in memory to retain an incomplete draft for undo and repair.
 
 The readers share a `ScenarioRecordCursor`. Here, a **cursor** is simply the
 current line plus the source locations collected so far. A successful reader

@@ -8,10 +8,12 @@ Status: accepted product and technical direction; implementation is staged.
 The deterministic domain, first original art pack, and first native Raylib
 feasibility slice exist today. That slice can move, collide, jump, select,
 remove, and place colored blocks; it is not the planned finished game. The
-modes, asset-integrated visual pass, inventory, creatures, NPCs, editor,
-persistence, localization, Ivvy behavior, and authored campaign are not yet
-implemented. Do not describe concept art or asset atlases as evidence that
-those capabilities run.
+target-neutral editor command/history/test-play layer now exists, but the
+in-game Raylib interface does not. The modes, asset-integrated visual pass,
+inventory, creatures, NPC gameplay, persistence, localization, Ivvy behavior,
+and authored campaign are not yet implemented. Do not describe concept art,
+semantic editor tests, or asset atlases as evidence that those broader
+capabilities run.
 
 The durable work owners are:
 
@@ -332,6 +334,13 @@ The editor itself supports bounded paint/erase/fill, selection, prefab stamps,
 entity and trigger placement, dialogue/objective editing, undo/redo, validation,
 save/load, and reversible Edit <-> Test Play transitions. The Adventure must
 round-trip through this public path with byte and semantic parity.
+
+The renderer-independent part of that contract is now executable: closed
+commands, bounded exact undo/redo, last-playable recovery, in-memory canonical
+reload, and disposable CaxeFlow test play are documented in
+[Caxecraft editor semantics](caxecraft-editor.md). Native file save/load and the
+child-friendly Raylib presentation remain separate gates; the Eval proof must
+not be described as a shipped visual editor.
 
 ## Music, sound, and audio authoring
 

@@ -80,6 +80,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
     "caxecraft": (
         "test:caxecraft-scenario-model",
         "test:caxecraft-caxeflow",
+        "test:caxecraft-editor",
         "test:caxecraft-scenario-determinism",
         "test:caxecraft-domain:full",
         "snapshots:catalog",

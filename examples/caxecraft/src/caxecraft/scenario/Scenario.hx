@@ -1,6 +1,12 @@
 package caxecraft.scenario;
 
-/** Complete validated semantic model shared by editor, game, Eval, and C. */
+/**
+	Complete typed scenario shape shared by editor, game, Eval, and C.
+
+	A parsed or edited value may still contain unresolved references or another
+	semantic error. Only a value returned by `ScenarioValidator` is playable or
+	eligible for persistence.
+**/
 typedef Scenario = {
 	final formatVersion:Int;
 	final requiredFeatures:Array<ContentId>;

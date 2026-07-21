@@ -287,8 +287,22 @@ compares normal versus reversed rule registration. It is target-neutral Eval
 evidence today, not yet proof that the complete executor compiles and runs in
 the playable generated-C application.
 
-Native persistence and the visual editor remain ordered `haxe_c-xge.19.*`
-slices. The readable
+The renderer-independent editor core also has a focused command:
+
+```sh
+npm run test:caxecraft-editor
+```
+
+It creates a complete small map through public typed commands and proves exact
+undo/redo, bounded history and gestures, canonical in-memory reload,
+last-playable recovery, and disposable test play under C and a second installed
+locale (Spanish when available). It imports no Raylib or C target API. This is
+the semantic foundation for the future UI, not a claim that an in-game editor
+or native file save is already available. Its design is explained in
+[the editor semantics guide](../../docs/caxecraft-editor.md).
+
+Native persistence and the visual Raylib editor remain ordered
+`haxe_c-xge.19.*` slices. The readable
 [CAXEMAP 1 reference](../../docs/caxemap-1.md) is their shared contract.
 
 To compile only the C project through the direct recovery path:

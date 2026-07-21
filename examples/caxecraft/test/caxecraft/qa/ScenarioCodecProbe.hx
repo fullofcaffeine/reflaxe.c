@@ -52,6 +52,7 @@ final class ScenarioCodecProbe {
 		checkSemanticLimitsAndContent(canonical);
 		checkDiagnosticPayloads(canonical, fullCanonical);
 		checkRoleSpecificReferences(canonical, fullCanonical);
+		checkNarratorIdentity(canonical);
 		checkFlowVariableScopes(fullCanonical);
 		checkFlowBoundsAndGrammar(canonical, fullCanonical);
 		checkBoundedFailures(canonical);
@@ -67,6 +68,20 @@ final class ScenarioCodecProbe {
 			"invalid-token", 60, 1, 60);
 		expectFailureAt(replace(fullCanonical, "greater-or-equal 1)", '"greater-or-equal" 1)'), "quoted-comparison", "invalid-token", 103, 3, 103);
 		expectFailureAt(replace(fullCanonical, "if (always)", 'if "(" always ")"'), "quoted-predicate-delimiters", "invalid-token", 121, 3, 121);
+	}
+
+	static function checkNarratorIdentity(canonical:Bytes):Void {
+		final legacy = replace(canonical, "line speaker guide.ivvy", "line guide.ivvy");
+		require(ScenarioWriter.write(readValid(legacy)).compare(canonical) == 0, "legacy speaker spelling did not converge on canonical bytes");
+		final speakerCanonical = ScenarioWriter.write(readValid(replace(canonical, "guide.ivvy", "speaker")));
+		final speakerLegacy = replace(speakerCanonical, "line speaker speaker", "line speaker");
+		require(ScenarioWriter.write(readValid(speakerLegacy)).compare(speakerCanonical) == 0,
+			"a legacy object named speaker did not converge on explicit canonical bytes");
+		final source = replace(canonical, "guide.ivvy", "narrator");
+		final scenario = readValid(source);
+		final speaker = scenario.story.dialogues[0].lines[0].speaker;
+		require(speaker != null && speaker.text() == "narrator", "an object named narrator became narration");
+		require(ScenarioWriter.write(scenario).compare(source) == 0, "the explicit narrator speaker did not round-trip byte-identically");
 	}
 
 	static function checkIntegerSpellings(fullCanonical:Bytes):Void {
@@ -133,7 +148,8 @@ final class ScenarioCodecProbe {
 		expectMissing(truncateAfterLast(canonical, "  run 0 12\n"), "missing-end-chunk", EndChunkRecord, 10, 1, 10);
 		expectMissing(truncateAfterLast(canonical, "  placement checkpoint 1500 1000 1500 0\n"), "missing-end-object", EndObjectRecord, 20, 1, 20);
 		expectMissing(replace(canonical, "  placement checkpoint 1500 1000 1500 0\n", ""), "missing-object-placement", ObjectPlacementRecord, 20, 1, 20);
-		expectMissing(truncateAfterLast(canonical, "  line guide.ivvy message dialogue.ivvy.hello\n"), "missing-end-dialogue", EndDialogueRecord, 36, 1, 36);
+		expectMissing(truncateAfterLast(canonical, "  line speaker guide.ivvy message dialogue.ivvy.hello\n"), "missing-end-dialogue", EndDialogueRecord, 36,
+			1, 36);
 		expectMissing(replace(fullCanonical, "  body literal \"Lower the bridge.\"\n", ""), "missing-journal-body", JournalBodyRecord, 57, 1, 57);
 		expectMissing(truncateAfterLast(fullCanonical, "  body literal \"Lower the bridge.\"\n"), "missing-end-journal", EndJournalRecord, 57, 1, 57);
 		expectMissing(replace(canonical, "  body message objective.meet-ivvy.body\n", ""), "missing-objective-body", ObjectiveBodyRecord, 39, 1, 39);
@@ -167,7 +183,7 @@ final class ScenarioCodecProbe {
 				case DuplicateTag(objectId, tag): objectId.text() == "guide.ivvy" && tag.text() == "friend";
 				case _: false;
 			});
-		final dialogue = "dialogue dialogue.ivvy.hello\n  line guide.ivvy message dialogue.ivvy.hello\nend dialogue\n";
+		final dialogue = "dialogue dialogue.ivvy.hello\n  line speaker guide.ivvy message dialogue.ivvy.hello\nend dialogue\n";
 		expectDuplicateId(replace(canonical, dialogue, dialogue + dialogue), "duplicate-dialogue", "dialogue.ivvy.hello", 39, 1, 39);
 		final objective = "objective objective.meet-ivvy active title message objective.meet-ivvy.title\n  body message objective.meet-ivvy.body\nend objective\n";
 		expectDuplicateId(replace(canonical, objective, objective + objective), "duplicate-objective", "objective.meet-ivvy", 42, 1, 42);

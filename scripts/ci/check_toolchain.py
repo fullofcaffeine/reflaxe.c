@@ -245,6 +245,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_caxeflow_script = (
         "python3 examples/caxecraft/check_caxeflow.py"
     )
+    expected_caxecraft_editor_script = "python3 examples/caxecraft/check_editor.py"
     expected_caxecraft_scenario_determinism_script = (
         "python3 examples/caxecraft/check_scenario_determinism.py"
     )
@@ -268,7 +269,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -457,6 +458,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         != expected_caxecraft_caxeflow_script
     ):
         errors.append("package.json must retain the deterministic CaxeFlow gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-editor") != expected_caxecraft_editor_script
+    ):
+        errors.append("package.json must retain the target-neutral CaxeMap editor gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-domain") != expected_caxecraft_domain_script

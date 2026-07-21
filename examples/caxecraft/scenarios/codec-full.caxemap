@@ -52,7 +52,7 @@ object zone.test
 end object
 dialogue dialogue.ivvy
   line narrator message dialogue.narrator
-  line npc.ivvy literal "¡Vamos, Haxirio!"
+  line speaker npc.ivvy literal "¡Vamos, Haxirio!"
 end dialogue
 journal journal.bridge title message journal.bridge.title
   body literal "Lower the bridge."

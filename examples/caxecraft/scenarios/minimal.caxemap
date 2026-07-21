@@ -34,7 +34,7 @@ object zone.welcome
   placement trigger-zone 1 1 1 2 2 2
 end object
 dialogue dialogue.ivvy.hello
-  line guide.ivvy message dialogue.ivvy.hello
+  line speaker guide.ivvy message dialogue.ivvy.hello
 end dialogue
 objective objective.meet-ivvy active title message objective.meet-ivvy.title
   body message objective.meet-ivvy.body
