@@ -44,5 +44,7 @@ its location belongs to a CaxeMap, not this reusable definition.
 
 These declarations now validate and generate typed Haxe. The native playable
 does not yet consume the complete authored level, render water, or persist its
-mutable fluid state. Those product integrations remain owned by
-`haxe_c-xge.20.5.3`; the schema does not claim they already work.
+mutable fluid state to a file. The engine now exposes a validated in-memory
+water snapshot for the future full save codec. The remaining product
+integrations are owned by `haxe_c-xge.20.5.3`; the schema does not claim they
+already work.

@@ -195,19 +195,34 @@ Current limits are deliberate and executable:
 - world edges are sealed;
 - only authored sources are permanent—adjacent sources do not create a new
   infinite source;
+- CAXEMAP may also place a finite initial volume. It writes full non-source
+  cells only after validating the complete box, then schedules the six outside
+  faces. A sealed pool stays full; an opening begins bounded leakage;
 - the simulation updates committed cells in its documented stable order rather
   than calculating a whole second world buffer;
 - `World.query` and collision still treat water bytes as passable air, while
   `WaterSimulation.cellState` and `WaterCellCodec.stateAt` preserve their exact
   fluid meaning;
-- rendering, transparent surface shape, playable-loop integration, CaxeMap
-  placement, editor tools, and save/load integration are owned by the following
-  slices, not claimed here.
+- CAXEMAP source/volume placement and renderer-independent editor commands are
+  implemented; rendering, transparent surface shape, and playable-loop loading
+  remain later parts of the active integration slice.
+
+`WaterSnapshot` is the save-game handoff, not a second simulator. It captures
+only exact source/flow bytes plus pending queue marks in ascending world-index
+order. Restore validates the complete candidate before changing live bytes,
+preserves solid terrain, clears authored water removed during play, overlays the
+saved water, and lets the owning `WaterSimulation` rebuild its two derived
+scheduler counters from the restored marks. The future full CAXESAVE codec
+owned by `haxe_c-4my` will place those facts beside player, terrain, inventory,
+quest, and actor state; this slice deliberately adds no private file format or
+filesystem path.
 
 The focused `test:caxecraft-water` command checks falling, landing, lateral
 weakening, obstacle routing, leaking, recession, dam repair, malformed bytes,
-bounded continuation, and equal settled hashes across work budgets and enqueue
-orders. The assertions and expected states are ordinary Haxe. A shared Python
+bounded continuation, transactional initial volumes, exact snapshot restore,
+continued-simulation parity after restore, rejection without live mutation, and
+equal settled hashes across work budgets and enqueue orders. The assertions and
+expected states are ordinary Haxe. A shared Python
 host runner starts that same entry point on Eval and generated native C, checks
 their small result envelope, and coordinates the strict compiler and optional
 sanitizers; it does not contain a second water implementation. Eval and strict

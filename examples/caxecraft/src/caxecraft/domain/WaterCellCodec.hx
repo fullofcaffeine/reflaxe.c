@@ -51,6 +51,14 @@ inline function sourceCode():Int
 inline function isWaterCode(code:Int):Bool
 	return code == SOURCE_CODE || (code >= FLOWING_BASE_CODE && code < FALLING_BASE_CODE + FLOW_LEVEL_COUNT);
 
+/** Recognize the ordinary terrain codes without confusing them with water. */
+inline function isSolidCode(code:Int):Bool
+	return code >= FIRST_SOLID_CODE && code <= LAST_SOLID_CODE;
+
+/** Admit exactly the byte meanings understood by the shared world buffer. */
+inline function isValidCode(code:Int):Bool
+	return code == AIR_CODE || isSolidCode(code) || isWaterCode(code);
+
 /** Encode one already-validated flow level in the compact world byte. */
 function encodeFlow(level:Int, falling:Bool):Int {
 	return (falling ? FALLING_BASE_CODE : FLOWING_BASE_CODE) + level;

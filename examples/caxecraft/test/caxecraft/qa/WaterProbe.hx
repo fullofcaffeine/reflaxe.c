@@ -6,6 +6,9 @@ import caxecraft.domain.WaterCellState;
 import caxecraft.domain.WaterLevel;
 import caxecraft.domain.WaterPendingCells;
 import caxecraft.domain.WaterSimulation;
+import caxecraft.domain.WaterSnapshot.capture as captureWaterSnapshot;
+import caxecraft.domain.WaterSnapshot.restore as restoreWaterSnapshot;
+import caxecraft.domain.WaterSnapshot.stateHash as waterSnapshotHash;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldStorage;
@@ -39,11 +42,17 @@ final class WaterProbe {
 		#if c
 		var worldStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var pendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
+		var snapshotStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
+		var snapshotPendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		var cells:WorldCells = worldStorage.span();
 		var pending:WaterPendingCells = pendingStorage.span();
+		var snapshotCells:WorldCells = snapshotStorage.span();
+		var snapshotPending:WaterPendingCells = snapshotPendingStorage.span();
 		#else
 		var cells:WorldCells = zeroes();
 		var pending:WaterPendingCells = zeroes();
+		var snapshotCells:WorldCells = zeroes();
+		var snapshotPending:WaterPendingCells = zeroes();
 		#end
 		final water = new WaterSimulation();
 		water.resetPending(pending);
@@ -121,6 +130,40 @@ final class WaterProbe {
 		final bounded = water.tick(cells, pending, 1);
 		if (bounded.processed != 1 || bounded.remaining <= 0 || water.pending() != bounded.remaining)
 			return 40;
+
+		clear(cells);
+		makeFloor(cells);
+		water.resetPending(pending);
+		final beforeRejectedVolume = water.stateHash(cells);
+		if (water.placeInitialVolume(cells, pending, World.coord(20, 0, 20), 2, 2, 2)
+			|| water.stateHash(cells) != beforeRejectedVolume
+			|| water.pending() != 0)
+			return 42;
+		if (!water.placeInitialVolume(cells, pending, World.coord(20, 1, 20), 2, 2, 2))
+			return 43;
+		if (!isFlow(water.cellState(cells, World.coord(20, 1, 20)), WaterLevel.Full, false) || water.pending() <= 0)
+			return 44;
+		water.tick(cells, pending, 3);
+		if (!captureWaterSnapshot(cells, pending, snapshotCells, snapshotPending))
+			return 45;
+		final savedHash = waterSnapshotHash(snapshotCells, snapshotPending);
+		final savedPending = water.pending();
+		if (!water.settle(cells, pending, 16, 2000))
+			return 46;
+		final settledHash = water.stateHash(cells);
+		if (!restoreWaterSnapshot(snapshotCells, snapshotPending, cells, pending))
+			return 47;
+		water.restorePending(pending);
+		if (waterSnapshotHash(cells, pending) != savedHash || water.pending() != savedPending)
+			return 47;
+		if (!water.settle(cells, pending, 16, 2000) || water.stateHash(cells) != settledHash)
+			return 48;
+		final beforeRejectedRestore = water.stateHash(cells);
+		WorldStorage.writeCode(snapshotCells, World.indexOf(World.coord(31, 15, 31)), 1);
+		if (restoreWaterSnapshot(snapshotCells, snapshotPending, cells, pending)
+			|| water.stateHash(cells) != beforeRejectedRestore
+			|| water.pending() != 0)
+			return 49;
 
 		final slow = deterministicHash(1, false);
 		final grouped = deterministicHash(23, true);

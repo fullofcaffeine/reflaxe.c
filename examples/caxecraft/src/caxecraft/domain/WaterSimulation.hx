@@ -4,6 +4,8 @@ import caxecraft.domain.WaterCellCodec.decode as decodeWaterCell;
 import caxecraft.domain.WaterCellCodec.emptyCode;
 import caxecraft.domain.WaterCellCodec.encodeFlow;
 import caxecraft.domain.WaterCellCodec.FLOW_LEVEL_COUNT;
+import caxecraft.domain.WaterCellCodec.isSolidCode;
+import caxecraft.domain.WaterCellCodec.isValidCode;
 import caxecraft.domain.WaterCellCodec.isWaterCode;
 import caxecraft.domain.WaterCellCodec.sourceCode;
 import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
@@ -55,6 +57,28 @@ final class WaterSimulation {
 		lowestPending = World.VOLUME;
 	}
 
+	/**
+		Rebuild the two scheduler counters from restored per-cell queue marks.
+
+		A save owns the marks because they determine which unfinished fluid work
+		runs next. The counters are derived state: scanning in ascending world-index
+		order reproduces the same next cell without persisting an implementation
+		detail separately.
+	**/
+	public function restorePending(pendingCells:WaterPendingCells):Void {
+		pendingCount = 0;
+		lowestPending = World.VOLUME;
+		var index = 0;
+		while (index < World.VOLUME) {
+			if (WaterPendingStorage.isMarked(pendingCells, index)) {
+				pendingCount++;
+				if (lowestPending == World.VOLUME)
+					lowestPending = index;
+			}
+			index++;
+		}
+	}
+
 	/** Return the typed water meaning at one coordinate. */
 	public function cellState(cells:WorldCells, coord:BlockCoord):WaterCellState {
 		return waterStateAt(cells, coord);
@@ -81,6 +105,55 @@ final class WaterSimulation {
 				scheduleAround(pendingCells, coord);
 				true;
 		};
+	}
+
+	/**
+		Fill one finite authored box with non-source water.
+
+		The complete box is checked before the first write, so an out-of-bounds box,
+		a solid overlap, or malformed world byte leaves the world unchanged. Existing
+		sources survive overlapping declarations. Only cells just outside the box are
+		scheduled: a sealed pool stays full, while an open face begins leaking on
+		later bounded ticks. Permanent replenishment still requires `placeSource`.
+	**/
+	public function placeInitialVolume(cells:WorldCells, pendingCells:WaterPendingCells, origin:BlockCoord, width:Int, height:Int, depth:Int):Bool {
+		if (width <= 0 || height <= 0 || depth <= 0 || origin.x < 0 || origin.y < 0 || origin.z < 0 || origin.x > World.WIDTH - width
+			|| origin.y > World.HEIGHT - height || origin.z > World.DEPTH - depth)
+			return false;
+
+		var z = origin.z;
+		while (z < origin.z + depth) {
+			var y = origin.y;
+			while (y < origin.y + height) {
+				var x = origin.x;
+				while (x < origin.x + width) {
+					final code = WorldStorage.readCode(cells, World.indexOf(World.coord(x, y, z)));
+					if (!isValidCode(code) || isSolidCode(code))
+						return false;
+					x++;
+				}
+				y++;
+			}
+			z++;
+		}
+
+		z = origin.z;
+		while (z < origin.z + depth) {
+			var y = origin.y;
+			while (y < origin.y + height) {
+				var x = origin.x;
+				while (x < origin.x + width) {
+					final index = World.indexOf(World.coord(x, y, z));
+					if (WorldStorage.readCode(cells, index) != sourceCode())
+						WorldStorage.writeCode(cells, index, encodeFlow(0, false));
+					x++;
+				}
+				y++;
+			}
+			z++;
+		}
+		scheduleOutsideVolume(pendingCells, origin, width, height, depth);
+		return true;
 	}
 
 	/** Remove water without removing a solid cell that occupies the coordinate. */
@@ -189,6 +262,40 @@ final class WaterSimulation {
 		schedule(pendingCells, World.coord(coord.x, coord.y, coord.z - 1));
 		schedule(pendingCells, World.coord(coord.x, coord.y, coord.z + 1));
 		schedule(pendingCells, World.coord(coord.x, coord.y + 1, coord.z));
+	}
+
+	/** Mark the six outside faces where a newly filled box may begin flowing. */
+	function scheduleOutsideVolume(pendingCells:WaterPendingCells, origin:BlockCoord, width:Int, height:Int, depth:Int):Void {
+		var z = origin.z;
+		while (z < origin.z + depth) {
+			var x = origin.x;
+			while (x < origin.x + width) {
+				schedule(pendingCells, World.coord(x, origin.y - 1, z));
+				schedule(pendingCells, World.coord(x, origin.y + height, z));
+				x++;
+			}
+			z++;
+		}
+		z = origin.z;
+		while (z < origin.z + depth) {
+			var y = origin.y;
+			while (y < origin.y + height) {
+				schedule(pendingCells, World.coord(origin.x - 1, y, z));
+				schedule(pendingCells, World.coord(origin.x + width, y, z));
+				y++;
+			}
+			z++;
+		}
+		var y = origin.y;
+		while (y < origin.y + height) {
+			var x = origin.x;
+			while (x < origin.x + width) {
+				schedule(pendingCells, World.coord(x, y, origin.z - 1));
+				schedule(pendingCells, World.coord(x, y, origin.z + depth));
+				x++;
+			}
+			y++;
+		}
 	}
 
 	/** Remove and return the lowest marked world index in deterministic order. */
