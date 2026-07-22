@@ -3,14 +3,35 @@ package caxecraft.app;
 #if c
 import c.CArray;
 import c.UInt8;
+import caxecraft.content.BaseContentPack;
+import caxecraft.content.FirstPlayableLevel.FLUID_INITIAL_VOLUME;
+import caxecraft.content.FirstPlayableLevel.FLUID_SOURCE;
+import caxecraft.content.FirstPlayableLevel.fluidCount;
+import caxecraft.content.FirstPlayableLevel.fluidDepth;
+import caxecraft.content.FirstPlayableLevel.fluidHeight;
+import caxecraft.content.FirstPlayableLevel.fluidKind;
+import caxecraft.content.FirstPlayableLevel.fluidPresentationCell;
+import caxecraft.content.FirstPlayableLevel.fluidWidth;
+import caxecraft.content.FirstPlayableLevel.fluidX;
+import caxecraft.content.FirstPlayableLevel.fluidY;
+import caxecraft.content.FirstPlayableLevel.fluidZ;
+import caxecraft.content.FirstPlayableLevel.loadTerrain as loadFirstPlayableTerrain;
+import caxecraft.content.FirstPlayableLevel.spawnXMilli;
+import caxecraft.content.FirstPlayableLevel.spawnYMilli;
+import caxecraft.content.FirstPlayableLevel.spawnZMilli;
+import caxecraft.domain.PlayerAquatics.canMine as playerCanMine;
+import caxecraft.domain.PlayerAquatics.input as aquaticInput;
+import caxecraft.domain.PlayerAquatics.start as startAquatics;
+import caxecraft.domain.PlayerAquatics.step as stepAquatics;
+import caxecraft.domain.PlayerAquaticState;
 import caxecraft.domain.PlayerPhysics.canPlaceAt as playerCanPlaceAt;
-import caxecraft.domain.PlayerPhysics.input as playerInput;
 import caxecraft.domain.PlayerPhysics.player as createPlayer;
 import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
-import caxecraft.domain.PlayerPhysics.step as stepPlayer;
 import caxecraft.domain.PlayerState;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VoxelRaycast;
+import caxecraft.domain.WaterPendingCells;
+import caxecraft.domain.WaterSimulation;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
 import caxecraft.domain.WorldVolume;
@@ -70,14 +91,40 @@ final class Main {
 	static inline final FIXED_SECONDS:Float = 0.05;
 	static inline final MAX_FRAME_SECONDS:Float = 0.25;
 	static inline final PICK_DISTANCE:Float = 7.0;
-	static inline final SPAWN_X:Float = 16.5;
-	static inline final SPAWN_Z:Float = 16.5;
 
 	static function main():Void {
 		var storage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
 		final cells:WorldCells = storage.span();
-		World.generate(cells, 0x0cafe);
-		World.prepareSpawnMeadow(cells);
+		var pendingStorage:CArray<UInt8, WorldVolume> = CArray.zero(World.VOLUME);
+		final pendingCells:WaterPendingCells = pendingStorage.span();
+		// Stack-backed class construction currently belongs in the unconditional
+		// function entry block. The scheduler still borrows no world storage.
+		final water = new WaterSimulation();
+		if (!loadFirstPlayableTerrain(cells))
+			return;
+		water.resetPending(pendingCells);
+		var fluidsLoaded = true;
+		var fluidIndex = 0;
+		while (fluidIndex < fluidCount()) {
+			final coordinate = World.coord(fluidX(fluidIndex), fluidY(fluidIndex), fluidZ(fluidIndex));
+			final kind = fluidKind(fluidIndex);
+			if (kind == FLUID_INITIAL_VOLUME) {
+				if (!water.placeInitialVolume(cells, pendingCells, coordinate, fluidWidth(fluidIndex), fluidHeight(fluidIndex), fluidDepth(fluidIndex)))
+					fluidsLoaded = false;
+			} else if (kind == FLUID_SOURCE) {
+				if (!water.placeSource(cells, pendingCells, coordinate))
+					fluidsLoaded = false;
+			} else {
+				fluidsLoaded = false;
+			}
+			fluidIndex++;
+		}
+		if (!fluidsLoaded)
+			return;
+		final waterPresentationCell = fluidPresentationCell(0);
+		if (waterPresentationCell < 0)
+			return;
+		final aquaticCapability = BaseContentPack.aquaticProfile(BaseContentPack.defaultAquaticProfile());
 
 		var windowFlags = ConfigFlags.VsyncHint | ConfigFlags.WindowResizable;
 		#if !raylib_platform_macos
@@ -131,6 +178,8 @@ final class Main {
 		#end
 
 		var player:PlayerState = spawnPlayer(cells);
+		var aquatic:PlayerAquaticState = startAquatics(aquaticCapability);
+		var cameraWaterBlend = 0.0;
 		var inventory:InventoryState = Inventory.starter();
 		#if caxecraft_pilot
 		// Only the deterministic provider may replace the ordinary starter kit.
@@ -222,6 +271,9 @@ final class Main {
 			final quitPressed = PilotScript.quitPressed(pilotAction);
 			final hotbarSelection = PilotScript.hotbarSelection(pilotAction);
 			final hotbarCycle = PilotScript.hotbarCycle(pilotAction);
+			// Existing deterministic scripts do not request downward swimming yet.
+			// A dedicated water pilot will own that authored action when added.
+			final descendHeld = false;
 			#else
 			final focused = Raylib.IsWindowFocused();
 			final frameInput:GameInputFrame = RaylibGameInput.sample(captured, paused);
@@ -240,6 +292,7 @@ final class Main {
 			final quitPressed = frameInput.quitPressed;
 			final hotbarSelection = frameInput.hotbarSelection;
 			final hotbarCycle = frameInput.hotbarCycle;
+			final descendHeld = frameInput.descendHeld;
 			#end
 			if (quitPressed)
 				quit = true;
@@ -251,6 +304,8 @@ final class Main {
 				if (PlayerVitals.isDefeated(vitals)) {
 					vitals = PlayerVitals.revive(vitals);
 					player = spawnPlayer(cells);
+					aquatic = startAquatics(aquaticCapability);
+					cameraWaterBlend = 0.0;
 				} else if (GuideNpc.isInRange(guide, player.x, player.z)) {
 					final sharesBerries = GuideNpc.sharesBerriesOnNextInteraction(guide);
 					if (sharesBerries) {
@@ -354,17 +409,27 @@ final class Main {
 			if (!paused)
 				accumulator += frameSeconds;
 			while (!paused && accumulator >= FIXED_SECONDS) {
+				// Water owns a bounded amount of work per game tick. A large leak
+				// therefore continues over later ticks without freezing a frame.
+				water.tick(cells, pendingCells, 64);
 				var moveX = moveForward * lookX - moveRight * lookZ;
 				var moveZ = moveForward * lookZ + moveRight * lookX;
 				if (moveForward != 0.0 && moveRight != 0.0) {
 					moveX *= 0.7071067811865476;
 					moveZ *= 0.7071067811865476;
 				}
-				if (!PlayerVitals.isDefeated(vitals))
-					player = stepPlayer(cells, player, playerInput(moveX, moveZ, jumpQueued));
+				var drowningThisTick = false;
+				if (!PlayerVitals.isDefeated(vitals)) {
+					final aquaticStep = stepAquatics(cells, player, aquatic, aquaticInput(moveX, moveZ, jumpQueued, descendHeld), aquaticCapability);
+					player = aquaticStep.player;
+					aquatic = aquaticStep.aquatic;
+					cameraWaterBlend = aquaticStep.immersion.cameraBlend;
+					drowningThisTick = aquaticStep.drowningDamage > 0;
+				}
 				if (selectedMode == GameMode.Adventure) {
 					if (!PlayerVitals.isDefeated(vitals)) {
 						vitals = PlayerVitals.step(vitals);
+						vitals = PlayerVitals.applyAttack(vitals, drowningThisTick);
 						final mosslingAttacked = Mossling.attacksThisTick(mossling, player.x, player.z);
 						vitals = PlayerVitals.applyAttack(vitals, mosslingAttacked);
 						if (mosslingAttacked)
@@ -398,9 +463,14 @@ final class Main {
 			if (captured && !recapturedThisFrame && primaryPressed) {
 				if (!PlayerVitals.isDefeated(vitals)) {
 					if (selectedMode == GameMode.Adventure) {
-						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword) && hit.hit) {
-							final mining = attemptMining(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ), inventory);
+						if (!Inventory.selectedIs(inventory, ItemKind.CopperSword)
+							&& hit.hit
+							&& playerCanMine(aquatic, aquaticCapability)) {
+							final minedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
+							final mining = attemptMining(cells, minedCoordinate, inventory);
 							inventory = mining.inventory;
+							if (mining.outcome == MiningOutcome.Collected)
+								water.terrainChanged(pendingCells, minedCoordinate);
 							#if caxecraft_pilot
 							if (mining.outcome == MiningOutcome.Collected)
 								removedBlocks++;
@@ -414,11 +484,12 @@ final class Main {
 							}
 						}
 					} else if (hit.hit) {
+						final removedCoordinate = World.coord(hit.cellX, hit.cellY, hit.cellZ);
 						#if caxecraft_pilot
-						if (World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ)))
+						if (water.removeTerrain(cells, pendingCells, removedCoordinate))
 							removedBlocks++;
 						#else
-						World.remove(cells, World.coord(hit.cellX, hit.cellY, hit.cellZ));
+						water.removeTerrain(cells, pendingCells, removedCoordinate);
 						#end
 					}
 				}
@@ -438,7 +509,7 @@ final class Main {
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
 							|| !playerCanPlaceAt(player, placement)
-							|| !World.place(cells, placement, selectedBlock)) {
+							|| !water.placeTerrain(cells, pendingCells, placement, selectedBlock)) {
 							placementBlockedFrames = 60;
 							#if caxecraft_pilot
 							rejectedEdits++;
@@ -503,19 +574,26 @@ final class Main {
 				Raylib.DrawCircle(sunX, 86, c.Float32.fromFloat(30.0), CaxecraftPalette.sunCore());
 				Raylib.BeginMode3D(camera);
 				final renderCounters = TerrainRenderer.draw(cells, terrainTexture, terrainTextureReady, player.x, player.z);
+				final waterCounters = WaterRenderer.draw(cells, terrainTexture, terrainTextureReady, waterPresentationCell);
+				final totalVisible = renderCounters.visible + waterCounters.visible;
+				final totalDrawCalls = renderCounters.drawCalls + waterCounters.drawCalls;
 				#if caxecraft_pilot
-				visibleBlocks = renderCounters.visible;
-				terrainDrawCalls = renderCounters.drawCalls;
+				visibleBlocks = totalVisible;
+				terrainDrawCalls = totalDrawCalls;
 				#end
 				drawActors(camera, entityTexture, entityTextureReady, guide, mossling, berryDrop);
 				if (hit.hit)
 					Raylib.DrawCubeWires(Vector3.fromFloat(hit.cellX + 0.5, hit.cellY + 0.5, hit.cellZ + 0.5), c.Float32.fromFloat(1.04),
 						c.Float32.fromFloat(1.04), c.Float32.fromFloat(1.04), CaxecraftPalette.selection());
 				Raylib.EndMode3D();
-				drawHud(renderCounters.visible, renderCounters.drawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit,
-					player.x, player.z, selectedMode, locale, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0,
-					enemyAttackFrames > 0, pickupFrames > 0, pickupAmount, inventoryFullReason, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture,
-					hudTextureReady, itemTexture, itemTextureReady);
+				if (cameraWaterBlend > 0.0) {
+					final overlayAlpha = Std.int(105.0 * cameraWaterBlend);
+					Raylib.DrawRectangle(0, 0, Raylib.GetScreenWidth(), Raylib.GetScreenHeight(), CaxecraftPalette.underwaterOverlay(overlayAlpha));
+				}
+				drawHud(totalVisible, totalDrawCalls, frameCount, updateCount, paused, captured, placementBlockedFrames > 0, hit, player.x, player.z,
+					selectedMode, locale, inventory, guide, mossling, vitals, strikeHitFrames > 0, enemyDefeatedFrames > 0, enemyAttackFrames > 0,
+					pickupFrames > 0, pickupAmount, inventoryFullReason, recoveryFeedback, recoveryFeedbackFrames > 0, hudTexture, hudTextureReady,
+					itemTexture, itemTextureReady, aquatic.headSubmerged, aquatic.breathTicks, aquaticCapability.maximumBreathTicks);
 			}
 			#if caxecraft_pilot
 			final pilotComplete = PilotScript.complete(pilotName, frameCount);
@@ -580,10 +658,12 @@ final class Main {
 		Raylib.CloseWindow();
 	}
 
-	/** Derive the meadow spawn afresh so no stale height survives a world edit. */
+	/** Restore the validated authored spawn, then recover if later edits blocked it. */
 	static function spawnPlayer(cells:WorldCells):PlayerState {
-		final spawnY = World.surfaceY(cells, 16, 16) + 1.0;
-		return recoverPlayerSpawn(cells, createPlayer(SPAWN_X, spawnY, SPAWN_Z));
+		final spawnX = spawnXMilli() / 1000.0;
+		final spawnY = spawnYMilli() / 1000.0;
+		final spawnZ = spawnZMilli() / 1000.0;
+		return recoverPlayerSpawn(cells, createPlayer(spawnX, spawnY, spawnZ));
 	}
 
 	/** Original atlas sprites with code-drawn fallbacks; actor rules remain in gameplay/. */
@@ -625,7 +705,7 @@ final class Main {
 			playerX:Float, playerZ:Float, mode:GameMode, locale:LocaleCursor, inventory:InventoryState, guide:GuideState, mossling:MosslingState,
 			vitals:PlayerVitalsState, strikeHit:Bool, enemyDefeated:Bool, enemyAttacked:Bool, pickedUp:Bool, pickupAmount:Int,
 			inventoryFullReason:InventoryFullReason, recoveryFeedback:RecoveryDecision, recoveryVisible:Bool, hudTexture:Texture2D, hudTextureReady:Bool,
-			itemTexture:Texture2D, itemTextureReady:Bool):Void {
+			itemTexture:Texture2D, itemTextureReady:Bool, headSubmerged:Bool, breathTicks:Int, maximumBreathTicks:Int):Void {
 		final width = Raylib.GetScreenWidth();
 		final height = Raylib.GetScreenHeight();
 		final centerX = Std.int(width / 2);
@@ -650,6 +730,8 @@ final class Main {
 		HudDigits.drawNumber(updates, 216, 85, 6, text);
 		drawHotbar(inventory, hudTexture, hudTextureReady, itemTexture, itemTextureReady, width, height);
 		drawHealth(vitals, hudTexture, hudTextureReady, width);
+		if (headSubmerged)
+			drawBreath(breathTicks, maximumBreathTicks, width, height);
 		UiCatalog.draw(locale, UiMessage.Controls, 20, height - 22, 14, text);
 		if (mode == GameMode.Adventure)
 			FirstPlayableCatalog.draw(locale, ScenarioMessage.AdventureProgress, 32, 110, 14, CaxecraftPalette.selection());
@@ -709,6 +791,28 @@ final class Main {
 			UiCatalog.draw(locale, UiMessage.CapturePrompt, centerX - 90, centerY + 26, 14, text);
 		} else if (!hit.hit) {
 			UiCatalog.draw(locale, UiMessage.NoBlockInReach, centerX - 105, centerY + 26, 14, text);
+		}
+	}
+
+	/** Draw ten bubbles from deterministic fixed-tick breath, with no text. */
+	static function drawBreath(breathTicks:Int, maximumBreathTicks:Int, width:Int, height:Int):Void {
+		final bubbleCount = 10;
+		var filled = 0;
+		if (maximumBreathTicks > 0)
+			filled = Std.int((breathTicks * bubbleCount + maximumBreathTicks - 1) / maximumBreathTicks);
+		if (filled < 0)
+			filled = 0;
+		if (filled > bubbleCount)
+			filled = bubbleCount;
+		final startX = Std.int((width - (bubbleCount * 18 - 4)) / 2);
+		final y = height - 128;
+		var bubble = 0;
+		while (bubble < bubbleCount) {
+			if (bubble < filled)
+				Raylib.DrawCircle(startX + bubble * 18, y, c.Float32.fromFloat(6.0), CaxecraftPalette.breathFull());
+			else
+				Raylib.DrawCircle(startX + bubble * 18, y, c.Float32.fromFloat(6.0), CaxecraftPalette.breathEmpty());
+			bubble++;
 		}
 	}
 

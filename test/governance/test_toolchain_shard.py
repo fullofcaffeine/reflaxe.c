@@ -35,13 +35,32 @@ class ToolchainShardTests(unittest.TestCase):
     def test_actual_partition_and_local_isolation_are_exact(self) -> None:
         scripts = self.runner.load_scripts()
         canonical = self.runner.validate_partition(scripts)
-        self.assertEqual(len(canonical), 46)
+        self.assertEqual(len(canonical), 50)
         self.assertEqual(tuple(self.runner.SHARDS), self.runner.SHARD_ORDER)
         self.assertEqual(
             tuple(self.runner.LOCAL_PARALLEL_ISOLATION), self.runner.SHARD_ORDER
         )
         self.assertEqual(canonical[-1], "snapshots:catalog")
         self.assertNotIn("snapshots:check", canonical)
+
+    def test_required_instruction_links_are_safe_fingerprint_inputs(self) -> None:
+        tracked = self.runner.git_bytes(
+            ["ls-files", "-z", "--", *self.runner.RELEVANT_UNTRACKED_ROOTS]
+        )
+        tracked_names = {
+            name.decode("utf-8", errors="strict")
+            for name in tracked.split(b"\0")
+            if name
+        }
+        self.assertTrue(
+            self.runner.is_reviewed_instruction_link(
+                "examples/caxecraft/CLAUDE.md", tracked_names
+            )
+        )
+        self.assertFalse(
+            self.runner.is_reviewed_instruction_link("AGENTS.md", tracked_names)
+        )
+        self.assertEqual(len(self.runner.relevant_worktree_digest()), 64)
 
     def test_timing_report_is_ordered_and_path_free(self) -> None:
         completed = [

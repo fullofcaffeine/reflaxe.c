@@ -80,6 +80,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
     "caxecraft": (
         "test:caxecraft-localization",
         "test:caxecraft-content-pack",
+        "test:caxecraft-level-adapter",
         "test:caxecraft-water",
         "test:caxecraft-aquatics",
         "test:caxecraft-inventory",
@@ -259,6 +260,34 @@ def staged_tree_identity() -> str:
     return tree
 
 
+def is_reviewed_instruction_link(name: str, tracked_names: set[str]) -> bool:
+    """Admit only the repository's required CLAUDE.md compatibility links.
+
+    AGENTS.md is the one maintained instruction file. Repository policy keeps a
+    same-directory CLAUDE.md symlink for tools that look for the older name.
+    The staged tree records the link itself, while the tracked AGENTS.md target
+    and the unstaged Git diff cover its contents. Every other symlink remains
+    rejected because its execution input may live outside the hashed roots.
+    """
+
+    relative = Path(name)
+    path = ROOT / relative
+    target_relative = relative.parent / "AGENTS.md"
+    target_name = target_relative.as_posix()
+    if target_name.startswith("./"):
+        target_name = target_name[2:]
+    try:
+        return (
+            relative.name == "CLAUDE.md"
+            and os.readlink(path) == "AGENTS.md"
+            and target_name in tracked_names
+            and not (ROOT / target_relative).is_symlink()
+            and (ROOT / target_relative).is_file()
+        )
+    except OSError:
+        return False
+
+
 def relevant_worktree_digest() -> str:
     """Hash execution inputs that are not represented by the staged tree.
 
@@ -270,14 +299,20 @@ def relevant_worktree_digest() -> str:
 
     digest = hashlib.sha256()
     tracked = git_bytes(["ls-files", "-z", "--", *RELEVANT_UNTRACKED_ROOTS])
-    for encoded_name in (name for name in tracked.split(b"\0") if name):
+    encoded_tracked_names = tuple(name for name in tracked.split(b"\0") if name)
+    tracked_names: set[str] = set()
+    for encoded_name in encoded_tracked_names:
         try:
             name = encoded_name.decode("utf-8", errors="strict")
         except UnicodeDecodeError as error:
             raise ToolchainShardFailure(
                 "relevant tracked input path is not valid UTF-8"
             ) from error
-        if (ROOT / name).is_symlink():
+        tracked_names.add(name)
+    for name in tracked_names:
+        if (ROOT / name).is_symlink() and not is_reviewed_instruction_link(
+            name, tracked_names
+        ):
             raise ToolchainShardFailure(
                 f"relevant tracked input must not be a symlink: {name}"
             )

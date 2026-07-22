@@ -193,6 +193,25 @@ final class WaterSimulation {
 		return true;
 	}
 
+	/** Place ordinary buildable terrain into air or water and schedule repair. */
+	public function placeTerrain(cells:WorldCells, pendingCells:WaterPendingCells, coord:BlockCoord, kind:BlockKind):Bool {
+		if (!World.isPlaceable(kind))
+			return false;
+		final index = World.indexOf(coord);
+		if (index < 0)
+			return false;
+		final code = WorldStorage.readCode(cells, index);
+		if (!isValidCode(code) || isSolidCode(code))
+			return false;
+		WorldStorage.writeCode(cells, index, World.kindCode(kind));
+		scheduleAround(pendingCells, coord);
+		return true;
+	}
+
+	/** Notify water after another transactional mechanic removed terrain. */
+	public function terrainChanged(pendingCells:WaterPendingCells, coord:BlockCoord):Void
+		scheduleAround(pendingCells, coord);
+
 	/** Add one cell to the duplicate-free deterministic work set. */
 	public function schedule(pendingCells:WaterPendingCells, coord:BlockCoord):Bool {
 		final index = World.indexOf(coord);

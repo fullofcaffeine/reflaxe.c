@@ -586,6 +586,14 @@ private final class Registry implements ScenarioContentRegistry {
 	public function hasBlock(id:ContentId):Bool
 		return id.text() == "caxecraft:air" || id.text() == "caxecraft:stone";
 
+	public function blockStorageCode(id:ContentId):Int {
+		if (id.text() == "caxecraft:air")
+			return 0;
+		if (id.text() == "caxecraft:stone")
+			return 3;
+		return -1;
+	}
+
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";
 

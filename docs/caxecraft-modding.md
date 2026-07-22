@@ -6,11 +6,13 @@ implements reusable mechanics; authored data decides where and when those
 mechanics are used.
 
 This guide separates what works now from the intended workflow. That boundary
-matters: the current native game packages the first CaxeMap and uses its
-validated localization adapter, but it still constructs the meadow, inventory,
-Nia, and Mossling in Haxe. `haxe_c-xge.20.4` owns removing that temporary
-coupling. Dropping a new map beside the executable does **not** yet replace the
-playable world.
+matters: the current native game packages the first CaxeMap and uses generated,
+validated adapters for its localization, terrain, initial water, fluid visual,
+and player spawn. Inventory setup, Nia/Mossling construction, item placements,
+and rule composition still contain temporary Haxe wiring. `haxe_c-xge.20.4`
+owns removing that remaining coupling. Dropping a new map beside the executable
+does **not** yet replace the playable world because native file loading is not
+implemented.
 
 ## Where each kind of change belongs
 

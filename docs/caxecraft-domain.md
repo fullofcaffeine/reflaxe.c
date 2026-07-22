@@ -204,8 +204,10 @@ Current limits are deliberate and executable:
   `WaterSimulation.cellState` and `WaterCellCodec.stateAt` preserve their exact
   fluid meaning;
 - CAXEMAP source/volume placement and renderer-independent editor commands are
-  implemented; rendering, transparent surface shape, and playable-loop loading
-  remain later parts of the active integration slice.
+  implemented. A validated generated level adapter now loads the shipped pond,
+  and a separate translucent quad batch draws exposed tops and sides without
+  advancing simulation. Direct native CAXEMAP file loading and chunk-mesh
+  scaling remain later work.
 
 `WaterSnapshot` is the save-game handoff, not a second simulator. It captures
 only exact source/flow bytes plus pending queue marks in ascending world-index
@@ -245,15 +247,16 @@ the water cells. Each 50 ms simulation tick follows one fixed sequence:
 The continuous covered fraction drives forces. The named labels use different
 enter and exit thresholds—called *hysteresis*—so a player resting at the
 waterline does not flip between states every tick. Feet, body, and head samples
-remain explicit. `cameraBlend` changes smoothly near the eye waterline, but it
-is only an input for future presentation; camera state never changes physics
-or breath.
+remain explicit. `cameraBlend` changes smoothly near the eye waterline; the
+native adapter uses it for a visual overlay, but camera state never changes
+physics or breath.
 
 Breath is stored as integer simulation ticks, not wall-clock seconds. It falls
 only while the head sample is wet, recovers after surfacing, and emits one
 explicit damage request at each configured drowning interval after reaching
-zero. The health system will own how that request affects Adventure, Creative,
-checkpoints, and retry. Starting or retrying creates a fresh full-breath state.
+zero. The native game applies that request through its existing protected health
+transition in Adventure and ignores it in Creative. Starting or retrying creates
+a fresh full-breath state.
 
 Movement and survival differences are supplied through a bounded
 `AquaticProfile`. The engine does not look for a Tideweave item name: any
@@ -270,11 +273,13 @@ trace parity, compiles strict runtime-free C, rejects generated `goto`, and runs
 available memory and undefined-behavior sanitizers. Its small C harness only
 prints returned scalar results.
 
-This slice does **not** yet make water visible or swimmable in the released
-window. The playable loop, camera/HUD/audio feedback, content resolution,
-authored pools, persistence, and the Tideweave quest remain the next integration
-work. The distinction prevents a passing domain test from being mistaken for a
-finished underwater level.
+The playable window now advances the bounded scheduler on the fixed clock,
+supports rising and Shift-to-descend swimming, draws the authored pond, blends
+the underwater camera, and presents breath bubbles. Focused Eval/native tests
+still own the detailed rules; the real-Raylib pilot owns presentation when a
+desktop display is available. Audio, Tideweave pickup/equipment, the underwater
+quest, full save-game composition, and larger authored levels remain unfinished.
+This is an integrated mechanic, not a finished underwater level.
 
 The checked linear index is:
 

@@ -29,11 +29,42 @@ void hxc_Main_main(void)
   bool hxc_mouseDown = hxc_tmp_native_call_result_n12;
   (void)hxc_mouseDown;
   struct Color hxc_accent = (struct Color){ .r = 245, .g = 166, .b = 35, .a = 255 };
+  int32_t hxc_tmp_native_call_result_n14 = GetScreenWidth();
+  int32_t hxc_a = (int32_t)hxc_tmp_native_call_result_n14;
+  uint8_t hxc_red = (uint8_t)31;
+  uint8_t hxc_green = (uint8_t)115;
+  uint8_t hxc_blue = (uint8_t)154;
+  int32_t hxc_tmp_load_result_n15 = hxc_a;
+  int32_t hxc_tmp_conditional_result_n13 = 0;
+  if (hxc_tmp_load_result_n15 < 0)
+  {
+    hxc_tmp_conditional_result_n13 = 0;
+  }
+  else
+  {
+    int32_t hxc_tmp_load_result_n16 = hxc_a;
+    int32_t hxc_tmp_conditional_result_n14 = 0;
+    if (hxc_tmp_load_result_n16 > 255)
+    {
+      hxc_tmp_conditional_result_n14 = 255;
+    }
+    else
+    {
+      hxc_tmp_conditional_result_n14 = hxc_a;
+    }
+    hxc_tmp_conditional_result_n13 = hxc_tmp_conditional_result_n14;
+  }
+  uint8_t hxc_alpha = (uint8_t)hxc_tmp_conditional_result_n13;
+  uint8_t hxc_tmp_load_result_n20 = hxc_red;
+  uint8_t hxc_tmp_load_result_n21 = hxc_green;
+  uint8_t hxc_tmp_load_result_n22 = hxc_blue;
+  struct Color hxc_fade = (struct Color){ .r = hxc_tmp_load_result_n20, .g = hxc_tmp_load_result_n21, .b = hxc_tmp_load_result_n22, .a = hxc_alpha };
   BeginDrawing();
   ClearBackground(RAYWHITE);
+  DrawRectangle((int32_t)0, (int32_t)0, (int32_t)64, (int32_t)64, hxc_fade);
   BeginMode3D(hxc_camera);
-  struct Vector3 hxc_tmp_load_result_n15 = hxc_origin;
-  DrawCube(hxc_tmp_load_result_n15, (float)1.0, (float)1.0, (float)1.0, hxc_accent);
+  struct Vector3 hxc_tmp_load_result_n27 = hxc_origin;
+  DrawCube(hxc_tmp_load_result_n27, (float)1.0, (float)1.0, (float)1.0, hxc_accent);
   EndMode3D();
   DrawText("Caxe: direct C, nicer Haxe", (int32_t)4, (int32_t)4, (int32_t)10, DARKGRAY);
   EndDrawing();

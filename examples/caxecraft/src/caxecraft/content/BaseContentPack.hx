@@ -494,10 +494,30 @@ final class BaseContentRegistry implements ScenarioContentRegistry {
 		return false;
 	}
 
+	public function blockStorageCode(id:ContentId):Int {
+		if (id.text() == "caxecraft:air")
+			return 0;
+		if (id.text() == "caxecraft:bedrock")
+			return 4;
+		if (id.text() == "caxecraft:dirt")
+			return 2;
+		if (id.text() == "caxecraft:grass")
+			return 1;
+		if (id.text() == "caxecraft:stone")
+			return 3;
+		return -1;
+	}
+
 	public function hasFluid(id:ContentId):Bool {
 		if (id.text() == "caxecraft:water")
 			return true;
 		return false;
+	}
+
+	public function fluidPresentationCell(id:ContentId):Int {
+		if (id.text() == "caxecraft:water")
+			return 5;
+		return -1;
 	}
 
 	public function hasItem(id:ContentId):Bool {

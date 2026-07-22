@@ -627,7 +627,19 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:air";
 
 	public function hasBlock(id:ContentId):Bool
-		return id.text() == "caxecraft:air" || id.text() == "caxecraft:bedrock";
+		return id.text() == "caxecraft:air" || id.text() == "caxecraft:bedrock" || id.text() == "caxecraft:dirt" || id.text() == "caxecraft:grass";
+
+	public function blockStorageCode(id:ContentId):Int {
+		if (id.text() == "caxecraft:air")
+			return 0;
+		if (id.text() == "caxecraft:bedrock")
+			return 4;
+		if (id.text() == "caxecraft:dirt")
+			return 2;
+		if (id.text() == "caxecraft:grass")
+			return 1;
+		return -1;
+	}
 
 	public function hasFluid(id:ContentId):Bool
 		return id.text() == "caxecraft:water";

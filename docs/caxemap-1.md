@@ -8,11 +8,12 @@ later ordered `haxe_c-xge.19.*` slices.
 CAXEMAP is Caxecraft's public map and story format. Today the target-neutral
 codec, validator, editor semantics, and first-playable authored source use the
 same typed model. The native first playable currently packages that source and
-uses deterministic generated localization and content adapters derived from
-validated source data. The `asset-pack` path resolves through the schema-2
+uses deterministic generated localization, level, and content adapters derived
+from validated source data. The level adapter supplies terrain, initial fluids,
+fluid presentation, and player spawn to the real game loop. The `asset-pack` path resolves through the schema-2
 built-in manifest at `packs/caxecraft/base/content.json`; direct native JSON
-loading is not implemented yet. Terrain, actor construction, starting
-inventory, and encounter wiring remain temporary Haxe scaffolding.
+loading is not implemented yet. Actor construction, starting inventory, item
+placement, and encounter wiring remain temporary Haxe scaffolding.
 `haxe_c-xge.20.4` owns replacing that coupling with one validated composition
 path. Direct native CAXEMAP loading
 (`haxe_c-xge.19.4`), Creative mode (`haxe_c-xge.20`), and the visual in-game

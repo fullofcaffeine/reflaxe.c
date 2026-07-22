@@ -67,6 +67,8 @@ PLAYABLE_SNAPSHOT_FORMATS = {
     "playable/src/modules/caxecraft/app/HudDigits.c": "c",
     "playable/src/modules/caxecraft/app/TerrainAtlas.c": "c",
     "playable/src/modules/caxecraft/app/TerrainRenderer.c": "c",
+    "playable/src/modules/caxecraft/app/WaterRenderer.c": "c",
+    "playable/src/modules/caxecraft/content/FirstPlayableLevel.c": "c",
     "playable/src/modules/caxecraft/app/Main.c": "c",
     "playable/src/modules/caxecraft/gameplay/Inventory.c": "c",
     "playable/src/modules/caxecraft/gameplay/GuideNpc.c": "c",
@@ -86,6 +88,9 @@ RUNTIME_CONTENT_FILES = (
     "packs/caxecraft/base/content.json",
     "scenarios/first-playable/map.caxemap",
 )
+FIRST_PLAYABLE_MAP = CASE / "scenarios/first-playable/map.caxemap"
+FIRST_PLAYABLE_ADAPTER = CASE / "src/caxecraft/content/FirstPlayableLevel.hx"
+LEVEL_SOURCE_HASH_PATTERN = re.compile(r'^inline final SOURCE_SHA256:String = "([0-9a-f]{64})";$', re.MULTILINE)
 
 
 def remove_owned_stale_stage_files(
@@ -321,6 +326,31 @@ def development_tool(name: str) -> str:
     local_name = f"{name}.cmd" if os.name == "nt" else name
     local = ROOT / "node_modules/.bin" / local_name
     return str(local) if local.is_file() else name
+
+
+def verify_level_adapter_provenance() -> None:
+    """Fail quickly when native play would use stale generated level facts.
+
+    Haxe owns map parsing, validation, expansion, and adapter generation. This
+    launcher checks only the adapter's recorded source hash, so an ordinary play
+    command cannot silently render old terrain after a map edit. The complete
+    semantic check remains `npm run test:caxecraft-level-adapter`.
+    """
+
+    if FIRST_PLAYABLE_MAP.is_symlink() or not FIRST_PLAYABLE_MAP.is_file():
+        raise PlayFailure(f"first-playable map is missing or a symlink: {FIRST_PLAYABLE_MAP}")
+    if FIRST_PLAYABLE_ADAPTER.is_symlink() or not FIRST_PLAYABLE_ADAPTER.is_file():
+        raise PlayFailure(f"generated first-playable adapter is missing or a symlink: {FIRST_PLAYABLE_ADAPTER}")
+    adapter = FIRST_PLAYABLE_ADAPTER.read_text(encoding="utf-8")
+    match = LEVEL_SOURCE_HASH_PATTERN.search(adapter)
+    if match is None:
+        raise PlayFailure("generated first-playable adapter omitted its exact source hash")
+    actual = hashlib.sha256(FIRST_PLAYABLE_MAP.read_bytes()).hexdigest()
+    if match.group(1) != actual:
+        raise PlayFailure(
+            "generated first-playable adapter is stale; run "
+            "`python3 examples/caxecraft/level_adapter.py` and review the generated Haxe"
+        )
 
 
 def run(arguments: list[str], *, cwd: Path, timeout: int, label: str) -> subprocess.CompletedProcess[str]:
@@ -841,6 +871,7 @@ def validated_relative(value: str, label: str) -> PurePosixPath:
 
 
 def compile_haxe(generated: Path, *, layout: str, platform_name: str, pilot: str | None = None) -> dict[str, object]:
+    verify_level_adapter_provenance()
     arguments = [
         development_tool("haxe"),
         "--cwd",
@@ -915,6 +946,12 @@ def validate_generated_playable(generated: Path, *, layout: str, pilot: str | No
         "BeginMode3D(",
         "DrawCube(",
         "DrawCubeWires(",
+        "FirstPlayableLevel_loadTerrain(",
+        "WaterSimulation_placeInitialVolume(",
+        "WaterSimulation_placeSource(",
+        "WaterSimulation_tick(",
+        "PlayerAquatics_step(",
+        "WaterRenderer_draw(",
     ):
         if required not in app:
             raise PlayFailure(f"generated Caxecraft app omitted direct Raylib call {required}")

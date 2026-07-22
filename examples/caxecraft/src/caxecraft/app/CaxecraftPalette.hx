@@ -27,6 +27,18 @@ final class CaxecraftPalette {
 	public static inline function hudText():Color
 		return Color.rgba(228, 239, 227);
 
+	/** Camera tint while the player's eyes cross the simulated waterline. */
+	public static inline function underwaterOverlay(alpha:Int):Color
+		return Color.rgbaClamped(31, 115, 154, alpha);
+
+	/** Filled fixed-tick breath bubble. */
+	public static inline function breathFull():Color
+		return Color.rgba(164, 235, 246);
+
+	/** Empty breath bubble, kept visible against both water and the HUD. */
+	public static inline function breathEmpty():Color
+		return Color.rgba(49, 82, 103, 210);
+
 	/** Neutral tint keeps reviewed source texture colors unchanged. */
 	public static inline function textureTint():Color
 		return Color.rgba(255, 255, 255);

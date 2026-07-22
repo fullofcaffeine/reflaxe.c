@@ -245,6 +245,7 @@ hxc_check_raylib_core_signatures(void)
     void (*const hxc_signature_ClearBackground)(Color) = &ClearBackground;
     void (*const hxc_signature_CloseWindow)(void) = &CloseWindow;
     void (*const hxc_signature_DisableCursor)(void) = &DisableCursor;
+    void (*const hxc_signature_DrawBillboardRec)(Camera, Texture2D, Rectangle, Vector3, Vector2, Color) = &DrawBillboardRec;
     void (*const hxc_signature_DrawCircle)(int, int, float, Color) = &DrawCircle;
     void (*const hxc_signature_DrawCube)(Vector3, float, float, float, Color) = &DrawCube;
     void (*const hxc_signature_DrawCubeV)(Vector3, Vector3, Color) = &DrawCubeV;
@@ -305,6 +306,7 @@ hxc_check_raylib_core_signatures(void)
     (void)hxc_signature_ClearBackground;
     (void)hxc_signature_CloseWindow;
     (void)hxc_signature_DisableCursor;
+    (void)hxc_signature_DrawBillboardRec;
     (void)hxc_signature_DrawCircle;
     (void)hxc_signature_DrawCube;
     (void)hxc_signature_DrawCubeV;

@@ -61,7 +61,8 @@ final class RaylibGameInput {
 		if (wheel < 0.0)
 			hotbarCycle = 1;
 		return GameInputFrames.make(forward, right, lookYaw, lookPitch, Raylib.IsKeyPressed(KeyboardKey.Space), primaryPressed, secondaryPressed,
-			interactPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q), hotbarSelection, hotbarCycle);
+			interactPressed, Raylib.IsKeyPressed(KeyboardKey.Escape), paused && leftPressed, Raylib.IsKeyPressed(KeyboardKey.Q), hotbarSelection, hotbarCycle,
+			Raylib.IsKeyDown(KeyboardKey.LeftShift));
 	}
 }
 #end

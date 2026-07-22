@@ -341,6 +341,7 @@ def validate_semantic_facade(project: RenderedProject) -> None:
         "IsMouseButtonDown(",
         "BeginDrawing(",
         "BeginMode3D(",
+        "DrawRectangle(",
         "DrawCube(",
         "DrawText(",
         "RAYWHITE",

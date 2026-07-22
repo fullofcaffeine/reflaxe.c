@@ -27,9 +27,13 @@ class Main {
 		final keyDown = Raylib.IsKeyDown(KeyboardKey.W);
 		final mouseDown = Raylib.IsMouseButtonDown(MouseButton.Left);
 		final accent = Color.rgba(245, 166, 35);
+		// Width is deliberately a run-time value. The semantic facade must clamp
+		// it before narrowing to Raylib's byte-sized alpha channel.
+		final fade = Color.rgbaClamped(31, 115, 154, Raylib.GetScreenWidth());
 
 		Raylib.BeginDrawing();
 		Raylib.ClearBackground(Colors.RAYWHITE);
+		Raylib.DrawRectangle(0, 0, 64, 64, fade);
 		Raylib.BeginMode3D(camera);
 		Raylib.DrawCube(origin, c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), c.Float32.fromFloat(1.0), accent);
 		Raylib.EndMode3D();

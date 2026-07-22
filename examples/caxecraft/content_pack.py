@@ -940,7 +940,25 @@ def render_haxe(pack: ContentPack) -> str:
         lines.extend(["\t\treturn false;", "\t}", ""])
 
     registry_membership("hasBlock", block_ids)
+    lines.extend(["\tpublic function blockStorageCode(id:ContentId):Int {"])
+    for block in pack.blocks:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(block.content_id)})",
+                f"\t\t\treturn {block.storage_code};",
+            ]
+        )
+    lines.extend(["\t\treturn -1;", "\t}", ""])
     registry_membership("hasFluid", fluid_ids)
+    lines.extend(["\tpublic function fluidPresentationCell(id:ContentId):Int {"])
+    for fluid in pack.fluids:
+        lines.extend(
+            [
+                f"\t\tif (id.text() == {haxe_string(fluid.content_id)})",
+                f"\t\t\treturn {fluid.presentation.cell_index};",
+            ]
+        )
+    lines.extend(["\t\treturn -1;", "\t}", ""])
     registry_membership("hasItem", item_ids)
     registry_membership("hasEntity", enemy_ids)
     registry_membership("hasNpc", npc_ids)

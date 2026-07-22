@@ -1066,6 +1066,11 @@ def validate() -> list[str]:
         != "python3 examples/caxecraft/check_content_pack.py"
     ):
         errors.append("package.json must retain the validated Caxecraft content-pack gate")
+    if (
+        scripts.get("test:caxecraft-level-adapter")
+        != "python3 examples/caxecraft/level_adapter.py --check"
+    ):
+        errors.append("package.json must retain the authored Caxecraft level-adapter gate")
     if scripts.get("test:caxecraft-water") != "python3 examples/caxecraft/run_haxe_c_test.py water":
         errors.append("package.json must retain the deterministic Caxecraft water gate")
     if scripts.get("test:caxecraft-aquatics") != "python3 examples/caxecraft/run_haxe_c_test.py aquatics":
@@ -1194,6 +1199,10 @@ def validate() -> list[str]:
         scripts.get("test:toolchain", "")
     ):
         errors.append("package.json test:toolchain must execute test:caxecraft-content-pack")
+    if "npm run test:caxecraft-level-adapter" not in str(
+        scripts.get("test:toolchain", "")
+    ):
+        errors.append("package.json test:toolchain must execute test:caxecraft-level-adapter")
     if "npm run test:caxecraft-water" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-water")
     if "npm run test:caxecraft-aquatics" not in str(scripts.get("test:toolchain", "")):

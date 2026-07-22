@@ -1,7 +1,7 @@
 package caxecraft.scenario;
 
 /**
-	Compile-time game-content facts used by scenario validation.
+	Compile-time game-content facts used by scenario validation and level loading.
 
 	The file format names content; it never loads code. A game supplies this
 	closed registry from ordinary typed Haxe before a candidate can become live.
@@ -10,6 +10,10 @@ interface ScenarioContentRegistry {
 	function supportsFeature(id:ContentId):Bool;
 	function isAirBlock(id:ContentId):Bool;
 	function hasBlock(id:ContentId):Bool;
+
+	/** Return the compact world byte for a known block, or `-1` when unknown. */
+	function blockStorageCode(id:ContentId):Int;
+
 	function hasFluid(id:ContentId):Bool;
 	function hasItem(id:ContentId):Bool;
 	function hasEntity(id:ContentId):Bool;

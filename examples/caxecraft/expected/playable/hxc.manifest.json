@@ -19,8 +19,15 @@
       "src/modules/caxecraft/app/TerrainAtlas.c",
       "src/modules/caxecraft/app/TerrainRenderer.c",
       "src/modules/caxecraft/app/TitleMenu.c",
+      "src/modules/caxecraft/app/WaterRenderer.c",
+      "src/modules/caxecraft/content/BaseContentPack.c",
+      "src/modules/caxecraft/content/FirstPlayableLevel.c",
+      "src/modules/caxecraft/domain/PlayerAquatics.c",
       "src/modules/caxecraft/domain/PlayerPhysics.c",
       "src/modules/caxecraft/domain/VoxelRaycast.c",
+      "src/modules/caxecraft/domain/WaterCellCodec.c",
+      "src/modules/caxecraft/domain/WaterPendingStorage.c",
+      "src/modules/caxecraft/domain/WaterSimulation.c",
       "src/modules/caxecraft/domain/World.c",
       "src/modules/caxecraft/domain/WorldStorage.c",
       "src/modules/caxecraft/gameplay/BerryDrop.c",
@@ -46,14 +53,28 @@
       "include/hxc/modules/caxecraft/app/TerrainAtlas.h",
       "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "include/hxc/modules/caxecraft/app/TitleMenu.h",
+      "include/hxc/modules/caxecraft/app/WaterRenderer.h",
+      "include/hxc/modules/caxecraft/content/BaseContentPack.h",
+      "include/hxc/modules/caxecraft/content/FirstPlayableLevel.h",
+      "include/hxc/modules/caxecraft/domain/AquaticInput.h",
+      "include/hxc/modules/caxecraft/domain/AquaticProfile.h",
       "include/hxc/modules/caxecraft/domain/AxisMove.h",
       "include/hxc/modules/caxecraft/domain/BlockCoord.h",
       "include/hxc/modules/caxecraft/domain/BlockKind.h",
+      "include/hxc/modules/caxecraft/domain/PlayerAquaticState.h",
+      "include/hxc/modules/caxecraft/domain/PlayerAquaticStep.h",
+      "include/hxc/modules/caxecraft/domain/PlayerAquatics.h",
+      "include/hxc/modules/caxecraft/domain/PlayerImmersion.h",
       "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
       "include/hxc/modules/caxecraft/domain/PlayerState.h",
       "include/hxc/modules/caxecraft/domain/RaycastHit.h",
       "include/hxc/modules/caxecraft/domain/StepInput.h",
       "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
+      "include/hxc/modules/caxecraft/domain/WaterCellCodec.h",
+      "include/hxc/modules/caxecraft/domain/WaterCellState.h",
+      "include/hxc/modules/caxecraft/domain/WaterPendingStorage.h",
+      "include/hxc/modules/caxecraft/domain/WaterSimulation.h",
+      "include/hxc/modules/caxecraft/domain/WaterTickResult.h",
       "include/hxc/modules/caxecraft/domain/World.h",
       "include/hxc/modules/caxecraft/domain/WorldStorage.h",
       "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
@@ -176,7 +197,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "3b170c9a3e9467c27fd335e1727dc47808450337ba7215c0fc96c369c439238d",
+      "sha256": "7232046592a318f2ffa40cac9d028e8813ecda313b9ded179529f2fb8d234809",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -186,12 +207,17 @@
       "kind": "abi-manifest"
     },
     {
+      "sha256": "d80468c0097186bb23ceb0dd052e12e486b6e2a5dc0f81efe4ed3dabc150c110",
+      "path": "hxc.dispatch.json",
+      "kind": "dispatch-report"
+    },
+    {
       "sha256": "6aef9c040069a8123d88bf2f92fb4431a361fb062222f6c7e58043f5dcb5e0b8",
       "path": "hxc.initialization-plan.json",
       "kind": "initialization-plan"
     },
     {
-      "sha256": "6cccccc03d388ff934752f206b3b2ab8207d057c10a802862af17c8a03a3fc20",
+      "sha256": "2ffc96b8be1a9e19ddfc1b2f3a232a25e0452ace27a746bf6b005b3aab119bec",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -201,12 +227,12 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "1ed7e30153efbb09ac724ec7b0f5d6265c3874260f6d6e8ca78e50e07119d8e2",
+      "sha256": "65fb448c7dc1fb3e91473512700ceb2517bf6cedffccf266a4e4290f8562281e",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "9cd0bab5c53ae62f8ac44f813e071616a025333000bbbde6253350c954f63d46",
+      "sha256": "f75092dc818d0d5e72668d19af72119391aad741916c1423c1fdd6f008e868b4",
       "path": "include/hxc/detail/program_types.h",
       "kind": "private-header"
     },
@@ -221,7 +247,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "cac211f2c0d54ce2d9afdab503725e36fb203652183340efec69836ceb0cc7da",
+      "sha256": "dbd50e3d1d0bcb6c78460b2edc92562f6bfd429db8d2bc35feb49b4657a45dcc",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
@@ -241,6 +267,31 @@
       "kind": "private-header"
     },
     {
+      "sha256": "a5e00c90b9f4f183d098a1547e86a0b7b1eb67cbfaa3d8a1e165303f6142ee9e",
+      "path": "include/hxc/modules/caxecraft/app/WaterRenderer.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "b744e8cf8e006fc10f082986d7cb06d358c7f16d8163a34c1e426d3e81aabf79",
+      "path": "include/hxc/modules/caxecraft/content/BaseContentPack.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c6d363d86eaa6ec0f84d02dd398a43b5551b2f34ceceea308b2ad73ca6a8d1cc",
+      "path": "include/hxc/modules/caxecraft/content/FirstPlayableLevel.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c617ad83a7863e21894dd915b722bbd4294e95979ca7233adc73916690aa2392",
+      "path": "include/hxc/modules/caxecraft/domain/AquaticInput.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "add10dd26f6d993a6a8ccfc98355e5541a93ce9a3e3fba3dd627c255d3f064b1",
+      "path": "include/hxc/modules/caxecraft/domain/AquaticProfile.h",
+      "kind": "private-header"
+    },
+    {
       "sha256": "cc6fea96691ea6cf65d6b267eeb47b571964c05cb68c856bd60c8a75d05b2c27",
       "path": "include/hxc/modules/caxecraft/domain/AxisMove.h",
       "kind": "private-header"
@@ -253,6 +304,26 @@
     {
       "sha256": "e21a24514adc50993891c78bc260603bdd5ab3f96d5f111c98b934395bcb3c3a",
       "path": "include/hxc/modules/caxecraft/domain/BlockKind.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "e5e05b4c7de5cf21f6fb7339a6b2182e6116836c8df875dde78485cc53e04b78",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerAquaticState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "56532ee073811bfdb858c3e349931d935990bb700941f2627355bf01dbe12f49",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerAquaticStep.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1920f4a292bee22fc5af38a712bc15c019ede9a54125e702ad6f5ab408b766ee",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerAquatics.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "2a9344c25f59ecf79738ba62914d29ffb9f6d63a66c8bd4cca0b5773c2956417",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerImmersion.h",
       "kind": "private-header"
     },
     {
@@ -281,7 +352,32 @@
       "kind": "private-header"
     },
     {
-      "sha256": "d60b5729de5b66029bb3fca2a848dcceee0a7f74de78d5b6bbf087da349acc31",
+      "sha256": "66707a6728c25f780eb9b549c7231cee62c5c5341e7cff4f62c5cc324f36a720",
+      "path": "include/hxc/modules/caxecraft/domain/WaterCellCodec.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "604e0792eb8188af5aa9934522890a4ac22b09d2656d72d21395e20d5e14e3ec",
+      "path": "include/hxc/modules/caxecraft/domain/WaterCellState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "7ad93c03d82e6b3adc64731117b428266f97572fa5ffc887f4caab7f0dc86a30",
+      "path": "include/hxc/modules/caxecraft/domain/WaterPendingStorage.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "2fa991792dd225a130765b3a2c770f4d43b773a4072bf583da933e37655e4eef",
+      "path": "include/hxc/modules/caxecraft/domain/WaterSimulation.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "9c76a48d596e9edee2f79e28dc05a4a1befe9acb72c30d1c64e04f63abb7823e",
+      "path": "include/hxc/modules/caxecraft/domain/WaterTickResult.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "4a789ae6151aad0fd607d326715d63a8f76c39927e5acfe48d0303893d70e91a",
       "path": "include/hxc/modules/caxecraft/domain/World.h",
       "kind": "private-header"
     },
@@ -421,12 +517,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "0917b87d0b89d013cfd36ff252cabeb3d30713614ccea668f0cb35cc1c84319d",
+      "sha256": "c57e16f2d4efaa6a5cde31f87ba97f723ac3378d2a016c239d937e3249834a0e",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "81e19290891186120c61ef5cb93f91f06f9153ed3de9a27881d7145f3c9cdbe1",
+      "sha256": "1b2fa58d721e88a3b7a7297d5363537adbb9739e0fcd49614f2b8265729a2eb2",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -436,7 +532,7 @@
       "kind": "source"
     },
     {
-      "sha256": "59d58769d48748b1a5c3977c20a325f24a2532c4cfcfc5fdd514d54aae835b01",
+      "sha256": "f575b7cca2103c2a0cfa85b1fdb4fd5b4548b6a0ea398618bc2643f350b1bf3a",
       "path": "src/hxc/support.c",
       "kind": "source"
     },
@@ -451,7 +547,7 @@
       "kind": "source"
     },
     {
-      "sha256": "8a36c8d51d8bf93c39ba1b6e80fff98a00137bcf9f3db78db22d0d8047fdbeb2",
+      "sha256": "2a1b914676602eaee081b5599a87da80450466b2855c60959be10b64b21d4cf4",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
@@ -471,6 +567,26 @@
       "kind": "source"
     },
     {
+      "sha256": "5e02019690136da54f6e7b422c04d291ba89d9c6bea802b76f46e59f4e491b38",
+      "path": "src/modules/caxecraft/app/WaterRenderer.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "7956bb38b3c8222006aa683f6e8e2b9fcee02d6a25314618ebc9ac537b58ab64",
+      "path": "src/modules/caxecraft/content/BaseContentPack.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "87cab3a053cd509eef2afd0c29b34bd42f89e2bf78952a4ddc238c2f4553f757",
+      "path": "src/modules/caxecraft/content/FirstPlayableLevel.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "2a873ebe84368ff5153d826e24cca4261ffa898cef0538c705274ec0c5ddec83",
+      "path": "src/modules/caxecraft/domain/PlayerAquatics.c",
+      "kind": "source"
+    },
+    {
       "sha256": "b61e8c6edd98bd91dad0447726830ecb091fe2a3b2e06ccd6867219967b1e117",
       "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
       "kind": "source"
@@ -481,7 +597,22 @@
       "kind": "source"
     },
     {
-      "sha256": "f25376867e3cc0674397f97c9642ad7398e7e74b2d4b8b1f6bcbb651471bba07",
+      "sha256": "32dcba69c09d97cd749d78abfbca10d4c2269a3ae89d37472cf6bfd0427863b1",
+      "path": "src/modules/caxecraft/domain/WaterCellCodec.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "64fa11858c7fc48875b152218e14e819b92d5bfc6c8d94ba4719c1c185852776",
+      "path": "src/modules/caxecraft/domain/WaterPendingStorage.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "be3e8ffd9d280b75714de9f3d65765a4c41e90689be52f1fc6d97a3c638d6ef0",
+      "path": "src/modules/caxecraft/domain/WaterSimulation.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "bc07d76795fc96593821d6d04d816c62d46a8be384ae516ec40fd179addae90f",
       "path": "src/modules/caxecraft/domain/World.c",
       "kind": "source"
     },

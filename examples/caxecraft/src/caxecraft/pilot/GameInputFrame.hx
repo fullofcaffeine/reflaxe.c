@@ -21,6 +21,9 @@ typedef GameInputFrame = {
 	final lookPitch:Float;
 	final jumpPressed:Bool;
 
+	/** Held downward-swim intent; ignored by ordinary land movement. */
+	final descendHeld:Bool;
+
 	/** Primary world action: mine with a block selected, strike with a sword. */
 	final primaryPressed:Bool;
 
@@ -39,13 +42,14 @@ typedef GameInputFrame = {
 final class GameInputFrames {
 	public static inline function make(moveForward:Float, moveRight:Float, lookYaw:Float, lookPitch:Float, jumpPressed:Bool, primaryPressed:Bool,
 			secondaryPressed:Bool, interactPressed:Bool, pausePressed:Bool, capturePressed:Bool, quitPressed:Bool, hotbarSelection:Int = -1,
-			hotbarCycle:Int = 0):GameInputFrame
+			hotbarCycle:Int = 0, descendHeld:Bool = false):GameInputFrame
 		return {
 			moveForward: moveForward,
 			moveRight: moveRight,
 			lookYaw: lookYaw,
 			lookPitch: lookPitch,
 			jumpPressed: jumpPressed,
+			descendHeld: descendHeld,
 			primaryPressed: primaryPressed,
 			secondaryPressed: secondaryPressed,
 			interactPressed: interactPressed,
@@ -87,6 +91,7 @@ final class GameInputFrames {
 			&& left.lookYaw == right.lookYaw
 			&& left.lookPitch == right.lookPitch
 			&& left.jumpPressed == right.jumpPressed
+			&& left.descendHeld == right.descendHeld
 			&& left.primaryPressed == right.primaryPressed
 			&& left.secondaryPressed == right.secondaryPressed
 			&& left.interactPressed == right.interactPressed
