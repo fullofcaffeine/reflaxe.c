@@ -3,7 +3,11 @@ package caxecraft.app;
 #if c
 import c.CArray;
 import c.UInt8;
-import caxecraft.domain.PlayerPhysics;
+import caxecraft.domain.PlayerPhysics.canPlaceAt as playerCanPlaceAt;
+import caxecraft.domain.PlayerPhysics.input as playerInput;
+import caxecraft.domain.PlayerPhysics.player as createPlayer;
+import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
+import caxecraft.domain.PlayerPhysics.step as stepPlayer;
 import caxecraft.domain.PlayerState;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.VoxelRaycast;
@@ -357,7 +361,7 @@ final class Main {
 					moveZ *= 0.7071067811865476;
 				}
 				if (!PlayerVitals.isDefeated(vitals))
-					player = PlayerPhysics.step(cells, player, PlayerPhysics.input(moveX, moveZ, jumpQueued));
+					player = stepPlayer(cells, player, playerInput(moveX, moveZ, jumpQueued));
 				if (selectedMode == GameMode.Adventure) {
 					if (!PlayerVitals.isDefeated(vitals)) {
 						vitals = PlayerVitals.step(vitals);
@@ -433,7 +437,7 @@ final class Main {
 						final hasItem = Inventory.countAt(inventory, inventory.selected) > 0;
 						if (!hasItem
 							|| !World.isPlaceable(selectedBlock)
-							|| !PlayerPhysics.canPlaceAt(player, placement)
+							|| !playerCanPlaceAt(player, placement)
 							|| !World.place(cells, placement, selectedBlock)) {
 							placementBlockedFrames = 60;
 							#if caxecraft_pilot
@@ -579,7 +583,7 @@ final class Main {
 	/** Derive the meadow spawn afresh so no stale height survives a world edit. */
 	static function spawnPlayer(cells:WorldCells):PlayerState {
 		final spawnY = World.surfaceY(cells, 16, 16) + 1.0;
-		return PlayerPhysics.recoverSpawn(cells, PlayerPhysics.player(SPAWN_X, spawnY, SPAWN_Z));
+		return recoverPlayerSpawn(cells, createPlayer(SPAWN_X, spawnY, SPAWN_Z));
 	}
 
 	/** Original atlas sprites with code-drawn fallbacks; actor rules remain in gameplay/. */

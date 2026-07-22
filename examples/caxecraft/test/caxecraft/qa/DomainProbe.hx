@@ -2,7 +2,11 @@ package caxecraft.qa;
 
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
-import caxecraft.domain.PlayerPhysics;
+import caxecraft.domain.PlayerPhysics.canPlaceAt as playerCanPlaceAt;
+import caxecraft.domain.PlayerPhysics.input as playerInput;
+import caxecraft.domain.PlayerPhysics.player as createPlayer;
+import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
+import caxecraft.domain.PlayerPhysics.step as stepPlayer;
 import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
@@ -133,59 +137,59 @@ final class DomainProbe {
 
 		clear(cells);
 		CaxecraftTrace.makeFloor(cells);
-		var player = PlayerPhysics.player(5.5, 1.0, 5.5);
-		if (PlayerPhysics.canPlaceAt(player, World.coord(5, 1, 5)))
+		var player = createPlayer(5.5, 1.0, 5.5);
+		if (playerCanPlaceAt(player, World.coord(5, 1, 5)))
 			return 37;
-		if (!PlayerPhysics.canPlaceAt(player, World.coord(7, 1, 5)))
+		if (!playerCanPlaceAt(player, World.coord(7, 1, 5)))
 			return 39;
-		player = PlayerPhysics.step(cells, player, PlayerPhysics.input(0.0, 0.0, false));
+		player = stepPlayer(cells, player, playerInput(0.0, 0.0, false));
 		if (!player.grounded || !near(player.y, 1.0) || !near(player.velocityY, 0.0))
 			return 30;
 
-		player = PlayerPhysics.step(cells, player, PlayerPhysics.input(0.0, 0.0, true));
+		player = stepPlayer(cells, player, playerInput(0.0, 0.0, true));
 		if (player.grounded || player.velocityY <= 0.0 || player.y <= 1.0)
 			return 31;
 
 		World.replace(cells, World.coord(6, 1, 5), BlockKind.Stone);
 		World.replace(cells, World.coord(6, 2, 5), BlockKind.Stone);
-		var slider = PlayerPhysics.player(5.7, 1.0, 5.2);
-		slider = PlayerPhysics.step(cells, slider, PlayerPhysics.input(1.0, 1.0, false));
+		var slider = createPlayer(5.7, 1.0, 5.2);
+		slider = stepPlayer(cells, slider, playerInput(1.0, 1.0, false));
 		if (!near(slider.x, 5.7) || slider.z <= 5.2 || !near(slider.velocityX, 0.0) || slider.velocityZ <= 0.0)
 			return 32;
 
 		World.replace(cells, World.coord(5, 1, 6), BlockKind.Stone);
 		World.replace(cells, World.coord(5, 2, 6), BlockKind.Stone);
-		var corner = PlayerPhysics.player(5.7, 1.0, 5.7);
-		corner = PlayerPhysics.step(cells, corner, PlayerPhysics.input(1.0, 1.0, false));
+		var corner = createPlayer(5.7, 1.0, 5.7);
+		corner = stepPlayer(cells, corner, playerInput(1.0, 1.0, false));
 		if (!near(corner.x, 5.7) || !near(corner.z, 5.7) || !near(corner.velocityX, 0.0) || !near(corner.velocityZ, 0.0))
 			return 38;
 
 		World.replace(cells, World.coord(4, 3, 4), BlockKind.Stone);
-		var ceiling = PlayerPhysics.player(4.5, 1.0, 4.5);
-		ceiling = PlayerPhysics.step(cells, ceiling, PlayerPhysics.input(0.0, 0.0, false));
-		ceiling = PlayerPhysics.step(cells, ceiling, PlayerPhysics.input(0.0, 0.0, true));
+		var ceiling = createPlayer(4.5, 1.0, 4.5);
+		ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, false));
+		ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, true));
 		var ceilingTicks = 0;
 		while (ceilingTicks < 4) {
-			ceiling = PlayerPhysics.step(cells, ceiling, PlayerPhysics.input(0.0, 0.0, false));
+			ceiling = stepPlayer(cells, ceiling, playerInput(0.0, 0.0, false));
 			ceilingTicks++;
 		}
 		if (ceiling.y + 1.8 > 3.0001 || ceiling.velocityY > 0.0)
 			return 33;
 
-		var embedded = PlayerPhysics.player(6.5, 1.0, 5.5);
-		embedded = PlayerPhysics.recoverSpawn(cells, embedded);
+		var embedded = createPlayer(6.5, 1.0, 5.5);
+		embedded = recoverPlayerSpawn(cells, embedded);
 		if (embedded.y < 3.0)
 			return 34;
 
-		var boundary = PlayerPhysics.player(0.31, 1.0, 0.31);
-		boundary = PlayerPhysics.step(cells, boundary, PlayerPhysics.input(-1.0, -1.0, false));
+		var boundary = createPlayer(0.31, 1.0, 0.31);
+		boundary = stepPlayer(cells, boundary, playerInput(-1.0, -1.0, false));
 		if (boundary.x < 0.29 || boundary.z < 0.29)
 			return 35;
 
-		var tunnel = PlayerPhysics.player(10.5, 1.0, 10.5);
+		var tunnel = createPlayer(10.5, 1.0, 10.5);
 		World.replace(cells, World.coord(11, 1, 10), BlockKind.Stone);
 		World.replace(cells, World.coord(11, 2, 10), BlockKind.Stone);
-		tunnel = PlayerPhysics.step(cells, tunnel, PlayerPhysics.input(20.0, 0.0, false));
+		tunnel = stepPlayer(cells, tunnel, playerInput(20.0, 0.0, false));
 		if (tunnel.x > 10.701)
 			return 36;
 

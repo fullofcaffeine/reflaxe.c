@@ -191,7 +191,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "ea200e7beca4628467b91946acfc20f2c211d43274cc84ad1da74479e1aebd52",
+      "sha256": "6cccccc03d388ff934752f206b3b2ab8207d057c10a802862af17c8a03a3fc20",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -201,7 +201,7 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "f000a5ea6ada237f859f17d873b483dbd7d1a9039c4874e028db29aa0b1272cb",
+      "sha256": "1ed7e30153efbb09ac724ec7b0f5d6265c3874260f6d6e8ca78e50e07119d8e2",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
@@ -256,7 +256,7 @@
       "kind": "private-header"
     },
     {
-      "sha256": "7fd4b350603e5220254733e7b150d6ed2e3b5c517f6051d7e89ab3cd01774fc7",
+      "sha256": "f446e5ca5355017ac10c8e2bc02f0a61efdea51dcc42b7492eaf7f10ff6758d2",
       "path": "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
       "kind": "private-header"
     },
@@ -471,7 +471,7 @@
       "kind": "source"
     },
     {
-      "sha256": "3edaa6fe6b2532ae613ebb2730db7c1ec9bc61f84667702094b12bd7db8397e8",
+      "sha256": "b61e8c6edd98bd91dad0447726830ecb091fe2a3b2e06ccd6867219967b1e117",
       "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
       "kind": "source"
     },

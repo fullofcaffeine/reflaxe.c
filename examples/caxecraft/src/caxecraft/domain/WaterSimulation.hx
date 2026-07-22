@@ -1,5 +1,13 @@
 package caxecraft.domain;
 
+import caxecraft.domain.WaterCellCodec.decode as decodeWaterCell;
+import caxecraft.domain.WaterCellCodec.emptyCode;
+import caxecraft.domain.WaterCellCodec.encodeFlow;
+import caxecraft.domain.WaterCellCodec.FLOW_LEVEL_COUNT;
+import caxecraft.domain.WaterCellCodec.isWaterCode;
+import caxecraft.domain.WaterCellCodec.sourceCode;
+import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
+
 /**
 	Deterministic, bounded voxel water for the target-neutral game domain.
 
@@ -20,14 +28,6 @@ package caxecraft.domain;
 	this state in later vertical slices; they never advance it themselves.
 **/
 final class WaterSimulation {
-	static inline final AIR_CODE:Int = 0;
-	static inline final FIRST_SOLID_CODE:Int = 1;
-	static inline final LAST_SOLID_CODE:Int = 4;
-	static inline final SOURCE_CODE:Int = 16;
-	static inline final FLOWING_BASE_CODE:Int = 17;
-	static inline final FALLING_BASE_CODE:Int = 25;
-	static inline final LEVEL_COUNT:Int = 8;
-
 	var pendingCount:Int;
 	var lowestPending:Int;
 
@@ -57,9 +57,7 @@ final class WaterSimulation {
 
 	/** Return the typed water meaning at one coordinate. */
 	public function cellState(cells:WorldCells, coord:BlockCoord):WaterCellState {
-		if (!World.contains(coord))
-			return Blocked;
-		return decode(WorldStorage.readCode(cells, World.indexOf(coord)));
+		return waterStateAt(cells, coord);
 	}
 
 	/** Number of distinct cells still waiting for bounded work. */
@@ -76,10 +74,10 @@ final class WaterSimulation {
 		final index = World.indexOf(coord);
 		if (index < 0)
 			return false;
-		return switch decode(WorldStorage.readCode(cells, index)) {
+		return switch decodeWaterCell(WorldStorage.readCode(cells, index)) {
 			case Blocked | InvalidStorage(_): false;
 			case Empty | Source | Flowing(_, _):
-				WorldStorage.writeCode(cells, index, SOURCE_CODE);
+				WorldStorage.writeCode(cells, index, sourceCode());
 				scheduleAround(pendingCells, coord);
 				true;
 		};
@@ -90,9 +88,9 @@ final class WaterSimulation {
 		final index = World.indexOf(coord);
 		if (index < 0)
 			return false;
-		return switch decode(WorldStorage.readCode(cells, index)) {
+		return switch decodeWaterCell(WorldStorage.readCode(cells, index)) {
 			case Source | Flowing(_, _):
-				WorldStorage.writeCode(cells, index, AIR_CODE);
+				WorldStorage.writeCode(cells, index, emptyCode());
 				scheduleAround(pendingCells, coord);
 				true;
 			case Empty | Blocked | InvalidStorage(_): false;
@@ -182,10 +180,6 @@ final class WaterSimulation {
 		return false;
 	}
 
-	/** Recognize only the compact source and flowing ranges owned by this module. */
-	static inline function isWaterCode(code:Int):Bool
-		return code == SOURCE_CODE || (code >= FLOWING_BASE_CODE && code < FALLING_BASE_CODE + LEVEL_COUNT);
-
 	/** Mark an edited cell and its six face-sharing neighbors for local repair. */
 	function scheduleAround(pendingCells:WaterPendingCells, coord:BlockCoord):Void {
 		schedule(pendingCells, coord);
@@ -225,7 +219,7 @@ final class WaterSimulation {
 	/** Recompute one non-source cell and propagate only when its byte changes. */
 	function recompute(cells:WorldCells, pendingCells:WaterPendingCells, index:Int):Bool {
 		final currentCode = WorldStorage.readCode(cells, index);
-		final current = decode(currentCode);
+		final current = decodeWaterCell(currentCode);
 		final coord = coordFromIndex(index);
 		return switch current {
 			case Source | Blocked | InvalidStorage(_): false;
@@ -247,12 +241,12 @@ final class WaterSimulation {
 			return encodeFlow(verticalLevel, !supported);
 		}
 
-		var horizontalLevel = LEVEL_COUNT;
+		var horizontalLevel = FLOW_LEVEL_COUNT;
 		horizontalLevel = smaller(horizontalLevel, feedLevel(cellState(cells, World.coord(coord.x - 1, coord.y, coord.z)), false));
 		horizontalLevel = smaller(horizontalLevel, feedLevel(cellState(cells, World.coord(coord.x + 1, coord.y, coord.z)), false));
 		horizontalLevel = smaller(horizontalLevel, feedLevel(cellState(cells, World.coord(coord.x, coord.y, coord.z - 1)), false));
 		horizontalLevel = smaller(horizontalLevel, feedLevel(cellState(cells, World.coord(coord.x, coord.y, coord.z + 1)), false));
-		return horizontalLevel < LEVEL_COUNT ? encodeFlow(horizontalLevel, false) : AIR_CODE;
+		return horizontalLevel < FLOW_LEVEL_COUNT ? encodeFlow(horizontalLevel, false) : emptyCode();
 	}
 
 	/** Convert one neighboring state into the level it can provide here. */
@@ -279,40 +273,6 @@ final class WaterSimulation {
 	/** Keep the smaller valid feed level without admitting the -1 sentinel. */
 	static inline function smaller(current:Int, candidate:Int):Int
 		return candidate >= 0 && candidate < current ? candidate : current;
-
-	/** Encode one already-validated flow level in the compact world byte. */
-	static function encodeFlow(level:Int, falling:Bool):Int {
-		return (falling ? FALLING_BASE_CODE : FLOWING_BASE_CODE) + level;
-	}
-
-	/** Decode every byte explicitly so malformed storage cannot masquerade as air. */
-	static function decode(code:Int):WaterCellState {
-		if (code == AIR_CODE)
-			return Empty;
-		if (code >= FIRST_SOLID_CODE && code <= LAST_SOLID_CODE)
-			return Blocked;
-		if (code == SOURCE_CODE)
-			return Source;
-		if (code >= FLOWING_BASE_CODE && code < FLOWING_BASE_CODE + LEVEL_COUNT)
-			return Flowing(level(code - FLOWING_BASE_CODE), false);
-		if (code >= FALLING_BASE_CODE && code < FALLING_BASE_CODE + LEVEL_COUNT)
-			return Flowing(level(code - FALLING_BASE_CODE), true);
-		return InvalidStorage(code);
-	}
-
-	/** Convert a proven 0...7 representation into the closed public level type. */
-	static function level(value:Int):WaterLevel {
-		return switch value {
-			case 0: Full;
-			case 1: One;
-			case 2: Two;
-			case 3: Three;
-			case 4: Four;
-			case 5: Five;
-			case 6: Six;
-			default: Thin;
-		};
-	}
 
 	/** Reverse the fixed 32 x 16 x 32 linear layout without division. */
 	static inline function coordFromIndex(index:Int):BlockCoord

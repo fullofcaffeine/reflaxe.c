@@ -594,25 +594,45 @@ def method_symbol_projection(symbols: dict[str, object]) -> dict[str, object]:
     entries = symbols.get("symbols")
     if not isinstance(entries, list):
         raise CaxecraftFailure("generated symbol table omitted its symbols array")
-    methods: list[dict[str, str]] = []
+    callables: list[dict[str, str]] = []
     for entry in entries:
         if not isinstance(entry, dict):
             raise CaxecraftFailure("generated symbol table contains a malformed entry")
         source = entry.get("sourceSymbol")
         c_name = entry.get("cName")
+        kind = entry.get("kind")
+        readable_name = entry.get("readableName")
         if (
-            entry.get("kind") == "method"
+            kind in ("function", "method")
             and isinstance(source, str)
             and source.startswith("caxecraft.")
         ):
             if not isinstance(c_name, str):
-                raise CaxecraftFailure(f"method symbol {source!r} has no C name")
-            methods.append({"sourceSymbol": source, "cName": c_name})
-    methods.sort(key=lambda entry: entry["sourceSymbol"].encode("utf-8"))
+                raise CaxecraftFailure(f"callable symbol {source!r} has no C name")
+            if not isinstance(readable_name, list) or not all(
+                isinstance(part, str) and part for part in readable_name
+            ):
+                raise CaxecraftFailure(
+                    f"callable symbol {source!r} has no readable source name"
+                )
+            callables.append(
+                {
+                    "sourceSymbol": source,
+                    "readableSymbol": ".".join(readable_name),
+                    "cName": c_name,
+                    "kind": kind,
+                }
+            )
+    callables.sort(
+        key=lambda entry: (
+            entry["readableSymbol"].encode("utf-8"),
+            entry["sourceSymbol"].encode("utf-8"),
+        )
+    )
     return {
-        "schemaVersion": 1,
-        "algorithm": "caxecraft-method-symbol-projection-v1",
-        "methods": methods,
+        "schemaVersion": 2,
+        "algorithm": "caxecraft-callable-symbol-projection-v2",
+        "callables": callables,
     }
 
 
@@ -671,62 +691,80 @@ def validate_runtime_plan(plan: dict[str, object]) -> None:
 
 
 def validate_method_symbols(projection: dict[str, object]) -> None:
-    methods = projection.get("methods")
+    methods = projection.get("callables")
     if (
-        projection.get("schemaVersion") != 1
-        or projection.get("algorithm") != "caxecraft-method-symbol-projection-v1"
+        projection.get("schemaVersion") != 2
+        or projection.get("algorithm") != "caxecraft-callable-symbol-projection-v2"
         or not isinstance(methods, list)
     ):
-        raise CaxecraftFailure("Caxecraft method-symbol projection drifted")
+        raise CaxecraftFailure("Caxecraft callable-symbol projection drifted")
     pairs: list[tuple[str, str]] = []
     for entry in methods:
         if (
             not isinstance(entry, dict)
             or not isinstance(entry.get("sourceSymbol"), str)
+            or not isinstance(entry.get("readableSymbol"), str)
             or not isinstance(entry.get("cName"), str)
+            or entry.get("kind") not in ("function", "method")
         ):
-            raise CaxecraftFailure("Caxecraft method-symbol projection is malformed")
+            raise CaxecraftFailure("Caxecraft callable-symbol projection is malformed")
         pairs.append((entry["sourceSymbol"], entry["cName"]))
-    if pairs != sorted(pairs, key=lambda pair: pair[0].encode("utf-8")):
-        raise CaxecraftFailure("Caxecraft method-symbol projection is not UTF-8 sorted")
-    sources = {source for source, _ in pairs}
+    order = [
+        (entry["readableSymbol"].encode("utf-8"), entry["sourceSymbol"].encode("utf-8"))
+        for entry in methods
+    ]
+    if order != sorted(order):
+        raise CaxecraftFailure("Caxecraft callable-symbol projection is not UTF-8 sorted")
+    readable_sources = {entry["readableSymbol"] for entry in methods}
     required = {
-        "caxecraft.domain.CaxecraftTrace.propertyTrace(i32)",
+        "caxecraft.domain.CaxecraftTrace.propertyTrace",
         "caxecraft.domain.CaxecraftTrace.runTrace",
-        "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
-        "caxecraft.domain.World.generate(span:mutable<u8>, i32)",
+        "caxecraft.domain.VoxelRaycast.trace",
+        "caxecraft.domain.World.generate",
         "caxecraft.qa.DomainProbe.selfCheck",
     }
-    missing = sorted(required - sources)
+    missing = sorted(required - readable_sources)
     if missing:
-        raise CaxecraftFailure(f"Caxecraft method symbols omitted {missing!r}")
-    if not any(source.startswith("caxecraft.domain.PlayerPhysics.step(") for source in sources):
-        raise CaxecraftFailure("Caxecraft method symbols omitted PlayerPhysics.step")
-    if any("hxrt" in value.lower() for pair in pairs for value in pair):
+        raise CaxecraftFailure(f"Caxecraft callable symbols omitted {missing!r}")
+    if "caxecraft.domain.PlayerPhysics.step" not in readable_sources:
+        raise CaxecraftFailure("Caxecraft callable symbols omitted PlayerPhysics.step")
+    report_values = [
+        value
+        for entry in methods
+        for value in (entry["sourceSymbol"], entry["readableSymbol"], entry["cName"])
+    ]
+    if any("hxrt" in value.lower() for value in report_values):
         raise CaxecraftFailure("Caxecraft method symbols unexpectedly mention hxrt")
 
 
 def projected_method_name(
     projection: dict[str, object], source_symbol: str, *, prefix: bool = False
 ) -> str:
-    methods = projection.get("methods")
+    methods = projection.get("callables")
     if not isinstance(methods, list):
-        raise CaxecraftFailure("Caxecraft method-symbol projection is malformed")
+        raise CaxecraftFailure("Caxecraft callable-symbol projection is malformed")
     matches = [
         item.get("cName")
         for item in methods
         if isinstance(item, dict)
         and isinstance(item.get("sourceSymbol"), str)
+        and isinstance(item.get("readableSymbol"), str)
         and (
-            item["sourceSymbol"].startswith(source_symbol)
+            (
+                item["sourceSymbol"].startswith(source_symbol)
+                or item["readableSymbol"].startswith(source_symbol)
+            )
             if prefix
-            else item["sourceSymbol"] == source_symbol
+            else (
+                item["sourceSymbol"] == source_symbol
+                or item["readableSymbol"] == source_symbol
+            )
         )
         and isinstance(item.get("cName"), str)
     ]
     if len(matches) != 1:
         raise CaxecraftFailure(
-            f"cannot resolve one generated C method for {source_symbol!r}: {matches!r}"
+            f"cannot resolve one generated C callable for {source_symbol!r}: {matches!r}"
         )
     return matches[0]
 
@@ -763,7 +801,7 @@ def native_method_symbol_header(projection: dict[str, object]) -> str:
             "#ifndef CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED",
             "#define CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED",
             "",
-            "/* Test-only aliases projected from the compiler symbol report. */",
+            "/* Test-only callable aliases projected from the compiler symbol report. */",
             *definitions,
             "",
             "#endif /* CAXECRAFT_TEST_METHOD_SYMBOLS_H_INCLUDED */",
@@ -772,12 +810,35 @@ def native_method_symbol_header(projection: dict[str, object]) -> str:
     )
 
 
-def validate_hxcir(hxcir: str) -> None:
+def projected_semantic_function_id(
+    projection: dict[str, object], readable_symbol: str
+) -> str:
+    callables = projection.get("callables")
+    if not isinstance(callables, list):
+        raise CaxecraftFailure("Caxecraft callable-symbol projection is malformed")
+    matches = [
+        entry["sourceSymbol"].split("(", 1)[0]
+        for entry in callables
+        if isinstance(entry, dict)
+        and entry.get("readableSymbol") == readable_symbol
+        and isinstance(entry.get("sourceSymbol"), str)
+    ]
+    if len(matches) != 1:
+        raise CaxecraftFailure(
+            f"cannot resolve one semantic function for {readable_symbol!r}: {matches!r}"
+        )
+    return f"function.{matches[0]}"
+
+
+def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
+    player_step_id = projected_semantic_function_id(
+        projection, "caxecraft.domain.PlayerPhysics.step"
+    )
     for marker in (
         "hxcir schema=10",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
-        'function "function.caxecraft.domain.PlayerPhysics.step"',
+        f'function "{player_step_id}"',
         "initialize-fixed-array",
         "initialize-span",
         "span-parameter-borrow",
@@ -817,7 +878,7 @@ def validate_generated_text(
             "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
         ),
         projected_method_name(
-            method_symbols, "caxecraft.domain.PlayerPhysics.step(", prefix=True
+            method_symbols, "caxecraft.domain.PlayerPhysics.step", prefix=True
         ),
         projected_method_name(
             method_symbols, "caxecraft.qa.DomainProbe.selfCheck"
@@ -931,9 +992,9 @@ def maintainability_function_mappings(
     hxcir: str,
     layout: str,
 ) -> dict[str, tuple[FunctionSourceMapping, ...]]:
-    methods = method_symbols.get("methods")
+    methods = method_symbols.get("callables")
     if not isinstance(methods, list):
-        raise CaxecraftFailure("Caxecraft method projection omitted methods")
+        raise CaxecraftFailure("Caxecraft callable projection omitted callables")
     spans = hxcir_function_sources(hxcir)
     decoded = {path: content.decode("utf-8") for path, content in contents.items()}
     sources = {path: content for path, content in decoded.items() if path.endswith(".c")}
@@ -1320,7 +1381,7 @@ def render_project(
     projection = method_symbol_projection(symbols)
     validate_method_symbols(projection)
     hxcir = extract_hxcir(result, label)
-    validate_hxcir(hxcir)
+    validate_hxcir(hxcir, projection)
     header, source = generated_c_bytes(output, layout)
     validate_generated_text(header, source, projection)
     maintainability_report = generated_maintainability_report(

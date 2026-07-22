@@ -303,13 +303,16 @@ with hosted CI, and do not label a change a performance improvement without a
 comparable before and after sample.
 
 The Caxecraft shard starts with focused, isolated contracts for localization,
-content, bounded voxel water, inventory, actors, and deterministic pilot input
-before the broader scenario, editor, and full generated-C lanes. These commands
+content, bounded voxel water, aquatic movement and breath, inventory, actors,
+and deterministic pilot input before the broader scenario, editor, and full
+generated-C lanes. These commands
 make a local gameplay regression cheap to reproduce; the later full lane remains
-the integrated authority and is not replaced by them. Water's focused lane runs
-its shared Haxe rules under Eval and generated C, then performs one strict native
-build plus an AddressSanitizer/UndefinedBehaviorSanitizer run when the selected
-compiler can provide them.
+the integrated authority and is not replaced by them. Water and aquatics use
+the shared focused Haxe-to-C runner: their Haxe probes own behavior while the
+host only coordinates Eval, native C, exact trace parity, and sanitizers. These
+focused lanes run their shared Haxe rules under Eval and generated C, then
+perform one strict native build plus an AddressSanitizer/UndefinedBehaviorSanitizer
+run when the selected compiler can provide them.
 
 The successful Caxecraft command embeds its own phase report, also described by
 [`caxecraft-timing.schema.json`](specs/caxecraft-timing.schema.json). It keeps

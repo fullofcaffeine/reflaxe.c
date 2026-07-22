@@ -19,6 +19,8 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_playe
 
 struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state);
 
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ);
+
 struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command);
 
 #endif /* HXC_CAXECRAFT_DOMAIN_PLAYER_PHYSICS_H_INCLUDED */

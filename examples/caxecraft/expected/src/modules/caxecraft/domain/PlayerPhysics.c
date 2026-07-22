@@ -247,6 +247,61 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recov
   return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = false, .hxc_velocityX = hxc_state.hxc_velocityX, .hxc_velocityY = 0.0, .hxc_velocityZ = hxc_state.hxc_velocityZ, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_recoveredY, .hxc_z = hxc_state.hxc_z };
 }
 
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ)
+{
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n5 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n5;
+  double hxc_velocityY = hxc_requestedVelocityY;
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_state.hxc_x, hxc_state.hxc_y, hxc_state.hxc_z, hxc_velocityX * 0.05, 0);
+  struct hxc_caxecraft_domain_AxisMove hxc_movedX = hxc_tmp_call_result_n3;
+  double hxc_tmp_record_field_load_result_n4 = hxc_movedX.hxc_x;
+  double hxc_tmp_record_field_load_result_n5 = hxc_movedX.hxc_y;
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n7 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n4, hxc_tmp_record_field_load_result_n5, hxc_movedX.hxc_z, hxc_velocityZ * 0.05, 2);
+  struct hxc_caxecraft_domain_AxisMove hxc_movedZ = hxc_tmp_call_result_n7;
+  double hxc_tmp_record_field_load_result_n8 = hxc_movedZ.hxc_x;
+  double hxc_tmp_record_field_load_result_n9 = hxc_movedZ.hxc_y;
+  double hxc_tmp_record_field_load_result_n10 = hxc_movedZ.hxc_z;
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n12 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n8, hxc_tmp_record_field_load_result_n9, hxc_tmp_record_field_load_result_n10, hxc_velocityY * 0.05, 1);
+  struct hxc_caxecraft_domain_AxisMove hxc_movedY = hxc_tmp_call_result_n12;
+  bool hxc_tmp_record_field_load_result_n13 = hxc_movedY.hxc_blocked;
+  bool hxc_tmp_short_circuit_result_n11 = hxc_tmp_record_field_load_result_n13;
+  if (hxc_tmp_record_field_load_result_n13)
+  {
+    hxc_tmp_short_circuit_result_n11 = hxc_velocityY <= 0.0;
+  }
+  bool hxc_grounded = hxc_tmp_short_circuit_result_n11;
+  if (hxc_movedY.hxc_blocked)
+  {
+    hxc_velocityY = 0.0;
+  }
+  if (!hxc_grounded)
+  {
+    double hxc_tmp_record_field_load_result_n18 = hxc_movedY.hxc_x;
+    double hxc_tmp_record_field_load_result_n19 = hxc_movedY.hxc_y;
+    bool hxc_tmp_call_result_n21 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n18, hxc_tmp_record_field_load_result_n19 - 0.02, hxc_movedY.hxc_z);
+    hxc_grounded = hxc_tmp_call_result_n21;
+  }
+  double hxc_finalVelocityX = hxc_velocityX;
+  if (hxc_movedX.hxc_blocked)
+  {
+    hxc_finalVelocityX = 0.0;
+  }
+  double hxc_finalVelocityZ = hxc_velocityZ;
+  if (hxc_movedZ.hxc_blocked)
+  {
+    hxc_finalVelocityZ = 0.0;
+  }
+  double hxc_tmp_record_field_load_result_n24 = hxc_movedY.hxc_x;
+  double hxc_tmp_record_field_load_result_n25 = hxc_movedY.hxc_y;
+  double hxc_tmp_record_field_load_result_n26 = hxc_movedY.hxc_z;
+  double hxc_tmp_load_result_n27 = hxc_finalVelocityX;
+  double hxc_tmp_load_result_n28 = hxc_velocityY;
+  double hxc_tmp_load_result_n29 = hxc_finalVelocityZ;
+  return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = hxc_grounded, .hxc_velocityX = hxc_tmp_load_result_n27, .hxc_velocityY = hxc_tmp_load_result_n28, .hxc_velocityZ = hxc_tmp_load_result_n29, .hxc_x = hxc_tmp_record_field_load_result_n24, .hxc_y = hxc_tmp_record_field_load_result_n25, .hxc_z = hxc_tmp_record_field_load_result_n26 };
+}
+
 struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command)
 {
   uint8_t *hxc_borrow = hxc_cells;
@@ -279,54 +334,9 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(
     hxc_tmp_conditional_result_n9 = hxc_state.hxc_velocityY + -0.9;
   }
   double hxc_velocityY = hxc_tmp_conditional_result_n9;
-  double hxc_tmp_record_field_load_result_n12 = hxc_state.hxc_x;
-  double hxc_tmp_record_field_load_result_n13 = hxc_state.hxc_y;
-  double hxc_tmp_record_field_load_result_n14 = hxc_state.hxc_z;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n16 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n12, hxc_tmp_record_field_load_result_n13, hxc_tmp_record_field_load_result_n14, hxc_velocityX * 0.05, 0);
-  struct hxc_caxecraft_domain_AxisMove hxc_movedX = hxc_tmp_call_result_n16;
-  double hxc_tmp_record_field_load_result_n17 = hxc_movedX.hxc_x;
-  double hxc_tmp_record_field_load_result_n18 = hxc_movedX.hxc_y;
-  double hxc_tmp_record_field_load_result_n19 = hxc_movedX.hxc_z;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n21 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n17, hxc_tmp_record_field_load_result_n18, hxc_tmp_record_field_load_result_n19, hxc_velocityZ * 0.05, 2);
-  struct hxc_caxecraft_domain_AxisMove hxc_movedZ = hxc_tmp_call_result_n21;
-  double hxc_tmp_record_field_load_result_n22 = hxc_movedZ.hxc_x;
-  double hxc_tmp_record_field_load_result_n23 = hxc_movedZ.hxc_y;
-  double hxc_tmp_record_field_load_result_n24 = hxc_movedZ.hxc_z;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n26 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n22, hxc_tmp_record_field_load_result_n23, hxc_tmp_record_field_load_result_n24, hxc_velocityY * 0.05, 1);
-  struct hxc_caxecraft_domain_AxisMove hxc_movedY = hxc_tmp_call_result_n26;
-  bool hxc_tmp_record_field_load_result_n27 = hxc_movedY.hxc_blocked;
-  bool hxc_tmp_short_circuit_result_n14 = hxc_tmp_record_field_load_result_n27;
-  if (hxc_tmp_record_field_load_result_n27)
-  {
-    hxc_tmp_short_circuit_result_n14 = hxc_velocityY <= 0.0;
-  }
-  bool hxc_grounded = hxc_tmp_short_circuit_result_n14;
-  if (hxc_movedY.hxc_blocked)
-  {
-    hxc_velocityY = 0.0;
-  }
-  if (!hxc_grounded)
-  {
-    double hxc_tmp_record_field_load_result_n32 = hxc_movedY.hxc_x;
-    double hxc_tmp_record_field_load_result_n33 = hxc_movedY.hxc_y;
-    bool hxc_tmp_call_result_n35 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n32, hxc_tmp_record_field_load_result_n33 - 0.02, hxc_movedY.hxc_z);
-    hxc_grounded = hxc_tmp_call_result_n35;
-  }
-  double hxc_finalVelocityX = hxc_velocityX;
-  if (hxc_movedX.hxc_blocked)
-  {
-    hxc_finalVelocityX = 0.0;
-  }
-  double hxc_finalVelocityZ = hxc_velocityZ;
-  if (hxc_movedZ.hxc_blocked)
-  {
-    hxc_finalVelocityZ = 0.0;
-  }
-  double hxc_tmp_record_field_load_result_n40 = hxc_movedY.hxc_x;
-  double hxc_tmp_record_field_load_result_n41 = hxc_movedY.hxc_y;
-  double hxc_tmp_record_field_load_result_n42 = hxc_movedY.hxc_z;
-  double hxc_tmp_load_result_n43 = hxc_finalVelocityX;
-  double hxc_tmp_load_result_n44 = hxc_velocityY;
-  double hxc_tmp_load_result_n45 = hxc_finalVelocityZ;
-  return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = hxc_grounded, .hxc_velocityX = hxc_tmp_load_result_n43, .hxc_velocityY = hxc_tmp_load_result_n44, .hxc_velocityZ = hxc_tmp_load_result_n45, .hxc_x = hxc_tmp_record_field_load_result_n40, .hxc_y = hxc_tmp_record_field_load_result_n41, .hxc_z = hxc_tmp_record_field_load_result_n42 };
+  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n12 = hxc_state;
+  double hxc_tmp_load_result_n13 = hxc_velocityX;
+  double hxc_tmp_load_result_n14 = hxc_velocityY;
+  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n16 = hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(hxc_cells, hxc_length, hxc_tmp_load_result_n12, hxc_tmp_load_result_n13, hxc_tmp_load_result_n14, hxc_velocityZ);
+  return hxc_tmp_call_result_n16;
 }

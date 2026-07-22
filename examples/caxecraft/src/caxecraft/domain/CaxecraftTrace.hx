@@ -1,5 +1,9 @@
 package caxecraft.domain;
 
+import caxecraft.domain.PlayerPhysics.input as playerInput;
+import caxecraft.domain.PlayerPhysics.player as createPlayer;
+import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
+import caxecraft.domain.PlayerPhysics.step as stepPlayer;
 #if c
 // C-only fixed storage imports are absent from the non-C oracle program.
 import c.CArray;
@@ -80,9 +84,9 @@ final class CaxecraftTrace {
 			cells.push(0);
 		#end
 		makeFloor(cells);
-		var state = PlayerPhysics.player(5.5, 1.0, 5.5);
-		state = PlayerPhysics.step(cells, state, PlayerPhysics.input(1.0, 0.5, false));
-		state = PlayerPhysics.step(cells, state, PlayerPhysics.input(0.0, 0.0, true));
+		var state = createPlayer(5.5, 1.0, 5.5);
+		state = stepPlayer(cells, state, playerInput(1.0, 0.5, false));
+		state = stepPlayer(cells, state, playerInput(0.0, 0.0, true));
 		var hash = Std.int(state.x * 1000.0);
 		hash = mix(hash, Std.int(state.y * 1000.0));
 		hash = mix(hash, Std.int(state.z * 1000.0));
@@ -115,9 +119,9 @@ final class CaxecraftTrace {
 		final moveX = (seed & 1) == 0 ? 1.0 : -1.0;
 		final moveZ = (seed & 2) == 0 ? 0.5 : -0.5;
 		final jump = (seed & 4) != 0;
-		var state = PlayerPhysics.player(1.5 + (seed & 3), 14.0, 1.5 + ((seed >>> 2) & 3));
-		state = PlayerPhysics.recoverSpawn(cells, state);
-		state = PlayerPhysics.step(cells, state, PlayerPhysics.input(moveX, moveZ, jump));
+		var state = createPlayer(1.5 + (seed & 3), 14.0, 1.5 + ((seed >>> 2) & 3));
+		state = recoverPlayerSpawn(cells, state);
+		state = stepPlayer(cells, state, playerInput(moveX, moveZ, jump));
 		var hash = World.stateHash(cells);
 		var hitCode = 0;
 		if (ray.hit)

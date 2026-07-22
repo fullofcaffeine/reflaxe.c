@@ -71,24 +71,6 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_runTrace(void);
 
 int32_t hxc_caxecraft_domain_CaxecraftTrace_terrainTrace(void);
 
-double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value);
-
-bool hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(struct hxc_caxecraft_domain_PlayerState hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord);
-
-int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value);
-
-struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_PlayerPhysics_input(double hxc_moveX, double hxc_moveZ, bool hxc_jump);
-
-struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_PlayerPhysics_moveAxis(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis);
-
-bool hxc_caxecraft_domain_PlayerPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z);
-
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_player(double hxc_x, double hxc_y, double hxc_z);
-
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state);
-
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command);
-
 double hxc_caxecraft_domain_VoxelRaycast_abs(double hxc_value);
 
 int32_t hxc_caxecraft_domain_VoxelRaycast_floorToInt(double hxc_value);
@@ -130,5 +112,25 @@ int32_t hxc_caxecraft_domain_World_terrainNoise(int32_t hxc_seed, int32_t hxc_x,
 int32_t hxc_caxecraft_domain_WorldStorage_readCode(uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_index);
 
 void hxc_caxecraft_domain_WorldStorage_writeCode(uint8_t *hxc_cells, size_t hxc_length, int32_t hxc_index, int32_t hxc_code);
+
+double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value);
+
+bool hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(struct hxc_caxecraft_domain_PlayerState hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+
+int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value);
+
+struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_PlayerPhysics_input(double hxc_moveX, double hxc_moveZ, bool hxc_jump);
+
+struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_PlayerPhysics_moveAxis(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis);
+
+bool hxc_caxecraft_domain_PlayerPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z);
+
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_player(double hxc_x, double hxc_y, double hxc_z);
+
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state);
+
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ);
+
+struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command);
 
 #endif /* HXC_PACKAGES_CAXECRAFT_DOMAIN_PACKAGE_H_INCLUDED */

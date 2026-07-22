@@ -54,6 +54,17 @@ class HaxeCTestCase:
 
 
 CASES = {
+    "aquatics": HaxeCTestCase(
+        case_id="aquatics",
+        eval_hxml="aquatics.hxml",
+        c_hxml="aquatics-c.hxml",
+        native_harness="test/native/aquatics_harness.c",
+        generated_source="src/modules/caxecraft/domain/PlayerAquatics.c",
+        required_source_markers=("PlayerAquatics_step",),
+        forbidden_source_markers=("goto ",),
+        output_line_count=2,
+        success_line="0",
+    ),
     "water": HaxeCTestCase(
         case_id="water",
         eval_hxml="water.hxml",

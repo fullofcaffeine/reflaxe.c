@@ -44,6 +44,7 @@ contract is documented in [configuration](configuration.md#target-activation-and
 | `WaterPendingCells.hx` | mutable `Span<UInt8>` queue marks | ordinary `Array<Int>` marks | The bounded scheduler needs one compact mark per world cell without changing its algorithm. |
 | `WaterPendingStorage.hx` | exact byte widening/narrowing | direct `Int` access | Only the storage adapter knows how the selected mark carrier is read and written. |
 | `WaterProbe.hx` | two fixed `CArray` buffers and retained scalar functions | two Haxe arrays and printed oracle lines | World and pending storage differ; every flow, leak, and repair rule after setup is shared. |
+| `AquaticsProbe.hx` | two fixed `CArray` buffers and retained scalar functions | two Haxe arrays and printed oracle lines | Test storage and output plumbing differ; immersion, movement, breath, and capabilities are the same Haxe on both paths. |
 
 The complete `caxecraft.app` source set is also guarded by `#if c`. That is a
 different kind of seam: the whole window/input/render adapter exists only for
@@ -171,13 +172,15 @@ objects. A cell is one of these typed states:
 - `Empty` or `Blocked`; or
 - `InvalidStorage(code)`, which keeps a malformed byte visible and immovable.
 
-The byte codes are private to `WaterSimulation`; gameplay consumes
-`WaterCellState` and never compares magic numbers. Sources flow down before
-they spread sideways. A vertical fall remains full strength. Once supported by
-terrain, it spreads up to seven cells while losing one strength per horizontal
-step. Removing a source makes unsupported flow recede. Placing or removing a
-solid schedules the edited cell and its six face-sharing neighbors, so opening
-a one-cell dam leaks and closing it repairs the downstream water.
+`WaterCellCodec` is the one owner of byte codes. The stateful
+`WaterSimulation` scheduler and read-only consumers such as player immersion
+share its typed `WaterCellState` view instead of comparing magic numbers.
+Sources flow down before they spread sideways. A vertical fall remains full
+strength. Once supported by terrain, it spreads up to seven cells while losing
+one strength per horizontal step. Removing a source makes unsupported flow
+recede. Placing or removing a solid schedules the edited cell and its six
+face-sharing neighbors, so opening a one-cell dam leaks and closing it repairs
+the downstream water.
 
 The scheduler stores one queued/not-queued mark per world cell. It always takes
 the lowest marked linear index, so the order in which edits requested work
@@ -195,10 +198,11 @@ Current limits are deliberate and executable:
 - the simulation updates committed cells in its documented stable order rather
   than calculating a whole second world buffer;
 - `World.query` and collision still treat water bytes as passable air, while
-  `WaterSimulation.cellState` preserves their exact fluid meaning;
-- rendering, transparent surface shape, swimming, buoyancy, breath, Tideweave,
-  CaxeMap placement, editor tools, and save/load integration are owned by the
-  following water slices, not claimed here.
+  `WaterSimulation.cellState` and `WaterCellCodec.stateAt` preserve their exact
+  fluid meaning;
+- rendering, transparent surface shape, playable-loop integration, CaxeMap
+  placement, editor tools, and save/load integration are owned by the following
+  slices, not claimed here.
 
 The focused `test:caxecraft-water` command checks falling, landing, lateral
 weakening, obstacle routing, leaking, recession, dam repair, malformed bytes,
@@ -210,6 +214,52 @@ sanitizers; it does not contain a second water implementation. Eval and strict
 generated C must print the same trace. The generated program selects no `hxrt`;
 the native build is warning-clean and is also run under AddressSanitizer and
 UndefinedBehaviorSanitizer when the compiler offers them.
+
+## Deterministic player aquatics
+
+`PlayerAquatics` is the renderer-independent movement and survival layer over
+the water cells. Each 50 ms simulation tick follows one fixed sequence:
+
+1. measure the vertical share of the 1.8-unit player body covered by water;
+2. choose a stable `Dry`, `Wading`, `Floating`, or `Submerged` label;
+3. apply horizontal control, buoyancy, drag, and requested rise or descent;
+4. pass the resulting velocity through the same player collision function used
+   on land; and
+5. update breath from the final head sample and report any drowning damage.
+
+The continuous covered fraction drives forces. The named labels use different
+enter and exit thresholds—called *hysteresis*—so a player resting at the
+waterline does not flip between states every tick. Feet, body, and head samples
+remain explicit. `cameraBlend` changes smoothly near the eye waterline, but it
+is only an input for future presentation; camera state never changes physics
+or breath.
+
+Breath is stored as integer simulation ticks, not wall-clock seconds. It falls
+only while the head sample is wet, recovers after surfacing, and emits one
+explicit damage request at each configured drowning interval after reaching
+zero. The health system will own how that request affects Adventure, Creative,
+checkpoints, and retry. Starting or retrying creates a fresh full-breath state.
+
+Movement and survival differences are supplied through a bounded
+`AquaticProfile`. The engine does not look for a Tideweave item name: any
+validated content item, effect, game mode, or mod may resolve to stronger
+control, longer breath, underwater mining, or cold protection. This keeps
+mechanics reusable and content data-owned.
+
+The focused `test:caxecraft-aquatics` lane owns the behavior assertions in
+Haxe. It covers dry, shallow, floating, submerged, and waterline states;
+hysteresis; rising and descending; generic enhanced capabilities; breath loss,
+recovery, drowning cadence, retry reset, and breaching the surface. The shared
+runner executes the same probe under Eval and generated native C, checks exact
+trace parity, compiles strict runtime-free C, rejects generated `goto`, and runs
+available memory and undefined-behavior sanitizers. Its small C harness only
+prints returned scalar results.
+
+This slice does **not** yet make water visible or swimmable in the released
+window. The playable loop, camera/HUD/audio feedback, content resolution,
+authored pools, persistence, and the Tideweave quest remain the next integration
+work. The distinction prevents a passing domain test from being mistaken for a
+finished underwater level.
 
 The checked linear index is:
 

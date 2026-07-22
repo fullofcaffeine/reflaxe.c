@@ -252,6 +252,9 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_water_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py water"
     )
+    expected_caxecraft_aquatics_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py aquatics"
+    )
     expected_caxecraft_gameplay_script = "python3 examples/caxecraft/check_gameplay.py"
     expected_caxecraft_pilot_script = "python3 examples/caxecraft/check_pilot.py"
     expected_caxecraft_caxeflow_script = (
@@ -281,7 +284,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-water && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -467,6 +470,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:caxecraft-water") != expected_caxecraft_water_script
     ):
         errors.append("package.json must retain the deterministic Caxecraft water gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-aquatics")
+        != expected_caxecraft_aquatics_script
+    ):
+        errors.append("package.json must retain the deterministic Caxecraft aquatics gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-scenario-model")

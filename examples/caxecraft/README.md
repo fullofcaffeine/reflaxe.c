@@ -43,9 +43,13 @@ bridge until native JSON and filesystem support can load the same format.
 The shared domain also contains the first deterministic water simulation:
 authored sources fall, spread with bounded strength, leak through openings,
 recede when removed, and repair after a dam closes. It already runs as the same
-ordinary Haxe under Eval and generated C, but it is not rendered or connected
-to the shipped map yet. Swimming, buoyancy, breath, underwater presentation,
-authored placement, and persistence are the next dependent slices.
+ordinary Haxe under Eval and generated C. The next domain slice also implements
+continuous submersion, wading/floating/submerged states, swimming forces,
+buoyancy, breath, drowning requests, and generic equipment capabilities. Both
+focused lanes pass Eval/native parity and sanitizer checks. Water is still not
+rendered or connected to the shipped map, so the playable window does not yet
+claim these mechanics; presentation, authored placement, and persistence are
+the next integration work.
 
 After editing the built-in pack, run:
 
@@ -53,6 +57,7 @@ After editing the built-in pack, run:
 python3 examples/caxecraft/content_pack.py
 npm run test:caxecraft-content-pack
 npm run test:caxecraft-water
+npm run test:caxecraft-aquatics
 ```
 
 ## Why the source contains `#if c`
