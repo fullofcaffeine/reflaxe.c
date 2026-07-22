@@ -40,12 +40,14 @@ import caxecraft.scenario.ScenarioTag;
 import caxecraft.scenario.ScenarioText;
 import caxecraft.scenario.ScenarioValidator;
 import caxecraft.scenario.ScenarioWriter;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluidPlacement;
 import haxe.io.Bytes;
 
 /** Complete public-command acceptance proof for renderer-independent editing. */
 final class EditorProbe {
 	static final AIR = content("caxecraft:air");
 	static final STONE = content("caxecraft:stone");
+	static final WATER = content("caxecraft:water");
 	static final PREFAB = content("caxecraft:small-house");
 	static final NPC = content("caxecraft:ivvy");
 	static final PLAYER = id("player.spawn");
@@ -55,6 +57,8 @@ final class EditorProbe {
 	static final DIALOGUE = id("dialogue.ivvy");
 	static final OBJECTIVE = id("objective.finish");
 	static final RULE = id("rule.finish");
+	static final WATER_POOL = id("water.pool");
+	static final WATER_SOURCE = id("water.source");
 	static final EN = new LocaleId("en");
 	static final ES_MX = new LocaleId("es-mx");
 	static final FR = new LocaleId("fr");
@@ -68,6 +72,16 @@ final class EditorProbe {
 		final session = open(EditorPolicy.defaults());
 		var commandChecks = 0;
 		commandChecks += roundTrip(session, ResizeWorld({width: 4, height: 2, depth: 4}), WorldShape);
+		commandChecks += roundTrip(session, PutFluid({
+			id: WATER_SOURCE,
+			fluidType: WATER,
+			placement: Source({x: 3, y: 1, z: 3})
+		}), Fluid);
+		commandChecks += roundTrip(session, PutFluid({
+			id: WATER_POOL,
+			fluidType: WATER,
+			placement: InitialVolume({origin: {x: 2, y: 1, z: 2}, size: {width: 2, height: 1, depth: 2}})
+		}), Fluid);
 		commandChecks += roundTrip(session, SetPaletteEntry(1, STONE), Voxel);
 		commandChecks += roundTrip(session, PaintVoxel({x: 1, y: 0, z: 1}, 1), Voxel);
 		commandChecks += roundTrip(session, EraseVoxel({x: 1, y: 0, z: 1}), Voxel);
@@ -198,6 +212,7 @@ final class EditorProbe {
 
 	static function checkRemoveCommands(session:EditorSession):Void {
 		for (entry in [
+			{command: RemoveFluid(WATER_SOURCE), family: Fluid, label: "remove fluid source"},
 			{command: RemoveRule(RULE), family: Rule, label: "remove rule"},
 			{command: RemoveObjective(OBJECTIVE), family: Objective, label: "remove objective"},
 			{command: RemoveDialogue(DIALOGUE), family: Dialogue, label: "remove dialogue"},
@@ -358,6 +373,10 @@ final class EditorProbe {
 			case CannotRemoveDefaultLocale(_): true;
 			case _: false;
 		}, "remove current default locale");
+		expectRejected(session.apply(RemoveFluid(id("water.missing"))), error -> switch error {
+			case MissingFluid(_): true;
+			case _: false;
+		}, "remove unknown fluid");
 		expectRejected(session.apply(Select({
 			origin: {x: 1, y: 0, z: 0},
 			size: {width: 2147483647, height: 1, depth: 1}
@@ -566,6 +585,9 @@ private final class Registry implements ScenarioContentRegistry {
 
 	public function hasBlock(id:ContentId):Bool
 		return id.text() == "caxecraft:air" || id.text() == "caxecraft:stone";
+
+	public function hasFluid(id:ContentId):Bool
+		return id.text() == "caxecraft:water";
 
 	public function hasItem(id:ContentId):Bool
 		return false;

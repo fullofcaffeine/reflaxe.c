@@ -5,6 +5,7 @@ import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioLimitKind;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluidPlacement;
 
 /**
 	Checks voxel geometry, registered content, and placed world objects.
@@ -178,6 +179,32 @@ final class ScenarioWorldValidator {
 		}
 		if (playerSpawns != 1)
 			context.addAtCoordinate(MissingRecord(SinglePlayerSpawn), context.coordinateForWorld());
+	}
+
+	/** Resolve fluid kinds and keep every authored source/volume inside the world. */
+	public function validateFluids():Void {
+		final size = context.scenario.world.size;
+		for (fluid in context.scenario.world.fluids) {
+			final coordinate = context.coordinateForIdentity(fluid.id, FluidIdentity);
+			if (!context.registry.hasFluid(fluid.fluidType))
+				context.addAtCoordinate(UnresolvedContent(fluid.fluidType), coordinate);
+			switch fluid.placement {
+				case Source(point):
+					if (point.x < 0 || point.y < 0 || point.z < 0 || point.x >= size.width || point.y >= size.height || point.z >= size.depth)
+						context.addAtCoordinate(ImpossiblePlacement(fluid.id), coordinate);
+				case InitialVolume(bounds):
+					if (bounds.origin.x < 0
+						|| bounds.origin.y < 0
+						|| bounds.origin.z < 0
+						|| bounds.size.width <= 0
+						|| bounds.size.height <= 0
+						|| bounds.size.depth <= 0
+						|| bounds.origin.x + bounds.size.width > size.width
+						|| bounds.origin.y + bounds.size.height > size.height
+						|| bounds.origin.z + bounds.size.depth > size.depth)
+						context.addAtCoordinate(ImpossiblePlacement(fluid.id), coordinate);
+			}
+		}
 	}
 
 	function validateTransform(id:ScenarioId, value:caxecraft.scenario.ScenarioGeometry.ScenarioTransform, coordinate:ScenarioCoordinate):Void {

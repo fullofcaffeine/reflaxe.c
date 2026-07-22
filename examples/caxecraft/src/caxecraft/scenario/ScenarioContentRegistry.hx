@@ -10,6 +10,7 @@ interface ScenarioContentRegistry {
 	function supportsFeature(id:ContentId):Bool;
 	function isAirBlock(id:ContentId):Bool;
 	function hasBlock(id:ContentId):Bool;
+	function hasFluid(id:ContentId):Bool;
 	function hasItem(id:ContentId):Bool;
 	function hasEntity(id:ContentId):Bool;
 	function hasNpc(id:ContentId):Bool;

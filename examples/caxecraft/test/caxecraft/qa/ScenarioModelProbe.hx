@@ -147,6 +147,7 @@ final class ScenarioModelProbe {
 			World,
 			Palette(0),
 			Chunk(objectId),
+			Fluid(objectId),
 			Object(objectId),
 			ObjectTag(objectId, new ScenarioTag("sample")),
 			Dialogue(objectId),
@@ -213,7 +214,12 @@ final class ScenarioModelProbe {
 			size: size(2, 2, 2),
 			runs: runs
 		};
-		final world:ScenarioWorld = {size: size(2, 2, 2), palette: palette, chunks: [chunk]};
+		final world:ScenarioWorld = {
+			size: size(2, 2, 2),
+			palette: palette,
+			chunks: [chunk],
+			fluids: []
+		};
 		final objects:Array<ScenarioObject> = [{id: objectId, tags: [new ScenarioTag("sample")], placement: placements[0]}];
 		final dialogue:ScenarioDialogue = {
 			id: objectId,
@@ -328,6 +334,7 @@ final class ScenarioModelProbe {
 			WorldDepth,
 			WorldCells,
 			PaletteEntries,
+			Fluids,
 			Objects,
 			ObjectTags,
 			Dialogues,
@@ -610,6 +617,7 @@ final class ScenarioModelProbe {
 			case World: 7;
 			case Palette(_): 8;
 			case Chunk(_): 9;
+			case Fluid(_): 29;
 			case Object(_): 10;
 			case ObjectTag(_, _): 11;
 			case Dialogue(_): 12;
@@ -728,6 +736,7 @@ final class ScenarioModelProbe {
 			case WorldDepth: 6;
 			case WorldCells: 7;
 			case PaletteEntries: 8;
+			case Fluids: 22;
 			case Objects: 9;
 			case ObjectTags: 10;
 			case Dialogues: 11;

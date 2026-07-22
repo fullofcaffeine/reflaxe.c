@@ -6,6 +6,8 @@ import caxecraft.scenario.ScenarioCodecModel.ScenarioSourceSubject;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioDiagnosticKind;
 import caxecraft.scenario.ScenarioDiagnostic.ScenarioExpectedRecord;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluidPlacement;
 import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 import caxecraft.scenario.ScenarioWorld.VoxelRun;
 
@@ -52,6 +54,32 @@ final class ScenarioWorldReader {
 			size: chunkSize,
 			runs: runs
 		});
+	}
+
+	/** Read one source point or one finite initial fluid box. */
+	public function readFluid():ScenarioReadResult<ScenarioFluid> {
+		final record = cursor.current();
+		if (record.tokens.length < 4)
+			return cursor.failAt(record, InvalidToken);
+		final id = ScenarioTokenGrammar.scenarioId(record.tokens[1]);
+		final fluidType = ScenarioTokenGrammar.contentId(record.tokens[2]);
+		if (id == null || fluidType == null)
+			return cursor.failAt(record, InvalidToken);
+		final placement:Null<ScenarioFluidPlacement> = switch ScenarioTokenGrammar.bareText(record.tokens[3]) {
+			case "source" if (ScenarioTokenGrammar.hasTokenCount(record, 7)):
+				final point = ScenarioTokenGrammar.point(record, 4);
+				point == null ? null : Source(point);
+			case "volume" if (ScenarioTokenGrammar.hasTokenCount(record, 10)): final origin = ScenarioTokenGrammar.point(record,
+					4); final volumeSize = ScenarioTokenGrammar.size(record,
+					7); origin == null || volumeSize == null ? null : InitialVolume({origin: origin, size: volumeSize});
+			case _:
+				null;
+		};
+		if (placement == null)
+			return cursor.failAt(record, InvalidToken);
+		cursor.locate(Fluid(id), record);
+		cursor.advance();
+		return ReadOk({id: id, fluidType: fluidType, placement: placement});
 	}
 
 	public function readObject():ScenarioReadResult<ScenarioObject> {

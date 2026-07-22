@@ -1,10 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "logicalPath": "packs/caxecraft/base",
   "packId": "caxecraft:base",
   "packVersion": 1,
   "assetManifestId": "caxecraft-showcase-v1-draft",
   "airBlock": "caxecraft:air",
+  "defaultAquaticProfile": "caxecraft:standard-aquatics",
   "features": [
     "caxecraft:core"
   ],
@@ -50,12 +51,54 @@
       "renderProfile": "slate-stone"
     }
   ],
+  "fluids": [
+    {
+      "id": "caxecraft:water",
+      "simulationProfile": "bounded-water",
+      "renderProfile": "translucent-voxel",
+      "cameraProfile": "clear-submersion",
+      "audioProfile": "fresh-water",
+      "presentation": {
+        "asset": "terrain",
+        "cell": "teal-water"
+      }
+    }
+  ],
+  "aquaticProfiles": [
+    {
+      "id": "caxecraft:standard-aquatics",
+      "maximumBreathTicks": 120,
+      "breathRecoveryPerTick": 4,
+      "horizontalControlMilli": 350,
+      "ascentAccelerationMilli": 14000,
+      "descentAccelerationMilli": 20000,
+      "buoyancyAccelerationMilli": 12000,
+      "dragPerTickMilli": 180,
+      "drowningIntervalTicks": 20,
+      "underwaterMining": false,
+      "coldProtection": false
+    },
+    {
+      "id": "caxecraft:tideweave-aquatics",
+      "maximumBreathTicks": 1200,
+      "breathRecoveryPerTick": 12,
+      "horizontalControlMilli": 900,
+      "ascentAccelerationMilli": 18000,
+      "descentAccelerationMilli": 22000,
+      "buoyancyAccelerationMilli": 14000,
+      "dragPerTickMilli": 100,
+      "drowningIntervalTicks": 20,
+      "underwaterMining": true,
+      "coldProtection": true
+    }
+  ],
   "items": [
     {
       "id": "caxecraft:berries",
       "maxStack": 64,
       "useProfile": "consume-one-heart",
       "placementBlock": null,
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "berries"
@@ -66,6 +109,7 @@
       "maxStack": 64,
       "useProfile": "none",
       "placementBlock": null,
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "bread"
@@ -76,6 +120,7 @@
       "maxStack": 1,
       "useProfile": "melee-sword",
       "placementBlock": null,
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "copper-sword"
@@ -86,6 +131,7 @@
       "maxStack": 64,
       "useProfile": "place-block",
       "placementBlock": "caxecraft:dirt",
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "soil-block"
@@ -96,6 +142,7 @@
       "maxStack": 64,
       "useProfile": "place-block",
       "placementBlock": "caxecraft:grass",
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "grass-block"
@@ -106,6 +153,7 @@
       "maxStack": 1,
       "useProfile": "haxeforge-tool",
       "placementBlock": null,
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "wood-pick"
@@ -116,6 +164,7 @@
       "maxStack": 64,
       "useProfile": "light-source",
       "placementBlock": null,
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "lantern"
@@ -126,9 +175,21 @@
       "maxStack": 64,
       "useProfile": "place-block",
       "placementBlock": "caxecraft:stone",
+      "aquaticProfile": null,
       "icon": {
         "asset": "items",
         "cell": "slate-stone"
+      }
+    },
+    {
+      "id": "caxecraft:tideweave-suit",
+      "maxStack": 1,
+      "useProfile": "equip-aquatic",
+      "placementBlock": null,
+      "aquaticProfile": "caxecraft:tideweave-aquatics",
+      "icon": {
+        "asset": "adventure-items",
+        "cell": "tideweave-suit-folded"
       }
     }
   ],

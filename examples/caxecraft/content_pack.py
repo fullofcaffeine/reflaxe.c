@@ -32,8 +32,11 @@ ROOT_KEYS = {
     "packVersion",
     "assetManifestId",
     "airBlock",
+    "defaultAquaticProfile",
     "features",
     "blocks",
+    "fluids",
+    "aquaticProfiles",
     "items",
     "npcs",
     "enemies",
@@ -45,7 +48,35 @@ ROOT_KEYS = {
     "signals",
 }
 BLOCK_KEYS = {"id", "storageCode", "collision", "edit", "dropItem", "renderProfile"}
-ITEM_KEYS = {"id", "maxStack", "useProfile", "placementBlock", "icon"}
+FLUID_KEYS = {
+    "id",
+    "simulationProfile",
+    "renderProfile",
+    "cameraProfile",
+    "audioProfile",
+    "presentation",
+}
+AQUATIC_PROFILE_KEYS = {
+    "id",
+    "maximumBreathTicks",
+    "breathRecoveryPerTick",
+    "horizontalControlMilli",
+    "ascentAccelerationMilli",
+    "descentAccelerationMilli",
+    "buoyancyAccelerationMilli",
+    "dragPerTickMilli",
+    "drowningIntervalTicks",
+    "underwaterMining",
+    "coldProtection",
+}
+ITEM_KEYS = {
+    "id",
+    "maxStack",
+    "useProfile",
+    "placementBlock",
+    "aquaticProfile",
+    "icon",
+}
 NPC_KEYS = {"id", "behaviorProfile", "interactionRadiusMilli", "presentation"}
 ENEMY_KEYS = {
     "id",
@@ -71,7 +102,19 @@ LOGICAL_PART_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 COLLISIONS = {"passable", "solid"}
 EDITS = {"collectable", "immutable"}
 BLOCK_RENDER_PROFILES = {"air", "foundation-rock", "meadow-grass", "rich-soil", "slate-stone"}
-ITEM_USE_PROFILES = {"consume-one-heart", "haxeforge-tool", "light-source", "melee-sword", "none", "place-block"}
+FLUID_SIMULATION_PROFILES = {"bounded-water"}
+FLUID_RENDER_PROFILES = {"translucent-voxel"}
+FLUID_CAMERA_PROFILES = {"clear-submersion"}
+FLUID_AUDIO_PROFILES = {"fresh-water"}
+ITEM_USE_PROFILES = {
+    "consume-one-heart",
+    "equip-aquatic",
+    "haxeforge-tool",
+    "light-source",
+    "melee-sword",
+    "none",
+    "place-block",
+}
 NPC_BEHAVIOR_PROFILES = {"stationary-dialogue"}
 ENEMY_BEHAVIOR_PROFILES = {"wander-chase-melee"}
 EFFECT_PROFILES = {"melee-feedback", "pickup-feedback"}
@@ -108,11 +151,37 @@ class Block:
 
 
 @dataclass(frozen=True)
+class Fluid:
+    content_id: str
+    simulation_profile: str
+    render_profile: str
+    camera_profile: str
+    audio_profile: str
+    presentation: Presentation
+
+
+@dataclass(frozen=True)
+class AquaticProfile:
+    content_id: str
+    maximum_breath_ticks: int
+    breath_recovery_per_tick: int
+    horizontal_control_milli: int
+    ascent_acceleration_milli: int
+    descent_acceleration_milli: int
+    buoyancy_acceleration_milli: int
+    drag_per_tick_milli: int
+    drowning_interval_ticks: int
+    underwater_mining: bool
+    cold_protection: bool
+
+
+@dataclass(frozen=True)
 class Item:
     content_id: str
     max_stack: int
     use_profile: str
     placement_block: str | None
+    aquatic_profile: str | None
     icon: Presentation
 
 
@@ -161,8 +230,11 @@ class ContentPack:
     pack_version: int
     asset_manifest_id: str
     air_block: str
+    default_aquatic_profile: str
     features: tuple[str, ...]
     blocks: tuple[Block, ...]
+    fluids: tuple[Fluid, ...]
+    aquatic_profiles: tuple[AquaticProfile, ...]
     items: tuple[Item, ...]
     npcs: tuple[Npc, ...]
     enemies: tuple[Enemy, ...]
@@ -219,6 +291,12 @@ def require_string(value: object, coordinate: str) -> str:
 def require_integer(value: object, coordinate: str, minimum: int, maximum: int) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < minimum or value > maximum:
         raise ContentPackFailure(f"{coordinate} must be an integer from {minimum} through {maximum}")
+    return value
+
+
+def require_boolean(value: object, coordinate: str) -> bool:
+    if not isinstance(value, bool):
+        raise ContentPackFailure(f"{coordinate} must be true or false")
     return value
 
 
@@ -302,8 +380,8 @@ def parse_presentation(value: object, coordinate: str, assets: dict[str, tuple[s
 
 def validate_document(document: dict[str, object], asset_document: dict[str, object]) -> ContentPack:
     root = require_keys(document, ROOT_KEYS, "content pack")
-    if root["schemaVersion"] != 1:
-        raise ContentPackFailure("only content-pack schemaVersion 1 is supported")
+    if root["schemaVersion"] != 2:
+        raise ContentPackFailure("only content-pack schemaVersion 2 is supported")
     pack_version = require_integer(root["packVersion"], "packVersion", 1, 2_147_483_647)
     pack_id = content_id(root["packId"], "packId")
     path = logical_path(root["logicalPath"], "logicalPath")
@@ -337,17 +415,64 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
             profile(raw["renderProfile"], f"{coordinate}.renderProfile", BLOCK_RENDER_PROFILES),
         )
 
+    def parse_fluid(value: object, coordinate: str) -> Fluid:
+        raw = require_keys(value, FLUID_KEYS, coordinate)
+        return Fluid(
+            content_id(raw["id"], f"{coordinate}.id"),
+            profile(
+                raw["simulationProfile"],
+                f"{coordinate}.simulationProfile",
+                FLUID_SIMULATION_PROFILES,
+            ),
+            profile(
+                raw["renderProfile"],
+                f"{coordinate}.renderProfile",
+                FLUID_RENDER_PROFILES,
+            ),
+            profile(
+                raw["cameraProfile"],
+                f"{coordinate}.cameraProfile",
+                FLUID_CAMERA_PROFILES,
+            ),
+            profile(
+                raw["audioProfile"],
+                f"{coordinate}.audioProfile",
+                FLUID_AUDIO_PROFILES,
+            ),
+            parse_presentation(raw["presentation"], f"{coordinate}.presentation", assets),
+        )
+
+    def parse_aquatic_profile(value: object, coordinate: str) -> AquaticProfile:
+        raw = require_keys(value, AQUATIC_PROFILE_KEYS, coordinate)
+        return AquaticProfile(
+            content_id(raw["id"], f"{coordinate}.id"),
+            require_integer(raw["maximumBreathTicks"], f"{coordinate}.maximumBreathTicks", 1, 12_000),
+            require_integer(raw["breathRecoveryPerTick"], f"{coordinate}.breathRecoveryPerTick", 1, 120),
+            require_integer(raw["horizontalControlMilli"], f"{coordinate}.horizontalControlMilli", 0, 1_000),
+            require_integer(raw["ascentAccelerationMilli"], f"{coordinate}.ascentAccelerationMilli", 0, 40_000),
+            require_integer(raw["descentAccelerationMilli"], f"{coordinate}.descentAccelerationMilli", 0, 40_000),
+            require_integer(raw["buoyancyAccelerationMilli"], f"{coordinate}.buoyancyAccelerationMilli", 0, 30_000),
+            require_integer(raw["dragPerTickMilli"], f"{coordinate}.dragPerTickMilli", 0, 900),
+            require_integer(raw["drowningIntervalTicks"], f"{coordinate}.drowningIntervalTicks", 1, 1_200),
+            require_boolean(raw["underwaterMining"], f"{coordinate}.underwaterMining"),
+            require_boolean(raw["coldProtection"], f"{coordinate}.coldProtection"),
+        )
+
     def parse_item(value: object, coordinate: str) -> Item:
         raw = require_keys(value, ITEM_KEYS, coordinate)
         use = profile(raw["useProfile"], f"{coordinate}.useProfile", ITEM_USE_PROFILES)
         placement = nullable_content_id(raw["placementBlock"], f"{coordinate}.placementBlock")
+        aquatic = nullable_content_id(raw["aquaticProfile"], f"{coordinate}.aquaticProfile")
         if (use == "place-block") != (placement is not None):
             raise ContentPackFailure(f"{coordinate} place-block items need placementBlock and other items need null")
+        if (use == "equip-aquatic") != (aquatic is not None):
+            raise ContentPackFailure(f"{coordinate} equip-aquatic items need aquaticProfile and other items need null")
         return Item(
             content_id(raw["id"], f"{coordinate}.id"),
             require_integer(raw["maxStack"], f"{coordinate}.maxStack", 1, 64),
             use,
             placement,
+            aquatic,
             parse_presentation(raw["icon"], f"{coordinate}.icon", assets),
         )
 
@@ -399,6 +524,12 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
         )
 
     blocks = canonical_array(require_array(root["blocks"], "blocks"), "blocks", parse_block)
+    fluids = canonical_array(require_array(root["fluids"], "fluids"), "fluids", parse_fluid)
+    aquatic_profiles = canonical_array(
+        require_array(root["aquaticProfiles"], "aquaticProfiles"),
+        "aquaticProfiles",
+        parse_aquatic_profile,
+    )
     items = canonical_array(require_array(root["items"], "items"), "items", parse_item)
     npcs = canonical_array(require_array(root["npcs"], "npcs"), "npcs", parse_npc)
     enemies = canonical_array(require_array(root["enemies"], "enemies"), "enemies", parse_enemy)
@@ -413,13 +544,14 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
             raise ContentPackFailure(f"{name} must remain empty until its engine mechanic has executable evidence")
 
     all_ids = [*features]
-    for values in (blocks, items, npcs, enemies, drops, effects):
+    for values in (blocks, fluids, aquatic_profiles, items, npcs, enemies, drops, effects):
         all_ids.extend(value.content_id for value in values)
     if len(all_ids) != len(set(all_ids)):
         raise ContentPackFailure("content IDs must be collision-free across every closed kind")
 
     item_ids = {item.content_id for item in items}
     block_ids = {block.content_id for block in blocks}
+    aquatic_profile_ids = {value.content_id for value in aquatic_profiles}
     drop_ids = {drop.content_id for drop in drops}
     codes = [block.storage_code for block in blocks]
     if len(codes) != len(set(codes)):
@@ -429,13 +561,20 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
     if air is None or air.storage_code != 0 or air.collision != "passable" or air.render_profile != "air":
         raise ContentPackFailure("airBlock must resolve to storage code 0 with passable collision and the air render profile")
     if sum(block.collision == "passable" for block in blocks) != 1:
-        raise ContentPackFailure("schema 1 requires exactly one passable block")
+        raise ContentPackFailure("schema 2 requires exactly one passable terrain block")
+    if not fluids:
+        raise ContentPackFailure("schema 2 requires at least one validated fluid")
+    default_aquatic_profile = content_id(root["defaultAquaticProfile"], "defaultAquaticProfile")
+    if default_aquatic_profile not in aquatic_profile_ids:
+        raise ContentPackFailure("defaultAquaticProfile references an unknown aquatic profile")
     for block in blocks:
         if block.drop_item is not None and block.drop_item not in item_ids:
             raise ContentPackFailure(f"block {block.content_id!r} references unknown drop item {block.drop_item!r}")
     for item in items:
         if item.placement_block is not None and item.placement_block not in block_ids:
             raise ContentPackFailure(f"item {item.content_id!r} references unknown placement block {item.placement_block!r}")
+        if item.aquatic_profile is not None and item.aquatic_profile not in aquatic_profile_ids:
+            raise ContentPackFailure(f"item {item.content_id!r} references unknown aquatic profile {item.aquatic_profile!r}")
     for drop in drops:
         if drop.item not in item_ids:
             raise ContentPackFailure(f"drop {drop.content_id!r} references unknown item {drop.item!r}")
@@ -446,7 +585,23 @@ def validate_document(document: dict[str, object], asset_document: dict[str, obj
         if enemy.drop not in drop_ids:
             raise ContentPackFailure(f"enemy {enemy.content_id!r} references unknown drop {enemy.drop!r}")
 
-    return ContentPack(path, pack_id, pack_version, asset_manifest_id, air_block, features, blocks, items, npcs, enemies, drops, effects)
+    return ContentPack(
+        path,
+        pack_id,
+        pack_version,
+        asset_manifest_id,
+        air_block,
+        default_aquatic_profile,
+        features,
+        blocks,
+        fluids,
+        aquatic_profiles,
+        items,
+        npcs,
+        enemies,
+        drops,
+        effects,
+    )
 
 
 def load_json_document(path: Path, label: str) -> dict[str, object]:
@@ -507,6 +662,8 @@ def switch_function(
 
 def render_haxe(pack: ContentPack) -> str:
     block_ids = tuple(value.content_id for value in pack.blocks)
+    fluid_ids = tuple(value.content_id for value in pack.fluids)
+    aquatic_profile_ids = tuple(value.content_id for value in pack.aquatic_profiles)
     item_ids = tuple(value.content_id for value in pack.items)
     npc_ids = tuple(value.content_id for value in pack.npcs)
     enemy_ids = tuple(value.content_id for value in pack.enemies)
@@ -515,6 +672,7 @@ def render_haxe(pack: ContentPack) -> str:
     asset_ids = tuple(
         sorted(
             {value.icon.asset for value in pack.items}
+            | {value.presentation.asset for value in pack.fluids}
             | {value.presentation.asset for value in pack.npcs}
             | {value.presentation.asset for value in pack.enemies}
             | {value.presentation.asset for value in pack.drops}
@@ -523,12 +681,16 @@ def render_haxe(pack: ContentPack) -> str:
     lines = [
         "package caxecraft.content;",
         "",
+        "import caxecraft.domain.AquaticProfile;",
+        "import caxecraft.domain.PlayerAquatics.profile as createAquaticProfile;",
         "import caxecraft.scenario.ContentId;",
         "import caxecraft.scenario.ScenarioContentRegistry;",
         "",
     ]
     for name, values, is_content in (
         ("BaseBlock", block_ids, True),
+        ("BaseFluid", fluid_ids, True),
+        ("BaseAquaticProfile", aquatic_profile_ids, True),
         ("BaseItem", item_ids, True),
         ("BaseNpc", npc_ids, True),
         ("BaseEnemy", enemy_ids, True),
@@ -538,6 +700,10 @@ def render_haxe(pack: ContentPack) -> str:
         ("BlockCollision", tuple(sorted(COLLISIONS)), False),
         ("BlockEdit", tuple(sorted(EDITS)), False),
         ("BlockRenderProfile", tuple(sorted(BLOCK_RENDER_PROFILES)), False),
+        ("FluidSimulationProfile", tuple(sorted(FLUID_SIMULATION_PROFILES)), False),
+        ("FluidRenderProfile", tuple(sorted(FLUID_RENDER_PROFILES)), False),
+        ("FluidCameraProfile", tuple(sorted(FLUID_CAMERA_PROFILES)), False),
+        ("FluidAudioProfile", tuple(sorted(FLUID_AUDIO_PROFILES)), False),
         ("ItemUseProfile", tuple(sorted(ITEM_USE_PROFILES)), False),
         ("NpcBehaviorProfile", tuple(sorted(NPC_BEHAVIOR_PROFILES)), False),
         ("EnemyBehaviorProfile", tuple(sorted(ENEMY_BEHAVIOR_PROFILES)), False),
@@ -571,9 +737,125 @@ def render_haxe(pack: ContentPack) -> str:
     lines.extend(switch_function("blockCollision", "BaseBlock", "BlockCollision", pack.blocks, lambda value: profile_symbol(value.collision)))
     lines.extend(switch_function("blockEdit", "BaseBlock", "BlockEdit", pack.blocks, lambda value: profile_symbol(value.edit)))
     lines.extend(switch_function("blockRenderProfile", "BaseBlock", "BlockRenderProfile", pack.blocks, lambda value: profile_symbol(value.render_profile)))
+    lines.extend(switch_function("fluidId", "BaseFluid", "ContentId", pack.fluids, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
+    lines.extend(
+        switch_function(
+            "fluidSimulationProfile",
+            "BaseFluid",
+            "FluidSimulationProfile",
+            pack.fluids,
+            lambda value: profile_symbol(value.simulation_profile),
+        )
+    )
+    lines.extend(
+        switch_function(
+            "fluidRenderProfile",
+            "BaseFluid",
+            "FluidRenderProfile",
+            pack.fluids,
+            lambda value: profile_symbol(value.render_profile),
+        )
+    )
+    lines.extend(
+        switch_function(
+            "fluidCameraProfile",
+            "BaseFluid",
+            "FluidCameraProfile",
+            pack.fluids,
+            lambda value: profile_symbol(value.camera_profile),
+        )
+    )
+    lines.extend(
+        switch_function(
+            "fluidAudioProfile",
+            "BaseFluid",
+            "FluidAudioProfile",
+            pack.fluids,
+            lambda value: profile_symbol(value.audio_profile),
+        )
+    )
+    lines.extend(
+        switch_function(
+            "fluidPresentation",
+            "BaseFluid",
+            "ContentPresentation",
+            pack.fluids,
+            lambda value: f"{{asset: {profile_symbol(value.presentation.asset)}, cellIndex: {value.presentation.cell_index}}}",
+        )
+    )
+    default_aquatic_symbol = haxe_symbol(pack.default_aquatic_profile)
+    lines.extend(
+        [
+            "\t/** Default movement profile used when no equipped item overrides it. */",
+            "\tpublic static inline function defaultAquaticProfile():BaseAquaticProfile",
+            f"\t\treturn BaseAquaticProfile.{default_aquatic_symbol};",
+            "",
+        ]
+    )
+    for function_name, field_name in (
+        ("aquaticMaximumBreathTicks", "maximum_breath_ticks"),
+        ("aquaticBreathRecoveryPerTick", "breath_recovery_per_tick"),
+        ("aquaticHorizontalControlMilli", "horizontal_control_milli"),
+        ("aquaticAscentAccelerationMilli", "ascent_acceleration_milli"),
+        ("aquaticDescentAccelerationMilli", "descent_acceleration_milli"),
+        ("aquaticBuoyancyAccelerationMilli", "buoyancy_acceleration_milli"),
+        ("aquaticDragPerTickMilli", "drag_per_tick_milli"),
+        ("aquaticDrowningIntervalTicks", "drowning_interval_ticks"),
+    ):
+        lines.extend(
+            switch_function(
+                function_name,
+                "BaseAquaticProfile",
+                "Int",
+                pack.aquatic_profiles,
+                lambda value, field=field_name: str(getattr(value, field)),
+            )
+        )
+    for function_name, field_name in (
+        ("aquaticUnderwaterMining", "underwater_mining"),
+        ("aquaticColdProtection", "cold_protection"),
+    ):
+        lines.extend(
+            switch_function(
+                function_name,
+                "BaseAquaticProfile",
+                "Bool",
+                pack.aquatic_profiles,
+                lambda value, field=field_name: "true" if getattr(value, field) else "false",
+            )
+        )
+    lines.extend(
+        [
+            "\t/** Convert reviewed integer pack facts into the generic physics profile. */",
+            "\tpublic static function aquaticProfile(value:BaseAquaticProfile):AquaticProfile {",
+            "\t\treturn createAquaticProfile(aquaticMaximumBreathTicks(value), aquaticBreathRecoveryPerTick(value), aquaticHorizontalControlMilli(value) / 1000.0,",
+            "\t\t\taquaticAscentAccelerationMilli(value) / 1000.0, aquaticDescentAccelerationMilli(value) / 1000.0, aquaticBuoyancyAccelerationMilli(value) / 1000.0,",
+            "\t\t\taquaticDragPerTickMilli(value) / 1000.0, aquaticDrowningIntervalTicks(value), aquaticUnderwaterMining(value), aquaticColdProtection(value));",
+            "\t}",
+            "",
+        ]
+    )
     lines.extend(switch_function("itemId", "BaseItem", "ContentId", pack.items, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
     lines.extend(switch_function("itemMaximumStack", "BaseItem", "Int", pack.items, lambda value: str(value.max_stack)))
     lines.extend(switch_function("itemUseProfile", "BaseItem", "ItemUseProfile", pack.items, lambda value: profile_symbol(value.use_profile)))
+    lines.extend(
+        switch_function(
+            "itemProvidesAquaticProfile",
+            "BaseItem",
+            "Bool",
+            pack.items,
+            lambda value: "true" if value.aquatic_profile is not None else "false",
+        )
+    )
+    lines.extend(
+        switch_function(
+            "itemAquaticProfile",
+            "BaseItem",
+            "BaseAquaticProfile",
+            pack.items,
+            lambda value: haxe_symbol(value.aquatic_profile or pack.default_aquatic_profile),
+        )
+    )
     lines.extend(
         switch_function(
             "itemIcon",
@@ -634,7 +916,9 @@ def render_haxe(pack: ContentPack) -> str:
             "\t\tproof += enemyMaxHealth(mossling) * 10000;",
             "\t\tproof += enemyWindupTicks(mossling) * 100;",
             "\t\tproof += dropQuantity(BaseDrop.MosslingBerries) * 10;",
-            "\t\treturn proof + itemMaximumStack(berries);",
+            "\t\tproof += itemMaximumStack(berries);",
+            "\t\tproof += aquaticMaximumBreathTicks(BaseAquaticProfile.TideweaveAquatics);",
+            "\t\treturn proof + fluidPresentation(BaseFluid.Water).cellIndex;",
             "\t}",
             "}",
             "",
@@ -656,6 +940,7 @@ def render_haxe(pack: ContentPack) -> str:
         lines.extend(["\t\treturn false;", "\t}", ""])
 
     registry_membership("hasBlock", block_ids)
+    registry_membership("hasFluid", fluid_ids)
     registry_membership("hasItem", item_ids)
     registry_membership("hasEntity", enemy_ids)
     registry_membership("hasNpc", npc_ids)
@@ -706,7 +991,8 @@ def main() -> int:
     action = "current" if arguments.check else "generated"
     print(
         "caxecraft-content-pack: OK: "
-        f"{len(pack.blocks)} blocks, {len(pack.items)} items, {len(pack.npcs) + len(pack.enemies)} actors; adapter {action}"
+        f"{len(pack.blocks)} blocks, {len(pack.fluids)} fluid definitions, {len(pack.aquatic_profiles)} aquatic profiles, "
+        f"{len(pack.items)} items, {len(pack.npcs) + len(pack.enemies)} actors; adapter {action}"
     )
     return 0
 

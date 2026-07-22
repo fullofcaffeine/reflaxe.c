@@ -20,7 +20,8 @@ An `EditorCommand` is a closed Haxe enum. Closed means the possible edit kinds
 are listed in the type rather than encoded as strings. Haxe can therefore make
 callers handle new command kinds intentionally. The first command set covers:
 
-- bounded world resize and palette entries;
+- bounded world resize, palette entries, fluid sources, and initial fluid
+  volumes;
 - single-voxel and bounded multi-voxel paint/erase plus selection fill;
 - bounded selection and clear-selection;
 - typed prefab stamps and general object placements;

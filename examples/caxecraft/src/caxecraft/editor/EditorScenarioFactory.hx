@@ -31,7 +31,8 @@ final class EditorScenarioFactory {
 						size: {width: 1, height: 1, depth: 1},
 						runs: [{paletteCode: 0, count: 1}]
 					}
-				]
+				],
+				fluids: []
 			},
 			objects: [
 				{

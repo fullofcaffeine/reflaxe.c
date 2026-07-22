@@ -405,7 +405,8 @@ final class CaxeFlowProbe {
 			world: {
 				size: {width: 2, height: 2, depth: 2},
 				palette: [{code: 0, blockType: AIR}],
-				chunks: []
+				chunks: [],
+				fluids: []
 			},
 			objects: [
 				{id: PLAYER, tags: [], placement: PlayerSpawn(transform)},

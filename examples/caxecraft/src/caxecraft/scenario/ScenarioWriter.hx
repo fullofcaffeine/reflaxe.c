@@ -12,6 +12,7 @@ import caxecraft.scenario.CaxeFlowActionRegistry.FlowActionId;
 import caxecraft.scenario.CaxeFlowActionRegistry.flowActionId;
 import caxecraft.scenario.Scenario.ScenarioMode;
 import caxecraft.scenario.ScenarioObject.ObjectPlacement;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioStory.ObjectiveState;
 import haxe.io.Bytes;
 
@@ -78,6 +79,10 @@ final class ScenarioWriter {
 				lines.push('  run ${run.paletteCode} ${run.count}');
 			lines.push("end chunk");
 		}
+		final fluids = scenario.world.fluids.copy();
+		fluids.sort((left, right) -> compareUtf8(left.id.text(), right.id.text()));
+		for (value in fluids)
+			lines.push(fluid(value));
 
 		final objects = scenario.objects.copy();
 		objects.sort((left, right) -> compareUtf8(left.id.text(), right.id.text()));
@@ -176,6 +181,15 @@ final class ScenarioWriter {
 				'trigger-zone ${bounds.origin.x} ${bounds.origin.y} ${bounds.origin.z} ${bounds.size.width} ${bounds.size.height} ${bounds.size.depth}';
 			case StatefulObject(objectType, state, position): 'stateful ${objectType.text()} ${state.text()} ${transform(position)}';
 		}
+	}
+
+	static function fluid(value:ScenarioFluid):String {
+		return switch value.placement {
+			case Source(point):
+				'fluid ${value.id.text()} ${value.fluidType.text()} source ${point.x} ${point.y} ${point.z}';
+			case InitialVolume(bounds):
+				'fluid ${value.id.text()} ${value.fluidType.text()} volume ${bounds.origin.x} ${bounds.origin.y} ${bounds.origin.z} ${bounds.size.width} ${bounds.size.height} ${bounds.size.depth}';
+		};
 	}
 
 	static function transform(value:caxecraft.scenario.ScenarioGeometry.ScenarioTransform):String

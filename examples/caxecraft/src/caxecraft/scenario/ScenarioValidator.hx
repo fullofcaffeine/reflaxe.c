@@ -21,6 +21,7 @@ final class ScenarioValidator {
 		new ScenarioMessageValidator(context).validate();
 		world.validateWorld();
 		context.indexIdentities();
+		world.validateFluids();
 		world.validateObjects();
 		new ScenarioStoryValidator(context).validate();
 		new CaxeFlowValidator(context).validate();

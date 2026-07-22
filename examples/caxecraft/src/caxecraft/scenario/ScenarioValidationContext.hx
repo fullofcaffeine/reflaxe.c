@@ -29,6 +29,7 @@ final class ScenarioValidationContext {
 
 	final parsed:ParsedScenario;
 	final objectIds:Map<String, Bool> = [];
+	final fluidIds:Map<String, Bool> = [];
 	final zoneIds:Map<String, Bool> = [];
 	final entityIds:Map<String, Bool> = [];
 	final checkpointIds:Map<String, Bool> = [];
@@ -53,6 +54,11 @@ final class ScenarioValidationContext {
 		validator because duplicate and limit diagnostics are ordered output.
 	**/
 	public function indexIdentities():Void {
+		if (scenario.world.fluids.length > ScenarioLimits.MAX_FLUIDS)
+			addAtCoordinate(LimitExceeded(Fluids, ScenarioLimits.MAX_FLUIDS),
+				coordinateForIdentity(scenario.world.fluids[scenario.world.fluids.length - 1].id, FluidIdentity));
+		for (fluid in scenario.world.fluids)
+			unique(fluidIds, fluid.id, FluidIdentity);
 		if (scenario.objects.length > ScenarioLimits.MAX_OBJECTS)
 			addAtCoordinate(LimitExceeded(Objects, ScenarioLimits.MAX_OBJECTS),
 				coordinateForIdentity(scenario.objects[scenario.objects.length - 1].id, ObjectIdentity));
@@ -266,6 +272,7 @@ final class ScenarioValidationContext {
 		return lastCoordinateMatching(subject -> {
 			final candidate:Null<ScenarioId> = switch [source, subject] {
 				case [ChunkIdentity, Chunk(value)]: value;
+				case [FluidIdentity, Fluid(value)]: value;
 				case [ObjectIdentity, Object(value)]: value;
 				case [DialogueIdentity, Dialogue(value)]: value;
 				case [JournalIdentity, Journal(value)]: value;

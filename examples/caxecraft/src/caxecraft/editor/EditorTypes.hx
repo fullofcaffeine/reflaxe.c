@@ -15,6 +15,7 @@ import caxecraft.scenario.ScenarioObject;
 import caxecraft.scenario.ScenarioStory.ScenarioDialogue;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioTag;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
 import haxe.io.Bytes;
@@ -37,6 +38,8 @@ enum EditorCommand {
 	Select(bounds:VoxelBounds);
 	ClearSelection;
 	FillSelection(paletteCode:Int);
+	PutFluid(fluid:ScenarioFluid);
+	RemoveFluid(id:ScenarioId);
 	StampPrefab(id:ScenarioId, prefabType:ContentId, tags:Array<ScenarioTag>, transform:ScenarioTransform);
 	PutObject(object:ScenarioObject);
 	RemoveObject(id:ScenarioId);
@@ -59,6 +62,7 @@ enum EditorCommandFamily {
 	WorldShape;
 	Voxel;
 	Selection;
+	Fluid;
 	Prefab;
 	Placement;
 	Dialogue;
@@ -90,6 +94,7 @@ enum EditorError {
 	NoSelection;
 	InvalidPaletteCode(code:Int);
 	UnknownPaletteCode(code:Int);
+	MissingFluid(id:ScenarioId);
 	DuplicateObject(id:ScenarioId);
 	MissingObject(id:ScenarioId);
 	MissingDialogue(id:ScenarioId);

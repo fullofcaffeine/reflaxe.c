@@ -43,6 +43,7 @@ enum ScenarioSourceSubject {
 	World;
 	Palette(code:Int);
 	Chunk(id:ScenarioId);
+	Fluid(id:ScenarioId);
 	Object(id:ScenarioId);
 	ObjectTag(objectId:ScenarioId, tag:ScenarioTag);
 	Dialogue(id:ScenarioId);

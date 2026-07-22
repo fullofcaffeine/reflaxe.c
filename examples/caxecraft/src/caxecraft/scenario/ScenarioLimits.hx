@@ -17,6 +17,7 @@ final class ScenarioLimits {
 	public static inline final MAX_WORLD_CELLS:Int = 1048576;
 	public static inline final MAX_CHUNK_EDGE:Int = 32;
 	public static inline final MAX_PALETTE_ENTRIES:Int = 256;
+	public static inline final MAX_FLUIDS:Int = 4096;
 	public static inline final MAX_OBJECTS:Int = 4096;
 	public static inline final MAX_TAGS_PER_OBJECT:Int = 16;
 	public static inline final MAX_DIALOGUES:Int = 1024;

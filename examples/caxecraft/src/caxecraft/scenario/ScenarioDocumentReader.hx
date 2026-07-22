@@ -17,6 +17,7 @@ import caxecraft.scenario.ScenarioStory.ScenarioJournalEntry;
 import caxecraft.scenario.ScenarioStory.ScenarioObjective;
 import caxecraft.scenario.ScenarioStory.ScenarioRoute;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 import caxecraft.scenario.ScenarioWorld.VoxelChunk;
 
 /**
@@ -67,6 +68,7 @@ final class ScenarioDocumentReader {
 		var worldSize:Null<VoxelSize> = null;
 		final palette:Array<BlockPaletteEntry> = [];
 		final chunks:Array<VoxelChunk> = [];
+		final fluids:Array<ScenarioFluid> = [];
 		final objects:Array<ScenarioObject> = [];
 		final dialogues:Array<ScenarioDialogue> = [];
 		final journal:Array<ScenarioJournalEntry> = [];
@@ -173,6 +175,11 @@ final class ScenarioDocumentReader {
 						case ReadError(diagnostics): return ReadError(diagnostics);
 						case ReadOk(chunk): chunks.push(chunk);
 					}
+				case "fluid":
+					switch worldReader.readFluid() {
+						case ReadError(diagnostics): return ReadError(diagnostics);
+						case ReadOk(fluid): fluids.push(fluid);
+					}
 				case "object":
 					switch worldReader.readObject() {
 						case ReadError(diagnostics): return ReadError(diagnostics);
@@ -261,7 +268,8 @@ final class ScenarioDocumentReader {
 				world: {
 					size: worldSize,
 					palette: palette,
-					chunks: chunks
+					chunks: chunks,
+					fluids: fluids
 				},
 				objects: objects,
 				story: {

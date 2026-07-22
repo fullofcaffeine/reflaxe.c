@@ -14,7 +14,7 @@ loop when the public CaxeMap, CaxeFlow, localization, asset, or campaign model
 can own it.
 
 Keep this rule evidence-bounded. CAXEMAP 1 already stores an `asset-pack`
-logical path, `packs/caxecraft/base/content.json` is the strict schema-1 content
+logical path, `packs/caxecraft/base/content.json` is the strict schema-2 content
 manifest, and its generated `BaseContentRegistry` is the typed validation
 boundary used by CaxeMap and renderer-independent editor validation.
 `assets/manifest.json` separately validates reviewed visual bytes and

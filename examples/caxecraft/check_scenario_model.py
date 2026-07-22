@@ -13,9 +13,9 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 MODEL = CASE / "src/caxecraft/scenario"
 FIXTURE = CASE / "test/fixtures/caxemap/minimal.caxemap"
-EXPECTED_TRACE = "scenario-model: -1220381045\n"
+EXPECTED_TRACE = "scenario-model: 264908270\n"
 EXPECTED_CODEC_TRACE = (
-    "scenario-codec: 1192 + 4027 + 2785 bytes, staged round-trip and exact "
+    "scenario-codec: 1192 + 4027 + 2991 bytes, staged round-trip and exact "
     "malformed-input audit\n"
 )
 FORBIDDEN_MODEL_TEXT = (

@@ -86,6 +86,7 @@ enum ScenarioLimitKind {
 	WorldDepth;
 	WorldCells;
 	PaletteEntries;
+	Fluids;
 	Objects;
 	ObjectTags;
 	Dialogues;

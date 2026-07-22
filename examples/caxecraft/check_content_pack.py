@@ -212,6 +212,27 @@ def check_malformed_inputs() -> None:
         lambda value: object_field(object_array(value, "items")[0], "icon").__setitem__("cell", "missing"),
         "unknown cell",
     )
+    expect_invalid(
+        "unknown fluid profile",
+        source,
+        assets,
+        lambda value: object_array(value, "fluids")[0].__setitem__("simulationProfile", "instant-ocean"),
+        "unregistered mechanic/profile",
+    )
+    expect_invalid(
+        "unknown equipped aquatic profile",
+        source,
+        assets,
+        lambda value: object_array(value, "items")[-1].__setitem__("aquaticProfile", "caxecraft:missing-aquatics"),
+        "references unknown aquatic profile",
+    )
+    expect_invalid(
+        "non-boolean aquatic capability",
+        source,
+        assets,
+        lambda value: object_array(value, "aquaticProfiles")[0].__setitem__("underwaterMining", 1),
+        "must be true or false",
+    )
 
 
 def check_eval_oracle() -> None:

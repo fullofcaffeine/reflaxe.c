@@ -2,13 +2,16 @@ package caxecraft.qa;
 
 import caxecraft.content.BaseContentPack;
 import caxecraft.content.BaseContentPack.BaseBlock;
+import caxecraft.content.BaseContentPack.BaseAquaticProfile;
 import caxecraft.content.BaseContentPack.BaseContentRegistry;
 import caxecraft.content.BaseContentPack.BaseEffect;
 import caxecraft.content.BaseContentPack.BaseEnemy;
 import caxecraft.content.BaseContentPack.BaseItem;
+import caxecraft.content.BaseContentPack.BaseFluid;
 import caxecraft.content.BaseContentPack.BaseNpc;
 import caxecraft.content.BaseContentPack.BlockCollision;
 import caxecraft.content.BaseContentPack.ContentAsset;
+import caxecraft.content.BaseContentPack.FluidRenderProfile;
 import caxecraft.editor.EditorSession;
 import caxecraft.editor.EditorTypes.EditorOpenResult;
 import caxecraft.editor.EditorTypes.EditorValidationResult;
@@ -30,16 +33,27 @@ final class ContentPackProbe {
 	static function main():Void {
 		final registry = new BaseContentRegistry();
 		require(BaseContentPack.PACK_VERSION == 1, "pack version");
-		require(BaseContentPack.compilerProof() == 130884, "stable scalar proof");
+		require(BaseContentPack.compilerProof() == 132089, "stable scalar proof");
 		require(BaseContentPack.blockStorageCode(BaseBlock.Air) == 0, "air storage code");
 		require(BaseContentPack.blockCollision(BaseBlock.Stone) == BlockCollision.Solid, "stone collision");
 		require(BaseContentPack.itemMaximumStack(BaseItem.Berries) == 64, "berry stack bound");
+		require(BaseContentPack.fluidId(BaseFluid.Water).text() == "caxecraft:water", "water identity");
+		require(BaseContentPack.fluidRenderProfile(BaseFluid.Water) == FluidRenderProfile.TranslucentVoxel, "water render profile");
+		require(BaseContentPack.fluidPresentation(BaseFluid.Water).asset == ContentAsset.Terrain, "water atlas");
+		require(BaseContentPack.defaultAquaticProfile() == BaseAquaticProfile.StandardAquatics, "default aquatics");
+		require(BaseContentPack.itemProvidesAquaticProfile(BaseItem.TideweaveSuit), "Tideweave capability");
+		require(BaseContentPack.itemAquaticProfile(BaseItem.TideweaveSuit) == BaseAquaticProfile.TideweaveAquatics, "Tideweave profile");
+		final tideweave = BaseContentPack.aquaticProfile(BaseAquaticProfile.TideweaveAquatics);
+		require(tideweave.maximumBreathTicks == 1200
+			&& tideweave.underwaterMining
+			&& tideweave.coldProtection, "resolved Tideweave facts");
 		require(BaseContentPack.enemyMaxHealth(BaseEnemy.Mossling) == 3, "Mossling health");
 		require(BaseContentPack.enemyWindupTicks(BaseEnemy.Mossling) == 8, "Mossling wind-up");
 		require(BaseContentPack.npcInteractionRadiusMilli(BaseNpc.Nia) == 3500, "NPC interaction radius");
 		require(BaseContentPack.npcPresentation(BaseNpc.Nia).asset == ContentAsset.Entities, "NPC presentation asset");
 		require(BaseContentPack.effectId(BaseEffect.CopperStrike).text() == "caxecraft:copper-strike", "effect identity");
 		require(registry.hasNpc(new ContentId("caxecraft:nia")), "registered Nia");
+		require(registry.hasFluid(new ContentId("caxecraft:water")), "registered water");
 		require(registry.hasEntity(new ContentId("caxecraft:mossling")), "registered Mossling");
 		require(!registry.hasNpc(new ContentId("caxecraft:mossling")), "wrong-kind actor rejection");
 		require(registry.maximumItemQuantity(new ContentId("caxecraft:copper-sword")) == 1, "sword stack bound");
@@ -58,7 +72,8 @@ final class ContentPackProbe {
 			case ReadError(_): fail("first-playable content resolution");
 		};
 		require(scenario.assetPack.text() == "packs/caxecraft/base", "map pack reference");
-		require(scenario.objects.length == 2, "validated placed objects");
+		require(scenario.world.fluids.length == 2, "validated authored water");
+		require(scenario.objects.length == 3, "validated placed objects and Tideweave");
 		final editor = switch EditorSession.open(parsed.candidate, registry) {
 			case EditorOpened(value): value;
 			case EditorOpenRejected(_): fail("editor opens with base-pack definitions");

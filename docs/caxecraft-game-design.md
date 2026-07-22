@@ -457,13 +457,14 @@ separate acceptance boundary.
 A scenario contains:
 
 - format version, logical asset pack, title, and bounded world dimensions;
-- a typed block palette and z/y/x-ordered RLE voxel chunks;
+- a typed block palette, z/y/x-ordered RLE voxel chunks, and authored fluid
+  sources or initial volumes;
 - stable object IDs plus author-facing tags;
 - typed prefab, entity, item, NPC, spawn, checkpoint, and trigger placements;
 - dialogue, journal entries, objectives, routes, and mode settings;
 - CaxeFlow state declarations, rules, and reusable action sequences.
 
-The required `asset-pack` record resolves to the checked-in schema-1 manifest
+The required `asset-pack` record resolves to the checked-in schema-2 manifest
 at `packs/caxecraft/base/content.json`. That data defines the current blocks,
 items, actors, selected engine behavior profiles, drops, effects, and logical
 presentation references. A strict build-time validator checks every field and

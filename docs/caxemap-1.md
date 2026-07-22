@@ -9,7 +9,7 @@ CAXEMAP is Caxecraft's public map and story format. Today the target-neutral
 codec, validator, editor semantics, and first-playable authored source use the
 same typed model. The native first playable currently packages that source and
 uses deterministic generated localization and content adapters derived from
-validated source data. The `asset-pack` path resolves through the schema-1
+validated source data. The `asset-pack` path resolves through the schema-2
 built-in manifest at `packs/caxecraft/base/content.json`; direct native JSON
 loading is not implemented yet. Terrain, actor construction, starting
 inventory, and encounter wiring remain temporary Haxe scaffolding.
@@ -102,14 +102,15 @@ The remaining top-level records appear in this canonical order:
 5. `title`, `mode`, and `world` exactly once;
 6. palette entries sorted by numeric code;
 7. chunks sorted by origin `z`, then `y`, then `x`, then ID;
-8. objects sorted by ID;
-9. dialogues, journal entries, objectives, and routes, each sorted by ID;
-10. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
+8. fluids sorted by ID;
+9. objects sorted by ID;
+10. dialogues, journal entries, objectives, and routes, each sorted by ID;
+11. variables sorted by scope (`map`, `player`, `quest`, then `local` by owning
    sequence ID) and then variable ID;
-11. sequences sorted by ID;
-12. rules sorted by ID;
-13. optional extension blocks sorted by feature content ID then record ID; and
-14. `end-map`.
+12. sequences sorted by ID;
+13. rules sorted by ID;
+14. optional extension blocks sorted by feature content ID then record ID; and
+15. `end-map`.
 
 Ordering that carries meaning is never sorted: voxel runs, object tags,
 dialogue lines, route objectives, predicate children, sequence parameters,
@@ -174,6 +175,21 @@ the checked sum of positive run counts equals its checked volume exactly.
 Chunks collectively cover the complete world exactly once. Cells are visited
 with `x` changing fastest, then `y`, then `z`; this is called z/y/x order
 because z is the outer dimension and x is the inner dimension.
+
+Fluids are authored independently of solid terrain:
+
+```text
+fluid <id> <fluid-content-id> source <x> <y> <z>
+fluid <id> <fluid-content-id> volume <x> <y> <z> <width> <height> <depth>
+```
+
+A `source` continually feeds the bounded fluid simulation. A `volume` fills
+the half-open box once when the level starts; its cells may then flow or drain.
+This distinction prevents every cell in an authored lake from becoming an
+infinite source. Fluid IDs are unique, the content ID must resolve to a fluid
+in the selected pack, and every point or positive-sized box must fit inside the
+world. Version 1 admits at most 4,096 fluid records. A CAXEMAP stores the
+designed starting water; a player save stores later cell and flow-queue state.
 
 ## Object records
 
@@ -507,7 +523,8 @@ instead of a C-only copy.
 
 `EditorSession` applies a closed `EditorCommand` enum to a draft without
 importing Raylib or the C target API. Commands cover world resize, palette and
-voxel edits, bounded selection/fill, prefab stamps, placements, dialogue,
+voxel edits, bounded selection/fill, fluid sources and initial volumes, prefab
+stamps, placements, dialogue,
 objectives, rules, and explicit last-playable recovery. The draft may be
 temporarily invalid; a separate last-playable snapshot changes only when the
 complete model passes `ScenarioValidator`.

@@ -43,7 +43,12 @@ final class EditorWorldGrid {
 			for (y in 0...copyHeight)
 				for (x in 0...copyWidth)
 					cells[index(nextSize, x, y, z)] = decoded[index(world.size, x, y, z)];
-		return WorldReady({size: nextSize, palette: world.palette.copy(), chunks: buildChunks(nextSize, cells)});
+		return WorldReady({
+			size: nextSize,
+			palette: world.palette.copy(),
+			chunks: buildChunks(nextSize, cells),
+			fluids: world.fluids.copy()
+		});
 	}
 
 	public static function paint(world:ScenarioWorld, point:VoxelPoint, paletteCode:Int):EditorWorldResult {
@@ -60,7 +65,12 @@ final class EditorWorldGrid {
 			return WorldRejected(DraftWorldIsNotEditable);
 		for (point in points)
 			cells[index(world.size, point.x, point.y, point.z)] = paletteCode;
-		return WorldReady({size: world.size, palette: world.palette.copy(), chunks: rewriteChunks(world.chunks, world.size, cells)});
+		return WorldReady({
+			size: world.size,
+			palette: world.palette.copy(),
+			chunks: rewriteChunks(world.chunks, world.size, cells),
+			fluids: world.fluids.copy()
+		});
 	}
 
 	public static function fill(world:ScenarioWorld, bounds:VoxelBounds, paletteCode:Int):EditorWorldResult {
@@ -73,7 +83,12 @@ final class EditorWorldGrid {
 			for (y in bounds.origin.y...bounds.origin.y + bounds.size.height)
 				for (x in bounds.origin.x...bounds.origin.x + bounds.size.width)
 					cells[index(world.size, x, y, z)] = paletteCode;
-		return WorldReady({size: world.size, palette: world.palette.copy(), chunks: rewriteChunks(world.chunks, world.size, cells)});
+		return WorldReady({
+			size: world.size,
+			palette: world.palette.copy(),
+			chunks: rewriteChunks(world.chunks, world.size, cells),
+			fluids: world.fluids.copy()
+		});
 	}
 
 	public static function containsPoint(size:VoxelSize, point:VoxelPoint):Bool

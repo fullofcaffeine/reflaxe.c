@@ -10,6 +10,7 @@ package caxecraft.scenario;
 @:noCompletion
 enum ScenarioIdentitySource {
 	ChunkIdentity;
+	FluidIdentity;
 	ObjectIdentity;
 	DialogueIdentity;
 	JournalIdentity;

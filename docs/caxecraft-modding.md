@@ -16,7 +16,7 @@ playable world.
 
 | You want to change | Owner | Why |
 |---|---|---|
-| blocks, dimensions, placed objects, spawn points, tags | CaxeMap | these describe one level |
+| terrain, dimensions, initial fluids, placed objects, spawn points, tags | CaxeMap | these describe one level |
 | dialogue, objectives, and translated story text | the level's CaxeMap | prose travels with the content that uses it |
 | triggers, gifts, state changes, encounters, and progression | CaxeFlow rules inside CaxeMap | these are authored cause-and-effect rules |
 | item, actor, behavior, render, audio, and effect definitions | validated content pack | levels reference stable definitions rather than copying their implementation |
@@ -26,7 +26,7 @@ playable world.
 | asset bytes and provenance | `assets/manifest.json` | this lock proves which reviewed files are packaged |
 | automated player input and assertions | CaxeTest/native pilot | tests exercise content; they are not content |
 
-The built-in schema-1 content manifest is
+The built-in schema-2 content manifest is
 [`packs/caxecraft/base/content.json`](../examples/caxecraft/packs/caxecraft/base/content.json).
 A strict build-time validator turns it into the typed
 `ScenarioContentRegistry` used by CaxeMap and editor validation. The separate
@@ -110,8 +110,8 @@ the host machine.
 
 The first authored package is
 [`examples/caxecraft/scenarios/first-playable/map.caxemap`](../examples/caxecraft/scenarios/first-playable/map.caxemap).
-It already uses the public version-1 grammar for a finite world, localized
-messages, placements, dialogue, and an objective. The codec, validator,
+It already uses the public version-1 grammar for a finite world, initial water,
+localized messages, placements, dialogue, and an objective. The codec, validator,
 canonical writer, CaxeFlow executor, and renderer-independent editor model run
 under the pinned Haxe oracle.
 

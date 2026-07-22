@@ -1,9 +1,10 @@
 # Caxecraft base content pack
 
 `content.json` is the checked-in source for Caxecraft's current built-in blocks,
-items, non-player characters (NPCs), enemies, drops, and effects. CaxeMap files
-refer to these definitions by namespaced IDs such as `caxecraft:stone`; they do
-not require a matching Haxe class for every piece of game content.
+fluids, movement profiles, items, non-player characters (NPCs), enemies, drops,
+and effects. CaxeMap files refer to these definitions by namespaced IDs such as
+`caxecraft:stone` or `caxecraft:water`; they do not require a matching Haxe
+class for every piece of game content.
 
 Run the focused check after editing the pack:
 
@@ -29,11 +30,19 @@ Do not edit `BaseContentPack.hx` directly. Change `content.json`, run
 `python3 examples/caxecraft/content_pack.py`, and review both the data and the
 generated typed surface.
 
-## Current boundary
+## Water and aquatic profiles
 
-Schema 1 describes only mechanics that exist now. In particular, it has one
-passable block—air—and no decorative “water” entry. Water will be added with
-its real fluid kind and engine behavior: deterministic voxel flow, leaks,
-swimming and buoyancy, breath, underwater presentation, saving, and tests.
-Keeping the entry out until those mechanics exist prevents data from claiming
-a capability the game cannot yet honor.
+Schema 2 keeps fluids separate from solid terrain blocks. The built-in water
+entry selects the already implemented bounded-flow simulation and names its
+render, camera, audio, and reviewed atlas profiles. It does not encode water as
+a decorative passable block.
+
+Aquatic profiles contain target-neutral integer facts for breath, buoyancy,
+drag, movement control, mining, and cold protection. The ordinary profile is
+the default. The Tideweave suit is an item that selects the stronger profile;
+its location belongs to a CaxeMap, not this reusable definition.
+
+These declarations now validate and generate typed Haxe. The native playable
+does not yet consume the complete authored level, render water, or persist its
+mutable fluid state. Those product integrations remain owned by
+`haxe_c-xge.20.5.3`; the schema does not claim they already work.

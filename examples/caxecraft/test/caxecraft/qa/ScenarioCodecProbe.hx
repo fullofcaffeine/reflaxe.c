@@ -582,7 +582,8 @@ final class ScenarioCodecProbe {
 			world: {
 				size: source.world.size,
 				palette: reversed(source.world.palette),
-				chunks: reversed(source.world.chunks)
+				chunks: reversed(source.world.chunks),
+				fluids: reversed(source.world.fluids)
 			},
 			objects: reversed(source.objects),
 			story: {
@@ -628,8 +629,11 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 	public function hasBlock(id:ContentId):Bool
 		return id.text() == "caxecraft:air" || id.text() == "caxecraft:bedrock";
 
+	public function hasFluid(id:ContentId):Bool
+		return id.text() == "caxecraft:water";
+
 	public function hasItem(id:ContentId):Bool
-		return id.text() == "caxecraft:haxe-pick";
+		return id.text() == "caxecraft:haxe-pick" || id.text() == "caxecraft:tideweave-suit";
 
 	public function hasEntity(id:ContentId):Bool
 		return id.text() == "caxecraft:browser";

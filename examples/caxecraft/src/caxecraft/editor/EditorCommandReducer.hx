@@ -22,6 +22,7 @@ import caxecraft.scenario.ScenarioMessages;
 import caxecraft.scenario.ScenarioMessages.ScenarioLocaleCatalog;
 import caxecraft.scenario.ScenarioMessages.ScenarioMessage;
 import caxecraft.scenario.ScenarioWorld.BlockPaletteEntry;
+import caxecraft.scenario.ScenarioWorld.ScenarioFluid;
 
 /** Internal candidate state produced before a command is committed to history. */
 @:noCompletion
@@ -71,6 +72,10 @@ final class EditorCommandReducer {
 				ready(scenario, null, Selection);
 			case FillSelection(paletteCode):
 				fillSelection(scenario, selection, paletteCode);
+			case PutFluid(fluid):
+				ready(withFluids(scenario, putFluid(scenario.world.fluids, fluid)), selection, Fluid);
+			case RemoveFluid(id):
+				removeWorldFluid(scenario, selection, id);
 			case StampPrefab(id, prefabType, tags, transform):
 				stampPrefab(scenario, selection, id, prefabType, tags, transform);
 			case PutObject(object):
@@ -181,7 +186,8 @@ final class EditorCommandReducer {
 		return ready(withWorld(scenario, {
 			size: scenario.world.size,
 			palette: putPalette(scenario.world.palette, {code: code, blockType: blockType}),
-			chunks: scenario.world.chunks.copy()
+			chunks: scenario.world.chunks.copy(),
+			fluids: scenario.world.fluids.copy()
 		}), selection, Voxel);
 	}
 
@@ -218,6 +224,12 @@ final class EditorCommandReducer {
 		if (!hasObject(scenario, id))
 			return ReductionRejected(MissingObject(id));
 		return ready(withObjects(scenario, removeObject(scenario.objects, id)), selection, Placement);
+	}
+
+	static function removeWorldFluid(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
+		if (!hasFluid(scenario, id))
+			return ReductionRejected(MissingFluid(id));
+		return ready(withFluids(scenario, removeFluid(scenario.world.fluids, id)), selection, Fluid);
 	}
 
 	static function removeStoryDialogue(scenario:Scenario, selection:Null<VoxelBounds>, id:ScenarioId):EditorReductionResult {
@@ -261,6 +273,13 @@ final class EditorCommandReducer {
 
 	static function hasObject(scenario:Scenario, id:ScenarioId):Bool {
 		for (value in scenario.objects)
+			if (same(value.id, id))
+				return true;
+		return false;
+	}
+
+	static function hasFluid(scenario:Scenario, id:ScenarioId):Bool {
+		for (value in scenario.world.fluids)
 			if (same(value.id, id))
 				return true;
 		return false;
@@ -316,6 +335,15 @@ final class EditorCommandReducer {
 			result.push({id: replacement.id, tags: replacement.tags.copy(), placement: replacement.placement});
 		return result;
 	}
+
+	static function putFluid(values:Array<ScenarioFluid>, replacement:ScenarioFluid):Array<ScenarioFluid> {
+		final result = [for (value in values) if (!same(value.id, replacement.id)) value];
+		result.push(replacement);
+		return result;
+	}
+
+	static function removeFluid(values:Array<ScenarioFluid>, id:ScenarioId):Array<ScenarioFluid>
+		return [for (value in values) if (!same(value.id, id)) value];
 
 	static function removeObject(values:Array<ScenarioObject>, id:ScenarioId):Array<ScenarioObject>
 		return [for (value in values) if (!same(value.id, id)) value];
@@ -414,6 +442,14 @@ final class EditorCommandReducer {
 
 	static function withWorld(scenario:Scenario, world:caxecraft.scenario.ScenarioWorld):Scenario
 		return copy(scenario, scenario.messages, world, scenario.objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
+
+	static function withFluids(scenario:Scenario, fluids:Array<ScenarioFluid>):Scenario
+		return withWorld(scenario, {
+			size: scenario.world.size,
+			palette: scenario.world.palette.copy(),
+			chunks: scenario.world.chunks.copy(),
+			fluids: fluids
+		});
 
 	static function withObjects(scenario:Scenario, objects:Array<ScenarioObject>):Scenario
 		return copy(scenario, scenario.messages, scenario.world, objects, scenario.story.dialogues, scenario.story.objectives, scenario.flow.rules);
