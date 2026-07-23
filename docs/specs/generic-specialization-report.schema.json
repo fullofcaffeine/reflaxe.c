@@ -97,7 +97,8 @@
         "representation": {
           "enum": [
             "direct-primitive",
-            "direct-enum"
+            "direct-enum",
+            "direct-record"
           ]
         }
       }

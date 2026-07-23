@@ -864,6 +864,13 @@ inline helpers without changing the C ABI. Core target carriers retain their
 dedicated rules, and an abstract never makes an unsupported underlying
 representation legal.
 
+When a closed generic record contains such an abstract, specialization records
+both facts before substituting the record type: the nominal Haxe path prevents
+unrelated abstracts from sharing one instance, and the normalized carrier key
+proves the later aggregate plan already understands its storage. This is a
+bounded record-field rule, not blanket abstract erasure or general generic
+class support.
+
 ## ABI boundary
 
 The internal object representation is not the public ABI. Export lowering maps Haxe values to a separate ABI model with:

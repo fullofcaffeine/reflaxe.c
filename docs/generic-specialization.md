@@ -12,15 +12,27 @@ general support for generic classes and containers.
 The current specialization boundary accepts only concrete arguments whose C
 representation is already proven:
 
-- non-null `Bool`, `Int`, `UInt`, and `Float`; and
-- concrete admitted Haxe enum instances whose own arguments meet this rule.
+- non-null `Bool`, `Int`, `UInt`, and `Float`;
+- concrete admitted Haxe enum instances whose own arguments meet this rule; and
+- closed anonymous records whose fields have an admitted direct representation.
+
+While canonicalizing a closed record, the compiler also accepts an ordinary
+non-`@:coreType` Haxe abstract when its underlying carrier already satisfies
+the same boundary. For example, a field typed as `LogicalPath`, declared as
+`abstract LogicalPath(String)`, keeps `LogicalPath` in the specialization key
+and uses the admitted immutable String view as its storage carrier. Haxe has
+already typed constructors, conversions, operators, and inline methods before
+this pass; this rule preserves the resulting value representation rather than
+re-running those behaviors. An unsupported carrier such as a class reference
+remains an exact source-positioned failure, and a nominal name never makes it
+legal.
 
 Haxe typedef aliases are expanded before identity is computed, so an alias of
 `Int` shares the same instance as `Int`. `Dynamic`, unresolved type variables,
-classes and references, anonymous records, function types, nullable values,
-native pointers, and other open or representation-dependent arguments fail at
-the source call with exact `HXC1001`. No boxed or descriptor-driven fallback is
-selected implicitly, and rejection leaves no plausible output.
+classes and references, open records, function types, unsupported nullable
+values, native pointers, and other open or representation-dependent arguments
+fail at the source call with exact `HXC1001`. No boxed or descriptor-driven
+fallback is selected implicitly, and rejection leaves no plausible output.
 
 Type arguments are inferred from the written typed call arguments first and,
 when needed, from the compiler-resolved callee function type. A shorter direct
@@ -36,7 +48,10 @@ encoding of the base function ID and normalized type-argument keys. Length
 prefixes keep component boundaries unambiguous without relying on punctuation
 escaping. Primitive keys preserve their semantic representation (`bool`,
 `i32`, `u32`, or `f64`); enum keys include the nominal Haxe path and recursively
-normalized argument list.
+normalized argument list. A transparent record-field abstract key includes its
+nominal Haxe path, closed abstract arguments, and normalized carrier key. Two
+abstracts can therefore share the same C spelling without sharing a generic
+specialization accidentally.
 
 The nominal path is the typed `pack + name` identity supplied by Haxe. For a
 public secondary type, the pinned compiler omits the source-module name and
@@ -105,11 +120,14 @@ payload and cannot select a runtime feature.
 ## Runtime and ABI effects
 
 Closed specialization adds `closed-generic-specializations` to the direct
-compiler decisions in `hxc.runtime-plan.json`. The admitted program remains
-runtime-free: it contains no `hxrt` include, source, define, library, feature,
-or symbol under `auto`, `minimal`, or explicit `none`. This follows the required
-order of direct C, then program-local specialization, then a reasoned runtime
-strategy only for semantics that truly need runtime state.
+compiler decisions in `hxc.runtime-plan.json`. Specialization itself adds no
+runtime machinery. The primitive/enum reference fixture therefore remains
+runtime-free under `auto`, `minimal`, and explicit `none`. A specialized record
+still composes the already-proven plan of its fields: the focused
+`LogicalPath(String)` fixture selects only the existing static String headers,
+not a generic box or descriptor. This follows the required order of direct C,
+then program-local specialization, then a reasoned runtime strategy only for
+semantics that truly need runtime state.
 
 Specialized names are private implementation details. Exported generic values
 or functions still require E7's explicit layout, ownership, naming, calling-
@@ -134,16 +152,24 @@ npm run snapshots:check
 The focused suite proves alias sharing, distinct `Bool`/`Int`/`UInt`/`Float`
 instances, an ordered two-parameter key, nested generic calls and enum
 arguments, a finite same-key recursive function instance, shared inner and
-outer generic enum layouts, and a runtime-free executable. It compares repeated
-isolated roots, reversed typed-module discovery, an alternate locale, and a warm
-compiler server before and after a rejected request, plus portable, metal, and
-explicit runtime-none projects. A same-root non-generic replacement proves that
-Reflaxe ownership removes the conditional sidecar and direct decision. Negative
-fixtures assert exact source-positioned `HXC1001` for `Dynamic`, an unbound
-phantom parameter, non-stationary recursive function and type growth at their
-hard bounds, and the code-size threshold with no artifacts. The generated
-project compiles and runs as warning-clean strict C11 at `-O0` and `-O2` under
-each available identity-matching GCC or Clang family; required CI provides both
+outer generic enum layouts, and a runtime-free executable. A separate ordinary
+Haxe fixture carries `LogicalPath(String)` in a closed record through a generic
+identity call. It runs on Eval, compiles through validated HxcIR, repeats
+byte-identically, emits readable `hxc_AssetRecord`/`hxc_assetPack` C in split,
+package, and unity layouts, and executes as warning-clean strict C11. A paired
+abstract-over-class-reference record fails at the field and leaves no
+artifacts.
+
+The suite also compares repeated isolated roots, reversed typed-module
+discovery, an alternate locale, and a warm compiler server before and after a
+rejected request, plus portable, metal, and explicit runtime-none projects. A
+same-root non-generic replacement proves that Reflaxe ownership removes the
+conditional sidecar and direct decision. Other negative fixtures assert exact
+source-positioned `HXC1001` for `Dynamic`, an unbound phantom parameter,
+non-stationary recursive function and type growth at their hard bounds, and the
+code-size threshold with no artifacts. The generated reference project
+compiles and runs as warning-clean strict C11 at `-O0` and `-O2` under each
+available identity-matching GCC or Clang family; required CI provides both
 families.
 
 The code-size negative uses the internal fixture-only

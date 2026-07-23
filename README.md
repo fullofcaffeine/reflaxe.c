@@ -284,7 +284,7 @@ This inventory combines product capability boundaries with repository infrastruc
 | `fixture-snapshot-policy` | `implemented` | Eight evidence lanes and centrally owned deterministic snapshots have fail-closed policy checks. |
 | `general-haxe-lowering` | `unsupported` | General Haxe programs are not supported and stop at the first unsupported typed construct. |
 | `generated-file-ownership` | `implemented` | Admitted projects use deterministic content-addressed artifacts and Reflaxe-owned stale-file handling. |
-| `generic-specialization` | `implemented` | Reachable closed generic static functions and admitted generic enums share deterministic program-local instances and emit a bounded code-size report. |
+| `generic-specialization` | `implemented` | Reachable closed generic static functions over admitted primitives, enums, and selected direct records share deterministic program-local instances and emit a bounded code-size report. |
 | `governance-and-provenance` | `implemented` | Contribution, disclosure, license, vendoring, provenance, and future release responsibilities are drift-checked. |
 | `hxc-cli` | `unsupported` | No Run.hx, hxc command router, project schema, template, or packaged executable exists. |
 | `hxc-doctor` | `unsupported` | The hxc doctor human and JSON command is not implemented. |

@@ -139,10 +139,10 @@ class CGenericTypeCanonicalizer {
 	}
 
 	public function normalize(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument
-		return normalizeType(type, 0, [], position, fail, node);
+		return normalizeType(type, 0, [], position, fail, node, false);
 
-	function normalizeType(type:Type, depth:Int, activeAnonymous:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void,
-			node:String):CGenericTypeArgument {
+	function normalizeType(type:Type, depth:Int, activeAnonymous:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void, node:String,
+			allowTransparentRecordFieldAbstract:Bool):CGenericTypeArgument {
 		if (depth > MAX_TYPE_ARGUMENT_DEPTH)
 			return rejected(fail, position, '$node:type-argument-depth-budget:$MAX_TYPE_ARGUMENT_DEPTH');
 		final resolved = unwrapAliases(type, MAX_ALIAS_EXPANSIONS, position, fail, node);
@@ -164,7 +164,8 @@ class CGenericTypeCanonicalizer {
 						} else {
 							if (parameters.length != 1)
 								rejected(fail, position, '$node:Array-type-argument-count:${parameters.length}');
-							final element = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Array-element');
+							final element = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Array-element',
+								allowTransparentRecordFieldAbstract);
 							final normalizedType:Type = TInst(reference, [element.type]);
 							new CGenericTypeArgument(normalizedType, CGenericSpecializationContract.arrayArgumentKey(element.key),
 								'Array<${element.displayName}>', ManagedArray);
@@ -173,7 +174,8 @@ class CGenericTypeCanonicalizer {
 			case TEnum(reference, parameters):
 				final definition = reference.get();
 				final path = definition.pack.concat([definition.name]).join(".");
-				final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, activeAnonymous, position, fail, node));
+				final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, activeAnonymous, position, fail, node,
+					allowTransparentRecordFieldAbstract));
 				final normalizedType:Type = TEnum(reference, arguments.map(argument -> argument.type));
 				new CGenericTypeArgument(normalizedType, CGenericSpecializationContract.enumArgumentKey(path, arguments.map(argument -> argument.key)),
 					arguments.length == 0 ? path : path
@@ -182,10 +184,14 @@ class CGenericTypeCanonicalizer {
 						+ ">", DirectEnum);
 			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
 				if (parameters.length != 1) rejected(fail, position, '$node:Null-type-argument-count:${parameters.length}'); else {
-					final value = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Null-value');
+					final value = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Null-value',
+						allowTransparentRecordFieldAbstract);
 					new CGenericTypeArgument(TAbstract(reference, [value.type]), CGenericSpecializationContract.nullableArgumentKey(value.key),
 						'Null<${value.displayName}>', NullableValue);
 				}
+			case TAbstract(reference, parameters) if (allowTransparentRecordFieldAbstract && !reference.get().meta.has(":coreType")):
+				final directPrimitive = admittedPrimitiveArgument(resolved);
+				directPrimitive == null ? normalizeTransparentAbstract(reference, parameters, depth, activeAnonymous, position, fail, node) : directPrimitive;
 			case TAnonymous(reference):
 				normalizeAnonymous(reference, depth, activeAnonymous, position, fail, node);
 			case TFun(_, _):
@@ -193,6 +199,32 @@ class CGenericTypeCanonicalizer {
 			case _:
 				primitiveArgument(resolved, position, fail, node);
 		};
+	}
+
+	/**
+		Preserve one ordinary Haxe abstract while proving its runtime carrier.
+
+		An abstract such as `LogicalPath(String)` is a named source-level view, not
+		a wrapper object. Haxe has already typed its constructors, conversions, and
+		operators before this pass, so specialization may store it as `String` only
+		after the existing String rule accepts that carrier. The nominal path and
+		closed arguments remain in the key, which prevents two different abstracts
+		from sharing a specialization merely because both happen to use the same C
+		bytes. `@:coreType` abstracts and unsupported carriers never enter this
+		path and continue to fail closed.
+	**/
+	function normalizeTransparentAbstract(reference:Ref<AbstractType>, parameters:Array<Type>, depth:Int, activeAnonymous:Array<Ref<AnonType>>,
+			position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument {
+		final definition = reference.get();
+		final path = definition.pack.concat([definition.name]).join(".");
+		final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, activeAnonymous, position, fail, '$node.abstract-argument', true));
+		final carrierType = TypeTools.applyTypeParameters(definition.type, definition.params, arguments.map(argument -> argument.type));
+		final carrier = normalizeType(carrierType, depth + 1, activeAnonymous, position, fail, '$node.abstract-carrier', true);
+		final normalizedType:Type = TAbstract(reference, arguments.map(argument -> argument.type));
+		final displayName = arguments.length == 0 ? path : path + "<" + arguments.map(argument -> argument.displayName).join(", ") + ">";
+		return new CGenericTypeArgument(normalizedType,
+			CGenericSpecializationContract.transparentAbstractArgumentKey(path, arguments.map(argument -> argument.key), carrier.key), displayName,
+			carrier.representation);
 	}
 
 	/**
@@ -229,7 +261,7 @@ class CGenericTypeCanonicalizer {
 				case FVar(read, write): 'var:${accessKey(read)}:${accessKey(write)}:${field.isFinal ? "final" : "nonfinal"}';
 				case FMethod(_): return rejected(fail, field.pos, '$node.field:${field.name}:method');
 			};
-			final fieldType = normalizeType(field.type, depth + 1, nextActive, field.pos, fail, '$node.field:${field.name}');
+			final fieldType = normalizeType(field.type, depth + 1, nextActive, field.pos, fail, '$node.field:${field.name}', true);
 			fieldKeys.push(CGenericSpecializationContract.recordFieldKey(field.name, access, fieldType.key));
 			fieldDisplays.push('${field.name}:${fieldType.displayName}');
 		}
@@ -239,26 +271,45 @@ class CGenericTypeCanonicalizer {
 	}
 
 	function primitiveArgument(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument {
+		final admitted = admittedPrimitiveArgument(type);
+		if (admitted != null)
+			return admitted;
 		return switch CPrimitiveTypeMapper.map(type, profile) {
 			case CTPrimitive(mapping):
 				if (mapping.nullability != CPNonNullable) {
 					return rejected(fail, position, '$node:nullable-type-argument:${mapping.cSpelling}');
 				}
-				final identity = switch mapping.sourceType {
-					case CPHaxeBool: {key: "bool", display: "Bool"};
-					case CPHaxeInt: {key: "i32", display: "Int"};
-					case CPHaxeUInt: {key: "u32", display: "UInt"};
-					case CPHaxeFloat: {key: "f64", display: "Float"};
-					case CPCFloat32: {key: "c-f32", display: "c.Float32"};
-					case _: return rejected(fail, position, '$node:unsupported-primitive-type-argument:${mapping.cSpelling}');
-				};
-				new CGenericTypeArgument(type, identity.key, identity.display, DirectPrimitive);
+				rejected(fail, position, '$node:unsupported-primitive-type-argument:${mapping.cSpelling}');
 			case CTReference(identity, nullable):
 				rejected(fail, position, '$node:reference-type-argument:$identity:${nullable ? "nullable" : "non-null"}');
 			case CTNativePointer(identity, nullable):
 				rejected(fail, position, '$node:native-pointer-type-argument:$identity:${nullable ? "nullable" : "non-null"}');
 			case CTUnsupported(reason):
 				rejected(fail, position, '$node:$reason');
+		};
+	}
+
+	/**
+		Keep dedicated primitive contracts ahead of ordinary abstract erasure.
+
+		`UInt` is implemented by Haxe as an abstract over `Int`, but haxe.c gives it
+		a distinct unsigned C representation. Returning that existing mapping here
+		prevents the general transparent-abstract rule from accidentally replacing
+		the target's proven `u32` semantics with the carrier's signed `i32` view.
+	**/
+	function admittedPrimitiveArgument(type:Type):Null<CGenericTypeArgument> {
+		return switch CPrimitiveTypeMapper.map(type, profile) {
+			case CTPrimitive(mapping) if (mapping.nullability == CPNonNullable):
+				final identity = switch mapping.sourceType {
+					case CPHaxeBool: {key: "bool", display: "Bool"};
+					case CPHaxeInt: {key: "i32", display: "Int"};
+					case CPHaxeUInt: {key: "u32", display: "UInt"};
+					case CPHaxeFloat: {key: "f64", display: "Float"};
+					case CPCFloat32: {key: "c-f32", display: "c.Float32"};
+					case _: null;
+				};
+				identity == null ? null : new CGenericTypeArgument(type, identity.key, identity.display, DirectPrimitive);
+			case _: null;
 		};
 	}
 

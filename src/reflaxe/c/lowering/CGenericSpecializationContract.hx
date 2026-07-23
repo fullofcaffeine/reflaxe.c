@@ -27,6 +27,18 @@ class CGenericSpecializationContract {
 	public static function stringArgumentKey():String
 		return "string(utf8-scalar-indexed)";
 
+	/**
+		Keep a Haxe abstract's nominal identity beside its proven storage carrier.
+
+		Two abstracts can use the same C representation while remaining different
+		Haxe types. Including both the declaration path and closed type arguments
+		prevents specialization sharing from erasing that source-level distinction;
+		the carrier key proves that later lowering already understands the stored
+		value.
+	**/
+	public static function transparentAbstractArgumentKey(haxePath:String, argumentKeys:Array<String>, carrierKey:String):String
+		return 'transparent-abstract(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)}${canonicalPart(carrierKey)})';
+
 	/** Preserve a closed inner identity when Haxe's `Null<T>` wrapper is inferred. */
 	public static function nullableArgumentKey(valueKey:String):String
 		return 'nullable(${canonicalPart(valueKey)})';

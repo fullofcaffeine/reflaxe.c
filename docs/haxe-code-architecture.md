@@ -488,11 +488,15 @@ concrete type. Do not add a type parameter used by only one call site, and do
 not use a generic container when a domain name would explain an invariant.
 
 Haxe.c currently specializes a bounded set of closed generic static functions
-for admitted primitive and enum arguments. In other words, it produces one
-direct C version per used concrete type. Generic classes, open type parameters,
-reference arguments, and unrestricted specialization are not current general
-capabilities. `c.CArray` is a dedicated typed C abstraction with its own
-lowering, not proof of broad generic-class support.
+for admitted primitive and enum arguments, plus selected closed record values
+whose fields already have a proven direct representation. In other words, it
+produces one direct C version per used concrete type. A nominal record field
+such as `LogicalPath(String)` keeps its Haxe identity in the specialization key
+while using String's already-admitted C carrier; the abstract does not allocate
+a wrapper or make an unsupported carrier legal. Generic classes, open type
+parameters, reference arguments, and unrestricted specialization are not
+current general capabilities. `c.CArray` is a dedicated typed C abstraction
+with its own lowering, not proof of broad generic-class support.
 
 ### `inline`: remove a boundary only when its meaning stays clear
 
@@ -668,7 +672,7 @@ claims. The current checked-in evidence is intentionally bounded:
 | concrete inheritance and virtual methods | bounded closed-world support | embedded base prefix and only the required virtual table |
 | abstract classes | no separate production gate | do not rely on them yet merely because concrete inheritance works |
 | interfaces | explicitly not admitted yet | source-positioned failure; later interface-table work owns support |
-| closed generic static functions | bounded primitive/enum specialization | one direct generated C function per admitted used instance |
+| closed generic static functions | bounded primitive/enum and selected direct-record specialization | one direct generated C function per admitted used instance |
 | generic classes and methods | not generally admitted | source-positioned failure except dedicated target abstractions |
 | function values and closures | not generally admitted | later lowering and lifetime work |
 | escaping/heap class objects and reflection | not generally admitted | later allocation, tracing, and object-model work |

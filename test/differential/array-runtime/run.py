@@ -634,24 +634,23 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Full Caxecraft now passes Array<Class>, nullable Array values, direct
-    # defaults, function values, EditorOpened(session)'s class-reference enum
-    # payload, and the first Map<String, Bool> slice. Naming the next
-    # LogicalPath aggregate-field boundary proves the compiler traversed those
-    # earlier features; merely checking for any failure would let a regression
-    # pass. haxe_c-djl.3 owns that general nominal-abstract rule.
+    # Full Caxecraft now also passes the nominal LogicalPath(String) field inside
+    # ScenarioParser's generic return record. Naming the next Bytes enum-payload
+    # guard proves the compiler traversed all earlier Array, function-value,
+    # StringMap, and abstract-record features; merely checking for any failure
+    # would let a regression pass. haxe_c-djl.4 owns that general Bytes payload
+    # admission bug.
     if (
-        "Scenario.hx:15:" not in result.stderr
-        or "field:assetPack:abstract `caxecraft.scenario.LogicalPath` is not an admitted primitive or native pointer contract"
+        "EditorTypes.hx:129:" not in result.stderr
+        or "ValidationPassed.canonical:reference-haxe.io.Bytes-non-null"
         not in result.stderr
         or "CaxeFlowState" in result.stderr
         or "CaxeFlowRulePlanner" in result.stderr
         or "EditorScenarioFactory" in result.stderr
-        or "EditorTypes" in result.stderr
         or "ScenarioMessageValidator" in result.stderr
     ):
         raise ArrayRuntimeFailure(
-            "Caxecraft did not compile past its former Array<Class> and Map<String, Bool> boundaries\n"
+            "Caxecraft did not compile past its former Array/Class/StringMap/nominal-abstract boundaries\n"
             f"exit={result.returncode} stdout={result.stdout!r} stderr={result.stderr!r}"
         )
 

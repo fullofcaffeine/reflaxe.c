@@ -37,12 +37,15 @@ field expressions become ordered HxcIR instructions in source order; the later
 uses a typed compound literal with designated members, so it never relies on C
 initializer evaluation order or positional coincidence.
 
-A non-core Haxe abstract contributes its underlying representation to this
-structural identity. For example, an `enum abstract MiningOutcome(Int)` field
-is represented as one `Int` member in C. The Haxe type still restricts source
-values and supports named decisions; only its already-erased storage
-representation reaches HxcIR. Core abstracts and unsupported underlying
-representations still fail closed.
+A non-core Haxe abstract contributes its proven underlying representation to
+the record plan. For example, an `enum abstract MiningOutcome(Int)` field is
+represented as one `Int` member in C. For a nominal immutable String view such
+as `LogicalPath(String)`, the plan retains the nominal source identity beside
+the shared `IRTString` carrier; generic specialization uses both facts in its
+key before aggregate lowering selects the C field. The Haxe type still
+restricts source values and supports named decisions, while C stores the
+already-typed carrier without a wrapper object. Core abstracts and unsupported
+underlying representations still fail closed.
 
 An ordinary enum contributes its complete nominal instance key to the record
 shape. Two enums can spell the same constructors and payloads and still be

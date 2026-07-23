@@ -520,8 +520,8 @@
       "area": "compiler",
       "status": "implemented",
       "disposition": "available",
-      "summary": "Reachable closed generic static functions and admitted generic enums share deterministic program-local instances and emit a bounded code-size report.",
-      "scope": "Direct static calls infer non-null Bool/Int/UInt/Float or admitted enum arguments, expand aliases, keep finite same-nominal nesting distinct, deduplicate full length-prefixed semantic keys, close recursion through request-local worklists, and remain runtime-free under 64 function, 64 type, and 524,288 estimated-C-byte limits.",
+      "summary": "Reachable closed generic static functions over admitted primitives, enums, and selected direct records share deterministic program-local instances and emit a bounded code-size report.",
+      "scope": "Direct static calls infer non-null Bool/Int/UInt/Float, admitted enums, or selected closed record arguments; transparent non-core record-field abstracts retain their nominal path and proven carrier key. Aliases expand, finite same-nominal nesting stays distinct, full length-prefixed semantic keys deduplicate, and request-local worklists close recursion under 64 function, 64 type, and 524,288 estimated-C-byte limits. Specialization adds no runtime machinery; each record still composes the runtime plan of its admitted fields.",
       "evidence": [
         "docs/generic-specialization.md",
         "docs/specs/generic-specialization-report.schema.json",
@@ -536,7 +536,7 @@
         "E3.T03"
       ],
       "limitations": [
-        "Dynamic or open arguments, classes/references, anonymous records, function types, nullability, native pointers, generic instances or code size beyond the hard budgets, and non-stationary recursive enum growth fail with source-positioned HXC1001.",
+        "Dynamic or open arguments, classes/references, open or unsupported records, function types, unsupported nullability, native pointers, generic instances or code size beyond the hard budgets, and non-stationary recursive enum growth fail with source-positioned HXC1001.",
         "Generic classes, general containers, descriptor-driven shared bodies, boxing, reflection, closures, dynamic dispatch, exported generics, and cross-program specialization stability remain unsupported."
       ]
     },

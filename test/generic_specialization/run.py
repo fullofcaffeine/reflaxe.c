@@ -71,6 +71,7 @@ def compile_fixture(
     fixture: str,
     output: Path,
     *,
+    layout: str = "unity",
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
@@ -95,7 +96,7 @@ def compile_fixture(
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     environment = os.environ.copy()
     environment["LC_ALL"] = locale
     if connect is None:
@@ -204,6 +205,23 @@ def render_positive(
     return project
 
 
+def render_nominal_abstract_record(output: Path, *, layout: str) -> RenderedProject:
+    """Compile the focused String-backed abstract record through production haxe.c."""
+
+    result = compile_fixture("abstract_record", output, layout=layout)
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise GenericSpecializationFailure(
+            f"{layout} nominal-abstract record compile failed or emitted diagnostics\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    return RenderedProject(
+        read_artifacts(output),
+        load_json(output / "hxc.specializations.json", "nominal-abstract specialization report"),
+        load_json(output / "hxc.runtime-plan.json", "nominal-abstract runtime plan"),
+        load_json(output / "hxc.manifest.json", "nominal-abstract compiler manifest"),
+    )
+
+
 def require_list(value: object, label: str) -> list[object]:
     if not isinstance(value, list):
         raise GenericSpecializationFailure(f"{label} is not an array")
@@ -239,7 +257,8 @@ def validate_argument(argument: object, expected_parameter: str | None = None) -
         or not record["parameter"]
         or expected_parameter is not None
         and record.get("parameter") != expected_parameter
-        or record.get("representation") not in ("direct-primitive", "direct-enum")
+        or record.get("representation")
+        not in ("direct-primitive", "direct-enum", "direct-record")
     ):
         raise GenericSpecializationFailure(f"generic argument drifted: {record!r}")
     return require_text(record.get("key"), "generic argument key")
@@ -576,6 +595,10 @@ def check_expected_snapshot() -> None:
 
 
 NEGATIVE_EXPECTATIONS = {
+    "abstract_unsupported": (
+        "Main.hx:21: characters 2-26",
+        "TCall(generic-specialization:function.Main.identity:type-argument:T).field:value.abstract-carrier:class-type-argument:UnsupportedCarrier",
+    ),
     "dynamic": (
         "Main.hx:8: characters 3-25",
         "TCall(generic-specialization:function.Main.identity:type-argument:T):dynamic-type-argument",
@@ -738,6 +761,180 @@ def check_profile_and_runtime_policy() -> None:
         )
 
 
+def check_nominal_abstract_record(requested_toolchain: str) -> None:
+    """Prove one nominal String field through Eval, HxcIR validation, C, and execution."""
+
+    eval_result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "--cwd",
+            str(FIXTURES / "abstract_record"),
+            "build.hxml",
+            "--interp",
+        ],
+        cwd=ROOT,
+        env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if eval_result.returncode != 0 or eval_result.stdout or eval_result.stderr:
+        raise GenericSpecializationFailure(
+            "nominal-abstract record Eval oracle failed\n"
+            f"stdout:\n{eval_result.stdout}\nstderr:\n{eval_result.stderr}"
+        )
+
+    compilers = native_compilers(requested_toolchain)
+    with tempfile.TemporaryDirectory(prefix="hxc-generic-abstract-record-") as temporary:
+        root = Path(temporary)
+        projects: dict[str, RenderedProject] = {}
+        for layout in ("split", "package", "unity"):
+            projects[layout] = render_nominal_abstract_record(root / layout, layout=layout)
+        repeated = render_nominal_abstract_record(root / "unity-repeated", layout="unity")
+        assert_artifacts_equal(
+            projects["unity"].artifacts,
+            repeated.artifacts,
+            "repeated nominal-abstract unity render",
+        )
+
+        for layout, project in projects.items():
+            functions = require_list(
+                project.report.get("functionSpecializations"),
+                f"{layout} nominal-abstract functions",
+            )
+            types = require_list(
+                project.report.get("typeSpecializations"),
+                f"{layout} nominal-abstract types",
+            )
+            if len(functions) != 1 or types:
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal-abstract specialization set drifted"
+                )
+            function = require_dict(functions[0], f"{layout} nominal-abstract function")
+            arguments = require_list(
+                function.get("arguments"), f"{layout} nominal-abstract arguments"
+            )
+            if len(arguments) != 1:
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal-abstract specialization lost its argument"
+                )
+            argument = require_dict(arguments[0], f"{layout} nominal-abstract argument")
+            key = require_text(argument.get("key"), f"{layout} nominal-abstract key")
+            if (
+                function.get("baseFunctionId") != "function.Main.identity"
+                or argument.get("parameter") != "T"
+                or argument.get("representation") != "direct-record"
+                or argument.get("displayName") != "{assetPack:LogicalPath}"
+                or "transparent-abstract(" not in key
+                or "LogicalPath" not in key
+                or "string(utf8-scalar-indexed)" not in key
+            ):
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal identity or String carrier drifted: {argument!r}"
+                )
+            specialization_key = require_text(
+                function.get("specializationKey"),
+                f"{layout} nominal-abstract specialization key",
+            )
+            digest = hashlib.sha256(specialization_key.encode("utf-8")).hexdigest()
+            if (
+                function.get("semanticDigestSha256") != digest
+                or function.get("instanceId") != f"function.specialization.{digest}"
+            ):
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal-abstract full-key identity drifted"
+                )
+            if (
+                project.runtime_plan.get("status") != "analyzed-runtime-features"
+                or project.runtime_plan.get("features")
+                != ["runtime-base", "string-literal"]
+                or project.runtime_plan.get("artifacts")
+                != [
+                    "runtime/include/hxrt/base.h",
+                    "runtime/include/hxrt/string_literal.h",
+                ]
+            ):
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal-abstract record selected unexpected runtime support"
+                )
+            direct = require_list(
+                project.runtime_plan.get("directDecisions"),
+                f"{layout} nominal-abstract direct decisions",
+            )
+            if not {
+                "closed-anonymous-value-records",
+                "closed-generic-specializations",
+                "direct-utf8-string-literals",
+            }.issubset(set(direct)):
+                raise GenericSpecializationFailure(
+                    f"{layout} nominal-abstract direct decisions are incomplete"
+                )
+            payload = b"\n".join(
+                content
+                for path, content in sorted(project.artifacts.items())
+                if path.endswith((".h", ".c"))
+            )
+            if (
+                b"struct hxc_AssetRecord" not in payload
+                or b"hxc_string hxc_assetPack" not in payload
+                or str(ROOT).encode() in payload
+            ):
+                raise GenericSpecializationFailure(
+                    f"{layout} generated C lost its readable record/String shape"
+                )
+
+            build = require_dict(project.manifest.get("build"), f"{layout} build plan")
+            output = root / layout
+            sources = [
+                output / require_text(value, f"{layout} build source")
+                for value in require_list(build.get("sources"), f"{layout} build sources")
+            ]
+            includes = [
+                output / require_text(value, f"{layout} include directory")
+                for value in require_list(
+                    build.get("includeDirectories"),
+                    f"{layout} include directories",
+                )
+            ]
+            for family, compiler in compilers:
+                executable = root / f"abstract-record-{layout}-{family}"
+                compiled = subprocess.run(
+                    [
+                        compiler,
+                        *STRICT_FLAGS,
+                        "-O0",
+                        *(f"-I{path}" for path in includes),
+                        *(str(path) for path in sources),
+                        "-o",
+                        str(executable),
+                    ],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if compiled.returncode != 0 or compiled.stdout or compiled.stderr:
+                    raise GenericSpecializationFailure(
+                        f"{family} rejected {layout} nominal-abstract generated C\n"
+                        f"stdout:\n{compiled.stdout}\nstderr:\n{compiled.stderr}"
+                    )
+                executed = subprocess.run(
+                    [str(executable)],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    timeout=10,
+                )
+                if executed.returncode != 0 or executed.stdout or executed.stderr:
+                    raise GenericSpecializationFailure(
+                        f"{family} {layout} nominal-abstract executable drifted: "
+                        f"exit={executed.returncode}, stdout={executed.stdout!r}, "
+                        f"stderr={executed.stderr!r}"
+                    )
+
+
 def compiler_family(command: str) -> str | None:
     result = subprocess.run(
         [command, "--version"], check=False, capture_output=True, text=True, timeout=10
@@ -873,6 +1070,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_expected_snapshot()
         for fixture in NEGATIVE_EXPECTATIONS:
             check_negative(fixture)
+        check_nominal_abstract_record(args.toolchain)
         check_server_isolation()
         check_conditional_sidecar_ownership()
         check_profile_and_runtime_policy()
@@ -887,7 +1085,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"generic-specialization: ERROR: {error}", file=os.sys.stderr)
         return 1
     print(
-        "generic-specialization: OK: closed primitive/function/enum/Array identities, "
+        "generic-specialization: OK: closed primitive/function/enum/Array/record identities, "
+        "nominal abstracts with admitted carriers, "
         "alias sharing, finite recursion, full-key collision checks, bounded code-size "
         f"reports, exact dynamic/open/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
         f"{'/'.join(families)} C11 O0/O2 passed"
