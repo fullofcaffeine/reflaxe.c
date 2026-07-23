@@ -16,6 +16,7 @@ import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
 import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
 import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
@@ -157,9 +158,11 @@ class CStaticFunctionGraphCollector {
 					addConstructor(target, constructorsById, pendingConstructors);
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
-			case TCall(callee, _) if (CBodyDispatchCatalog.instanceAccess(callee) != null
-				&& !isArrayInstanceCall(callee)
-				&& !isBytesInstanceCall(callee)):
+			case TCall(callee, _)
+				if (CBodyDispatchCatalog.instanceAccess(callee) != null
+					&& !isArrayInstanceCall(callee)
+					&& !isStringMapInstanceCall(callee)
+					&& !isBytesInstanceCall(callee)):
 				final callerId = currentConstructor == null ? CBodyLowering.functionInputId(caller) : currentConstructor.id;
 				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath))
 					add(method, byId, pending);
@@ -231,6 +234,11 @@ class CStaticFunctionGraphCollector {
 	static function isBytesInstanceCall(callee:TypedExpr):Bool {
 		final access = CBodyDispatchCatalog.instanceAccess(callee);
 		return access != null && CBodyBytesRecognition.isCoreBytes(access.owner);
+	}
+
+	static function isStringMapInstanceCall(callee:TypedExpr):Bool {
+		final access = CBodyDispatchCatalog.instanceAccess(callee);
+		return access != null && CBodyStringMapRecognition.isStringMap(access.owner);
 	}
 
 	/**

@@ -219,6 +219,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
     expected_array_runtime_script = "python3 test/differential/array-runtime/run.py"
+    expected_string_map_script = "python3 test/differential/string-map/run.py"
     expected_bytes_runtime_script = "python3 test/differential/bytes-runtime/run.py"
     expected_gc_runtime_script = "python3 test/runtime/gc/run.py"
     expected_string_runtime_script = "python3 test/differential/string-runtime/run.py"
@@ -298,7 +299,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "npm run test:hxc-config && npm run test:all-sources && "
         "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:array-runtime && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:array-runtime && npm run test:string-map && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
@@ -370,6 +371,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:array-runtime") != expected_array_runtime_script
     ):
         errors.append("package.json must retain the typed array runtime gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:string-map") != expected_string_map_script
+    ):
+        errors.append("package.json must retain the typed StringMap runtime gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:bytes-runtime") != expected_bytes_runtime_script

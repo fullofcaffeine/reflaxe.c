@@ -96,6 +96,7 @@ class HxcIRGolden {
 				cstringByteLengthMismatch: invalidDiagnostics(cstringByteLengthMismatchProgram()),
 				cstringEmbeddedNul: invalidDiagnostics(cstringEmbeddedNulProgram()),
 				ioFailurePolicy: invalidDiagnostics(ioFailurePolicyProgram()),
+				invalidStringMapValue: invalidDiagnostics(invalidStringMapValueProgram()),
 				defaultInitializationType: invalidDiagnostics(defaultInitializationTypeProgram()),
 				statusConventionReturnType: invalidDiagnostics(statusConventionReturnTypeProgram()),
 				statusCallWithoutFailure: invalidDiagnostics(statusCallWithoutFailureProgram()),
@@ -1799,6 +1800,47 @@ class HxcIRGolden {
 			instruction("bad.string", result("value.string", IRTString), IRIOConstant(IRCString("output", 6)), file, 2),
 			instruction("bad.output", null, IRIOCall(call(IRCDRuntime("io", "sys-println-literal"), ["value.string"], IRTVoid)), file, 3)
 		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+	}
+
+	/**
+		Reject a runtime family label that lies about its admitted value type.
+
+		The compiler currently constructs only `Map<String, Bool>` instances, but
+		HxcIR validation is an independent safety boundary. A malformed producer
+		must not turn the generic native byte-storage ABI into claimed language
+		support for `Map<String, Int>`.
+	**/
+	static function invalidStringMapValueProgram():HxcIRProgram {
+		final file = "test/negative/InvalidStringMapValue.hx";
+		final mapType:HxcIRTypeDeclaration = {
+			id: "type.invalid-string-map",
+			displayName: "Map<String, Int>",
+			kind: IRTKReference,
+			source: span(file, 1)
+		};
+		final mapInstance:HxcIRTypeInstance = {
+			id: "instance.invalid-string-map",
+			declarationId: mapType.id,
+			arguments: [IRTString, IRTInt(32, true)],
+			representation: IRRManaged("string-map"),
+			source: span(file, 1)
+		};
+		final program = minimalProgram("invalid.InvalidStringMapValue", [
+			instruction("value.key", result("value.key", IRTString), IRIOConstant(IRCString("key", 3)), file, 2),
+			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.string-map-reference.equal", "value.map", "value.map", IRIStatic), file,
+				3),
+			instruction("bad.exists", result("value.exists", IRTBool),
+				IRIOCall(call(IRCDRuntime("string-map", "exists"), ["value.map", "value.key"], IRTBool, {
+					kind: IRFNativeStatus,
+					target: IRFTAbort,
+					arguments: [],
+					cleanup: []
+				})), file, 4)
+		], terminator(IRTReturn(null, []), file, 5), [], [], file);
+		program.modules[0].types.push(mapType);
+		program.modules[0].typeInstances.push(mapInstance);
+		program.modules[0].functions[0].parameters.push(parameter("value.map", IRTInstance(mapInstance.id), file, 1));
+		return program;
 	}
 
 	static function defaultInitializationTypeProgram():HxcIRProgram {

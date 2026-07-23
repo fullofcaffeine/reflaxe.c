@@ -94,7 +94,7 @@ module "Main" @"Main.hx":2:2-128:3
     end block "entry"
     block "block.0.short-circuit-rhs" @"Main.hx":45:7-45:38
       instruction "instruction.8.load" result="value.4":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) load place=local("local.2") @"Main.hx":45:21-45:30
-      instruction "instruction.9.null-class-reference" result="value.5":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":45:34-45:38
+      instruction "instruction.9.null-reference" result="value.5":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":45:34-45:38
       instruction "instruction.10.class-reference-equality" result="value.6":bool binary operation="haxe.class-reference.not-equal" left="value.4" right="value.5" implementation=static @"Main.hx":45:21-45:38
       instruction "instruction.11.short-circuit-store" result=- store place=local("local.4") value="value.6" @"Main.hx":45:7-45:38
       terminator jump edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":45:7-45:38
@@ -310,7 +310,7 @@ module "Main" @"Main.hx":2:2-128:3
     end block "block.18.short-circuit-join"
     block "block.19.short-circuit-rhs" @"Main.hx":118:11-127:21
       instruction "instruction.101.load" result="value.59":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) load place=local("local.2") @"Main.hx":127:7-127:12
-      instruction "instruction.102.null-class-reference" result="value.60":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":127:16-127:20
+      instruction "instruction.102.null-reference" result="value.60":pointer(nullable,instance("instance.class.3e4c96cf3de0c1da0123f187164fd36d7d91a1b6cfd558e05b3c601bb034b93a")) constant value=null @"Main.hx":127:16-127:20
       instruction "instruction.103.class-reference-equality" result="value.61":bool binary operation="haxe.class-reference.not-equal" left="value.59" right="value.60" implementation=static @"Main.hx":127:7-127:20
       instruction "instruction.104.short-circuit-store" result=- store place=local("local.18") value="value.61" @"Main.hx":118:11-127:21
       terminator jump edge(target="block.20.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":118:11-127:21

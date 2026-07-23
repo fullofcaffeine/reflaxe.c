@@ -59,6 +59,8 @@ import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumPayload;
 import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRecognition;
+import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CBodyNullCheckCoalescing;
@@ -233,6 +235,7 @@ class CBodyLoweringResult {
 	public final enums:Array<CLoweredBodyEnum>;
 	public final classes:Array<CLoweredBodyClass>;
 	public final arrays:Array<CLoweredBodyArray>;
+	public final stringMaps:Array<CPreparedBodyStringMap>;
 	public final bytes:Array<CPreparedBodyBytes>;
 	public final optionals:Array<CLoweredBodyOptional>;
 	public final constructors:Array<CLoweredBodyConstructor>;
@@ -247,10 +250,10 @@ class CBodyLoweringResult {
 
 	public function new(program:HxcIRProgram, functions:Array<CLoweredBodyFunction>, globals:Array<CLoweredBodyGlobal>,
 			aggregates:Array<CLoweredBodyAggregate>, enums:Array<CLoweredBodyEnum>, classes:Array<CLoweredBodyClass>, arrays:Array<CLoweredBodyArray>,
-			bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>, constructors:Array<CLoweredBodyConstructor>,
-			dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>, buildFacts:Array<TypedCBuildFact>,
-			symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>, runtimeRequirements:Array<CBodyRuntimeRequirement>,
-			managedProgram:Null<CManagedProgramNames>) {
+			stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>, optionals:Array<CLoweredBodyOptional>,
+			constructors:Array<CLoweredBodyConstructor>, dispatch:CLoweredBodyDispatch, imports:CLoweredImports, helpers:Array<CPrimitiveHelperPlan>,
+			buildFacts:Array<TypedCBuildFact>, symbolTable:CSymbolTableSnapshot, boundsAbortName:Null<CIdentifier>,
+			runtimeRequirements:Array<CBodyRuntimeRequirement>, managedProgram:Null<CManagedProgramNames>) {
 		this.program = program;
 		this.functions = functions.copy();
 		this.globals = globals.copy();
@@ -258,6 +261,7 @@ class CBodyLoweringResult {
 		this.enums = enums.copy();
 		this.classes = classes.copy();
 		this.arrays = arrays.copy();
+		this.stringMaps = stringMaps.copy();
 		this.bytes = bytes.copy();
 		this.optionals = optionals.copy();
 		this.constructors = constructors.copy();
@@ -378,10 +382,11 @@ class CBodyLowering {
 		final preparedClasses = aggregateRegistry.canonicalClasses();
 		final preparedInterfaces = aggregateRegistry.canonicalInterfaces();
 		final preparedArrays = aggregateRegistry.canonicalArrays();
+		final preparedStringMaps = aggregateRegistry.canonicalStringMaps();
 		final preparedBytes = aggregateRegistry.canonicalBytes();
 		final preparedImports = aggregateRegistry.canonicalImports();
 		final program = buildProgram(built, preparedGlobals, preparedAggregates, preparedEnums, preparedClasses, preparedInterfaces, preparedArrays,
-			preparedBytes, preparedImports, preparedDispatch);
+			preparedStringMaps, preparedBytes, preparedImports, preparedDispatch);
 		new HxcIRManagedRootPlanner().run(program);
 		new CBodyNullCheckCoalescing().run(program);
 		CPhaseTiming.stop(hxcIRConstructionTimer);
@@ -432,8 +437,8 @@ class CBodyLowering {
 		}
 		CPhaseTiming.stop(analysisTimer);
 		final castBodyTimer = CPhaseTiming.start(CPCASTBodyConstruction);
-		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedBytes, loweredOptionals, loweredDispatch,
-			loweredImports, managedProgram);
+		final emitter = new CBodyEmitter(loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedStringMaps, preparedBytes, loweredOptionals,
+			loweredDispatch, loweredImports, managedProgram);
 		final lowered:Array<CLoweredBodyFunction> = [];
 		for (item in built) {
 			final parameterNames:Map<String, CIdentifier> = [];
@@ -482,6 +487,9 @@ class CBodyLowering {
 			runtimeRequirements.push(new CBodyRuntimeRequirement(feature, "managed-type-representation",
 				"ordinary Haxe Array<T> shared container representation", array.source, array.position));
 		}
+		for (map in preparedStringMaps)
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "managed-type-representation",
+				"ordinary Haxe Map<String, V> shared hash-table representation", map.source, map.position));
 		for (value in preparedClasses) {
 			if (!value.managedByCollector)
 				continue;
@@ -500,9 +508,9 @@ class CBodyLowering {
 					runtimeRequirements.push(new CBodyRuntimeRequirement("gc", "root-frame", "compiler-emitted exact managed root frame", root.source, null));
 			}
 		runtimeRequirements.sort(compareRuntimeRequirements);
-		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedBytes,
-			loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers, helperSelection.buildFacts().concat(loweredImports.buildFacts),
-			symbolTable, boundsAbortName, runtimeRequirements, managedProgram);
+		return new CBodyLoweringResult(program, lowered, loweredGlobals, loweredAggregates, loweredEnums, loweredClasses, loweredArrays, preparedStringMaps,
+			preparedBytes, loweredOptionals, loweredConstructors, loweredDispatch, loweredImports, helpers,
+			helperSelection.buildFacts().concat(loweredImports.buildFacts), symbolTable, boundsAbortName, runtimeRequirements, managedProgram);
 	}
 
 	function registerManagedProgramNames(program:HxcIRProgram, preparedById:Map<String, PreparedBodyFunction>):Null<CManagedProgramRequests> {
@@ -600,7 +608,7 @@ class CBodyLowering {
 
 	static function buildProgram(functions:Array<BuiltBodyFunction>, globals:Array<PreparedBodyGlobal>, aggregates:Array<CPreparedBodyAggregate>,
 			enums:Array<CPreparedBodyEnumInstance>, classes:Array<CPreparedBodyClass>, interfaces:Array<CPreparedBodyInterface>,
-			arrays:Array<CPreparedBodyArray>, bytes:Array<CPreparedBodyBytes>, imports:Array<CPreparedImportType>,
+			arrays:Array<CPreparedBodyArray>, stringMaps:Array<CPreparedBodyStringMap>, bytes:Array<CPreparedBodyBytes>, imports:Array<CPreparedImportType>,
 			dispatch:CPreparedBodyDispatch):HxcIRProgram {
 		final byModule:Map<String, Array<BuiltBodyFunction>> = [];
 		for (fn in functions) {
@@ -665,6 +673,15 @@ class CBodyLowering {
 			}
 			moduleArrays.push(value);
 		}
+		final stringMapsByModule:Map<String, Array<CPreparedBodyStringMap>> = [];
+		for (value in stringMaps) {
+			var moduleMaps = stringMapsByModule.get(value.ownerModule);
+			if (moduleMaps == null) {
+				moduleMaps = [];
+				stringMapsByModule.set(value.ownerModule, moduleMaps);
+			}
+			moduleMaps.push(value);
+		}
 		final bytesByModule:Map<String, Array<CPreparedBodyBytes>> = [];
 		for (value in bytes) {
 			var moduleBytes = bytesByModule.get(value.ownerModule);
@@ -705,6 +722,8 @@ class CBodyLowering {
 		for (moduleId in arraysByModule.keys()) {
 			moduleIdSet.set(moduleId, true);
 		}
+		for (moduleId in stringMapsByModule.keys())
+			moduleIdSet.set(moduleId, true);
 		for (moduleId in bytesByModule.keys())
 			moduleIdSet.set(moduleId, true);
 		for (moduleId in importsByModule.keys()) {
@@ -735,6 +754,9 @@ class CBodyLowering {
 			final arrayEntries = arraysByModule.get(moduleId);
 			final moduleArrays = arrayEntries == null ? [] : arrayEntries;
 			moduleArrays.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
+			final stringMapEntries = stringMapsByModule.get(moduleId);
+			final moduleStringMaps = stringMapEntries == null ? [] : stringMapEntries;
+			moduleStringMaps.sort((left, right) -> compareUtf8(left.declarationId, right.declarationId));
 			final bytesEntries = bytesByModule.get(moduleId);
 			final moduleBytes = bytesEntries == null ? [] : bytesEntries;
 			final importEntries = importsByModule.get(moduleId);
@@ -747,6 +769,7 @@ class CBodyLowering {
 				.concat(moduleClasses.map(value -> value.source))
 				.concat(moduleInterfaces.map(value -> value.source))
 				.concat(moduleArrays.map(value -> value.source))
+				.concat(moduleStringMaps.map(value -> value.source))
 				.concat(moduleBytes.map(value -> value.source))
 				.concat(moduleImports.map(value -> value.source));
 			if (spans.length == 0) {
@@ -759,6 +782,7 @@ class CBodyLowering {
 					.concat(moduleClasses.map(value -> value.declaration()))
 					.concat(moduleInterfaces.map(value -> value.declaration()))
 					.concat(moduleArrays.map(value -> value.declaration()))
+					.concat(moduleStringMaps.map(value -> value.declaration()))
 					.concat(moduleBytes.map(value -> value.declaration()))
 					.concat(moduleImports.map(value -> value.declaration())),
 				typeInstances: moduleAggregates.map(aggregate -> aggregate.instance())
@@ -766,6 +790,7 @@ class CBodyLowering {
 					.concat(moduleClasses.map(value -> value.instance()))
 					.concat(moduleInterfaces.map(value -> value.instance()))
 					.concat(moduleArrays.map(value -> value.instance()))
+					.concat(moduleStringMaps.map(value -> value.instance()))
 					.concat(moduleBytes.map(value -> value.instance()))
 					.concat(moduleImports.map(value -> value.instance())),
 				globals: moduleGlobals.map(global -> global.ir),
@@ -1884,12 +1909,14 @@ private class FunctionBuilder {
 	final constructedObjects:Array<BodyConstructedObject> = [];
 	final normalCleanupActionIds:Array<String> = [];
 	final freshManagedArrayValueIds:Map<String, Bool> = [];
+	final freshManagedStringMapValueIds:Map<String, Bool> = [];
 	final freshManagedBytesValueIds:Map<String, Bool> = [];
 	final freshManagedEnumValueIds:Map<String, Bool> = [];
 	final freshManagedAggregateValueIds:Map<String, Bool> = [];
 	final freshManagedOptionalValueIds:Map<String, Bool> = [];
 	final borrowedManagedArrayElementValueIds:Map<String, Bool> = [];
 	final arrayCleanupActionIdsByCompilerId:Map<Int, String> = [];
+	final stringMapCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final bytesCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final enumCleanupActionIdsByCompilerId:Map<Int, String> = [];
 	final aggregateCleanupActionIdsByCompilerId:Map<Int, String> = [];
@@ -2060,6 +2087,8 @@ private class FunctionBuilder {
 		validateConstructorManagedArrayFields(bodyExpression.pos);
 		if (freshManagedArrayValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Array-value");
+		if (freshManagedStringMapValueIds.keys().hasNext())
+			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-StringMap-value");
 		if (freshManagedBytesValueIds.keys().hasNext())
 			unsupportedAt(bodyExpression.pos, "function-exit:unowned-fresh-managed-Bytes-value");
 		if (freshManagedEnumValueIds.keys().hasNext())
@@ -2168,6 +2197,8 @@ private class FunctionBuilder {
 				lowerSuperCall(expression, arguments);
 			case TCall(_, _):
 				final result = lowerCall(expression, false);
+				if (result != null && freshManagedStringMapValueIds.exists(result.id))
+					unsupported(expression, "TCall(discarded-fresh-managed-StringMap-needs-owner)");
 				if (result != null && freshManagedBytesValueIds.exists(result.id))
 					unsupported(expression, "TCall(discarded-fresh-managed-Bytes-needs-owner)");
 				if (result != null && freshManagedEnumValueIds.exists(result.id))
@@ -2613,7 +2644,7 @@ private class FunctionBuilder {
 		var stackReferenceAlias = false;
 		if (initializer != null) {
 			final construction = newExpression(initializer);
-			if (construction != null) {
+			if (construction != null && !CBodyStringMapRecognition.isStringMap(construction.classReference)) {
 				// Constructor preparation already owns the admitted nominal class. Use
 				// that plan to choose stack or collector storage instead of typing the
 				// local a second time here. Re-typing would make an unsupported extern,
@@ -2702,6 +2733,23 @@ private class FunctionBuilder {
 			normalCleanupActionIds.push(cleanupId);
 			arrayCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("array", "cleanup-release", "ordinary Haxe Array local lifetime", source, position));
+		}
+		if (localMapping.stringMapValue() != null) {
+			final transferredFreshOwner = value != null && freshManagedStringMapValueIds.remove(value.id);
+			if (!transferredFreshOwner) {
+				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("string-map")), source, "retain-string-map-alias");
+				runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "retain", "ordinary Haxe StringMap local alias", source, position));
+			}
+			final cleanupId = 'string-map-local.$ordinal.release';
+			constructionCleanupActions.push({
+				id: cleanupId,
+				idempotence: IRCExactlyOnce,
+				kind: IRCARelease(IRPLocal(localId), IRIRuntime("string-map")),
+				source: source
+			});
+			normalCleanupActionIds.push(cleanupId);
+			stringMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "ordinary Haxe StringMap local lifetime", source, position));
 		}
 		if (localMapping.bytesValue() != null) {
 			final transferredFreshOwner = value != null && freshManagedBytesValueIds.remove(value.id);
@@ -3603,6 +3651,24 @@ private class FunctionBuilder {
 			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
 			return;
 		}
+		if (prepared.returnMapping.stringMapValue() != null) {
+			var transferredCleanupId:Null<String> = null;
+			var returnedValueId = lowered.id;
+			if (!freshManagedStringMapValueIds.remove(lowered.id)) {
+				final returnedLocal = directLocalCompilerId(value);
+				if (returnedLocal != null)
+					transferredCleanupId = stringMapCleanupActionIdsByCompilerId.get(returnedLocal);
+				if (transferredCleanupId == null) {
+					final ownerLocalId = createFlowLocal(prepared.returnMapping, lowered.id, source, "returned-string-map-owner");
+					appendInstruction(null, IRIORetain(IRPLocal(ownerLocalId), IRIRuntime("string-map")), source, "retain-string-map-return");
+					runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "retain", "ordinary Haxe StringMap borrowed return", source, value.pos));
+					returnedValueId = loadPlace({place: IRPLocal(ownerLocalId), mapping: prepared.returnMapping, mutable: false}, value.pos,
+						"returned-string-map-owned-load").id;
+				}
+			}
+			currentBlock.terminator = {kind: IRTReturn(returnedValueId, normalCleanupSteps(transferredCleanupId)), source: source};
+			return;
+		}
 		if (prepared.returnMapping.bytesValue() != null) {
 			var transferredCleanupId:Null<String> = null;
 			if (!freshManagedBytesValueIds.remove(lowered.id)) {
@@ -3757,7 +3823,7 @@ private class FunctionBuilder {
 						// still reach `coerce`'s fail-closed runtime-proof diagnostic.
 						coerce(lowerValue(inner), target, expression.pos, "TCast(interface)");
 					case CBVKStaticString(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _) |
-						CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _):
+						CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _):
 						coerce(lowerValue(inner, target), target, expression.pos, "TCast(record-alias)");
 				}
 			case TCall(callee, arguments) if (enumConstructor(callee) != null):
@@ -3784,6 +3850,8 @@ private class FunctionBuilder {
 				lowerValueSwitch(expression, subject, cases, defaultExpression, expectedMapping);
 			case TEnumParameter(receiver, enumField, payloadIndex):
 				lowerEnumParameter(expression, receiver, enumField, payloadIndex);
+			case TNew(classReference, _, arguments) if (CBodyStringMapRecognition.isStringMap(classReference)):
+				lowerStringMapConstruction(expression, arguments, expectedMapping);
 			case TNew(_, _, _):
 				final construction = newExpression(expression);
 				if (construction == null)
@@ -4856,6 +4924,8 @@ private class FunctionBuilder {
 			unsupported(expression, "TBinop(OpAssign:owned-class-field-reassignment-not-admitted)");
 		if (target.mapping.arrayValue() != null)
 			unsupported(expression, "TBinop(OpAssign:managed-Array-reassignment-not-admitted)");
+		if (target.mapping.stringMapValue() != null)
+			unsupported(expression, "TBinop(OpAssign:managed-StringMap-reassignment-not-admitted)");
 		if (target.mapping.bytesValue() != null)
 			unsupported(expression, "TBinop(OpAssign:managed-Bytes-reassignment-not-admitted)");
 		final stagedTarget = stageFlowPlace(target, left.pos, expressionCreatesFlow(right), "assignment-target");
@@ -4951,6 +5021,12 @@ private class FunctionBuilder {
 			}
 			if (leftMapping != null && leftMapping.arrayValue() != null || rightMapping != null && rightMapping.arrayValue() != null) {
 				return lowerArrayReferenceEquality(expression, operation, left, right, leftMapping, rightMapping);
+			}
+			if (leftMapping != null
+				&& leftMapping.stringMapValue() != null
+				|| rightMapping != null
+				&& rightMapping.stringMapValue() != null) {
+				return lowerStringMapReferenceEquality(expression, operation, left, right, leftMapping, rightMapping);
 			}
 			if (leftMapping != null && leftMapping.enumValue() != null || rightMapping != null && rightMapping.enumValue() != null) {
 				return lowerFieldlessEnumEquality(expression, operation, left, right, leftMapping, rightMapping);
@@ -5168,6 +5244,40 @@ private class FunctionBuilder {
 		appendInstruction(result,
 			IRIOBinary(operation == OpEq ? "haxe.array-reference.equal" : "haxe.array-reference.not-equal", stableLeftId, rightValue.id, IRIStatic),
 			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "array-reference-equality");
+		return {id: result.id, type: result.type, mapping: boolMapping};
+	}
+
+	/**
+		Compare Haxe StringMap references by identity, including explicit `null`.
+
+		A StringMap is one shared mutable object represented by a nullable C
+		pointer. Equality therefore compares the pointer carriers; it does not walk
+		keys or compare entries.
+	**/
+	function lowerStringMapReferenceEquality(expression:TypedExpr, operation:Binop, left:TypedExpr, right:TypedExpr, leftMapping:Null<CBodyValueType>,
+			rightMapping:Null<CBodyValueType>):LoweredValue {
+		if (leftMapping == null && rightMapping == null)
+			return unsupported(expression, "TBinop(string-map-reference-equality-without-StringMap-type)");
+		final target = leftMapping == null ? rightMapping : leftMapping;
+		if (target == null || target.stringMapValue() == null)
+			return unsupported(expression, "TBinop(string-map-reference-equality-target-not-StringMap)");
+		if (leftMapping != null
+			&& rightMapping != null
+			&& (leftMapping.stringMapValue() == null
+				|| rightMapping.stringMapValue() == null
+				|| typeKey(leftMapping.irType) != typeKey(rightMapping.irType)))
+			return unsupported(expression, "TBinop(string-map-reference-equality-requires-matching-specializations)");
+		final leftValue = coerce(lowerValue(left, target), target, left.pos, "TBinop(string-map-reference-equality:left)");
+		final stagedLeft = stageFlowValue(leftValue, left, expressionCreatesFlow(right), "string-map-reference-equality-left");
+		final rightValue = coerce(lowerValue(right, target), target, right.pos, "TBinop(string-map-reference-equality:right)");
+		final stableLeftId = restoreStagedValue(stagedLeft, "string-map-reference-equality-left");
+		final boolMapping = bodyValueType(expression.t, expression.pos, "TBinop(string-map-reference-equality:result-type)");
+		if (boolMapping.irType != IRTBool)
+			return unsupported(expression, "TBinop(string-map-reference-equality:result-not-Bool)");
+		final result:HxcIRResult = {id: nextValueId(), type: IRTBool};
+		appendInstruction(result,
+			IRIOBinary(operation == OpEq ? "haxe.string-map-reference.equal" : "haxe.string-map-reference.not-equal", stableLeftId, rightValue.id, IRIStatic),
+			HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath), "string-map-reference-equality");
 		return {id: result.id, type: result.type, mapping: boolMapping};
 	}
 
@@ -5665,6 +5775,8 @@ private class FunctionBuilder {
 		final instanceAccess = CBodyDispatchCatalog.instanceAccess(call.callee);
 		if (instanceAccess != null && CBodyArrayRecognition.isCoreArray(instanceAccess.owner))
 			return lowerManagedArrayCall(expression, instanceAccess, call.arguments, materializeResult);
+		if (instanceAccess != null && CBodyStringMapRecognition.isStringMap(instanceAccess.owner))
+			return lowerStringMapCall(expression, instanceAccess, call.arguments, materializeResult);
 		if (instanceAccess != null && CBodyBytesRecognition.isCoreBytes(instanceAccess.owner))
 			return lowerManagedBytesCall(expression, instanceAccess, call.arguments, materializeResult);
 		if (instanceAccess != null)
@@ -5701,6 +5813,8 @@ private class FunctionBuilder {
 			converted = stabilizeFreshManagedOptional(converted, argumentExpression.pos, 'static-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
+			if (freshManagedStringMapValueIds.exists(converted.id))
+				return unsupported(argumentExpression, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedBytesValueIds.exists(converted.id))
 				return unsupported(argumentExpression, 'TCall(fresh-managed-Bytes-argument-needs-owner:$index,target=$targetId)');
 			if (borrowedManagedArrayElementValueIds.exists(converted.id))
@@ -5744,6 +5858,8 @@ private class FunctionBuilder {
 		final returnedArray = target.returnMapping.arrayValue();
 		if (returnedArray != null && !returnedArray.managedByCollector)
 			freshManagedArrayValueIds.set(result.id, true);
+		if (target.returnMapping.stringMapValue() != null)
+			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = target.returnMapping.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
 			freshManagedEnumValueIds.set(result.id, true);
@@ -5778,6 +5894,7 @@ private class FunctionBuilder {
 			argument = stabilizeFreshManagedAggregate(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			argument = stabilizeFreshManagedOptional(argument, argumentExpression.pos, 'indirect-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(argument.id)
+				|| freshManagedStringMapValueIds.exists(argument.id)
 				|| freshManagedBytesValueIds.exists(argument.id)
 				|| borrowedManagedArrayElementValueIds.exists(argument.id))
 				return unsupported(argumentExpression, 'TCall(indirect-managed-argument-needs-explicit-ownership:$index)');
@@ -5808,6 +5925,8 @@ private class FunctionBuilder {
 			registerValueTemporary(result.id, "indirect-call-result");
 		if (signature.result.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
+		if (signature.result.stringMapValue() != null)
+			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = signature.result.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
 			freshManagedEnumValueIds.set(result.id, true);
@@ -6243,6 +6362,78 @@ private class FunctionBuilder {
 			cleanup: []
 		};
 
+	/** Construct one empty String-keyed Haxe Map with shared reference identity. */
+	function lowerStringMapConstruction(expression:TypedExpr, arguments:Array<TypedExpr>, expected:Null<CBodyValueType>):LoweredValue {
+		if (arguments.length != 0)
+			return unsupported(expression, 'TNew(StringMap:argument-count=${arguments.length})');
+		final mapping = expected == null ? bodyValueType(expression.t, expression.pos, "TNew(StringMap:result-type)") : expected;
+		if (mapping.stringMapValue() == null)
+			return unsupported(expression, 'TNew(StringMap:expected-type=${mapping.cSpelling})');
+		final result:HxcIRResult = {id: nextValueId(), type: mapping.irType};
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-map", "create"),
+			arguments: [],
+			returnType: mapping.irType,
+			failure: managedArrayFailure()
+		}), source, "string-map-create");
+		registerValueTemporary(result.id, "string-map-create-result");
+		freshManagedStringMapValueIds.set(result.id, true);
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "create", "ordinary Haxe Map<String, V> construction", source, expression.pos));
+		return {id: result.id, type: result.type, mapping: mapping};
+	}
+
+	/**
+		Lower the complete first StringMap method family without virtual dispatch.
+
+		The prepared receiver is authoritative because Haxe 5 can omit the value
+		parameter from a method-access receiver after multi-type specialization.
+	**/
+	function lowerStringMapCall(expression:TypedExpr, access:reflaxe.c.lowering.CBodyDispatch.CBodyInstanceCallAccess, arguments:Array<TypedExpr>,
+			materializeResult:Bool):Null<LoweredValue> {
+		final receiver = lowerValue(access.receiver);
+		final map = receiver.mapping.stringMapValue();
+		if (map == null)
+			return unsupported(access.receiver, "TCall(StringMap:receiver-identity-lost)");
+		final method = access.field.get().name;
+		final expectedArguments = method == "clear" ? 0 : method == "set" ? 2 : 1;
+		if (arguments.length != expectedArguments)
+			return unsupported(expression, 'TCall(StringMap.$method:argument-count=${arguments.length},expected=$expectedArguments)');
+		final loweredArguments:Array<String> = [receiver.id];
+		if (arguments.length > 0) {
+			final keyMapping = bodyValueType(arguments[0].t, arguments[0].pos, 'TCall(StringMap.$method:key-type)');
+			if (keyMapping.staticStringIdentity() == null)
+				return unsupported(arguments[0], 'TCall(StringMap.$method:key-not-admitted-String)');
+			loweredArguments.push(coerce(lowerValue(arguments[0], keyMapping), keyMapping, arguments[0].pos, 'TCall(StringMap.$method:key)').id);
+		}
+		if (method == "set")
+			loweredArguments.push(coerce(lowerValue(arguments[1], map.value), map.value, arguments[1].pos, "TCall(StringMap.set:value)").id);
+		final source = HaxeSourceSpan.fromPosition(expression.pos, input.sourcePath);
+		if (method == "set" || method == "clear") {
+			appendInstruction(null, IRIOCall({
+				dispatch: IRCDRuntime("string-map", method),
+				arguments: loweredArguments,
+				returnType: IRTVoid,
+				failure: managedArrayFailure()
+			}), source, 'string-map-$method');
+			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+			return null;
+		}
+		if (method != "exists" && method != "get" && method != "remove")
+			return unsupported(expression, 'TCall(StringMap.$method:not-yet-admitted)');
+		final resultMapping = bodyValueType(expression.t, expression.pos, 'TCall(StringMap.$method:result-type)');
+		final result:HxcIRResult = {id: nextValueId(), type: resultMapping.irType};
+		appendInstruction(result, IRIOCall({
+			dispatch: IRCDRuntime("string-map", method),
+			arguments: loweredArguments,
+			returnType: result.type,
+			failure: managedArrayFailure()
+		}), source, 'string-map-$method');
+		registerValueTemporary(result.id, 'string-map-$method-result');
+		runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", method, 'ordinary Haxe StringMap.$method', source, expression.pos));
+		return {id: result.id, type: result.type, mapping: resultMapping};
+	}
+
 	/** Read Bytes.length through the fixed-length shared binary owner. */
 	function lowerManagedBytesLength(expression:TypedExpr, receiverExpression:TypedExpr):LoweredValue {
 		final receiver = lowerManagedBytesReceiver(receiverExpression, "length");
@@ -6502,6 +6693,8 @@ private class FunctionBuilder {
 			value = stabilizeFreshManagedOptional(value, argument.pos, 'instance-call-argument-$index');
 			if (freshManagedArrayValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-Array-argument-needs-owner:$index,target=$targetId)');
+			if (freshManagedStringMapValueIds.exists(value.id))
+				return unsupported(argument, 'TCall(fresh-managed-StringMap-argument-needs-owner:$index,target=$targetId)');
 			if (freshManagedBytesValueIds.exists(value.id))
 				return unsupported(argument, 'TCall(fresh-managed-Bytes-argument-needs-owner:$index,target=$targetId)');
 			if (borrowedManagedArrayElementValueIds.exists(value.id))
@@ -6544,6 +6737,8 @@ private class FunctionBuilder {
 			borrowedClassValueIds.set(result.id, true);
 		if (returnMapping.bytesValue() != null)
 			freshManagedBytesValueIds.set(result.id, true);
+		if (returnMapping.stringMapValue() != null)
+			freshManagedStringMapValueIds.set(result.id, true);
 		final returnedEnum = returnMapping.enumValue();
 		if (returnedEnum != null && returnedEnum.managedLifetime)
 			freshManagedEnumValueIds.set(result.id, true);

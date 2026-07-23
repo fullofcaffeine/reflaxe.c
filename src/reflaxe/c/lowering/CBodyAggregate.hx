@@ -32,6 +32,8 @@ import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyOptional.CBodyOptionalRegistry;
 import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
+import reflaxe.c.lowering.CBodyStringMap.CBodyStringMapRegistry;
+import reflaxe.c.lowering.CBodyStringMap.CPreparedBodyStringMap;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -65,6 +67,7 @@ enum CBodyValueKind {
 	CBVKClass(value:CPreparedBodyClass, nullable:Bool);
 	CBVKInterface(value:CPreparedBodyInterface);
 	CBVKArray(value:CPreparedBodyArray);
+	CBVKStringMap(value:CPreparedBodyStringMap);
 	CBVKBytes(value:CPreparedBodyBytes);
 	CBVKOptional(value:CPreparedBodyOptional);
 
@@ -117,6 +120,9 @@ class CBodyValueType {
 			case CBVKArray(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-array-reference:${value.digest}<${value.element.cSpelling}>';
+			case CBVKStringMap(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'haxe-string-map-reference:${value.digest}<String,${value.value.cSpelling}>';
 			case CBVKBytes(value):
 				this.irType = IRTInstance(CPreparedBodyBytes.INSTANCE_ID);
 				this.cSpelling = "haxe-bytes-reference";
@@ -166,6 +172,9 @@ class CBodyValueType {
 	public static function arrayReference(value:CPreparedBodyArray):CBodyValueType
 		return new CBodyValueType(CBVKArray(value));
 
+	public static function stringMapReference(value:CPreparedBodyStringMap):CBodyValueType
+		return new CBodyValueType(CBVKStringMap(value));
+
 	public static function bytesReference(value:CPreparedBodyBytes):CBodyValueType
 		return new CBodyValueType(CBVKBytes(value));
 
@@ -179,7 +188,8 @@ class CBodyValueType {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
 			case CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
-				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKOwnedClass(_) | CBVKClass(_,
+					_) | CBVKInterface(_) | CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 		};
 	}
 
@@ -232,7 +242,7 @@ class CBodyValueType {
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKOwnedClass(_) |
-				CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKInterface(_) | CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -241,7 +251,8 @@ class CBodyValueType {
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKOwnedClass(_) | CBVKClass(_,
+					_) | CBVKInterface(_) | CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
@@ -249,7 +260,7 @@ class CBodyValueType {
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
 		};
 	}
@@ -271,6 +282,13 @@ class CBodyValueType {
 	public function arrayValue():Null<CPreparedBodyArray> {
 		return switch kind {
 			case CBVKArray(value): value;
+			case _: null;
+		};
+	}
+
+	public function stringMapValue():Null<CPreparedBodyStringMap> {
+		return switch kind {
+			case CBVKStringMap(value): value;
 			case _: null;
 		};
 	}
@@ -301,21 +319,22 @@ class CBodyValueType {
 			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
 			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
-				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKStringMap(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 		};
 	}
 
 	/**
 		Whether this value's selected C carrier already represents absence exactly.
 
-		A nullable class reference and an ordinary Haxe `Array<T>` both lower to C
-		pointers, so `NULL` is enough. Keeping that fact here prevents
-		`Null<Array<T>>` from acquiring a second `{ has_value, value }` wrapper merely
-		because the source used Haxe's explicit `Null<T>` spelling.
+		A nullable class reference, an ordinary Haxe `Array<T>`, and an ordinary
+		`Map<String, V>` all lower to C pointers, so `NULL` is enough. Keeping that
+		fact here prevents an explicit `Null` spelling from adding a second
+		`{ has_value, value }` wrapper around a carrier that already represents
+		absence exactly.
 	**/
 	public function hasExactNullCarrier():Bool
 		return switch kind {
-			case CBVKClass(_, true) | CBVKArray(_): true;
+			case CBVKClass(_, true) | CBVKArray(_) | CBVKStringMap(_): true;
 			case _: false;
 		};
 }
@@ -466,6 +485,7 @@ class CBodyAggregateRegistry {
 	final classRegistry:CBodyClassRegistry;
 	final interfaceRegistry:CBodyInterfaceRegistry;
 	final arrayRegistry:CBodyArrayRegistry;
+	final stringMapRegistry:CBodyStringMapRegistry;
 	final bytesRegistry:CBodyBytesRegistry;
 	final optionalRegistry:CBodyOptionalRegistry;
 	final importRegistry:Null<CImportRegistry>;
@@ -480,6 +500,7 @@ class CBodyAggregateRegistry {
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
 		this.interfaceRegistry = new CBodyInterfaceRegistry(program);
 		this.arrayRegistry = new CBodyArrayRegistry(context, valueType);
+		this.stringMapRegistry = new CBodyStringMapRegistry(valueType);
 		this.bytesRegistry = new CBodyBytesRegistry();
 		this.optionalRegistry = new CBodyOptionalRegistry(context);
 		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
@@ -493,6 +514,9 @@ class CBodyAggregateRegistry {
 		final stringIdentity = staticStringIdentity(type);
 		if (stringIdentity != null)
 			return CBodyValueType.staticString(stringIdentity);
+		final directStringMap = stringMapRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
+		if (directStringMap != null)
+			return CBodyValueType.stringMapReference(directStringMap);
 		final aliasOwner = anonymousTypedefOwner(type);
 		final resolved = unwrapAliases(type, position, fail, node);
 		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
@@ -504,6 +528,9 @@ class CBodyAggregateRegistry {
 		final array = arrayRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
 		if (array != null)
 			return CBodyValueType.arrayReference(array);
+		final stringMap = stringMapRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (stringMap != null)
+			return CBodyValueType.stringMapReference(stringMap);
 		final bytes = bytesRegistry.valueType(resolved, position, ownerModule, sourcePath);
 		if (bytes != null)
 			return CBodyValueType.bytesReference(bytes);
@@ -629,6 +656,9 @@ class CBodyAggregateRegistry {
 
 	public function canonicalArrays():Array<CPreparedBodyArray>
 		return arrayRegistry.canonicalArrays();
+
+	public function canonicalStringMaps():Array<CPreparedBodyStringMap>
+		return stringMapRegistry.canonicalMaps();
 
 	public function finalizeArrays(symbols:CSymbolRegistry):Array<reflaxe.c.lowering.CBodyArray.CLoweredBodyArray>
 		return arrayRegistry.finalize(symbols);

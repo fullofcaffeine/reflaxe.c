@@ -775,6 +775,69 @@
         "freestanding",
         "hosted"
       ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable ordinary Haxe Map<String, V> whose keys, contents, and shared identity change at run time.",
+            "id": "managed-type-representation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable admitted construction, lookup, membership, insertion, removal, or clear operation.",
+            "id": "string-map-operation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General mutable maps need run-time key ownership and shared identity. The compiler still chooses one exact value layout per specialization, so the runtime does not introduce Dynamic values or universal boxing.",
+        "evidence": [
+          "test/differential/string-map/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "A compiler-known immutable lookup table can remain direct const C data when Haxe mutation and alias identity are unobservable.",
+        "contract": "Preserves ordinary Map<String, V> alias identity while copying canonical UTF-8 keys and keeping each admitted V specialization exact and unboxed.",
+        "programLocalAlternative": "A closed, bounded map can use a program-local specialization when it preserves String equality, mutation, missing values, and alias identity."
+      },
+      "dependencies": [
+        "alloc",
+        "string-literal"
+      ],
+      "id": "string-map",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_string_map_ref_clear",
+        "hxc_string_map_ref_create",
+        "hxc_string_map_ref_exists",
+        "hxc_string_map_ref_get_copy",
+        "hxc_string_map_ref_release",
+        "hxc_string_map_ref_remove",
+        "hxc_string_map_ref_retain",
+        "hxc_string_map_ref_set_copy"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "4e2512f07b5c23b243acbf1d2c61d91359ad8a0b06f7cfadec34fb5eeab55473",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/string_map.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/string_map.h"
+        },
+        {
+          "sourceSha256": "d847e5ecd0af2609e3c897ebcafbb49e654f830f5f9bb4d89d3e6e66105327bf",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/string_map.c",
+          "sourcePath": "runtime/hxrt/src/string_map.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "String-keyed shared Haxe Map identity with copied UTF-8 keys and exact unboxed value storage.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
     }
   ],
   "status": "selective-compiler-packaging",
@@ -788,7 +851,8 @@
     "object",
     "runtime-base",
     "status",
-    "string-literal"
+    "string-literal",
+    "string-map"
   ],
   "algorithm": "hxc-runtime-feature-graph-v3",
   "runtimeAbi": {
@@ -823,6 +887,7 @@
         "hxc_owned_string",
         "hxc_string",
         "hxc_string_buffer",
+        "hxc_string_map_ref",
         "hxc_type_descriptor"
       ],
       "exportTypePolicy": "runtime-structs-forbidden"
@@ -830,7 +895,7 @@
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "e1a2ed3f79888a3cb864d3ff55431d37e41f1da8269bb959c83809951de8f5fa",
+      "sourceSetSha256": "88e2608c803a68a20de0f0ca4210acf2d35e4a515bcde6f7c4ca0fc9f7e9e674",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

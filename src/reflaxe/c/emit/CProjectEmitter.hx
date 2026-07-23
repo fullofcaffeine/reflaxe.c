@@ -581,6 +581,8 @@ class CProjectEmitter {
 		}
 		if (runtimePlan.features.indexOf("array") != -1)
 			expectedDirectDecisions.push("managed-haxe-arrays");
+		if (runtimePlan.features.indexOf("string-map") != -1)
+			expectedDirectDecisions.push("managed-haxe-string-maps");
 		if (runtimePlan.features.indexOf("bytes") != -1)
 			expectedDirectDecisions.push("managed-haxe-bytes");
 		if (runtimePlan.features.indexOf("gc") != -1)
@@ -606,6 +608,7 @@ class CProjectEmitter {
 				case "string-literal" if (reason.kind == "direct-string-value"):
 				case "io" if (reason.kind == "hosted-output"):
 				case "array" if (reason.kind == "runtime-operation"):
+				case "string-map" if (reason.kind == "runtime-operation"):
 				case "bytes" if (reason.kind == "runtime-operation"):
 				case "alloc" if (reason.kind == "runtime-operation" && reason.operationId == "allocation"):
 				case "gc" if (reason.kind == "runtime-operation" && switch reason.operationId {

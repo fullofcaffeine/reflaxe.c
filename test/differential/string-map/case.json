@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "string-map",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009"
+  ],
+  "sources": [
+    "docs/hxrt.md",
+    "runtime/hxrt/include/hxrt/string_map.h",
+    "runtime/hxrt/src/string_map.c",
+    "test/differential/string-map/generated/Main.hx",
+    "test/differential/string-map/generated/oracle.hxml",
+    "test/differential/string-map/negative/iteration/Main.hx",
+    "test/differential/string-map/negative/key_type/Main.hx",
+    "test/differential/string-map/negative/reassignment/Main.hx",
+    "test/differential/string-map/negative/value_type/Main.hx",
+    "test/differential/string-map/run.py",
+    "test/differential/string-map/string_map_runtime.c"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/string-map",
+    "timeoutSeconds": 240,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "string-map: OK: .*Eval plus generated Map<String, Bool>; missing-vs-false, replacement, removal, clear, aliases, nullable identity, empty keys, growth, allocation rollback, malformed-call rejection, layouts, determinism, sanitizers, C\\+\\+ headers, runtime-none, and selective symbols passed$"
+    },
+    "oracle": "test/differential/string-map/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/string_map.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

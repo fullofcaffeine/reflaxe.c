@@ -917,6 +917,9 @@ private class HxcIRValidationState {
 						if (isArrayRuntimeImplementation(implementation)
 							&& managedArrayElement(knownPlaceType(place, noValues, locals)) == null)
 							add(actionPath, "array release cleanup requires a managed Array place", action.source);
+						if (isStringMapRuntimeImplementation(implementation)
+							&& managedStringMapValue(knownPlaceType(place, noValues, locals)) == null)
+							add(actionPath, "StringMap release cleanup requires a managed Map<String, V> place", action.source);
 						if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, noValues, locals)))
 							add(actionPath, "bytes release cleanup requires a managed Bytes place", action.source);
 						switch implementation {
@@ -1354,6 +1357,20 @@ private class HxcIRValidationState {
 					};
 					if (implementation != IRIStatic || !hasBoolResult)
 						add(path, "Array-reference equality requires a static Bool result", instruction.source);
+				} else if (operationId == "haxe.string-map-reference.equal" || operationId == "haxe.string-map-reference.not-equal") {
+					if (leftType == null
+						|| rightType == null
+						|| typeKey(leftType) != typeKey(rightType)
+						|| !isManagedStringMapReference(leftType)) {
+						add(path, "StringMap-reference equality requires matching managed Map<String, Bool> pointer operands", instruction.source);
+					}
+					final binaryResult = instruction.result;
+					final hasBoolResult = switch binaryResult {
+						case null: false;
+						case result: result.type == IRTBool;
+					};
+					if (implementation != IRIStatic || !hasBoolResult)
+						add(path, "StringMap-reference equality requires a static Bool result", instruction.source);
 				} else if (operationId == "haxe.enum-tag.equal" || operationId == "haxe.enum-tag.not-equal") {
 					if (leftType == null
 						|| rightType == null
@@ -1555,6 +1572,9 @@ private class HxcIRValidationState {
 				validateImplementation(implementation, '$path.implementation', instruction.source);
 				if (isArrayRuntimeImplementation(implementation) && managedArrayElement(knownPlaceType(place, available, locals)) == null)
 					add(path, "array retain requires a managed Array place", instruction.source);
+				if (isStringMapRuntimeImplementation(implementation)
+					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
+					add(path, "StringMap retain requires a managed Map<String, V> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes retain requires a managed Bytes place", instruction.source);
 				switch implementation {
@@ -1583,6 +1603,9 @@ private class HxcIRValidationState {
 				validateImplementation(implementation, '$path.implementation', instruction.source);
 				if (isArrayRuntimeImplementation(implementation) && managedArrayElement(knownPlaceType(place, available, locals)) == null)
 					add(path, "array release requires a managed Array place", instruction.source);
+				if (isStringMapRuntimeImplementation(implementation)
+					&& managedStringMapValue(knownPlaceType(place, available, locals)) == null)
+					add(path, "StringMap release requires a managed Map<String, V> place", instruction.source);
 				if (isBytesRuntimeImplementation(implementation) && !isManagedBytes(knownPlaceType(place, available, locals)))
 					add(path, "bytes release requires a managed Bytes place", instruction.source);
 				switch implementation {
@@ -1851,6 +1874,8 @@ private class HxcIRValidationState {
 					validateHostedOutputCall(call, argumentTypes, path, source);
 				} else if (featureId == "array") {
 					validateManagedArrayCall(call, argumentTypes, path, source);
+				} else if (featureId == "string-map") {
+					validateStringMapCall(call, argumentTypes, path, source);
 				} else if (featureId == "bytes") {
 					validateManagedBytesCall(call, argumentTypes, path, source);
 				}
@@ -1932,6 +1957,82 @@ private class HxcIRValidationState {
 	static function isArrayRuntimeImplementation(implementation:HxcIRImplementation):Bool
 		return switch implementation {
 			case IRIRuntime("array"): true;
+			case _: false;
+		};
+
+	/** Validate the closed first Map<String, V> runtime operation family. */
+	function validateStringMapCall(call:HxcIRCall, argumentTypes:Array<Null<HxcIRTypeRef>>, path:String, source:HxcSourceSpan):Void {
+		final operationId = switch call.dispatch {
+			case IRCDRuntime("string-map", value): value;
+			case _: return;
+		};
+		final receiverValue = argumentTypes.length == 0 ? null : managedStringMapValue(argumentTypes[0]);
+		final hasStringKey = argumentTypes.length > 1 && argumentTypes[1] == IRTString;
+		final returnsBool = call.returnType == IRTBool;
+		switch operationId {
+			case "create":
+				if (argumentTypes.length != 0 || managedStringMapValue(call.returnType) == null)
+					add(path, "StringMap creation takes no arguments and returns one exact Map<String, V> specialization", source);
+			case "set":
+				final storedType = argumentTypes.length > 2 ? argumentTypes[2] : null;
+				if (argumentTypes.length != 3
+					|| receiverValue == null
+					|| !hasStringKey
+					|| storedType == null
+					|| typeKey(storedType) != typeKey(receiverValue)
+					|| call.returnType != IRTVoid)
+					add(path, "StringMap.set requires map + String + exact value and returns Void", source);
+			case "clear":
+				if (argumentTypes.length != 1 || receiverValue == null || call.returnType != IRTVoid)
+					add(path, "StringMap.clear requires one map and returns Void", source);
+			case "exists" | "remove":
+				if (argumentTypes.length != 2 || receiverValue == null || !hasStringKey || !returnsBool)
+					add(path, 'StringMap.$operationId requires map + String and returns Bool', source);
+			case "get":
+				final expectedReturnKey = receiverValue == null ? null : typeKey(IRTNullable(receiverValue, IRNTagged));
+				if (argumentTypes.length != 2
+					|| receiverValue == null
+					|| !hasStringKey
+					|| expectedReturnKey == null
+					|| typeKey(call.returnType) != expectedReturnKey)
+					add(path, "StringMap.get requires map + String and returns a tagged nullable value", source);
+			case _:
+				add(path, 'string-map runtime call names unsupported operation `$operationId`', source);
+		}
+		validateCleanupFreeStatusAbort(call.failure, path, source, "managed StringMap operation");
+	}
+
+	/**
+		Return V only for the exact managed `Map<String, V>` HxcIR shape.
+
+		The String key remains explicit even though hxrt specializes its table for
+		String keys; this prevents a later pass from accepting another map family
+		merely because its runtime feature name happens to match.
+	**/
+	function managedStringMapValue(type:Null<HxcIRTypeRef>):Null<HxcIRTypeRef> {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return null;
+		};
+		final instance = typeInstances.get(instanceId);
+		if (instance == null
+			|| instance.arguments.length != 2
+			|| instance.arguments[0] != IRTString
+			|| instance.arguments[1] != IRTBool)
+			return null;
+		return switch instance.representation {
+			case IRRManaged("string-map"): instance.arguments[1];
+			case _: null;
+		};
+	}
+
+	/** True only for the exact managed pointer carrier of Map<String, Bool>. */
+	function isManagedStringMapReference(type:HxcIRTypeRef):Bool
+		return managedStringMapValue(type) != null;
+
+	static function isStringMapRuntimeImplementation(implementation:HxcIRImplementation):Bool
+		return switch implementation {
+			case IRIRuntime("string-map"): true;
 			case _: false;
 		};
 
@@ -3131,7 +3232,7 @@ private class HxcIRValidationState {
 			case IRCNull:
 				switch type {
 					case IRTPointer(_, true) | IRTNullable(_, _): true;
-					case IRTInstance(_): isManagedArrayReference(type);
+					case IRTInstance(_): isManagedArrayReference(type) || isManagedStringMapReference(type);
 					case _: false;
 				}
 		};

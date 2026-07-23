@@ -377,11 +377,14 @@ class CCompiler {
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "string-literal")
 			|| hasRuntimeFeature(runtimeRequirements, "io")
+			|| hasRuntimeFeature(runtimeRequirements, "string-map")
 			|| hasRuntimeFeature(runtimeRequirements, "bytes")) {
 			directDecisions.push("direct-utf8-string-literals");
 		}
 		if (hasRuntimeFeature(runtimeRequirements, "array"))
 			directDecisions.push("managed-haxe-arrays");
+		if (hasRuntimeFeature(runtimeRequirements, "string-map"))
+			directDecisions.push("managed-haxe-string-maps");
 		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
 			directDecisions.push("managed-haxe-bytes");
 		if (hasRuntimeFeature(runtimeRequirements, "gc"))

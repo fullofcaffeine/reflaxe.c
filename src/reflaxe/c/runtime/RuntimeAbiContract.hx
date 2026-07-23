@@ -43,6 +43,7 @@ class RuntimeAbiContract {
 		"hxc_owned_string",
 		"hxc_string",
 		"hxc_string_buffer",
+		"hxc_string_map_ref",
 		"hxc_type_descriptor"
 	];
 

@@ -179,6 +179,10 @@
   "borrowedClassReturn": [
     "HXC9000 error [profile=portable] test/negative/BorrowedClassReturn.hx:3:1-3:2 [module:invalid.BorrowedClassReturn.function:invalid.BorrowedClassReturn.main.block:entry.terminator] Invalid HxcIR: borrowed class value `value.borrowed` escapes through a return Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "invalidStringMapValue": [
+    "HXC9000 error [profile=portable] test/negative/InvalidStringMapValue.hx:3:1-3:2 [module:invalid.InvalidStringMapValue.function:invalid.InvalidStringMapValue.main.block:entry.instruction:1:bad.equal] Invalid HxcIR: StringMap-reference equality requires matching managed Map<String, Bool> pointer operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/negative/InvalidStringMapValue.hx:4:1-4:2 [module:invalid.InvalidStringMapValue.function:invalid.InvalidStringMapValue.main.block:entry.instruction:2:bad.exists] Invalid HxcIR: StringMap.exists requires map + String and returns Bool Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "mismatchedClassEquality": [
     "HXC9000 error [profile=portable] test/negative/MismatchedClassEquality.hx:3:1-3:2 [module:invalid.MismatchedClassEquality.function:invalid.MismatchedClassEquality.main.block:entry.instruction:0:bad.equal] Invalid HxcIR: class-reference equality requires matching nullable concrete-class pointer operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],

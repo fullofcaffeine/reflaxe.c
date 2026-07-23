@@ -188,6 +188,7 @@
         "gc-runtime",
         "runtime-feature-graph",
         "array-runtime",
+        "string-map",
         "bytes-runtime",
         "string-runtime",
         "string-output",
@@ -212,6 +213,7 @@
         "arithmetic-semantics",
         "primitive-differential",
         "array-runtime",
+        "string-map",
         "bytes-runtime",
         "string-runtime",
         "string-output",
@@ -235,6 +237,7 @@
         "c-import",
         "raylib-provisioning",
         "array-runtime",
+        "string-map",
         "bytes-runtime",
         "gc-runtime",
         "string-runtime"
@@ -939,6 +942,28 @@
         "fresh and aliased owners retain and release explicitly while allocation rollback and final-release counts balance under failure injection and sanitizers",
         "the target _std declaration prevents early inlining without claiming unsupported methods, which fail at their Haxe source position and leave no plausible output",
         "the selected runtime closure contains only base, status, allocator, literal-view, and Bytes slices and links no Array, object, GC, reflection, or dynamic symbols"
+      ]
+    },
+    {
+      "id": "string-map",
+      "directory": "test/differential/string-map",
+      "runner": [
+        "python3",
+        "test/differential/string-map/run.py"
+      ],
+      "types": [
+        "runtime",
+        "differential",
+        "abi"
+      ],
+      "status": "active",
+      "assertions": [
+        "ordinary Haxe Map<String, Bool> preserves shared mutation, exact String content keys, stored false versus absence, replacement, removal, clear, parameters, and returned owners under Eval and generated native C",
+        "validated HxcIR retains String and Bool specialization identity, nullable lookup, ownership, failure, and string-map runtime intent before C syntax is selected",
+        "generated C uses one typed hxc_string_map_ref pointer plus exact sizeof(bool)/_Alignof(bool) storage without Dynamic or universal boxing",
+        "key copying, growth, replacement, injected allocation failure, and malformed native calls preserve logical contents and balance allocator ownership under strict and sanitizer lanes",
+        "unsupported key/value types, iteration, and owner-replacing assignment fail before output rather than emitting incomplete collection or pointer-lifetime semantics",
+        "split, package, unity, reversed discovery, warm compiler-server, C++ private headers, runtime-none diagnostics, and selective symbols remain deterministic and fail closed"
       ]
     },
     {

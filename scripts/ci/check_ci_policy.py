@@ -86,6 +86,7 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxrt/status_name.h",
     "runtime/hxrt/include/hxrt/allocator.h",
     "runtime/hxrt/include/hxrt/array.h",
+    "runtime/hxrt/include/hxrt/string_map.h",
     "runtime/hxrt/include/hxrt/bytes.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string.h",
@@ -94,6 +95,7 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/allocator.c",
     "runtime/hxrt/src/array.c",
+    "runtime/hxrt/src/string_map.c",
     "runtime/hxrt/src/bytes.c",
     "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/string.c",
@@ -115,6 +117,11 @@ REQUIRED_GATE_FILES = (
     "test/differential/array-runtime/case.json",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py",
+    "test/differential/string-map/case.json",
+    "test/differential/string-map/generated/Main.hx",
+    "test/differential/string-map/generated/oracle.hxml",
+    "test/differential/string-map/run.py",
+    "test/differential/string-map/string_map_runtime.c",
     "test/differential/bytes-runtime/bytes_runtime.c",
     "test/differential/bytes-runtime/case.json",
     "test/differential/bytes-runtime/generated/Main.hx",
@@ -1084,6 +1091,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
         errors.append("package.json must retain the test:array-runtime entry point")
+    if scripts.get("test:string-map") != "python3 test/differential/string-map/run.py":
+        errors.append("package.json must retain the test:string-map entry point")
     if scripts.get("test:bytes-runtime") != "python3 test/differential/bytes-runtime/run.py":
         errors.append("package.json must retain the test:bytes-runtime entry point")
     if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
@@ -1238,6 +1247,8 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:runtime-features")
     if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:array-runtime")
+    if "npm run test:string-map" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:string-map")
     if "npm run test:bytes-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:bytes-runtime")
     if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
@@ -1446,6 +1457,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the selective runtime feature test")
     if "test/differential/array-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed array runtime test")
+    if "test/differential/string-map/run.py" not in pre_commit:
+        errors.append("pre-commit must run the typed StringMap runtime test")
     if "test/differential/bytes-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the fixed-length Bytes runtime test")
     if "test/differential/string-runtime/run.py" not in pre_commit:
@@ -1590,6 +1603,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if "array-runtime-contract" not in runner or "ARRAY_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the typed array contract in each toolchain lane")
+    if "string-map-runtime-contract" not in runner or "STRING_MAP" not in runner:
+        errors.append("native smoke runner must execute the typed StringMap contract in each toolchain lane")
     if "bytes-runtime-contract" not in runner or "BYTES_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the fixed-length Bytes contract in each toolchain lane")
     if "string-runtime-contract" not in runner or "STRING_RUNTIME" not in runner:
@@ -1714,6 +1729,30 @@ def validate() -> list[str]:
             errors.append(
                 "array runtime runner lost growth/alias/lifecycle/selective-link evidence: "
                 + required_array_runtime_contract
+            )
+
+    string_map_runner = read_text(
+        ROOT / "test/differential/string-map/run.py", errors
+    )
+    for required_string_map_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "--native-only",
+        "run_eval_oracle",
+        "-fsanitize=address,undefined",
+        "hxc_string_map_ref_get_copy",
+        "allocation rollback",
+        "hxc_gc",
+        "nm",
+    ):
+        if required_string_map_contract not in string_map_runner:
+            errors.append(
+                "StringMap runner lost typed map/ownership/failure/selective-link evidence: "
+                + required_string_map_contract
             )
 
     bytes_runtime_runner = read_text(

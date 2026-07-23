@@ -123,8 +123,8 @@ class GeneratedRootFrameProbe {
 				}
 			]
 		};
-		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], dispatch, CLoweredImports.empty(), [],
-			[], {
+		final lowered = new CBodyLoweringResult(program, [loweredRoot, loweredEntry], [], [], [], [], [], [], [], [], [], dispatch, CLoweredImports.empty(),
+			[], [], {
 				schemaVersion: 1,
 				algorithm: "synthetic-root-frame",
 				symbols: [],

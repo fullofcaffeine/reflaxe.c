@@ -41,14 +41,15 @@ eventually justify a feature, but only after measurements and semantic evidence
 show that sharing is better than specialization.
 
 The checked-in runtime is deliberately incomplete. Generated Haxe can select
-the hosted literal-output closure plus bounded ordinary-Haxe Array and
-`haxe.io.Bytes` closures. Array and Bytes select allocator-backed storage
-transitively; Bytes also selects the literal carrier used by its admitted
-literal `ofString` operation. The compiler may also select immutable object
+the hosted literal-output closure plus bounded ordinary-Haxe Array,
+`Map<String, Bool>`, and `haxe.io.Bytes` closures. These collections select
+allocator-backed storage transitively; StringMap and Bytes also select the
+literal carrier used by their admitted String inputs. The compiler may also select immutable object
 descriptors and the precise collector when a managed-representation plan
 explicitly needs them; ordinary direct classes remain header-free. Full strings, status-name, and
 ABI-query slices remain native-seed-only. This is not a claim that general
-allocation, `Array`, `Bytes`, escaping classes, or `String` lowering works.
+allocation, arbitrary Map key/value families, `Array`, `Bytes`, escaping
+classes, or `String` lowering works.
 
 ## Selection pipeline
 
@@ -312,6 +313,35 @@ additionally proves alias-safe insert/resize paths that generated Haxe does not
 yet expose. Fixed arrays and spans stay direct and runtime-free. See
 [array runtime](array-runtime.md).
 
+<!-- hxrt-feature:string-map -->
+### `string-map`
+
+Compiler-selectable shared storage for the first ordinary-Haxe
+`Map<String, Bool>` slice. The compiler records both `String` and `Bool` in
+HxcIR, emits a typed `struct hxc_string_map_ref *`, and passes `sizeof(bool)`
+plus `_Alignof(bool)` when it creates the table. The runtime therefore copies
+exact, unboxed values; it is not a `Dynamic` or universal `void *` map.
+
+Keys are compared by canonical UTF-8 contents and copied into table-owned
+storage, so a temporary String view cannot leave a dangling pointer.
+Initializing another local from a map retains the same mutable table; replacing
+an already-owning local is not admitted yet. An explicit
+`Null<Map<String, Bool>>` uses the same pointer carrier: `NULL` is absence, map
+identity equality compares pointers, and retain/release treat `NULL` as a
+successful no-op so ordinary cleanup needs no special branch. Operations that
+need a table still reject `NULL`. `get` returns a tagged nullable Bool so a
+stored `false` differs from a missing key, and the final owner releases keys and
+slots. Empty keys are valid String values and are stored without inventing a
+sentinel key.
+
+Growth and insertion are checked and failure-atomic: an allocation failure does
+not publish a partial entry. The Haxe fixture proves language semantics through
+generated C; the separate handwritten-C native fixture injects allocator
+failure and malformed calls directly so code generation and hxrt cannot
+accidentally validate the same bug together. Other key/value specializations,
+iteration, and owner-replacing assignment remain explicitly unsupported until
+they receive complete typed lifetime contracts.
+
 <!-- hxrt-feature:bytes -->
 ### `bytes`
 
@@ -382,8 +412,9 @@ them.
 | `include/hxrt/abi.h`, `src/abi.c` | Native-seed ABI version query. No ownership or failure state. |
 | `include/hxrt/status.h` | Dependency-only status vocabulary. No source or mutable state. |
 | `include/hxrt/status_name.h`, `src/status.c` | Native-seed status-name evidence helper. |
-| `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed Array or Bytes. |
+| `include/hxrt/allocator.h`, `src/allocator.c` | Dependency-only allocator callbacks, owner lifecycle, checked arithmetic, and aligned hosted implementation; selected transitively by managed collections. |
 | `include/hxrt/array.h`, `src/array.c` | Compiler-selectable resizable typed storage, shared Array identity, and element lifecycle. |
+| `include/hxrt/string_map.h`, `src/string_map.c` | Compiler-selectable String-keyed shared map storage with copied keys and exact unboxed values. |
 | `include/hxrt/bytes.h`, `src/bytes.c` | Compiler-selectable fixed-length mutable byte storage, shared identity, checked ranges, and overlap-safe copying. |
 | `include/hxrt/gc.h`, `src/gc.c` | Compiler-selectable precise non-moving collector, exact roots/pins, pressure policy, and observable reports. |
 | `include/hxrt/object.h`, `src/object.c` | Compiler-selectable immutable managed-payload descriptors and exact trace/finalizer dispatch; no allocation or collection. |

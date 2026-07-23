@@ -53,6 +53,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:project-emitter",
         "test:runtime-features",
         "test:array-runtime",
+        "test:string-map",
         "test:bytes-runtime",
         "test:gc-runtime",
         "test:string-runtime",

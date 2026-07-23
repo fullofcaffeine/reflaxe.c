@@ -23,6 +23,7 @@ ALLOCATOR_ABI = ROOT / "runtime/hxrt/test/allocator_abi.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
 RUNTIME_FEATURE_GRAPH = ROOT / "test/runtime/runtime-feature-graph/run.py"
 ARRAY_RUNTIME = ROOT / "test/differential/array-runtime/run.py"
+STRING_MAP = ROOT / "test/differential/string-map/run.py"
 BYTES_RUNTIME = ROOT / "test/differential/bytes-runtime/run.py"
 STRING_RUNTIME = ROOT / "test/differential/string-runtime/run.py"
 GC_RUNTIME = ROOT / "test/runtime/gc/run.py"
@@ -305,6 +306,18 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         label=f"{family} typed array runtime contract",
     )
     lanes.append("array-runtime-contract")
+
+    run_command(
+        [
+            sys.executable,
+            str(STRING_MAP),
+            "--toolchain",
+            family,
+            "--native-only",
+        ],
+        label=f"{family} StringMap runtime contract",
+    )
+    lanes.append("string-map-runtime-contract")
 
     run_command(
         [

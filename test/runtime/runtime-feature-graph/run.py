@@ -27,6 +27,7 @@ CATALOG_SCHEMA = ROOT / "docs/specs/runtime-features.schema.json"
 RUNTIME_SOURCE_ROOT = ROOT / "runtime/hxrt"
 ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 ARRAY_CONSUMER = CASE / "array_consumer.c"
+STRING_MAP_CONSUMER = ROOT / "test/differential/string-map/string_map_runtime.c"
 BYTES_CONSUMER = CASE / "bytes_consumer.c"
 OBJECT_CONSUMER = CASE / "object_consumer.c"
 GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
@@ -176,6 +177,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "runtime-base",
         "status",
         "string-literal",
+        "string-map",
     ]:
         raise RuntimeFeatureFailure("catalog compiler-selectable feature inventory drifted")
     runtime_abi = record(catalog.get("runtimeAbi"), "runtime ABI contract")
@@ -220,6 +222,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name",
         "alloc",
         "array",
+        "string-map",
         "bytes",
         "gc",
         "object",
@@ -235,6 +238,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name": ["status"],
         "alloc": ["status"],
         "array": ["alloc"],
+        "string-map": ["alloc", "string-literal"],
         "bytes": ["alloc", "string-literal"],
         "gc": ["alloc", "object"],
         "object": ["runtime-base"],
@@ -249,6 +253,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name": "native-seed-only",
         "alloc": "compiler-selectable",
         "array": "compiler-selectable",
+        "string-map": "compiler-selectable",
         "bytes": "compiler-selectable",
         "gc": "compiler-selectable",
         "object": "compiler-selectable",
@@ -484,6 +489,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
     alloc = record(plans.get("alloc"), "alloc plan")
     array = record(plans.get("array"), "array plan")
+    string_map = record(plans.get("stringMap"), "StringMap plan")
     bytes_plan = record(plans.get("bytes"), "bytes plan")
     object_plan = record(plans.get("object"), "object plan")
     gc_plan = record(plans.get("gc"), "gc plan")
@@ -494,6 +500,14 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
+    if string_map.get("features") != [
+        "runtime-base",
+        "status",
+        "alloc",
+        "string-literal",
+        "string-map",
+    ]:
+        raise RuntimeFeatureFailure("StringMap closure is incomplete or nondeterministic")
     if bytes_plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
         raise RuntimeFeatureFailure("Bytes closure is incomplete or nondeterministic")
     if object_plan.get("features") != ["runtime-base", "object"]:
@@ -504,6 +518,7 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("string closure is incomplete or nondeterministic")
     validate_selected_reasons(alloc, "alloc")
     validate_selected_reasons(array, "array")
+    validate_selected_reasons(string_map, "StringMap")
     validate_selected_reasons(bytes_plan, "Bytes")
     validate_selected_reasons(object_plan, "object")
     validate_selected_reasons(gc_plan, "gc")
@@ -529,6 +544,10 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("string build plan omitted its selected source")
     if "runtime/src/array.c" not in text_list(array.get("artifacts"), "array artifacts"):
         raise RuntimeFeatureFailure("array build plan omitted its selected source")
+    if "runtime/src/string_map.c" not in text_list(
+        string_map.get("artifacts"), "StringMap artifacts"
+    ):
+        raise RuntimeFeatureFailure("StringMap build plan omitted its selected source")
     if "runtime/src/bytes.c" not in text_list(bytes_plan.get("artifacts"), "Bytes artifacts"):
         raise RuntimeFeatureFailure("Bytes build plan omitted its selected source")
     if "runtime/src/object.c" not in text_list(object_plan.get("artifacts"), "object artifacts"):
@@ -904,6 +923,7 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
 def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     alloc = records(package.get("alloc"), "alloc package")
     array = records(package.get("array"), "array package")
+    string_map = records(package.get("stringMap"), "StringMap package")
     bytes_package = records(package.get("bytes"), "Bytes package")
     object_package = records(package.get("object"), "object package")
     gc_package = records(package.get("gc"), "gc package")
@@ -915,6 +935,7 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             family_root = root / toolchain.family
             run_native_case(toolchain, "alloc", alloc, ALLOC_CONSUMER, "runtime-feature-alloc: OK\n", family_root)
             run_native_case(toolchain, "array", array, ARRAY_CONSUMER, "runtime-feature-array: OK\n", family_root)
+            run_native_case(toolchain, "string-map", string_map, STRING_MAP_CONSUMER, "", family_root)
             run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
             run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
             run_native_case(
