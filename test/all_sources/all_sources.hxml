@@ -5,8 +5,11 @@
 -lib reflaxe.c
 
 --macro include("reflaxe.c", true)
---macro include("c", true)
+# `std/c/_std` is also visible below the ordinary `std` root as the physical
+# package `c._std`. It is a target override, not a second public C package.
+--macro include("c", true, ["c._std*"])
 --macro include("hxc", true)
 --macro include("raylib", true)
+--macro include("raygui", true)
 
 -main AllSourcesProbe

@@ -1,6 +1,8 @@
 {
   "selectedFeatures": [],
   "directDecisions": [
+    "closed-anonymous-value-records",
+    "compiler-planned-eager-static-initialization",
     "direct-calls",
     "executable-entry-point",
     "explicit-evaluation-order",
@@ -17,6 +19,8 @@
   "manualOverrides": [],
   "noRuntimeProof": {
     "directDecisions": [
+      "closed-anonymous-value-records",
+      "compiler-planned-eager-static-initialization",
       "direct-calls",
       "executable-entry-point",
       "explicit-evaluation-order",
@@ -28,18 +32,20 @@
       "ub-safe-primitive-operations"
     ],
     "reachability": {
-      "typeInstances": 5,
-      "functions": 2,
-      "blocks": 7,
-      "modules": 6,
+      "typeInstances": 6,
+      "functions": 9,
+      "blocks": 26,
+      "modules": 7,
       "runtimeIntents": 0,
-      "instructions": 96,
+      "instructions": 182,
       "cleanupActions": 0
     },
     "programLocalHelpers": [
-      "hxc.f64.divide.zero-safe"
+      "hxc.f64.divide.zero-safe",
+      "hxc.i32.add.wrapping",
+      "hxc.u32.to.i32.bits"
     ],
-    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation",
+    "semanticProof": "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls, plus shape-deduplicated closed anonymous records with direct value storage and no runtime intent, plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation, with eager static initialization planned and emitted entirely by the compiler",
     "scope": "reachable-whole-program",
     "status": "eligible",
     "schemaVersion": 1,

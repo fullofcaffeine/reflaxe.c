@@ -13,6 +13,7 @@ import reflaxe.c.lowering.CBodyLowering;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.plan.CDeclarationPlanner;
+import reflaxe.c.runtime.RuntimeAbiContract;
 
 typedef EnumPayloadRecord = {
 	final semanticName:String;
@@ -107,7 +108,7 @@ class EnumLoweringProbe {
 		context.symbols.register(guardRequest);
 		final lowered = new CBodyLowering(context).lower(inputs);
 		final project = new CStaticFunctionProjectEmitter().plan(lowered, entryId, context.symbols.identifierFor(entryRequest),
-			context.symbols.identifierFor(guardRequest));
+			context.symbols.identifierFor(guardRequest), null, null, RuntimeAbiContract.MAJOR);
 		final enumRecords:Array<EnumRecord> = [];
 		for (value in lowered.enums) {
 			enumRecords.push({
@@ -147,15 +148,22 @@ class EnumLoweringProbe {
 			sources.push({path: source.path, content: printer.printTranslationUnit(source.unit)});
 		final report:EnumLoweringReport = {
 			schemaVersion: 1,
-			status: "haxe-enums-direct-runtime-free",
+			status: "haxe-enums-owned-managed-values",
 			profile: Std.string(profile),
 			hxcir: new HxcIRDumper().dump(lowered.program),
 			header: printer.printHeader(project.header),
 			sources: sources,
 			enums: enumRecords,
 			symbols: lowered.symbolTable,
-			runtimeFeatures: [],
-			runtimeArtifacts: []
+			runtimeFeatures: ["runtime-base", "status", "alloc", "array"],
+			runtimeArtifacts: [
+				"runtime/include/hxrt/allocator.h",
+				"runtime/include/hxrt/array.h",
+				"runtime/include/hxrt/base.h",
+				"runtime/include/hxrt/status.h",
+				"runtime/src/allocator.c",
+				"runtime/src/array.c"
+			]
 		};
 		Sys.println(REPORT_PREFIX + Json.stringify(report));
 	}

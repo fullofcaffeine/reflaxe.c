@@ -7,6 +7,11 @@ import reflaxe.c.CEnvironment;
 import reflaxe.c.CProfile;
 import reflaxe.c.CRuntimeDiagnostics;
 import reflaxe.c.CRuntimePolicy;
+import reflaxe.c.ast.CAST;
+import reflaxe.c.ast.CASTPrinter;
+import reflaxe.c.emit.CObjectDescriptorEmitter;
+import reflaxe.c.emit.CObjectDescriptorEmitter.CObjectDescriptorEmissionError;
+import reflaxe.c.emit.CObjectDescriptorEmitter.CObjectDescriptorSpec;
 import reflaxe.c.emit.GeneratedFile;
 import reflaxe.c.emit.GeneratedFile.GeneratedFileKind;
 import reflaxe.c.ir.HxcSourceSpan;
@@ -55,6 +60,7 @@ class RuntimeFeatureGraphGolden {
 	static inline final PACKAGE_PREFIX = "HXC_RUNTIME_FEATURE_PACKAGE=";
 
 	static function main():Void {
+		verifyObjectDescriptorEmission();
 		final registry = RuntimeFeatureCatalog.registry();
 		final definitions = RuntimeFeatureCatalog.definitions();
 		final reservations = RuntimeFeatureCatalog.reservations();
@@ -69,6 +75,9 @@ class RuntimeFeatureGraphGolden {
 		final empty = planner.plan(emptyRequest());
 		final alloc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.alloc", "alloc")], []));
 		final array = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.array", "array")], []));
+		final bytes = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.bytes", "bytes")], []));
+		final objectPlan = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.object", "object")], []));
+		final gc = planner.plan(featureRequest(CRuntimePolicy.Auto, [reason("fixture.gc", "gc")], []));
 		final stringReason = reason("fixture.string", "string");
 		final ownerAllocationReason = reason("fixture.owner-allocation", "alloc");
 		final stringReasons = [stringReason, ownerAllocationReason];
@@ -88,6 +97,9 @@ class RuntimeFeatureGraphGolden {
 		final packager = new RuntimeFeaturePackager(registry);
 		final allocFiles = packager.packageFiles(alloc, repositorySource);
 		final arrayFiles = packager.packageFiles(array, repositorySource);
+		final bytesFiles = packager.packageFiles(bytes, repositorySource);
+		final objectFiles = packager.packageFiles(objectPlan, repositorySource);
+		final gcFiles = packager.packageFiles(gc, repositorySource);
 		final stringFiles = packager.packageFiles(stringPlan, repositorySource);
 		final ioFiles = packager.packageFiles(compilerIo, repositorySource);
 		final emptySource = new CountingRuntimeSource();
@@ -132,6 +144,9 @@ class RuntimeFeatureGraphGolden {
 			empty: empty,
 			alloc: alloc,
 			array: array,
+			bytes: bytes,
+			object: objectPlan,
+			gc: gc,
 			string: stringPlan,
 			minimalString: minimalString,
 			compilerIo: compilerIo,
@@ -171,9 +186,62 @@ class RuntimeFeatureGraphGolden {
 		Sys.println(PACKAGE_PREFIX + Json.stringify({
 			alloc: packageRecords(allocFiles),
 			array: packageRecords(arrayFiles),
+			bytes: packageRecords(bytesFiles),
+			object: packageRecords(objectFiles),
+			gc: packageRecords(gcFiles),
 			string: packageRecords(stringFiles),
 			io: packageRecords(ioFiles)
 		}));
+	}
+
+	/** Prove that only the selected, finalized descriptor plans reach C syntax. */
+	static function verifyObjectDescriptorEmission():Void {
+		final emitter = new CObjectDescriptorEmitter();
+		if (emitter.declarations([]).length != 0)
+			throw "empty object descriptor plan emitted C declarations";
+		final leaf = descriptorSpec("fixture.leaf", "hxc_descriptor_leaf", "fixture_leaf", null, null);
+		final node = descriptorSpec("fixture.node", "hxc_descriptor_node", "fixture_node", "fixture_trace", "fixture_finalize");
+		final declarations = emitter.declarations([node, leaf]);
+		if (declarations.length != 4)
+			throw "selected object descriptor plan did not emit one assertion and definition per payload";
+		final printer = new CASTPrinter();
+		final rendered = declarations.map(printer.printDecl).join("\n");
+		final leafOffset = rendered.indexOf("hxc_descriptor_leaf");
+		final nodeOffset = rendered.indexOf("hxc_descriptor_node");
+		if (leafOffset == -1 || nodeOffset == -1 || leafOffset >= nodeOffset)
+			throw "object descriptor C emission changed with input discovery order";
+		for (required in [
+			"static const struct hxc_type_descriptor",
+			".abi_version = HXC_TYPE_DESCRIPTOR_ABI_VERSION",
+			".object_size = sizeof(struct fixture_node)",
+			".object_alignment = _Alignof(struct fixture_node)",
+			"HXC_TYPE_DESCRIPTOR_HAS_TRACE | HXC_TYPE_DESCRIPTOR_HAS_FINALIZER",
+			".trace = fixture_trace",
+			".finalize = fixture_finalize"
+		])
+			if (rendered.indexOf(required) == -1)
+				throw 'object descriptor C emission omitted `$required`';
+		expectObjectDescriptorFailure(() -> emitter.declarations([leaf, leaf]));
+		final duplicateName = descriptorSpec("fixture.other", "hxc_descriptor_leaf", "fixture_leaf", null, null);
+		expectObjectDescriptorFailure(() -> emitter.declarations([leaf, duplicateName]));
+	}
+
+	static function descriptorSpec(id:String, descriptorName:String, payloadName:String, traceName:Null<String>,
+			finalizerName:Null<String>):CObjectDescriptorSpec {
+		return new CObjectDescriptorSpec(id, new CIdentifier(descriptorName), {
+			type: new CType(TStruct(new CIdentifier(payloadName))),
+			declarator: DName(null)
+		},
+			traceName == null ? null : new CIdentifier(traceName), finalizerName == null ? null : new CIdentifier(finalizerName));
+	}
+
+	static function expectObjectDescriptorFailure(action:() -> Void):Void {
+		try {
+			action();
+		} catch (_:CObjectDescriptorEmissionError) {
+			return;
+		}
+		throw "malformed object descriptor plan was accepted";
 	}
 
 	static function emptyRequest():RuntimePlanningRequest {

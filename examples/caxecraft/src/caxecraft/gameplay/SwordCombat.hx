@@ -1,5 +1,8 @@
 package caxecraft.gameplay;
 
+import caxecraft.domain.VitalsState;
+import caxecraft.domain.Vitals.isDefeated;
+
 /**
  * Target-neutral timing and hit decisions for the Copper Sword.
  *
@@ -21,11 +24,11 @@ final class SwordCombat {
 	}
 
 	/** Classify one queued action without changing inventory, health, or target. */
-	public static function decide(state:SwordCombatState, inventory:InventoryState, vitals:PlayerVitalsState, target:MosslingState, playerX:Float,
-			playerZ:Float, lookX:Float, lookZ:Float):SwordCombatDecision {
+	public static function decide(state:SwordCombatState, inventory:InventoryState, vitals:VitalsState, target:MosslingState, playerX:Float, playerZ:Float,
+			lookX:Float, lookZ:Float):SwordCombatDecision {
 		if (!Inventory.selectedIs(inventory, ItemKind.CopperSword))
 			return NotSword;
-		if (PlayerVitals.isDefeated(vitals))
+		if (isDefeated(vitals))
 			return PlayerDefeated;
 		if (inventory.sword <= 0)
 			return SwordMissing;

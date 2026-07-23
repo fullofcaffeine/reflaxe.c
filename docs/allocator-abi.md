@@ -1,15 +1,21 @@
 # Allocator ownership contract
 
 This document is the E4.T02 contract for the checked-in `hxrt` allocator slice.
-It hardens the internal native-seed boundary used by future runtime features; it
-does not make `alloc` compiler-selectable, define a generated public C ABI, or
-promise application compatibility for these structs. E4.T11 established the
+It hardens the internal storage boundary used by selected runtime features.
+`alloc` is now compiler-selectable only as a transitive dependency of an
+admitted feature such as the bounded ordinary-Haxe Array or Bytes slice; source code
+cannot request it merely by mentioning an allocator-shaped type. This does not
+define a generated public C ABI or promise application compatibility for these
+structs. E4.T11 established the
 internal same-major runtime/versioned-manifest contract, while E7 owns exported
 application APIs.
 The incompatible callback/owner revision advanced the provisional runtime ABI
 marker from 0.1.0 to 0.2.0. E4.T03's private string-contract revision advanced
 it to 0.3.0, E2.T07's hosted literal-output addition advanced it to 0.4.0, and
-E4.T04's additive typed-array slice advances it to 0.5.0. The schema-2 ABI
+E4.T04's additive typed-array storage advanced it to 0.5.0, E5.T03's
+shared-identity Array container advanced it to 0.6.0, E5.T04's fixed-length
+Bytes owner advanced it to 0.7.0, and the selected collector/root API advances
+it to 0.8.0. The schema-3 ABI
 contract now defines same-major compatibility, but none of these internal
 markers is a stable application ABI promise.
 
@@ -83,11 +89,11 @@ allocator identity and alignment until disposal.
 | Axis | E4.T02 result |
 | --- | --- |
 | Portable/metal | The allocator slice is profile-neutral; neither profile selects it merely from an import or type mention. |
-| Runtime policy | The feature remains `native-seed-only`; compiler programs still reject an `alloc` request. |
+| Runtime policy | The feature is dependency-only: an admitted runtime-sized owner such as ordinary Haxe Array or Bytes may select it transitively, while a direct compiler root remains invalid. |
 | Hosted | The default handle supports checked arbitrary power-of-two alignment subject to address space and `malloc`. |
 | Freestanding | The default handle is invalid; a caller-supplied allocator is required. The compiled allocator object has no undefined libc allocation symbol. |
 | WASI/Emscripten | No environment-specific allocator evidence exists yet, so the feature remains unavailable there. |
-| Generated C | Primitive-only output stays runtime-free. Literal output selects its separate allocation-free carrier and does not include or link `allocator.c` or allocator symbols. |
+| Generated C | Primitive-only and fixed-array/span output stay runtime-free. Literal output uses its allocation-free carrier. The bounded ordinary-Haxe Array and Bytes slices package `allocator.c` because their storage is allocated while the program runs. |
 | Public ABI | C/C++ agree on the native-seed callback types and layouts, but the structs remain internal, versioned, and forbidden from application exports; E7 owns future public admission. |
 
 The executable evidence is registered by

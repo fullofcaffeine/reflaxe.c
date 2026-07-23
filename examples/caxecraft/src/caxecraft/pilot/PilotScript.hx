@@ -1,6 +1,6 @@
 package caxecraft.pilot;
 
-import caxecraft.gameplay.PlayerVitals;
+import caxecraft.domain.Vitals.MAX_HEALTH;
 import caxecraft.gameplay.Recovery.BERRY_HEALTH;
 import caxecraft.gameplay.Inventory;
 import caxecraft.gameplay.InventoryState;
@@ -17,6 +17,8 @@ enum abstract PilotScriptName(Int) to Int {
 	var FullInventoryGift = 5;
 	var FullInventoryMining = 6;
 	var ResizeLayout = 7;
+	var AquaticGear = 8;
+	var SmoothMotion = 9;
 }
 
 /** One closed semantic action selected for a scripted frame. */
@@ -37,6 +39,8 @@ enum abstract PilotAction(Int) to Int {
 	var Strike = 13;
 	var SelectBerries = 14;
 	var EatBerries = 15;
+	var ForwardLeft = 16;
+	var LookDown = 17;
 }
 
 /**
@@ -65,6 +69,7 @@ final class PilotScript {
 		var frame = 0;
 		while (frame < frameLimit(name)) {
 			hash = mix(hash, actionCode(actionAt(name, frame)));
+			hash = mix(hash, frameDurationMilliseconds(name, frame));
 			hash = mix(hash, requestedWindowWidth(name, frame));
 			hash = mix(hash, requestedWindowHeight(name, frame));
 			frame++;
@@ -86,7 +91,7 @@ final class PilotScript {
 		if (name == LaunchSmoke)
 			return 4;
 		if (name == MoveJumpEdit)
-			return 10;
+			return 14;
 		if (name == PauseRecapture)
 			return 7;
 		if (name == CombatDrop)
@@ -95,6 +100,10 @@ final class PilotScript {
 			return 7;
 		if (name == ResizeLayout)
 			return 6;
+		if (name == AquaticGear)
+			return 96;
+		if (name == SmoothMotion)
+			return 12;
 		return 4;
 	}
 
@@ -113,6 +122,10 @@ final class PilotScript {
 			return "full-inventory-gift";
 		if (name == FullInventoryMining)
 			return "full-inventory-mining";
+		if (name == AquaticGear)
+			return "aquatic-gear";
+		if (name == SmoothMotion)
+			return "smooth-motion";
 		return "resize-layout";
 	}
 
@@ -131,6 +144,10 @@ final class PilotScript {
 			return recoveryAction(frameNumber);
 		if (name == FullInventoryGift)
 			return fullInventoryGiftAction(frameNumber);
+		if (name == AquaticGear)
+			return frameNumber < 92 ? ForwardLeft : Idle;
+		if (name == SmoothMotion)
+			return frameNumber == 8 ? ForwardJump : Forward;
 		return fullInventoryMiningAction(frameNumber);
 	}
 
@@ -142,16 +159,16 @@ final class PilotScript {
 	}
 
 	public static inline function moveForward(action:PilotAction):Float
-		return action == Forward || action == ForwardTurn || action == ForwardJump ? 1.0 : 0.0;
+		return action == Forward || action == ForwardTurn || action == ForwardJump || action == ForwardLeft ? 1.0 : 0.0;
 
 	public static inline function moveRight(action:PilotAction):Float
-		return action == RightLook ? 1.0 : 0.0;
+		return action == RightLook ? 1.0 : action == ForwardLeft ? -1.0 : 0.0;
 
 	public static inline function lookYaw(action:PilotAction):Float
 		return action == ForwardTurn ? -0.05 : 0.0;
 
 	public static inline function lookPitch(action:PilotAction):Float
-		return action == RightLook ? 0.04 : 0.0;
+		return action == RightLook ? 0.04 : action == LookDown ? -0.25 : 0.0;
 
 	public static inline function jumpPressed(action:PilotAction):Bool
 		return action == ForwardJump;
@@ -202,7 +219,30 @@ final class PilotScript {
 				frameNumber == 5 ? new PilotCheckpoint("full-inventory-mining.frame", CaptureScreenshot) : null;
 			case ResizeLayout:
 				frameNumber == 3 ? new PilotCheckpoint("resize-layout.frame", CaptureScreenshot) : null;
+			case AquaticGear:
+				frameNumber == 92 ? new PilotCheckpoint("aquatic-gear.frame", CaptureScreenshot) : null;
+			case SmoothMotion:
+				frameNumber == 10 ? new PilotCheckpoint("smooth-motion.frame", CaptureScreenshot) : null;
 			case _: null;
+		};
+	}
+
+	/**
+	 * Deterministic outer-frame duration used only by native pilots.
+	 *
+	 * Ordinary pilots retain one exact 50 ms simulation step per frame. The
+	 * smooth-motion script deliberately alternates common fast and slow display
+	 * intervals; their accumulated time crosses fixed-tick boundaries with a
+	 * remainder, giving the real renderer a position between committed states.
+	 */
+	public static function frameDurationMilliseconds(name:PilotScriptName, frameNumber:Int):Int {
+		if (name != SmoothMotion)
+			return 50;
+		return switch frameNumber {
+			case 0 | 1 | 3 | 5 | 7 | 9 | 11: 8;
+			case 2 | 6 | 10: 17;
+			case 4 | 8: 25;
+			case _: 8;
 		};
 	}
 
@@ -222,7 +262,7 @@ final class PilotScript {
 
 	/** Initial fixture health; ordinary and release paths begin at full health. */
 	public static inline function initialHealth(name:PilotScriptName):Int
-		return name == RecoveryUse ? PlayerVitals.MAX_HEALTH - BERRY_HEALTH : PlayerVitals.MAX_HEALTH;
+		return name == RecoveryUse ? MAX_HEALTH - BERRY_HEALTH : MAX_HEALTH;
 
 	/**
 	 * Initial state owned by a deterministic native pilot, never release play.
@@ -258,11 +298,14 @@ final class PilotScript {
 			case 0: Forward;
 			case 1: ForwardTurn;
 			case 2: ForwardJump;
-			case 3: RightLook;
-			case 4: Mine;
-			case 5: Place;
-			case 6: SelectNext;
-			case 7: Interact;
+			// Three bounded pitch steps put the ground inside the seven-block
+			// interaction ray. The test therefore proves an edit happened instead
+			// of merely sending mouse-button input while no block was selected.
+			case 3 | 4 | 5: LookDown;
+			case 6: Mine;
+			case 7: SelectNext;
+			case 8: Place;
+			case 9: Interact;
 			case _: Idle;
 		};
 	}
@@ -311,8 +354,8 @@ final class PilotScript {
 
 	static function moveJumpCheckpoint(frameNumber:Int):Null<PilotCheckpoint> {
 		return switch frameNumber {
-			case 7: new PilotCheckpoint("move-jump-edit.state", ObserveState);
-			case 8: new PilotCheckpoint("move-jump-edit.frame", CaptureScreenshot);
+			case 10: new PilotCheckpoint("move-jump-edit.state", ObserveState);
+			case 12: new PilotCheckpoint("move-jump-edit.frame", CaptureScreenshot);
 			case _: null;
 		};
 	}

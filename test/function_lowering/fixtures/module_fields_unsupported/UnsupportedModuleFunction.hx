@@ -1,6 +1,6 @@
-function optionalValue(?value:Int):Int
-	return value == null ? 0 : value;
+function restCount(values:haxe.Rest<Int>):Int
+	return values.length;
 
 function main():Void {
-	while (optionalValue() != 0) {}
+	while (restCount(1, 2) != 2) {}
 }

@@ -12,3 +12,10 @@ malformed-input, allocation, and CString rules that ADR 0004 defines directly.
 The E4.T04 array-runtime case compares a common primitive mutation trace while
 its native side independently forces relocation aliasing, reference lifecycle,
 overflow, allocator failure, and rollback behavior.
+
+The first E5.T04 Bytes slice runs one ordinary Haxe binary-storage program under
+Eval and generated native C. Its independent C contract then forces overlapping
+copies, embedded NUL data, byte masking, bounds failures, reference-count
+overflow, allocator rollback, and final-release balance. A declaration in the C
+target `_std` override makes the nominal API visible without claiming that every
+declared Bytes method is already implemented.

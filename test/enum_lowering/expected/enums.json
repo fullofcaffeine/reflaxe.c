@@ -39,6 +39,45 @@
     "discriminantTag": "hxc_Option_tag_h4f842caea9db"
   },
   {
+    "instanceId": "instance.enum.249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8",
+    "displayName": "Option<closed-record(3:49:7:actions22:var:normal:never:final12:array(3:i32)55:5:chain22:var:normal:never:final20:enum(5:Chain1:3:i32)54:7:choices22:var:normal:never:final17:enum(7:Choices0:))>",
+    "digest": "249367042efd11cc63c8c7f59875e4ac7665c507c5b0b88f26b5cb9066b1d4d8",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_Option_payload_hbc7d11cfb27e",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "None",
+        "discriminant": "hxc_Option_None_hdcfb48028a4b",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_Some",
+        "semanticName": "Some",
+        "discriminant": "hxc_Option_Some_ha8dd5a59e40a",
+        "payload": [
+          {
+            "semanticName": "value",
+            "cName": "hxc_value",
+            "indirect": false,
+            "type": "instance:instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a"
+          }
+        ],
+        "payloadStructTag": "hxc_Option_Some_payload_h663331e4468e"
+      }
+    ],
+    "valueTag": "hxc_Option_h2a07afaff02e",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_Option_tag_hff067ac061db"
+  },
+  {
     "instanceId": "instance.enum.34ffd1921c0fce7397ea45a7840571b743a9a203544116c89cd6bca9342d91fb",
     "representation": "tagged-union",
     "recursive": false,
@@ -160,5 +199,83 @@
     "tagMember": null,
     "payloadMember": null,
     "discriminantTag": "hxc_Mode"
+  },
+  {
+    "instanceId": "instance.enum.d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce",
+    "displayName": "Choices",
+    "digest": "d215f6115399f1aee252ec00f591b14438842533b70cc7cb0061b31863d2d2ce",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_Choices_payload",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "NoChoices",
+        "discriminant": "hxc_Choices_NoChoices",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_ChoiceValues",
+        "semanticName": "ChoiceValues",
+        "discriminant": "hxc_Choices_ChoiceValues",
+        "payload": [
+          {
+            "semanticName": "values",
+            "cName": "hxc_values",
+            "indirect": false,
+            "type": "instance:instance.haxe-array.bde26f8c96af438c91ff3601cba864613553c1869186c1c74b7385a44a093c3c"
+          }
+        ],
+        "payloadStructTag": "hxc_Choices_ChoiceValues_payload"
+      }
+    ],
+    "valueTag": "hxc_Choices",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_Choices_tag"
+  },
+  {
+    "instanceId": "instance.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e",
+    "representation": "tagged-union",
+    "recursive": false,
+    "declarationId": "type.enum.ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e",
+    "displayName": "RuleEnvelope",
+    "digest": "ffce8027b64408d579f9f82d3436423417f0e58c7d5f11b904e00528130b979e",
+    "scopedLifetime": false,
+    "payloadUnionTag": "hxc_RuleEnvelope_payload",
+    "cases": [
+      {
+        "tagValue": 0,
+        "unionMember": null,
+        "semanticName": "MissingRule",
+        "discriminant": "hxc_RuleEnvelope_MissingRule",
+        "payload": [],
+        "payloadStructTag": null
+      },
+      {
+        "tagValue": 1,
+        "unionMember": "hxc_WrappedRule",
+        "semanticName": "WrappedRule",
+        "discriminant": "hxc_RuleEnvelope_WrappedRule",
+        "payload": [
+          {
+            "semanticName": "rule",
+            "cName": "hxc_rule",
+            "indirect": false,
+            "type": "instance:instance.closed-record.9f230b686a7f56c40da364a8738fc6bc59ce9f16e104a5e73aa5b6bf2ac5679a"
+          }
+        ],
+        "payloadStructTag": "hxc_RuleEnvelope_WrappedRule_payload"
+      }
+    ],
+    "valueTag": "hxc_RuleEnvelope",
+    "tagMember": "hxc_tag",
+    "payloadMember": "hxc_payload",
+    "discriminantTag": "hxc_RuleEnvelope_tag"
   }
 ]

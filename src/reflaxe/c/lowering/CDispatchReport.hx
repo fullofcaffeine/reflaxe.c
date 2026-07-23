@@ -85,11 +85,11 @@ typedef CDispatchReportSnapshot = {
 
 #if (macro || reflaxe_runtime)
 class CDispatchReportBuilder {
-	public static inline final SCHEMA_VERSION = 1;
-	public static inline final ALGORITHM = "hxc-closed-world-virtual-dispatch-v1";
+	public static inline final SCHEMA_VERSION = 2;
+	public static inline final ALGORITHM = "hxc-closed-world-instance-dispatch-v2";
 	public static inline final STATUS = "analyzed-reachable-instance-dispatch";
-	public static inline final TABLE_POLICY = "one-root-layout-reachable-virtual-slots-only";
-	public static inline final ADAPTER_POLICY = "representation-identical-overrides-with-typed-self-thunks";
+	public static inline final TABLE_POLICY = "reachable-class-vtables-and-per-interface-itables-only";
+	public static inline final ADAPTER_POLICY = "representation-identical-overrides-with-typed-receiver-thunks";
 
 	public function new() {}
 
@@ -118,6 +118,14 @@ class CDispatchReportBuilder {
 						targetFunctionId: null,
 						slotId: slotId
 					};
+				case CBDInterface(slotId, reason):
+					indirectCalls++;
+					{
+						dispatch: "interface",
+						reason: reason,
+						targetFunctionId: null,
+						slotId: slotId
+					};
 			};
 			calls.push({
 				id: 'dispatch.call.$index',
@@ -133,13 +141,13 @@ class CDispatchReportBuilder {
 		}
 		final layouts:Array<CDispatchLayoutSnapshot> = lowered.layouts.map(layout -> {
 			id: layout.prepared.id,
-			rootInstanceId: layout.prepared.root.instanceId,
+			rootInstanceId: layout.prepared.rootInstanceId(),
 			cTag: layout.cTag.value,
 			slotIds: layout.slots.map(slot -> slot.prepared.input.id)
 		});
 		final slots:Array<CDispatchSlotSnapshot> = lowered.slots.map(slot -> {
 			id: slot.prepared.input.id,
-			ownerInstanceId: slot.prepared.owner.instanceId,
+			ownerInstanceId: slot.prepared.ownerInstanceId(),
 			cMember: slot.cMember.value,
 			parameterRepresentations: slot.prepared.parameters.map(value -> CBodyDispatchPreparer.typeKey(value.irType)),
 			returnRepresentation: CBodyDispatchPreparer.typeKey(slot.prepared.returnType.irType)
@@ -192,11 +200,11 @@ class CDispatchReportBuilder {
 }
 #else
 class CDispatchReportBuilder {
-	public static inline final SCHEMA_VERSION = 1;
-	public static inline final ALGORITHM = "hxc-closed-world-virtual-dispatch-v1";
+	public static inline final SCHEMA_VERSION = 2;
+	public static inline final ALGORITHM = "hxc-closed-world-instance-dispatch-v2";
 	public static inline final STATUS = "analyzed-reachable-instance-dispatch";
-	public static inline final TABLE_POLICY = "one-root-layout-reachable-virtual-slots-only";
-	public static inline final ADAPTER_POLICY = "representation-identical-overrides-with-typed-self-thunks";
+	public static inline final TABLE_POLICY = "reachable-class-vtables-and-per-interface-itables-only";
+	public static inline final ADAPTER_POLICY = "representation-identical-overrides-with-typed-receiver-thunks";
 
 	public function new() {}
 }

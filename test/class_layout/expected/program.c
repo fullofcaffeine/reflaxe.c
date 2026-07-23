@@ -61,6 +61,41 @@ struct hxc_RootRecord *hxc_ClassLayoutFixture_asRoot(struct hxc_LeafRecord *hxc_
   return hxc_value == NULL ? NULL : &hxc_value->hxc_base.hxc_base;
 }
 
+int32_t hxc_ClassLayoutFixture_branchProofDoesNotEscape(struct hxc_RootRecord *hxc_value, struct hxc_RootRecord *hxc_other, bool hxc_useFirst)
+{
+  int32_t hxc_result = 0;
+  if (hxc_useFirst)
+  {
+    if (hxc_value == NULL)
+    {
+      abort();
+    }
+    int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_rootValue;
+    hxc_result = hxc_tmp_class_field_load_result_n0;
+  }
+  else
+  {
+    if (hxc_other == NULL)
+    {
+      abort();
+    }
+    int32_t hxc_tmp_class_field_load_result_n1 = (*hxc_other).hxc_rootValue;
+    hxc_result = hxc_tmp_class_field_load_result_n1;
+  }
+  int32_t hxc_tmp_load_result_n2 = hxc_result;
+  if (hxc_value == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_class_field_load_result_n3 = (*hxc_value).hxc_rootValue;
+  if (hxc_other == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_class_field_load_result_n4 = (*hxc_other).hxc_rootValue;
+  return hxc_i32_add_wrapping(hxc_i32_add_wrapping(hxc_tmp_load_result_n2, hxc_tmp_class_field_load_result_n3), hxc_tmp_class_field_load_result_n4);
+}
+
 bool hxc_ClassLayoutFixture_different(struct hxc_RootRecord *hxc_left, struct hxc_RootRecord *hxc_right)
 {
   return hxc_left != hxc_right;
@@ -169,6 +204,25 @@ bool hxc_ClassLayoutFixture_same(struct hxc_RootRecord *hxc_left, struct hxc_Roo
   return hxc_left == hxc_right;
 }
 
+double hxc_ClassLayoutFixture_sumAcrossBranch(struct hxc_LeafRecord *hxc_value, bool hxc_addScore)
+{
+  if (hxc_value == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
+  double hxc_total = (double)hxc_tmp_class_field_load_result_n0;
+  if (hxc_addScore)
+  {
+    double hxc_tmp_compound_load_result_n1 = hxc_total;
+    double hxc_tmp_class_field_load_result_n2 = (*hxc_value).hxc_score;
+    hxc_total = hxc_tmp_compound_load_result_n1 + hxc_tmp_class_field_load_result_n2;
+  }
+  double hxc_tmp_load_result_n3 = hxc_total;
+  int32_t hxc_tmp_class_field_load_result_n4 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
+  return hxc_tmp_load_result_n3 + (double)hxc_tmp_class_field_load_result_n4;
+}
+
 int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_value, int32_t hxc_next)
 {
   if (hxc_value == NULL)
@@ -176,10 +230,6 @@ int32_t hxc_ClassLayoutFixture_writeInherited(struct hxc_LeafRecord *hxc_value, 
     abort();
   }
   (*hxc_value).hxc_base.hxc_base.hxc_rootValue = hxc_next;
-  if (hxc_value == NULL)
-  {
-    abort();
-  }
   int32_t hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_base.hxc_base.hxc_rootValue;
   return hxc_tmp_class_field_load_result_n0;
 }
@@ -191,10 +241,6 @@ struct hxc_RootRecord *hxc_ClassLayoutFixture_writePeer(struct hxc_LeafRecord *h
     abort();
   }
   (*hxc_value).hxc_peer = hxc_peer;
-  if (hxc_value == NULL)
-  {
-    abort();
-  }
   struct hxc_RootRecord *hxc_tmp_class_field_load_result_n0 = (*hxc_value).hxc_peer;
   return hxc_tmp_class_field_load_result_n0;
 }

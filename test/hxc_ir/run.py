@@ -136,6 +136,8 @@ def check_semantics(semantic: str, coverage: str) -> None:
     missing = [marker for marker in dispatches if marker not in coverage]
     if missing:
         raise HxcIRFailure("coverage dump lost call classifications: " + ", ".join(missing))
+    if 'function-reference target="fn.coverage.target"' not in coverage:
+        raise HxcIRFailure("coverage dump lost the exact non-capturing function reference")
     for explicit_runtime in ('runtime(feature="exception"', 'implementation=runtime("object")', 'implementation=runtime("gc")'):
         if explicit_runtime not in coverage:
             raise HxcIRFailure(f"coverage dump lost explicit runtime provenance: {explicit_runtime}")
@@ -191,6 +193,8 @@ def check_diagnostics(report: dict[str, object]) -> None:
         "uncheckedClassDereference",
         "unsafeClassUpcast",
         "mismatchedClassEquality",
+        "borrowedClassStore",
+        "borrowedClassReturn",
         "primitiveRuntimeConversion",
         "invalidFloat32Narrow",
         "invalidFloat32Widen",

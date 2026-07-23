@@ -54,15 +54,48 @@ class HaxeCTestCase:
 
 
 CASES = {
+    "app-screen": HaxeCTestCase(
+        case_id="app-screen",
+        eval_hxml="app-screen.hxml",
+        c_hxml="app-screen-c.hxml",
+        native_harness="test/native/app_screen_harness.c",
+        generated_source="src/modules/caxecraft/app/AppScreen.c",
+        required_source_markers=(
+            "AppScreen_initialScreen",
+            "AppScreen_startPlaying",
+            "AppScreen_loseFocus",
+            "AppScreen_togglePause",
+            "AppScreen_recapture",
+            "switch (hxc_screen)",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
+        success_line="0",
+    ),
     "aquatics": HaxeCTestCase(
         case_id="aquatics",
         eval_hxml="aquatics.hxml",
         c_hxml="aquatics-c.hxml",
         native_harness="test/native/aquatics_harness.c",
-        generated_source="src/modules/caxecraft/domain/PlayerAquatics.c",
-        required_source_markers=("PlayerAquatics_step",),
+        generated_source="src/modules/caxecraft/domain/GameSession.c",
+        required_source_markers=("GameSession_tick", "GameSession *hxc_self"),
         forbidden_source_markers=("goto ",),
         output_line_count=2,
+        success_line="0",
+    ),
+    "presentation": HaxeCTestCase(
+        case_id="presentation",
+        eval_hxml="presentation.hxml",
+        c_hxml="presentation-c.hxml",
+        native_harness="test/native/presentation_harness.c",
+        generated_source="src/modules/caxecraft/app/MotionInterpolation.c",
+        required_source_markers=(
+            "MotionInterpolation_start",
+            "MotionInterpolation_advance",
+            "MotionInterpolation_sample",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=1,
         success_line="0",
     ),
     "water": HaxeCTestCase(
@@ -75,7 +108,43 @@ CASES = {
         forbidden_source_markers=("goto ",),
         output_line_count=2,
         success_line="0",
-    )
+    ),
+    "session": HaxeCTestCase(
+        case_id="session",
+        eval_hxml="session.hxml",
+        c_hxml="session-c.hxml",
+        native_harness="test/native/session_harness.c",
+        generated_source="src/modules/caxecraft/domain/GameSession.c",
+        required_source_markers=(
+            "GameSession_writeTerrainRunDuringLoad",
+            "GameSession_placeInitialWaterVolume",
+            "GameSession_authoredItemIsActive",
+            "GameSession_bindLocalPlayer",
+            "GameSession_view",
+            "hxc_completedTicks",
+            "hxc_tickIndex",
+        ),
+        forbidden_source_markers=("goto ",),
+        output_line_count=2,
+        success_line="0",
+    ),
+    "terrain-chunks": HaxeCTestCase(
+        case_id="terrain-chunks",
+        eval_hxml="terrain-chunks.hxml",
+        c_hxml="terrain-chunks-c.hxml",
+        native_harness="test/native/terrain_chunks_harness.c",
+        generated_source="src/modules/caxecraft/app/TerrainChunkCache.c",
+        required_source_markers=(
+            "TerrainChunkCache_prepare",
+            "TerrainChunkCache_invalidate",
+            "TerrainChunkCache_rebuild",
+            "hxc_faceX",
+            "hxc_packedFaces",
+        ),
+        forbidden_source_markers=("goto ", "malloc(", "calloc("),
+        output_line_count=1,
+        success_line="0",
+    ),
 }
 
 
@@ -95,11 +164,17 @@ def development_tool(name: str) -> str:
     return resolved
 
 
-def native_compiler() -> str:
-    """Choose one available strict C compiler for the focused local lane."""
+def native_compiler(requested: str | None) -> str:
+    """Resolve an explicit compiler or choose one fast local default."""
 
-    resolved = shutil.which("clang") or shutil.which("gcc") or shutil.which("cc")
+    resolved = shutil.which(requested) if requested is not None else (
+        shutil.which("clang") or shutil.which("gcc") or shutil.which("cc")
+    )
     if resolved is None:
+        if requested is not None:
+            raise HaxeCTestFailure(
+                f"requested native C compiler {requested!r} is unavailable"
+            )
         raise HaxeCTestFailure("no native C compiler is available")
     return resolved
 
@@ -240,7 +315,7 @@ def compile_native(
     )
 
 
-def execute(test_case: HaxeCTestCase) -> bool:
+def execute(test_case: HaxeCTestCase, requested_compiler: str | None) -> bool:
     """Run one Haxe test on Eval, haxe.c, strict C, and optional sanitizers."""
 
     eval_hxml = checked_case_path(test_case.eval_hxml, "Eval HXML")
@@ -254,7 +329,7 @@ def execute(test_case: HaxeCTestCase) -> bool:
     ).stdout
     validate_oracle(test_case, oracle)
 
-    compiler = native_compiler()
+    compiler = native_compiler(requested_compiler)
     with tempfile.TemporaryDirectory(prefix=f"hxc-caxecraft-{test_case.case_id}-") as temporary:
         temporary_root = Path(temporary)
         generated = temporary_root / "generated"
@@ -345,6 +420,10 @@ def execute(test_case: HaxeCTestCase) -> bool:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("case", choices=tuple(sorted(CASES)))
+    parser.add_argument(
+        "--cc",
+        help="explicit C compiler command or path; the default keeps the focused local lane fast",
+    )
     return parser.parse_args()
 
 
@@ -352,7 +431,7 @@ def main() -> int:
     args = parse_args()
     test_case = CASES[args.case]
     try:
-        sanitizer_ran = execute(test_case)
+        sanitizer_ran = execute(test_case, args.cc)
     except (HaxeCTestFailure, OSError, UnicodeError, json.JSONDecodeError) as error:
         print(
             f"caxecraft-haxe-c-test: ERROR [{test_case.case_id}]: {error}",

@@ -96,35 +96,35 @@ _Static_assert(_Alignof(struct hxc_caxecraft_domain_AxisMove) >= _Alignof(double
 
 _Static_assert(sizeof(struct hxc_caxecraft_domain_AxisMove) >= offsetof(struct hxc_caxecraft_domain_AxisMove, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_AxisMove size contains its final field");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_grounded) == 0, "closed record hxc_caxecraft_domain_PlayerState first field begins at offset zero");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_grounded) == 0, "closed record hxc_caxecraft_domain_CharacterBody first field begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(bool), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 0");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(bool), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 0");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityX) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_grounded) + sizeof(bool), "closed record hxc_caxecraft_domain_PlayerState field 1 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityX) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_grounded) + sizeof(bool), "closed record hxc_caxecraft_domain_CharacterBody field 1 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 1");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 1");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityY) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityX) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 2 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityY) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityX) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 2 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 2");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 2");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityZ) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityY) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 3 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityZ) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityY) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 3 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 3");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 3");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_x) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityZ) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 4 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_x) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityZ) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 4 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 4");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 4");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_y) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_x) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 5 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_y) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_x) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 5 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 5");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 5");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_z) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_y) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 6 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_z) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_y) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 6 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 6");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 6");
 
-_Static_assert(sizeof(struct hxc_caxecraft_domain_PlayerState) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState size contains its final field");
+_Static_assert(sizeof(struct hxc_caxecraft_domain_CharacterBody) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody size contains its final field");
 
 _Static_assert(hxc_caxecraft_domain_BlockKind_Air == 0, "enum hxc_caxecraft_domain_BlockKind case Air retains its Haxe discriminant");
 
@@ -136,21 +136,31 @@ _Static_assert(hxc_caxecraft_domain_BlockKind_Stone == 3, "enum hxc_caxecraft_do
 
 _Static_assert(hxc_caxecraft_domain_BlockKind_Bedrock == 4, "enum hxc_caxecraft_domain_BlockKind case Bedrock retains its Haxe discriminant");
 
+_Static_assert(hxc_caxecraft_domain_BlockKind_Sand == 5, "enum hxc_caxecraft_domain_BlockKind case Sand retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Wood == 6, "enum hxc_caxecraft_domain_BlockKind case Wood retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Leaves == 7, "enum hxc_caxecraft_domain_BlockKind case Leaves retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Snow == 8, "enum hxc_caxecraft_domain_BlockKind case Snow retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Ash == 9, "enum hxc_caxecraft_domain_BlockKind case Ash retains its Haxe discriminant");
+
 int32_t hxc_caxecraft_domain_CaxecraftTrace_collisionTrace(void)
 {
   uint8_t hxc_storage[16384] = { 0 };
   uint8_t *hxc_cells = hxc_storage;
   size_t hxc_tmp_length_n1 = sizeof(hxc_storage) / sizeof(hxc_storage[0]);
   hxc_caxecraft_domain_CaxecraftTrace_makeFloor(hxc_cells, hxc_tmp_length_n1);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n0 = hxc_caxecraft_domain_PlayerPhysics_player(5.5, 1.0, 5.5);
-  struct hxc_caxecraft_domain_PlayerState hxc_state = hxc_tmp_call_result_n0;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n1 = hxc_state;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n2 = hxc_caxecraft_domain_PlayerPhysics_input(1.0, 0.5, false);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n1, hxc_tmp_call_result_n2);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n0 = hxc_caxecraft_domain_CharacterPhysics_body(5.5, 1.0, 5.5);
+  struct hxc_caxecraft_domain_CharacterBody hxc_state = hxc_tmp_call_result_n0;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n1 = hxc_state;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n2 = hxc_caxecraft_domain_CharacterPhysics_input(1.0, 0.5, false);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n1, hxc_tmp_call_result_n2);
   hxc_state = hxc_tmp_call_result_n3;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n4 = hxc_state;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n5 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, true);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n6 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n4, hxc_tmp_call_result_n5);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n4 = hxc_state;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n5 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, true);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n6 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n4, hxc_tmp_call_result_n5);
   hxc_state = hxc_tmp_call_result_n6;
   int32_t hxc_hash = hxc_f64_to_i32_saturating(hxc_state.hxc_x * 1000.0);
   int32_t hxc_tmp_load_result_n8 = hxc_hash;
@@ -270,15 +280,15 @@ int32_t hxc_caxecraft_domain_CaxecraftTrace_propertyTrace(int32_t hxc_seed)
   }
   double hxc_moveZ = hxc_tmp_conditional_result_n10;
   bool hxc_jump = hxc_i32_bit_and(hxc_seed, 4) != 0;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n12 = hxc_caxecraft_domain_PlayerPhysics_player(1.5 + (double)hxc_i32_bit_and(hxc_seed, 3), 14.0, 1.5 + (double)hxc_i32_bit_and(hxc_i32_unsigned_shift_right_masked(hxc_seed, 2), 3));
-  struct hxc_caxecraft_domain_PlayerState hxc_state = hxc_tmp_call_result_n12;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n14 = hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(hxc_cells, hxc_tmp_length_n2, hxc_state);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n12 = hxc_caxecraft_domain_CharacterPhysics_body(1.5 + (double)hxc_i32_bit_and(hxc_seed, 3), 14.0, 1.5 + (double)hxc_i32_bit_and(hxc_i32_unsigned_shift_right_masked(hxc_seed, 2), 3));
+  struct hxc_caxecraft_domain_CharacterBody hxc_state = hxc_tmp_call_result_n12;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n14 = hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(hxc_cells, hxc_tmp_length_n2, hxc_state);
   hxc_state = hxc_tmp_call_result_n14;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n15 = hxc_state;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n15 = hxc_state;
   double hxc_tmp_load_result_n16 = hxc_moveX;
   double hxc_tmp_load_result_n17 = hxc_moveZ;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n19 = hxc_caxecraft_domain_PlayerPhysics_input(hxc_tmp_load_result_n16, hxc_tmp_load_result_n17, hxc_jump);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n20 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n2, hxc_tmp_load_result_n15, hxc_tmp_call_result_n19);
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n19 = hxc_caxecraft_domain_CharacterPhysics_input(hxc_tmp_load_result_n16, hxc_tmp_load_result_n17, hxc_jump);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n20 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n2, hxc_tmp_load_result_n15, hxc_tmp_call_result_n19);
   hxc_state = hxc_tmp_call_result_n20;
   int32_t hxc_tmp_call_result_n21 = hxc_caxecraft_domain_World_stateHash(hxc_cells, hxc_tmp_length_n2);
   int32_t hxc_hash = hxc_tmp_call_result_n21;
@@ -935,6 +945,11 @@ bool hxc_caxecraft_domain_World_isPlaceable(enum hxc_caxecraft_domain_BlockKind 
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return false;
       }
@@ -953,6 +968,11 @@ bool hxc_caxecraft_domain_World_isSolid(enum hxc_caxecraft_domain_BlockKind hxc_
     case hxc_caxecraft_domain_BlockKind_Dirt:
     case hxc_caxecraft_domain_BlockKind_Stone:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return true;
       }
@@ -983,6 +1003,26 @@ int32_t hxc_caxecraft_domain_World_kindCode(enum hxc_caxecraft_domain_BlockKind 
       {
         return 4;
       }
+    case hxc_caxecraft_domain_BlockKind_Sand:
+      {
+        return 5;
+      }
+    case hxc_caxecraft_domain_BlockKind_Wood:
+      {
+        return 6;
+      }
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+      {
+        return 7;
+      }
+    case hxc_caxecraft_domain_BlockKind_Snow:
+      {
+        return 8;
+      }
+    case hxc_caxecraft_domain_BlockKind_Ash:
+      {
+        return 9;
+      }
   }
   return 0;
 }
@@ -1005,6 +1045,26 @@ enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_kindFromCode(int3
     case 4:
       {
         return hxc_caxecraft_domain_BlockKind_Bedrock;
+      }
+    case 5:
+      {
+        return hxc_caxecraft_domain_BlockKind_Sand;
+      }
+    case 6:
+      {
+        return hxc_caxecraft_domain_BlockKind_Wood;
+      }
+    case 7:
+      {
+        return hxc_caxecraft_domain_BlockKind_Leaves;
+      }
+    case 8:
+      {
+        return hxc_caxecraft_domain_BlockKind_Snow;
+      }
+    case 9:
+      {
+        return hxc_caxecraft_domain_BlockKind_Ash;
       }
     default:
       {
@@ -1033,6 +1093,11 @@ bool hxc_caxecraft_domain_World_place(uint8_t *hxc_cells, size_t hxc_length, str
       case hxc_caxecraft_domain_BlockKind_Dirt:
       case hxc_caxecraft_domain_BlockKind_Stone:
       case hxc_caxecraft_domain_BlockKind_Bedrock:
+      case hxc_caxecraft_domain_BlockKind_Sand:
+      case hxc_caxecraft_domain_BlockKind_Wood:
+      case hxc_caxecraft_domain_BlockKind_Leaves:
+      case hxc_caxecraft_domain_BlockKind_Snow:
+      case hxc_caxecraft_domain_BlockKind_Ash:
         {
           return false;
         }
@@ -1077,6 +1142,11 @@ bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_cells, size_t hxc_length, st
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return false;
       }
@@ -1158,7 +1228,7 @@ void hxc_caxecraft_domain_WorldStorage_writeCode(uint8_t *hxc_cells, size_t hxc_
   return;
 }
 
-double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value)
+double hxc_caxecraft_domain_CharacterPhysics_abs(double hxc_value)
 {
   if (!(hxc_value < 0.0))
   {
@@ -1167,43 +1237,48 @@ double hxc_caxecraft_domain_PlayerPhysics_abs(double hxc_value)
   return -hxc_value;
 }
 
-bool hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(struct hxc_caxecraft_domain_PlayerState hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_body(double hxc_x, double hxc_y, double hxc_z)
 {
-  double hxc_playerMinimumX = hxc_state.hxc_x - 0.30;
-  double hxc_playerMaximumX = hxc_state.hxc_x + 0.30;
-  double hxc_playerMinimumY = hxc_state.hxc_y;
-  double hxc_playerMaximumY = hxc_state.hxc_y + 1.80;
-  double hxc_playerMinimumZ = hxc_state.hxc_z - 0.30;
-  double hxc_playerMaximumZ = hxc_state.hxc_z + 0.30;
+  return (struct hxc_caxecraft_domain_CharacterBody){ .hxc_grounded = false, .hxc_velocityX = 0.0, .hxc_velocityY = 0.0, .hxc_velocityZ = 0.0, .hxc_x = hxc_x, .hxc_y = hxc_y, .hxc_z = hxc_z };
+}
+
+bool hxc_caxecraft_domain_CharacterPhysics_canPlaceAt(struct hxc_caxecraft_domain_CharacterBody hxc_state, struct hxc_caxecraft_domain_BlockCoord hxc_coord)
+{
+  double hxc_bodyMinimumX = hxc_state.hxc_x - 0.30;
+  double hxc_bodyMaximumX = hxc_state.hxc_x + 0.30;
+  double hxc_bodyMinimumY = hxc_state.hxc_y;
+  double hxc_bodyMaximumY = hxc_state.hxc_y + 1.80;
+  double hxc_bodyMinimumZ = hxc_state.hxc_z - 0.30;
+  double hxc_bodyMaximumZ = hxc_state.hxc_z + 0.30;
   bool hxc_separated = false;
-  if (hxc_playerMaximumX <= (double)hxc_coord.hxc_x)
+  if (hxc_bodyMaximumX <= (double)hxc_coord.hxc_x)
   {
     hxc_separated = true;
   }
-  if (hxc_playerMinimumX >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_x, 1))
+  if (hxc_bodyMinimumX >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_x, 1))
   {
     hxc_separated = true;
   }
-  if (hxc_playerMaximumY <= (double)hxc_coord.hxc_y)
+  if (hxc_bodyMaximumY <= (double)hxc_coord.hxc_y)
   {
     hxc_separated = true;
   }
-  if (hxc_playerMinimumY >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_y, 1))
+  if (hxc_bodyMinimumY >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_y, 1))
   {
     hxc_separated = true;
   }
-  if (hxc_playerMaximumZ <= (double)hxc_coord.hxc_z)
+  if (hxc_bodyMaximumZ <= (double)hxc_coord.hxc_z)
   {
     hxc_separated = true;
   }
-  if (hxc_playerMinimumZ >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_z, 1))
+  if (hxc_bodyMinimumZ >= (double)hxc_i32_add_wrapping(hxc_coord.hxc_z, 1))
   {
     hxc_separated = true;
   }
   return hxc_separated;
 }
 
-int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value)
+int32_t hxc_caxecraft_domain_CharacterPhysics_floorToInt(double hxc_value)
 {
   int32_t hxc_truncated = hxc_f64_to_i32_saturating(hxc_value);
   if (!(hxc_value < (double)hxc_truncated))
@@ -1213,18 +1288,18 @@ int32_t hxc_caxecraft_domain_PlayerPhysics_floorToInt(double hxc_value)
   return hxc_i32_subtract_wrapping(hxc_truncated, 1);
 }
 
-struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_PlayerPhysics_input(double hxc_moveX, double hxc_moveZ, bool hxc_jump)
+struct hxc_caxecraft_domain_StepInput hxc_caxecraft_domain_CharacterPhysics_input(double hxc_moveX, double hxc_moveZ, bool hxc_jump)
 {
   return (struct hxc_caxecraft_domain_StepInput){ .hxc_jump = hxc_jump, .hxc_moveX = hxc_moveX, .hxc_moveZ = hxc_moveZ };
 }
 
-struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_PlayerPhysics_moveAxis(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis)
+struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_CharacterPhysics_moveAxis(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z, double hxc_delta, int32_t hxc_axis)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n6 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n6;
-  double hxc_tmp_call_result_n0 = hxc_caxecraft_domain_PlayerPhysics_abs(hxc_delta);
+  double hxc_tmp_call_result_n0 = hxc_caxecraft_domain_CharacterPhysics_abs(hxc_delta);
   double hxc_magnitude = hxc_tmp_call_result_n0;
   if (hxc_magnitude == 0.0)
   {
@@ -1288,7 +1363,7 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_PlayerPhysics_moveAxis
     double hxc_candidateZ = hxc_tmp_conditional_result_n20;
     double hxc_tmp_load_result_n23 = hxc_candidateX;
     double hxc_tmp_load_result_n24 = hxc_candidateY;
-    bool hxc_tmp_call_result_n26 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_load_result_n23, hxc_tmp_load_result_n24, hxc_candidateZ);
+    bool hxc_tmp_call_result_n26 = hxc_caxecraft_domain_CharacterPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_load_result_n23, hxc_tmp_load_result_n24, hxc_candidateZ);
     if (!hxc_tmp_call_result_n26)
     {
       hxc_currentX = hxc_candidateX;
@@ -1306,23 +1381,23 @@ struct hxc_caxecraft_domain_AxisMove hxc_caxecraft_domain_PlayerPhysics_moveAxis
   return (struct hxc_caxecraft_domain_AxisMove){ .hxc_blocked = hxc_blocked, .hxc_x = hxc_tmp_load_result_n31, .hxc_y = hxc_tmp_load_result_n32, .hxc_z = hxc_tmp_load_result_n33 };
 }
 
-bool hxc_caxecraft_domain_PlayerPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
+bool hxc_caxecraft_domain_CharacterPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_length, double hxc_x, double hxc_y, double hxc_z)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n4;
-  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_x - 0.30 + 0.0001);
+  int32_t hxc_tmp_call_result_n0 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_x - 0.30 + 0.0001);
   int32_t hxc_minimumX = hxc_tmp_call_result_n0;
-  int32_t hxc_tmp_call_result_n1 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_x + 0.30 - 0.0001);
+  int32_t hxc_tmp_call_result_n1 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_x + 0.30 - 0.0001);
   int32_t hxc_maximumX = hxc_tmp_call_result_n1;
-  int32_t hxc_tmp_call_result_n2 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_y + 0.0001);
+  int32_t hxc_tmp_call_result_n2 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_y + 0.0001);
   int32_t hxc_minimumY = hxc_tmp_call_result_n2;
-  int32_t hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_y + 1.80 - 0.0001);
+  int32_t hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_y + 1.80 - 0.0001);
   int32_t hxc_maximumY = hxc_tmp_call_result_n3;
-  int32_t hxc_tmp_call_result_n4 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_z - 0.30 + 0.0001);
+  int32_t hxc_tmp_call_result_n4 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_z - 0.30 + 0.0001);
   int32_t hxc_minimumZ = hxc_tmp_call_result_n4;
-  int32_t hxc_tmp_call_result_n5 = hxc_caxecraft_domain_PlayerPhysics_floorToInt(hxc_z + 0.30 - 0.0001);
+  int32_t hxc_tmp_call_result_n5 = hxc_caxecraft_domain_CharacterPhysics_floorToInt(hxc_z + 0.30 - 0.0001);
   int32_t hxc_maximumZ = hxc_tmp_call_result_n5;
   int32_t hxc_blockY = hxc_minimumY;
   while (1)
@@ -1374,12 +1449,7 @@ bool hxc_caxecraft_domain_PlayerPhysics_overlaps(uint8_t *hxc_cells, size_t hxc_
   return false;
 }
 
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_player(double hxc_x, double hxc_y, double hxc_z)
-{
-  return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = false, .hxc_velocityX = 0.0, .hxc_velocityY = 0.0, .hxc_velocityZ = 0.0, .hxc_x = hxc_x, .hxc_y = hxc_y, .hxc_z = hxc_z };
-}
-
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n2 = hxc_length;
@@ -1389,7 +1459,7 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recov
   int32_t hxc_attempts = 0;
   while (1)
   {
-    bool hxc_tmp_call_result_n4 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_state.hxc_x, hxc_recoveredY, hxc_state.hxc_z);
+    bool hxc_tmp_call_result_n4 = hxc_caxecraft_domain_CharacterPhysics_overlaps(hxc_cells, hxc_length, hxc_state.hxc_x, hxc_recoveredY, hxc_state.hxc_z);
     bool hxc_tmp_short_circuit_result_n5 = hxc_tmp_call_result_n4;
     if (hxc_tmp_call_result_n4)
     {
@@ -1402,26 +1472,26 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_recov
     hxc_recoveredY = hxc_recoveredY + 1.0;
     hxc_attempts = hxc_i32_add_wrapping(hxc_attempts, 1);
   }
-  return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = false, .hxc_velocityX = hxc_state.hxc_velocityX, .hxc_velocityY = 0.0, .hxc_velocityZ = hxc_state.hxc_velocityZ, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_recoveredY, .hxc_z = hxc_state.hxc_z };
+  return (struct hxc_caxecraft_domain_CharacterBody){ .hxc_grounded = false, .hxc_velocityX = hxc_state.hxc_velocityX, .hxc_velocityY = 0.0, .hxc_velocityZ = hxc_state.hxc_velocityZ, .hxc_x = hxc_state.hxc_x, .hxc_y = hxc_recoveredY, .hxc_z = hxc_state.hxc_z };
 }
 
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_state, double hxc_velocityX, double hxc_requestedVelocityY, double hxc_velocityZ)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n5 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n5;
   double hxc_velocityY = hxc_requestedVelocityY;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_state.hxc_x, hxc_state.hxc_y, hxc_state.hxc_z, hxc_velocityX * 0.05, 0);
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_moveAxis(hxc_cells, hxc_length, hxc_state.hxc_x, hxc_state.hxc_y, hxc_state.hxc_z, hxc_velocityX * 0.05, 0);
   struct hxc_caxecraft_domain_AxisMove hxc_movedX = hxc_tmp_call_result_n3;
   double hxc_tmp_record_field_load_result_n4 = hxc_movedX.hxc_x;
   double hxc_tmp_record_field_load_result_n5 = hxc_movedX.hxc_y;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n7 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n4, hxc_tmp_record_field_load_result_n5, hxc_movedX.hxc_z, hxc_velocityZ * 0.05, 2);
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n7 = hxc_caxecraft_domain_CharacterPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n4, hxc_tmp_record_field_load_result_n5, hxc_movedX.hxc_z, hxc_velocityZ * 0.05, 2);
   struct hxc_caxecraft_domain_AxisMove hxc_movedZ = hxc_tmp_call_result_n7;
   double hxc_tmp_record_field_load_result_n8 = hxc_movedZ.hxc_x;
   double hxc_tmp_record_field_load_result_n9 = hxc_movedZ.hxc_y;
   double hxc_tmp_record_field_load_result_n10 = hxc_movedZ.hxc_z;
-  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n12 = hxc_caxecraft_domain_PlayerPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n8, hxc_tmp_record_field_load_result_n9, hxc_tmp_record_field_load_result_n10, hxc_velocityY * 0.05, 1);
+  struct hxc_caxecraft_domain_AxisMove hxc_tmp_call_result_n12 = hxc_caxecraft_domain_CharacterPhysics_moveAxis(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n8, hxc_tmp_record_field_load_result_n9, hxc_tmp_record_field_load_result_n10, hxc_velocityY * 0.05, 1);
   struct hxc_caxecraft_domain_AxisMove hxc_movedY = hxc_tmp_call_result_n12;
   bool hxc_tmp_record_field_load_result_n13 = hxc_movedY.hxc_blocked;
   bool hxc_tmp_short_circuit_result_n11 = hxc_tmp_record_field_load_result_n13;
@@ -1438,7 +1508,7 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resol
   {
     double hxc_tmp_record_field_load_result_n18 = hxc_movedY.hxc_x;
     double hxc_tmp_record_field_load_result_n19 = hxc_movedY.hxc_y;
-    bool hxc_tmp_call_result_n21 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n18, hxc_tmp_record_field_load_result_n19 - 0.02, hxc_movedY.hxc_z);
+    bool hxc_tmp_call_result_n21 = hxc_caxecraft_domain_CharacterPhysics_overlaps(hxc_cells, hxc_length, hxc_tmp_record_field_load_result_n18, hxc_tmp_record_field_load_result_n19 - 0.02, hxc_movedY.hxc_z);
     hxc_grounded = hxc_tmp_call_result_n21;
   }
   double hxc_finalVelocityX = hxc_velocityX;
@@ -1457,20 +1527,20 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_resol
   double hxc_tmp_load_result_n27 = hxc_finalVelocityX;
   double hxc_tmp_load_result_n28 = hxc_velocityY;
   double hxc_tmp_load_result_n29 = hxc_finalVelocityZ;
-  return (struct hxc_caxecraft_domain_PlayerState){ .hxc_grounded = hxc_grounded, .hxc_velocityX = hxc_tmp_load_result_n27, .hxc_velocityY = hxc_tmp_load_result_n28, .hxc_velocityZ = hxc_tmp_load_result_n29, .hxc_x = hxc_tmp_record_field_load_result_n24, .hxc_y = hxc_tmp_record_field_load_result_n25, .hxc_z = hxc_tmp_record_field_load_result_n26 };
+  return (struct hxc_caxecraft_domain_CharacterBody){ .hxc_grounded = hxc_grounded, .hxc_velocityX = hxc_tmp_load_result_n27, .hxc_velocityY = hxc_tmp_load_result_n28, .hxc_velocityZ = hxc_tmp_load_result_n29, .hxc_x = hxc_tmp_record_field_load_result_n24, .hxc_y = hxc_tmp_record_field_load_result_n25, .hxc_z = hxc_tmp_record_field_load_result_n26 };
 }
 
-struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_PlayerState hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command)
+struct hxc_caxecraft_domain_CharacterBody hxc_caxecraft_domain_CharacterPhysics_step(uint8_t *hxc_cells, size_t hxc_length, struct hxc_caxecraft_domain_CharacterBody hxc_original, struct hxc_caxecraft_domain_StepInput hxc_command)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n3 = hxc_length;
   (void)hxc_borrow;
   (void)hxc_tmp_length_n3;
-  struct hxc_caxecraft_domain_PlayerState hxc_state = hxc_original;
-  bool hxc_tmp_call_result_n3 = hxc_caxecraft_domain_PlayerPhysics_overlaps(hxc_cells, hxc_length, hxc_original.hxc_x, hxc_original.hxc_y, hxc_original.hxc_z);
+  struct hxc_caxecraft_domain_CharacterBody hxc_state = hxc_original;
+  bool hxc_tmp_call_result_n3 = hxc_caxecraft_domain_CharacterPhysics_overlaps(hxc_cells, hxc_length, hxc_original.hxc_x, hxc_original.hxc_y, hxc_original.hxc_z);
   if (hxc_tmp_call_result_n3)
   {
-    struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n4 = hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(hxc_cells, hxc_length, hxc_original);
+    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n4 = hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(hxc_cells, hxc_length, hxc_original);
     hxc_state = hxc_tmp_call_result_n4;
   }
   double hxc_velocityX = hxc_command.hxc_moveX * 4.0;
@@ -1492,10 +1562,10 @@ struct hxc_caxecraft_domain_PlayerState hxc_caxecraft_domain_PlayerPhysics_step(
     hxc_tmp_conditional_result_n9 = hxc_state.hxc_velocityY + -0.9;
   }
   double hxc_velocityY = hxc_tmp_conditional_result_n9;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n12 = hxc_state;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n12 = hxc_state;
   double hxc_tmp_load_result_n13 = hxc_velocityX;
   double hxc_tmp_load_result_n14 = hxc_velocityY;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n16 = hxc_caxecraft_domain_PlayerPhysics_resolveVelocity(hxc_cells, hxc_length, hxc_tmp_load_result_n12, hxc_tmp_load_result_n13, hxc_tmp_load_result_n14, hxc_velocityZ);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n16 = hxc_caxecraft_domain_CharacterPhysics_resolveVelocity(hxc_cells, hxc_length, hxc_tmp_load_result_n12, hxc_tmp_load_result_n13, hxc_tmp_load_result_n14, hxc_velocityZ);
   return hxc_tmp_call_result_n16;
 }
 
@@ -1927,25 +1997,25 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   }
   hxc_caxecraft_qa_DomainProbe_clear(hxc_cells, hxc_tmp_length_n1);
   hxc_caxecraft_domain_CaxecraftTrace_makeFloor(hxc_cells, hxc_tmp_length_n1);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n145 = hxc_caxecraft_domain_PlayerPhysics_player(5.5, 1.0, 5.5);
-  struct hxc_caxecraft_domain_PlayerState hxc_player = hxc_tmp_call_result_n145;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n146 = hxc_player;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n145 = hxc_caxecraft_domain_CharacterPhysics_body(5.5, 1.0, 5.5);
+  struct hxc_caxecraft_domain_CharacterBody hxc_player = hxc_tmp_call_result_n145;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n146 = hxc_player;
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n147 = hxc_caxecraft_domain_World_coord(5, 1, 5);
-  bool hxc_tmp_call_result_n148 = hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(hxc_tmp_load_result_n146, hxc_tmp_call_result_n147);
+  bool hxc_tmp_call_result_n148 = hxc_caxecraft_domain_CharacterPhysics_canPlaceAt(hxc_tmp_load_result_n146, hxc_tmp_call_result_n147);
   if (hxc_tmp_call_result_n148)
   {
     return 37;
   }
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n149 = hxc_player;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n149 = hxc_player;
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n150 = hxc_caxecraft_domain_World_coord(7, 1, 5);
-  bool hxc_tmp_call_result_n151 = hxc_caxecraft_domain_PlayerPhysics_canPlaceAt(hxc_tmp_load_result_n149, hxc_tmp_call_result_n150);
+  bool hxc_tmp_call_result_n151 = hxc_caxecraft_domain_CharacterPhysics_canPlaceAt(hxc_tmp_load_result_n149, hxc_tmp_call_result_n150);
   if (!hxc_tmp_call_result_n151)
   {
     return 39;
   }
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n152 = hxc_player;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n153 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, false);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n154 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n152, hxc_tmp_call_result_n153);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n152 = hxc_player;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n153 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, false);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n154 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n152, hxc_tmp_call_result_n153);
   hxc_player = hxc_tmp_call_result_n154;
   bool hxc_tmp_record_field_load_result_n155 = hxc_player.hxc_grounded;
   bool hxc_tmp_short_circuit_result_n54 = !hxc_tmp_record_field_load_result_n155;
@@ -1965,9 +2035,9 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   {
     return 30;
   }
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n162 = hxc_player;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n163 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, true);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n164 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n162, hxc_tmp_call_result_n163);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n162 = hxc_player;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n163 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, true);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n164 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n162, hxc_tmp_call_result_n163);
   hxc_player = hxc_tmp_call_result_n164;
   bool hxc_tmp_record_field_load_result_n165 = hxc_player.hxc_grounded;
   bool hxc_tmp_short_circuit_result_n56 = hxc_tmp_record_field_load_result_n165;
@@ -1989,11 +2059,11 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n170, hxc_caxecraft_domain_BlockKind_Stone);
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n172 = hxc_caxecraft_domain_World_coord(6, 2, 5);
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n172, hxc_caxecraft_domain_BlockKind_Stone);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n174 = hxc_caxecraft_domain_PlayerPhysics_player(5.7, 1.0, 5.2);
-  struct hxc_caxecraft_domain_PlayerState hxc_slider = hxc_tmp_call_result_n174;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n175 = hxc_slider;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n176 = hxc_caxecraft_domain_PlayerPhysics_input(1.0, 1.0, false);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n177 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n175, hxc_tmp_call_result_n176);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n174 = hxc_caxecraft_domain_CharacterPhysics_body(5.7, 1.0, 5.2);
+  struct hxc_caxecraft_domain_CharacterBody hxc_slider = hxc_tmp_call_result_n174;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n175 = hxc_slider;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n176 = hxc_caxecraft_domain_CharacterPhysics_input(1.0, 1.0, false);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n177 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n175, hxc_tmp_call_result_n176);
   hxc_slider = hxc_tmp_call_result_n177;
   bool hxc_tmp_call_result_n179 = hxc_caxecraft_qa_DomainProbe_near(hxc_slider.hxc_x, 5.7);
   bool hxc_tmp_short_circuit_result_n59 = !hxc_tmp_call_result_n179;
@@ -2022,11 +2092,11 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n187, hxc_caxecraft_domain_BlockKind_Stone);
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n189 = hxc_caxecraft_domain_World_coord(5, 2, 6);
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n189, hxc_caxecraft_domain_BlockKind_Stone);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n191 = hxc_caxecraft_domain_PlayerPhysics_player(5.7, 1.0, 5.7);
-  struct hxc_caxecraft_domain_PlayerState hxc_corner = hxc_tmp_call_result_n191;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n192 = hxc_corner;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n193 = hxc_caxecraft_domain_PlayerPhysics_input(1.0, 1.0, false);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n194 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n192, hxc_tmp_call_result_n193);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n191 = hxc_caxecraft_domain_CharacterPhysics_body(5.7, 1.0, 5.7);
+  struct hxc_caxecraft_domain_CharacterBody hxc_corner = hxc_tmp_call_result_n191;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n192 = hxc_corner;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n193 = hxc_caxecraft_domain_CharacterPhysics_input(1.0, 1.0, false);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n194 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n192, hxc_tmp_call_result_n193);
   hxc_corner = hxc_tmp_call_result_n194;
   bool hxc_tmp_call_result_n196 = hxc_caxecraft_qa_DomainProbe_near(hxc_corner.hxc_x, 5.7);
   bool hxc_tmp_short_circuit_result_n63 = !hxc_tmp_call_result_n196;
@@ -2055,15 +2125,15 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   }
   struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n206 = hxc_caxecraft_domain_World_coord(4, 3, 4);
   hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n206, hxc_caxecraft_domain_BlockKind_Stone);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n208 = hxc_caxecraft_domain_PlayerPhysics_player(4.5, 1.0, 4.5);
-  struct hxc_caxecraft_domain_PlayerState hxc_ceiling = hxc_tmp_call_result_n208;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n209 = hxc_ceiling;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n210 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, false);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n211 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n209, hxc_tmp_call_result_n210);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n208 = hxc_caxecraft_domain_CharacterPhysics_body(4.5, 1.0, 4.5);
+  struct hxc_caxecraft_domain_CharacterBody hxc_ceiling = hxc_tmp_call_result_n208;
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n209 = hxc_ceiling;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n210 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, false);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n211 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n209, hxc_tmp_call_result_n210);
   hxc_ceiling = hxc_tmp_call_result_n211;
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n212 = hxc_ceiling;
-  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n213 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, true);
-  struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n214 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n212, hxc_tmp_call_result_n213);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n212 = hxc_ceiling;
+  struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n213 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, true);
+  struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n214 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n212, hxc_tmp_call_result_n213);
   hxc_ceiling = hxc_tmp_call_result_n214;
   int32_t hxc_ceilingTicks = 0;
   while (1)
@@ -2072,9 +2142,9 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
     {
       break;
     }
-    struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n216 = hxc_ceiling;
-    struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n217 = hxc_caxecraft_domain_PlayerPhysics_input(0.0, 0.0, false);
-    struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n218 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n216, hxc_tmp_call_result_n217);
+    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n216 = hxc_ceiling;
+    struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n217 = hxc_caxecraft_domain_CharacterPhysics_input(0.0, 0.0, false);
+    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n218 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n216, hxc_tmp_call_result_n217);
     hxc_ceiling = hxc_tmp_call_result_n218;
     hxc_ceilingTicks = hxc_i32_add_wrapping(hxc_ceilingTicks, 1);
   }
@@ -2086,17 +2156,17 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
   }
   if (!hxc_tmp_short_circuit_result_n68)
   {
-    struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n223 = hxc_caxecraft_domain_PlayerPhysics_player(6.5, 1.0, 5.5);
-    struct hxc_caxecraft_domain_PlayerState hxc_embedded = hxc_tmp_call_result_n223;
-    struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n225 = hxc_caxecraft_domain_PlayerPhysics_recoverSpawn(hxc_cells, hxc_tmp_length_n1, hxc_embedded);
+    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n223 = hxc_caxecraft_domain_CharacterPhysics_body(6.5, 1.0, 5.5);
+    struct hxc_caxecraft_domain_CharacterBody hxc_embedded = hxc_tmp_call_result_n223;
+    struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n225 = hxc_caxecraft_domain_CharacterPhysics_recoverSpawn(hxc_cells, hxc_tmp_length_n1, hxc_embedded);
     hxc_embedded = hxc_tmp_call_result_n225;
     if (!(hxc_embedded.hxc_y < 3.0))
     {
-      struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n227 = hxc_caxecraft_domain_PlayerPhysics_player(0.31, 1.0, 0.31);
-      struct hxc_caxecraft_domain_PlayerState hxc_boundary = hxc_tmp_call_result_n227;
-      struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n228 = hxc_boundary;
-      struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n229 = hxc_caxecraft_domain_PlayerPhysics_input(-1.0, -1.0, false);
-      struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n230 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n228, hxc_tmp_call_result_n229);
+      struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n227 = hxc_caxecraft_domain_CharacterPhysics_body(0.31, 1.0, 0.31);
+      struct hxc_caxecraft_domain_CharacterBody hxc_boundary = hxc_tmp_call_result_n227;
+      struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n228 = hxc_boundary;
+      struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n229 = hxc_caxecraft_domain_CharacterPhysics_input(-1.0, -1.0, false);
+      struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n230 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n228, hxc_tmp_call_result_n229);
       hxc_boundary = hxc_tmp_call_result_n230;
       double hxc_tmp_record_field_load_result_n231 = hxc_boundary.hxc_x;
       bool hxc_tmp_short_circuit_result_n71 = hxc_tmp_record_field_load_result_n231 < 0.29;
@@ -2106,15 +2176,15 @@ int32_t hxc_caxecraft_qa_DomainProbe_selfCheck(void)
       }
       if (!hxc_tmp_short_circuit_result_n71)
       {
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n234 = hxc_caxecraft_domain_PlayerPhysics_player(10.5, 1.0, 10.5);
-        struct hxc_caxecraft_domain_PlayerState hxc_tunnel = hxc_tmp_call_result_n234;
+        struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n234 = hxc_caxecraft_domain_CharacterPhysics_body(10.5, 1.0, 10.5);
+        struct hxc_caxecraft_domain_CharacterBody hxc_tunnel = hxc_tmp_call_result_n234;
         struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n235 = hxc_caxecraft_domain_World_coord(11, 1, 10);
         hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n235, hxc_caxecraft_domain_BlockKind_Stone);
         struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n237 = hxc_caxecraft_domain_World_coord(11, 2, 10);
         hxc_caxecraft_domain_World_replace(hxc_cells, hxc_tmp_length_n1, hxc_tmp_call_result_n237, hxc_caxecraft_domain_BlockKind_Stone);
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_load_result_n239 = hxc_tunnel;
-        struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n240 = hxc_caxecraft_domain_PlayerPhysics_input(20.0, 0.0, false);
-        struct hxc_caxecraft_domain_PlayerState hxc_tmp_call_result_n241 = hxc_caxecraft_domain_PlayerPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n239, hxc_tmp_call_result_n240);
+        struct hxc_caxecraft_domain_CharacterBody hxc_tmp_load_result_n239 = hxc_tunnel;
+        struct hxc_caxecraft_domain_StepInput hxc_tmp_call_result_n240 = hxc_caxecraft_domain_CharacterPhysics_input(20.0, 0.0, false);
+        struct hxc_caxecraft_domain_CharacterBody hxc_tmp_call_result_n241 = hxc_caxecraft_domain_CharacterPhysics_step(hxc_cells, hxc_tmp_length_n1, hxc_tmp_load_result_n239, hxc_tmp_call_result_n240);
         hxc_tunnel = hxc_tmp_call_result_n241;
         if (!(hxc_tunnel.hxc_x > 10.701))
         {

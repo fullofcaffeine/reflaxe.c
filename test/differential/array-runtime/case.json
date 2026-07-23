@@ -15,6 +15,15 @@
     "runtime/hxrt/src/array.c",
     "test/differential/array-runtime/ArrayRuntimeOracle.hx",
     "test/differential/array-runtime/array_runtime.c",
+    "test/differential/array-runtime/generated/History.hx",
+    "test/differential/array-runtime/generated/HistoryEntry.hx",
+    "test/differential/array-runtime/generated/Main.hx",
+    "test/differential/array-runtime/generated/oracle.hxml",
+    "test/differential/array-runtime/generated-class/Main.hx",
+    "test/differential/array-runtime/generated-class/ManagedNode.hx",
+    "test/differential/array-runtime/negative/managed_element_return/Main.hx",
+    "test/differential/array-runtime/negative/nested_managed_control_flow/Main.hx",
+    "test/differential/array-runtime/negative/reassignment/Main.hx",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py"
   ],
@@ -31,7 +40,7 @@
     "exitCode": 0,
     "stdout": {
       "mode": "regex",
-      "value": "array-runtime: OK: .*primitive/reference growth, aliasing, overflow, allocation failure, lifecycle rollback, sanitizers, and selective symbols passed$"
+      "value": "array-runtime: OK: .*generated ordinary-Haxe Array ownership plus primitive/reference growth, traced class identity and cycles, aliasing, overflow, allocation failure, lifecycle rollback, sanitizers, and selective symbols passed$"
     },
     "oracle": "test/differential/array-runtime/oracle.hxml",
     "artifacts": [

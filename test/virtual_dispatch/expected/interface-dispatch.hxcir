@@ -1,0 +1,133 @@
+hxcir schema=17
+dispatch
+  layout "itable.layout.CounterView" root="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" slots=["interface-slot.CounterView.doubled","interface-slot.CounterView.read"] @"CounterView.hx":6:1-8:2
+  layout "itable.layout.ResetView" root="instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" slots=["interface-slot.ResetView.resetValue"] @"ResetView.hx":2:1-4:2
+  slot "interface-slot.CounterView.doubled" owner="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" parameters=[] returns=i32 @"CounterView.hx":7:2-7:25
+  slot "interface-slot.CounterView.read" owner="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" parameters=[i32] returns=i32 @"CounterView.hx":3:2-3:31
+  slot "interface-slot.ResetView.resetValue" owner="instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" parameters=[] returns=i32 @"ResetView.hx":3:2-3:28
+  table "itable.Counter.CounterView" layout="itable.layout.CounterView" class="instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" @"Counter.hx":2:7-17:2
+    entry slot="interface-slot.CounterView.doubled" implementation="method.Counter.doubled"
+    entry slot="interface-slot.CounterView.read" implementation="method.Counter.read"
+  table "itable.Counter.ResetView" layout="itable.layout.ResetView" class="instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" @"Counter.hx":2:7-17:2
+    entry slot="interface-slot.ResetView.resetValue" implementation="method.Counter.resetValue"
+end dispatch
+module "Counter" @"Counter.hx":2:7-17:2
+  type "type.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" name="Counter" kind=class @"Counter.hx":2:7-17:2
+    class-layout base=none header=none
+    field "base" type=i32 mutable=true @"Counter.hx":3:2-3:15
+  instance "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" declaration="type.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8" arguments=[] representation=direct @"Counter.hx":2:7-17:2
+  function "constructor.Counter" name="Counter.new" returns=void failure=infallible entry="entry" @"Counter.hx":5:32-7:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=owned-or-value @"Counter.hx":5:32-7:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"Counter.hx":5:32-7:3
+    block "entry" @"Counter.hx":6:3-6:19
+      instruction "instruction.0.store" result=- store place=field(dereference("parameter.self"),"base") value="parameter.0" @"Counter.hx":6:3-6:19
+      terminator return value=none cleanup=[] @"Counter.hx":6:3-6:19
+    end block "entry"
+  end function "constructor.Counter"
+  function "method.Counter.doubled" name="Counter.doubled" returns=i32 failure=infallible entry="entry" @"Counter.hx":13:3-13:18
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":13:3-13:18
+    block "entry" @"Counter.hx":13:3-13:18
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"Counter.hx":13:10-13:14
+      instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"base") @"Counter.hx":13:10-13:14
+      instruction "instruction.2.constant" result="value.1":i32 constant value=int(2) @"Counter.hx":13:17-13:18
+      instruction "instruction.3.binary" result="value.2":i32 binary operation="haxe.i32.multiply" left="value.0" right="value.1" implementation=program-local("hxc.i32.multiply.wrapping") @"Counter.hx":13:10-13:18
+      terminator return value="value.2" cleanup=[] @"Counter.hx":13:3-13:18
+    end block "entry"
+  end function "method.Counter.doubled"
+  function "method.Counter.read" name="Counter.read" returns=i32 failure=infallible entry="entry" @"Counter.hx":10:3-10:22
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":10:3-10:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"Counter.hx":10:3-10:22
+    block "entry" @"Counter.hx":10:3-10:22
+      instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"Counter.hx":10:10-10:14
+      instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"base") @"Counter.hx":10:10-10:14
+      instruction "instruction.2.binary" result="value.1":i32 binary operation="haxe.i32.add" left="value.0" right="parameter.0" implementation=program-local("hxc.i32.add.wrapping") @"Counter.hx":10:10-10:22
+      terminator return value="value.1" cleanup=[] @"Counter.hx":10:3-10:22
+    end block "entry"
+  end function "method.Counter.read"
+  function "method.Counter.resetValue" name="Counter.resetValue" returns=i32 failure=infallible entry="entry" @"Counter.hx":16:3-16:11
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=borrowed-class @"Counter.hx":16:3-16:11
+    block "entry" @"Counter.hx":16:3-16:11
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(0) @"Counter.hx":16:10-16:11
+      terminator return value="value.0" cleanup=[] @"Counter.hx":16:3-16:11
+    end block "entry"
+  end function "method.Counter.resetValue"
+end module "Counter"
+module "CounterView" @"CounterView.hx":6:1-8:2
+  type "type.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" name="CounterView" kind=reference @"CounterView.hx":6:1-8:2
+  instance "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" declaration="type.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" arguments=[] representation=direct @"CounterView.hx":6:1-8:2
+end module "CounterView"
+module "Main" @"Main.hx":3:30-10:3
+  function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":3:30-10:3
+    local "local.0" type=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:34
+    local "local.1" type=instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:34
+    local "local.2" type=instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:38
+    local "local.3" type=instance("instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":8:3-8:34
+    local "local.4" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":9:10-9:58
+    local "local.5" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":9:10-9:85
+    cleanup "cleanup.construction" parent=none registration-order @"Main.hx":3:30-10:3
+      action "construction.0.partial" idempotence=exactly-once destroy place=local("local.1") transition=initializing->destroyed @"Main.hx":4:3-4:34
+      action "construction.0.initialized" idempotence=exactly-once destroy place=local("local.1") transition=initialized->destroyed @"Main.hx":4:3-4:34
+    block "entry" @"Main.hx":3:30-10:3
+      instruction "instruction.0.constant" result="value.0":i32 constant value=int(40) @"Main.hx":4:30-4:32
+      instruction "instruction.1.class-default-initialize" result=- default-initialize place=local("local.1") transition=uninitialized->initializing @"Main.hx":4:3-4:34
+      instruction "instruction.2.class-object-address" result="value.1":pointer(nonnull,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) address place=local("local.1") @"Main.hx":4:3-4:34
+      instruction "instruction.3.constructor-call" result=- call dispatch=direct("constructor.Counter") arguments=["value.1","value.0"] returns=void failure=none @"Main.hx":4:3-4:34
+      instruction "instruction.4.constructor-complete" result=- lifetime place=local("local.1") transition=initializing->initialized reason="constructor completed" @"Main.hx":4:3-4:34
+      instruction "instruction.5.class-nullable-inject" result="value.2":pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) convert value="value.1" kind=nullable-inject target=pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) implementation=static failure=none @"Main.hx":4:18-4:33
+      instruction "instruction.6.initialize-class-reference" result=- initialize place=local("local.0") value="value.2" transition=uninitialized->initialized @"Main.hx":4:3-4:34
+      instruction "instruction.7.load" result="value.3":pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) load place=local("local.0") @"Main.hx":5:29-5:37
+      instruction "instruction.8.interface-construction-null-check" result=- null-check value="value.3" policy=checked-abort(profile="portable",build="debug") @"Main.hx":5:29-5:37
+      instruction "instruction.9.interface-construction" result="value.4":instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") construct-interface interface="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc" object="value.3" table="itable.Counter.CounterView" @"Main.hx":5:29-5:37
+      instruction "instruction.10.initialize" result=- initialize place=local("local.2") value="value.4" transition=uninitialized->initialized @"Main.hx":5:3-5:38
+      instruction "instruction.11.load" result="value.5":pointer(nullable,instance("instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8")) load place=local("local.0") @"Main.hx":8:25-8:33
+      instruction "instruction.12.interface-construction-null-check" result=- null-check value="value.5" policy=checked-abort(profile="portable",build="debug") @"Main.hx":8:25-8:33
+      instruction "instruction.13.interface-construction" result="value.6":instance("instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34") construct-interface interface="instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" object="value.5" table="itable.Counter.ResetView" @"Main.hx":8:25-8:33
+      instruction "instruction.14.initialize" result=- initialize place=local("local.3") value="value.6" transition=uninitialized->initialized @"Main.hx":8:3-8:34
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"Main.hx":9:3-9:89
+    end block "entry"
+    block "block.0.while-condition" @"Main.hx":9:3-9:89
+      instruction "instruction.15.load" result="value.7":instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") load place=local("local.2") @"Main.hx":9:10-9:17
+      instruction "instruction.16.constant" result="value.8":i32 constant value=int(2) @"Main.hx":9:23-9:24
+      instruction "instruction.17.instance-call" result="value.9":i32 call dispatch=interface(type="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc",slot="interface-slot.CounterView.read",receiver="value.7") arguments=["value.8"] returns=i32 failure=none @"Main.hx":9:10-9:25
+      instruction "instruction.18.constant" result="value.10":i32 constant value=int(42) @"Main.hx":9:29-9:31
+      instruction "instruction.19.binary" result="value.11":bool binary operation="haxe.i32.not-equal" left="value.9" right="value.10" implementation=static @"Main.hx":9:10-9:31
+      instruction "instruction.20.short-circuit-result-initialize" result=- initialize place=local("local.4") value="value.11" transition=uninitialized->initialized @"Main.hx":9:10-9:58
+      terminator branch condition="value.11" true=edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) false=edge(target="block.3.short-circuit-rhs",arguments=[],cleanup=[]) @"Main.hx":9:10-9:58
+    end block "block.0.while-condition"
+    block "block.1.while-body" @"Main.hx":9:3-9:89
+      terminator jump edge(target="block.0.while-condition",arguments=[],cleanup=[]) @"Main.hx":9:3-9:89
+    end block "block.1.while-body"
+    block "block.2.while-exit" @"Main.hx":9:3-9:89
+      terminator return value=none cleanup=["cleanup.construction"."construction.0.initialized"] @"Main.hx":3:30-10:3
+    end block "block.2.while-exit"
+    block "block.3.short-circuit-rhs" @"Main.hx":9:10-9:58
+      instruction "instruction.21.load" result="value.12":instance("instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc") load place=local("local.2") @"Main.hx":9:35-9:42
+      instruction "instruction.22.instance-call" result="value.13":i32 call dispatch=interface(type="instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc",slot="interface-slot.CounterView.doubled",receiver="value.12") arguments=[] returns=i32 failure=none @"Main.hx":9:35-9:52
+      instruction "instruction.23.constant" result="value.14":i32 constant value=int(80) @"Main.hx":9:56-9:58
+      instruction "instruction.24.binary" result="value.15":bool binary operation="haxe.i32.not-equal" left="value.13" right="value.14" implementation=static @"Main.hx":9:35-9:58
+      instruction "instruction.25.short-circuit-store" result=- store place=local("local.4") value="value.15" @"Main.hx":9:10-9:58
+      terminator jump edge(target="block.4.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":9:10-9:58
+    end block "block.3.short-circuit-rhs"
+    block "block.4.short-circuit-join" @"Main.hx":9:10-9:58
+      instruction "instruction.26.short-circuit-load" result="value.16":bool load place=local("local.4") @"Main.hx":9:10-9:58
+      instruction "instruction.27.short-circuit-result-initialize" result=- initialize place=local("local.5") value="value.16" transition=uninitialized->initialized @"Main.hx":9:10-9:85
+      terminator branch condition="value.16" true=edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) false=edge(target="block.5.short-circuit-rhs",arguments=[],cleanup=[]) @"Main.hx":9:10-9:85
+    end block "block.4.short-circuit-join"
+    block "block.5.short-circuit-rhs" @"Main.hx":9:10-9:85
+      instruction "instruction.28.load" result="value.17":instance("instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34") load place=local("local.3") @"Main.hx":9:62-9:67
+      instruction "instruction.29.instance-call" result="value.18":i32 call dispatch=interface(type="instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34",slot="interface-slot.ResetView.resetValue",receiver="value.17") arguments=[] returns=i32 failure=none @"Main.hx":9:62-9:80
+      instruction "instruction.30.constant" result="value.19":i32 constant value=int(0) @"Main.hx":9:84-9:85
+      instruction "instruction.31.binary" result="value.20":bool binary operation="haxe.i32.not-equal" left="value.18" right="value.19" implementation=static @"Main.hx":9:62-9:85
+      instruction "instruction.32.short-circuit-store" result=- store place=local("local.5") value="value.20" @"Main.hx":9:10-9:85
+      terminator jump edge(target="block.6.short-circuit-join",arguments=[],cleanup=[]) @"Main.hx":9:10-9:85
+    end block "block.5.short-circuit-rhs"
+    block "block.6.short-circuit-join" @"Main.hx":9:10-9:85
+      instruction "instruction.33.short-circuit-load" result="value.21":bool load place=local("local.5") @"Main.hx":9:10-9:85
+      terminator branch condition="value.21" true=edge(target="block.1.while-body",arguments=[],cleanup=[]) false=edge(target="block.2.while-exit",arguments=[],cleanup=[]) @"Main.hx":9:3-9:89
+    end block "block.6.short-circuit-join"
+  end function "function.Main.main"
+end module "Main"
+module "ResetView" @"ResetView.hx":2:1-4:2
+  type "type.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" name="ResetView" kind=reference @"ResetView.hx":2:1-4:2
+  instance "instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" declaration="type.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34" arguments=[] representation=direct @"ResetView.hx":2:1-4:2
+end module "ResetView"

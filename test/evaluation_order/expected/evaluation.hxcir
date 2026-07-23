@@ -1,4 +1,4 @@
-hxcir schema=10
+hxcir schema=17
 module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx":2:2-175:2
   type "type.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871" name="_EvaluationFixture.EvaluationChoiceRecord" kind=aggregate @"test/evaluation_order/fixtures/EvaluationFixture.hx":172:9-175:2
     field "amount" type=i32 mutable=false @"test/evaluation_order/fixtures/EvaluationFixture.hx":173:2-173:19
@@ -11,9 +11,9 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
   global "global.EvaluationFixture.switchCalls" type=u32 mutable=true initialization=constant(int(0)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":6:2-6:34
   global "global.EvaluationFixture.ternaryIntact" type=bool mutable=true initialization=constant(bool(true)) @"test/evaluation_order/fixtures/EvaluationFixture.hx":4:2-4:39
   function "function.EvaluationFixture.consumePair" name="EvaluationFixture.consumePair" returns=bool failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
-    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
-    parameter "parameter.1" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
-    local "local.2" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:10-16:26
+    parameter "parameter.0" type=bool ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
+    parameter "parameter.1" type=bool ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
+    local "local.2" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:10-16:26
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:3-16:26
       instruction "instruction.0.short-circuit-result-initialize" result=- initialize place=local("local.2") value="parameter.0" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:10-16:26
       terminator branch condition="parameter.0" true=edge(target="block.0.short-circuit-rhs",arguments=[],cleanup=[]) false=edge(target="block.1.short-circuit-join",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":16:10-16:26
@@ -29,9 +29,9 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "block.1.short-circuit-join"
   end function "function.EvaluationFixture.consumePair"
   function "function.EvaluationFixture.exhaustiveAbstractRecord" name="EvaluationFixture.exhaustiveAbstractRecord" returns=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:90-57:3
-    parameter "parameter.0" type=i32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:90-57:3
-    local "local.1" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:3-55:5
-    local "local.2" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:43-55:4
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:90-57:3
+    local "local.1" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:3-55:5
+    local "local.2" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:43-55:4
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":50:90-57:3
       instruction "instruction.0.switch-result-default-initialize" result=- default-initialize place=local("local.2") transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:43-55:4
       terminator switch value="parameter.0" cases=[int(0)=>edge(target="block.0.switch-value-case-0",arguments=[],cleanup=[]),int(1)=>edge(target="block.1.switch-value-case-1",arguments=[],cleanup=[]),int(2)=>edge(target="block.2.switch-value-case-2",arguments=[],cleanup=[])] default=edge(target="block.3.switch-value-default",arguments=[],cleanup=[]) @"test/evaluation_order/fixtures/EvaluationFixture.hx":51:43-55:4
@@ -68,8 +68,8 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "block.4.switch-value-join"
   end function "function.EvaluationFixture.exhaustiveAbstractRecord"
   function "function.EvaluationFixture.exhaustiveAbstractReturn" name="EvaluationFixture.exhaustiveAbstractReturn" returns=i32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-47:4
-    parameter "parameter.0" type=i32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-47:4
-    local "local.1" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:10-47:4
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-47:4
+    local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:10-47:4
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:3-47:4
       instruction "instruction.0.switch-default-result" result="value.0":i32 constant value=int(0) @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:10-47:4
       instruction "instruction.1.switch-result-initialize" result=- initialize place=local("local.1") value="value.0" transition=uninitialized->initialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":43:10-47:4
@@ -99,7 +99,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "block.4.switch-value-join"
   end function "function.EvaluationFixture.exhaustiveAbstractReturn"
   function "function.EvaluationFixture.finish" name="EvaluationFixture.finish" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
-    parameter "parameter.0" type=u32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":32:42-34:3
       terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":33:3-33:15
     end block "entry"
@@ -125,7 +125,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "entry"
   end function "function.EvaluationFixture.overwriteBarrierValue"
   function "function.EvaluationFixture.readGlobalBeforeCall" name="EvaluationFixture.readGlobalBeforeCall" returns=i32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:45-69:3
-    local "local.0" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":66:3-66:29
+    local "local.0" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":66:3-66:29
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":64:45-69:3
       instruction "instruction.0.constant" result="value.0":i32 constant value=int(5) @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:18-65:19
       instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.barrierValue") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":65:3-65:19
@@ -137,37 +137,37 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "entry"
   end function "function.EvaluationFixture.readGlobalBeforeCall"
   function "function.EvaluationFixture.run" name="EvaluationFixture.run" returns=u32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":71:29-156:3
-    local "local.0" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:3-73:111
-    local "local.1" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:41-73:58
-    local "local.10" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":95:3-95:30
-    local "local.11" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":100:3-100:26
-    local "local.12" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:3-102:97
-    local "local.13" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:21-102:96
-    local "local.14" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:38-102:95
-    local "local.15" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:60-102:89
-    local "local.16" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":104:3-104:21
-    local "local.17" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":105:3-105:21
-    local "local.18" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:4-110:22
-    local "local.19" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":113:9-113:33
-    local "local.2" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:60-73:109
-    local "local.20" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":126:3-126:26
-    local "local.21" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":127:3-127:24
-    local "local.22" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:17-128:21
-    local "local.23" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:21-128:29
-    local "local.24" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:8-128:21
-    local "local.25" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:3-136:5
-    local "local.26" type=i32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:39-132:59
-    local "local.27" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:39-132:59
-    local "local.28" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":137:3-137:33
-    local "local.29" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":146:3-146:59
-    local "local.3" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-77:25
-    local "local.30" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":147:7-147:60
-    local "local.4" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:3-79:25
-    local "local.5" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":80:3-81:23
-    local "local.6" type=bool storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":84:3-85:24
-    local "local.7" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:3-91:70
-    local "local.8" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:23-91:69
-    local "local.9" type=u32 storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":94:3-94:28
+    local "local.0" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:3-73:111
+    local "local.1" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:41-73:58
+    local "local.10" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":95:3-95:30
+    local "local.11" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":100:3-100:26
+    local "local.12" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:3-102:97
+    local "local.13" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:21-102:96
+    local "local.14" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:38-102:95
+    local "local.15" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":102:60-102:89
+    local "local.16" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":104:3-104:21
+    local "local.17" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":105:3-105:21
+    local "local.18" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":110:4-110:22
+    local "local.19" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":113:9-113:33
+    local "local.2" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":73:60-73:109
+    local "local.20" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":126:3-126:26
+    local "local.21" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":127:3-127:24
+    local "local.22" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:17-128:21
+    local "local.23" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:21-128:29
+    local "local.24" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":128:8-128:21
+    local "local.25" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:3-136:5
+    local "local.26" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:39-132:59
+    local "local.27" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":132:39-132:59
+    local "local.28" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":137:3-137:33
+    local "local.29" type=instance("instance.closed-record.f842f6c62e73be932ee1e8c2b45258a3b85dc4a3fcc87191a8ca1311fcc71871") ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":146:3-146:59
+    local "local.3" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":76:3-77:25
+    local "local.30" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":147:7-147:60
+    local "local.4" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":78:3-79:25
+    local "local.5" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":80:3-81:23
+    local "local.6" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":84:3-85:24
+    local "local.7" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:3-91:70
+    local "local.8" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":91:23-91:69
+    local "local.9" type=u32 ownership=owned-or-value storage=automatic state=uninitialized @"test/evaluation_order/fixtures/EvaluationFixture.hx":94:3-94:28
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":71:29-156:3
       instruction "instruction.0.constant" result="value.0":bool constant value=bool(false) @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:14-72:19
       instruction "instruction.1.store" result=- store place=global("global.EvaluationFixture.callFlag") value="value.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":72:3-72:19
@@ -606,7 +606,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "block.9.if-true"
   end function "function.EvaluationFixture.run"
   function "function.EvaluationFixture.setCallFlag" name="EvaluationFixture.setCallFlag" returns=bool failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:47-12:3
-    parameter "parameter.0" type=bool @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:47-12:3
+    parameter "parameter.0" type=bool ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:47-12:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":9:47-12:3
       instruction "instruction.0.store" result=- store place=global("global.EvaluationFixture.callFlag") value="parameter.0" @"test/evaluation_order/fixtures/EvaluationFixture.hx":10:3-10:19
       terminator return value="parameter.0" cleanup=[] @"test/evaluation_order/fixtures/EvaluationFixture.hx":11:3-11:15
@@ -629,7 +629,7 @@ module "EvaluationFixture" @"test/evaluation_order/fixtures/EvaluationFixture.hx
     end block "entry"
   end function "function.EvaluationFixture.spoilTernary"
   function "function.EvaluationFixture.switchSubject" name="EvaluationFixture.switchSubject" returns=i32 failure=infallible entry="entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
-    parameter "parameter.0" type=i32 @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
     block "entry" @"test/evaluation_order/fixtures/EvaluationFixture.hx":36:47-39:3
       instruction "instruction.0.increment-load" result="value.0":u32 load place=global("global.EvaluationFixture.switchCalls") @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:14
       instruction "instruction.1.increment-one" result="value.1":u32 constant value=int(1) @"test/evaluation_order/fixtures/EvaluationFixture.hx":37:3-37:16

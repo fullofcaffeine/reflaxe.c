@@ -1,0 +1,195 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/raygui-core-binding-lock.schema.json",
+  "title": "Clang-derived raygui 5.0 core binding lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "generator",
+    "upstream",
+    "extraction",
+    "selection",
+    "implementation",
+    "canonicalAbi",
+    "declarations",
+    "declarationSha256",
+    "generatedPaths"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "algorithm"],
+      "properties": {
+        "path": { "const": "scripts/raygui/core_binding.py" },
+        "algorithm": { "const": "hxc-raygui-clang-core-v1" }
+      }
+    },
+    "upstream": { "$ref": "#/$defs/upstream" },
+    "extraction": { "$ref": "#/$defs/extraction" },
+    "selection": { "$ref": "#/$defs/selection" },
+    "implementation": { "$ref": "raygui-core-selection.schema.json#/properties/implementation" },
+    "canonicalAbi": { "$ref": "raygui-core-selection.schema.json#/properties/canonicalAbi" },
+    "declarations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["functions"],
+      "properties": {
+        "functions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/function" }
+        }
+      }
+    },
+    "declarationSha256": { "$ref": "#/$defs/sha256" },
+    "generatedPaths": {
+      "const": ["src/raygui/raw/Raygui.hx"]
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "release", "commit", "archive", "sourceTree", "header", "license"],
+      "properties": {
+        "name": { "const": "raygui" },
+        "release": { "const": "5.0" },
+        "commit": { "$ref": "#/$defs/revision" },
+        "archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["url", "sha256", "sizeBytes", "rootDirectory"],
+          "properties": {
+            "url": { "type": "string", "pattern": "^https://codeload\\.github\\.com/raysan5/raygui/tar\\.gz/[0-9a-f]{40}$" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "sizeBytes": { "type": "integer", "minimum": 1 },
+            "rootDirectory": { "type": "string", "pattern": "^raygui-[0-9a-f]{40}$" }
+          }
+        },
+        "sourceTree": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["algorithm", "sha256", "fileCount", "sizeBytes"],
+          "properties": {
+            "algorithm": { "const": "hxc-path-size-content-sha256-v1" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "fileCount": { "type": "integer", "minimum": 1 },
+            "sizeBytes": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "header": { "$ref": "#/$defs/fileIdentity" },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["expression", "path", "sha256"],
+          "properties": {
+            "expression": { "const": "Zlib" },
+            "path": { "const": "LICENSE" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "fileIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "const": "src/raygui.h" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "extraction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "clang", "requestedTarget", "arguments"],
+      "properties": {
+        "authority": { "const": "clang-ast-json" },
+        "clang": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["family", "version", "dumpMachine"],
+          "properties": {
+            "family": { "const": "clang" },
+            "version": { "type": "string", "minLength": 1 },
+            "dumpMachine": { "type": "string", "minLength": 1 }
+          }
+        },
+        "requestedTarget": { "const": "x86_64-unknown-linux-gnu" },
+        "arguments": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "coverageState", "counts", "omissions"],
+      "properties": {
+        "path": { "const": "docs/specs/raygui-core-selection.json" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "coverageState": { "const": "coherent-editor-shell-core" },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["functions", "omittedFamilies"],
+          "properties": {
+            "functions": { "type": "integer", "minimum": 1 },
+            "omittedFamilies": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "omissions": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "raygui-core-selection.schema.json#/$defs/omission" }
+        }
+      }
+    },
+    "typeFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cType", "canonicalCType", "haxeType"],
+      "properties": {
+        "cType": { "type": "string", "minLength": 1 },
+        "canonicalCType": { "type": "string", "minLength": 1 },
+        "haxeType": { "type": "string", "minLength": 1 }
+      }
+    },
+    "parameter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "type": { "$ref": "#/$defs/typeFact" }
+      }
+    },
+    "function": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "parameters", "returnType", "sourceLine"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+        "parameters": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/parameter" }
+        },
+        "returnType": { "$ref": "#/$defs/typeFact" },
+        "sourceLine": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

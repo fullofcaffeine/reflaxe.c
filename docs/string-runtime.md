@@ -4,16 +4,21 @@ This document records the bounded E4.T03 native `hxrt` string slice. It
 implements the storage and operation contract from
 [ADR 0004](adr/0004-utf8-scalar-string-contract.md), but it does not make the
 full operation slice compiler-selectable, expose the private layout as a public
-ABI, or claim general Haxe `String`/standard-library lowering. E2.T07 now selects
-only the independently packaged literal carrier for hosted literal output;
-E5.T02 owns broader compiler and library connections, E4.T11 established the
-internal same-major runtime contract, and E7 owns any future public ABI.
+ABI, or claim general Haxe `String`/standard-library lowering. The compiler can
+now keep a String whose bytes come from a source literal as an immutable value:
+it may pass or return that value, store it in a closed record, enum, optional, or
+managed Array, and compare it for content equality. E2.T07 also uses the same
+literal carrier for hosted literal output. E5.T02 owns runtime-created and
+owned Strings plus broader standard-library connections, E4.T11 established
+the internal same-major runtime contract, and E7 owns any future public ABI.
 
 E4.T03 advanced the incompatible native-seed marker from 0.2.0 to 0.3.0.
 E2.T07 added the provisional hosted output API and advanced it to 0.4.0;
 E4.T04's additive array slice advances the internal same-major contract to
-0.5.0. That marker does not stabilize the private string layout or application
-ABI.
+0.5.0, E5.T03's shared Array identity layer advanced it to 0.6.0, E5.T04's
+fixed-length Bytes owner advanced it to 0.7.0, and the separate selected
+collector/root API advances it to 0.8.0. That
+marker does not stabilize the private string layout or application ABI.
 
 ## Representation and invariants
 
@@ -37,6 +42,37 @@ shortest-form UTF-8 for Unicode scalar values:
 literal array and uses static storage plus `sizeof`, so it allocates nothing and
 preserves embedded NUL. It is not an unchecked user-facing raw-string API;
 compiler emission owns its valid input.
+
+### Literal-backed values in generated programs
+
+A *literal-backed String* is a normal typed Haxe `String` whose bytes are known
+at compile time because they originate in source such as `"village:west"`.
+The compiler validates those bytes as canonical UTF-8, places them in C storage
+that lives for the whole program, and represents the Haxe value as an
+`hxc_string` view containing a pointer and byte length. A *view* means the value
+describes existing bytes; it does not own an allocation that must be freed.
+
+That stable lifetime makes ordinary value operations cheap and safe. Copying
+the value copies only the view, not its bytes. The value can therefore cross
+parameters and returns and can be stored in closed records, tagged enums,
+`Null<T>`, and managed Arrays without adding retain/release work. A nominal Haxe
+abstract such as `ScenarioId(String)` keeps its Haxe identity in plans and
+diagnostics even though its generated C carrier is the same String view.
+
+`Null<String>` and `Null<ScenarioId>` use an explicit presence flag beside the
+view. The flag—not a null byte pointer—distinguishes `null` from the valid empty
+String. Equality compares byte lengths and then the canonical UTF-8 bytes with
+`memcmp`; it never compares the storage pointers, because two equal Strings are
+allowed to reside at different addresses.
+
+This is deliberately smaller than general String support. A value created at
+run time by parsing, input, concatenation, interpolation, or another allocating
+operation needs an owned lifetime plan and remains unsupported until E5.T02
+connects that plan. Likewise, `Sys.println(value)` remains unsupported even
+when `value` is literal-backed: the current output API accepts a literal at the
+call site, and broadening that API is a separate standard-library lowering
+decision. These boundaries prevent the no-allocation representation from being
+misapplied to values whose bytes do not live for the whole program.
 
 `hxc_owned_string` pairs one immutable value with `hxc_allocation`. The complete
 allocator callback/context identity therefore follows owned bytes and disposal
@@ -131,8 +167,12 @@ the compiler-selectable `string-literal` carrier. It has no object, tracing
 collector, dynamic, reflection, exception, thread, or Unicode-table dependency.
 A generated Haxe program cannot request the full feature.
 
-E2.T07 admits only compiler-known literals passed to hosted `Sys.println` or
-default `trace`. Those programs select
+The compiler admits literal-backed String values as the direct
+`string-literal/static-value` capability. A program using only those values
+selects `runtime-base + string-literal`; this packages the private carrier
+definition but no allocator or full String operations. E2.T07 additionally
+admits compiler-known literals passed directly to hosted `Sys.println` or
+default `trace`. Those output programs select
 `runtime-base + status + string-literal + io`; they package no allocator or
 `string.c` operation symbols. Generated C
 stores exact validated UTF-8 bytes and byte length, including embedded NUL, and
@@ -150,11 +190,15 @@ lifetime, and exact allocation counts. Required GCC and Clang lanes run at
 inspect the link for the string symbols and absence of object/GC/reflection/
 dynamic families.
 
-[`test/string_output`](../test/string_output) adds generated-Haxe evidence for
-the narrow literal carrier and output edge. It compares exact bytes with Eval,
-checks UTF-8 scalars and embedded NUL, exercises portable and metal policy,
-rejects nonliteral/general output forms, and closes stdout to prove error
-handling. That evidence is not general String or I/O support.
+[`test/enum_lowering`](../test/enum_lowering) proves that a nominal
+abstract-over-String literal can be constructed, copied, passed, returned,
+stored in an enum, projected, and compared across split, package, and unity
+layouts. [`test/string_output`](../test/string_output) adds generated-Haxe
+evidence for the output edge. It compares exact bytes with Eval, checks UTF-8
+scalars and embedded NUL, exercises portable and metal policy, rejects
+nonliteral/general output forms, and closes stdout to prove error handling.
+Together these tests prove the bounded literal-backed value model, not general
+String or I/O support.
 
 Run the focused evidence with:
 

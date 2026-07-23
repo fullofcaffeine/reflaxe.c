@@ -34,8 +34,8 @@ EXPECTED_RUNTIME_ARTIFACTS = [
     "runtime/src/io.c",
 ]
 ABI_ASSERTION = (
-    '_Static_assert(HXC_RUNTIME_ABI_MAJOR == 0U, '
-    '"incompatible hxrt ABI major: generated code requires 0");'
+    "typedef char hxc_runtime_abi_major_must_match["
+    "HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : -1];"
 )
 STRICT_FLAGS = (
     "-std=c11",
@@ -157,7 +157,7 @@ def extract_hxcir(result: subprocess.CompletedProcess[str], label: str) -> str:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=10",
+        "hxcir schema=17",
         'string-utf8(bytes=5,value="ASCII")',
         'string-utf8(bytes=6,value="é🙂")',
         'string-utf8(bytes=12,value="embedded\\u0000NUL")',
@@ -201,15 +201,19 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
     if text_list(plan.get("artifacts"), "runtime artifacts") != EXPECTED_RUNTIME_ARTIFACTS:
         raise StringOutputFailure("literal output did not package the exact dependency-closed runtime artifacts")
     reasons = plan.get("rootReasons")
-    if not isinstance(reasons, list) or len(reasons) != 4:
-        raise StringOutputFailure("literal output must retain four deduplicated root reasons")
+    if not isinstance(reasons, list) or len(reasons) != 8:
+        raise StringOutputFailure("literal output must retain four output and four String-storage reasons")
     expected_ids = [
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
         "runtime.io.trace-literal.3",
+        "runtime.string-literal.static-value.4",
+        "runtime.string-literal.static-value.5",
+        "runtime.string-literal.static-value.6",
+        "runtime.string-literal.static-value.7",
     ]
-    expected_operations = ["sys-println-literal"] * 3 + ["trace-literal"]
+    expected_operations = ["sys-println-literal"] * 3 + ["trace-literal"] + ["static-value"] * 4
     actual_ids: list[str] = []
     for index, value in enumerate(reasons):
         if not isinstance(value, dict):
@@ -217,9 +221,11 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
         source = value.get("source")
         if not isinstance(source, dict) or source.get("file") != "Main.hx":
             raise StringOutputFailure("runtime root reason lost its stable logical source")
+        expected_feature = "io" if index < 4 else "string-literal"
+        expected_kind = "hosted-output" if index < 4 else "direct-string-value"
         if (
-            value.get("featureId") != "io"
-            or value.get("kind") != "hosted-output"
+            value.get("featureId") != expected_feature
+            or value.get("kind") != expected_kind
             or value.get("operationId") != expected_operations[index]
         ):
             raise StringOutputFailure("runtime root reason lost its typed output provenance")
@@ -233,8 +239,8 @@ def validate_runtime_plan(plan: dict[str, object], *, profile: str, policy: str)
     if not isinstance(selected, list) or [entry.get("id") for entry in selected if isinstance(entry, dict)] != EXPECTED_FEATURES:
         raise StringOutputFailure("selected runtime feature records are incomplete")
     roots = [entry.get("id") for entry in selected if isinstance(entry, dict) and entry.get("root") is True]
-    if roots != ["io"]:
-        raise StringOutputFailure("only io may be a literal-output root feature")
+    if roots != ["string-literal", "io"]:
+        raise StringOutputFailure("literal values and io must be the only output root features")
     serialized = json.dumps(plan, ensure_ascii=False, sort_keys=True)
     for forbidden in ('"id": "object"', '"id": "gc"', '"id": "dynamic"', '"id": "reflection"', '"id": "exception"'):
         if forbidden in serialized:
@@ -248,8 +254,8 @@ def validate_stdlib_report(report: dict[str, object]) -> None:
         report.get("schemaVersion") != 1
         or report.get("status") != "analyzed-selected-stdlib-use"
         or report.get("profile") not in ("portable", "metal")
-        or report.get("modules") != ["Sys", "haxe.Log"]
-        or report.get("capabilities") != ["sys-println-literal", "trace-literal"]
+        or report.get("modules") != ["String", "Sys", "haxe.Log"]
+        or report.get("capabilities") != ["static-value", "sys-println-literal", "trace-literal"]
     ):
         raise StringOutputFailure("literal-output stdlib report overstated or lost its bounded surface")
 
@@ -400,7 +406,7 @@ def validate_default_diagnostics(root: Path) -> None:
     if summary.returncode != 0 or summary.stderr or summary.stdout.count("HXC2001:") != 1 or "[INFO]" not in summary.stdout:
         raise StringOutputFailure(f"portable default runtime summary drifted: {summary.stdout!r}")
     metal = compile_target(POSITIVE, root / "metal-warn", profile="metal", diagnostics=None)
-    if metal.returncode != 0 or metal.stdout or metal.stderr.count("HXC2001:") != 4 or metal.stderr.count("[WARNING]") != 4:
+    if metal.returncode != 0 or metal.stdout or metal.stderr.count("HXC2001:") != 8 or metal.stderr.count("[WARNING]") != 8:
         raise StringOutputFailure(f"metal default runtime root warnings drifted: {metal.stderr!r}")
     quiet = compile_target(POSITIVE, root / "quiet", diagnostics="off")
     if quiet.returncode != 0 or quiet.stdout or quiet.stderr:
@@ -421,7 +427,7 @@ def plausible_output_exists(output: Path) -> bool:
 
 def validate_fail_closed(root: Path) -> None:
     cases = (
-        ("nonliteral", "TFunction(argument:value):reference-String-non-null"),
+        ("nonliteral", "TCall(Sys.println(String literal):requires-String-literal)"),
         ("nonstring", "requires-String-literal"),
         ("sys_print", "unavailable-static-target:function.Sys.print"),
         ("trace_custom", "custom-position-info-not-admitted"),
@@ -440,23 +446,32 @@ def validate_fail_closed(root: Path) -> None:
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
         "runtime.io.trace-literal.3",
+        "runtime.string-literal.static-value.4",
+        "runtime.string-literal.static-value.5",
+        "runtime.string-literal.static-value.6",
+        "runtime.string-literal.static-value.7",
     ]
     blocker_positions = [none.stderr.find(identifier) for identifier in blocker_ids]
     expected_sources = ["Main.hx:3:3-3:23", "Main.hx:4:3-4:20", "Main.hx:5:3-5:33", "Main.hx:6:3-6:8"]
     if (
         none.returncode == 0
         or "HXC2000:" not in none.stderr
-        or "found 4 deduplicated runtime blocker(s)" not in none.stderr
+        or "found 8 deduplicated runtime blocker(s)" not in none.stderr
         or any(position < 0 for position in blocker_positions)
         or blocker_positions != sorted(blocker_positions)
         or any(source not in none.stderr for source in expected_sources)
         or none.stderr.count("kind=hosted-output") != 4
-        or none.stderr.count("surface=`Sys.println(String literal)`") != 3
-        or none.stderr.count("surface=`trace(String literal)`") != 1
+        or none.stderr.count("kind=direct-string-value") != 4
+        # Each call owns two different requirements: the hosted output itself
+        # and the immutable String value that carries the UTF-8 bytes. Keeping
+        # both records makes runtime-policy failures explain both decisions.
+        or none.stderr.count("surface=`Sys.println(String literal)`") != 6
+        or none.stderr.count("surface=`trace(String literal)`") != 2
         or none.stderr.count(
             "dependency-chains=[io -> status -> runtime-base; io -> string-literal -> runtime-base]"
         )
         != 4
+        or none.stderr.count("dependency-chains=[string-literal -> runtime-base]") != 4
     ):
         raise StringOutputFailure(f"runtime-none output policy did not fail closed: {none.stderr!r}")
     if plausible_output_exists(none_output):
@@ -609,7 +624,7 @@ def reject_incompatible_runtime(toolchain: NativeToolchain, rendered: RenderedPr
         str(executable),
     ]
     result = subprocess.run(command, cwd=ROOT, check=False, capture_output=True, text=True, timeout=90)
-    if result.returncode == 0 or result.stdout or "incompatible hxrt ABI major" not in result.stderr:
+    if result.returncode == 0 or result.stdout or "hxc_runtime_abi_major_must_match" not in result.stderr:
         raise StringOutputFailure(
             f"{toolchain.family} accepted an incompatible runtime ABI major\ncommand={command!r}\n"
             f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
@@ -637,7 +652,7 @@ def run_native(toolchains: list[NativeToolchain], projects: list[RenderedProject
 
         compatibility_root = build / f"{toolchain.family}-runtime-compatibility"
         compatibility_root.mkdir()
-        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "5u", "999u")
+        compatible = project_with_runtime_macro(projects[0], compatibility_root / "compatible-minor", "HXC_RUNTIME_ABI_MINOR", "8u", "999u")
         compatible_build = compatibility_root / "compatible-build"
         compatible_build.mkdir()
         compatible_executable = compile_native(toolchain, compatible, "O0", compatible_build)

@@ -2,17 +2,39 @@
 
 E3.T05 admits constructors for concrete, non-generic Haxe classes when the
 complete object lifetime is proven inside one generated C function. The
-compiler lowers the real pinned-Haxe `TypedExpr` through schema-10 HxcIR and
+compiler lowers the real pinned-Haxe `TypedExpr` through schema-17 HxcIR and
 structural C AST nodes. It does not allocate, select `hxrt`, use C++ constructor
 syntax, or establish a public C ABI.
 
 This is deliberately a useful but narrow construction model. A direct local
 initializer such as `var item = new Item(7)` receives automatic C storage when
 it is in the function's unconditional entry block and the reference cannot
-escape that function. Returning it, aliasing it, passing it to another Haxe
-function, assigning it into storage, constructing it conditionally, or storing
-`this` into a field fails with source-positioned `HXC1001`. General escaping
-objects remain owned by the allocator, lifetime, and tracing work in E4.
+escape that function. A nonescaping parent may also own a child created by a
+`final` field initializer such as `public final inventory = new Inventory()`.
+The child is stored directly inside the parent's C struct, so it has a stable
+address for the complete parent lifetime without a heap allocation.
+
+Returning a local or owned-child reference, assigning it into longer-lived
+storage, constructing a local conditionally, or storing `this` into a field
+fails with source-positioned `HXC1001`. One same-function automatic alias is
+safe: `var second = first` merely names the same stack object, and Haxe may
+generate the equivalent `_this` alias when it inlines a method. The compiler
+keeps that alias marked as stack-backed, so returning, storing, throwing, or
+forwarding it still fails rather than losing the original lifetime.
+
+A local or owned child may also be passed to a known ordinary Haxe function:
+the callee receives a checked caller-owned parameter, which means it may read
+and mutate the object only for that call. This separate parameter-borrow slice
+still forbids creating another local alias inside the callee, as well as
+returning, storing, throwing, capturing in a constructor, or forwarding the
+borrow to an unproven call. HxcIR records function parameters as
+`ownership=borrowed-class` and validates their no-escape rule before C is
+chosen. The generated private C function receives an ordinary pointer; neither
+form adds allocation or reference-counting machinery.
+
+An owned-child field must be `final`, have the exact concrete class type, and
+use an infallible constructor in this bounded slice. General escaping objects
+remain owned by the allocator, lifetime, and tracing work in E4.
 
 ## Discovery and order
 
@@ -35,6 +57,34 @@ struct hxc_widget storage = { 0 };
 
 That supplies Haxe defaults for the admitted direct fields before any explicit
 field initializer or constructor statement runs. It is not a raw C fragment.
+
+An owned child is a direct `IRTInstance` field in HxcIR rather than the
+`IRTPointer` used for an ordinary Haxe class reference. That explicit semantic
+choice lets the HxcIR validator reject recursive by-value layouts before C
+syntax exists. C definition planning emits the complete child type before its
+parent, and the parent constructor takes the child's address, binds any virtual
+table required by the child, and then calls the ordinary child constructor:
+
+```c
+struct hxc_Parent {
+  struct hxc_Child child;
+};
+
+hxc_Child_ctor(&self->child);
+```
+
+The compiler tracks references derived from that address as borrowed views of
+the parent-owned storage. They may be used for immediate field and method
+operations or named by a same-function automatic alias, but the lowering
+boundary rejects any operation that would let the borrow outlive or become
+independent from its parent.
+
+The same rule applies when Haxe inlines a child method into an ordinary parent
+instance method. The pinned front end may introduce a local named `_this` for
+the embedded child. That local is only another name for the child during the
+current parent call; haxe.c preserves its parent-bound borrow instead of
+mistaking it for new ownership. The usual return, storage, throw, constructor,
+and unproven-call checks still reject a real escape.
 
 Constructor bodies preserve the exact sequence already produced by the pinned
 Haxe compiler. The current Haxe 5.0.0-preview.1 filter expands a derived
@@ -96,7 +146,12 @@ cleanup exactly enough for the bounded no-catch graph.
 
 The compiler reports exact `HXC1001` diagnostics and emits no project for:
 
-- an escaping, aliased, assigned, returned, or passed stack reference;
+- an assigned or returned stack reference, or an automatic alias that is later
+  stored, thrown, captured, or forwarded beyond a known borrow contract;
+- an assigned, reassigned, or returned owned-child reference, or a bounded
+  alias that later outlives or becomes independent from its parent;
+- a mutable owned-child field, a mismatched declared child type, or a fallible
+  owned-child constructor;
 - conditional or otherwise non-entry local construction;
 - constructor dependency cycles, with the canonical nominal cycle path;
 - extern or `@:c.layout` native construction, because imported construction
@@ -130,8 +185,15 @@ npm run snapshots:check
 `test/constructor_lowering/fixtures/minimal/Main.hx` is the small readable
 example. The positive semantic corpus adds inheritance, default fields,
 side-effecting arguments and initializers, a throwing base constructor, an
-inner temporary, and empty-constructor elision. It compares Eval with repeated,
-reversed-input, portable, metal, and explicit runtime-none production builds.
+inner temporary, empty-constructor elision, a same-function stack alias, and a
+parent with an inline owned child whose constructor, stable identity, and later mutation are observed. It
+compares Eval with repeated, reversed-input, portable, metal, and explicit
+runtime-none production builds. Negative fixtures keep child reassignment,
+return, storing a bounded alias, unsafe borrow forwarding, constructor capture,
+fallible construction, and recursive direct layout fail-closed. Focused HxcIR
+fixtures prove that a declared automatic borrow alias may be initialized and
+reloaded, while the same pointer still cannot initialize an ordinary owning
+local or escape after that reload.
 Because Eval is a dynamic platform whose uninitialized primitive fields are
 `null`, the separate target-native default-field fixture proves the C target's
 static-platform `0`/`false`/`0.0`/null defaults without pretending Eval is an

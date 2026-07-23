@@ -1,9 +1,11 @@
 {
   "capabilities": [
+    "static-value",
     "sys-println-literal"
   ],
   "profile": "portable",
   "modules": [
+    "String",
     "Sys"
   ],
   "status": "analyzed-selected-stdlib-use",

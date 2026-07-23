@@ -1,4 +1,4 @@
-hxcir schema=10
+hxcir schema=17
 dispatch
   layout "vtable.layout.BaseWorker" root="instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" slots=["slot.BaseWorker.value"] @"BaseWorker.hx":1:1-24:2
   slot "slot.BaseWorker.value" owner="instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" parameters=[i32] returns=i32 @"BaseWorker.hx":8:2-10:3
@@ -13,16 +13,16 @@ module "BaseWorker" @"BaseWorker.hx":1:1-24:2
     field "seed" type=i32 mutable=true @"BaseWorker.hx":2:2-2:22
   instance "instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" declaration="type.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" arguments=[] representation=direct @"BaseWorker.hx":1:1-24:2
   function "constructor.BaseWorker" name="BaseWorker.new" returns=void failure=infallible entry="entry" @"BaseWorker.hx":4:32-6:3
-    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) @"BaseWorker.hx":4:32-6:3
-    parameter "parameter.0" type=i32 @"BaseWorker.hx":4:32-6:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=owned-or-value @"BaseWorker.hx":4:32-6:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"BaseWorker.hx":4:32-6:3
     block "entry" @"BaseWorker.hx":5:3-5:19
       instruction "instruction.0.store" result=- store place=field(dereference("parameter.self"),"seed") value="parameter.0" @"BaseWorker.hx":5:3-5:19
       terminator return value=none cleanup=[] @"BaseWorker.hx":5:3-5:19
     end block "entry"
   end function "constructor.BaseWorker"
   function "method.BaseWorker.finalValue" name="BaseWorker.finalValue" returns=i32 failure=infallible entry="entry" @"BaseWorker.hx":12:50-14:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) @"BaseWorker.hx":12:50-14:3
-    parameter "parameter.0" type=i32 @"BaseWorker.hx":12:50-14:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class @"BaseWorker.hx":12:50-14:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"BaseWorker.hx":12:50-14:3
     block "entry" @"BaseWorker.hx":13:3-13:33
       instruction "instruction.0.instance-call-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"BaseWorker.hx":13:10-13:22
       instruction "instruction.1.instance-call" result="value.0":i32 call dispatch=direct("method.BaseWorker.privateValue") arguments=["parameter.self","parameter.0"] returns=i32 failure=none @"BaseWorker.hx":13:10-13:29
@@ -32,8 +32,8 @@ module "BaseWorker" @"BaseWorker.hx":1:1-24:2
     end block "entry"
   end function "method.BaseWorker.finalValue"
   function "method.BaseWorker.pinnedValue" name="BaseWorker.pinnedValue" returns=i32 failure=infallible entry="entry" @"BaseWorker.hx":17:45-19:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) @"BaseWorker.hx":17:45-19:3
-    parameter "parameter.0" type=i32 @"BaseWorker.hx":17:45-19:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class @"BaseWorker.hx":17:45-19:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"BaseWorker.hx":17:45-19:3
     block "entry" @"BaseWorker.hx":18:3-18:26
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"BaseWorker.hx":18:10-18:14
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"seed") @"BaseWorker.hx":18:10-18:14
@@ -44,8 +44,8 @@ module "BaseWorker" @"BaseWorker.hx":1:1-24:2
     end block "entry"
   end function "method.BaseWorker.pinnedValue"
   function "method.BaseWorker.privateValue" name="BaseWorker.privateValue" returns=i32 failure=infallible entry="entry" @"BaseWorker.hx":21:47-23:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) @"BaseWorker.hx":21:47-23:3
-    parameter "parameter.0" type=i32 @"BaseWorker.hx":21:47-23:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class @"BaseWorker.hx":21:47-23:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"BaseWorker.hx":21:47-23:3
     block "entry" @"BaseWorker.hx":22:3-22:22
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"BaseWorker.hx":22:10-22:14
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"seed") @"BaseWorker.hx":22:10-22:14
@@ -54,8 +54,8 @@ module "BaseWorker" @"BaseWorker.hx":1:1-24:2
     end block "entry"
   end function "method.BaseWorker.privateValue"
   function "method.BaseWorker.value" name="BaseWorker.value" returns=i32 failure=infallible entry="entry" @"BaseWorker.hx":8:39-10:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) @"BaseWorker.hx":8:39-10:3
-    parameter "parameter.0" type=i32 @"BaseWorker.hx":8:39-10:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=borrowed-class @"BaseWorker.hx":8:39-10:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"BaseWorker.hx":8:39-10:3
     block "entry" @"BaseWorker.hx":9:3-9:22
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"BaseWorker.hx":9:10-9:14
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"seed") @"BaseWorker.hx":9:10-9:14
@@ -70,16 +70,16 @@ module "FinalWorker" @"FinalWorker.hx":1:7-11:2
     field "seed" type=i32 mutable=true @"FinalWorker.hx":2:2-2:22
   instance "instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c" declaration="type.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c" arguments=[] representation=direct @"FinalWorker.hx":1:7-11:2
   function "constructor.FinalWorker" name="FinalWorker.new" returns=void failure=infallible entry="entry" @"FinalWorker.hx":4:32-6:3
-    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) @"FinalWorker.hx":4:32-6:3
-    parameter "parameter.0" type=i32 @"FinalWorker.hx":4:32-6:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) ownership=owned-or-value @"FinalWorker.hx":4:32-6:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"FinalWorker.hx":4:32-6:3
     block "entry" @"FinalWorker.hx":5:3-5:19
       instruction "instruction.0.store" result=- store place=field(dereference("parameter.self"),"seed") value="parameter.0" @"FinalWorker.hx":5:3-5:19
       terminator return value=none cleanup=[] @"FinalWorker.hx":5:3-5:19
     end block "entry"
   end function "constructor.FinalWorker"
   function "method.FinalWorker.value" name="FinalWorker.value" returns=i32 failure=infallible entry="entry" @"FinalWorker.hx":8:39-10:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) @"FinalWorker.hx":8:39-10:3
-    parameter "parameter.0" type=i32 @"FinalWorker.hx":8:39-10:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) ownership=borrowed-class @"FinalWorker.hx":8:39-10:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"FinalWorker.hx":8:39-10:3
     block "entry" @"FinalWorker.hx":9:3-9:22
       instruction "instruction.0.class-field-null-check" result=- null-check value="parameter.self" policy=checked-abort(profile="portable",build="debug") @"FinalWorker.hx":9:10-9:14
       instruction "instruction.1.class-field-load" result="value.0":i32 load place=field(dereference("parameter.self"),"seed") @"FinalWorker.hx":9:10-9:14
@@ -93,8 +93,8 @@ module "LeafWorker" @"LeafWorker.hx":1:1-9:2
     class-layout base="instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216" header=none
   instance "instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a" declaration="type.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a" arguments=[] representation=direct @"LeafWorker.hx":1:1-9:2
   function "constructor.LeafWorker" name="LeafWorker.new" returns=void failure=infallible entry="entry" @"LeafWorker.hx":2:32-4:3
-    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) @"LeafWorker.hx":2:32-4:3
-    parameter "parameter.0" type=i32 @"LeafWorker.hx":2:32-4:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) ownership=owned-or-value @"LeafWorker.hx":2:32-4:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"LeafWorker.hx":2:32-4:3
     block "entry" @"LeafWorker.hx":3:3-3:14
       instruction "instruction.0.class-upcast" result="value.0":pointer(nonnull,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) convert value="parameter.self" kind=representation target=pointer(nonnull,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) implementation=static failure=none @"LeafWorker.hx":3:3-3:14
       instruction "instruction.1.super-constructor-call" result=- call dispatch=direct("constructor.MiddleWorker") arguments=["value.0","parameter.0"] returns=void failure=none @"LeafWorker.hx":3:3-3:14
@@ -102,8 +102,8 @@ module "LeafWorker" @"LeafWorker.hx":1:1-9:2
     end block "entry"
   end function "constructor.LeafWorker"
   function "method.LeafWorker.value" name="LeafWorker.value" returns=i32 failure=infallible entry="entry" @"LeafWorker.hx":6:48-8:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) @"LeafWorker.hx":6:48-8:3
-    parameter "parameter.0" type=i32 @"LeafWorker.hx":6:48-8:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) ownership=borrowed-class @"LeafWorker.hx":6:48-8:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"LeafWorker.hx":6:48-8:3
     block "entry" @"LeafWorker.hx":7:3-7:34
       instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) convert value="parameter.self" kind=representation target=pointer(nullable,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) implementation=static failure=none @"LeafWorker.hx":7:10-7:15
       instruction "instruction.1.instance-call-null-check" result=- null-check value="value.0" policy=checked-abort(profile="portable",build="debug") @"LeafWorker.hx":7:10-7:15
@@ -116,19 +116,19 @@ module "LeafWorker" @"LeafWorker.hx":1:1-9:2
 end module "LeafWorker"
 module "Main" @"Main.hx":2:30-9:3
   function "function.Main.main" name="Main.main" returns=void failure=infallible entry="entry" @"Main.hx":2:30-9:3
-    local "local.0" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) storage=automatic state=uninitialized @"Main.hx":3:3-3:43
-    local "local.1" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") storage=automatic state=uninitialized @"Main.hx":3:3-3:43
-    local "local.10" type=bool storage=automatic state=uninitialized @"Main.hx":7:12-7:113
-    local "local.11" type=bool storage=automatic state=uninitialized @"Main.hx":7:12-7:137
-    local "local.12" type=bool storage=automatic state=uninitialized @"Main.hx":7:11-8:31
-    local "local.2" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) storage=automatic state=uninitialized @"Main.hx":4:3-4:47
-    local "local.3" type=instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216") storage=automatic state=uninitialized @"Main.hx":4:3-4:47
-    local "local.4" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) storage=automatic state=uninitialized @"Main.hx":5:3-5:34
-    local "local.5" type=instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c") storage=automatic state=uninitialized @"Main.hx":5:3-5:34
-    local "local.6" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) storage=automatic state=uninitialized @"Main.hx":6:3-6:35
-    local "local.7" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") storage=automatic state=uninitialized @"Main.hx":6:3-6:35
-    local "local.8" type=bool storage=automatic state=uninitialized @"Main.hx":7:12-7:57
-    local "local.9" type=bool storage=automatic state=uninitialized @"Main.hx":7:12-7:84
+    local "local.0" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:3-3:43
+    local "local.1" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":3:3-3:43
+    local "local.10" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:113
+    local "local.11" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:137
+    local "local.12" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:11-8:31
+    local "local.2" type=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:47
+    local "local.3" type=instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":4:3-4:47
+    local "local.4" type=pointer(nullable,instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:34
+    local "local.5" type=instance("instance.class.d967b6afa9d76aef4277499f5c57071b19226801d1373d430c4deb3c08518c2c") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":5:3-5:34
+    local "local.6" type=pointer(nullable,instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a")) ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":6:3-6:35
+    local "local.7" type=instance("instance.class.052bef6cf799ac1888c4b62a3747e82400f93b8c39aca670a5934cc92db7d46a") ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":6:3-6:35
+    local "local.8" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:57
+    local "local.9" type=bool ownership=owned-or-value storage=automatic state=uninitialized @"Main.hx":7:12-7:84
     cleanup "cleanup.construction" parent=none registration-order @"Main.hx":2:30-9:3
       action "construction.0.partial" idempotence=exactly-once destroy place=local("local.1") transition=initializing->destroyed @"Main.hx":3:3-3:43
       action "construction.0.initialized" idempotence=exactly-once destroy place=local("local.1") transition=initialized->destroyed @"Main.hx":3:3-3:43
@@ -273,8 +273,8 @@ module "MiddleWorker" @"MiddleWorker.hx":1:1-9:2
     class-layout base="instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4" header=none
   instance "instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216" declaration="type.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216" arguments=[] representation=direct @"MiddleWorker.hx":1:1-9:2
   function "constructor.MiddleWorker" name="MiddleWorker.new" returns=void failure=infallible entry="entry" @"MiddleWorker.hx":2:32-4:3
-    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) @"MiddleWorker.hx":2:32-4:3
-    parameter "parameter.0" type=i32 @"MiddleWorker.hx":2:32-4:3
+    parameter "parameter.self" type=pointer(nonnull,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) ownership=owned-or-value @"MiddleWorker.hx":2:32-4:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"MiddleWorker.hx":2:32-4:3
     block "entry" @"MiddleWorker.hx":3:3-3:14
       instruction "instruction.0.class-upcast" result="value.0":pointer(nonnull,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) convert value="parameter.self" kind=representation target=pointer(nonnull,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) implementation=static failure=none @"MiddleWorker.hx":3:3-3:14
       instruction "instruction.1.super-constructor-call" result=- call dispatch=direct("constructor.BaseWorker") arguments=["value.0","parameter.0"] returns=void failure=none @"MiddleWorker.hx":3:3-3:14
@@ -282,8 +282,8 @@ module "MiddleWorker" @"MiddleWorker.hx":1:1-9:2
     end block "entry"
   end function "constructor.MiddleWorker"
   function "method.MiddleWorker.value" name="MiddleWorker.value" returns=i32 failure=infallible entry="entry" @"MiddleWorker.hx":6:48-8:3
-    parameter "parameter.self" type=pointer(nullable,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) @"MiddleWorker.hx":6:48-8:3
-    parameter "parameter.0" type=i32 @"MiddleWorker.hx":6:48-8:3
+    parameter "parameter.self" type=pointer(nullable,instance("instance.class.a8f643ee254ec60908f3c2d6804e290a7b4fcddfa035580f3dc9917c98b36216")) ownership=borrowed-class @"MiddleWorker.hx":6:48-8:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"MiddleWorker.hx":6:48-8:3
     block "entry" @"MiddleWorker.hx":7:3-7:33
       instruction "instruction.0.class-upcast" result="value.0":pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) convert value="parameter.self" kind=representation target=pointer(nullable,instance("instance.class.e248095207468b3caa5996af129308d8b507c41daf167ed339383ebeac1107e4")) implementation=static failure=none @"MiddleWorker.hx":7:10-7:15
       instruction "instruction.1.instance-call-null-check" result=- null-check value="value.0" policy=checked-abort(profile="portable",build="debug") @"MiddleWorker.hx":7:10-7:15

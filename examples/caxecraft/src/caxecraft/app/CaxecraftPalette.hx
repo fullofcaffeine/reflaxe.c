@@ -79,6 +79,11 @@ final class CaxecraftPalette {
 			case Dirt: Color.rgba(132, 91, 62);
 			case Stone: Color.rgba(91, 107, 117);
 			case Bedrock: Color.rgba(47, 54, 64);
+			case Sand: Color.rgba(196, 174, 113);
+			case Wood: Color.rgba(109, 76, 52);
+			case Leaves: Color.rgba(54, 112, 73);
+			case Snow: Color.rgba(222, 235, 238);
+			case Ash: Color.rgba(73, 70, 76);
 		};
 	}
 
@@ -90,6 +95,11 @@ final class CaxecraftPalette {
 			case Dirt: Color.rgba(82, 55, 45);
 			case Stone: Color.rgba(57, 69, 78);
 			case Bedrock: Color.rgba(25, 31, 39);
+			case Sand: Color.rgba(131, 111, 70);
+			case Wood: Color.rgba(65, 43, 34);
+			case Leaves: Color.rgba(31, 69, 48);
+			case Snow: Color.rgba(151, 174, 183);
+			case Ash: Color.rgba(39, 36, 43);
 		};
 	}
 }

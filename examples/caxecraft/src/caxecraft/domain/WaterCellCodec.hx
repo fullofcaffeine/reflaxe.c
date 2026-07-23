@@ -11,7 +11,7 @@ package caxecraft.domain;
 private inline final AIR_CODE:Int = 0;
 
 private inline final FIRST_SOLID_CODE:Int = 1;
-private inline final LAST_SOLID_CODE:Int = 4;
+private inline final LAST_SOLID_CODE:Int = 9;
 private inline final SOURCE_CODE:Int = 16;
 private inline final FLOWING_BASE_CODE:Int = 17;
 private inline final FALLING_BASE_CODE:Int = 25;

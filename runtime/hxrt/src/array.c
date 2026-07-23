@@ -1,9 +1,9 @@
 /*
- * Implementation of native-seed-only feature `array`.
+ * Implementation of feature `array`.
  *
- * Array differential and selective-package native fixtures call this runtime-
- * sized unboxed owner; generated Haxe cannot select it yet. The slice depends
- * on alloc, stores allocator and element-callback lifetimes in the owner, and
+ * Generated Haxe and independent native fixtures call this runtime-sized
+ * unboxed owner. The slice depends on alloc, stores allocator and element-
+ * callback lifetimes in the owner, and
  * invalidates element borrows on mutation. Fallible operations preserve the
  * previous live value, cleanup runs in reverse element order, and no hidden
  * global/thread state or application-public layout is introduced.
@@ -506,4 +506,228 @@ hxc_status hxc_array_dispose(hxc_array *array) {
   }
   hxc_array_clear(array);
   return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_create(
+  hxc_allocator allocator,
+  hxc_array_element_ops elements,
+  hxc_array_ref **out_array
+) {
+  hxc_array_ref *array = NULL;
+  hxc_status status;
+
+  if (out_array == NULL || *out_array != NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (!hxc_allocator_is_valid(&allocator)
+      || !hxc_array_element_ops_is_valid(&elements)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_alloc(
+    &allocator,
+    sizeof(hxc_array_ref),
+    HXC_ALIGNOF(hxc_array_ref),
+    (void **)&array
+  );
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  *array = (hxc_array_ref){0};
+  status = hxc_array_ref_init_in_place(allocator, elements, array);
+  if (status != HXC_STATUS_OK) {
+    (void)hxc_free(
+      &allocator,
+      array,
+      sizeof(hxc_array_ref),
+      HXC_ALIGNOF(hxc_array_ref)
+    );
+    return status;
+  }
+  *out_array = array;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_init_in_place(
+  hxc_allocator allocator,
+  hxc_array_element_ops elements,
+  hxc_array_ref *out_array
+) {
+  hxc_status status;
+  if (out_array == NULL
+      || out_array->references != 0u
+      || out_array->value.storage.memory != NULL
+      || out_array->value.storage.size != 0u
+      || out_array->value.length != 0u
+      || out_array->value.capacity != 0u
+      || !hxc_allocator_is_valid(&allocator)
+      || !hxc_array_element_ops_is_valid(&elements)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  out_array->value = (hxc_array)HXC_ARRAY_INITIALIZER;
+  status = hxc_array_init(&allocator, elements, &out_array->value);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  out_array->references = 1u;
+  out_array->allocator = allocator;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_dispose_in_place(hxc_array_ref *array) {
+  hxc_status status;
+  if (array == NULL) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->references == 0u
+      && array->value.storage.memory == NULL
+      && array->value.storage.size == 0u
+      && array->value.length == 0u
+      && array->value.capacity == 0u) {
+    return HXC_STATUS_OK;
+  }
+  if (!hxc_array_ref_is_valid(array) || array->references != 1u) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_array_dispose(&array->value);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  array->references = 0u;
+  array->allocator = (hxc_allocator){ NULL, NULL, NULL, NULL };
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_create_trivial(
+  hxc_allocator allocator,
+  size_t element_size,
+  size_t element_alignment,
+  hxc_array_ref **out_array
+) {
+  hxc_array_element_ops elements;
+
+  elements.size = element_size;
+  elements.alignment = element_alignment;
+  elements.context = NULL;
+  elements.copy = NULL;
+  elements.assign = NULL;
+  elements.destroy = NULL;
+  return hxc_array_ref_create(allocator, elements, out_array);
+}
+
+bool hxc_array_ref_is_valid(const hxc_array_ref *array) {
+  return array != NULL
+    && array->references > 0u
+    && hxc_allocator_is_valid(&array->allocator)
+    && hxc_array_is_valid(&array->value)
+    && hxc_allocator_same_identity(
+      &array->allocator,
+      &array->value.storage.allocator
+    );
+}
+
+hxc_status hxc_array_ref_retain(hxc_array_ref *array) {
+  if (array == NULL) {
+    return HXC_STATUS_OK;
+  }
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->references == SIZE_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  array->references++;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_release(hxc_array_ref *array) {
+  hxc_allocator allocator;
+  hxc_status status;
+
+  if (array == NULL) {
+    return HXC_STATUS_OK;
+  }
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  array->references--;
+  if (array->references != 0u) {
+    return HXC_STATUS_OK;
+  }
+  allocator = array->allocator;
+  array->references = 1u;
+  status = hxc_array_ref_dispose_in_place(array);
+  if (status != HXC_STATUS_OK) {
+    array->references = 1u;
+    return status;
+  }
+  return hxc_free(
+    &allocator,
+    array,
+    sizeof(hxc_array_ref),
+    HXC_ALIGNOF(hxc_array_ref)
+  );
+}
+
+hxc_status hxc_array_ref_length(
+  const hxc_array_ref *array,
+  int32_t *out_length
+) {
+  if (out_length == NULL || !hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->value.length > (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  *out_length = (int32_t)array->value.length;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_get_copy(
+  const hxc_array_ref *array,
+  size_t index,
+  void *out_element
+) {
+  const void *element = NULL;
+  hxc_status status;
+
+  if (out_element == NULL || !hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  status = hxc_array_at_const(&array->value, index, &element);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  return hxc_array_construct(&array->value, out_element, element);
+}
+
+hxc_status hxc_array_ref_push_copy(
+  hxc_array_ref *array,
+  const void *element,
+  int32_t *out_length
+) {
+  hxc_status status;
+
+  if (out_length == NULL || !hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  if (array->value.length >= (size_t)INT32_MAX) {
+    return HXC_STATUS_SIZE_OVERFLOW;
+  }
+  status = hxc_array_push_copy(&array->value, element);
+  if (status != HXC_STATUS_OK) {
+    return status;
+  }
+  *out_length = (int32_t)array->value.length;
+  return HXC_STATUS_OK;
+}
+
+hxc_status hxc_array_ref_set_copy(
+  hxc_array_ref *array,
+  size_t index,
+  const void *element
+) {
+  if (!hxc_array_ref_is_valid(array)) {
+    return HXC_STATUS_INVALID_ARGUMENT;
+  }
+  return hxc_array_set_copy(&array->value, index, element);
 }

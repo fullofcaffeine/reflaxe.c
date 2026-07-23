@@ -13,6 +13,34 @@ story progression directly in a reusable gameplay system or the application
 loop when the public CaxeMap, CaxeFlow, localization, asset, or campaign model
 can own it.
 
+Follow the composition-first runtime direction in
+[`docs/caxecraft-architecture.md`](../../docs/caxecraft-architecture.md).
+Use the repository's
+[`docs/haxe-code-architecture.md`](../../docs/haxe-code-architecture.md) when
+choosing between records, abstracts, enums, classes, module functions, externs,
+and macros. Keep the specific reason in the declaration's own HxDoc when a real
+choice exists, so the source teaches the decision without requiring a separate
+architecture reading.
+`Main` is an executable entry, not the long-term owner of gameplay. A
+`CaxecraftApp` owns the Raylib frame loop and screens; a `GameSession` owns one
+loaded simulation and its fixed-step loop; one shared character model composes
+movement, aquatics, vitals, inventory, equipment, combat, and interaction;
+player, NPC, companion, enemy, boss, cutscene, and test controllers produce the
+same typed intents for those systems. Runtime actors use stable IDs and typed
+content-selected capabilities; deterministic systems receive only the state
+they need; renderers observe read-only views. Use classes for identity,
+lifetime, cohesive mutable aggregates, and resource ownership. Use records,
+closed enums, and module functions for snapshots, inputs, results, events, and
+stateless rules. A weapon, life rule, water rule, inventory operation, or
+status effect that applies to more than one role has one shared Haxe
+implementation. Do not create player/NPC copies, macro-injected copies,
+role-name branches, or a subclass hierarchy where explicit composition and a
+typed profile/controller are sufficient. Favor composition over inheritance.
+Do not introduce a full entity-component system (ECS), service locator,
+dynamic component bag, or
+string event bus without the measured admission evidence required by that
+architecture record.
+
 Keep this rule evidence-bounded. CAXEMAP 1 already stores an `asset-pack`
 logical path, `packs/caxecraft/base/content.json` is the strict schema-2 content
 manifest, and its generated `BaseContentRegistry` is the typed validation
@@ -38,6 +66,22 @@ not a general runtime loader, dependency system, or mod marketplace.
   small typed engine capability and expose it through the shared registry and
   editor. Do not add a character-name branch, duplicate simulator, arbitrary
   script hook, or raw-C shortcut.
+- Connect each reusable capability to authored content through one explicit
+  typed descriptor: stable ID, validated arguments/profile, execution owner,
+  allowed CaxeFlow/cutscene/console/test authorities, editor presentation, and
+  localization references. All surfaces must invoke the normal `GameSession`
+  mechanic; none may maintain a private simulator or privileged behavior path.
+- Prefer ordinary Haxe composition, nominal abstracts, closed enums,
+  exhaustive matching, records, final classes, module functions, generics, and
+  narrow interfaces before macros. A macro is admitted only for demonstrated
+  repetitive compile-time glue such as deriving registry, codec/schema,
+  editor, console, and test descriptors from one typed declaration. It must
+  generate deterministic inspectable typed Haxe with source-positioned errors
+  and must not copy gameplay behavior into entity types, hide update order,
+  scan arbitrary methods, use runtime reflection, or execute user content.
+  Macro-generated mixin-like forwarding requires specific evidence that plain
+  composition is materially less clear; the ordinary-Haxe system remains the
+  one behavior owner.
 - Use one general event-to-action path for authored behavior. An engine event
   reports that something happened, optional CaxeFlow conditions decide whether
   a rule applies, and its ordered actions invoke any compatible admitted

@@ -12,6 +12,9 @@ std::size_t hxc_test_envelope_size(void);
 std::size_t hxc_test_envelope_alignment(void);
 std::size_t hxc_test_envelope_enabled_offset(void);
 std::size_t hxc_test_envelope_point_offset(void);
+std::size_t hxc_test_actor_size(void);
+std::size_t hxc_test_actor_alignment(void);
+std::size_t hxc_test_actor_phase_offset(void);
 }
 
 int main()
@@ -23,6 +26,11 @@ int main()
   HXC_ENVELOPE_TAG envelope{};
   envelope.HXC_ENVELOPE_ENABLED = true;
   envelope.HXC_ENVELOPE_POINT = copied;
+  HXC_ACTOR_TAG actor{};
+  actor.HXC_ACTOR_PHASE.HXC_ACTOR_PHASE_TAG_MEMBER = HXC_ACTOR_PHASE_MOVING;
+  actor.HXC_ACTOR_PHASE.HXC_ACTOR_PHASE_PAYLOAD_MEMBER
+    .HXC_ACTOR_PHASE_MOVING_UNION_MEMBER.HXC_ACTOR_PHASE_MOVING_SPEED = INT32_C(5);
+  HXC_ACTOR_TAG actor_copy = actor;
 
   const bool layout_matches =
     hxc_test_pair_size() == sizeof(HXC_PAIR_TAG) &&
@@ -34,9 +42,19 @@ int main()
     hxc_test_envelope_enabled_offset() ==
       offsetof(HXC_ENVELOPE_TAG, HXC_ENVELOPE_ENABLED) &&
     hxc_test_envelope_point_offset() ==
-      offsetof(HXC_ENVELOPE_TAG, HXC_ENVELOPE_POINT);
+      offsetof(HXC_ENVELOPE_TAG, HXC_ENVELOPE_POINT) &&
+    hxc_test_actor_size() == sizeof(HXC_ACTOR_TAG) &&
+    hxc_test_actor_alignment() == alignof(HXC_ACTOR_TAG) &&
+    hxc_test_actor_phase_offset() ==
+      offsetof(HXC_ACTOR_TAG, HXC_ACTOR_PHASE);
   const bool values_match = envelope.HXC_ENVELOPE_ENABLED &&
     envelope.HXC_ENVELOPE_POINT.HXC_PAIR_A == INT32_C(3) &&
-    envelope.HXC_ENVELOPE_POINT.HXC_PAIR_Z == INT32_C(4);
+    envelope.HXC_ENVELOPE_POINT.HXC_PAIR_Z == INT32_C(4) &&
+    actor_copy.HXC_ACTOR_PHASE.HXC_ACTOR_PHASE_TAG_MEMBER ==
+      HXC_ACTOR_PHASE_MOVING &&
+    actor_copy.HXC_ACTOR_PHASE.HXC_ACTOR_PHASE_PAYLOAD_MEMBER
+      .HXC_ACTOR_PHASE_MOVING_UNION_MEMBER.HXC_ACTOR_PHASE_MOVING_SPEED ==
+      INT32_C(5) &&
+    HXC_ACTOR_PHASE_WAITING != HXC_ACTOR_PHASE_MOVING;
   return layout_matches && values_match ? 0 : 1;
 }

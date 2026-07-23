@@ -58,7 +58,7 @@ the C-only carrier imports. The repeated storage setup in the trace is visible
 on purpose; it makes the representational difference reviewable rather than
 hiding it in an untyped factory or runtime service.
 
-No `#if c` appears in `World`, `VoxelRaycast`, or `PlayerPhysics`. Bounds,
+No `#if c` appears in `World`, `VoxelRaycast`, or `CharacterPhysics`. Bounds,
 terrain, edits, material rules, DDA traversal, collision, and fixed-step state
 updates are one ordinary Haxe implementation. That placement is the central
 architectural rule: select carriers and platform services at a narrow edge,
@@ -160,6 +160,55 @@ direct C. The portability value comes from keeping semantics in ordinary Haxe
 and isolating representation-specific operations, not from forcing every
 backend through one universal IR or one runtime container.
 
+## Terrain presentation cache
+
+The playable renderer divides the finite 32-by-16-by-32 world into a four-by-
+four horizontal grid. Each **chunk** is an 8-by-16-by-8 rendering group. It is
+not a level, save region, gameplay area, or promise of infinite streaming. The
+group exists so a frame does not need to inspect all 16,384 world cells merely
+to rediscover which solid faces touch air.
+
+`TerrainChunkCache` is a stateful class because its derived face data survives
+from one rendered frame to the next. `GameSession` still owns the authoritative
+world. On the first frame the cache builds all sixteen chunks. A successful
+terrain edit marks its owning chunk dirty. An edit on an 8-cell boundary also
+marks the one face-sharing neighbor; a corner can therefore mark three chunks,
+but never the diagonal chunk because diagonals share no voxel face. Before the
+next draw, `prepare` rebuilds only those dirty partitions. An unchanged frame
+rebuilds none.
+
+The C representation embeds four fixed byte arrays for face x, y, z, and a
+packed material/face code. One chunk owns 3,072 slots. That is not a guessed
+limit: an 8-by-16-by-8 three-dimensional checkerboard contains 512 solid cells,
+and every one can expose all six faces, reaching exactly 3,072. The focused
+test constructs that maximum. If the proof ever drifts, the cache clears the
+broken partition and reports `valid=false` instead of drawing partial geometry.
+The complete cache uses 49,152 face slots and performs no steady-state heap
+allocation or `hxrt` selection.
+
+Cached faces are replayed through two opaque atlas batches, followed by the
+existing water batch. This deliberately removes repeated neighbor discovery
+without yet adding GPU mesh handles, allocation, cleanup, or a wider Raylib
+binding. The benchmark-only `TerrainImmediateBaseline` retains the former
+complete-world scan behind an explicit define so both implementations can use
+the same world, atlas, face submission, and native pilot. It is not emitted in
+ordinary playable builds.
+
+Run the renderer-free Eval/native C contract with:
+
+```sh
+npm run test:caxecraft-terrain-chunks
+```
+
+It proves exact checkerboard capacity, same-chunk and boundary invalidation,
+steady-frame reuse, atlas counts, warning-clean generated C, zero runtime
+features, and optional AddressSanitizer/UndefinedBehaviorSanitizer execution.
+The graphical `move-jump-edit` pilot separately proves that those cached faces
+reach a real Raylib frame and that successful edits cause bounded rebuild work.
+Timing remains an opt-in benchmark claim described in
+[the pilot document](caxecraft-game-pilot.md); the presence of a cache alone is
+not evidence that every platform or scene is faster.
+
 ## Bounded voxel water
 
 `WaterSimulation` is the first target-neutral fluid slice. It models water as
@@ -234,7 +283,7 @@ UndefinedBehaviorSanitizer when the compiler offers them.
 
 ## Deterministic player aquatics
 
-`PlayerAquatics` is the renderer-independent movement and survival layer over
+`Aquatics` is the renderer-independent movement and survival layer over
 the water cells. Each 50 ms simulation tick follows one fixed sequence:
 
 1. measure the vertical share of the 1.8-unit player body covered by water;
@@ -332,15 +381,16 @@ and avoids jumping directly across an edge/corner. The traversal is monotonic
 and capped at `WIDTH + HEIGHT + DEPTH + 8` visits, comfortably beyond every
 possible in-world path without permitting an accidental infinite loop.
 
-## Fixed-step player collision
+## Fixed-step character collision
 
-`PlayerState` stores a feet-center position, three velocities, and grounded
+`CharacterBody` stores a feet-center position, three velocities, and grounded
 state. The controller advances exactly 50 ms per call; wall clock and render
 delta never enter the domain. Input is a small record containing horizontal
-movement and a jump request. The future Raylib shell will sample real input and
-feed a fixed-step accumulator rather than changing these semantics.
+movement and a jump request. The Raylib shell samples real input and feeds a
+fixed-step accumulator rather than changing these semantics.
 
-The player is an upright AABB with half-width 0.30 and height 1.80. Movement is
+The character body is an upright axis-aligned bounding box (AABB) with
+half-width 0.30 and height 1.80. Movement is
 resolved X, then Z, then Y, allowing wall sliding. Each axis delta is divided
 into steps no larger than 0.20 world units. This is the documented tunneling
 policy: it catches the one-voxel obstacles exercised by normal movement and by
@@ -356,6 +406,38 @@ operation never searches horizontally or allocates. If no free vertical
 position exists, the returned state remains explicit and the next collision
 step stays bounded; level construction is responsible for providing a valid
 spawn column.
+
+## First shared character composition
+
+`Character` now groups the reusable body, aquatic state and profile, and
+vitals under one stable `EntityId`. `EntityStore` owns the committed value
+between frames; callers read a value snapshot, run explicit systems, and commit
+the newer value under the same ID. The first store deliberately holds one
+character because haxe.c does not yet admit an allocation-free fixed C array of
+aggregate records. Its private storage can grow later without changing the ID
+or system APIs.
+
+`PlayerAgent` adds only the local-character ID. `GameSession` owns that binding,
+installs it only after `EntityStore` accepts the character, and resolves it
+inside each fixed tick. The session also owns the deterministic completed-tick
+count, so artificial intelligence, saves, tests, the HUD, and telemetry share
+one simulation clock regardless of rendered frame rate. `Main` therefore
+carries neither a second agent value, a character ID, nor a mutable gameplay
+update counter. The binding does not copy position, breath, health, input,
+camera, or HUD state. The focused aquatics probe creates a separate non-player
+character and advances both through the same
+`Character.step` and damage functions. Equal starting components and intent
+produce equal movement, water, and health results, while cross-ID writes fail.
+This is the executable boundary for the first slice; it is not yet a general
+multi-actor store or a claim that inventory, equipment, weapons, and effects
+have completed the same migration.
+
+`GameSession.view()` is the first presentation boundary. It returns an
+immutable `GameView` containing the committed local-character value and tick
+count, never the entity store, water scheduler, or backing arrays. The invalid
+view before binding is explicit, so rendering and telemetry can fail closed
+without receiving mutation authority. World and actor read models remain on
+the presentation migration task rather than being implied by this first slice.
 
 ## Determinism and executable evidence
 
@@ -432,11 +514,12 @@ does not authorize a mechanical repository-wide rewrite.
 
 | Classification | Current types | Reason |
 | --- | --- | --- |
-| Migrated | `Recovery`, `Mining`, `BerryDrop` | Stateless gameplay operations with stable module-shaped call sites. |
-| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TerrainRenderer`, `TitleMenu`, `CaxecraftTrace`, `PlayerPhysics`, `VoxelRaycast`, `World`, `WorldStorage`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, `EditorWorldGrid`, `GuideNpc`, `Inventory`, `Mossling`, `PlayerVitals`, `SwordCombat`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
+| Migrated | `Recovery`, `Mining`, `BerryDrop`, `CharacterPhysics`, `Aquatics`, `Character`, and `Vitals` | Stateless gameplay/domain operations with stable module-shaped call sites; the character slice also has a real non-player consumer. |
+| Migrate by ownership slice | `CaxecraftAtlas`, `CaxecraftPalette`, `CaxecraftTextures`, `HudDigits`, `RaylibGameInput`, `TerrainAtlas`, `TitleMenu`, `CaxecraftTrace`, `VoxelRaycast`, `World`, `WorldStorage`, `EditorCommandReducer`, `EditorPolicy`, `EditorScenarioFactory`, `EditorScenarioSnapshot`, `EditorWorldGrid`, `GuideNpc`, `Inventory`, `Mossling`, `SwordCombat`, `PilotScript`, `CaxeFlowClock`, `CaxeFlowValueReader`, `ScenarioLexer`, `ScenarioLimits`, `ScenarioTokenGrammar`, and `ScenarioWriter` | They currently expose only stateless functions/constants over explicit state. Migrate when that subsystem is next changed, after checking target-boundary and generated-C evidence. |
+| Retain as stateful owners | `TerrainChunkCache`, `TerrainRenderer` | Their mutable derived face data has a real lifetime across frames. Classes make that ownership explicit without moving world authority out of `GameSession`. |
 | Retain as a named boundary | `Main`, `GameInputFrames`, `ScenarioMessages`/`ScenarioMessageLookup`, `ScenarioParser`, and `ScenarioValidator` | The current name is an intentional application, factory, lookup, or public parsing/validation boundary. Revisit only with an API-focused reason, not to remove a class count. |
-| Retain pending replacement | `FirstPlayableCatalog`, `UiCatalog` | The data-driven localization work in `haxe_c-xge.19.7` removes or reshapes these hard-coded catalog owners; converting their present form first would be throwaway churn. |
-| Generated | none | Generated raylib bindings live outside this game-source audit and follow their generator contract. |
+| Generated bridge | `FirstPlayableCatalog`, `UiCatalog` | Validated JSON/CaxeMap sources generate renderer-independent typed lookups. The C carrier selects only static literals; future runtime catalog loading under `haxe_c-xge.21` and `haxe_c-xge.39` must replace this required build-time provider without changing renderer ownership. |
+| Generated | no other Caxecraft runtime modules | Generated raylib bindings live outside this game-source audit and follow their generator contract. |
 | Blocked by a compiler gap | none known in the migrated slice | If a later module conversion exposes a real gap, reduce it to a compiler fixture and track it rather than restoring a wrapper silently. |
 
 Classes remain the right Haxe source model for values with instance state,

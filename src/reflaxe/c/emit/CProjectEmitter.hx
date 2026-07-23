@@ -61,6 +61,7 @@ typedef CProjectEmissionPlan = {
 	final ?directAggregateCount:Int;
 	final ?directEnumCount:Int;
 	final ?directClassCount:Int;
+	final ?directInterfaceCount:Int;
 	final ?directConstructorCount:Int;
 	final ?directGenericFunctionCount:Int;
 	final ?directGenericTypeCount:Int;
@@ -323,15 +324,17 @@ class CProjectEmitter {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
 		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
+		final interfaceCount = plan.directInterfaceCount == null ? 0 : plan.directInterfaceCount;
 		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
 		final importCount = plan.directImportCount == null ? 0 : plan.directImportCount;
 		final importTypeCount = plan.directImportTypeCount == null ? 0 : plan.directImportTypeCount;
-		final directValueCount = aggregateCount + enumCount + classCount + genericFunctionCount + importCount;
+		final directValueCount = aggregateCount + enumCount + classCount + interfaceCount + genericFunctionCount + importCount;
 		if (aggregateCount < 0
 			|| enumCount < 0
 			|| classCount < 0
+			|| interfaceCount < 0
 			|| constructorCount < 0
 			|| constructorCount > 0
 			&& classCount == 0
@@ -469,6 +472,7 @@ class CProjectEmitter {
 		final aggregateCount = plan.directAggregateCount == null ? 0 : plan.directAggregateCount;
 		final enumCount = plan.directEnumCount == null ? 0 : plan.directEnumCount;
 		final classCount = plan.directClassCount == null ? 0 : plan.directClassCount;
+		final interfaceCount = plan.directInterfaceCount == null ? 0 : plan.directInterfaceCount;
 		final constructorCount = plan.directConstructorCount == null ? 0 : plan.directConstructorCount;
 		final genericFunctionCount = plan.directGenericFunctionCount == null ? 0 : plan.directGenericFunctionCount;
 		final genericTypeCount = plan.directGenericTypeCount == null ? 0 : plan.directGenericTypeCount;
@@ -509,12 +513,12 @@ class CProjectEmitter {
 					case proof:
 						RuntimeNoRuntimeEligibilityAnalyzer.validateProof(proof, runtimePlan.planPurpose, runtimePlan.directDecisions,
 							plan.primitiveHelperIds == null ? [] : plan.primitiveHelperIds);
-						if (proof.reachability.typeInstances != aggregateCount + enumCount + classCount + importTypeCount) {
+						if (proof.reachability.typeInstances != aggregateCount + enumCount + classCount + interfaceCount + importTypeCount) {
 							fail("runtime-free direct executable value-layout count differs from reachable HxcIR instances");
 						}
 				}
 			case RuntimeFeaturePlanStatus.RuntimeFeatures:
-				validateHostedOutputRuntimePlan(runtimePlan);
+				validateCompilerRuntimePlan(runtimePlan);
 			case RuntimeFeaturePlanStatus.NativeSeedFeatures:
 				fail("generated Haxe cannot use a native-seed runtime plan");
 			case _:
@@ -546,9 +550,22 @@ class CProjectEmitter {
 		if (genericFunctionCount + genericTypeCount > 0) {
 			expectedDirectDecisions.push("closed-generic-specializations");
 		}
-		if (indirectInstanceCallCount > 0) {
+		var virtualCallCount = 0;
+		var interfaceCallCount = 0;
+		if (plan.dispatchReport != null)
+			for (call in plan.dispatchReport.calls)
+				switch call.dispatch {
+					case "virtual":
+						virtualCallCount++;
+					case "interface":
+						interfaceCallCount++;
+					case _:
+				}
+		if (virtualCallCount > 0) {
 			expectedDirectDecisions.push("reachable-program-local-virtual-dispatch");
 		}
+		if (interfaceCallCount > 0)
+			expectedDirectDecisions.push("reachable-program-local-interface-dispatch");
 		if (importCount > 0) {
 			expectedDirectDecisions.push("typed-header-owned-c-imports");
 		}
@@ -559,32 +576,44 @@ class CProjectEmitter {
 		if (initialization.executionOrder.length > 0) {
 			expectedDirectDecisions.push("compiler-planned-eager-static-initialization");
 		}
-		if (runtimePlan.status == RuntimeFeaturePlanStatus.RuntimeFeatures) {
+		if (runtimePlan.features.indexOf("string-literal") != -1) {
 			expectedDirectDecisions.push("direct-utf8-string-literals");
 		}
+		if (runtimePlan.features.indexOf("array") != -1)
+			expectedDirectDecisions.push("managed-haxe-arrays");
+		if (runtimePlan.features.indexOf("bytes") != -1)
+			expectedDirectDecisions.push("managed-haxe-bytes");
+		if (runtimePlan.features.indexOf("gc") != -1)
+			expectedDirectDecisions.push("exact-traced-haxe-object-graph");
 		expectedDirectDecisions.sort(compareUtf8);
 		if (runtimePlan.directDecisions.join("\n") != expectedDirectDecisions.join("\n")) {
 			fail("direct executable runtime analysis differs from compiler-owned direct and program-local decisions");
 		}
 	}
 
-	function validateHostedOutputRuntimePlan(runtimePlan:RuntimeFeaturePlanSnapshot):Void {
-		final expectedFeatures = ["runtime-base", "status", "string-literal", "io"];
-		if (runtimePlan.features.join("\n") != expectedFeatures.join("\n")
+	function validateCompilerRuntimePlan(runtimePlan:RuntimeFeaturePlanSnapshot):Void {
+		if (runtimePlan.features.length == 0
 			|| runtimePlan.rootReasons.length == 0
 			|| runtimePlan.manualOverrides.length != 0
-			|| runtimePlan.selectedFeatures.length != expectedFeatures.length
+			|| runtimePlan.selectedFeatures.length != runtimePlan.features.length
 			|| runtimePlan.artifactDetails.length == 0
 			|| runtimePlan.artifacts.length != runtimePlan.artifactDetails.length
-			|| runtimePlan.symbols.indexOf("hxc_io_println") == -1
-			|| runtimePlan.libraries.length != 0
-			|| runtimePlan.defines.length != 0
 			|| runtimePlan.noRuntimeProof != null) {
-			fail("the admitted runtime-using primitive slice requires exactly the dependency-closed hosted String output plan");
+			fail("the admitted runtime-using slice requires one complete dependency-closed compiler runtime plan");
 		}
 		for (reason in runtimePlan.rootReasons) {
-			if (reason.featureId != "io" || reason.kind != "hosted-output") {
-				fail('hosted output runtime plan contains unrelated root reason `${reason.id}`');
+			switch reason.featureId {
+				case "string-literal" if (reason.kind == "direct-string-value"):
+				case "io" if (reason.kind == "hosted-output"):
+				case "array" if (reason.kind == "runtime-operation"):
+				case "bytes" if (reason.kind == "runtime-operation"):
+				case "alloc" if (reason.kind == "runtime-operation" && reason.operationId == "allocation"):
+				case "gc" if (reason.kind == "runtime-operation" && switch reason.operationId {
+						case "allocation" | "class-object-header" | "managed-type-representation" | "root-frame": true;
+						case _: false;
+					}):
+				case _:
+					fail('compiler runtime plan contains an unadmitted root reason `${reason.id}`');
 			}
 		}
 	}
@@ -855,14 +884,14 @@ class CProjectEmitter {
 						case null: fail('direct dispatch call `${call.id}` lost its target-only choice');
 						case target: validateLogicalText(target, "direct dispatch target function ID");
 					}
-				case "virtual":
+				case "virtual" | "interface":
 					observedIndirect++;
 					if (call.targetFunctionId != null)
-						fail('virtual dispatch call `${call.id}` lost its reachable slot-only choice');
+						fail('indirect dispatch call `${call.id}` lost its reachable slot-only choice');
 					switch call.slotId {
-						case null: fail('virtual dispatch call `${call.id}` lost its reachable slot-only choice');
+						case null: fail('indirect dispatch call `${call.id}` lost its reachable slot-only choice');
 						case slotId if (!slotIds.exists(slotId)):
-							fail('virtual dispatch call `${call.id}` refers to unknown reachable slot `$slotId`');
+							fail('indirect dispatch call `${call.id}` refers to unknown reachable slot `$slotId`');
 						case _:
 					}
 				case invalid:
@@ -898,8 +927,14 @@ class CProjectEmitter {
 		validateLogicalText(parameter, "generic type parameter");
 		validateLogicalText(key, "generic type argument key");
 		validateLogicalText(displayName, "generic type argument display name");
-		if (representation != "direct-primitive" && representation != "direct-enum")
-			fail('generic type argument `$parameter` has unknown representation `$representation`');
+		// Validate the complete closed vocabulary produced by the generic
+		// canonicalizer. Project emission must not reject a representation that
+		// body lowering has already admitted and recorded structurally.
+		switch representation {
+			case "direct-primitive" | "direct-enum" | "managed-array" | "direct-record" | "immutable-string" | "nullable-value":
+			case _:
+				fail('generic type argument `$parameter` has unknown representation `$representation`');
+		}
 	}
 
 	static function validateGenericSource(source:reflaxe.c.lowering.CGenericSpecializationReport.CGenericSourceSnapshot, label:String):Void {

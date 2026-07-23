@@ -23,6 +23,7 @@ SEMANTIC_FIXTURE = SUITE / "fixtures/semantic"
 SUPPORT_INCLUDE = SUITE / "support/include"
 ABI_PROBE = SUITE / "native/core_abi_probe.c"
 RLGL_ABI_PROBE = SUITE / "native/rlgl_abi_probe.c"
+MEMORY_CLOCK_PROBE = SUITE / "native/memory_clock_probe.c"
 EXPECTED = SUITE / "expected"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -95,6 +96,9 @@ CLANG_CL_RUNTIME_FLAG = "/MD"
 EXPECTED_HEADLESS_STDOUT = "INFO: RLSW: Software renderer initialized successfully\n"
 EXPECTED_ABI_STDOUT = "raylib-core-abi: OK\n"
 EXPECTED_RLGL_ABI_STDOUT = "raylib-rlgl-abi: OK\n"
+EXPECTED_MEMORY_CLOCK_STDOUT = (
+    EXPECTED_HEADLESS_STDOUT + "raylib-memory-clock: OK\n"
+)
 VARIANTS = (
     ("linux-memory", "linux", "memory-software", False),
     ("linux-desktop", "linux", "desktop", False),
@@ -999,6 +1003,113 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "stderrText": rlgl_abi_stderr,
             }
         )
+
+    clock_probe_report: dict[str, object] = {
+        "applicable": args.configuration == "memory-software",
+        "compiled": False,
+        "run": {"exercised": False},
+    }
+    if args.configuration == "memory-software":
+        clock_source = native_root / "memory_clock_probe.c"
+        clock_source.write_bytes(MEMORY_CLOCK_PROBE.read_bytes())
+        if family == "clang-cl":
+            clock_compile_arguments, clock_object = clang_cl_abi_compile_arguments(
+                args.cc,
+                clock_source,
+                source_build.include_directory,
+                native_root,
+            )
+        else:
+            clock_compile_arguments, clock_object = gcc_like_abi_compile_arguments(
+                args.cc,
+                clock_source,
+                source_build.include_directory,
+                native_root,
+            )
+        clock_compile_result = run_command(
+            clock_compile_arguments,
+            cwd=native_root,
+            replacements=replacements,
+            timeout=120,
+            label="strict raylib Memory clock probe compile",
+        )
+        clock_executable = native_root / (
+            "raylib-memory-clock.exe"
+            if args.platform == "windows"
+            else "raylib-memory-clock"
+        )
+        if family == "clang-cl":
+            clock_link_arguments = clang_cl_link_arguments(
+                args.cc,
+                clock_object,
+                source_build.library_file,
+                libraries,
+                clock_executable,
+            )
+        else:
+            clock_link_arguments = gcc_like_link_arguments(
+                args.cc,
+                clock_object,
+                source_build.library_file,
+                libraries,
+                frameworks,
+                clock_executable,
+            )
+        clock_link_result = run_command(
+            clock_link_arguments,
+            cwd=native_root,
+            replacements=replacements,
+            timeout=120,
+            label="raylib Memory clock probe link",
+        )
+        clock_run_evidence: dict[str, object] = {"exercised": False}
+        if args.run:
+            clock_run_result = run_command(
+                [str(clock_executable)],
+                cwd=native_root,
+                replacements=replacements,
+                timeout=30,
+                label="raylib Memory clock probe run",
+            )
+            clock_stdout = normalize_text(
+                clock_run_result.process.stdout.decode("utf-8", errors="replace"),
+                replacements,
+            )
+            clock_stderr = normalize_text(
+                clock_run_result.process.stderr.decode("utf-8", errors="replace"),
+                replacements,
+            )
+            if clock_stdout != EXPECTED_MEMORY_CLOCK_STDOUT or clock_stderr != "":
+                raise RaylibTestFailure(
+                    "raylib Memory clock probe output drifted: "
+                    f"stdout={clock_stdout!r}, stderr={clock_stderr!r}"
+                )
+            clock_run_evidence = dict(clock_run_result.evidence)
+            clock_run_evidence.update(
+                {
+                    "exercised": True,
+                    "stdoutText": clock_stdout,
+                    "stderrText": clock_stderr,
+                }
+            )
+        clock_probe_report = {
+            "applicable": True,
+            "compiled": True,
+            "sourceSha256": sha256_file(clock_source),
+            "compile": clock_compile_result.evidence,
+            "link": clock_link_result.evidence,
+            "run": clock_run_evidence,
+            "object": {
+                "path": normalize_text(str(clock_object), replacements),
+                "sha256": sha256_file(clock_object),
+                "sizeBytes": clock_object.stat().st_size,
+            },
+            "executable": {
+                "path": normalize_text(str(clock_executable), replacements),
+                "sha256": sha256_file(clock_executable),
+                "sizeBytes": clock_executable.stat().st_size,
+            },
+        }
     run_evidence: dict[str, object] = {"exercised": False}
     if args.run:
         if args.configuration != "memory-software":
@@ -1108,12 +1219,16 @@ def integration_report(args: argparse.Namespace) -> dict[str, object]:
                 "sizeBytes": rlgl_abi_executable.stat().st_size,
             },
         },
+        "memoryClockProbe": clock_probe_report,
         "claims": {
             "cacheAuthorityExplicit": True,
             "networkAfterProvision": False,
             "generatedCCompiled": True,
             "coreAbiVerified": True,
             "rlglAbiVerified": True,
+            "memoryClockVerified": bool(
+                args.run and args.configuration == "memory-software"
+            ),
             "linked": True,
             "executed": bool(args.run),
             "runConfiguration": args.configuration if args.run else None,

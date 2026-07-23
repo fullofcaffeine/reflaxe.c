@@ -1,5 +1,21 @@
 # Agent Instructions
 
+## Reasoning-effort calibration
+
+Before claiming or beginning substantial work on a new task, use
+`$calibrate-reasoning-effort`, state the lowest effective level and why in one
+sentence, and apply it for subsequent turns when the host exposes that control.
+Recalibrate when evidence materially changes the task's ambiguity, risk, blast
+radius, verification cost, or ability to split into independent work.
+
+At task closure, check whether the completed work changed the shape or risk of
+the next task. If another task will begin, calibrate that new task before doing
+its substantial work. Do not invoke the skill a second time merely to assign a
+retroactive label to finished work or for a tiny administrative close: the
+finished task can no longer benefit from a new setting. A recommendation or
+task label records intent; only a successful host/App Server update proves that
+the setting changed for subsequent turns.
+
 This project uses **bd** (beads) for issue tracking. Run `bd prime` for full workflow context.
 
 > **Architecture in one line:** Issues live in a local Dolt database
@@ -27,6 +43,16 @@ npm run beads:push     # Scan and push Beads data to remote
 
 ## Commit Messages
 
+- Treat a verified task boundary as a Git boundary. After the owning Beads
+  issue is updated or closed and its required gates pass, commit that task's
+  complete scoped changes before beginning substantial work on the next task.
+  Aim to leave the worktree clean between tasks so later failures and reviews
+  have an honest starting point. Do not achieve cleanliness by sweeping
+  unfinished, unrelated, generated-local, or user-owned work into the commit:
+  give unfinished work an active issue, keep it clearly isolated, and report
+  the remaining paths. If several already-completed tasks have accumulated,
+  prefer one explicitly named catch-up integration commit over inventing
+  misleading historical boundaries after the fact.
 - Keep the conventional-commit subject concise, then add a useful commit body
   for every non-trivial change. Write the body in friendly, beginner-readable
   language so someone who does not already know the compiler internals can
@@ -44,6 +70,15 @@ Treat source code, comments, diagnostics, examples, and documentation as a
 learning path for a curious contributor, not as notes for people who already
 know the compiler. Reading this repository should be accurate, approachable,
 and pleasant.
+
+Treat working Haxe source as executable teaching material for the language,
+software design, compiler construction, and--where applicable--game-engine
+architecture. Model the practice being taught in the real implementation rather
+than adding tutorial-only parallel code. Point out a useful pattern where it is
+used, explain its tradeoff in plain language, and link to
+[`docs/haxe-code-architecture.md`](docs/haxe-code-architecture.md) or another
+focused guide for the deeper lesson. Keep every lesson evidence-bounded: clean
+prose must never turn planned behavior or unsupported lowering into fact.
 
 - Prefer common, concrete words whenever they express the same idea. Do not use
   specialist vocabulary merely because it sounds more formal.
@@ -74,6 +109,16 @@ and pleasant.
   type signature, or obvious syntax, and do not let comments compensate for an
   oversized or poorly named API. Update the HxDoc in the same change whenever
   the documented behavior changes.
+- When a declaration makes a meaningful design choice and a real, plausible
+  neighboring design exists, keep the local reason beside it. Briefly name that
+  alternative--for example a `typedef` record versus a class, a module function
+  versus a static-only class, or composition versus inheritance--and explain
+  why the chosen shape matches this value's identity, ownership, mutability,
+  and lifetime. Say what would make the decision worth revisiting when that is
+  useful. Never invent or ritualistically reject an alternative just to satisfy
+  documentation. Link to a canonical guide for the reusable rule, but do not
+  make a newcomer leave the source file to understand the local choice or its
+  important generated-C consequence.
 - Link to the canonical deeper document when a short explanation would become
   repetitive. The local text must still make sense on its own; a link is a path
   to more depth, not a substitute for a basic definition.
@@ -193,6 +238,35 @@ performance, packaging, and developer experience together.
   focused regression and the flagship E2E path that originally exposed it.
   The focused test diagnoses the rule; the flagship proves the layers work
   together.
+- Design the flagship's public APIs in the natural, safe Haxe shape first. If
+  that shape reveals a missing haxe.c capability, do not replace it with a
+  compiler-shaped bandage: generated target-library calls, duplicated
+  application logic, scattered target conditionals, raw C, or a weaker public
+  abstraction must not become the design merely because the current compiler
+  accepts them. A compiler limit changes the current work lane, not the product
+  architecture: pause the application change at its smallest honest
+  reproducer, switch to the owning compiler/runtime work, lift the general
+  limit, and then resume the natural Haxe implementation. Give the compiler gap
+  a focused fixture and an owning Beads issue, implement the reusable typed
+  lowering, and keep the flagship path as its integrated proof. Do not document
+  an avoidable compiler restriction as an application design rule, propagate it
+  into new APIs or data formats, or declare the feature complete while its
+  natural implementation is still blocked. A temporary bridge is acceptable
+  only when an unrelated blocker prevents that compiler work. Before adding one, state the
+  concrete question or learning it unlocks, the smallest evidence it must
+  produce, the definitive path it is standing in for, and the observable
+  removal condition plus owning Beads issue. Keep it private, explicitly
+  transitional, and minimal. Link the temporary code and its nearest truthful
+  documentation to that removal issue so a later contributor cannot mistake it
+  for the intended design. Do not polish, broaden, duplicate, or build new
+  features on top of it. Remove it as soon as it has produced the stated
+  evidence or its blocker clears; learning from an experiment is not a reason
+  to keep the experiment in the product path. Do not close or advertise the
+  definitive capability while a required path still depends on the bridge,
+  unless its acceptance criteria explicitly describe that bounded experimental
+  state. Fail review if the bridge starts shaping source data, public APIs,
+  tooling requirements, or durable architecture. Prefer a focused check that
+  fails if the removal issue is closed while the temporary path still exists.
 - Apply the same loop to improvements, not only failures. Measure readability,
   output shape, compile time, runtime cost, allocations, code size, diagnostics,
   and workflow friction where relevant. Turn a broadly useful improvement into

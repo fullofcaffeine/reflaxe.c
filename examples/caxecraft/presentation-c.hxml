@@ -1,0 +1,5 @@
+-cp src
+-cp test
+-lib reflaxe.c
+--main caxecraft.qa.PresentationInterpolationProbe
+-D hxc_runtime=none

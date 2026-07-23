@@ -2208,6 +2208,179 @@
       "sourceOrdinal": null,
       "readableName": [
         "SpanFixture",
+        "ownedFieldRoundTrip"
+      ],
+      "requestedName": null,
+      "cName": "hxc_SpanFixture_ownedFieldRoundTrip",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_SpanFixture_ownedFieldRoundTrip",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip(u8)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "buffer"
+      ],
+      "requestedName": null,
+      "cName": "hxc_buffer",
+      "semanticKey": "5:local|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture19:ownedFieldRoundTrip6:buffer|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_buffer",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.buffer#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "object-storage"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_object_storage_n2",
+      "semanticKey": "9:temporary|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|4:11:SpanFixture19:ownedFieldRoundTrip6:buffer14:object-storage|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_object_storage_n2",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.buffer.object-storage#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "class-object-address"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_class_object_address_n0",
+      "semanticKey": "9:temporary|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture19:ownedFieldRoundTrip20:class-object-address|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_class_object_address_n0",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.class-object-address#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "instance-call-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_instance_call_result_n2",
+      "semanticKey": "9:temporary|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture19:ownedFieldRoundTrip20:instance-call-result|0:|0:|1:2",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_instance_call_result_n2",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.instance-call-result#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_load_result_n1",
+      "semanticKey": "9:temporary|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture19:ownedFieldRoundTrip11:load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_load_result_n1",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "replacement"
+      ],
+      "requestedName": null,
+      "cName": "hxc_replacement",
+      "semanticKey": "5:local|104:ordinary:92:6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:|3:11:SpanFixture19:ownedFieldRoundTrip11:replacement|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|2:11:SpanFixture19:ownedFieldRoundTrip|1:2:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_replacement",
+      "sourceSymbol": "SpanFixture.ownedFieldRoundTrip.replacement#0"
+    },
+    {
+      "overloadSignature": [
+        "u8"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "SpanFixture",
         "parameterRoundTrip"
       ],
       "requestedName": null,
@@ -3772,6 +3945,244 @@
     {
       "overloadSignature": [],
       "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
+      "requestedName": null,
+      "cName": "hxc_self",
+      "semanticKey": "5:local|230:ordinary:217:6:method|28:ordinary:16:translation-unit|4:8:compiler11:constructor12:_SpanFixture15:OwnedSpanBuffer|1:103:class-reference:nonnull:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766|0:|1:0|4:12:_SpanFixture15:OwnedSpanBuffer3:new4:self|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|4:8:compiler11:constructor12:_SpanFixture15:OwnedSpanBuffer|1:103:class-reference:nonnull:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766|0:|1:0",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_self",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.new.self#0"
+    },
+    {
+      "overloadSignature": [
+        "class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766",
+        "u8"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "_SpanFixture",
+        "OwnedSpanBuffer",
+        "roundTrip"
+      ],
+      "requestedName": null,
+      "cName": "hxc_SpanFixture_OwnedSpanBuffer_roundTrip",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+      "escapeReasons": [
+        "implementation-reserved",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_SpanFixture_OwnedSpanBuffer_roundTrip",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip(class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766, u8)"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "tmp",
+        "collection-index-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_collection_index_load_result_n0",
+      "semanticKey": "9:temporary|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip28:collection-index-load-result|0:|0:|1:0",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_collection_index_load_result_n0",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.collection-index-load-result#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "tmp",
+        "collection-index-load-result"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_collection_index_load_result_n1",
+      "semanticKey": "9:temporary|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip28:collection-index-load-result|0:|0:|1:1",
+      "escapeReasons": [
+        "non-c-identifier-byte",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_collection_index_load_result_n1",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.collection-index-load-result#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "readBytes"
+      ],
+      "requestedName": null,
+      "cName": "hxc_readBytes",
+      "semanticKey": "5:local|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip9:readBytes|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_readBytes",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.readBytes#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 2,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_length_n2",
+      "semanticKey": "9:temporary|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|5:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip9:readBytes6:length|0:|0:|1:2",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_length_n2",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.readBytes.length#2"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "readNumbers"
+      ],
+      "requestedName": null,
+      "cName": "hxc_readNumbers",
+      "semanticKey": "5:local|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip11:readNumbers|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_readNumbers",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.readNumbers#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 3,
+      "readableName": [
+        "tmp",
+        "length"
+      ],
+      "requestedName": null,
+      "cName": "hxc_tmp_length_n3",
+      "semanticKey": "9:temporary|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|5:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip11:readNumbers6:length|0:|0:|1:3",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "temporary",
+      "specializationArguments": [],
+      "baseName": "hxc_tmp_length_n3",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.readNumbers.length#3"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "replacement"
+      ],
+      "requestedName": null,
+      "cName": "hxc_replacement",
+      "semanticKey": "5:local|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip11:replacement|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_replacement",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.replacement#1"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "self"
+      ],
+      "requestedName": null,
+      "cName": "hxc_self",
+      "semanticKey": "5:local|221:ordinary:208:6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:|4:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip4:self|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "6:method|28:ordinary:16:translation-unit|3:12:_SpanFixture15:OwnedSpanBuffer9:roundTrip|2:104:class-reference:nullable:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b2597662:u8|0:|0:",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "local",
+      "specializationArguments": [],
+      "baseName": "hxc_self",
+      "sourceSymbol": "_SpanFixture.OwnedSpanBuffer.roundTrip.self#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
       "naming": "explicit",
       "sourceOrdinal": null,
       "readableName": [
@@ -3837,6 +4248,36 @@
       "specializationArguments": [],
       "baseName": "abort",
       "sourceSymbol": "c-standard-library.abort"
+    },
+    {
+      "overloadSignature": [
+        "class-reference:nonnull:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766"
+      ],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "compiler",
+        "constructor",
+        "_SpanFixture",
+        "OwnedSpanBuffer"
+      ],
+      "requestedName": null,
+      "cName": "hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer",
+      "semanticKey": "6:method|28:ordinary:16:translation-unit|4:8:compiler11:constructor12:_SpanFixture15:OwnedSpanBuffer|1:103:class-reference:nonnull:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766|0:|1:0",
+      "escapeReasons": [
+        "implementation-reserved",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "ordinary"
+      },
+      "visibility": "internal",
+      "kind": "method",
+      "specializationArguments": [],
+      "baseName": "hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer",
+      "sourceSymbol": "compiler.constructor._SpanFixture.OwnedSpanBuffer(class-reference:nonnull:instance.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766)#0"
     },
     {
       "overloadSignature": [],
@@ -3910,6 +4351,76 @@
       "specializationArguments": [],
       "baseName": "hxc_storage",
       "sourceSymbol": "compiler.haxe-class._SpanFixture.FinalSpanMutator.empty-anchor#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": null,
+      "readableName": [
+        "_SpanFixture",
+        "OwnedSpanBuffer"
+      ],
+      "requestedName": null,
+      "cName": "hxc_SpanFixture_OwnedSpanBuffer",
+      "semanticKey": "4:type|23:tag:16:translation-unit|3:8:compiler10:haxe-class28:_SpanFixture.OwnedSpanBuffer|0:|0:|0:",
+      "escapeReasons": [
+        "implementation-reserved",
+        "separator-normalized"
+      ],
+      "namespace": {
+        "scope": "translation-unit",
+        "kind": "tag"
+      },
+      "visibility": "internal",
+      "kind": "type",
+      "specializationArguments": [],
+      "baseName": "hxc_SpanFixture_OwnedSpanBuffer",
+      "sourceSymbol": "compiler.haxe-class._SpanFixture.OwnedSpanBuffer"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 0,
+      "readableName": [
+        "bytes"
+      ],
+      "requestedName": null,
+      "cName": "hxc_bytes",
+      "semanticKey": "5:field|85:member:75:type.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766|5:8:compiler10:haxe-class28:_SpanFixture.OwnedSpanBuffer5:field5:bytes|0:|0:|1:0",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_bytes",
+      "sourceSymbol": "compiler.haxe-class._SpanFixture.OwnedSpanBuffer.field.bytes#0"
+    },
+    {
+      "overloadSignature": [],
+      "collisionResolved": false,
+      "naming": "generated",
+      "sourceOrdinal": 1,
+      "readableName": [
+        "numbers"
+      ],
+      "requestedName": null,
+      "cName": "hxc_numbers",
+      "semanticKey": "5:field|85:member:75:type.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766|5:8:compiler10:haxe-class28:_SpanFixture.OwnedSpanBuffer5:field7:numbers|0:|0:|1:1",
+      "escapeReasons": [],
+      "namespace": {
+        "scope": "type.class.b360c0c3527e7ded38add0797d41a88a202f4826b7934cdee0cce2c10b259766",
+        "kind": "member"
+      },
+      "visibility": "internal",
+      "kind": "field",
+      "specializationArguments": [],
+      "baseName": "hxc_numbers",
+      "sourceSymbol": "compiler.haxe-class._SpanFixture.OwnedSpanBuffer.field.numbers#1"
     },
     {
       "overloadSignature": [],

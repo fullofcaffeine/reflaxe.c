@@ -1,4 +1,4 @@
-hxcir schema=10
+hxcir schema=17
 module "AStaticInitDependent" @"AStaticInitDependent.hx":2:2-7:69
   global "global.AStaticInitDependent.first" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.first") @"AStaticInitDependent.hx":2:2-2:62
   global "global.AStaticInitDependent.second" type=i32 mutable=true initialization=deferred("initializer.AStaticInitDependent.field.second") @"AStaticInitDependent.hx":3:2-3:43
@@ -48,7 +48,7 @@ module "MStaticInitTrace" @"MStaticInitTrace.hx":2:2-18:3
   global "global.MStaticInitTrace.phaseValue" type=i32 mutable=true initialization=deferred("initializer.MStaticInitTrace.field.phaseValue") @"MStaticInitTrace.hx":3:2-3:39
   global "global.MStaticInitTrace.trace" type=i32 mutable=true initialization=deferred("initializer.MStaticInitTrace.field.trace") @"MStaticInitTrace.hx":4:2-4:39
   function "function.MStaticInitTrace.mark" name="MStaticInitTrace.mark" returns=i32 failure=infallible entry="entry" @"MStaticInitTrace.hx":15:45-18:3
-    parameter "parameter.0" type=i32 @"MStaticInitTrace.hx":15:45-18:3
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"MStaticInitTrace.hx":15:45-18:3
     block "entry" @"MStaticInitTrace.hx":15:45-18:3
       instruction "instruction.0.global-load" result="value.0":i32 load place=global("global.MStaticInitTrace.trace") @"MStaticInitTrace.hx":16:11-16:16
       instruction "instruction.1.constant" result="value.1":i32 constant value=int(10) @"MStaticInitTrace.hx":16:19-16:21

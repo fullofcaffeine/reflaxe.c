@@ -1,0 +1,147 @@
+{
+  "slots": [
+    {
+      "cMember": "hxc_interface_slot_CounterView_doubled",
+      "id": "interface-slot.CounterView.doubled",
+      "ownerInstanceId": "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc",
+      "returnRepresentation": "i32",
+      "parameterRepresentations": []
+    },
+    {
+      "cMember": "hxc_interface_slot_CounterView_read",
+      "id": "interface-slot.CounterView.read",
+      "ownerInstanceId": "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc",
+      "returnRepresentation": "i32",
+      "parameterRepresentations": [
+        "i32"
+      ]
+    },
+    {
+      "cMember": "hxc_interface_slot_ResetView_resetValue",
+      "id": "interface-slot.ResetView.resetValue",
+      "ownerInstanceId": "instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34",
+      "returnRepresentation": "i32",
+      "parameterRepresentations": []
+    }
+  ],
+  "status": "analyzed-reachable-instance-dispatch",
+  "schemaVersion": 2,
+  "tables": [
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_CounterView_doubled_method_Counter_doubled",
+          "implementationFunctionId": "method.Counter.doubled",
+          "slotId": "interface-slot.CounterView.doubled"
+        },
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_CounterView_read_method_Counter_read",
+          "implementationFunctionId": "method.Counter.read",
+          "slotId": "interface-slot.CounterView.read"
+        }
+      ],
+      "layoutId": "itable.layout.CounterView",
+      "classInstanceId": "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8",
+      "cName": "hxc_itable_compiler_interface_dispatch_Counter_itable_layout_CounterView",
+      "id": "itable.Counter.CounterView"
+    },
+    {
+      "entries": [
+        {
+          "adapterCName": "hxc_compiler_virtual_dispatch_thunk_interface_slot_ResetView_resetValue_method_Counter_resetValue",
+          "implementationFunctionId": "method.Counter.resetValue",
+          "slotId": "interface-slot.ResetView.resetValue"
+        }
+      ],
+      "layoutId": "itable.layout.ResetView",
+      "classInstanceId": "instance.class.e888477ae6b335d3e298cdf3d314d6ee439bbf3ad2634e5e6227184490d1f2c8",
+      "cName": "hxc_itable_compiler_interface_dispatch_Counter_itable_layout_ResetView",
+      "id": "itable.Counter.ResetView"
+    }
+  ],
+  "adapterPolicy": "representation-identical-overrides-with-typed-receiver-thunks",
+  "runtimeFeatures": [],
+  "tablePolicy": "reachable-class-vtables-and-per-interface-itables-only",
+  "calls": [
+    {
+      "methodFunctionId": "method.ReadableView.read",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.0",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "CounterView",
+      "slotId": "interface-slot.CounterView.read",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 9,
+        "file": "Main.hx",
+        "startColumn": 10,
+        "endLine": 9,
+        "endColumn": 25
+      }
+    },
+    {
+      "methodFunctionId": "method.CounterView.doubled",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.1",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "CounterView",
+      "slotId": "interface-slot.CounterView.doubled",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 9,
+        "file": "Main.hx",
+        "startColumn": 35,
+        "endLine": 9,
+        "endColumn": 52
+      }
+    },
+    {
+      "methodFunctionId": "method.ResetView.resetValue",
+      "callerFunctionId": "function.Main.main",
+      "id": "dispatch.call.2",
+      "reason": "ordinary-interface-method",
+      "receiverStaticClass": "ResetView",
+      "slotId": "interface-slot.ResetView.resetValue",
+      "targetFunctionId": null,
+      "dispatch": "interface",
+      "source": {
+        "startLine": 9,
+        "file": "Main.hx",
+        "startColumn": 62,
+        "endLine": 9,
+        "endColumn": 80
+      }
+    }
+  ],
+  "layouts": [
+    {
+      "cTag": "hxc_compiler_interface_dispatch_CounterView_table_layout",
+      "id": "itable.layout.CounterView",
+      "slotIds": [
+        "interface-slot.CounterView.doubled",
+        "interface-slot.CounterView.read"
+      ],
+      "rootInstanceId": "instance.interface.2930f20fd8651d0973dc4eca05b9816cb3060a9477306e517f4e3bc8f5e36afc"
+    },
+    {
+      "cTag": "hxc_compiler_interface_dispatch_ResetView_table_layout",
+      "id": "itable.layout.ResetView",
+      "slotIds": [
+        "interface-slot.ResetView.resetValue"
+      ],
+      "rootInstanceId": "instance.interface.b93487e9aaad33ad71972b061c3d8633d3f3e104f738c6da257d9645b887ae34"
+    }
+  ],
+  "summary": {
+    "indirectCalls": 3,
+    "slots": 3,
+    "instanceCalls": 3,
+    "tables": 2,
+    "directCalls": 0,
+    "adapters": 3,
+    "layouts": 2
+  },
+  "algorithm": "hxc-closed-world-instance-dispatch-v2"
+}

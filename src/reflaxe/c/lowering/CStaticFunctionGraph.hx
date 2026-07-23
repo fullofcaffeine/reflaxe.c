@@ -3,6 +3,7 @@ package reflaxe.c.lowering;
 #if (macro || reflaxe_runtime)
 import haxe.io.Bytes;
 import haxe.macro.Type;
+import haxe.macro.TypeTools;
 import haxe.macro.TypedExprTools;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.frontend.TypedProgramInput;
@@ -13,6 +14,8 @@ import reflaxe.c.lowering.CBodyLowering.CBodyInitializerInput;
 import reflaxe.c.lowering.CBodyConstructor.CBodyConstructorInput;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchCatalog;
 import reflaxe.c.lowering.CBodyDispatch.CBodyDispatchGraph;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayRecognition;
+import reflaxe.c.lowering.CBodyBytes.CBodyBytesRecognition;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericCallResolver;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericFunctionSpecialization;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericSpecializationReason;
@@ -122,6 +125,18 @@ class CStaticFunctionGraphCollector {
 			pending:Array<CBodyFunctionInput>, constructorsById:Map<String, CBodyConstructorInput>, pendingConstructors:Array<CBodyConstructorInput>,
 			constructorDependencies:Map<String, Array<CConstructorDependency>>):Void {
 		switch expression.expr {
+			case TField(_, FStatic(classReference, fieldReference)) if (isFunctionType(expression.t)):
+				final owner = classReference.get();
+				final field = fieldReference.get();
+				// A non-capturing function value still makes its declaration reachable
+				// even though no direct `TCall` node names it. Generic function values
+				// need a separate specialization contract and remain fail-closed.
+				if (field.params.length == 0) {
+					final targetId = CBodyLowering.functionId(owner.pack.concat([owner.name]).join("."), field.name);
+					final target = available.get(targetId);
+					if (target != null)
+						add(target, byId, pending);
+				}
 			case TNew(classReference, _, _):
 				final target = constructorForGraph(classReference, availableConstructors);
 				if (target != null) {
@@ -142,11 +157,16 @@ class CStaticFunctionGraphCollector {
 					addConstructor(target, constructorsById, pendingConstructors);
 					addConstructorDependency(currentConstructor.id, target.id, expression.pos, constructorDependencies);
 				}
-			case TCall(callee, _) if (CBodyDispatchCatalog.instanceAccess(callee) != null):
+			case TCall(callee, _) if (CBodyDispatchCatalog.instanceAccess(callee) != null
+				&& !isArrayInstanceCall(callee)
+				&& !isBytesInstanceCall(callee)):
 				final callerId = currentConstructor == null ? CBodyLowering.functionInputId(caller) : currentConstructor.id;
 				for (method in requireDispatchCatalog().collectCall(expression, callerId, caller.sourcePath))
 					add(method, byId, pending);
-			case TCall(callee, arguments) if (!isCompilerIntrinsicCall(callee)):
+			case TCall(callee, arguments)
+				if (!isCompilerIntrinsicCall(callee)
+					&& !isBytesIntrinsicCall(callee)
+					&& !CBodyFixedArray.isZeroCall(callee, arguments.length)):
 				final baseTargetId = directStaticFunctionId(callee);
 				final target = baseTargetId == null ? null : available.get(baseTargetId);
 				if (target != null && baseTargetId != null) {
@@ -165,10 +185,69 @@ class CStaticFunctionGraphCollector {
 				}
 			case _:
 		}
-		TypedExprTools.iter(expression,
-			child -> collectExpression(child, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
-				pendingConstructors, constructorDependencies));
+		switch expression.expr {
+			case TCall(callee, arguments) if (isCompilerIntrinsicCall(callee)):
+				// Haxe rewrites `trace(value)` to `haxe.Log.trace(value, info)` and
+				// synthesizes the second argument from source-position metadata. Custom
+				// trace parameters also live inside that object. It is not an ordinary
+				// user Array expression and must not discover functions or managed
+				// representations before the trace lowerer validates the bounded trace
+				// contract. The first argument is ordinary evaluated Haxe, so keep
+				// walking it for reachable calls and function values.
+				if (arguments.length > 0)
+					collectExpression(arguments[0], caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
+						pendingConstructors, constructorDependencies);
+			case TCall(callee, arguments):
+				// A direct static callee is owned by the TCall case above. Visiting its
+				// field node again would misclassify every ordinary direct call as a
+				// first-class function value and could make intrinsic implementation
+				// helpers reachable. Arguments remain ordinary value contexts, so a
+				// function passed as an argument is still discovered.
+				if (directStaticFunctionId(callee) == null)
+					collectExpression(callee, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
+						pendingConstructors, constructorDependencies);
+				for (argument in arguments)
+					collectExpression(argument, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
+						pendingConstructors, constructorDependencies);
+			case _:
+				TypedExprTools.iter(expression,
+					child -> collectExpression(child, caller, currentConstructor, available, availableConstructors, byId, pending, constructorsById,
+						pendingConstructors, constructorDependencies));
+		}
 	}
+
+	static function isFunctionType(type:Type):Bool {
+		return switch TypeTools.follow(type) {
+			case TFun(_, _): true;
+			case _: false;
+		};
+	}
+
+	static function isArrayInstanceCall(callee:TypedExpr):Bool {
+		final access = CBodyDispatchCatalog.instanceAccess(callee);
+		return access != null && CBodyArrayRecognition.isCoreArray(access.owner);
+	}
+
+	static function isBytesInstanceCall(callee:TypedExpr):Bool {
+		final access = CBodyDispatchCatalog.instanceAccess(callee);
+		return access != null && CBodyBytesRecognition.isCoreBytes(access.owner);
+	}
+
+	/**
+	 * Keep the standard Bytes implementation out of the reachable function graph.
+	 *
+	 * The ordinary Haxe call remains visible to body lowering, which validates the
+	 * admitted method and turns it into a typed Bytes runtime operation. Emitting
+	 * the standard library method as well would duplicate the representation and
+	 * expose its target-neutral `BytesData` implementation details.
+	 */
+	static function isBytesIntrinsicCall(callee:TypedExpr):Bool
+		return switch callee.expr {
+			case TField(_, FStatic(classReference, _)): CBodyBytesRecognition.isCoreBytes(classReference);
+			case TField(_, FInstance(classReference, _, _)): CBodyBytesRecognition.isCoreBytes(classReference);
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): isBytesIntrinsicCall(inner);
+			case _: false;
+		};
 
 	function requireDispatchCatalog():CBodyDispatchCatalog {
 		final value = dispatchCatalog;

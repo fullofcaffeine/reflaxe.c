@@ -1,11 +1,36 @@
 [
   {
+    "instanceId": "instance.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f",
+    "cTag": "hxc_OptionalEnvelope",
+    "fields": [
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "point",
+        "cName": "hxc_point",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "optional<instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367>"
+      }
+    ],
+    "declarationId": "type.closed-record.20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f",
+    "digest": "20e4ff95bda8af6280ffe5d770d5a10346685525568e485f46ce93961bd8813f"
+  },
+  {
     "instanceId": "instance.closed-record.4f7014ab7abe19a7ec35be86539abe1f771249e6941f17a8f83d6d9c74863be0",
     "cTag": "hxc_SwitchRecord",
     "fields": [
       {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
         "semanticName": "state",
         "cName": "hxc_state",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
         "type": "i32"
       }
     ],
@@ -17,13 +42,25 @@
     "cTag": "hxc_OrderA",
     "fields": [
       {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
         "semanticName": "a",
         "cName": "hxc_a",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
         "type": "i32"
       },
       {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
         "semanticName": "z",
         "cName": "hxc_z",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
         "type": "i32"
       }
     ],
@@ -31,21 +68,127 @@
     "digest": "9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
   },
   {
+    "instanceId": "instance.closed-record.a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7",
+    "cTag": "hxc_FlowRecord",
+    "fields": [
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "first",
+        "cName": "hxc_first",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "i32"
+      },
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "order",
+        "cName": "hxc_order",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "i32"
+      },
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "second",
+        "cName": "hxc_second",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "i32"
+      },
+      {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
+        "semanticName": "third",
+        "cName": "hxc_third",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
+        "type": "i32"
+      }
+    ],
+    "declarationId": "type.closed-record.a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7",
+    "digest": "a6e9a54a91b748a3add7c25a17f8fcebf0095023e207b32730239cc1461466b7"
+  },
+  {
     "instanceId": "instance.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
     "cTag": "hxc_Envelope",
     "fields": [
       {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
         "semanticName": "enabled",
         "cName": "hxc_enabled",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
         "type": "bool"
       },
       {
+        "enumPayloadMember": null,
+        "enumPayloadUnionTag": null,
+        "enumTag": null,
         "semanticName": "point",
         "cName": "hxc_point",
+        "enumCases": [],
+        "enumDiscriminantTag": null,
+        "enumTagMember": null,
         "type": "instance:instance.closed-record.9cea43a168458d02bfe72970b206dafeedcec7b18823d7bd800e89f1b4b71367"
       }
     ],
     "declarationId": "type.closed-record.b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54",
     "digest": "b661c8070fec7e24aaa423b15bc362ef6a0a03547ff6bd6decc1ac8cc31cde54"
+  },
+  {
+    "instanceId": "instance.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a",
+    "cTag": "hxc_ActorRecord",
+    "fields": [
+      {
+        "enumPayloadMember": "hxc_payload",
+        "enumPayloadUnionTag": "hxc_ActorPhase_payload",
+        "enumTag": "hxc_ActorPhase",
+        "semanticName": "phase",
+        "cName": "hxc_phase",
+        "enumCases": [
+          {
+            "tagValue": 0,
+            "unionMember": null,
+            "semanticName": "Waiting",
+            "cName": "hxc_ActorPhase_Waiting",
+            "payload": [],
+            "payloadStructTag": null
+          },
+          {
+            "tagValue": 1,
+            "unionMember": "hxc_Moving",
+            "semanticName": "Moving",
+            "cName": "hxc_ActorPhase_Moving",
+            "payload": [
+              {
+                "semanticName": "speed",
+                "cName": "hxc_speed",
+                "type": "i32"
+              }
+            ],
+            "payloadStructTag": "hxc_ActorPhase_Moving_payload"
+          }
+        ],
+        "enumDiscriminantTag": "hxc_ActorPhase_tag",
+        "enumTagMember": "hxc_tag",
+        "type": "instance:instance.enum.6ef81aa5dac2c3bd4abd53902efc013401a4bd86a5ae69ae6a635c526204641c"
+      }
+    ],
+    "declarationId": "type.closed-record.bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a",
+    "digest": "bb5fc2f0f3e2a65e6947a5c6deaf89cb7310661faa3bb69749821e29c737148a"
   }
 ]

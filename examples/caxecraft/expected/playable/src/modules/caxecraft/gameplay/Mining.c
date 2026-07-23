@@ -25,6 +25,11 @@ struct hxc_caxecraft_gameplay_MiningResult hxc_caxecraft_gameplay_Mining_attempt
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return (struct hxc_caxecraft_gameplay_MiningResult){ .hxc_inventory = hxc_inventory, .hxc_outcome = 0 };
       }

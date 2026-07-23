@@ -15,13 +15,15 @@ final class PilotProbe {
 		var checkpoints = 0;
 
 		sampledFrames += checkBounded(PilotScriptName.LaunchSmoke, 4);
-		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 10);
+		sampledFrames += checkBounded(PilotScriptName.MoveJumpEdit, 14);
 		sampledFrames += checkBounded(PilotScriptName.PauseRecapture, 7);
 		sampledFrames += checkBounded(PilotScriptName.CombatDrop, 40);
 		sampledFrames += checkBounded(PilotScriptName.RecoveryUse, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryGift, 4);
 		sampledFrames += checkBounded(PilotScriptName.FullInventoryMining, 7);
 		sampledFrames += checkBounded(PilotScriptName.ResizeLayout, 6);
+		sampledFrames += checkBounded(PilotScriptName.AquaticGear, 96);
+		sampledFrames += checkBounded(PilotScriptName.SmoothMotion, 12);
 		checkpoints += checkLaunch();
 		checkpoints += checkMovement();
 		checkpoints += checkPause();
@@ -30,9 +32,11 @@ final class PilotProbe {
 		checkpoints += checkFullInventory();
 		checkpoints += checkFullInventoryMining();
 		checkpoints += checkResize();
+		checkpoints += checkAquaticGear();
+		checkpoints += checkSmoothMotion();
 		checkSharedInterface();
 
-		Sys.println('caxecraft-pilot: 8 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
+		Sys.println('caxecraft-pilot: 10 named scripts, $sampledFrames deterministic frames, $checkpoints checkpoints; bounded quit and shared input interface');
 	}
 
 	static function checkBounded(name:PilotScriptName, expectedLimit:Int):Int {
@@ -69,14 +73,16 @@ final class PilotProbe {
 		require(PilotScript.sample(name, 0).moveForward == 1.0, "movement script lost forward input");
 		require(PilotScript.sample(name, 1).lookYaw == -0.05, "movement script lost look input");
 		require(PilotScript.sample(name, 2).jumpPressed, "movement script lost jump input");
-		require(PilotScript.sample(name, 3).moveRight == 1.0
-			&& PilotScript.sample(name, 3).lookPitch == 0.04, "movement script lost strafe/look input");
-		require(PilotScript.sample(name, 4).primaryPressed, "movement script lost its primary world action");
-		require(PilotScript.sample(name, 5).secondaryPressed, "movement script lost its secondary world action");
-		require(PilotScript.sample(name, 6).hotbarCycle == 1, "movement script lost hotbar input");
-		require(PilotScript.sample(name, 7).interactPressed, "movement script lost guide interaction input");
-		final state = PilotScript.checkpoint(name, 7);
-		final screenshot = PilotScript.checkpoint(name, 8);
+		require(PilotScript.sample(name, 3).lookPitch == -0.25
+			&& PilotScript.sample(name, 4).lookPitch == -0.25
+			&& PilotScript.sample(name, 5).lookPitch == -0.25,
+			"movement script lost its bounded ground aim");
+		require(PilotScript.sample(name, 6).primaryPressed, "movement script lost its primary world action");
+		require(PilotScript.sample(name, 7).hotbarCycle == 1, "movement script lost hotbar input");
+		require(PilotScript.sample(name, 8).secondaryPressed, "movement script lost its secondary world action");
+		require(PilotScript.sample(name, 9).interactPressed, "movement script lost guide interaction input");
+		final state = PilotScript.checkpoint(name, 10);
+		final screenshot = PilotScript.checkpoint(name, 12);
 		require(state != null && state.kind == ObserveState && state.label == "move-jump-edit.state", "movement state checkpoint changed");
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "move-jump-edit.frame",
 			"movement screenshot checkpoint changed");
@@ -161,6 +167,36 @@ final class PilotProbe {
 		final screenshot = PilotScript.checkpoint(name, 3);
 		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "resize-layout.frame",
 			"resize screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkAquaticGear():Int {
+		final name = PilotScriptName.AquaticGear;
+		require(PilotScript.stableName(name) == "aquatic-gear", "aquatic gear script lost its stable name");
+		require(PilotScript.sample(name, 0).moveForward == 1.0 && PilotScript.sample(name, 0).moveRight == -1.0,
+			"aquatic gear script lost its authored-item approach");
+		require(PilotScript.sample(name, 92).moveForward == 0.0 && PilotScript.sample(name, 92).moveRight == 0.0,
+			"aquatic gear script did not stop for its evidence frame");
+		final screenshot = PilotScript.checkpoint(name, 92);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "aquatic-gear.frame",
+			"aquatic gear screenshot checkpoint changed");
+		return 1;
+	}
+
+	static function checkSmoothMotion():Int {
+		final name = PilotScriptName.SmoothMotion;
+		require(PilotScript.stableName(name) == "smooth-motion", "smooth-motion script lost its stable name");
+		require(PilotScript.sample(name, 0).moveForward == 1.0 && PilotScript.sample(name, 10).moveForward == 1.0,
+			"smooth-motion script lost ordinary forward input");
+		require(PilotScript.sample(name, 8).jumpPressed, "smooth-motion script lost its fixed-boundary jump input");
+		require(PilotScript.frameDurationMilliseconds(name, 0) == 8
+			&& PilotScript.frameDurationMilliseconds(name, 2) == 17
+			&& PilotScript.frameDurationMilliseconds(name, 4) == 25
+			&& PilotScript.frameDurationMilliseconds(PilotScriptName.MoveJumpEdit, 0) == 50,
+			"smooth-motion cadence or ordinary one-tick cadence changed");
+		final screenshot = PilotScript.checkpoint(name, 10);
+		require(screenshot != null && screenshot.kind == CaptureScreenshot && screenshot.label == "smooth-motion.frame",
+			"smooth-motion screenshot checkpoint changed");
 		return 1;
 	}
 

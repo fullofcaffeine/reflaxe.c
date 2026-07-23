@@ -16,6 +16,8 @@ import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyLowering.CBodyLoweringResult;
 import reflaxe.c.lowering.CBodyLowering.CLoweredBodyFunction;
 import reflaxe.c.lowering.CPrimitiveHelperEmitter;
+import reflaxe.c.lowering.CBodyRuntimeNames;
+import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 import reflaxe.c.runtime.RuntimeAbiContract;
 
 /** One guarded private header assigned before printing. */
@@ -116,6 +118,8 @@ private class CStaticFunctionSemanticPlan {
 	public final common:CTranslationUnit;
 	public final aggregateForwards:Array<CDecl>;
 	public final aggregateTypes:Array<CTypeSemanticPlan>;
+	public final optionalForwards:Array<CDecl>;
+	public final optionalTypes:Array<CTypeSemanticPlan>;
 	public final enumForwards:Array<CDecl>;
 	public final enumTypes:Array<CTypeSemanticPlan>;
 	public final virtualForwards:Array<CDecl>;
@@ -131,14 +135,16 @@ private class CStaticFunctionSemanticPlan {
 	public final functions:Array<CFunctionSemanticPlan>;
 	public final entry:Array<CDecl>;
 
-	public function new(common:CTranslationUnit, aggregateForwards:Array<CDecl>, aggregateTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>,
-			enumTypes:Array<CTypeSemanticPlan>, virtualForwards:Array<CDecl>, classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>,
-			virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>, moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>,
-			supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>, globalDefinitions:Array<CModuleDeclaration>,
-			functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
+	public function new(common:CTranslationUnit, aggregateForwards:Array<CDecl>, aggregateTypes:Array<CTypeSemanticPlan>, optionalForwards:Array<CDecl>,
+			optionalTypes:Array<CTypeSemanticPlan>, enumForwards:Array<CDecl>, enumTypes:Array<CTypeSemanticPlan>, virtualForwards:Array<CDecl>,
+			classForwards:Array<CDecl>, classTypes:Array<CTypeSemanticPlan>, virtualDefinitions:Array<CDecl>, virtualObjectDeclarations:Array<CDecl>,
+			moduleDependencies:Map<String, Array<String>>, support:Array<CDecl>, supportGlobalSplit:Int, globalDeclarations:Array<CModuleDeclaration>,
+			globalDefinitions:Array<CModuleDeclaration>, functions:Array<CFunctionSemanticPlan>, entry:Array<CDecl>) {
 		this.common = common;
 		this.aggregateForwards = aggregateForwards.copy();
 		this.aggregateTypes = aggregateTypes.copy();
+		this.optionalForwards = optionalForwards.copy();
+		this.optionalTypes = optionalTypes.copy();
 		this.enumForwards = enumForwards.copy();
 		this.enumTypes = enumTypes.copy();
 		this.virtualForwards = virtualForwards.copy();
@@ -201,7 +207,8 @@ class CStaticFunctionProjectEmitter {
 			throw new ProjectEmissionError("a compiler-owned initialization name requires an explicit initialization order");
 		}
 
-		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.dispatch, lowered.imports);
+		final bodyEmitter = new CBodyEmitter(lowered.aggregates, lowered.enums, lowered.classes, lowered.arrays, lowered.bytes, lowered.optionals,
+			lowered.dispatch, lowered.imports, lowered.managedProgram);
 		final helperEmitter = new CPrimitiveHelperEmitter(lowered.helpers);
 		final nonReturningFunctionIds = nonReturningCallCycles(lowered.functions);
 		var hasNonReturningFunctions = false;
@@ -278,10 +285,21 @@ class CStaticFunctionProjectEmitter {
 			if (runtimeAbiMajor != RuntimeAbiContract.MAJOR) {
 				throw new ProjectEmissionError('generated runtime ABI major `$runtimeAbiMajor` differs from the compiler contract `${RuntimeAbiContract.MAJOR}`');
 			}
-			headerUnit.declarations.push(DStaticAssert(EBinary(Equal, EIdentifier(new CIdentifier(RuntimeAbiContract.MAJOR_MACRO)),
-				EInt(CIntegerLiteral.decimal(Std.string(runtimeAbiMajor), ISUnsigned))),
-				'incompatible hxrt ABI major: generated code requires $runtimeAbiMajor'));
+			// A negative array bound is rejected by both strict C11 and C++17. This
+			// header-level ABI check therefore stays portable to both consumers;
+			// `_Static_assert` itself is C-only under a pedantic C++ compiler.
+			headerUnit.declarations.push(DTypedef(new CType(TChar(null)),
+				DArray(DName(new CIdentifier(RuntimeAbiContract.MAJOR_CHECK_TYPE)),
+					ABFixed(EConditional(EBinary(Equal, EIdentifier(new CIdentifier(RuntimeAbiContract.MAJOR_MACRO)),
+						EInt(CIntegerLiteral.decimal(Std.string(runtimeAbiMajor), ISUnsigned))),
+						EInt(CIntegerLiteral.decimal("1", ISNone)), EUnary(Minus, EInt(CIntegerLiteral.decimal("1", ISNone))))),
+					[]),
+				[]));
 		}
+		for (declaration in managedProgramDeclarations(lowered))
+			headerUnit.declarations.push(declaration);
+		for (declaration in bodyEmitter.managedObjectDescriptorDeclarations())
+			headerUnit.declarations.push(declaration);
 		if (usesFloat32) {
 			for (assertion in float32AbiAssertions()) {
 				headerUnit.declarations.push(assertion);
@@ -290,9 +308,14 @@ class CStaticFunctionProjectEmitter {
 		for (definition in helperEmitter.definitions(lowered.helpers)) {
 			headerUnit.declarations.push(definition);
 		}
+		for (prototype in bodyEmitter.arrayElementLifecyclePrototypes()) {
+			headerUnit.declarations.push(prototype);
+		}
 		final typeOwners = typeOwnerModules(lowered);
 		final aggregateForwards = bodyEmitter.aggregateForwardDeclarations();
 		final aggregateTypes = aggregateTypePlans(lowered, bodyEmitter);
+		final optionalForwards = bodyEmitter.optionalForwardDeclarations();
+		final optionalTypes = optionalTypePlans(lowered, bodyEmitter);
 		final enumForwards = bodyEmitter.enumForwardDeclarations();
 		final enumTypes = enumTypePlans(lowered, bodyEmitter);
 		final virtualForwards = bodyEmitter.virtualTableForwardDeclarations();
@@ -300,7 +323,8 @@ class CStaticFunctionProjectEmitter {
 		final classTypes = classTypePlans(lowered, bodyEmitter);
 		final virtualDefinitions = bodyEmitter.virtualTableDefinitions();
 		final virtualObjectDeclarations = bodyEmitter.virtualTableObjectDeclarations();
-		final moduleDependencies = completeModuleDependencies(lowered, aggregateTypes.concat(enumTypes).concat(classTypes), typeOwners, bodyEmitter);
+		final moduleDependencies = completeModuleDependencies(lowered, aggregateTypes.concat(optionalTypes).concat(enumTypes).concat(classTypes), typeOwners,
+			bodyEmitter);
 		final globalDeclarations:Array<CModuleDeclaration> = [];
 		final globalDefinitions:Array<CModuleDeclaration> = [];
 		for (global in lowered.globals) {
@@ -331,6 +355,8 @@ class CStaticFunctionProjectEmitter {
 		}
 
 		final support:Array<CDecl> = [];
+		for (definition in managedProgramDefinitions(lowered))
+			support.push(definition);
 		for (assertion in bodyEmitter.aggregateLayoutAssertions()) {
 			support.push(assertion);
 		}
@@ -340,8 +366,14 @@ class CStaticFunctionProjectEmitter {
 		for (assertion in bodyEmitter.classLayoutAssertions()) {
 			support.push(assertion);
 		}
+		for (definition in bodyEmitter.managedObjectDefinitions()) {
+			support.push(definition);
+		}
 		for (prototype in bodyEmitter.virtualThunkPrototypes()) {
 			support.push(prototype);
+		}
+		for (definition in bodyEmitter.arrayElementLifecycleDefinitions()) {
+			support.push(definition);
 		}
 		final helperNames:Map<String, CIdentifier> = [];
 		for (helper in lowered.helpers) {
@@ -376,6 +408,7 @@ class CStaticFunctionProjectEmitter {
 		}
 		final entryDeclarations:Array<CDecl> = [];
 		final entryStatements:Array<CStmt> = [];
+		appendManagedProgramStart(entryStatements, lowered);
 		if (orderedInitializers.length > 0) {
 			if (initializationName == null) {
 				throw new ProjectEmissionError("validated static initialization order lost its compiler-owned name");
@@ -395,6 +428,7 @@ class CStaticFunctionProjectEmitter {
 			entryStatements.push(SExpr(ECall(EIdentifier(initializationName), [])));
 		}
 		entryStatements.push(SExpr(ECall(EIdentifier(entry.cName), [])));
+		appendManagedProgramStop(entryStatements, lowered);
 		entryStatements.push(SReturn(EInt(CIntegerLiteral.decimal("0"))));
 		entryDeclarations.push(DFunction({
 			storage: [],
@@ -404,9 +438,9 @@ class CStaticFunctionProjectEmitter {
 			body: SBlock(entryStatements),
 			attributes: []
 		}));
-		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, enumForwards, enumTypes, virtualForwards,
-			classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies, support, supportGlobalSplit, globalDeclarations,
-			globalDefinitions, functions, entryDeclarations);
+		final semantic = new CStaticFunctionSemanticPlan(headerUnit, aggregateForwards, aggregateTypes, optionalForwards, optionalTypes, enumForwards,
+			enumTypes, virtualForwards, classForwards, classTypes, virtualDefinitions, virtualObjectDeclarations, moduleDependencies, support,
+			supportGlobalSplit, globalDeclarations, globalDefinitions, functions, entryDeclarations);
 		return switch layout.layout {
 			case Unity: assignUnity(semantic, layout, headerGuards);
 			case Split: assignSplit(semantic, layout, headerGuards);
@@ -432,6 +466,94 @@ class CStaticFunctionProjectEmitter {
 		return files;
 	}
 
+	/** Declare the generated executable's request-local collector state. */
+	static function managedProgramDeclarations(lowered:CBodyLoweringResult):Array<CDecl> {
+		final names = lowered.managedProgram;
+		if (names == null)
+			return [];
+		return [
+			DVariable({
+				storage: [SExtern],
+				alignments: [],
+				type: runtimeStruct(CBRNGcType),
+				declarator: DName(names.collector),
+				initializer: null,
+				attributes: []
+			}),
+			DVariable({
+				storage: [SExtern],
+				alignments: [],
+				type: runtimeStruct(CBRNGcThreadType),
+				declarator: DName(names.thread),
+				initializer: null,
+				attributes: []
+			})
+		];
+	}
+
+	/** Define zero-state storage once, in the compiler-owned support unit. */
+	static function managedProgramDefinitions(lowered:CBodyLoweringResult):Array<CDecl> {
+		final names = lowered.managedProgram;
+		if (names == null)
+			return [];
+		return [
+			DVariable({
+				storage: [],
+				alignments: [],
+				type: runtimeStruct(CBRNGcType),
+				declarator: DName(names.collector),
+				initializer: IExpr(EIdentifier(runtimeName(CBRNGcInitializer))),
+				attributes: []
+			}),
+			DVariable({
+				storage: [],
+				alignments: [],
+				type: runtimeStruct(CBRNGcThreadType),
+				declarator: DName(names.thread),
+				initializer: IExpr(EIdentifier(runtimeName(CBRNGcThreadInitializer))),
+				attributes: []
+			})
+		];
+	}
+
+	/** Initialize the collector and register the main execution-context roots. */
+	static function appendManagedProgramStart(statements:Array<CStmt>, lowered:CBodyLoweringResult):Void {
+		final names = lowered.managedProgram;
+		if (names == null)
+			return;
+		final config = ECompoundLiteral(runtimeStruct(CBRNGcConfigType), DName(null), IList([
+			{designators: [], value: IExpr(ECall(EIdentifier(runtimeName(CBRNDefaultAllocator)), []))},
+			// One mebibyte is a deterministic initial pressure threshold, not a heap cap.
+			{designators: [], value: IExpr(EInt(CIntegerLiteral.decimal("1048576", ISUnsigned)))},
+			{designators: [], value: IExpr(ENull)},
+			{designators: [], value: IExpr(ENull)}
+		]));
+		statements.push(checkedRuntimeCall(ECall(EIdentifier(runtimeName(CBRNGcInit)),
+			[EUnary(AddressOf, config), EUnary(AddressOf, EIdentifier(names.collector))])));
+		statements.push(checkedRuntimeCall(ECall(EIdentifier(runtimeName(CBRNGcThreadRegister)), [
+			EUnary(AddressOf, EIdentifier(names.collector)),
+			EUnary(AddressOf, EIdentifier(names.thread))
+		])));
+	}
+
+	/** Unregister roots before disposing the executable-owned collector. */
+	static function appendManagedProgramStop(statements:Array<CStmt>, lowered:CBodyLoweringResult):Void {
+		final names = lowered.managedProgram;
+		if (names == null)
+			return;
+		statements.push(checkedRuntimeCall(ECall(EIdentifier(runtimeName(CBRNGcThreadUnregister)), [EUnary(AddressOf, EIdentifier(names.thread))])));
+		statements.push(checkedRuntimeCall(ECall(EIdentifier(runtimeName(CBRNGcDispose)), [EUnary(AddressOf, EIdentifier(names.collector))])));
+	}
+
+	static function checkedRuntimeCall(call:CExpr):CStmt
+		return SIf(EBinary(NotEqual, call, EIdentifier(runtimeName(CBRNStatusOk))), SExpr(ECall(EIdentifier(runtimeName(CBRNAbort)), [])), null);
+
+	static function runtimeStruct(name:CBodyRuntimeName):CType
+		return new CType(TStruct(runtimeName(name)));
+
+	static function runtimeName(name:CBodyRuntimeName):CIdentifier
+		return CBodyRuntimeNames.identifier(name);
+
 	static function sourceUnit(?headerInclude:String):CTranslationUnit {
 		final unit = new CTranslationUnit();
 		unit.includes.push({path: headerInclude == null ? HEADER_INCLUDE : headerInclude, kind: Local});
@@ -441,12 +563,11 @@ class CStaticFunctionProjectEmitter {
 	static function assignUnity(semantic:CStaticFunctionSemanticPlan, layout:CProjectLayoutPlan,
 			headerGuards:Map<String, CIdentifier>):CStaticFunctionDeclarationPlan {
 		final headerUnit = copyUnit(semantic.common);
-		appendTypeDeclarations(headerUnit, semantic.aggregateTypes);
 		appendDeclarations(headerUnit, semantic.enumForwards);
-		appendTypeDeclarations(headerUnit, semantic.enumTypes);
+		appendDeclarations(headerUnit, semantic.optionalForwards);
 		appendDeclarations(headerUnit, semantic.virtualForwards);
 		appendDeclarations(headerUnit, semantic.classForwards);
-		appendTypeDeclarations(headerUnit, semantic.classTypes);
+		appendTypeDeclarations(headerUnit, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes).concat(semantic.classTypes));
 		appendDeclarations(headerUnit, semantic.virtualDefinitions);
 		appendDeclarations(headerUnit, semantic.virtualObjectDeclarations);
 		for (global in semantic.globalDeclarations)
@@ -493,6 +614,7 @@ class CStaticFunctionProjectEmitter {
 		final headers:Array<CStaticFunctionHeaderPlan> = [];
 		final typesUnit = copyUnit(semantic.common);
 		appendDeclarations(typesUnit, semantic.aggregateForwards);
+		appendDeclarations(typesUnit, semantic.optionalForwards);
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
@@ -513,9 +635,7 @@ class CStaticFunctionProjectEmitter {
 				unit.includes.push({path: layout.module(dependency).headerInclude, kind: Local});
 			moduleHeaderUnits.set(module.modulePath, unit);
 		}
-		appendModuleTypes(moduleHeaderUnits, semantic.aggregateTypes);
-		appendModuleTypes(moduleHeaderUnits, semantic.enumTypes);
-		appendModuleTypes(moduleHeaderUnits, semantic.classTypes);
+		appendModuleTypes(moduleHeaderUnits, semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes).concat(semantic.classTypes));
 		for (global in semantic.globalDeclarations)
 			requireModuleUnit(moduleHeaderUnits, global.modulePath).declarations.push(global.declaration);
 		for (fn in semantic.functions)
@@ -602,6 +722,7 @@ class CStaticFunctionProjectEmitter {
 		final headers:Array<CStaticFunctionHeaderPlan> = [];
 		final typesUnit = copyUnit(semantic.common);
 		appendDeclarations(typesUnit, semantic.aggregateForwards);
+		appendDeclarations(typesUnit, semantic.optionalForwards);
 		appendDeclarations(typesUnit, semantic.enumForwards);
 		appendDeclarations(typesUnit, semantic.virtualForwards);
 		appendDeclarations(typesUnit, semantic.classForwards);
@@ -623,7 +744,8 @@ class CStaticFunctionProjectEmitter {
 				unit.includes.push({path: layout.packageLayout(dependency).headerInclude, kind: Local});
 			packageHeaderUnits.set(pack.packagePath, unit);
 		}
-		appendPackageTypes(packageHeaderUnits, layout, semantic.aggregateTypes.concat(semantic.enumTypes).concat(semantic.classTypes));
+		appendPackageTypes(packageHeaderUnits, layout,
+			semantic.aggregateTypes.concat(semantic.optionalTypes).concat(semantic.enumTypes).concat(semantic.classTypes));
 		for (global in semantic.globalDeclarations) {
 			requirePackageUnit(packageHeaderUnits, layout.packageForModule(global.modulePath).packagePath).declarations.push(global.declaration);
 		}
@@ -748,13 +870,51 @@ class CStaticFunctionProjectEmitter {
 	}
 
 	static function appendTypeDeclarations(unit:CTranslationUnit, plans:Array<CTypeSemanticPlan>):Void {
-		for (plan in plans)
+		for (plan in dependencyOrderedTypePlans(plans))
 			appendDeclarations(unit, plan.declarations);
 	}
 
 	static function appendModuleTypes(units:Map<String, CTranslationUnit>, plans:Array<CTypeSemanticPlan>):Void {
-		for (plan in plans)
+		for (plan in dependencyOrderedTypePlans(plans))
 			appendDeclarations(requireModuleUnit(units, plan.modulePath), plan.declarations);
+	}
+
+	/**
+		Orders complete generated types before any owning type that stores them by
+		value. A native C enum cannot be forward-declared in strict C11, so grouping
+		all aggregate, enum, and class plans is required when one semantic family
+		contains another—for example, a Haxe record with an enum-valued field.
+	**/
+	static function dependencyOrderedTypePlans(plans:Array<CTypeSemanticPlan>):Array<CTypeSemanticPlan> {
+		final byId:Map<String, CTypeSemanticPlan> = [];
+		final roots = plans.copy();
+		roots.sort((left, right) -> compareStrings(left.instanceId, right.instanceId));
+		for (plan in roots) {
+			if (byId.exists(plan.instanceId))
+				throw new ProjectEmissionError('project repeats complete type `${plan.instanceId}`');
+			byId.set(plan.instanceId, plan);
+		}
+		final result:Array<CTypeSemanticPlan> = [];
+		final state:Map<String, Int> = [];
+		for (plan in roots)
+			visitTypePlan(plan, byId, state, result);
+		return result;
+	}
+
+	static function visitTypePlan(plan:CTypeSemanticPlan, byId:Map<String, CTypeSemanticPlan>, state:Map<String, Int>, result:Array<CTypeSemanticPlan>):Void {
+		final current = state.get(plan.instanceId);
+		if (current == 2)
+			return;
+		if (current == 1)
+			throw new ProjectEmissionError('complete-type dependency cycle reaches `${plan.instanceId}`');
+		state.set(plan.instanceId, 1);
+		for (dependencyId in plan.completeDependencies) {
+			final dependency = byId.get(dependencyId);
+			if (dependency != null)
+				visitTypePlan(dependency, byId, state, result);
+		}
+		state.set(plan.instanceId, 2);
+		result.push(plan);
 	}
 
 	/**
@@ -817,6 +977,8 @@ class CStaticFunctionProjectEmitter {
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
 		for (value in lowered.classes)
 			addTypeOwner(result, value.prepared.instanceId, value.prepared.ownerModule);
+		for (value in lowered.optionals)
+			addTypeOwner(result, value.prepared.planId, value.prepared.ownerModule);
 		return result;
 	}
 
@@ -864,6 +1026,30 @@ class CStaticFunctionProjectEmitter {
 		return result;
 	}
 
+	/**
+		Give every direct optional record one ordinary generated-type owner.
+
+		The wrapper depends on its payload record being complete first. Any record or
+		function that then uses the wrapper by value depends on this plan ID, which is
+		what keeps split and package headers valid without duplicating definitions.
+	**/
+	static function optionalTypePlans(lowered:CBodyLoweringResult, emitter:CBodyEmitter):Array<CTypeSemanticPlan> {
+		final result:Array<CTypeSemanticPlan> = [];
+		for (planId in emitter.orderedOptionalPlanIds()) {
+			var loweredOptional = null;
+			for (candidate in lowered.optionals)
+				if (candidate.prepared.planId == planId)
+					loweredOptional = candidate;
+			if (loweredOptional == null)
+				throw new ProjectEmissionError('optional definition order contains unknown plan `$planId`');
+			final dependencies:Array<String> = [];
+			addDefinitionTypeDependencies(emitter.optionalPayloadType(planId), dependencies, emitter);
+			dependencies.sort(compareStrings);
+			result.push(new CTypeSemanticPlan(planId, loweredOptional.prepared.ownerModule, [emitter.optionalDefinition(planId)], dependencies));
+		}
+		return result;
+	}
+
 	static function classTypePlans(lowered:CBodyLoweringResult, emitter:CBodyEmitter):Array<CTypeSemanticPlan> {
 		final byId:Map<String, CLoweredBodyClass> = [];
 		for (value in lowered.classes)
@@ -890,8 +1076,10 @@ class CStaticFunctionProjectEmitter {
 			case IRTInstance(instanceId):
 				if (dependencies.indexOf(instanceId) == -1)
 					dependencies.push(instanceId);
-			case IRTNullable(value, IRNTagged):
-				addDefinitionTypeDependencies(value, dependencies, emitter);
+			case IRTNullable(_, IRNTagged):
+				final planId = emitter.optionalPlanId(type);
+				if (dependencies.indexOf(planId) == -1)
+					dependencies.push(planId);
 			case IRTFixedArray(element, _, _):
 				addDefinitionTypeDependencies(element, dependencies, emitter);
 			case IRTPointer(pointee, _) | IRTNullable(pointee, IRNPointer) | IRTSpan(pointee, _):
@@ -944,7 +1132,11 @@ class CStaticFunctionProjectEmitter {
 			case IRTInstance(instanceId):
 				if (!emitter.typeInstanceIsForwardDeclarable(instanceId) && dependencies.indexOf(instanceId) == -1)
 					dependencies.push(instanceId);
-			case IRTNullable(value, IRNTagged) | IRTFixedArray(value, _, _):
+			case IRTNullable(_, IRNTagged):
+				final planId = emitter.optionalPlanId(type);
+				if (dependencies.indexOf(planId) == -1)
+					dependencies.push(planId);
+			case IRTFixedArray(value, _, _):
 				addDeclarationHeaderDependencies(value, dependencies, emitter);
 			case IRTFunction(parameters, result):
 				for (parameter in parameters)

@@ -1,0 +1,533 @@
+{
+  "canonicalAbi": {
+    "defines": [],
+    "languageStandard": "c11",
+    "target": "x86_64-unknown-linux-gnu"
+  },
+  "declarationSha256": "73b9389b133d549a629dec8fc5ca1e32c7ad87403339fa9d1a9c8d29f297bd31",
+  "declarations": {
+    "functions": [
+      {
+        "name": "GuiButton",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 836
+      },
+      {
+        "name": "GuiDisable",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 786
+      },
+      {
+        "name": "GuiDummyRec",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 854
+      },
+      {
+        "name": "GuiEnable",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 785
+      },
+      {
+        "name": "GuiGetState",
+        "parameters": [],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 792
+      },
+      {
+        "name": "GuiGetStyle",
+        "parameters": [
+          {
+            "name": "control",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "property",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 800
+      },
+      {
+        "name": "GuiGetTextWidth",
+        "parameters": [
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 823
+      },
+      {
+        "name": "GuiGroupBox",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 829
+      },
+      {
+        "name": "GuiIsLocked",
+        "parameters": [],
+        "returnType": {
+          "cType": "bool",
+          "canonicalCType": "_Bool",
+          "haxeType": "Bool"
+        },
+        "sourceLine": 789
+      },
+      {
+        "name": "GuiLabel",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 835
+      },
+      {
+        "name": "GuiLabelButton",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 837
+      },
+      {
+        "name": "GuiLine",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 830
+      },
+      {
+        "name": "GuiLoadStyleDefault",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 805
+      },
+      {
+        "name": "GuiLock",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 787
+      },
+      {
+        "name": "GuiPanel",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 831
+      },
+      {
+        "name": "GuiSetAlpha",
+        "parameters": [
+          {
+            "name": "alpha",
+            "type": {
+              "cType": "float",
+              "canonicalCType": "float",
+              "haxeType": "c.Float32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 790
+      },
+      {
+        "name": "GuiSetState",
+        "parameters": [
+          {
+            "name": "state",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 791
+      },
+      {
+        "name": "GuiSetStyle",
+        "parameters": [
+          {
+            "name": "control",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "property",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          },
+          {
+            "name": "value",
+            "type": {
+              "cType": "int",
+              "canonicalCType": "int",
+              "haxeType": "c.Int32"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 799
+      },
+      {
+        "name": "GuiStatusBar",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "text",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 853
+      },
+      {
+        "name": "GuiUnlock",
+        "parameters": [],
+        "returnType": {
+          "cType": "void",
+          "canonicalCType": "void",
+          "haxeType": "Void"
+        },
+        "sourceLine": 788
+      },
+      {
+        "name": "GuiWindowBox",
+        "parameters": [
+          {
+            "name": "bounds",
+            "type": {
+              "cType": "Rectangle",
+              "canonicalCType": "struct Rectangle",
+              "haxeType": "raylib.raw.Rectangle"
+            }
+          },
+          {
+            "name": "title",
+            "type": {
+              "cType": "const char *",
+              "canonicalCType": "const char *",
+              "haxeType": "c.CString"
+            }
+          }
+        ],
+        "returnType": {
+          "cType": "int",
+          "canonicalCType": "int",
+          "haxeType": "c.Int32"
+        },
+        "sourceLine": 828
+      }
+    ]
+  },
+  "extraction": {
+    "arguments": [
+      "--target=x86_64-unknown-linux-gnu",
+      "-x",
+      "c",
+      "-std=c11",
+      "-I",
+      "${RAYGUI_INCLUDE}",
+      "-I",
+      "${RAYLIB_INCLUDE}",
+      "-Xclang",
+      "-ast-dump=json",
+      "-fsyntax-only",
+      "${RAYGUI_HEADER}"
+    ],
+    "authority": "clang-ast-json",
+    "clang": {
+      "dumpMachine": "arm64-apple-darwin24.4.0",
+      "family": "clang",
+      "version": "Apple clang version 17.0.0 (clang-1700.0.13.3)"
+    },
+    "requestedTarget": "x86_64-unknown-linux-gnu"
+  },
+  "generatedPaths": [
+    "src/raygui/raw/Raygui.hx"
+  ],
+  "generator": {
+    "algorithm": "hxc-raygui-clang-core-v1",
+    "path": "scripts/raygui/core_binding.py"
+  },
+  "implementation": {
+    "macro": "RAYGUI_IMPLEMENTATION",
+    "owner": "raygui-static-library",
+    "sourceTemplateSha256": "3c206e58f97342b6b2359be7e28c49620b9045efc9b04fa89fe70102d0b7ce73",
+    "translationUnits": 1
+  },
+  "schemaVersion": 1,
+  "selection": {
+    "counts": {
+      "functions": 21,
+      "omittedFamilies": 3
+    },
+    "coverageState": "coherent-editor-shell-core",
+    "omissions": [
+      {
+        "family": "pointer-mutating-controls",
+        "owner": "haxe_c-xge.19.6.1",
+        "reason": "Text boxes, lists, toggles, sliders, color controls, grids, scroll panels, tabs, and message boxes require typed mutable-borrow and buffer-capacity contracts before the ergonomic facade can expose them."
+      },
+      {
+        "family": "style-and-icon-file-loading",
+        "owner": "haxe_c-xge.19.6.1",
+        "reason": "Style and icon loading allocate or retain Raylib resources and need explicit ownership, cleanup, failure, and packaged-file policies."
+      },
+      {
+        "family": "remaining-public-header",
+        "owner": "haxe_c-xge.19.6.1",
+        "reason": "The first binding is a coherent editor-shell subset and does not claim complete raygui 5.0 coverage."
+      }
+    ],
+    "path": "docs/specs/raygui-core-selection.json",
+    "sha256": "3a0407a97f76b0970d0a1a326bd6276242103a17f85978e1575e23a96175143c"
+  },
+  "upstream": {
+    "archive": {
+      "rootDirectory": "raygui-020a61bebcbe288b4414de3416e219ef40af847a",
+      "sha256": "8327ee8ec254ababfd76908cf39857384ad311e4ef43f9c2c7d94bec6e4a6389",
+      "sizeBytes": 5468832,
+      "url": "https://codeload.github.com/raysan5/raygui/tar.gz/020a61bebcbe288b4414de3416e219ef40af847a"
+    },
+    "commit": "020a61bebcbe288b4414de3416e219ef40af847a",
+    "header": {
+      "path": "src/raygui.h",
+      "sha256": "9428525eef081eaec45f8fedbb68199bcbe876f2ce927d5e2a69e811a01ae3a9"
+    },
+    "license": {
+      "expression": "Zlib",
+      "path": "LICENSE",
+      "sha256": "3d651cb17718213238247b60f599f6706b97183391ad36387ad9949ff8b08c0b"
+    },
+    "name": "raygui",
+    "release": "5.0",
+    "sourceTree": {
+      "algorithm": "hxc-path-size-content-sha256-v1",
+      "fileCount": 281,
+      "sha256": "cf0baec6f439c3eeb72e695d16eeb08e622eea9e2d5d8bb534d39d187f424db2",
+      "sizeBytes": 10010338
+    }
+  }
+}

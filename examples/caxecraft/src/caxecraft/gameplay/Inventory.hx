@@ -12,28 +12,16 @@ final class Inventory {
 		return make(0, 16, 24, 12, 1, 1, 6, 3, 1);
 
 	public static function make(selected:Int, grass:Int, dirt:Int, stone:Int, haxeforge:Int, sword:Int, berries:Int, bread:Int, lantern:Int):InventoryState {
-		// Materialize each checked scalar before constructing the record. This
-		// keeps source evaluation order explicit and avoids carrying a branch-local
-		// temporary into a later aggregate field. haxe_c-940 owns lifting that
-		// current compiler constraint.
-		final safeGrass = boundedCount(grass);
-		final safeDirt = boundedCount(dirt);
-		final safeStone = boundedCount(stone);
-		final safeHaxeforge = boundedCount(haxeforge);
-		final safeSword = boundedCount(sword);
-		final safeBerries = boundedCount(berries);
-		final safeBread = boundedCount(bread);
-		final safeLantern = boundedCount(lantern);
 		return {
 			selected: selected,
-			grass: safeGrass,
-			dirt: safeDirt,
-			stone: safeStone,
-			haxeforge: safeHaxeforge,
-			sword: safeSword,
-			berries: safeBerries,
-			bread: safeBread,
-			lantern: safeLantern
+			grass: boundedCount(grass),
+			dirt: boundedCount(dirt),
+			stone: boundedCount(stone),
+			haxeforge: boundedCount(haxeforge),
+			sword: boundedCount(sword),
+			berries: boundedCount(berries),
+			bread: boundedCount(bread),
+			lantern: boundedCount(lantern)
 		};
 	}
 
@@ -166,7 +154,7 @@ final class Inventory {
 				make(state.selected, state.grass, state.dirt + 1, state.stone, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
 			case Stone:
 				make(state.selected, state.grass, state.dirt, state.stone + 1, state.haxeforge, state.sword, state.berries, state.bread, state.lantern);
-			case Air | Bedrock: state;
+			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: state;
 		};
 	}
 

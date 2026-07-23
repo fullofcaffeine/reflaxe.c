@@ -48,6 +48,8 @@ pointlib_float_point pointlib_float_point_scale(pointlib_float_point point, floa
 float pointlib_float_point_dot(pointlib_float_point left, pointlib_float_point right);
 bool pointlib_float32_verify(pointlib_float_point point, float dot, double widened, float tie, float subnormal,
   float positive_infinity, float nan_value, float negative_zero, float finite_overflow);
+bool pointlib_inline_float32_verify(float from_integer_local, float from_integer_arithmetic, float from_float_local,
+  float from_side_effect, float from_non_inline);
 void pointlib_build_fact_probe(void);
 
 #if defined(__cplusplus)

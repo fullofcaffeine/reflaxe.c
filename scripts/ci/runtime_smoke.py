@@ -23,7 +23,9 @@ ALLOCATOR_ABI = ROOT / "runtime/hxrt/test/allocator_abi.c"
 CPP_HEADER_SMOKE = ROOT / "runtime/hxrt/test/public_header_cpp.cpp"
 RUNTIME_FEATURE_GRAPH = ROOT / "test/runtime/runtime-feature-graph/run.py"
 ARRAY_RUNTIME = ROOT / "test/differential/array-runtime/run.py"
+BYTES_RUNTIME = ROOT / "test/differential/bytes-runtime/run.py"
 STRING_RUNTIME = ROOT / "test/differential/string-runtime/run.py"
+GC_RUNTIME = ROOT / "test/runtime/gc/run.py"
 HELLO_EXAMPLE = ROOT / "examples/hello/run.py"
 PRIMITIVE_DIFFERENTIAL = ROOT / "test/primitive_differential/run.py"
 C_IMPORT = ROOT / "test/c_import/run.py"
@@ -303,6 +305,29 @@ def run_toolchain(toolchain: Toolchain, build: Path) -> tuple[str, ...]:
         label=f"{family} typed array runtime contract",
     )
     lanes.append("array-runtime-contract")
+
+    run_command(
+        [
+            sys.executable,
+            str(BYTES_RUNTIME),
+            "--toolchain",
+            family,
+            "--native-only",
+        ],
+        label=f"{family} fixed-length Bytes runtime contract",
+    )
+    lanes.append("bytes-runtime-contract")
+
+    run_command(
+        [
+            sys.executable,
+            str(GC_RUNTIME),
+            "--toolchain",
+            family,
+        ],
+        label=f"{family} precise non-moving collector contract",
+    )
+    lanes.append("gc-runtime-contract")
 
     run_command(
         [

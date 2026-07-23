@@ -4,7 +4,8 @@
       "dependencies": [],
       "id": "runtime-base",
       "reasonIds": [
-        "runtime.io.sys-println-literal.0"
+        "runtime.io.sys-println-literal.0",
+        "runtime.string-literal.static-value.1"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -38,7 +39,8 @@
       ],
       "id": "string-literal",
       "reasonIds": [
-        "runtime.io.sys-println-literal.0"
+        "runtime.io.sys-println-literal.0",
+        "runtime.string-literal.static-value.1"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -47,7 +49,7 @@
       ],
       "libraries": [],
       "defines": [],
-      "root": false
+      "root": true
     },
     {
       "dependencies": [
@@ -108,7 +110,8 @@
     {
       "featureId": "string-literal",
       "reasonIds": [
-        "runtime.io.sys-println-literal.0"
+        "runtime.io.sys-println-literal.0",
+        "runtime.string-literal.static-value.1"
       ],
       "dependencyId": "runtime-base"
     }
@@ -176,6 +179,25 @@
       "id": "runtime.io.sys-println-literal.0",
       "operationId": "sys-println-literal",
       "kind": "hosted-output",
+      "surface": "Sys.println(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 3,
+          "column": 32
+        },
+        "start": {
+          "line": 3,
+          "column": 3
+        }
+      }
+    },
+    {
+      "featureId": "string-literal",
+      "alternative": null,
+      "id": "runtime.string-literal.static-value.1",
+      "operationId": "static-value",
+      "kind": "direct-string-value",
       "surface": "Sys.println(String literal)",
       "source": {
         "file": "Main.hx",

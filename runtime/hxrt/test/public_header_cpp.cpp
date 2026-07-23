@@ -16,7 +16,7 @@
 extern "C" void hxc_test_c_allocator_layout(std::size_t *values);
 
 static_assert(HXC_RUNTIME_ABI_MAJOR == 0u, "C++ consumer must see the reviewed runtime ABI major");
-static_assert(HXC_RUNTIME_ABI_MINOR == 5u, "C++ consumer must see the reviewed runtime ABI minor");
+static_assert(HXC_RUNTIME_ABI_MINOR == 8u, "C++ consumer must see the reviewed runtime ABI minor");
 static_assert(
   std::is_same<
     hxc_allocate_fn,
@@ -46,6 +46,10 @@ static_assert(std::is_standard_layout<hxc_array_element_ops>::value, "array elem
 static_assert(std::is_trivially_copyable<hxc_array_element_ops>::value, "array element strategy must cross C ABI calls by value");
 static_assert(std::is_standard_layout<hxc_array>::value, "array owner must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_array>::value, "array owner must cross C ABI calls by value");
+static_assert(std::is_standard_layout<hxc_array_ref>::value, "shared Array container must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_array_ref>::value, "shared Array container must have a C-compatible object representation");
+static_assert(std::is_standard_layout<hxc_bytes_ref>::value, "shared Bytes container must be C-compatible");
+static_assert(std::is_trivially_copyable<hxc_bytes_ref>::value, "shared Bytes container must have a C-compatible object representation");
 static_assert(
   std::is_same<
     hxc_array_copy_fn,
@@ -63,6 +67,36 @@ static_assert(
 static_assert(
   std::is_same<hxc_array_destroy_fn, void (*)(void *, void *)>::value,
   "array destructor callback signature must agree in C++"
+);
+static_assert(
+  std::is_same<decltype(&hxc_array_ref_retain), hxc_status (*)(hxc_array_ref *)>::value,
+  "shared Array retain signature must agree in C++"
+);
+static_assert(
+	std::is_same<decltype(&hxc_array_ref_release), hxc_status (*)(hxc_array_ref *)>::value,
+	"shared Array release signature must agree in C++"
+);
+static_assert(
+  std::is_same<
+    decltype(&hxc_array_ref_init_in_place),
+    hxc_status (*)(hxc_allocator, hxc_array_element_ops, hxc_array_ref *)
+  >::value,
+  "in-place shared Array initialization signature must agree in C++"
+);
+static_assert(
+  std::is_same<
+    decltype(&hxc_array_ref_dispose_in_place),
+    hxc_status (*)(hxc_array_ref *)
+  >::value,
+  "in-place shared Array disposal signature must agree in C++"
+);
+static_assert(
+  std::is_same<decltype(&hxc_bytes_ref_retain), hxc_status (*)(hxc_bytes_ref *)>::value,
+  "shared Bytes retain signature must agree in C++"
+);
+static_assert(
+  std::is_same<decltype(&hxc_bytes_ref_release), hxc_status (*)(hxc_bytes_ref *)>::value,
+  "shared Bytes release signature must agree in C++"
 );
 static_assert(std::is_standard_layout<hxc_string>::value, "private string value must be C-compatible");
 static_assert(std::is_trivially_copyable<hxc_string>::value, "private string value must cross internal C ABI calls by value");

@@ -227,9 +227,19 @@ jobs:
         run: npm run test:build-adapters -- --toolchain "${{ matrix.toolchain }}"
 
   raylib-headless:
-    name: Raylib 6.0 headless (Linux GCC)
+    name: Raylib 6.0 headless (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-gcc
+            cc: gcc
+            cxx: g++
+          - name: linux-clang
+            cc: clang
+            cxx: clang++
     steps:
       - name: Check out source
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
@@ -245,9 +255,8 @@ jobs:
 
       - name: Require native build tools
         run: |
-          gcc --version
-          g++ --version
-          clang --version
+          "${{ matrix.cc }}" --version
+          "${{ matrix.cxx }}" --version
           cmake --version
           ninja --version
 
@@ -269,8 +278,8 @@ jobs:
             --platform linux \
             --cache-root "$raylib_cache" \
             --build-root "$raylib_build" \
-            --cc gcc \
-            --cxx g++ \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
             --clang clang \
             --cmake cmake \
             --generator Ninja \
@@ -278,11 +287,69 @@ jobs:
             --run \
             --report "$raylib_report"
 
+          # Prove the separately generated RayguiHx declarations against the
+          # same pinned Raylib build with independent C11 and C++17 consumers.
+          raygui_cache="$RUNNER_TEMP/raygui-headless-cache"
+          raygui_native="$RUNNER_TEMP/raygui-headless-native"
+          python3 test/raygui_binding/native.py \
+            --raygui-cache-root "$raygui_cache" \
+            --allow-network \
+            --raylib-source "$raylib_cache/sources/raylib-dbc56a87da87d973a9c5baa4e7438a9d20121d28" \
+            --raylib-library "$raylib_build/raylib/libraylib.a" \
+            --platform linux \
+            --configuration memory-software \
+            --build-root "$raygui_native" \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --ar ar \
+            --report "$RUNNER_TEMP/raygui-headless-${{ matrix.name }}.json"
+
+          # Reuse the checksum-verified library above for the flagship game.
+          # This is the real Haxe -> C -> native application and the real
+          # software framebuffer, not the small binding integration fixture.
+          export ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:strict_string_checks=1"
+          export UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"
+          python3 examples/caxecraft/play.py \
+            --raylib-configuration memory-software \
+            --pilot move-jump-edit \
+            --optimization 2 \
+            --sanitizers \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --prebuilt-raylib-cache "$raylib_cache" \
+            --prebuilt-raylib-build "$raylib_build" \
+            --prebuilt-raylib-report "$raylib_report" \
+            --raygui-cache-root "$raygui_cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-headless"
+
+          # Timing uses the same verified Raylib build without sanitizer
+          # instrumentation. The benchmark itself runs both generated-Haxe
+          # renderer variants and requires identical semantic/image evidence.
+          python3 examples/caxecraft/benchmark_renderer.py \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --generator Ninja \
+            --prebuilt-raylib-cache "$raylib_cache" \
+            --prebuilt-raylib-build "$raylib_build" \
+            --prebuilt-raylib-report "$raylib_report" \
+            --raygui-cache-root "$raygui_cache" \
+            --output-root "$RUNNER_TEMP/caxecraft-renderer-benchmark" \
+            --report "$RUNNER_TEMP/caxecraft-renderer-comparison-${{ matrix.name }}.json"
+
       - name: Preserve normalized Raylib headless evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: raylib-headless-linux-gcc
-          path: ${{ runner.temp }}/raylib-headless-report.json
+          name: raylib-headless-${{ matrix.name }}
+          path: |
+            ${{ runner.temp }}/raylib-headless-report.json
+            ${{ runner.temp }}/raygui-headless-${{ matrix.name }}.json
+            ${{ runner.temp }}/caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-move.png
+            ${{ runner.temp }}/caxecraft-renderer-comparison-${{ matrix.name }}.json
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-benchmark/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-benchmark/bin/caxecraft-pilot-move.png
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-immediate-baseline-benchmark/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-renderer-benchmark/variants/linux-memory-software-split-pilot-move-jump-edit-immediate-baseline-benchmark/bin/caxecraft-pilot-move.png
           if-no-files-found: error
           retention-days: 14
 
@@ -373,6 +440,33 @@ jobs:
             --allow-network \
             --report "$raylib_report"
 
+      - name: Verify the Memory clock on macOS and Windows
+        if: matrix.platform == 'macos' || matrix.platform == 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Reuse the already verified source archive, but keep this backend's
+          # CMake output isolated from the desktop library above. On macOS the
+          # provisioner applies the locked clock patch to a private source copy;
+          # Windows exercises its existing performance-counter branch unchanged.
+          raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
+          raylib_build="$RUNNER_TEMP/raylib-memory-clock-build"
+          raylib_report="$RUNNER_TEMP/raylib-memory-clock-report.json"
+          python3 test/raylib_provisioning/run.py \
+            --integration \
+            --authority pinned-source \
+            --configuration memory-software \
+            --platform "${{ matrix.platform }}" \
+            --cache-root "$raylib_cache" \
+            --build-root "$raylib_build" \
+            --cc "${{ matrix.cc }}" \
+            --cxx "${{ matrix.cxx }}" \
+            --clang clang \
+            --cmake cmake \
+            --generator Ninja \
+            --run \
+            --report "$raylib_report"
+
       - name: Compile first Caxecraft playable through the Windows C target
         if: matrix.platform == 'windows'
         shell: bash
@@ -389,27 +483,32 @@ jobs:
           raylib_cache="$RUNNER_TEMP/raylib-desktop-cache"
           raylib_build="$RUNNER_TEMP/raylib-desktop-build"
           raylib_report="$RUNNER_TEMP/raylib-desktop-report.json"
+          raygui_cache="$RUNNER_TEMP/raygui-desktop-cache"
           python3 examples/caxecraft/play.py \
             --build-only \
             --optimization 0 \
+            --allow-network \
             --cc "${{ matrix.cc }}" \
             --cxx "${{ matrix.cxx }}" \
             --prebuilt-raylib-cache "$raylib_cache" \
             --prebuilt-raylib-build "$raylib_build" \
             --prebuilt-raylib-report "$raylib_report" \
+            --raygui-cache-root "$raygui_cache" \
             --output-root "$RUNNER_TEMP/caxecraft-playable-o0"
           if [ "${{ matrix.platform }}" = linux ]; then
-            # The O2 compile/link proof is also the graphical proof. Reusing
-            # one build avoids paying for the exact same Haxe compile twice.
+            # The O2 compile/link proof is also the graphical proof. This
+            # title-screen pilot performs a real desktop resize, preserving
+            # launch evidence without paying for a second Haxe compile.
             xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24" \
               python3 examples/caxecraft/play.py \
-                --smoke \
+                --pilot resize-layout \
                 --optimization 2 \
                 --cc "${{ matrix.cc }}" \
                 --cxx "${{ matrix.cxx }}" \
                 --prebuilt-raylib-cache "$raylib_cache" \
                 --prebuilt-raylib-build "$raylib_build" \
                 --prebuilt-raylib-report "$raylib_report" \
+                --raygui-cache-root "$raygui_cache" \
                 --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
           else
             python3 examples/caxecraft/play.py \
@@ -420,6 +519,7 @@ jobs:
               --prebuilt-raylib-cache "$raylib_cache" \
               --prebuilt-raylib-build "$raylib_build" \
               --prebuilt-raylib-report "$raylib_report" \
+              --raygui-cache-root "$raygui_cache" \
               --output-root "$RUNNER_TEMP/caxecraft-playable-o2"
           fi
 
@@ -431,14 +531,23 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Preserve Raylib Memory-clock evidence
+        if: matrix.platform == 'macos' || matrix.platform == 'windows'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: raylib-memory-clock-${{ matrix.name }}
+          path: ${{ runner.temp }}/raylib-memory-clock-report.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Preserve Caxecraft graphical pilot evidence
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: caxecraft-pilot-${{ matrix.name }}
           path: |
-            ${{ runner.temp }}/caxecraft-playable-o2/variants/linux-split-pilot-launch-smoke/bin/caxecraft-pilot-report.json
-            ${{ runner.temp }}/caxecraft-playable-o2/variants/linux-split-pilot-launch-smoke/bin/caxecraft-smoke.png
+            ${{ runner.temp }}/caxecraft-playable-o2/variants/linux-split-pilot-resize-layout/bin/caxecraft-pilot-report.json
+            ${{ runner.temp }}/caxecraft-playable-o2/variants/linux-split-pilot-resize-layout/bin/caxecraft-pilot-resize.png
           if-no-files-found: error
           retention-days: 14
 

@@ -1,4 +1,7 @@
 {
+  "payloadEnumTagEquality": [
+    "HXC9000 error [profile=portable] test/negative/PayloadEnumTagEquality.hx:3:1-3:2 [module:invalid.PayloadEnumTagEquality.function:invalid.PayloadEnumTagEquality.main.block:entry.instruction:0:bad.equal] Invalid HxcIR: enum-tag equality requires matching payload-free direct-enum operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "cstringByteLengthMismatch": [
     "HXC9000 error [profile=portable] test/negative/CStringByteLengthMismatch.hx:2:1-2:2 [module:invalid.CStringByteLengthMismatch.function:invalid.CStringByteLengthMismatch.main.block:entry.instruction:0:bad.cstring.constant] Invalid HxcIR: C string literal records UTF-8 byte length 3 but encodes to 6 byte(s) Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -15,19 +18,25 @@
     "HXC9000 error [profile=portable] test/negative/StatusCallWithoutFailure.hx:2:1-2:2 [module:invalid.StatusCallWithoutFailure.function:invalid.StatusCallWithoutFailure.main.block:entry.instruction:0:bad.call] Invalid HxcIR: status-returning direct call `fn.status` requires an explicit failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uncheckedClassDereference": [
-    "HXC9000 error [profile=portable] test/negative/UncheckedClassDereference.hx:3:1-3:2 [module:invalid.UncheckedClassDereference.function:invalid.UncheckedClassDereference.main.block:entry.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/UncheckedClassDereference.hx:3:1-3:2 [module:invalid.UncheckedClassDereference.function:invalid.UncheckedClassDereference.main.block:entry.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "directPayloadRepresentation": [
     "HXC9000 error [profile=portable] test/negative/DirectPayloadRepresentation.hx:1:1-1:2 [module:invalid.DirectPayloadRepresentation.instance:instance.option] Invalid HxcIR: direct native-enum instance `instance.option` cannot contain payload case `Some` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "uncheckedVirtualCall": [
-    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:25:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding in-block null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:21:1-21:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:28:c03.virtual] Invalid HxcIR: virtual call receiver `value.receiver` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unknownVirtualImplementation": [
     "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:8:1-8:2 [dispatch.table:vtable.coverage.Object.entry:0:slot.render] Invalid HxcIR: virtual table refers to unknown implementation `fn.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "nonExhaustiveTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/NonExhaustiveTagSwitch.hx:3:1-3:2 [module:invalid.NonExhaustiveTagSwitch.function:invalid.NonExhaustiveTagSwitch.main.block:entry.terminator] Invalid HxcIR: tag switch without a default omits `None` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "nonDominatingNullProof": [
+    "HXC9000 error [profile=portable] test/negative/NonDominatingNullProof.hx:6:1-6:2 [module:invalid.NonDominatingNullProof.function:invalid.NonDominatingNullProof.main.block:join.instruction:0:bad.load.place.base] Invalid HxcIR: nullable pointer `value.object` requires a preceding dominating null check Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mismatchedFunctionReference": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedFunctionReference.hx:2:1-2:2 [module:invalid.MismatchedFunctionReference.function:invalid.MismatchedFunctionReference.main.block:entry.instruction:0:bad.function-reference] Invalid HxcIR: function reference target `function.target` has a different parameter count Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "zeroFixedArrayNonAutomatic": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayNonAutomatic.hx:2:1-2:2 [module:invalid.ZeroFixedArrayNonAutomatic.function:invalid.ZeroFixedArrayNonAutomatic.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage must be an automatic local Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -53,6 +62,9 @@
   "voidReturnWithValue": [
     "HXC9000 error [profile=portable] test/negative/VoidReturnWithValue.hx:3:1-3:2 [module:invalid.VoidReturnWithValue.function:invalid.VoidReturnWithValue.main.block:entry.terminator] Invalid HxcIR: void function return carries a value Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "unknownFunctionReference": [
+    "HXC9000 error [profile=portable] test/negative/UnknownFunctionReference.hx:2:1-2:2 [module:invalid.UnknownFunctionReference.function:invalid.UnknownFunctionReference.main.block:entry.instruction:0:bad.function-reference] Invalid HxcIR: function reference names unknown target `function.missing` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "storeTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/StoreTypeMismatch.hx:3:1-3:2 [module:invalid.StoreTypeMismatch.function:invalid.StoreTypeMismatch.main.block:entry.instruction:1:bad.store] Invalid HxcIR: stored value type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
@@ -74,8 +86,17 @@
   "loadTypeMismatch": [
     "HXC9000 error [profile=portable] test/negative/LoadTypeMismatch.hx:2:1-2:2 [module:invalid.LoadTypeMismatch.function:invalid.LoadTypeMismatch.main.block:entry.instruction:0:bad.load] Invalid HxcIR: load result type does not match its place type Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "mismatchedInterfaceReceiver": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedInterfaceReceiver.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:30:c04.interface] Invalid HxcIR: interface call receiver does not have interface value type `instance.interface` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "zeroFixedArrayOverBudget": [
     "HXC9000 error [profile=portable] test/negative/ZeroFixedArrayOverBudget.hx:2:1-2:2 [module:invalid.ZeroFixedArrayOverBudget.function:invalid.ZeroFixedArrayOverBudget.main.block:entry.instruction:0:bad.zero-initialize] Invalid HxcIR: zero-initialized fixed-array storage 65537 bytes exceeds the 65536-byte automatic limit Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "unknownInterfaceImplementation": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:9:1-9:2 [dispatch.table:itable.coverage.Object.entry:0:slot.measure] Invalid HxcIR: interface table refers to unknown implementation `fn.missing-interface` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mismatchedInterfaceTable": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedInterfaceTable.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:28:c02.interface-bind] Invalid HxcIR: interface table `vtable.coverage.Object` does not implement `instance.interface` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "unknownLoopBoundsGuard": [
     "HXC9000 error [profile=portable] test/negative/UnknownLoopBoundsGuard.hx:4:1-4:2 [module:invalid.UnknownLoopBoundsGuard.function:invalid.UnknownLoopBoundsGuard.main.block:entry.instruction:2:bad.bounds.policy] Invalid HxcIR: loop bounds proof refers to unknown guard instruction `missing.guard` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -84,8 +105,17 @@
     "HXC9000 error [profile=portable] test/negative/AggregateProjectionMismatch.hx:5:1-5:2 [module:invalid.AggregateProjectionMismatch.function:invalid.AggregateProjectionMismatch.main.block:entry.instruction:3:bad.project-type] Invalid HxcIR: aggregate projection result type does not match field `x` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
     "HXC9000 error [profile=portable] test/negative/AggregateProjectionMismatch.hx:6:1-6:2 [module:invalid.AggregateProjectionMismatch.function:invalid.AggregateProjectionMismatch.main.block:entry.instruction:4:bad.project-name] Invalid HxcIR: aggregate projection names unknown field `z` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "borrowedClassAliasEscape": [
+    "HXC9000 error [profile=portable] test/negative/BorrowedClassAliasEscape.hx:5:1-5:2 [module:invalid.BorrowedClassAliasEscape.function:invalid.BorrowedClassAliasEscape.main.block:entry.instruction:2:bad.initialize] Invalid HxcIR: borrowed class value `value.reloaded` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "nullableUnwrapWithoutFailure": [
     "HXC9000 error [profile=portable] test/negative/NullableUnwrapWithoutFailure.hx:3:1-3:2 [module:invalid.NullableUnwrapWithoutFailure.function:invalid.NullableUnwrapWithoutFailure.main.block:entry.instruction:1:bad.unwrap] Invalid HxcIR: checked or nullable-unwrapping conversion requires an explicit failure edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mismatchedEnumTagEquality": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedEnumTagEquality.hx:3:1-3:2 [module:invalid.MismatchedEnumTagEquality.function:invalid.MismatchedEnumTagEquality.main.block:entry.instruction:0:bad.equal] Invalid HxcIR: enum-tag equality requires matching payload-free direct-enum operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "mismatchedInterfaceObject": [
+    "HXC9000 error [profile=portable] test/negative/MismatchedInterfaceObject.hx:1:1-1:2 [module:coverage.IR.function:fn.coverage.block:entry.instruction:28:c02.interface-bind] Invalid HxcIR: interface construction requires a concrete class reference Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "cleanupOrder": [
     "HXC9000 error [profile=portable] test/negative/CleanupOrder.hx:6:1-6:2 [module:invalid.CleanupOrder.function:invalid.CleanupOrder.main.block:entry.terminator.cleanup:1] Invalid HxcIR: cleanup actions in region `cleanup.bad` must execute in reverse registration order Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -93,6 +123,9 @@
   "invalidStaticBoundsProof": [
     "HXC9000 error [profile=portable] test/negative/InvalidStaticBoundsProof.hx:3:1-3:2 [module:invalid.InvalidStaticBoundsProof.function:invalid.InvalidStaticBoundsProof.main.block:entry.instruction:1:bad.bounds-claimed.policy] Invalid HxcIR: static bounds proof index must be the exact in-block Haxe Int constant it claims Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
     "HXC9000 error [profile=portable] test/negative/InvalidStaticBoundsProof.hx:5:1-5:2 [module:invalid.InvalidStaticBoundsProof.function:invalid.InvalidStaticBoundsProof.main.block:entry.instruction:3:bad.bounds-range.policy] Invalid HxcIR: invalid static bounds proof for index 2 and length 2 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "invalidManagedRoot": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:75:1-75:2 [module:coverage.ManagedRoot.function:fn.managed-root.managedRoot:0:root.parameter-managed] Invalid HxcIR: managed root `root.parameter-managed` has invalid path `` for `i32` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "throwWithoutStatus": [
     "HXC9000 error [profile=portable] test/negative/ThrowWithoutStatus.hx:3:1-3:2 [module:invalid.ThrowWithoutStatus.function:invalid.ThrowWithoutStatus.main.block:entry.terminator] Invalid HxcIR: throw propagation requires a matching function status convention Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -104,7 +137,7 @@
     "HXC9000 error [profile=portable] test/negative/CStringEmbeddedNul.hx:2:1-2:2 [module:invalid.CStringEmbeddedNul.function:invalid.CStringEmbeddedNul.main.block:entry.instruction:0:bad.cstring.constant] Invalid HxcIR: C string literal contains an embedded NUL byte Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "orphanVirtualSlot": [
-    "HXC9000 error [profile=portable] test/negative/OrphanVirtualSlot.hx:1:1-1:2 [dispatch.slot:slot.zz-orphan] Invalid HxcIR: virtual slot `slot.zz-orphan` does not belong to a table layout Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+    "HXC9000 error [profile=portable] test/negative/OrphanVirtualSlot.hx:1:1-1:2 [dispatch.slot:slot.zz-orphan] Invalid HxcIR: dispatch slot `slot.zz-orphan` does not belong to a table layout Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "deferredInitializerMissingWrite": [
     "HXC9000 error [profile=portable] test/negative/DeferredInitializerMissingWrite.hx:1:1-1:2 [module:invalid.DeferredInitializerMissingWrite.global:global.value] Invalid HxcIR: global `global.value` initializer `invalid.DeferredInitializerMissingWrite.main` must initialize it exactly once; found 0 Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
@@ -143,8 +176,18 @@
   "redundantDefaultTagSwitch": [
     "HXC9000 error [profile=portable] test/negative/RedundantDefaultTagSwitch.hx:3:1-3:2 [module:invalid.RedundantDefaultTagSwitch.function:invalid.RedundantDefaultTagSwitch.main.block:entry.terminator] Invalid HxcIR: exhaustive tag switch must not carry a default edge Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
+  "borrowedClassReturn": [
+    "HXC9000 error [profile=portable] test/negative/BorrowedClassReturn.hx:3:1-3:2 [module:invalid.BorrowedClassReturn.function:invalid.BorrowedClassReturn.main.block:entry.terminator] Invalid HxcIR: borrowed class value `value.borrowed` escapes through a return Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
   "mismatchedClassEquality": [
     "HXC9000 error [profile=portable] test/negative/MismatchedClassEquality.hx:3:1-3:2 [module:invalid.MismatchedClassEquality.function:invalid.MismatchedClassEquality.main.block:entry.instruction:0:bad.equal] Invalid HxcIR: class-reference equality requires matching nullable concrete-class pointer operands Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "invalidManagedRootProjection": [
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:75:1-75:2 [module:coverage.ManagedRoot.function:fn.managed-root.managedRoot:0:root.parameter-managed] Invalid HxcIR: managed root `root.parameter-managed` has invalid path `nullable-payload` for `pointer:nullable<instance:instance.managed-root-object>` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",
+    "HXC9000 error [profile=portable] test/hxc_ir/fixtures/IRCoverage.hx:75:1-75:2 [module:coverage.ManagedRoot.function:fn.managed-root.managedRoots] Invalid HxcIR: managed value `parameter.managed` is missing exact root path `` Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
+  ],
+  "borrowedClassStore": [
+    "HXC9000 error [profile=portable] test/negative/BorrowedClassStore.hx:3:1-3:2 [module:invalid.BorrowedClassStore.function:invalid.BorrowedClassStore.main.block:entry.instruction:0:bad.store] Invalid HxcIR: borrowed class value `value.borrowed` escapes through an initializer Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C."
   ],
   "aggregateConstructionMismatch": [
     "HXC9000 error [profile=portable] test/negative/AggregateConstructionMismatch.hx:4:1-4:2 [module:invalid.AggregateConstructionMismatch.function:invalid.AggregateConstructionMismatch.main.block:entry.instruction:2:bad.construct] Invalid HxcIR: aggregate construction fields must follow declaration order Remediation: Report a minimized reproducer, compiler/version manifest, and IR dump; do not bypass validation with raw C.",

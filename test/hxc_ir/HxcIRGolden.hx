@@ -4,6 +4,7 @@ import reflaxe.c.ir.HxcIRDiagnostic;
 import reflaxe.c.ir.HxcIRDumper;
 import reflaxe.c.ir.HxcIRValidator;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyNullCheckCoalescing;
 
 /** Builds deterministic semantic IR fixtures without invoking C emission. */
 class HxcIRGolden {
@@ -27,6 +28,9 @@ class HxcIRGolden {
 		final coverage = coverageProgram();
 		validator.requireValid(coverage, PROFILE);
 		validator.requireValid(nativeConstantAggregateProgram(), PROFILE);
+		validator.requireValid(borrowedClassAliasProgram(), PROFILE);
+		validator.requireValid(managedRootProgram(false), PROFILE);
+		verifyReceiverReassignmentCoalescing(validator);
 		final coverageDump = dumper.dump(coverage);
 
 		Sys.println(REPORT_PREFIX + Json.stringify({
@@ -34,6 +38,8 @@ class HxcIRGolden {
 			coverage: coverageDump,
 			diagnostics: {
 				missingTerminator: invalidDiagnostics(missingTerminatorProgram()),
+				unknownFunctionReference: invalidDiagnostics(unknownFunctionReferenceProgram()),
+				mismatchedFunctionReference: invalidDiagnostics(mismatchedFunctionReferenceProgram()),
 				constantTypeMismatch: invalidDiagnostics(constantTypeMismatchProgram()),
 				loadTypeMismatch: invalidDiagnostics(loadTypeMismatchProgram()),
 				addressTypeMismatch: invalidDiagnostics(addressTypeMismatchProgram()),
@@ -45,17 +51,29 @@ class HxcIRGolden {
 				directPayloadRepresentation: invalidDiagnostics(directPayloadRepresentationProgram()),
 				orphanVirtualSlot: invalidDiagnostics(orphanVirtualSlotProgram()),
 				unknownVirtualImplementation: invalidDiagnostics(unknownVirtualImplementationProgram()),
+				unknownInterfaceImplementation: invalidDiagnostics(unknownInterfaceImplementationProgram()),
+				mismatchedInterfaceTable: invalidDiagnostics(mismatchedInterfaceTableProgram()),
+				mismatchedInterfaceObject: invalidDiagnostics(mismatchedInterfaceObjectProgram()),
+				mismatchedInterfaceReceiver: invalidDiagnostics(mismatchedInterfaceReceiverProgram()),
 				mismatchedVirtualTableBind: invalidDiagnostics(mismatchedVirtualTableBindProgram()),
 				uncheckedVirtualCall: invalidDiagnostics(uncheckedVirtualCallProgram()),
 				nonExhaustiveTagSwitch: invalidDiagnostics(nonExhaustiveTagSwitchProgram()),
 				redundantDefaultTagSwitch: invalidDiagnostics(redundantDefaultTagSwitchProgram()),
 				recursiveDirectLayout: invalidDiagnostics(recursiveDirectLayoutProgram()),
 				uncheckedClassDereference: invalidDiagnostics(uncheckedClassDereferenceProgram()),
+				nonDominatingNullProof: invalidDiagnostics(nonDominatingNullProofProgram()),
 				unsafeClassUpcast: invalidDiagnostics(unsafeClassUpcastProgram()),
 				mismatchedClassEquality: invalidDiagnostics(mismatchedClassEqualityProgram()),
+				mismatchedEnumTagEquality: invalidDiagnostics(mismatchedEnumTagEqualityProgram()),
+				payloadEnumTagEquality: invalidDiagnostics(payloadEnumTagEqualityProgram()),
 				storeTypeMismatch: invalidDiagnostics(storeTypeMismatchProgram()),
 				switchCaseTypeMismatch: invalidDiagnostics(switchCaseTypeMismatchProgram()),
 				initializerTypeMismatch: invalidDiagnostics(initializerTypeMismatchProgram()),
+				borrowedClassStore: invalidDiagnostics(borrowedClassStoreProgram()),
+				borrowedClassAliasEscape: invalidDiagnostics(borrowedClassAliasEscapeProgram()),
+				borrowedClassReturn: invalidDiagnostics(borrowedClassReturnProgram()),
+				invalidManagedRoot: invalidDiagnostics(managedRootProgram(true)),
+				invalidManagedRootProjection: invalidDiagnostics(invalidManagedRootProjectionProgram()),
 				deferredInitializerMissingWrite: invalidDiagnostics(deferredInitializerMissingWriteProgram()),
 				fixedArrayInitializerMismatch: invalidDiagnostics(fixedArrayInitializerMismatchProgram()),
 				zeroFixedArrayOverBudget: invalidDiagnostics(zeroFixedArrayOverBudgetProgram()),
@@ -231,6 +249,9 @@ class HxcIRGolden {
 			id: "fn.main",
 			displayName: "app.SideEffects.main",
 			parameters: [],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [
 				local("local.array", IRTInstance("instance.buffer"), IRLSAutomatic, IRISInitialized, MAIN_SOURCE, 14),
 				local("local.scratch", IRTInt(32, true), IRLSRegion("cleanup.inner"), IRISInitialized, MAIN_SOURCE, 15),
@@ -277,6 +298,9 @@ class HxcIRGolden {
 			id: id,
 			displayName: 'app.SideEffectSupport.$displayName',
 			parameters: [],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [],
 			returnType: IRTInt(32, true),
 			failureConvention: IRFCInfallible,
@@ -390,6 +414,12 @@ class HxcIRGolden {
 			dispatch: {
 				layouts: [
 					{
+						id: "itable.layout.coverage.Interface",
+						rootInstanceId: "instance.interface",
+						slotIds: ["slot.measure"],
+						source: span(COVERAGE_SOURCE, 9)
+					},
+					{
 						id: "vtable.layout.coverage.Object",
 						rootInstanceId: "instance.object",
 						slotIds: ["slot.render"],
@@ -397,6 +427,13 @@ class HxcIRGolden {
 					}
 				],
 				slots: [
+					{
+						id: "slot.measure",
+						ownerInstanceId: "instance.interface",
+						parameterTypes: [IRTInt(32, true)],
+						returnType: IRTInt(32, true),
+						source: span(COVERAGE_SOURCE, 9)
+					},
 					{
 						id: "slot.render",
 						ownerInstanceId: "instance.object",
@@ -406,6 +443,13 @@ class HxcIRGolden {
 					}
 				],
 				tables: [
+					{
+						id: "itable.coverage.Object",
+						layoutId: "itable.layout.coverage.Interface",
+						classInstanceId: "instance.object",
+						entries: [{slotId: "slot.measure", implementationFunctionId: "fn.coverage.render"}],
+						source: span(COVERAGE_SOURCE, 9)
+					},
 					{
 						id: "vtable.coverage.Object",
 						layoutId: "vtable.layout.coverage.Object",
@@ -434,6 +478,85 @@ class HxcIRGolden {
 		};
 	}
 
+	/**
+		Exercise the schema-17 exact-root contract without involving C emission.
+
+		The negative variant deliberately roots an Int. A collector cannot learn
+		anything from that address-shaped mistake, so validation must reject it
+		before the backend builds a root-slot array.
+	**/
+	static function managedRootProgram(invalid:Bool):HxcIRProgram {
+		final source = span(COVERAGE_SOURCE, 75);
+		final managedType:HxcIRTypeDeclaration = {
+			id: "type.managed-root-object",
+			displayName: "coverage.ManagedRootObject",
+			kind: IRTKClass({baseInstanceId: null, fields: [], header: IRCHRuntime("gc")}),
+			source: source
+		};
+		final managedInstance:HxcIRTypeInstance = {
+			id: "instance.managed-root-object",
+			declarationId: managedType.id,
+			arguments: [],
+			representation: IRRManaged("gc"),
+			source: source
+		};
+		final parameterType = invalid ? IRTInt(32, true) : IRTPointer(IRTInstance(managedInstance.id), true);
+		final fn:HxcIRFunction = {
+			id: "fn.managed-root",
+			displayName: "coverage.managedRoot",
+			parameters: [parameter("parameter.managed", parameterType, COVERAGE_SOURCE, 75)],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [
+				{
+					id: "root.parameter-managed",
+					valueId: "parameter.managed",
+					projections: [],
+					source: source
+				}
+			],
+			locals: [],
+			returnType: IRTVoid,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn(null, []), COVERAGE_SOURCE, 75),
+					source: source
+				}
+			],
+			cleanupRegions: [],
+			source: source
+		};
+		return {
+			schemaVersion: HxcIRValidator.SCHEMA_VERSION,
+			dispatch: emptyDispatch(),
+			modules: [
+				{
+					id: "coverage.ManagedRoot",
+					types: [managedType],
+					typeInstances: [managedInstance],
+					globals: [],
+					functions: [fn],
+					source: source
+				}
+			]
+		};
+	}
+
+	/** Reject a syntactically typed path that does not belong to its root value. */
+	static function invalidManagedRootProjectionProgram():HxcIRProgram {
+		final program = managedRootProgram(false);
+		final roots = program.modules[0].functions[0].managedRoots;
+		if (roots == null || roots.length != 1)
+			throw "managed-root fixture lost its one root";
+		roots[0].projections.push(IRMRPNullablePayload);
+		return program;
+	}
+
 	static function coverageTarget():HxcIRFunction {
 		return voidFunction("fn.coverage.target", "coverage.IR.target", COVERAGE_SOURCE, 12);
 	}
@@ -446,6 +569,9 @@ class HxcIRGolden {
 				parameter("parameter.self", IRTPointer(IRTInstance("instance.object"), true), COVERAGE_SOURCE, 12),
 				parameter("parameter.value", IRTInt(32, true), COVERAGE_SOURCE, 12)
 			],
+			borrowedClassParameterIds: ["parameter.self"],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [],
 			returnType: IRTInt(32, true),
 			failureConvention: IRFCInfallible,
@@ -469,6 +595,9 @@ class HxcIRGolden {
 			id: "fn.coverage.throw",
 			displayName: "coverage.IR.throwValue",
 			parameters: [parameter("value.thrown", IRTDynamic, COVERAGE_SOURCE, 14)],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [],
 			returnType: IRTVoid,
 			failureConvention: IRFCStatus(IRFException),
@@ -522,6 +651,9 @@ class HxcIRGolden {
 				parameter("value.size", IRTAbiInteger(IRAKSize), COVERAGE_SOURCE, 16),
 				parameter("value.nullable-reference", IRTNullable(IRTInstance("instance.object"), IRNPointer), COVERAGE_SOURCE, 16)
 			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [
 				local("local.fixed", IRTFixedArray(IRTInt(32, true), 2, "coverage.Length2"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
 				local("local.fixed-zero", IRTFixedArray(IRTInt(8, false), 16, "coverage.Length16"), IRLSAutomatic, IRISUninitialized, COVERAGE_SOURCE, 17),
@@ -591,13 +723,20 @@ class HxcIRGolden {
 							COVERAGE_SOURCE, 19),
 						instruction("c01.unbox", result("value.unboxed", IRTInt(32, true)),
 							IRIOConvert("value.boxed", IRCUnbox, IRTInt(32, true), IRIRuntime("dynamic"), null), COVERAGE_SOURCE, 19),
+						instruction("c02.function-reference", result("value.direct-callable", IRTFunction([], IRTVoid)),
+							IRIOFunctionReference("fn.coverage.target"), COVERAGE_SOURCE, 20),
+						instruction("c02.function-reference-call", null, IRIOCall(call(IRCDClosure("value.direct-callable"), [], IRTVoid)), COVERAGE_SOURCE,
+							20),
 						instruction("c02.direct", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid)), COVERAGE_SOURCE, 20),
 						instruction("c02.result-edge", null, IRIOCall(call(IRCDDirect("fn.coverage.target"), [], IRTVoid, resultFailure)), COVERAGE_SOURCE, 20),
 						instruction("c02.receiver-check", null, IRIONullCheck("value.receiver", IRNCPCheckedAbort("portable", "debug")), COVERAGE_SOURCE, 20),
+						instruction("c02.interface-bind", result("value.interface-receiver", IRTInstance("instance.interface")),
+							IRIOConstructInterface("instance.interface", "value.receiver", "itable.coverage.Object"), COVERAGE_SOURCE, 20),
 						instruction("c03.virtual", result("value.virtual", IRTInt(32, true)),
 							IRIOCall(call(IRCDVirtual("slot.render", "value.receiver"), ["value.argument"], IRTInt(32, true))), COVERAGE_SOURCE, 21),
 						instruction("c04.interface", result("value.interface", IRTInt(32, true)),
-							IRIOCall(call(IRCDInterface("instance.interface", "slot.measure", "value.receiver"), ["value.argument"], IRTInt(32, true))),
+							IRIOCall(call(IRCDInterface("instance.interface", "slot.measure", "value.interface-receiver"), ["value.argument"],
+								IRTInt(32, true))),
 							COVERAGE_SOURCE, 22),
 						instruction("c05.closure", result("value.closure", IRTInt(32, true)),
 							IRIOCall(call(IRCDClosure("value.callable"), ["value.argument"], IRTInt(32, true))), COVERAGE_SOURCE, 23),
@@ -634,11 +773,12 @@ class HxcIRGolden {
 						instruction("c15.initialize", null, IRIOInitialize(IRPLocal("local.owned"), "value.allocation", IRISUninitialized, IRISInitialized),
 							COVERAGE_SOURCE, 33),
 						instruction("c16.retain", null, IRIORetain(IRPLocal("local.owned"), IRIRuntime("object")), COVERAGE_SOURCE, 34),
-						instruction("c17.trace", null, IRIOTrace(IRPLocal("local.owned"), IRIRuntime("gc")), COVERAGE_SOURCE, 35),
-						instruction("c18.deallocate", null, IRIODeallocate(IRPLocal("local.owned"), IRIProgramLocal("helper.free-object")), COVERAGE_SOURCE,
-							36),
-						instruction("c19.lifetime", null,
-							IRIOLifetime(IRPLocal("local.owned"), IRISInitialized, IRISDestroyed, "explicit deallocation completed"), COVERAGE_SOURCE, 37)
+						instruction("c17.release", null, IRIORelease(IRPLocal("local.owned"), IRIRuntime("object")), COVERAGE_SOURCE, 35),
+						instruction("c18.trace", null, IRIOTrace(IRPLocal("local.owned"), IRIRuntime("gc")), COVERAGE_SOURCE, 36),
+						instruction("c19.deallocate", null, IRIODeallocate(IRPLocal("local.owned"), IRIProgramLocal("helper.free-object")), COVERAGE_SOURCE,
+							37),
+						instruction("c20.lifetime", null,
+							IRIOLifetime(IRPLocal("local.owned"), IRISInitialized, IRISDestroyed, "explicit deallocation completed"), COVERAGE_SOURCE, 38)
 					],
 					terminator: terminator(IRTBranch("value.is-some", {
 						targetBlockId: "success",
@@ -683,6 +823,9 @@ class HxcIRGolden {
 			parameters: [
 				parameter("value.option-switch", IRTInstance("instance.option"), COVERAGE_SOURCE, 42)
 			],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [],
 			returnType: IRTVoid,
 			failureConvention: IRFCInfallible,
@@ -718,6 +861,23 @@ class HxcIRGolden {
 
 	static function missingTerminatorProgram():HxcIRProgram {
 		return minimalProgram("invalid.MissingTerminator", [], null, [], [], "test/negative/MissingTerminator.hx");
+	}
+
+	static function unknownFunctionReferenceProgram():HxcIRProgram {
+		final file = "test/negative/UnknownFunctionReference.hx";
+		return minimalProgram("invalid.UnknownFunctionReference", [
+			instruction("bad.function-reference", result("value.callable", IRTFunction([], IRTVoid)), IRIOFunctionReference("function.missing"), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+	}
+
+	static function mismatchedFunctionReferenceProgram():HxcIRProgram {
+		final file = "test/negative/MismatchedFunctionReference.hx";
+		final program = minimalProgram("invalid.MismatchedFunctionReference", [
+			instruction("bad.function-reference", result("value.callable", IRTFunction([IRTInt(32, true)], IRTVoid)),
+				IRIOFunctionReference("function.target"), file, 2)
+		], terminator(IRTReturn(null, []), file, 3), [], [], file);
+		program.modules[0].functions.push(voidFunction("function.target", "target", file, 5));
+		return program;
 	}
 
 	static function useBeforeDefinitionProgram():HxcIRProgram {
@@ -863,10 +1023,66 @@ class HxcIRGolden {
 
 	static function unknownVirtualImplementationProgram():HxcIRProgram {
 		final program = coverageProgram();
-		final table = program.dispatch.tables[0];
-		final entry = table.entries[0];
-		table.entries[0] = {slotId: entry.slotId, implementationFunctionId: "fn.missing"};
-		return program;
+		for (table in program.dispatch.tables) {
+			if (table.id != "vtable.coverage.Object")
+				continue;
+			final entry = table.entries[0];
+			table.entries[0] = {slotId: entry.slotId, implementationFunctionId: "fn.missing"};
+			return program;
+		}
+		throw "coverage virtual table is missing";
+	}
+
+	static function unknownInterfaceImplementationProgram():HxcIRProgram {
+		final program = coverageProgram();
+		for (table in program.dispatch.tables) {
+			if (table.id != "itable.coverage.Object")
+				continue;
+			final entry = table.entries[0];
+			table.entries[0] = {slotId: entry.slotId, implementationFunctionId: "fn.missing-interface"};
+			return program;
+		}
+		throw "coverage interface table is missing";
+	}
+
+	static function mismatchedInterfaceTableProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id != "c02.interface-bind")
+				continue;
+			instructions[index] = instruction("c02.interface-bind", result("value.interface-receiver", IRTInstance("instance.interface")),
+				IRIOConstructInterface("instance.interface", "value.receiver", "vtable.coverage.Object"), "test/negative/MismatchedInterfaceTable.hx", 1);
+			return program;
+		}
+		throw "coverage interface construction is missing";
+	}
+
+	static function mismatchedInterfaceObjectProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id != "c02.interface-bind")
+				continue;
+			instructions[index] = instruction("c02.interface-bind", result("value.interface-receiver", IRTInstance("instance.interface")),
+				IRIOConstructInterface("instance.interface", "value.one", "itable.coverage.Object"), "test/negative/MismatchedInterfaceObject.hx", 1);
+			return program;
+		}
+		throw "coverage interface construction is missing";
+	}
+
+	static function mismatchedInterfaceReceiverProgram():HxcIRProgram {
+		final program = coverageProgram();
+		final instructions = coverageEntryInstructions(program);
+		for (index in 0...instructions.length) {
+			if (instructions[index].id != "c04.interface")
+				continue;
+			instructions[index] = instruction("c04.interface", result("value.interface", IRTInt(32, true)),
+				IRIOCall(call(IRCDInterface("instance.interface", "slot.measure", "value.receiver"), ["value.argument"], IRTInt(32, true))),
+				"test/negative/MismatchedInterfaceReceiver.hx", 1);
+			return program;
+		}
+		throw "coverage interface call is missing";
 	}
 
 	static function mismatchedVirtualTableBindProgram():HxcIRProgram {
@@ -958,6 +1174,98 @@ class HxcIRGolden {
 		return program;
 	}
 
+	/**
+		Prove that a local receiver replacement creates a fresh check identity.
+
+		The pass removes the second check of each immutable loaded value, but it must
+		not reuse the proof made before the mutable local receives another object.
+	**/
+	static function verifyReceiverReassignmentCoalescing(validator:HxcIRValidator):Void {
+		final file = "test/hxc_ir/fixtures/ReceiverReassignment.hx";
+		final reference = IRTPointer(IRTInstance("instance.class.root"), true);
+		final program = classProgram(file, [
+			instruction("initialize.selected", null, IRIOInitialize(IRPLocal("local.selected"), "value.first", IRISUninitialized, IRISInitialized), file, 2),
+			instruction("load.before", result("value.before", reference), IRIOLoad(IRPLocal("local.selected")), file, 3),
+			instruction("check.before.0", null, IRIONullCheck("value.before", IRNCPCheckedAbort("portable", "debug")), file, 3),
+			instruction("field.before.0", result("value.field.before.0", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.before"), "value")), file,
+				3),
+			instruction("check.before.1", null, IRIONullCheck("value.before", IRNCPCheckedAbort("portable", "debug")), file, 4),
+			instruction("field.before.1", result("value.field.before.1", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.before"), "value")), file,
+				4),
+			instruction("replace.selected", null, IRIOStore(IRPLocal("local.selected"), "value.second"), file, 5),
+			instruction("load.after", result("value.after", reference), IRIOLoad(IRPLocal("local.selected")), file, 6),
+			instruction("check.after.0", null, IRIONullCheck("value.after", IRNCPCheckedAbort("portable", "debug")), file, 6),
+			instruction("field.after.0", result("value.field.after.0", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.after"), "value")), file, 6),
+			instruction("check.after.1", null, IRIONullCheck("value.after", IRNCPCheckedAbort("portable", "debug")), file, 7),
+			instruction("field.after.1", result("value.field.after.1", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.after"), "value")), file, 7)
+		], "valid.ReceiverReassignment");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.first", reference, file, 1));
+		fn.parameters.push(parameter("value.second", reference, file, 1));
+		fn.locals.push(local("local.selected", reference, IRLSAutomatic, IRISUninitialized, file, 1));
+		new CBodyNullCheckCoalescing().run(program);
+		validator.requireValid(program, PROFILE);
+		var checks = 0;
+		for (instruction in fn.blocks[0].instructions)
+			switch instruction.kind {
+				case IRIONullCheck(_, _):
+					checks++;
+				case _:
+			}
+		if (checks != 2)
+			throw 'receiver reassignment retained $checks null checks; expected one for each immutable load';
+	}
+
+	/** A null check on only one branch must not authorize the shared join. */
+	static function nonDominatingNullProofProgram():HxcIRProgram {
+		final file = "test/negative/NonDominatingNullProof.hx";
+		final program = classProgram(file, [], "invalid.NonDominatingNullProof");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.object", IRTPointer(IRTInstance("instance.class.root"), true), file, 1));
+		fn.parameters.push(parameter("value.condition", IRTBool, file, 1));
+		final checkedEdge:HxcIRBlockEdge = {targetBlockId: "checked", arguments: [], cleanup: []};
+		final uncheckedEdge:HxcIRBlockEdge = {targetBlockId: "unchecked", arguments: [], cleanup: []};
+		final joinEdge:HxcIRBlockEdge = {targetBlockId: "join", arguments: [], cleanup: []};
+		fn.blocks.resize(0);
+		final replacementBlocks:Array<HxcIRBlock> = [
+			{
+				id: "entry",
+				parameters: [],
+				instructions: [],
+				terminator: terminator(IRTBranch("value.condition", checkedEdge, uncheckedEdge), file, 2),
+				source: span(file, 2)
+			},
+			{
+				id: "checked",
+				parameters: [],
+				instructions: [
+					instruction("checked.null", null, IRIONullCheck("value.object", IRNCPCheckedAbort("portable", "debug")), file, 3)
+				],
+				terminator: terminator(IRTJump(joinEdge), file, 4),
+				source: span(file, 3, 4)
+			},
+			{
+				id: "unchecked",
+				parameters: [],
+				instructions: [],
+				terminator: terminator(IRTJump(joinEdge), file, 5),
+				source: span(file, 5)
+			},
+			{
+				id: "join",
+				parameters: [],
+				instructions: [
+					instruction("bad.load", result("value.field", IRTInt(32, true)), IRIOLoad(IRPField(IRPDereference("value.object"), "value")), file, 6)
+				],
+				terminator: terminator(IRTReturn(null, []), file, 7),
+				source: span(file, 6, 7)
+			}
+		];
+		for (block in replacementBlocks)
+			fn.blocks.push(block);
+		return program;
+	}
+
 	static function unsafeClassUpcastProgram():HxcIRProgram {
 		final file = "test/negative/UnsafeClassUpcast.hx";
 		final program = classProgram(file, [
@@ -975,6 +1283,57 @@ class HxcIRGolden {
 		], "invalid.MismatchedClassEquality");
 		program.modules[0].functions[0].parameters.push(parameter("value.root", IRTPointer(IRTInstance("instance.class.root"), true), file, 2));
 		program.modules[0].functions[0].parameters.push(parameter("value.leaf", IRTPointer(IRTInstance("instance.class.leaf"), true), file, 2));
+		return program;
+	}
+
+	static function payloadEnumTagEqualityProgram():HxcIRProgram {
+		final file = "test/negative/PayloadEnumTagEquality.hx";
+		final program = taggedUnionProgram(file, [
+			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.enum-tag.equal", "value.left", "value.right", IRIStatic), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), "invalid.PayloadEnumTagEquality");
+		program.modules[0].functions[0].parameters.push(parameter("value.left", IRTInstance("instance.option"), file, 2));
+		program.modules[0].functions[0].parameters.push(parameter("value.right", IRTInstance("instance.option"), file, 2));
+		return program;
+	}
+
+	static function mismatchedEnumTagEqualityProgram():HxcIRProgram {
+		final file = "test/negative/MismatchedEnumTagEquality.hx";
+		final program = minimalProgram("invalid.MismatchedEnumTagEquality", [
+			instruction("bad.equal", result("value.equal", IRTBool), IRIOBinary("haxe.enum-tag.equal", "value.left", "value.right", IRIStatic), file, 3)
+		], terminator(IRTReturn(null, []), file, 4), [], [], file);
+		for (identity in [
+			{typeId: "type.left", instanceId: "instance.left"},
+			{typeId: "type.right", instanceId: "instance.right"}
+		]) {
+			program.modules[0].types.push({
+				id: identity.typeId,
+				displayName: identity.typeId,
+				kind: IRTKTaggedUnion([
+					{
+						name: "Off",
+						tagValue: 0,
+						payload: [],
+						source: span(file, 1)
+					},
+					{
+						name: "On",
+						tagValue: 1,
+						payload: [],
+						source: span(file, 1)
+					}
+				]),
+				source: span(file, 1)
+			});
+			program.modules[0].typeInstances.push({
+				id: identity.instanceId,
+				declarationId: identity.typeId,
+				arguments: [],
+				representation: IRRDirect,
+				source: span(file, 1)
+			});
+		}
+		program.modules[0].functions[0].parameters.push(parameter("value.left", IRTInstance("instance.left"), file, 2));
+		program.modules[0].functions[0].parameters.push(parameter("value.right", IRTInstance("instance.right"), file, 2));
 		return program;
 	}
 
@@ -1090,6 +1449,83 @@ class HxcIRGolden {
 			instruction("bad.store", null, IRIOStore(IRPLocal("local.value"), "value.bad"), file, 3)
 		],
 			terminator(IRTReturn(null, []), file, 4), [local("local.value", IRTInt(32, true), IRLSAutomatic, IRISInitialized, file, 1)], [], file);
+	}
+
+	static function borrowedClassStoreProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedClassStore.hx";
+		final classReference = IRTPointer(IRTInstance("instance.class.root"), false);
+		final program = classProgram(file, [
+			instruction("bad.store", null, IRIOInitialize(IRPLocal("local.saved"), "value.borrowed", IRISUninitialized, IRISInitialized), file, 3)
+		], "invalid.BorrowedClassStore");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", classReference, file, 2));
+		fn.borrowedClassParameterIds.push("value.borrowed");
+		fn.locals.push(local("local.saved", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		return program;
+	}
+
+	/** A declared automatic alias may reload a borrow without becoming an owner. */
+	static function borrowedClassAliasProgram():HxcIRProgram {
+		final file = "test/positive/BorrowedClassAlias.hx";
+		final classReference = IRTPointer(IRTInstance("instance.class.root"), false);
+		final program = classProgram(file, [
+			instruction("alias.initialize", null, IRIOInitialize(IRPLocal("local.alias"), "value.borrowed", IRISUninitialized, IRISInitialized), file, 3),
+			instruction("alias.load", result("value.reloaded", classReference), IRIOLoad(IRPLocal("local.alias")), file, 4)
+		], "valid.BorrowedClassAlias");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", classReference, file, 2));
+		fn.borrowedClassParameterIds.push("value.borrowed");
+		fn.borrowedClassLocalIds.push("local.alias");
+		fn.locals.push(local("local.alias", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		return program;
+	}
+
+	/** Reloading an alias remains borrowed and therefore cannot initialize an owner. */
+	static function borrowedClassAliasEscapeProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedClassAliasEscape.hx";
+		final classReference = IRTPointer(IRTInstance("instance.class.root"), false);
+		final program = classProgram(file, [
+			instruction("alias.initialize", null, IRIOInitialize(IRPLocal("local.alias"), "value.borrowed", IRISUninitialized, IRISInitialized), file, 3),
+			instruction("alias.load", result("value.reloaded", classReference), IRIOLoad(IRPLocal("local.alias")), file, 4),
+			instruction("bad.initialize", null, IRIOInitialize(IRPLocal("local.saved"), "value.reloaded", IRISUninitialized, IRISInitialized), file, 5)
+		], "invalid.BorrowedClassAliasEscape");
+		final fn = program.modules[0].functions[0];
+		fn.parameters.push(parameter("value.borrowed", classReference, file, 2));
+		fn.borrowedClassParameterIds.push("value.borrowed");
+		fn.borrowedClassLocalIds.push("local.alias");
+		fn.locals.push(local("local.alias", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		fn.locals.push(local("local.saved", classReference, IRLSAutomatic, IRISUninitialized, file, 2));
+		return program;
+	}
+
+	static function borrowedClassReturnProgram():HxcIRProgram {
+		final file = "test/negative/BorrowedClassReturn.hx";
+		final classReference = IRTPointer(IRTInstance("instance.class.root"), false);
+		final program = classProgram(file, [], "invalid.BorrowedClassReturn");
+		program.modules[0].functions[0] = {
+			id: "invalid.BorrowedClassReturn.main",
+			displayName: "invalid.BorrowedClassReturn.main",
+			parameters: [parameter("value.borrowed", classReference, file, 2)],
+			borrowedClassParameterIds: ["value.borrowed"],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
+			locals: [],
+			returnType: classReference,
+			failureConvention: IRFCInfallible,
+			entryBlockId: "entry",
+			blocks: [
+				{
+					id: "entry",
+					parameters: [],
+					instructions: [],
+					terminator: terminator(IRTReturn("value.borrowed", []), file, 3),
+					source: span(file, 1, 4)
+				}
+			],
+			cleanupRegions: [],
+			source: span(file, 1, 4)
+		};
+		return program;
 	}
 
 	static function switchCaseTypeMismatchProgram():HxcIRProgram {
@@ -1423,6 +1859,9 @@ class HxcIRGolden {
 							id: '$moduleId.main',
 							displayName: '$moduleId.main',
 							parameters: [],
+							borrowedClassParameterIds: [],
+							borrowedClassLocalIds: [],
+							managedRoots: [],
 							locals: locals,
 							returnType: functionReturnType,
 							failureConvention: functionFailureConvention,
@@ -1468,6 +1907,9 @@ class HxcIRGolden {
 			id: id,
 			displayName: displayName,
 			parameters: [],
+			borrowedClassParameterIds: [],
+			borrowedClassLocalIds: [],
+			managedRoots: [],
 			locals: [],
 			returnType: IRTVoid,
 			failureConvention: failureConvention == null ? IRFCInfallible : failureConvention,

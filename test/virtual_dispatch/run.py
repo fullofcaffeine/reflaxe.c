@@ -25,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CASE = Path(__file__).resolve().parent
 FIXTURES = CASE / "fixtures"
 POSITIVE = FIXTURES / "positive"
+INTERFACE_POSITIVE = ROOT / "test/interface_dispatch/fixtures/positive"
 NATIVE = CASE / "native"
 EXPECTED = CASE / "expected"
 SCHEMA = ROOT / "docs/specs/dispatch-report.schema.json"
@@ -82,6 +83,15 @@ REQUIRED_NATIVE_COVERAGE = frozenset(
         "direct-call-preservation",
         "minimal-vtable",
         "override-adapters",
+        "runtime-free",
+        "strict-c11",
+    }
+)
+REQUIRED_INTERFACE_NATIVE_COVERAGE = frozenset(
+    {
+        "inherited-interface-method",
+        "multiple-interface-views",
+        "program-local-interface-tables",
         "runtime-free",
         "strict-c11",
     }
@@ -275,7 +285,7 @@ def extract_report(
     hxcir = require_text(inspection.get("hxcir"), "dispatch HxcIR")
     profile = require_text(inspection.get("profile"), "inspection profile")
     if inspection.get("schemaVersion") != 1:
-        raise VirtualDispatchFailure("dispatch inspection lost schema version 1")
+        raise VirtualDispatchFailure("dispatch inspection lost wrapper schema version 1")
     return RenderedProject(
         artifacts=read_artifacts(output),
         dispatch=dispatch,
@@ -299,11 +309,13 @@ def render(
     reverse: bool = False,
     locale: str = "C",
     connect: str | None = None,
+    fixture: Path = POSITIVE,
+    interface: bool = False,
 ) -> RenderedProject:
     with tempfile.TemporaryDirectory(prefix="hxc-virtual-dispatch-render-") as temporary:
         output = Path(temporary) / "generated"
         result = compile_fixture(
-            POSITIVE,
+            fixture,
             output,
             profile=profile,
             runtime=runtime,
@@ -313,7 +325,10 @@ def render(
             connect=connect,
         )
         project = extract_report(result, output, label)
-        validate_project(project, expected_profile=profile)
+        if interface:
+            validate_interface_project(project, expected_profile=profile)
+        else:
+            validate_project(project, expected_profile=profile)
         return project
 
 
@@ -326,9 +341,9 @@ def validate_schema_document() -> None:
         != "https://reflaxe-c.dev/schemas/dispatch-report.schema.json"
         or schema.get("additionalProperties") is not False
         or require_dict(properties.get("schemaVersion"), "schema version").get("const")
-        != 1
+        != 2
         or require_dict(properties.get("algorithm"), "schema algorithm").get("const")
-        != "hxc-closed-world-virtual-dispatch-v1"
+        != "hxc-closed-world-instance-dispatch-v2"
     ):
         raise VirtualDispatchFailure("dispatch report schema identity drifted")
 
@@ -352,13 +367,13 @@ def validate_source(value: object, label: str) -> tuple[str, int, int, int, int]
 
 def validate_dispatch(report: dict[str, object]) -> None:
     if (
-        report.get("schemaVersion") != 1
-        or report.get("algorithm") != "hxc-closed-world-virtual-dispatch-v1"
+        report.get("schemaVersion") != 2
+        or report.get("algorithm") != "hxc-closed-world-instance-dispatch-v2"
         or report.get("status") != "analyzed-reachable-instance-dispatch"
         or report.get("tablePolicy")
-        != "one-root-layout-reachable-virtual-slots-only"
+        != "reachable-class-vtables-and-per-interface-itables-only"
         or report.get("adapterPolicy")
-        != "representation-identical-overrides-with-typed-self-thunks"
+        != "representation-identical-overrides-with-typed-receiver-thunks"
         or report.get("runtimeFeatures") != []
         or report.get("summary") != EXPECTED_SUMMARY
     ):
@@ -463,7 +478,7 @@ def validate_dispatch(report: dict[str, object]) -> None:
 def validate_hxcir(project: RenderedProject) -> None:
     hxcir = project.hxcir
     required = (
-        "hxcir schema=10\n",
+        "hxcir schema=17\n",
         'layout "vtable.layout.BaseWorker"',
         'slot "slot.BaseWorker.value"',
         'table "vtable.LeafWorker"',
@@ -477,7 +492,7 @@ def validate_hxcir(project: RenderedProject) -> None:
         "class-layout base=none header=none",
     )
     if not hxcir.startswith(required[0]) or any(marker not in hxcir for marker in required[1:]):
-        raise VirtualDispatchFailure("schema-10 dispatch HxcIR lost a structural marker")
+        raise VirtualDispatchFailure("schema-17 dispatch HxcIR lost a structural marker")
     if hxcir.count('dispatch=virtual(slot="slot.BaseWorker.value"') != 3:
         raise VirtualDispatchFailure("HxcIR did not retain exactly three indirect calls")
     if str(ROOT) in hxcir or "\\" in hxcir or "hxrt" in hxcir.lower():
@@ -580,6 +595,175 @@ def validate_project(project: RenderedProject, *, expected_profile: str) -> None
             )
 
 
+def validate_interface_project(
+    project: RenderedProject, *, expected_profile: str
+) -> None:
+    """Validate inherited and multiple-interface dispatch as structural C.
+
+    The fixture deliberately calls a base-interface method through a child
+    interface and exposes the same object through a second interface. This
+    catches accidental single-table designs and prevents an unused interface
+    declaration from becoming emitted C merely because Haxe typed it.
+    """
+    report = project.dispatch
+    if (
+        report.get("schemaVersion") != 2
+        or report.get("algorithm") != "hxc-closed-world-instance-dispatch-v2"
+        or report.get("status") != "analyzed-reachable-instance-dispatch"
+        or report.get("tablePolicy")
+        != "reachable-class-vtables-and-per-interface-itables-only"
+        or report.get("adapterPolicy")
+        != "representation-identical-overrides-with-typed-receiver-thunks"
+        or report.get("runtimeFeatures") != []
+        or report.get("summary")
+        != {
+            "instanceCalls": 3,
+            "directCalls": 0,
+            "indirectCalls": 3,
+            "layouts": 2,
+            "slots": 3,
+            "tables": 2,
+            "adapters": 3,
+        }
+    ):
+        raise VirtualDispatchFailure("interface dispatch report identity or summary drifted")
+
+    calls = [
+        require_dict(value, "interface dispatch call")
+        for value in require_list(report.get("calls"), "interface dispatch calls")
+    ]
+    expected_calls = (
+        ("CounterView", "method.ReadableView.read", "interface-slot.CounterView.read"),
+        ("CounterView", "method.CounterView.doubled", "interface-slot.CounterView.doubled"),
+        ("ResetView", "method.ResetView.resetValue", "interface-slot.ResetView.resetValue"),
+    )
+    for index, (call, expected) in enumerate(zip(calls, expected_calls, strict=True)):
+        if (
+            call.get("id") != f"dispatch.call.{index}"
+            or call.get("dispatch") != "interface"
+            or call.get("reason") != "ordinary-interface-method"
+            or call.get("receiverStaticClass") != expected[0]
+            or call.get("methodFunctionId") != expected[1]
+            or call.get("slotId") != expected[2]
+            or call.get("targetFunctionId") is not None
+        ):
+            raise VirtualDispatchFailure(f"interface dispatch call {index} drifted")
+        validate_source(call.get("source"), f"interface dispatch call {index}")
+
+    layouts = {
+        require_text(layout.get("id"), "interface layout ID"): layout
+        for layout in (
+            require_dict(value, "interface layout")
+            for value in require_list(report.get("layouts"), "interface layouts")
+        )
+    }
+    slots = {
+        require_text(slot.get("id"), "interface slot ID"): slot
+        for slot in (
+            require_dict(value, "interface slot")
+            for value in require_list(report.get("slots"), "interface slots")
+        )
+    }
+    tables = {
+        require_text(table.get("id"), "interface table ID"): table
+        for table in (
+            require_dict(value, "interface table")
+            for value in require_list(report.get("tables"), "interface tables")
+        )
+    }
+    if (
+        set(layouts) != {"itable.layout.CounterView", "itable.layout.ResetView"}
+        or set(slots)
+        != {
+            "interface-slot.CounterView.doubled",
+            "interface-slot.CounterView.read",
+            "interface-slot.ResetView.resetValue",
+        }
+        or set(tables) != {"itable.Counter.CounterView", "itable.Counter.ResetView"}
+        or layouts["itable.layout.CounterView"].get("slotIds")
+        != ["interface-slot.CounterView.doubled", "interface-slot.CounterView.read"]
+        or layouts["itable.layout.ResetView"].get("slotIds")
+        != ["interface-slot.ResetView.resetValue"]
+    ):
+        raise VirtualDispatchFailure("interface layout, slot, or table ownership drifted")
+    for table_id, table in tables.items():
+        entries = require_list(table.get("entries"), f"{table_id} entries")
+        if table.get("classInstanceId") is None or not entries:
+            raise VirtualDispatchFailure(f"{table_id} lost its concrete implementation")
+        for value in entries:
+            entry = require_dict(value, f"{table_id} entry")
+            if (
+                require_text(entry.get("slotId"), f"{table_id} slot") not in slots
+                or C_IDENTIFIER.fullmatch(
+                    require_text(entry.get("adapterCName"), f"{table_id} adapter")
+                )
+                is None
+            ):
+                raise VirtualDispatchFailure(f"{table_id} contains a malformed entry")
+
+    hxcir = project.hxcir
+    for marker in (
+        'type "type.interface.',
+        'layout "itable.layout.CounterView"',
+        'layout "itable.layout.ResetView"',
+        'table "itable.Counter.CounterView"',
+        'table "itable.Counter.ResetView"',
+        "construct-interface interface=",
+        'dispatch=interface(type="instance.interface.',
+    ):
+        if marker not in hxcir:
+            raise VirtualDispatchFailure(f"interface HxcIR omitted {marker!r}")
+    if hxcir.count("construct-interface interface=") != 2 or hxcir.count(
+        'dispatch=interface(type="instance.interface.'
+    ) != 3:
+        raise VirtualDispatchFailure("interface HxcIR cardinality drifted")
+
+    for layout in layouts.values():
+        c_tag = require_text(layout.get("cTag"), "interface layout C tag")
+        value_tag = c_tag.removesuffix("_table_layout") + "_value"
+        if (
+            f"struct {c_tag} {{" not in project.header
+            or f"struct {value_tag} {{" not in project.header
+            or "void *object;" not in project.header
+            or f"const struct {c_tag} *table;" not in project.header
+        ):
+            raise VirtualDispatchFailure(f"interface value {value_tag!r} lost its fat C shape")
+    for table_id, table in tables.items():
+        c_name = require_text(table.get("cName"), f"{table_id} C name")
+        if f"&{c_name}" not in project.source or f" {c_name} =" not in project.source:
+            raise VirtualDispatchFailure(f"interface table {table_id!r} was not emitted")
+    if (
+        project.source.count("void *hxc_receiver") != 6
+        or project.source.count(".table->") != 3
+        or "UnusedView" in project.header
+        or "UnusedView" in project.source
+        or "UnusedView" in hxcir
+    ):
+        raise VirtualDispatchFailure("interface adapters, calls, or reachability drifted")
+
+    proof = require_dict(project.runtime_plan.get("noRuntimeProof"), "interface no-runtime proof")
+    if (
+        project.profile != expected_profile
+        or project.runtime_plan.get("profile") != expected_profile
+        or project.runtime_plan.get("status") != "analyzed-runtime-free"
+        or project.runtime_plan.get("features") != []
+        or "reachable-program-local-interface-dispatch"
+        not in require_list(project.runtime_plan.get("directDecisions"), "direct decisions")
+        or "compact program-local interface values" not in str(proof.get("semanticProof"))
+        or project.manifest.get("compilationStatus")
+        != "lowered-direct-value-executable"
+        or project.abi.get("status") != "analyzed-no-public-exports"
+        or project.abi.get("exports") != []
+        or project.symbols.get("algorithm") != "hxc-c-symbol-v2"
+    ):
+        raise VirtualDispatchFailure("interface runtime, manifest, ABI, or symbols drifted")
+    for path, content in project.artifacts.items():
+        if str(ROOT).encode() in content or b"\\" in content or b"hxrt" in content.lower():
+            raise VirtualDispatchFailure(
+                f"interface artifact {path!r} leaked a host path or runtime dependency"
+            )
+
+
 def first_difference(left: bytes, right: bytes) -> int:
     for index, (left_byte, right_byte) in enumerate(zip(left, right)):
         if left_byte != right_byte:
@@ -662,6 +846,33 @@ def check_determinism_and_policy(*, connect: str) -> RenderedProject:
     return first
 
 
+def check_interface_determinism(*, connect: str) -> RenderedProject:
+    first = render(
+        "first interface-dispatch render",
+        fixture=INTERFACE_POSITIVE,
+        interface=True,
+        connect=connect,
+    )
+    reversed_project = render(
+        "reverse-input/locale interface-dispatch render",
+        fixture=INTERFACE_POSITIVE,
+        interface=True,
+        reverse=True,
+        locale=alternate_locale(),
+        connect=connect,
+    )
+    assert_artifacts_equal(
+        first.artifacts,
+        reversed_project.artifacts,
+        "interface reverse-order/locale render",
+    )
+    if first.inspection_payload != reversed_project.inspection_payload:
+        raise VirtualDispatchFailure(
+            "interface dispatch inspection changed with module order or locale"
+        )
+    return first
+
+
 def snapshot_values(project: RenderedProject) -> dict[str, object]:
     return {
         "dispatch.hxcir": project.hxcir,
@@ -672,9 +883,27 @@ def snapshot_values(project: RenderedProject) -> dict[str, object]:
     }
 
 
+def interface_snapshot_values(project: RenderedProject) -> dict[str, object]:
+    return {
+        "interface-dispatch.hxcir": project.hxcir,
+        "interface-hxc.dispatch.json": project.dispatch,
+        "interface-program.h": project.header,
+        "interface-program.c": project.source,
+        "interface-symbols.json": project.symbols,
+    }
+
+
+def all_snapshot_values(
+    class_project: RenderedProject, interface_project: RenderedProject
+) -> dict[str, object]:
+    return {**snapshot_values(class_project), **interface_snapshot_values(interface_project)}
+
+
 def render_snapshot() -> dict[str, object]:
     with haxe_server() as endpoint:
-        return snapshot_values(check_determinism_and_policy(connect=endpoint))
+        class_project = check_determinism_and_policy(connect=endpoint)
+        interface_project = check_interface_determinism(connect=endpoint)
+        return all_snapshot_values(class_project, interface_project)
 
 
 def difference(expected: str, actual: str, name: str) -> str:
@@ -688,8 +917,10 @@ def difference(expected: str, actual: str, name: str) -> str:
     )
 
 
-def check_snapshots(project: RenderedProject) -> None:
-    for name, actual in snapshot_values(project).items():
+def check_snapshots(
+    class_project: RenderedProject, interface_project: RenderedProject
+) -> None:
+    for name, actual in all_snapshot_values(class_project, interface_project).items():
         path = EXPECTED / name
         if not path.is_file():
             raise VirtualDispatchFailure(
@@ -890,6 +1121,50 @@ def check_native(
         )
 
 
+def check_interface_native(
+    values: dict[str, object], *, requested_toolchain: str = "auto"
+) -> None:
+    """Compile and execute the generated interface program under strict C11.
+
+    This is intentionally independent of Haxe execution: the generated program
+    itself loops forever if any inherited or multiple-interface call returns the
+    wrong value, so a successful native exit proves the emitted tables cooperate.
+    """
+    native_values = {
+        "program.h": values.get("interface-program.h"),
+        "program.c": values.get("interface-program.c"),
+    }
+    with tempfile.TemporaryDirectory(prefix="hxc-interface-dispatch-native-") as temporary:
+        root = Path(temporary)
+        fixture_root = root / "fixture"
+        write_native_fixture(native_values, fixture_root)
+        project = CFixtureProject(
+            "interface-dispatch-positive",
+            ("src/program.c",),
+            ("include/hxc/program.h",),
+            ("include",),
+            "",
+            tuple(sorted(REQUIRED_INTERFACE_NATIVE_COVERAGE)),
+        )
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"interface-dispatch-{optimization[1:].lower()}",
+                projects=(project,),
+                fixture_root=fixture_root,
+                build_root=root / f"build-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=REQUIRED_INTERFACE_NATIVE_COVERAGE)
+            encoded = report_json(report, compact=True)
+            for forbidden in (str(ROOT), str(fixture_root), str(root)):
+                if forbidden in encoded:
+                    raise VirtualDispatchFailure(
+                        f"interface native report leaked absolute path {forbidden}"
+                    )
+
+
 def check_split_project(*, requested_toolchain: str) -> None:
     with tempfile.TemporaryDirectory(
         prefix="hxc-virtual-dispatch-split-"
@@ -994,6 +1269,17 @@ def snapshot_project() -> dict[str, object]:
     }
 
 
+def interface_snapshot_project() -> dict[str, object]:
+    return {
+        "interface-program.h": (EXPECTED / "interface-program.h").read_text(
+            encoding="utf-8"
+        ),
+        "interface-program.c": (EXPECTED / "interface-program.c").read_text(
+            encoding="utf-8"
+        ),
+    }
+
+
 def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
@@ -1007,11 +1293,15 @@ def main(arguments: Iterable[str] = ()) -> int:
         validate_schema_document()
         if args.native_only:
             check_native(snapshot_project(), requested_toolchain=args.toolchain)
-            print("virtual-dispatch: OK: required dispatch native matrix passed")
+            check_interface_native(
+                interface_snapshot_project(), requested_toolchain=args.toolchain
+            )
+            print("virtual-dispatch: OK: required class/interface native matrix passed")
             return 0
         with haxe_server() as endpoint:
             project = check_determinism_and_policy(connect=endpoint)
-            check_snapshots(project)
+            interface_project = check_interface_determinism(connect=endpoint)
+            check_snapshots(project, interface_project)
             check_negative_cases(connect=endpoint)
             warm_after_rejection = render(
                 "warm-server render after rejected overrides", connect=endpoint
@@ -1026,6 +1316,10 @@ def main(arguments: Iterable[str] = ()) -> int:
                     "warm-server dispatch inspection changed after rejected requests"
                 )
         check_native(snapshot_values(project), requested_toolchain=args.toolchain)
+        check_interface_native(
+            interface_snapshot_values(interface_project),
+            requested_toolchain=args.toolchain,
+        )
         check_split_project(requested_toolchain=args.toolchain)
     except (
         VirtualDispatchFailure,
@@ -1039,7 +1333,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "virtual-dispatch: OK: direct-call preservation, minimal root-only tables, "
-        "deterministic slots, representation-checked overrides, explanatory reports, "
+        "inherited/multiple-interface tables, deterministic slots, "
+        "representation-checked overrides, explanatory reports, "
         "runtime-free strict C11/C++17 split/unity consumers, and fail-closed variance passed"
     )
     return 0

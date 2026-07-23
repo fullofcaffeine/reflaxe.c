@@ -86,9 +86,24 @@ comparisons remain direct binary64 operations; division is zero-safe and
 modulo uses `fmod` with an exact compiler-selected `m` link fact. See [UB-safe primitive
 arithmetic](arithmetic-semantics.md) for the production operation boundary.
 
-Nullable scalars use a tagged optional. Nullable references and native pointers
-use a null pointer. A nullable unwrap either has a presence proof or retains an
-explicit failure edge.
+Nullable scalars use a direct tagged optional:
+
+```c
+struct hxc_optional_int {
+  bool has_value;
+  int32_t value;
+};
+```
+
+The generated names vary, but the rule does not. `has_value = false` means
+Haxe `null`; `has_value = true` permits every payload value, including `false`,
+integer zero, and `0.0`. This uses no heap allocation, boxing, NaN trick, or
+magic integer. Nullable references and native pointers already have a unique
+null pointer, so they do not acquire this second wrapper. A nullable unwrap
+either has a control-flow presence proof or retains an explicit failure edge.
+The function-lowering fixture carries nullable Bool, Int, UInt, and Float
+through parameters, returns, locals, records, enum payloads, and Arrays, then
+compares native execution with Eval.
 
 ## Evidence and current limit
 
@@ -97,6 +112,7 @@ Run the focused contract with:
 ```sh
 npm run test:primitive-semantics
 npm run test:arithmetic-semantics
+npm run test:function-lowering
 ```
 
 The primitive suite maps real typed Haxe declarations in both profiles, renders

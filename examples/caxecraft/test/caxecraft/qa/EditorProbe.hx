@@ -600,6 +600,9 @@ private final class Registry implements ScenarioContentRegistry {
 	public function hasItem(id:ContentId):Bool
 		return false;
 
+	public function itemStorageCode(id:ContentId):Int
+		return -1;
+
 	public function hasEntity(id:ContentId):Bool
 		return false;
 

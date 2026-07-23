@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://reflaxe-c.dev/schemas/dispatch-report.schema.json",
-  "title": "reflaxe.c reachable virtual-dispatch report",
+  "title": "reflaxe.c reachable instance-dispatch report",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -18,11 +18,11 @@
     "tables"
   ],
   "properties": {
-    "schemaVersion": { "const": 1 },
-    "algorithm": { "const": "hxc-closed-world-virtual-dispatch-v1" },
+    "schemaVersion": { "const": 2 },
+    "algorithm": { "const": "hxc-closed-world-instance-dispatch-v2" },
     "status": { "const": "analyzed-reachable-instance-dispatch" },
-    "tablePolicy": { "const": "one-root-layout-reachable-virtual-slots-only" },
-    "adapterPolicy": { "const": "representation-identical-overrides-with-typed-self-thunks" },
+    "tablePolicy": { "const": "reachable-class-vtables-and-per-interface-itables-only" },
+    "adapterPolicy": { "const": "representation-identical-overrides-with-typed-receiver-thunks" },
     "runtimeFeatures": {
       "type": "array",
       "maxItems": 0
@@ -124,7 +124,7 @@
         "callerFunctionId": { "$ref": "#/$defs/nonEmptyText" },
         "methodFunctionId": { "$ref": "#/$defs/nonEmptyText" },
         "receiverStaticClass": { "$ref": "#/$defs/nonEmptyText" },
-        "dispatch": { "enum": ["direct", "virtual"] },
+        "dispatch": { "enum": ["direct", "virtual", "interface"] },
         "reason": { "$ref": "#/$defs/nonEmptyText" },
         "targetFunctionId": { "$ref": "#/$defs/nullableText" },
         "slotId": { "$ref": "#/$defs/nullableText" },

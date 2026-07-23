@@ -25,11 +25,20 @@ static inline int32_t hxc_i32_multiply_wrapping(int32_t hxc_left, int32_t hxc_ri
   return hxc_u32_to_i32_bits((uint32_t)((uint64_t)(uint32_t)hxc_left * (uint64_t)(uint32_t)hxc_right));
 }
 
+struct hxc_SpanFixture_OwnedSpanBuffer;
+
 struct hxc_SpanFixture_FinalSpanMutator;
+
+struct hxc_SpanFixture_OwnedSpanBuffer {
+  uint8_t hxc_bytes[4];
+  int32_t hxc_numbers[4];
+};
 
 struct hxc_SpanFixture_FinalSpanMutator {
   unsigned char hxc_storage;
 };
+
+void hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer(struct hxc_SpanFixture_OwnedSpanBuffer *hxc_self);
 
 int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index);
 
@@ -51,6 +60,8 @@ int32_t hxc_SpanFixture_mutableSum(void);
 
 uint8_t hxc_SpanFixture_mutatedGridCell(uint8_t hxc_replacement);
 
+int32_t hxc_SpanFixture_ownedFieldRoundTrip(uint8_t hxc_replacement);
+
 uint8_t hxc_SpanFixture_parameterRoundTrip(uint8_t hxc_replacement);
 
 uint8_t hxc_SpanFixture_readAt(const uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index);
@@ -64,5 +75,7 @@ uint8_t hxc_SpanFixture_zeroedGridCell(void);
 uint8_t hxc_SpanConditionalAssignment_assignSelected(uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_whenTrue, uint8_t hxc_whenFalse, bool hxc_selectTrue);
 
 uint8_t hxc_SpanFixture_FinalSpanMutator_replace(struct hxc_SpanFixture_FinalSpanMutator *hxc_self, uint8_t *hxc_values, size_t hxc_length, int32_t hxc_index, uint8_t hxc_replacement);
+
+int32_t hxc_SpanFixture_OwnedSpanBuffer_roundTrip(struct hxc_SpanFixture_OwnedSpanBuffer *hxc_self, uint8_t hxc_replacement);
 
 #endif /* HXC_PROGRAM_H_INCLUDED */

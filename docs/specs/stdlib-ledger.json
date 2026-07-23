@@ -76,7 +76,7 @@
     "applicableSourceCount": 183,
     "applicableSourceSha256": "be53a7994b9d58654465038f02792ebc70f5c2d283854ad19d755e4af780aa8a",
     "apiCount": 2311,
-    "apiSurfaceSha256": "e86c62cc85c973a10425bb23740986fa262cd623fe7e4646427416c63ed543da"
+    "apiSurfaceSha256": "20712f1813414eec4d0d1442de718fde6d9ce97413b61098467d4f513a0dab95"
   },
   "applicability": {
     "publicSurface": "non-private typed declarations and fields visible to the pinned compiler; @:noCompletion declarations are excluded",
@@ -495,6 +495,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -515,7 +516,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support."
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support."
     },
     {
       "id": "io-value-utilities",
@@ -1038,6 +1039,356 @@
     }
   ],
   "apiOverrides": [
+    {
+      "id": "bytes-type-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": null,
+        "kind": "class",
+        "isStatic": true,
+        "signature": "haxe.io.Bytes"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The nominal fixed-length shared Bytes representation, local ownership, owned returns, and exact selective runtime closure are admitted; unlisted methods and managed values inside aggregate or Array elements remain source-positioned boundaries."
+    },
+    {
+      "id": "bytes-alloc-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "alloc",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(length : Int) -> haxe.io.Bytes"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Run-time non-negative lengths allocate exact shared storage and haxe.c zero-initializes it deliberately; invalid lengths and allocation failures use the checked status edge."
+    },
+    {
+      "id": "bytes-blit-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "blit",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, src : haxe.io.Bytes, srcpos : Int, len : Int) -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Named live source and destination values support checked overlap-safe copying; an unowned fresh nested source is rejected until expression-temporary cleanup is admitted."
+    },
+    {
+      "id": "bytes-compare-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "compare",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(other : haxe.io.Bytes) -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Named values use the pinned implementation's byte-prefix-first lexicographic order and then length; a fresh nested argument remains an explicit temporary-lifetime boundary."
+    },
+    {
+      "id": "bytes-fill-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "fill",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, len : Int, value : Int) -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked range is filled with the low eight bits of the Haxe Int; the operation mutates every alias to the same Bytes owner."
+    },
+    {
+      "id": "bytes-get-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "get",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int) -> Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked position returns an ordinary Haxe Int in the inclusive range 0 through 255; haxe.c preserves the nominal call with its target source declaration."
+    },
+    {
+      "id": "bytes-length-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "length",
+        "kind": "field",
+        "isStatic": false,
+        "signature": "Int"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The immutable fixed length is read through the managed owner and is guaranteed to fit Haxe's signed Int because construction rejects larger storage."
+    },
+    {
+      "id": "bytes-of-string-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "ofString",
+        "kind": "method",
+        "isStatic": true,
+        "signature": "(s : String, ?encoding : Null<haxe.io.Encoding>) -> haxe.io.Bytes"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A compiler-known valid UTF-8 String literal with absent or null encoding is copied exactly, including embedded NUL; run-time Strings and explicit encodings remain unsupported."
+    },
+    {
+      "id": "bytes-set-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "set",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, v : Int) -> Void"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked position stores the low eight bits of the Haxe Int and the mutation is visible through every alias to the same Bytes value."
+    },
+    {
+      "id": "bytes-sub-partial",
+      "selector": {
+        "module": "haxe.io.Bytes",
+        "type": "haxe.io.Bytes",
+        "member": "sub",
+        "kind": "method",
+        "isStatic": false,
+        "signature": "(pos : Int, len : Int) -> haxe.io.Bytes"
+      },
+      "owner": "target-source-override",
+      "runtimeFeatures": [
+        "bytes"
+      ],
+      "profiles": [
+        "portable",
+        "metal"
+      ],
+      "environments": [
+        "hosted",
+        "freestanding"
+      ],
+      "status": "partial",
+      "ownerBeads": "E5.T04",
+      "testOwnerBeads": "E5.T04",
+      "diagnosticPolicies": [
+        "planned-unsupported",
+        "runtime-policy-after-implementation"
+      ],
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked range creates an independent owned copy; fresh results may bind to locals or cross an owned return boundary, while unsupported nested temporary shapes fail closed."
+    },
     {
       "id": "std-int-conformant",
       "selector": {
@@ -37784,6 +38135,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37804,7 +38156,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -37821,6 +38173,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37841,7 +38194,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -37858,6 +38211,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37878,7 +38232,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -37895,6 +38249,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37915,7 +38270,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -37932,6 +38287,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37952,7 +38308,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -37969,6 +38325,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -37989,7 +38346,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38006,6 +38363,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38026,7 +38384,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38043,6 +38401,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38063,7 +38422,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38080,6 +38439,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38100,7 +38460,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38117,6 +38477,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38137,7 +38498,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38154,6 +38515,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38174,7 +38536,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38191,6 +38553,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38211,7 +38574,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38228,6 +38591,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38248,7 +38612,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38265,6 +38629,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38285,7 +38650,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38302,6 +38667,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38322,7 +38688,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38339,6 +38705,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38359,7 +38726,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38376,6 +38743,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38396,7 +38764,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38413,6 +38781,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38433,7 +38802,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38450,6 +38819,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38470,7 +38840,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38487,6 +38857,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38507,7 +38878,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38524,6 +38895,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38544,7 +38916,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38561,6 +38933,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38581,7 +38954,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38598,6 +38971,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38618,7 +38992,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38635,6 +39009,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38655,7 +39030,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38672,6 +39047,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38692,7 +39068,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38709,6 +39085,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38729,7 +39106,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38746,6 +39123,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38766,7 +39144,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38782,8 +39160,7 @@
       "isStatic": true,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -38791,20 +39168,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The nominal fixed-length shared Bytes representation, local ownership, owned returns, and exact selective runtime closure are admitted; unlisted methods and managed values inside aggregate or Array elements remain source-positioned boundaries.",
+      "ruleId": "bytes-type-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:6513990fcdcbe808dcb516272af4129deb7b3e0e76e4a9a0185aa0721433e4ac",
@@ -38819,8 +39197,7 @@
       "isStatic": true,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -38828,20 +39205,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Run-time non-negative lengths allocate exact shared storage and haxe.c zero-initializes it deliberately; invalid lengths and allocation failures use the checked status edge.",
+      "ruleId": "bytes-alloc-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:af9f758097846c3f13056bf02e6d7aa908fe5094deadc6344318eb7817776bf9",
@@ -38856,8 +39234,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -38865,20 +39242,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Named live source and destination values support checked overlap-safe copying; an unowned fresh nested source is rejected until expression-temporary cleanup is admitted.",
+      "ruleId": "bytes-blit-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:cd96dffdbfcdb384fda6779f07e747cc2196603aa0018b8a03097e18253a77ce",
@@ -38893,8 +39271,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -38902,35 +39279,37 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "Named values use the pinned implementation's byte-prefix-first lexicographic order and then length; a fresh nested argument remains an explicit temporary-lifetime boundary.",
+      "ruleId": "bytes-compare-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:24927d876a5c5c04d5eac256dfa7e7f21419af4165a611e443365034e3ead4ca",
+      "id": "hxc-stdlib-api-v1:bc0a97500f3ffd4b74aa6647e62031c64d9ce0c1b4e7c334a3f193b48862788e",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "fastGet",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(b : haxe.io.BytesData, pos : Int) -> Int",
       "isStatic": true,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -38951,7 +39330,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -38967,8 +39346,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -38976,36 +39354,36 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/bytes_runtime.c",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked range is filled with the low eight bits of the Haxe Int; the operation mutates every alias to the same Bytes owner.",
+      "ruleId": "bytes-fill-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:df653491739bdd60cfb921638ec43854bd70c76ab5d9c2a09313d09f9cde52ea",
+      "id": "hxc-stdlib-api-v1:73c756ebbcfe39c8cf1e48a000c0fa71a95b89fc5ce8fece64954d8583207177",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "get",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int) -> Int",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -39013,35 +39391,37 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked position returns an ordinary Haxe Int in the inclusive range 0 through 255; haxe.c preserves the nominal call with its target source declaration.",
+      "ruleId": "bytes-get-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:1969672d4735e7cdbfde9fa5be48819cf382e03472355a8b4967eeed94ed2c60",
+      "id": "hxc-stdlib-api-v1:b546bf294d99cf31318e4ecc6470f9de62ae82526bdaf6ed9fafea9d2a0d603d",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "getData",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "() -> haxe.io.BytesData",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39062,7 +39442,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39079,6 +39459,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39099,7 +39480,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39116,6 +39497,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39136,23 +39518,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:8ef4f8ee85e37f0bcf1de883889695a90927c440da6ec690d57430eb34490833",
+      "id": "hxc-stdlib-api-v1:cc0a4850f18fb28cfd50660098e85f07e6339c3ba6c2fa7f63d349863e34ad8f",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "getInt32",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int) -> Int",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39173,23 +39556,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:de6794854c69bb8e6804a0b862f48486c169419bd23da12acdddc62084c98d7b",
+      "id": "hxc-stdlib-api-v1:d92caf1e06fd5fbf6951e6bd17c437184e78f52eb4a07c306b51c288261c8445",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "getInt64",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int) -> haxe.Int64",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39210,7 +39594,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39227,6 +39611,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39247,23 +39632,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:b28f3ed5ca9b731d69a83cc1f76af93c8b68c491c603181671ca7fed1bf0cc8d",
+      "id": "hxc-stdlib-api-v1:1037fbf91e6a1471829953eafc5c7880fba798b6cf3591ebe41abdf98a9c8532",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "getUInt16",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int) -> Int",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39284,7 +39670,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39300,8 +39686,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -39309,20 +39694,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "The immutable fixed length is read through the managed owner and is guaranteed to fit Haxe's signed Int because construction rejects larger storage.",
+      "ruleId": "bytes-length-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:f8f4ad02d162e9fadeebdc62c6501b8d57de306835822e48c088c9ea9c2bfa69",
@@ -39338,6 +39724,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39358,7 +39745,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39375,6 +39762,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39395,7 +39783,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39411,8 +39799,7 @@
       "isStatic": true,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -39420,36 +39807,36 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A compiler-known valid UTF-8 String literal with absent or null encoding is copied exactly, including embedded NUL; run-time Strings and explicit encodings remain unsupported.",
+      "ruleId": "bytes-of-string-partial"
     },
     {
-      "id": "hxc-stdlib-api-v1:35dde1053eef3d7a67ac49146e4e4e3bddaf6576ad3b1b6de2120b3a6c4cdb71",
+      "id": "hxc-stdlib-api-v1:e8799f1f3d27b265656d057ee80a3b95f8bc0195988a2ee433e9718d46d6ed6c",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "set",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int, v : Int) -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -39457,20 +39844,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked position stores the low eight bits of the Haxe Int and the mutation is visible through every alias to the same Bytes value.",
+      "ruleId": "bytes-set-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:3841375586a35282959907292d75299491ba6bdd6fa4f8a8d275b4a4fce9b671",
@@ -39486,6 +39874,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39506,7 +39895,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39523,6 +39912,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39543,23 +39933,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:96091a6eae93395029e51f5a82b15af44f01e572cfafb4c7456ed9b2e82b73fa",
+      "id": "hxc-stdlib-api-v1:b88e931617eb3fa3f058ac0a31c89440e6a9b9e1247817167167e5b0989d11b8",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "setInt32",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int, v : Int) -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39580,23 +39971,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:4c7092e2807ba1baa9233f9efc44996432e1223390dc9500be4efd9d4584d630",
+      "id": "hxc-stdlib-api-v1:e2837de7214066c6173e4bf0797fc4f378f11d737dc2664ba75caef63d5b0a9d",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "setInt64",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int, v : haxe.Int64) -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39617,23 +40009,24 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
-      "id": "hxc-stdlib-api-v1:dcb13928b35fbd84517e88b09c8302d017f64c449a437038b268e267a272c6b4",
+      "id": "hxc-stdlib-api-v1:ec128114912f89dd7addd211000c3f18f04ccc03c8b54b44c789cdbfea519914",
       "module": "haxe.io.Bytes",
       "source": "haxe/io/Bytes.hx",
       "sourceSha256": "ba33b81fca38dd03a6d98910ac05f61e9cfb77e9be878b69fb1208e15c06f079",
       "probeScope": "c-common",
       "type": "haxe.io.Bytes",
       "member": "setUInt16",
-      "kind": "inline-method",
+      "kind": "method",
       "signature": "(pos : Int, v : Int) -> Void",
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39654,7 +40047,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39670,8 +40063,7 @@
       "isStatic": false,
       "owner": "target-source-override",
       "runtimeFeatures": [
-        "alloc",
-        "io"
+        "bytes"
       ],
       "profiles": [
         "portable",
@@ -39679,20 +40071,21 @@
       ],
       "environments": [
         "hosted",
-        "freestanding",
-        "wasi",
-        "emscripten"
+        "freestanding"
       ],
-      "status": "planned",
+      "status": "partial",
       "ownerBeads": "E5.T04",
-      "testOwnerBeads": "E5.T12",
+      "testOwnerBeads": "E5.T04",
       "diagnosticPolicies": [
         "planned-unsupported",
         "runtime-policy-after-implementation"
       ],
-      "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
-      "ruleId": "binary-and-stream-storage"
+      "tests": [
+        "test/differential/bytes-runtime/generated/Main.hx",
+        "test/differential/bytes-runtime/run.py"
+      ],
+      "notes": "A checked range creates an independent owned copy; fresh results may bind to locals or cross an owned return boundary, while unsupported nested temporary shapes fail closed.",
+      "ruleId": "bytes-sub-partial"
     },
     {
       "id": "hxc-stdlib-api-v1:4907a5387ed78e65756b8ebc39a1efaae2723e45a6ae60fa67344f930b6ab812",
@@ -39708,6 +40101,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39728,7 +40122,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39745,6 +40139,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39765,7 +40160,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39782,6 +40177,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39802,7 +40198,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39819,6 +40215,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39839,7 +40236,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39856,6 +40253,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39876,7 +40274,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39893,6 +40291,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39913,7 +40312,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39930,6 +40329,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39950,7 +40350,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -39967,6 +40367,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -39987,7 +40388,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40004,6 +40405,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40024,7 +40426,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40041,6 +40443,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40061,7 +40464,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40078,6 +40481,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40098,7 +40502,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40115,6 +40519,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40135,7 +40540,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40152,6 +40557,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40172,7 +40578,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40189,6 +40595,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40209,7 +40616,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40226,6 +40633,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40246,7 +40654,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40263,6 +40671,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40283,7 +40692,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40300,6 +40709,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40320,7 +40730,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40337,6 +40747,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40357,7 +40768,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40374,6 +40785,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40394,7 +40806,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40411,6 +40823,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40431,7 +40844,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40448,6 +40861,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40468,7 +40882,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40485,6 +40899,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40505,7 +40920,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40522,6 +40937,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40542,7 +40958,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40559,6 +40975,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40579,7 +40996,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40596,6 +41013,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40616,7 +41034,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40633,6 +41051,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40653,7 +41072,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -40670,6 +41089,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -40690,7 +41110,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41037,6 +41457,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41057,7 +41478,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41074,6 +41495,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41094,7 +41516,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41111,6 +41533,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41131,7 +41554,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41148,6 +41571,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41168,7 +41592,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41185,6 +41609,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41205,7 +41630,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41222,6 +41647,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41242,7 +41668,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41259,6 +41685,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41279,7 +41706,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41296,6 +41723,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41316,7 +41744,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41333,6 +41761,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41353,7 +41782,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41370,6 +41799,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41390,7 +41820,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41407,6 +41837,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41427,7 +41858,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41444,6 +41875,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41464,7 +41896,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41481,6 +41913,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41501,7 +41934,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41518,6 +41951,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41538,7 +41972,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41555,6 +41989,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41575,7 +42010,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41592,6 +42027,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41612,7 +42048,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41629,6 +42065,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41649,7 +42086,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41666,6 +42103,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41686,7 +42124,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41703,6 +42141,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41723,7 +42162,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41740,6 +42179,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41760,7 +42200,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41777,6 +42217,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41797,7 +42238,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41814,6 +42255,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41834,7 +42276,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41851,6 +42293,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41871,7 +42314,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41888,6 +42331,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41908,7 +42352,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41925,6 +42369,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41945,7 +42390,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41962,6 +42407,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -41982,7 +42428,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -41999,6 +42445,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42019,7 +42466,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42036,6 +42483,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42056,7 +42504,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42073,6 +42521,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42093,7 +42542,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42110,6 +42559,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42130,7 +42580,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42147,6 +42597,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42167,7 +42618,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42184,6 +42635,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42204,7 +42656,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42221,6 +42673,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42241,7 +42694,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42258,6 +42711,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42278,7 +42732,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42295,6 +42749,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42315,7 +42770,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42332,6 +42787,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42352,7 +42808,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42369,6 +42825,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42389,7 +42846,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42406,6 +42863,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42426,7 +42884,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42443,6 +42901,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42463,7 +42922,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42480,6 +42939,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42500,7 +42960,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42517,6 +42977,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42537,7 +42998,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42554,6 +43015,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42574,7 +43036,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42591,6 +43053,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42611,7 +43074,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42628,6 +43091,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42648,7 +43112,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42665,6 +43129,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42685,7 +43150,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42702,6 +43167,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42722,7 +43188,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42739,6 +43205,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42759,7 +43226,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42776,6 +43243,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42796,7 +43264,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42813,6 +43281,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42833,7 +43302,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42850,6 +43319,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42870,7 +43340,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42887,6 +43357,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42907,7 +43378,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42924,6 +43395,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42944,7 +43416,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42961,6 +43433,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -42981,7 +43454,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -42998,6 +43471,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43018,7 +43492,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43035,6 +43509,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43055,7 +43530,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43072,6 +43547,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43092,7 +43568,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43109,6 +43585,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43129,7 +43606,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43146,6 +43623,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43166,7 +43644,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43183,6 +43661,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43203,7 +43682,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43220,6 +43699,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43240,7 +43720,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43257,6 +43737,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43277,7 +43758,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43294,6 +43775,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43314,7 +43796,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43331,6 +43813,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43351,7 +43834,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43368,6 +43851,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43388,7 +43872,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43405,6 +43889,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43425,7 +43910,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43442,6 +43927,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43462,7 +43948,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43479,6 +43965,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43499,7 +43986,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43516,6 +44003,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43536,7 +44024,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -43553,6 +44041,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -43573,7 +44062,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54051,6 +54540,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54071,7 +54561,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54088,6 +54578,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54108,7 +54599,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54125,6 +54616,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54145,7 +54637,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54162,6 +54654,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54182,7 +54675,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54199,6 +54692,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54219,7 +54713,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54236,6 +54730,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54256,7 +54751,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54273,6 +54768,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54293,7 +54789,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54310,6 +54806,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54330,7 +54827,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54347,6 +54844,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54367,7 +54865,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54384,6 +54882,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54404,7 +54903,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54421,6 +54920,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54441,7 +54941,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54458,6 +54958,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54478,7 +54979,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54495,6 +54996,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54515,7 +55017,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54532,6 +55034,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54552,7 +55055,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54569,6 +55072,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54589,7 +55093,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54606,6 +55110,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54626,7 +55131,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54643,6 +55148,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54663,7 +55169,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54680,6 +55186,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54700,7 +55207,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -54717,6 +55224,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -54737,7 +55245,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55612,6 +56120,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55632,7 +56141,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55649,6 +56158,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55669,7 +56179,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55686,6 +56196,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55706,7 +56217,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55723,6 +56234,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55743,7 +56255,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55760,6 +56272,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55780,7 +56293,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55797,6 +56310,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55817,7 +56331,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55834,6 +56348,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55854,7 +56369,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55871,6 +56386,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55891,7 +56407,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55908,6 +56424,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55928,7 +56445,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55945,6 +56462,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -55965,7 +56483,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -55982,6 +56500,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56002,7 +56521,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56019,6 +56538,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56039,7 +56559,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56056,6 +56576,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56076,7 +56597,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56093,6 +56614,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56113,7 +56635,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56130,6 +56652,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56150,7 +56673,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56167,6 +56690,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56187,7 +56711,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56204,6 +56728,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56224,7 +56749,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56241,6 +56766,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56261,7 +56787,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56278,6 +56804,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56298,7 +56825,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56315,6 +56842,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56335,7 +56863,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56352,6 +56880,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56372,7 +56901,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56389,6 +56918,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56409,7 +56939,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56426,6 +56956,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56446,7 +56977,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56463,6 +56994,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56483,7 +57015,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56500,6 +57032,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56520,7 +57053,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56537,6 +57070,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56557,7 +57091,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56574,6 +57108,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56594,7 +57129,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56611,6 +57146,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56631,7 +57167,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56648,6 +57184,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56668,7 +57205,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56685,6 +57222,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56705,7 +57243,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56722,6 +57260,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56742,7 +57281,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56759,6 +57298,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56779,7 +57319,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56796,6 +57336,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56816,7 +57357,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56833,6 +57374,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56853,7 +57395,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56870,6 +57412,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56890,7 +57433,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56907,6 +57450,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56927,7 +57471,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56944,6 +57488,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -56964,7 +57509,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -56981,6 +57526,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57001,7 +57547,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57018,6 +57564,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57038,7 +57585,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57055,6 +57602,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57075,7 +57623,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57092,6 +57640,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57112,7 +57661,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57129,6 +57678,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57149,7 +57699,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57166,6 +57716,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57186,7 +57737,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57203,6 +57754,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57223,7 +57775,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57240,6 +57792,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57260,7 +57813,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57277,6 +57830,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57297,7 +57851,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {
@@ -57314,6 +57868,7 @@
       "owner": "target-source-override",
       "runtimeFeatures": [
         "alloc",
+        "bytes",
         "io"
       ],
       "profiles": [
@@ -57334,7 +57889,7 @@
         "runtime-policy-after-implementation"
       ],
       "tests": [],
-      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit; compiler-known buffer operations should become direct C before shared I/O support.",
+      "notes": "Byte units, bounds, partial I/O, ownership, and overflow are explicit. The admitted haxe.io.Bytes subset has exact API overrides; other binary and stream APIs remain planned, and compiler-known buffer operations should become direct C before shared I/O support.",
       "ruleId": "binary-and-stream-storage"
     },
     {

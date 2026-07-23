@@ -19,6 +19,14 @@
       "renderProfile": "air"
     },
     {
+      "id": "caxecraft:ash",
+      "storageCode": 9,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "ash-field"
+    },
+    {
       "id": "caxecraft:bedrock",
       "storageCode": 4,
       "collision": "solid",
@@ -43,12 +51,44 @@
       "renderProfile": "meadow-grass"
     },
     {
+      "id": "caxecraft:leaves",
+      "storageCode": 7,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "forest-leaves"
+    },
+    {
+      "id": "caxecraft:sand",
+      "storageCode": 5,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "river-sand"
+    },
+    {
+      "id": "caxecraft:snow",
+      "storageCode": 8,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "snow-field"
+    },
+    {
       "id": "caxecraft:stone",
       "storageCode": 3,
       "collision": "solid",
       "edit": "collectable",
       "dropItem": "caxecraft:stone-block",
       "renderProfile": "slate-stone"
+    },
+    {
+      "id": "caxecraft:wood",
+      "storageCode": 6,
+      "collision": "solid",
+      "edit": "immutable",
+      "dropItem": null,
+      "renderProfile": "forest-wood"
     }
   ],
   "fluids": [

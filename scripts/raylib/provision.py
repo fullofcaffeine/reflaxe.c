@@ -27,6 +27,7 @@ SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 REVISION_RE = re.compile(r"^[0-9a-f]{40}$")
 SAFE_DEFINITION_RE = re.compile(r"^[A-Z][A-Z0-9_]*=[A-Za-z0-9.+_-]+$")
 SAFE_LINK_NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_+.-]*$")
+PATCH_ID_RE = re.compile(r"^[a-z0-9][a-z0-9.-]+$")
 VERSION_MACROS = {
     "RAYLIB_VERSION_MAJOR": "6",
     "RAYLIB_VERSION_MINOR": "0",
@@ -67,6 +68,16 @@ PINNED_REVIEWED_INPUTS = (
     (
         "tools/rlparser/output/raylib_api.json",
         "d4e2dd0727a8edf4d4f828e23f86e3bb74e373861edd0eabef4a634ae74936d6",
+    ),
+)
+PINNED_PATCHES = (
+    (
+        "raylib-6.0-memory-macos-monotonic-clock",
+        "scripts/raylib/patches/memory-macos-monotonic-clock.json",
+        "2f01f00341818374a6ccc4411c816ca9c52a470470cab4cde2ede38ab3002dae",
+        PINNED_COMMIT,
+        ("macos",),
+        ("memory-software",),
     ),
 )
 EXPECTED_CONFIGURATION_DEFINITIONS = {
@@ -252,6 +263,7 @@ def validate_lock(lock: Mapping[str, object]) -> None:
             "schemaVersion",
             "upstream",
             "reviewedInputs",
+            "patches",
             "configurations",
             "platforms",
             "authorities",
@@ -259,8 +271,8 @@ def validate_lock(lock: Mapping[str, object]) -> None:
         ),
         "raylib lock",
     )
-    if lock.get("schemaVersion") != 1:
-        raise ProvisionFailure("raylib lock must use schemaVersion 1")
+    if lock.get("schemaVersion") != 2:
+        raise ProvisionFailure("raylib lock must use schemaVersion 2")
     upstream = lock.get("upstream")
     if not isinstance(upstream, dict):
         raise ProvisionFailure("raylib lock omitted upstream")
@@ -384,6 +396,66 @@ def validate_lock(lock: Mapping[str, object]) -> None:
     ):
         if required not in paths:
             raise ProvisionFailure(f"raylib lock omitted build input {required}")
+
+    patches = lock.get("patches")
+    if not isinstance(patches, list):
+        raise ProvisionFailure("raylib lock patches must be an array")
+    validated_patches: list[
+        tuple[str, str, str, str, tuple[str, ...], tuple[str, ...]]
+    ] = []
+    for index, entry in enumerate(patches):
+        if not isinstance(entry, dict):
+            raise ProvisionFailure(f"patches[{index}] must be an object")
+        require_exact_keys(
+            entry,
+            ("id", "path", "sha256", "upstreamCommit", "platforms", "configurations"),
+            f"raylib lock patches[{index}]",
+        )
+        patch_id = entry.get("id")
+        if not isinstance(patch_id, str) or PATCH_ID_RE.fullmatch(patch_id) is None:
+            raise ProvisionFailure(f"patches[{index}].id is malformed")
+        relative = safe_relative_path(entry.get("path"), f"patches[{index}].path")
+        if relative.parts[:3] != ("scripts", "raylib", "patches"):
+            raise ProvisionFailure(f"patches[{index}].path must stay under scripts/raylib/patches")
+        digest = entry.get("sha256")
+        if not isinstance(digest, str) or SHA256_RE.fullmatch(digest) is None:
+            raise ProvisionFailure(f"patches[{index}].sha256 is malformed")
+        recipe_path = ROOT.joinpath(*relative.parts)
+        if recipe_path.is_symlink() or not recipe_path.is_file():
+            raise ProvisionFailure(f"locked raylib patch recipe is missing: {relative.as_posix()}")
+        if sha256_file(recipe_path) != digest:
+            raise ProvisionFailure(f"locked raylib patch recipe hash mismatch: {relative.as_posix()}")
+        upstream_commit = entry.get("upstreamCommit")
+        if upstream_commit != PINNED_COMMIT:
+            raise ProvisionFailure(f"patches[{index}].upstreamCommit drifted")
+        patch_platforms = entry.get("platforms")
+        patch_configurations = entry.get("configurations")
+        if (
+            not isinstance(patch_platforms, list)
+            or not patch_platforms
+            or not all(value in SUPPORTED_PLATFORMS for value in patch_platforms)
+            or len(patch_platforms) != len(set(patch_platforms))
+        ):
+            raise ProvisionFailure(f"patches[{index}].platforms is invalid")
+        if (
+            not isinstance(patch_configurations, list)
+            or not patch_configurations
+            or not all(value in SUPPORTED_CONFIGURATIONS for value in patch_configurations)
+            or len(patch_configurations) != len(set(patch_configurations))
+        ):
+            raise ProvisionFailure(f"patches[{index}].configurations is invalid")
+        validated_patches.append(
+            (
+                patch_id,
+                relative.as_posix(),
+                digest,
+                upstream_commit,
+                tuple(patch_platforms),
+                tuple(patch_configurations),
+            )
+        )
+    if tuple(validated_patches) != PINNED_PATCHES:
+        raise ProvisionFailure("raylib patch identities drifted from the reviewed set")
 
     configurations = lock.get("configurations")
     if not isinstance(configurations, dict) or set(configurations) != set(SUPPORTED_CONFIGURATIONS):
@@ -513,6 +585,253 @@ def load_lock(path: Path = LOCK_PATH) -> dict[str, object]:
         raise ProvisionFailure("raylib lock root must be an object")
     validate_lock(value)
     return value
+
+
+def selected_patch_entries(
+    lock: Mapping[str, object], platform_name: str, configuration: str
+) -> tuple[Mapping[str, object], ...]:
+    """Return the reviewed source patches that apply to one exact build."""
+
+    patches = lock.get("patches")
+    if not isinstance(patches, list):
+        raise ProvisionFailure("validated lock lost raylib patches")
+    selected: list[Mapping[str, object]] = []
+    for entry in patches:
+        if not isinstance(entry, dict):
+            raise ProvisionFailure("validated lock contains an invalid raylib patch")
+        platforms = entry.get("platforms")
+        configurations = entry.get("configurations")
+        if (
+            isinstance(platforms, list)
+            and isinstance(configurations, list)
+            and platform_name in platforms
+            and configuration in configurations
+        ):
+            selected.append(entry)
+    return tuple(selected)
+
+
+def patch_lock_identity(
+    lock: Mapping[str, object], platform_name: str, configuration: str
+) -> list[dict[str, object]]:
+    """Return stable patch facts suitable for cache keys and state checks."""
+
+    return [
+        {
+            "id": entry["id"],
+            "sha256": entry["sha256"],
+        }
+        for entry in selected_patch_entries(lock, platform_name, configuration)
+    ]
+
+
+def patch_report_identity(report: Mapping[str, object]) -> list[dict[str, object]]:
+    """Read the stable patch identity back from a provisioning report.
+
+    Reports retain richer review information, including every changed file,
+    while cache checks need only the immutable recipe ID and hash.  Keeping
+    this projection here prevents callers from accepting a similarly named
+    but differently reviewed local patch.
+    """
+
+    patches = report.get("patches")
+    if not isinstance(patches, list):
+        raise ProvisionFailure("raylib provisioning report omitted its patch inventory")
+    identity: list[dict[str, object]] = []
+    for index, entry in enumerate(patches):
+        if not isinstance(entry, dict):
+            raise ProvisionFailure(f"raylib provisioning report patches[{index}] is invalid")
+        patch_id = entry.get("id")
+        digest = entry.get("sha256")
+        if (
+            not isinstance(patch_id, str)
+            or PATCH_ID_RE.fullmatch(patch_id) is None
+            or not isinstance(digest, str)
+            or SHA256_RE.fullmatch(digest) is None
+        ):
+            raise ProvisionFailure(
+                f"raylib provisioning report patches[{index}] has an invalid identity"
+            )
+        identity.append({"id": patch_id, "sha256": digest})
+    return identity
+
+
+def load_patch_recipe(entry: Mapping[str, object]) -> dict[str, object]:
+    """Load and validate one content-addressed, exact-text patch recipe."""
+
+    relative = safe_relative_path(entry.get("path"), "raylib patch recipe path")
+    path = ROOT.joinpath(*relative.parts)
+    if path.is_symlink() or not path.is_file():
+        raise ProvisionFailure(f"raylib patch recipe is missing: {relative.as_posix()}")
+    if sha256_file(path) != entry.get("sha256"):
+        raise ProvisionFailure(f"raylib patch recipe hash mismatch: {relative.as_posix()}")
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        raise ProvisionFailure(f"cannot read raylib patch recipe {relative.as_posix()}: {error}") from error
+    if not isinstance(value, dict):
+        raise ProvisionFailure(f"raylib patch recipe must contain one object: {relative.as_posix()}")
+    require_exact_keys(
+        value,
+        (
+            "schemaVersion",
+            "id",
+            "reason",
+            "upstreamCommit",
+            "platforms",
+            "configurations",
+            "files",
+        ),
+        f"raylib patch recipe {relative.as_posix()}",
+    )
+    if (
+        value.get("schemaVersion") != 1
+        or value.get("id") != entry.get("id")
+        or value.get("upstreamCommit") != entry.get("upstreamCommit")
+        or value.get("platforms") != entry.get("platforms")
+        or value.get("configurations") != entry.get("configurations")
+    ):
+        raise ProvisionFailure(f"raylib patch recipe identity drifted: {relative.as_posix()}")
+    reason = value.get("reason")
+    if not isinstance(reason, str) or not reason.strip() or "\x00" in reason:
+        raise ProvisionFailure(f"raylib patch recipe reason is invalid: {relative.as_posix()}")
+    files = value.get("files")
+    if not isinstance(files, list) or not files:
+        raise ProvisionFailure(f"raylib patch recipe has no files: {relative.as_posix()}")
+    file_paths: list[str] = []
+    for file_index, file_entry in enumerate(files):
+        if not isinstance(file_entry, dict):
+            raise ProvisionFailure(f"raylib patch recipe files[{file_index}] must be an object")
+        require_exact_keys(
+            file_entry,
+            ("path", "beforeSha256", "afterSha256", "replacements"),
+            f"raylib patch recipe files[{file_index}]",
+        )
+        target = safe_relative_path(file_entry.get("path"), f"patch files[{file_index}].path")
+        before_digest = file_entry.get("beforeSha256")
+        after_digest = file_entry.get("afterSha256")
+        if (
+            not isinstance(before_digest, str)
+            or SHA256_RE.fullmatch(before_digest) is None
+            or not isinstance(after_digest, str)
+            or SHA256_RE.fullmatch(after_digest) is None
+            or before_digest == after_digest
+        ):
+            raise ProvisionFailure(f"raylib patch recipe files[{file_index}] hashes are invalid")
+        replacements = file_entry.get("replacements")
+        if not isinstance(replacements, list) or not replacements:
+            raise ProvisionFailure(f"raylib patch recipe files[{file_index}] has no replacements")
+        for replacement_index, replacement in enumerate(replacements):
+            if not isinstance(replacement, dict):
+                raise ProvisionFailure(
+                    f"raylib patch recipe files[{file_index}].replacements[{replacement_index}] must be an object"
+                )
+            require_exact_keys(
+                replacement,
+                ("before", "after"),
+                f"raylib patch recipe files[{file_index}].replacements[{replacement_index}]",
+            )
+            before = replacement.get("before")
+            after = replacement.get("after")
+            if (
+                not isinstance(before, str)
+                or not before
+                or not isinstance(after, str)
+                or not after
+                or before == after
+                or "\x00" in before
+                or "\x00" in after
+            ):
+                raise ProvisionFailure(
+                    f"raylib patch recipe files[{file_index}].replacements[{replacement_index}] is invalid"
+                )
+        file_paths.append(target.as_posix())
+    if file_paths != sorted(file_paths, key=lambda item: item.encode("utf-8")):
+        raise ProvisionFailure("raylib patch recipe file paths must be UTF-8 sorted")
+    if len(file_paths) != len(set(file_paths)):
+        raise ProvisionFailure("raylib patch recipe file paths must be unique")
+    return value
+
+
+def prepare_build_source(
+    source_root: Path,
+    build_root: Path,
+    lock: Mapping[str, object],
+    platform_name: str,
+    configuration: str,
+) -> tuple[Path, list[dict[str, object]]]:
+    """Copy and patch source only when one locked build requires it."""
+
+    selected = selected_patch_entries(lock, platform_name, configuration)
+    if not selected:
+        return source_root, []
+    staged = build_root / "hxc-patched-source"
+    if staged.exists():
+        raise ProvisionFailure(f"patched raylib source destination already exists: {staged}")
+    shutil.copytree(source_root, staged)
+    staged_resolved = staged.resolve(strict=True)
+    reports: list[dict[str, object]] = []
+    for entry in selected:
+        recipe = load_patch_recipe(entry)
+        file_reports: list[dict[str, object]] = []
+        files = recipe.get("files")
+        if not isinstance(files, list):
+            raise ProvisionFailure("validated raylib patch recipe lost files")
+        for file_entry in files:
+            if not isinstance(file_entry, dict):
+                raise ProvisionFailure("validated raylib patch recipe contains an invalid file")
+            relative = safe_relative_path(file_entry.get("path"), "raylib patch target")
+            target = staged.joinpath(*relative.parts)
+            try:
+                target.resolve(strict=False).relative_to(staged_resolved)
+            except ValueError as error:
+                raise ProvisionFailure(f"raylib patch target escapes staged source: {relative}") from error
+            if target.is_symlink() or not target.is_file():
+                raise ProvisionFailure(f"raylib patch target is missing: {relative.as_posix()}")
+            before_digest = file_entry.get("beforeSha256")
+            if sha256_file(target) != before_digest:
+                raise ProvisionFailure(f"raylib patch input hash mismatch: {relative.as_posix()}")
+            try:
+                text = target.read_text(encoding="utf-8")
+            except (OSError, UnicodeError) as error:
+                raise ProvisionFailure(f"cannot read raylib patch target {relative.as_posix()}: {error}") from error
+            replacements = file_entry.get("replacements")
+            if not isinstance(replacements, list):
+                raise ProvisionFailure("validated raylib patch file lost replacements")
+            for replacement in replacements:
+                if not isinstance(replacement, dict):
+                    raise ProvisionFailure("validated raylib patch contains an invalid replacement")
+                before = replacement.get("before")
+                after = replacement.get("after")
+                if not isinstance(before, str) or not isinstance(after, str):
+                    raise ProvisionFailure("validated raylib patch replacement lost text")
+                count = text.count(before)
+                if count != 1:
+                    raise ProvisionFailure(
+                        f"raylib patch replacement expected one match in {relative.as_posix()}, found {count}"
+                    )
+                text = text.replace(before, after, 1)
+            target.write_text(text, encoding="utf-8", newline="")
+            after_digest = file_entry.get("afterSha256")
+            if sha256_file(target) != after_digest:
+                raise ProvisionFailure(f"raylib patch output hash mismatch: {relative.as_posix()}")
+            file_reports.append(
+                {
+                    "path": relative.as_posix(),
+                    "beforeSha256": before_digest,
+                    "afterSha256": after_digest,
+                }
+            )
+        reports.append(
+            {
+                "id": entry["id"],
+                "recipe": entry["path"],
+                "sha256": entry["sha256"],
+                "reason": recipe["reason"],
+                "files": file_reports,
+            }
+        )
+    return staged, reports
 
 
 def canonical_tree_identity(root: Path) -> TreeIdentity:
@@ -1042,6 +1361,18 @@ def build_source(
     if source_root == build_root or source_root in build_root.parents or build_root in source_root.parents:
         raise ProvisionFailure("raylib source and build roots must be disjoint")
 
+    # The downloaded/offline tree remains the byte-for-byte upstream authority.
+    # A narrowly scoped compatibility patch is applied only to a private copy
+    # inside this build root, so neither the shared cache nor the caller's
+    # offline checkout can be mutated by provisioning.
+    effective_source_root, applied_patches = prepare_build_source(
+        source_root,
+        build_root,
+        lock,
+        platform_name,
+        configuration,
+    )
+
     replacements = path_replacements(
         {
             "${CACHE_ROOT}": cache_root.resolve() if cache_root is not None else "",
@@ -1088,7 +1419,7 @@ def build_source(
     configure_arguments = [
         cmake,
         "-S",
-        str(source_root),
+        str(effective_source_root),
         "-B",
         str(build_root),
         "-G",
@@ -1113,10 +1444,11 @@ def build_source(
     )
 
     library_file = locate_raylib_library(build_root, platform_name)
-    include_directory = source_root / "src"
+    include_directory = effective_source_root / "src"
     header = include_directory / "raylib.h"
     libraries, frameworks = link_facts(lock, platform_name, configuration)
     source_identity = canonical_tree_identity(source_root)
+    effective_source_identity = canonical_tree_identity(effective_source_root)
     compile_commands = build_root / "compile_commands.json"
     if compile_commands.is_symlink() or not compile_commands.is_file():
         raise ProvisionFailure("raylib build did not emit compile_commands.json")
@@ -1153,6 +1485,13 @@ def build_source(
             "id": configuration,
             "cmakeDefinitions": list(definitions),
         },
+        "patches": applied_patches,
+        "effectiveSourceTree": {
+            "algorithm": "hxc-path-size-content-sha256-v1",
+            "sha256": effective_source_identity.sha256,
+            "fileCount": effective_source_identity.file_count,
+            "sizeBytes": effective_source_identity.size_bytes,
+        },
         "commands": {
             "compilerIdentity": compiler_commands,
             "cxxCompilerIdentity": cxx_command,
@@ -1163,10 +1502,10 @@ def build_source(
         },
         "inputs": source_report_inputs(lock),
         "outputs": {
-            "includeDirectories": ["${RAYLIB_SOURCE}/src"],
+            "includeDirectories": [normalize_argument(str(include_directory), replacements)],
             "headers": [
                 {
-                    "path": "${RAYLIB_SOURCE}/src/raylib.h",
+                    "path": normalize_argument(str(header), replacements),
                     "sha256": sha256_file(header),
                 }
             ],
@@ -1192,7 +1531,15 @@ def build_source(
             "executed": False,
         },
     }
-    forbidden: list[Path | str] = [source_root, build_root, compiler, cxx_compiler, cmake, build_tool]
+    forbidden: list[Path | str] = [
+        source_root,
+        effective_source_root,
+        build_root,
+        compiler,
+        cxx_compiler,
+        cmake,
+        build_tool,
+    ]
     if cache_root is not None:
         forbidden.append(cache_root.resolve())
     assert_report_redacted(report, forbidden)

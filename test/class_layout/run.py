@@ -8,11 +8,13 @@ import copy
 import difflib
 import json
 import os
+import signal
 import shutil
 import subprocess
 import sys
 import tempfile
 from collections.abc import Iterable
+from dataclasses import replace
 from pathlib import Path
 
 
@@ -67,6 +69,11 @@ CXX_STRICT_FLAGS = (
     "-Wcast-qual",
 )
 CXX_COMMANDS = {"gcc": "g++", "clang": "clang++"}
+SANITIZER_FLAGS = (
+    "-fsanitize=address,undefined",
+    "-fno-sanitize-recover=all",
+    "-fno-omit-frame-pointer",
+)
 REQUIRED_COVERAGE = frozenset(
     {
         "base-prefix-layout",
@@ -74,9 +81,11 @@ REQUIRED_COVERAGE = frozenset(
         "checked-field-access",
         "class-reference-equality",
         "cpp-consumer",
+        "dominating-receiver-guards",
         "empty-class-layout",
         "generated-executable",
         "null-preserving-upcast",
+        "null-receiver-abort",
         "private-layout",
         "runtime-free",
     }
@@ -213,6 +222,7 @@ def function_map(report: dict[str, object]) -> dict[str, str]:
             "asEmptyBase",
             "asMiddle",
             "asRoot",
+            "branchProofDoesNotEscape",
             "different",
             "isNull",
             "main",
@@ -221,6 +231,7 @@ def function_map(report: dict[str, object]) -> dict[str, str]:
             "readRoot",
             "readScore",
             "same",
+            "sumAcrossBranch",
             "writeInherited",
             "writePeer",
         )
@@ -302,6 +313,34 @@ def function_section(hxcir: str, field: str) -> str:
     return hxcir[start : end + len(end_marker)]
 
 
+def null_check_count(hxcir_function: str) -> int:
+    """Count semantic null-check instructions, excluding their descriptive IDs."""
+    return hxcir_function.count(" result=- null-check value=")
+
+
+def c_function_section(source: str, c_name: str) -> str:
+    """Return one generated C definition so structural checks stay function-local."""
+    cursor = 0
+    while True:
+        name = source.find(c_name + "(", cursor)
+        if name == -1:
+            raise ClassLayoutFailure(f"generated C omitted function {c_name}")
+        opening = source.find("{", name)
+        semicolon = source.find(";", name)
+        if opening != -1 and (semicolon == -1 or opening < semicolon):
+            depth = 0
+            for index in range(opening, len(source)):
+                if source[index] == "{":
+                    depth += 1
+                elif source[index] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        start = source.rfind("\n", 0, name) + 1
+                        return source[start : index + 1]
+            raise ClassLayoutFailure(f"generated C function {c_name} has no closing brace")
+        cursor = name + len(c_name) + 1
+
+
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
         report.get("schemaVersion") != 1
@@ -330,6 +369,15 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or inherited.find("null-check") > inherited.find("load place=field")
     ):
         raise ClassLayoutFailure("inherited field access lost its explicit null proof")
+    if null_check_count(function_section(hxcir, "writeInherited")) != 1:
+        raise ClassLayoutFailure("same-block receiver checks were not coalesced")
+    if null_check_count(function_section(hxcir, "writePeer")) != 1:
+        raise ClassLayoutFailure("same-block nullable-field checks were not coalesced")
+    if null_check_count(function_section(hxcir, "sumAcrossBranch")) != 1:
+        raise ClassLayoutFailure("entry receiver proof did not dominate branch and join reads")
+    branch_join = function_section(hxcir, "branchProofDoesNotEscape")
+    if null_check_count(branch_join) != 4:
+        raise ClassLayoutFailure("branch-local receiver proofs escaped through an uncertain join")
     upcast = function_section(hxcir, "asRoot")
     if "convert value=" not in upcast or "kind=representation" not in upcast or "implementation=static" not in upcast:
         raise ClassLayoutFailure("derived-to-base conversion lost its inspectable representation step")
@@ -366,6 +414,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "int main(void)" not in source
     ):
         raise ClassLayoutFailure("structural class CAST emission/layout assertions drifted")
+    for key in ("fn_writeInherited", "fn_writePeer", "fn_sumAcrossBranch"):
+        if c_function_section(source, names[key]).count("abort();") != 1:
+            raise ClassLayoutFailure(f"generated C did not retain exactly one dominating guard in {key}")
+    if c_function_section(source, names["fn_branchProofDoesNotEscape"]).count("abort();") != 4:
+        raise ClassLayoutFailure("generated C incorrectly reused a branch-local receiver guard")
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise ClassLayoutFailure("class-layout report omitted its finalized symbol table")
@@ -444,6 +497,7 @@ def macro_definitions(report: dict[str, object]) -> tuple[str, ...]:
         ("HXC_FN_AS_EMPTY_BASE", "fn_asEmptyBase"),
         ("HXC_FN_AS_MIDDLE", "fn_asMiddle"),
         ("HXC_FN_AS_ROOT", "fn_asRoot"),
+        ("HXC_FN_BRANCH_PROOF_DOES_NOT_ESCAPE", "fn_branchProofDoesNotEscape"),
         ("HXC_FN_DIFFERENT", "fn_different"),
         ("HXC_FN_IS_NULL", "fn_isNull"),
         ("HXC_FN_READ_INHERITED", "fn_readInherited"),
@@ -451,6 +505,7 @@ def macro_definitions(report: dict[str, object]) -> tuple[str, ...]:
         ("HXC_FN_READ_ROOT", "fn_readRoot"),
         ("HXC_FN_READ_SCORE", "fn_readScore"),
         ("HXC_FN_SAME", "fn_same"),
+        ("HXC_FN_SUM_ACROSS_BRANCH", "fn_sumAcrossBranch"),
         ("HXC_FN_WRITE_INHERITED", "fn_writeInherited"),
         ("HXC_FN_WRITE_PEER", "fn_writePeer"),
     ):
@@ -462,12 +517,14 @@ def write_native_fixture(report: dict[str, object], root: Path) -> None:
     header = root / "include/hxc/program.h"
     source = root / "src/program.c"
     native = root / "native/behavior_consumer.c"
+    null_native = root / "native/null_consumer.c"
     header.parent.mkdir(parents=True)
     source.parent.mkdir(parents=True)
     native.parent.mkdir(parents=True)
     header.write_text(required_text(report, "header"), encoding="utf-8", newline="\n")
     source.write_text(source_records(report)["src/program.c"], encoding="utf-8", newline="\n")
     shutil.copyfile(NATIVE / "behavior_consumer.c", native)
+    shutil.copyfile(NATIVE / "null_consumer.c", null_native)
 
 
 def run_harness_matrix(
@@ -487,6 +544,7 @@ def run_harness_matrix(
                 "c-consumer",
                 "checked-field-access",
                 "class-reference-equality",
+                "dominating-receiver-guards",
                 "empty-class-layout",
                 "null-preserving-upcast",
                 "private-layout",
@@ -499,6 +557,15 @@ def run_harness_matrix(
             ("include",),
             "",
             ("generated-executable", "runtime-free"),
+        ),
+        CFixtureProject(
+            "null-receiver",
+            ("native/null_consumer.c",),
+            ("include/hxc/program.h", "src/program.c"),
+            ("include",),
+            "",
+            ("null-receiver-abort",),
+            expected_exit=-signal.SIGABRT,
         ),
     )
     reports: list[dict[str, object]] = []
@@ -521,7 +588,56 @@ def run_harness_matrix(
             if forbidden in encoded:
                 raise ClassLayoutFailure(f"native harness report leaked absolute path {forbidden}")
         reports.append(report_value)
+    for toolchain in resolve_toolchains(requested_toolchain, repository_root=ROOT):
+        if not sanitizer_supported(toolchain.compiler, toolchain.family, root):
+            print(
+                f"class-layout: SKIP optional {toolchain.family} address/undefined "
+                "sanitizers: toolchain does not provide them"
+            )
+            continue
+        sanitized_projects = tuple(
+            replace(
+                project,
+                identifier=project.identifier + "-sanitized",
+                coverage=project.coverage + ("sanitizers",),
+                link_arguments=SANITIZER_FLAGS,
+            )
+            for project in projects
+            if project.expected_exit == 0
+        )
+        report_value = run_c_fixture_corpus(
+            suite=f"class-layout-sanitized-{toolchain.family}",
+            projects=sanitized_projects,
+            fixture_root=fixture_root,
+            build_root=root / f"c-build-sanitized-{toolchain.family}",
+            repository_root=ROOT,
+            requested_toolchain=toolchain.family,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                *SANITIZER_FLAGS,
+                *macro_definitions(report),
+            ),
+        )
+        validate_report(report_value, required_coverage=frozenset({"sanitizers"}))
+        reports.append(report_value)
     return reports
+
+
+def sanitizer_supported(compiler: str, family: str, root: Path) -> bool:
+    """Probe sanitizer availability without weakening the strict native lanes."""
+    source = root / f"sanitizer-probe-{family}.c"
+    executable = root / f"sanitizer-probe-{family}"
+    source.write_text("int main(void) { return 0; }\n", encoding="utf-8", newline="\n")
+    result = subprocess.run(
+        [compiler, *SANITIZER_FLAGS, str(source), "-o", str(executable)],
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    return result.returncode == 0
 
 
 def compiler_identity(executable: str) -> str:
@@ -760,7 +876,7 @@ def check_production() -> None:
 
 def check_negative_cases() -> None:
     cases = {
-        "interface": "interface-reference-requires-E3.T07:Marker",
+        "interface": "TConst(TNull:requires-nullable-reference-or-direct-optional-context)",
         "generic": "generic-class-reference-requires-bounded-class-specialization:Box",
         "downcast": "function.Std.downcast",
     }
@@ -852,8 +968,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "class-layout: OK: private base-prefix structs, checked inherited fields, "
-        "null-preserving upcasts, identity equality, strict C11 and C++17 layout "
-        "agreement, runtime-free production artifacts, and fail-closed future edges passed"
+        "dominating receiver guards, null-preserving upcasts, identity equality, "
+        "strict C11 and C++17 layout agreement, runtime-free production artifacts, "
+        "and fail-closed future edges passed"
     )
     return 0
 

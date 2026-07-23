@@ -13,25 +13,25 @@
     "note": "These reviewed PNG bytes are primary design-source inputs, not build-generated artifacts. Every runtime-selected file is packaged byte-for-byte with no derived conversion. Interactive creation history is provenance only and cannot recreate the selected bytes. Any resized, packed, compressed, or otherwise derived runtime asset must have a deterministic source-to-byte command before it is checked in."
   },
   "runtimeIntegration": {
-    "owner": "haxe_c-xge.15.2.1",
+    "owner": "haxe_c-xge.15.2.2",
     "packagedPrimaryAssets": [
       "caxecraft-wordmark",
       "title-panorama",
       "hud",
       "items",
+      "adventure-items",
+      "adventure-terrain",
       "entities",
       "terrain"
     ],
     "designOnlyAssets": [
       "adventure-characters",
-      "adventure-items",
-      "adventure-terrain",
       "cutscene-editor",
       "ivvy"
     ],
     "pathPolicy": "Exact manifest paths below the executable assets directory; no host or source-checkout path is embedded.",
     "lifetimePolicy": "Each valid LoadTexture result has one explicit owner and one UnloadTexture call before CloseWindow; copied Texture2D values are non-owning aliases.",
-    "derivation": "The six packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
+    "derivation": "The eight packaged files are exact primary bytes verified by SHA-256; no resize, atlas repack, compression, or format conversion occurs."
   },
   "rights": {
     "caxecraft-original": {

@@ -52,6 +52,11 @@ palette 0 caxecraft:air
 palette 1 caxecraft:bedrock
 palette 2 caxecraft:dirt
 palette 3 caxecraft:grass
+palette 4 caxecraft:sand
+palette 5 caxecraft:wood
+palette 6 caxecraft:leaves
+palette 7 caxecraft:snow
+palette 8 caxecraft:ash
 chunk world.base 0 0 0 32 16 32
   run 1 32
   run 2 96
@@ -59,32 +64,76 @@ chunk world.base 0 0 0 32 16 32
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 3 1
+  run 4 6
+  run 3 25
   run 0 352
   run 1 32
   run 2 96
-  run 3 2
+  run 4 2
   run 0 4
-  run 3 26
+  run 4 2
+  run 3 24
   run 0 352
   run 1 32
   run 2 96
-  run 3 2
+  run 4 2
   run 0 4
-  run 3 26
+  run 4 2
+  run 3 24
   run 0 352
   run 1 32
   run 2 96
-  run 3 2
+  run 4 2
   run 0 4
-  run 3 26
+  run 4 2
+  run 3 24
   run 0 352
   run 1 32
   run 2 96
-  run 3 2
+  run 4 2
   run 0 4
-  run 3 26
+  run 4 2
+  run 3 24
   run 0 352
+  run 1 32
+  run 2 96
+  run 3 1
+  run 4 6
+  run 3 25
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 352
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 89
+  run 6 3
+  run 0 260
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 26
+  run 5 1
+  run 0 31
+  run 5 1
+  run 0 30
+  run 6 3
+  run 0 30
+  run 6 1
+  run 0 229
+  run 1 32
+  run 2 96
+  run 3 32
+  run 0 89
+  run 6 3
+  run 0 260
   run 1 32
   run 2 96
   run 3 32
@@ -135,59 +184,51 @@ chunk world.base 0 0 0 32 16 32
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
   run 1 32
   run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
-  run 0 352
-  run 1 32
-  run 2 96
-  run 3 32
+  run 7 10
+  run 3 12
+  run 8 10
   run 0 352
 end chunk
 fluid water.pool caxecraft:water volume 2 4 2 4 1 4

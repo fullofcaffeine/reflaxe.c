@@ -1,0 +1,24 @@
+#ifndef HXC_CAXECRAFT_APP_TERRAIN_CHUNK_LAYOUT_H_INCLUDED
+#define HXC_CAXECRAFT_APP_TERRAIN_CHUNK_LAYOUT_H_INCLUDED
+
+#include "hxc/detail/program_types.h"
+#include "hxc/modules/caxecraft/app/TerrainAtlas.h"
+#include "hxc/modules/caxecraft/domain/BlockKind.h"
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkFor(struct hxc_caxecraft_domain_BlockCoord hxc_coord);
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkOriginX(int32_t hxc_chunk);
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_chunkOriginZ(int32_t hxc_chunk);
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_faceCode(enum hxc_caxecraft_app_VoxelFace hxc_face);
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_facePartitionStart(int32_t hxc_chunk);
+
+int32_t hxc_caxecraft_app_TerrainChunkLayout_packFace(enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face);
+
+enum hxc_caxecraft_app_VoxelFace hxc_caxecraft_app_TerrainChunkLayout_unpackFace(int32_t hxc_packed);
+
+enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_app_TerrainChunkLayout_unpackKind(int32_t hxc_packed);
+
+#endif /* HXC_CAXECRAFT_APP_TERRAIN_CHUNK_LAYOUT_H_INCLUDED */

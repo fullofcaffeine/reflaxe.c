@@ -7,7 +7,11 @@
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
-        "runtime.io.trace-literal.3"
+        "runtime.io.trace-literal.3",
+        "runtime.string-literal.static-value.4",
+        "runtime.string-literal.static-value.5",
+        "runtime.string-literal.static-value.6",
+        "runtime.string-literal.static-value.7"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -47,7 +51,11 @@
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
-        "runtime.io.trace-literal.3"
+        "runtime.io.trace-literal.3",
+        "runtime.string-literal.static-value.4",
+        "runtime.string-literal.static-value.5",
+        "runtime.string-literal.static-value.6",
+        "runtime.string-literal.static-value.7"
       ],
       "availability": "compiler-selectable",
       "symbols": [],
@@ -56,7 +64,7 @@
       ],
       "libraries": [],
       "defines": [],
-      "root": false
+      "root": true
     },
     {
       "dependencies": [
@@ -132,7 +140,11 @@
         "runtime.io.sys-println-literal.0",
         "runtime.io.sys-println-literal.1",
         "runtime.io.sys-println-literal.2",
-        "runtime.io.trace-literal.3"
+        "runtime.io.trace-literal.3",
+        "runtime.string-literal.static-value.4",
+        "runtime.string-literal.static-value.5",
+        "runtime.string-literal.static-value.6",
+        "runtime.string-literal.static-value.7"
       ],
       "dependencyId": "runtime-base"
     }
@@ -257,6 +269,82 @@
       "id": "runtime.io.trace-literal.3",
       "operationId": "trace-literal",
       "kind": "hosted-output",
+      "surface": "trace(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 6,
+          "column": 8
+        },
+        "start": {
+          "line": 6,
+          "column": 3
+        }
+      }
+    },
+    {
+      "featureId": "string-literal",
+      "alternative": null,
+      "id": "runtime.string-literal.static-value.4",
+      "operationId": "static-value",
+      "kind": "direct-string-value",
+      "surface": "Sys.println(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 3,
+          "column": 23
+        },
+        "start": {
+          "line": 3,
+          "column": 3
+        }
+      }
+    },
+    {
+      "featureId": "string-literal",
+      "alternative": null,
+      "id": "runtime.string-literal.static-value.5",
+      "operationId": "static-value",
+      "kind": "direct-string-value",
+      "surface": "Sys.println(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 4,
+          "column": 20
+        },
+        "start": {
+          "line": 4,
+          "column": 3
+        }
+      }
+    },
+    {
+      "featureId": "string-literal",
+      "alternative": null,
+      "id": "runtime.string-literal.static-value.6",
+      "operationId": "static-value",
+      "kind": "direct-string-value",
+      "surface": "Sys.println(String literal)",
+      "source": {
+        "file": "Main.hx",
+        "end": {
+          "line": 5,
+          "column": 33
+        },
+        "start": {
+          "line": 5,
+          "column": 3
+        }
+      }
+    },
+    {
+      "featureId": "string-literal",
+      "alternative": null,
+      "id": "runtime.string-literal.static-value.7",
+      "operationId": "static-value",
+      "kind": "direct-string-value",
       "surface": "trace(String literal)",
       "source": {
         "file": "Main.hx",

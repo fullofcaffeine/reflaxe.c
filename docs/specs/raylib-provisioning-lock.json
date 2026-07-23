@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "upstream": {
     "name": "raylib",
     "release": "6.0",
@@ -85,6 +85,20 @@
     {
       "path": "tools/rlparser/output/raylib_api.json",
       "sha256": "d4e2dd0727a8edf4d4f828e23f86e3bb74e373861edd0eabef4a634ae74936d6"
+    }
+  ],
+  "patches": [
+    {
+      "id": "raylib-6.0-memory-macos-monotonic-clock",
+      "path": "scripts/raylib/patches/memory-macos-monotonic-clock.json",
+      "sha256": "2f01f00341818374a6ccc4411c816ca9c52a470470cab4cde2ede38ab3002dae",
+      "upstreamCommit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+      "platforms": [
+        "macos"
+      ],
+      "configurations": [
+        "memory-software"
+      ]
     }
   ],
   "configurations": {

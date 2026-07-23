@@ -13,7 +13,7 @@ final class GuideNpc {
 			x: x,
 			y: World.surfaceY(cells, Std.int(x), Std.int(z)) + 1.0,
 			z: z,
-			phaseCode: GuidePhase.Waiting
+			phase: GuidePhase.Waiting
 		};
 	}
 
@@ -27,9 +27,9 @@ final class GuideNpc {
 	public static function sharesBerriesOnNextInteraction(state:GuideState):Bool
 		return phase(state) == GuidePhase.Welcomed;
 
-	/** Recover the closed phase from its validated record carrier. */
+	/** Read the guide's closed conversation phase. */
 	public static inline function phase(state:GuideState):GuidePhase
-		return GuidePhase.fromCode(state.phaseCode);
+		return state.phase;
 
 	/** Advance one step; repeated interaction after the gift is safely inert. */
 	public static function interact(state:GuideState):GuideState {
@@ -42,7 +42,7 @@ final class GuideNpc {
 			x: state.x,
 			y: state.y,
 			z: state.z,
-			phaseCode: nextPhase
+			phase: nextPhase
 		};
 	}
 }

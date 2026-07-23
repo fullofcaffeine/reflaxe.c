@@ -16,10 +16,9 @@ HXML = Path(__file__).with_name("all_sources.hxml")
 SUCCESS_SENTINEL = "all-sources: OK"
 LOWERING_DIAGNOSTIC_ID = "HXC1001"
 LOWERING_DETAIL = (
-    "Unsupported typed Haxe node `TFunction(return-type).abstract-representation:"
-    "reference-String-non-null`"
+    "Unsupported typed Haxe node `TField(static:SIDECAR_PATHS:reference-Array-non-null)`"
 )
-LOWERING_SOURCE = "ProfileResolver.hx:10: lines 10-25"
+LOWERING_SOURCE = "CProjectEmitter.hx:183: lines 183-194"
 MACRO_BRANCH_MARKERS = (
     "Typing macro reflaxe.c.CompilerBootstrap.Start",
     "Typing macro reflaxe.c.BuildDetection.isCBuild",

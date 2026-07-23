@@ -5,7 +5,7 @@
 #include <hxrt/string_literal.h>
 #include <stdlib.h>
 
-_Static_assert(HXC_RUNTIME_ABI_MAJOR == 0U, "incompatible hxrt ABI major: generated code requires 0");
+typedef char hxc_runtime_abi_major_must_match[HXC_RUNTIME_ABI_MAJOR == 0U ? 1 : -1];
 
 void hxc_Main_main(void);
 

@@ -175,9 +175,14 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CReflaxe
   python3 "$ROOT_DIR/test/project_emitter/run.py"
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CompilationContext|CEnvironment|CRuntimeDiagnostics|CRuntimePolicy)\.hx|src/reflaxe/c/(emit|runtime)/|runtime/hxrt/|test/(runtime/runtime-feature-graph|string_output)/|docs/(architecture|array-runtime|configuration|project-emission|runtime-feature-planning|string-runtime|testing)\.md|docs/specs/(fixture-taxonomy|runtime-features).*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(src/reflaxe/c/(CCompiler|CompilationContext|CEnvironment|CRuntimeDiagnostics|CRuntimePolicy)\.hx|src/reflaxe/c/(emit|runtime)/|runtime/hxrt/|test/(runtime/runtime-feature-graph|string_output)/|docs/(architecture|array-runtime|bytes-runtime|configuration|project-emission|runtime-feature-planning|string-runtime|testing)\.md|docs/specs/(fixture-taxonomy|runtime-features).*\.json|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
   echo "[pre-commit] Running deterministic runtime feature and selective packaging probes..."
   python3 "$ROOT_DIR/test/runtime/runtime-feature-graph/run.py"
+fi
+
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/hxrt/(allocator|base|bytes|status|string_literal)\.h|src/(allocator|bytes)\.c|test/(runtime_smoke\.c|public_header_cpp\.cpp))|std/c/_std/haxe/io/Bytes\.hx|src/reflaxe/c/(CCompiler\.hx|emit/CProjectEmitter\.hx|ir/|lowering/|runtime/)|test/differential/bytes-runtime/|test/runtime/runtime-feature-graph/|docs/(bytes-runtime|runtime-feature-planning|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy|stdlib-ledger).*\.(json|csv)|haxe_libraries/reflaxe\.c\.hxml|package\.json)'; then
+  echo "[pre-commit] Running fixed-length Bytes lowering and runtime probes..."
+  python3 "$ROOT_DIR/test/differential/bytes-runtime/run.py"
 fi
 
 if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(runtime/hxrt/(include/(hxc_runtime|hxrt/(allocator|array|base|status))\.h|src/(allocator|array)\.c|test/(runtime_smoke\.c|public_header_cpp\.cpp))|src/reflaxe/c/runtime/(RuntimeAbiContract|RuntimeFeatureCatalog)\.hx|test/differential/array-runtime/|test/runtime/runtime-feature-graph/|docs/(array-runtime|runtime-feature-planning|testing)\.md|docs/specs/(bootstrap-inventory|fixture-taxonomy)\.json|package\.json)'; then
@@ -290,7 +295,7 @@ if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/feat
   python3 "$ROOT_DIR/scripts/test/snapshots.py" --catalog-check
 fi
 
-if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|differential/array-runtime|primitive_differential|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization|string_output)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
+if printf '%s\n' "$STAGED_FILES" | grep -Eq '^(examples/hello/|runtime/hxrt/|src/reflaxe/c/(ast|emit|lowering|plan|runtime|semantics)/|test/native/|test/(aggregate_lowering|class_layout|enum_lowering|generic_specialization|virtual_dispatch|arithmetic_semantics|differential/(array-runtime|bytes-runtime)|primitive_differential|body_lowering|evaluation_order|function_lowering|primitive_semantics|span_lowering|static_initialization|string_output)/|test/runtime/runtime-feature-graph/|test/c_ast/expected/|test/ast/c-ast-roundtrip/|test/declaration_plan/(expected|support|smoke\.c)|test/project_emitter/expected/|scripts/(ci/(check_ci_policy|runtime_smoke)\.py|test/c_fixture_harness\.py)|\.github/workflows/governance\.yml|package\.json)'; then
   echo "[pre-commit] Running strict C11/C++17 native smoke gates..."
   python3 "$ROOT_DIR/scripts/ci/runtime_smoke.py"
   python3 "$ROOT_DIR/scripts/ci/check_ci_policy.py"

@@ -346,14 +346,31 @@ typedef HxcIRResult = {
 enum HxcIRInstructionKind {
 	IRIOSequence(label:String);
 	IRIOConstant(value:HxcIRConstant);
+
+	/** Materialize one reachable, signature-compatible non-capturing function. */
+	IRIOFunctionReference(functionId:String);
+
 	IRIOLoad(place:HxcIRPlace);
 	IRIOStore(place:HxcIRPlace, valueId:String);
 	IRIOAddress(place:HxcIRPlace);
+
+	/** Name an embedded class subobject without acquiring its parent's lifetime. */
+	IRIOBorrowClassField(place:HxcIRPlace);
+
 	IRIOUnary(operationId:String, valueId:String, implementation:HxcIRImplementation);
 	IRIOBinary(operationId:String, leftValueId:String, rightValueId:String, implementation:HxcIRImplementation);
 	IRIOConvert(valueId:String, kind:HxcIRConversionKind, targetType:HxcIRTypeRef, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
 	IRIOCall(call:HxcIRCall);
 	IRIOConstructAggregate(instanceId:String, fields:Array<HxcIRNamedValue>);
+
+	/**
+		Pair a concrete Haxe object reference with the interface table selected for
+		its runtime class. Keeping this as semantic IR lets validation reject a
+		wrong object/table/interface combination before C chooses a two-pointer
+		struct spelling.
+	**/
+	IRIOConstructInterface(interfaceInstanceId:String, objectValueId:String, tableId:String);
+
 	IRIOProject(valueId:String, fieldName:String);
 	IRIOConstructTag(instanceId:String, tagName:String, payload:Array<String>);
 	IRIOMatchTag(valueId:String, tagName:String);
@@ -361,6 +378,10 @@ enum HxcIRInstructionKind {
 	IRIOAllocate(type:HxcIRTypeRef, intent:HxcIRAllocationIntent, implementation:HxcIRImplementation, failure:Null<HxcIRFailureEdge>);
 	IRIODeallocate(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIORetain(place:HxcIRPlace, implementation:HxcIRImplementation);
+
+	/** Release one live managed place at its exact lexical or control-flow boundary. */
+	IRIORelease(place:HxcIRPlace, implementation:HxcIRImplementation);
+
 	IRIOTrace(place:HxcIRPlace, implementation:HxcIRImplementation);
 	IRIODefaultInitialize(place:HxcIRPlace, from:HxcIRInitializationState, to:HxcIRInitializationState);
 	IRIOInitialize(place:HxcIRPlace, valueId:String, from:HxcIRInitializationState, to:HxcIRInitializationState);
@@ -446,10 +467,59 @@ typedef HxcIRBlock = {
 	final source:HxcSourceSpan;
 }
 
+/** One typed step from an inline HxcIR value to an embedded managed reference. */
+enum HxcIRManagedRootProjection {
+	/** Select one field from a direct closed-record instance. */
+	IRMRPAggregateField(instanceId:String, fieldName:String);
+
+	/** Select one payload field, but only while the tagged enum has this case. */
+	IRMRPTagPayload(instanceId:String, tagName:String, payloadIndex:Int);
+
+	/** Select a tagged optional's payload, but only while it is present. */
+	IRMRPNullablePayload;
+}
+
+/**
+	One exact managed reference kept alive by a generated function root frame.
+
+	The root starts at an immutable HxcIR value. An empty projection list means
+	the value itself is one collector-managed pointer. A non-empty list walks a
+	closed record, active enum payload, or present optional until it reaches that
+	pointer. The C emitter publishes the resulting pointer—or null when a tag or
+	presence guard does not match—after the value is defined.
+
+	Keeping the path in semantic IR is important: validation can prove that every
+	step names a real field and ends at an exact managed base pointer before C
+	syntax is chosen. It also lets by-value records and enums remain readable C
+	structs instead of boxing them merely to satisfy the garbage collector.
+**/
+typedef HxcIRManagedRoot = {
+	final id:String;
+	final valueId:String;
+	final projections:Array<HxcIRManagedRootProjection>;
+	final source:HxcSourceSpan;
+}
+
 typedef HxcIRFunction = {
 	final id:String;
 	final displayName:String;
 	final parameters:Array<HxcIRParameter>;
+
+	/** Class-reference parameters whose storage remains owned by the caller. */
+	final borrowedClassParameterIds:Array<String>;
+
+	/** Automatic pointer locals that only rename caller- or parent-owned class storage. */
+	final borrowedClassLocalIds:Array<String>;
+
+	/**
+		Exact managed parameters and instruction results kept alive until return.
+
+		This field is optional only so older hand-built test/program adapters fail
+		closed through validation without requiring an untyped migration shim. New
+		compiler-produced HxcIR always supplies it, including an empty list.
+	**/
+	final ?managedRoots:Array<HxcIRManagedRoot>;
+
 	final locals:Array<HxcIRLocal>;
 	final returnType:HxcIRTypeRef;
 	final failureConvention:HxcIRFunctionFailureConvention;

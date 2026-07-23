@@ -3,7 +3,7 @@
 E3.T06 admits ordinary instance methods and reachable class-hierarchy virtual
 calls for the bounded concrete-class program already supported by E3.T04 and
 E3.T05. The compiler discovers calls from pinned-Haxe typed expressions,
-records the choice in schema-10 HxcIR, and emits program-local strict C11. The
+records the choice in schema-17 HxcIR, and emits program-local strict C11. The
 slice works in `portable` and `metal`, selects no `hxrt` feature, and exposes no
 public C ABI.
 
@@ -80,7 +80,7 @@ varargs function, boxing, or a runtime descriptor.
 
 When at least one instance call is reachable, production output includes
 `hxc.dispatch.json`. The schema-1
-`hxc-closed-world-virtual-dispatch-v1` report is validated by
+`hxc-closed-world-instance-dispatch-v2` report is validated by
 `docs/specs/dispatch-report.schema.json` and content-addressed in
 `hxc.manifest.json` as `dispatch-report`. It records:
 

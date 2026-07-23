@@ -156,7 +156,7 @@ def text_list(value: object, label: str) -> list[str]:
 
 def validate_hxcir(hxcir: str) -> None:
     required = (
-        "hxcir schema=10",
+        "hxcir schema=17",
         'string-utf8(bytes=14,value="Hello from hxc")',
         'runtime(feature="io",operation="sys-println-literal")',
         "failure(kind=native-status,target=abort,arguments=[],cleanup=[])",
@@ -200,48 +200,61 @@ def validate_runtime_plan(plan: dict[str, object]) -> None:
         raise HelloFailure("hello did not package the exact runtime artifact closure")
 
     reasons = plan.get("rootReasons")
-    if not isinstance(reasons, list) or len(reasons) != 1:
-        raise HelloFailure("hello must retain exactly one runtime root reason")
-    reason = reasons[0]
-    if not isinstance(reason, dict):
-        raise HelloFailure("hello runtime root reason must be an object")
-    source = reason.get("source")
-    start = source.get("start") if isinstance(source, dict) else None
-    if (
-        reason.get("id") != "runtime.io.sys-println-literal.0"
-        or reason.get("featureId") != "io"
-        or reason.get("operationId") != "sys-println-literal"
-        or reason.get("kind") != "hosted-output"
-        or reason.get("surface") != "Sys.println(String literal)"
-        or not isinstance(source, dict)
-        or source.get("file") != "Main.hx"
-        or not isinstance(start, dict)
-        or start.get("line") != 3
-    ):
-        raise HelloFailure("hello runtime root lost its stable source provenance")
+    if not isinstance(reasons, list) or len(reasons) != 2:
+        raise HelloFailure("hello must retain its output and literal-value reasons")
+    expected_reasons = (
+        (
+            "runtime.io.sys-println-literal.0",
+            "io",
+            "sys-println-literal",
+            "hosted-output",
+        ),
+        (
+            "runtime.string-literal.static-value.1",
+            "string-literal",
+            "static-value",
+            "direct-string-value",
+        ),
+    )
+    for reason, expected in zip(reasons, expected_reasons, strict=True):
+        if not isinstance(reason, dict):
+            raise HelloFailure("hello runtime root reason must be an object")
+        source = reason.get("source")
+        start = source.get("start") if isinstance(source, dict) else None
+        if (
+            tuple(reason.get(key) for key in ("id", "featureId", "operationId", "kind"))
+            != expected
+            or reason.get("surface") != "Sys.println(String literal)"
+            or not isinstance(source, dict)
+            or source.get("file") != "Main.hx"
+            or not isinstance(start, dict)
+            or start.get("line") != 3
+        ):
+            raise HelloFailure("hello runtime root lost its stable source provenance")
 
     selected = plan.get("selectedFeatures")
     if not isinstance(selected, list) or len(selected) != len(EXPECTED_FEATURES):
         raise HelloFailure("hello selected runtime feature records are incomplete")
+    output_reason = "runtime.io.sys-println-literal.0"
+    literal_reason = "runtime.string-literal.static-value.1"
     expected_records = (
-        ("runtime-base", [], False),
-        ("status", ["runtime-base"], False),
-        ("string-literal", ["runtime-base"], False),
-        ("io", ["status", "string-literal"], True),
+        ("runtime-base", [], [output_reason, literal_reason], False),
+        ("status", ["runtime-base"], [output_reason], False),
+        ("string-literal", ["runtime-base"], [output_reason, literal_reason], True),
+        ("io", ["status", "string-literal"], [output_reason], True),
     )
-    for value, (identifier, dependencies, root) in zip(
+    for value, (identifier, dependencies, reason_ids, root) in zip(
         selected, expected_records, strict=True
     ):
         if (
             not isinstance(value, dict)
             or value.get("id") != identifier
             or value.get("dependencies") != dependencies
-            or value.get("reasonIds")
-            != ["runtime.io.sys-println-literal.0"]
+            or value.get("reasonIds") != reason_ids
             or value.get("root") is not root
         ):
             raise HelloFailure(
-                "every selected hello feature must retain the one source reason"
+                "every selected hello feature must retain its exact source reasons"
             )
 
     serialized = json.dumps(plan, ensure_ascii=False, sort_keys=True)
@@ -265,8 +278,8 @@ def validate_stdlib_report(report: dict[str, object]) -> None:
         report.get("schemaVersion") != 1
         or report.get("status") != "analyzed-selected-stdlib-use"
         or report.get("profile") != "portable"
-        or report.get("modules") != ["Sys"]
-        or report.get("capabilities") != ["sys-println-literal"]
+        or report.get("modules") != ["String", "Sys"]
+        or report.get("capabilities") != ["static-value", "sys-println-literal"]
     ):
         raise HelloFailure("hello stdlib report overstated or lost its bounded surface")
 

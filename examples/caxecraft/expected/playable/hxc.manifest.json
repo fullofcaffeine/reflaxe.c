@@ -13,17 +13,29 @@
     "sources": [
       "src/hxc/main.c",
       "src/hxc/support.c",
+      "src/modules/caxecraft/app/AppScreen.c",
+      "src/modules/caxecraft/app/AuthoredItemRenderer.c",
+      "src/modules/caxecraft/app/CaxecraftApp.c",
       "src/modules/caxecraft/app/CaxecraftAtlas.c",
       "src/modules/caxecraft/app/HudDigits.c",
       "src/modules/caxecraft/app/Main.c",
+      "src/modules/caxecraft/app/MotionInterpolation.c",
       "src/modules/caxecraft/app/TerrainAtlas.c",
+      "src/modules/caxecraft/app/TerrainChunkCache.c",
+      "src/modules/caxecraft/app/TerrainChunkLayout.c",
       "src/modules/caxecraft/app/TerrainRenderer.c",
       "src/modules/caxecraft/app/TitleMenu.c",
       "src/modules/caxecraft/app/WaterRenderer.c",
       "src/modules/caxecraft/content/BaseContentPack.c",
       "src/modules/caxecraft/content/FirstPlayableLevel.c",
-      "src/modules/caxecraft/domain/PlayerAquatics.c",
-      "src/modules/caxecraft/domain/PlayerPhysics.c",
+      "src/modules/caxecraft/content/FirstPlayableSessionLoader.c",
+      "src/modules/caxecraft/domain/Aquatics.c",
+      "src/modules/caxecraft/domain/Character.c",
+      "src/modules/caxecraft/domain/CharacterPhysics.c",
+      "src/modules/caxecraft/domain/EntityStore.c",
+      "src/modules/caxecraft/domain/GameSession.c",
+      "src/modules/caxecraft/domain/PlayerAgent.c",
+      "src/modules/caxecraft/domain/Vitals.c",
       "src/modules/caxecraft/domain/VoxelRaycast.c",
       "src/modules/caxecraft/domain/WaterCellCodec.c",
       "src/modules/caxecraft/domain/WaterPendingStorage.c",
@@ -35,9 +47,9 @@
       "src/modules/caxecraft/gameplay/Inventory.c",
       "src/modules/caxecraft/gameplay/Mining.c",
       "src/modules/caxecraft/gameplay/Mossling.c",
-      "src/modules/caxecraft/gameplay/PlayerVitals.c",
       "src/modules/caxecraft/gameplay/Recovery.c",
       "src/modules/caxecraft/gameplay/SwordCombat.c",
+      "src/modules/caxecraft/gameplay/WorldItemPickup.c",
       "src/modules/caxecraft/localization/FirstPlayableCatalog.c",
       "src/modules/caxecraft/localization/UiCatalog.c"
     ],
@@ -47,28 +59,45 @@
     "schemaVersion": 1,
     "privateHeaders": [
       "include/hxc/detail/program_types.h",
+      "include/hxc/modules/caxecraft/app/AppScreen.h",
+      "include/hxc/modules/caxecraft/app/AuthoredItemRenderer.h",
+      "include/hxc/modules/caxecraft/app/CaxecraftApp.h",
       "include/hxc/modules/caxecraft/app/CaxecraftAtlas.h",
       "include/hxc/modules/caxecraft/app/HudDigits.h",
+      "include/hxc/modules/caxecraft/app/HudResources.h",
+      "include/hxc/modules/caxecraft/app/HudView.h",
       "include/hxc/modules/caxecraft/app/Main.h",
+      "include/hxc/modules/caxecraft/app/MotionInterpolation.h",
       "include/hxc/modules/caxecraft/app/TerrainAtlas.h",
+      "include/hxc/modules/caxecraft/app/TerrainChunkCache.h",
+      "include/hxc/modules/caxecraft/app/TerrainChunkLayout.h",
       "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "include/hxc/modules/caxecraft/app/TitleMenu.h",
       "include/hxc/modules/caxecraft/app/WaterRenderer.h",
       "include/hxc/modules/caxecraft/content/BaseContentPack.h",
       "include/hxc/modules/caxecraft/content/FirstPlayableLevel.h",
-      "include/hxc/modules/caxecraft/domain/AquaticInput.h",
+      "include/hxc/modules/caxecraft/content/FirstPlayableSessionLoader.h",
       "include/hxc/modules/caxecraft/domain/AquaticProfile.h",
+      "include/hxc/modules/caxecraft/domain/AquaticState.h",
+      "include/hxc/modules/caxecraft/domain/AquaticStep.h",
+      "include/hxc/modules/caxecraft/domain/Aquatics.h",
       "include/hxc/modules/caxecraft/domain/AxisMove.h",
       "include/hxc/modules/caxecraft/domain/BlockCoord.h",
       "include/hxc/modules/caxecraft/domain/BlockKind.h",
-      "include/hxc/modules/caxecraft/domain/PlayerAquaticState.h",
-      "include/hxc/modules/caxecraft/domain/PlayerAquaticStep.h",
-      "include/hxc/modules/caxecraft/domain/PlayerAquatics.h",
-      "include/hxc/modules/caxecraft/domain/PlayerImmersion.h",
-      "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
-      "include/hxc/modules/caxecraft/domain/PlayerState.h",
+      "include/hxc/modules/caxecraft/domain/Character.h",
+      "include/hxc/modules/caxecraft/domain/CharacterBody.h",
+      "include/hxc/modules/caxecraft/domain/CharacterIntent.h",
+      "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
+      "include/hxc/modules/caxecraft/domain/CharacterStep.h",
+      "include/hxc/modules/caxecraft/domain/EntityStore.h",
+      "include/hxc/modules/caxecraft/domain/GameSession.h",
+      "include/hxc/modules/caxecraft/domain/GameView.h",
+      "include/hxc/modules/caxecraft/domain/Immersion.h",
+      "include/hxc/modules/caxecraft/domain/PlayerAgent.h",
       "include/hxc/modules/caxecraft/domain/RaycastHit.h",
       "include/hxc/modules/caxecraft/domain/StepInput.h",
+      "include/hxc/modules/caxecraft/domain/Vitals.h",
+      "include/hxc/modules/caxecraft/domain/VitalsState.h",
       "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
       "include/hxc/modules/caxecraft/domain/WaterCellCodec.h",
       "include/hxc/modules/caxecraft/domain/WaterCellState.h",
@@ -80,6 +109,7 @@
       "include/hxc/modules/caxecraft/gameplay/BerryDrop.h",
       "include/hxc/modules/caxecraft/gameplay/BerryDropState.h",
       "include/hxc/modules/caxecraft/gameplay/GuideNpc.h",
+      "include/hxc/modules/caxecraft/gameplay/GuidePhase.h",
       "include/hxc/modules/caxecraft/gameplay/GuideState.h",
       "include/hxc/modules/caxecraft/gameplay/Inventory.h",
       "include/hxc/modules/caxecraft/gameplay/InventoryState.h",
@@ -87,12 +117,12 @@
       "include/hxc/modules/caxecraft/gameplay/Mining.h",
       "include/hxc/modules/caxecraft/gameplay/MiningResult.h",
       "include/hxc/modules/caxecraft/gameplay/Mossling.h",
+      "include/hxc/modules/caxecraft/gameplay/MosslingMode.h",
       "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
-      "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
-      "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
       "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
       "include/hxc/modules/caxecraft/gameplay/SwordCombatState.h",
+      "include/hxc/modules/caxecraft/gameplay/WorldItemPickup.h",
       "include/hxc/modules/caxecraft/localization/FirstPlayableCatalog.h",
       "include/hxc/modules/caxecraft/localization/UiCatalog.h",
       "include/hxc/modules/raylib/raw/Camera.h",
@@ -197,7 +227,7 @@
   "generator": "reflaxe.c",
   "artifacts": [
     {
-      "sha256": "7232046592a318f2ffa40cac9d028e8813ecda313b9ded179529f2fb8d234809",
+      "sha256": "b6e7a52217c15735a6bf21531a2fe07fd04b20c52ed3549c4f8b63f39946f610",
       "path": "cmake/CMakeLists.txt",
       "kind": "cmake-adapter"
     },
@@ -207,7 +237,7 @@
       "kind": "abi-manifest"
     },
     {
-      "sha256": "d80468c0097186bb23ceb0dd052e12e486b6e2a5dc0f81efe4ed3dabc150c110",
+      "sha256": "a167372fbd5b2cf6d9a75795879f4af296b77bd2d8ce6eb2ece4aba4660a1e4a",
       "path": "hxc.dispatch.json",
       "kind": "dispatch-report"
     },
@@ -217,7 +247,7 @@
       "kind": "initialization-plan"
     },
     {
-      "sha256": "2ffc96b8be1a9e19ddfc1b2f3a232a25e0452ace27a746bf6b005b3aab119bec",
+      "sha256": "fe437fcdc9c97f7ed0990bed37cbb9c77d3482b3cd718c3db23328d4c050435b",
       "path": "hxc.runtime-plan.json",
       "kind": "runtime-plan"
     },
@@ -227,13 +257,28 @@
       "kind": "stdlib-report"
     },
     {
-      "sha256": "65fb448c7dc1fb3e91473512700ceb2517bf6cedffccf266a4e4290f8562281e",
+      "sha256": "48b2e2dcf423ce5ba307428ee93dcfcde6f58735b52b0123ed52cc96a916b56a",
       "path": "hxc.symbols.json",
       "kind": "symbol-table"
     },
     {
-      "sha256": "f75092dc818d0d5e72668d19af72119391aad741916c1423c1fdd6f008e868b4",
+      "sha256": "76e5b4c3a64868065a377814d45e39eb6c30717f0be878b721cc10cdeb57712d",
       "path": "include/hxc/detail/program_types.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "5f97eec7b24a1aed9229bf590e95b546148a07ed0ce8a77d1a9bcf942de5e3bf",
+      "path": "include/hxc/modules/caxecraft/app/AppScreen.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "c7d6d948e2c6ecc5657c2386ee281cfccd2ab6ad75d91ccfa9baa12840d24d0a",
+      "path": "include/hxc/modules/caxecraft/app/AuthoredItemRenderer.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "8c70defd128a3aedaa53f884f0a02e6ac1daeb68ed96db561419cf0544f22f24",
+      "path": "include/hxc/modules/caxecraft/app/CaxecraftApp.h",
       "kind": "private-header"
     },
     {
@@ -247,17 +292,42 @@
       "kind": "private-header"
     },
     {
-      "sha256": "dbd50e3d1d0bcb6c78460b2edc92562f6bfd429db8d2bc35feb49b4657a45dcc",
+      "sha256": "fc7a938e8a9d469ff982ce29bd105230026e4baf451cb77c50b87bc316f4b799",
+      "path": "include/hxc/modules/caxecraft/app/HudResources.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "b5cca84a36c1b7e1b688a88c14c8b294ebfa788f52f622043669daa417786477",
+      "path": "include/hxc/modules/caxecraft/app/HudView.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "e42e878e4d86623b956b75f6142274595a2741af58ad31a89b31eea09c993540",
       "path": "include/hxc/modules/caxecraft/app/Main.h",
       "kind": "private-header"
     },
     {
-      "sha256": "9b7e465dc593ac6d7959a1f283ed16d7d0bba1efe27ae99f895472db801bfadb",
+      "sha256": "2168091030ff9483c4a2d3715f913c097bd19ca0bf69008c0790a924ce0a6e3c",
+      "path": "include/hxc/modules/caxecraft/app/MotionInterpolation.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "e88b2ec8de032736845cb6657e1db99e281eb73354f068c91c141f61eaa8d152",
       "path": "include/hxc/modules/caxecraft/app/TerrainAtlas.h",
       "kind": "private-header"
     },
     {
-      "sha256": "ac4e032f4415cf12bc7b33dab8efb96866c73e6e267b41331efd5eeab9e59c04",
+      "sha256": "07ef4b244630a432dce978a8a331a259488526b95c2f7a3404be380b9ca3dbd9",
+      "path": "include/hxc/modules/caxecraft/app/TerrainChunkCache.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1f83824996c9e52e2e7713c28d5d78ff0cc76e4db1febc2f6fb60acc4b2b6c0e",
+      "path": "include/hxc/modules/caxecraft/app/TerrainChunkLayout.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "44733b6ef3612a05e61a319349b3ae3c9614da2268d770c075f6ad5dcc82ce3d",
       "path": "include/hxc/modules/caxecraft/app/TerrainRenderer.h",
       "kind": "private-header"
     },
@@ -267,28 +337,43 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a5e00c90b9f4f183d098a1547e86a0b7b1eb67cbfaa3d8a1e165303f6142ee9e",
+      "sha256": "42ad8e53834b263c9223700a4fc91e1850adcf2a122d36b6e0e13fd459f91ad2",
       "path": "include/hxc/modules/caxecraft/app/WaterRenderer.h",
       "kind": "private-header"
     },
     {
-      "sha256": "b744e8cf8e006fc10f082986d7cb06d358c7f16d8163a34c1e426d3e81aabf79",
+      "sha256": "5e0a90bae81d6bb61b391e88f9bf7c9b8d189d2efb96806882728d18fdcd11ff",
       "path": "include/hxc/modules/caxecraft/content/BaseContentPack.h",
       "kind": "private-header"
     },
     {
-      "sha256": "c6d363d86eaa6ec0f84d02dd398a43b5551b2f34ceceea308b2ad73ca6a8d1cc",
+      "sha256": "b25dc409dd235a1dc6f1d801aa4d3f269f4458ecffecdaf141da5f2d2fc37701",
       "path": "include/hxc/modules/caxecraft/content/FirstPlayableLevel.h",
       "kind": "private-header"
     },
     {
-      "sha256": "c617ad83a7863e21894dd915b722bbd4294e95979ca7233adc73916690aa2392",
-      "path": "include/hxc/modules/caxecraft/domain/AquaticInput.h",
+      "sha256": "b80644561918c5498df86c5c36ab65ea544a5ea815301d2721402e139bba406f",
+      "path": "include/hxc/modules/caxecraft/content/FirstPlayableSessionLoader.h",
       "kind": "private-header"
     },
     {
       "sha256": "add10dd26f6d993a6a8ccfc98355e5541a93ce9a3e3fba3dd627c255d3f064b1",
       "path": "include/hxc/modules/caxecraft/domain/AquaticProfile.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "71636372e0169975fbe5fb02c53dab3085f514d6f91ce61ecadead60ed2dc2c1",
+      "path": "include/hxc/modules/caxecraft/domain/AquaticState.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "6775a826bc071458eb2a50a2fd42c5131f78f8ec80921639eddde33b3b60afe1",
+      "path": "include/hxc/modules/caxecraft/domain/AquaticStep.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "6efc66653750492236e8b3bd179660c35340bebc6984c9c31e80ce492b1c56a6",
+      "path": "include/hxc/modules/caxecraft/domain/Aquatics.h",
       "kind": "private-header"
     },
     {
@@ -302,38 +387,58 @@
       "kind": "private-header"
     },
     {
-      "sha256": "e21a24514adc50993891c78bc260603bdd5ab3f96d5f111c98b934395bcb3c3a",
+      "sha256": "57d8b9a44f29f4bcbde5817651f45cae1c051115b396b42f7f0d18e1a8f2b205",
       "path": "include/hxc/modules/caxecraft/domain/BlockKind.h",
       "kind": "private-header"
     },
     {
-      "sha256": "e5e05b4c7de5cf21f6fb7339a6b2182e6116836c8df875dde78485cc53e04b78",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerAquaticState.h",
+      "sha256": "42d819793da7f277159cf64e4e283fb148e557202b9e915b80111b7494790bb7",
+      "path": "include/hxc/modules/caxecraft/domain/Character.h",
       "kind": "private-header"
     },
     {
-      "sha256": "56532ee073811bfdb858c3e349931d935990bb700941f2627355bf01dbe12f49",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerAquaticStep.h",
+      "sha256": "fab6f748ff3a354451b6f50dbefb557343ffadcc55ebf70517d468293055636f",
+      "path": "include/hxc/modules/caxecraft/domain/CharacterBody.h",
       "kind": "private-header"
     },
     {
-      "sha256": "1920f4a292bee22fc5af38a712bc15c019ede9a54125e702ad6f5ab408b766ee",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerAquatics.h",
+      "sha256": "172b0d5e6a44270337c3b007d9e6601831dd5525c2f1de7f2e0e06af0f8d3a74",
+      "path": "include/hxc/modules/caxecraft/domain/CharacterIntent.h",
       "kind": "private-header"
     },
     {
-      "sha256": "2a9344c25f59ecf79738ba62914d29ffb9f6d63a66c8bd4cca0b5773c2956417",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerImmersion.h",
+      "sha256": "92fbf04c5c05dad15dabe3f9cffbdf251872730e514d49118e1060b2e569018b",
+      "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
       "kind": "private-header"
     },
     {
-      "sha256": "f446e5ca5355017ac10c8e2bc02f0a61efdea51dcc42b7492eaf7f10ff6758d2",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
+      "sha256": "2f2ff49588f85ef921fe8841d0d5cf563b98fd30034657bd67cb50257fe33e4f",
+      "path": "include/hxc/modules/caxecraft/domain/CharacterStep.h",
       "kind": "private-header"
     },
     {
-      "sha256": "1bfe033b1930cca6b256fe31a4d72c857b5ca6b21e79d15e7166945c624e5947",
-      "path": "include/hxc/modules/caxecraft/domain/PlayerState.h",
+      "sha256": "f5fc5fa003c57c7ac0c6420ada860152b8936d13d46e121399adfa019af7d6a9",
+      "path": "include/hxc/modules/caxecraft/domain/EntityStore.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "6e55ac143ad5169f9d4ef3aa616a0f9c07aa8ae89d6aa084e8c139fe5abddf38",
+      "path": "include/hxc/modules/caxecraft/domain/GameSession.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "396009c041385a59cbaeb7197d8c53a72ab7265441ce09ca75456c4a9f3f7071",
+      "path": "include/hxc/modules/caxecraft/domain/GameView.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1182b27f97bc1873114089abc3d262ef7c02a09d47711eded03faa79dd37d0db",
+      "path": "include/hxc/modules/caxecraft/domain/Immersion.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "922a84185a15ab3484554cd2cab47fcc7cdf93cfcf495263f90affe5fa7ff224",
+      "path": "include/hxc/modules/caxecraft/domain/PlayerAgent.h",
       "kind": "private-header"
     },
     {
@@ -344,6 +449,16 @@
     {
       "sha256": "351f03f466158bda55711d622a0c256812c1f8efc94b32490ff41b3e2f309fa9",
       "path": "include/hxc/modules/caxecraft/domain/StepInput.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "200ddcdc9710e1a9c9907f8ccc41a35ab7d2248fa0ccd9ee59550156585d818c",
+      "path": "include/hxc/modules/caxecraft/domain/Vitals.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "a5a2ef0a4929575a35d4470ae524e17403c1a51c1bb33a9ace097ec68ab33a64",
+      "path": "include/hxc/modules/caxecraft/domain/VitalsState.h",
       "kind": "private-header"
     },
     {
@@ -402,7 +517,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "1598c017d301d355a2c3bc55bbf1a7d7d416c03210e918c8bcebab7d65d11a54",
+      "sha256": "f3d27944ccd46725b22001d2ba6d7602b8e783ba2d7f764e6d6b9d24440b6eda",
+      "path": "include/hxc/modules/caxecraft/gameplay/GuidePhase.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "689ce0071aaa3efb76a5c94e4045414bc9c52e0ad61e529c377c9c1f88ed7cba",
       "path": "include/hxc/modules/caxecraft/gameplay/GuideState.h",
       "kind": "private-header"
     },
@@ -437,27 +557,22 @@
       "kind": "private-header"
     },
     {
-      "sha256": "a38f6ffd7c3bc631f24bf84ea851cddea9c6f31404fa575c4cf3c136caccf5aa",
+      "sha256": "6b0406e3ab17b02014498747254e6f6f11bc7ff2bdc6ac2dfe02d0f54b00fa6d",
+      "path": "include/hxc/modules/caxecraft/gameplay/MosslingMode.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "cd3e3bfee7394740f80b61a050468bcf55e0527120759c1530106dc64c9c1cdc",
       "path": "include/hxc/modules/caxecraft/gameplay/MosslingState.h",
       "kind": "private-header"
     },
     {
-      "sha256": "34869b74f16b3bc8071cc2fc72dd4658093507185d33a9117eb62568dc7164aa",
-      "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitals.h",
-      "kind": "private-header"
-    },
-    {
-      "sha256": "bbaff31a6bc22d24c8a0601383c38b3fda2a730c0ca4c626e405e408c412c030",
-      "path": "include/hxc/modules/caxecraft/gameplay/PlayerVitalsState.h",
-      "kind": "private-header"
-    },
-    {
-      "sha256": "4557329fd2094fc1e10a31414bd8754d5be8835f0e6f5f9a8b7bbcdc5df56128",
+      "sha256": "e9ce31ca6dc731b45a8404d6a5b2075272bf2081e573870541b342406556c6cf",
       "path": "include/hxc/modules/caxecraft/gameplay/Recovery.h",
       "kind": "private-header"
     },
     {
-      "sha256": "4401562a1734295ba966cd3ad137c7f116e351fe66c88748cd972b8d2f41410f",
+      "sha256": "a22fa1c023fba61be17f7debccecfc41499264302452213c85033e6ff61e5fdf",
       "path": "include/hxc/modules/caxecraft/gameplay/SwordCombat.h",
       "kind": "private-header"
     },
@@ -467,12 +582,17 @@
       "kind": "private-header"
     },
     {
-      "sha256": "7e246d489dad6529d077e819fdf3366c49e8bc0afb567c4a0a5762216beebe34",
+      "sha256": "31c2d2cf8aac6610c676d8a2181694d9d0e8fea16ffe9b77b31f7b183aee2216",
+      "path": "include/hxc/modules/caxecraft/gameplay/WorldItemPickup.h",
+      "kind": "private-header"
+    },
+    {
+      "sha256": "1d02490882922ff74d09f6cca29b2be0aa520b2ccdcb2fe2393e9b1f5162cc57",
       "path": "include/hxc/modules/caxecraft/localization/FirstPlayableCatalog.h",
       "kind": "private-header"
     },
     {
-      "sha256": "cf1033b991b6c9b512142b2bb5f2282a5d3ec18437694bdf82ef0498d2b8f27b",
+      "sha256": "74ca910a909543781737d070521ff49a311b8bc7872333da015ec8cd622c2852",
       "path": "include/hxc/modules/caxecraft/localization/UiCatalog.h",
       "kind": "private-header"
     },
@@ -517,12 +637,12 @@
       "kind": "private-header"
     },
     {
-      "sha256": "c57e16f2d4efaa6a5cde31f87ba97f723ac3378d2a016c239d937e3249834a0e",
+      "sha256": "a67a29244c3e88a96416d3ccc4b163812ce2845c3c1422b396d9dd158d875222",
       "path": "include/hxc/program.h",
       "kind": "private-header"
     },
     {
-      "sha256": "1b2fa58d721e88a3b7a7297d5363537adbb9739e0fcd49614f2b8265729a2eb2",
+      "sha256": "3755120d2457b654fa10ce5eb2b8620c7249018598ff78aeaf8d89c7c23ff628",
       "path": "meson.build",
       "kind": "meson-adapter"
     },
@@ -532,8 +652,23 @@
       "kind": "source"
     },
     {
-      "sha256": "f575b7cca2103c2a0cfa85b1fdb4fd5b4548b6a0ea398618bc2643f350b1bf3a",
+      "sha256": "d24da51e98c05bc766e2be9addd5d4d520cd9623bfab267590ef069ed7198b0f",
       "path": "src/hxc/support.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "6001843e43a6703c4ecaeaadb3633f356d8dc2b66f74085d183de7604acf71f0",
+      "path": "src/modules/caxecraft/app/AppScreen.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "d7b25c0b7893b5d1e6f63322a20ce42a532e07e2a4b34be991c0b862d8376e4a",
+      "path": "src/modules/caxecraft/app/AuthoredItemRenderer.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "08eaf0e44f33f49be30005adafae94ab73262c16a2f36d7c6ff4a6b2fc18f184",
+      "path": "src/modules/caxecraft/app/CaxecraftApp.c",
       "kind": "source"
     },
     {
@@ -547,17 +682,32 @@
       "kind": "source"
     },
     {
-      "sha256": "2a1b914676602eaee081b5599a87da80450466b2855c60959be10b64b21d4cf4",
+      "sha256": "90b3f2620810dfe84a8260501ebf7232068b4beec4d89943aa50417c8bb810ec",
       "path": "src/modules/caxecraft/app/Main.c",
       "kind": "source"
     },
     {
-      "sha256": "ef5569472113dcfc101a0b5ceb741cd0d8d52cb76f970e7656a559772fd7fa33",
+      "sha256": "55f9715065372450e37f4eedbdd23373d546a290ddaadccc75e9a637d7c0bab2",
+      "path": "src/modules/caxecraft/app/MotionInterpolation.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "d2cab9236607ba8887c4ab77d5639c63c3753f00af7b5d2d84e2be1a42e18df9",
       "path": "src/modules/caxecraft/app/TerrainAtlas.c",
       "kind": "source"
     },
     {
-      "sha256": "ded46c3a0af73673ed8c846d42ad526f74a3a3c8505920059849a39e372720f8",
+      "sha256": "4d9acb0a25753d5b0bbe0de372f6f837c0a1b43223dde4f41d0a000a5ae78df8",
+      "path": "src/modules/caxecraft/app/TerrainChunkCache.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "7ecc68045782b35d90afe76f34a8c17f95fbdcb13a4663effa1b84e5dff77329",
+      "path": "src/modules/caxecraft/app/TerrainChunkLayout.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "ebb2a24ef7f34620648a79619ba4817d81398d16929e3bac9d6f1416a9e5adc1",
       "path": "src/modules/caxecraft/app/TerrainRenderer.c",
       "kind": "source"
     },
@@ -567,28 +717,58 @@
       "kind": "source"
     },
     {
-      "sha256": "5e02019690136da54f6e7b422c04d291ba89d9c6bea802b76f46e59f4e491b38",
+      "sha256": "5f65d678799e4b1a184f4dca0acc84699a591a1f3ad1ebc489f945ae3ff1da41",
       "path": "src/modules/caxecraft/app/WaterRenderer.c",
       "kind": "source"
     },
     {
-      "sha256": "7956bb38b3c8222006aa683f6e8e2b9fcee02d6a25314618ebc9ac537b58ab64",
+      "sha256": "b22fa27207a53142541fea589184760f2f6f2803f83c0d1b3074889c3247bc4a",
       "path": "src/modules/caxecraft/content/BaseContentPack.c",
       "kind": "source"
     },
     {
-      "sha256": "87cab3a053cd509eef2afd0c29b34bd42f89e2bf78952a4ddc238c2f4553f757",
+      "sha256": "7b4c61c3e6929a540079006f506cc9c7154332a7ace4acbd36f5355d56b5377a",
       "path": "src/modules/caxecraft/content/FirstPlayableLevel.c",
       "kind": "source"
     },
     {
-      "sha256": "2a873ebe84368ff5153d826e24cca4261ffa898cef0538c705274ec0c5ddec83",
-      "path": "src/modules/caxecraft/domain/PlayerAquatics.c",
+      "sha256": "aca8d95b25ccf90712a4d4df11d56e0f8d3ac183baa296c1b178d998782ea739",
+      "path": "src/modules/caxecraft/content/FirstPlayableSessionLoader.c",
       "kind": "source"
     },
     {
-      "sha256": "b61e8c6edd98bd91dad0447726830ecb091fe2a3b2e06ccd6867219967b1e117",
-      "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
+      "sha256": "745f3fb1c6cefac19569f62453c575d5da481e5ac82fc9a167d408b8c9d8bac7",
+      "path": "src/modules/caxecraft/domain/Aquatics.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "76c1a80de4056a054d06e96ad8ed16fb216194e60bbb8a3b9c5a2aec11da335a",
+      "path": "src/modules/caxecraft/domain/Character.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "c59469be8ccd503ca85cae45e2e7807150a214b937c3c7ef1fc6416bb14cb13f",
+      "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "9d382d48547a596d1ff09fa4bdd2927a526d8efbb4e3285e47d439b7b55fd4de",
+      "path": "src/modules/caxecraft/domain/EntityStore.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "f524dad61996de2dbb7a0540888592c486e5c9af7885204e17e4047741f216c5",
+      "path": "src/modules/caxecraft/domain/GameSession.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "effae1bf885de47d2e51adc3fcc60447493cb1cc74bf0b70958a05cef98eb760",
+      "path": "src/modules/caxecraft/domain/PlayerAgent.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "524c4aa611a89fbf1c549aa120c7f6ea495fc2f1d696f71ed96fd5df359a3cbf",
+      "path": "src/modules/caxecraft/domain/Vitals.c",
       "kind": "source"
     },
     {
@@ -597,7 +777,7 @@
       "kind": "source"
     },
     {
-      "sha256": "32dcba69c09d97cd749d78abfbca10d4c2269a3ae89d37472cf6bfd0427863b1",
+      "sha256": "cd890b8c6c894b92ceeac87871eba778131f817f40563845b7da38e282edd8cd",
       "path": "src/modules/caxecraft/domain/WaterCellCodec.c",
       "kind": "source"
     },
@@ -607,12 +787,12 @@
       "kind": "source"
     },
     {
-      "sha256": "be3e8ffd9d280b75714de9f3d65765a4c41e90689be52f1fc6d97a3c638d6ef0",
+      "sha256": "b6c5e240e9f2f8d55e425ca6cda0bb91989a32b8c395d93ac7f5571d0241b8b3",
       "path": "src/modules/caxecraft/domain/WaterSimulation.c",
       "kind": "source"
     },
     {
-      "sha256": "bc07d76795fc96593821d6d04d816c62d46a8be384ae516ec40fd179addae90f",
+      "sha256": "7fac15da7635a327d942d1b0fcabd96cdc3cba550b44fa155190fd451458bd6a",
       "path": "src/modules/caxecraft/domain/World.c",
       "kind": "source"
     },
@@ -627,47 +807,47 @@
       "kind": "source"
     },
     {
-      "sha256": "6c6a385361621fab559a82707b901eb03a4ffc490cec9dedc38ceb945927370e",
+      "sha256": "7c7ef67f25fda58086aaa5301cf3e44cccb00bbbccd69bb66cf18eb87669a91b",
       "path": "src/modules/caxecraft/gameplay/GuideNpc.c",
       "kind": "source"
     },
     {
-      "sha256": "75a417cdb9417b145135d879cfa229c407e26aeab19900b6fb5bce7bd791e33f",
+      "sha256": "b6531de1802b9d0fc34c8e74116a762e05f33018647db1aab65bb05616794479",
       "path": "src/modules/caxecraft/gameplay/Inventory.c",
       "kind": "source"
     },
     {
-      "sha256": "29a53867c740a2939bebd0ea86e3ffca1477b5f3b320963178333d5d99fbfde4",
+      "sha256": "4d9e82b1ab0870f94ceb0c488600c109212f5d6e529cebabf8f8bb742cfe30f5",
       "path": "src/modules/caxecraft/gameplay/Mining.c",
       "kind": "source"
     },
     {
-      "sha256": "9e651f2c7270a0ab42b1efc4f8d42f36a7e1199c0b29063abfd207219945e32e",
+      "sha256": "7042c68bbcab278b453722383623e53681216243ddf1966ab8884cd8da78ce12",
       "path": "src/modules/caxecraft/gameplay/Mossling.c",
       "kind": "source"
     },
     {
-      "sha256": "ee3fd5cf6635859a30b44e1b05fa8173d32406a663425206d037c00336ad2b15",
-      "path": "src/modules/caxecraft/gameplay/PlayerVitals.c",
-      "kind": "source"
-    },
-    {
-      "sha256": "7e5826c74cf6c16d44798f37f5944b13a3f1bd6dde36dfdff23679216ac6902a",
+      "sha256": "2c17279d694264362185ce4fed75c84d90859a186ab83051dcdae82e8afcedab",
       "path": "src/modules/caxecraft/gameplay/Recovery.c",
       "kind": "source"
     },
     {
-      "sha256": "6da941f51abf314eaea9a8737b27389a4446c4ed5bb29f4c67674310e08707a9",
+      "sha256": "a6ecb7946ebd8ccd8b3b75dc6542f1def4585d76829913ef22f9268cfc760609",
       "path": "src/modules/caxecraft/gameplay/SwordCombat.c",
       "kind": "source"
     },
     {
-      "sha256": "d58573ea8fb3e11a7fc35834b3bb55b633b5c3f82269bd23ac9cac49568b6118",
+      "sha256": "61afeedcb80ca9f5550f602e3baeced55121997f3a214d22c5bef07e0e840fed",
+      "path": "src/modules/caxecraft/gameplay/WorldItemPickup.c",
+      "kind": "source"
+    },
+    {
+      "sha256": "b21ef0304976f53f7a37bb06aa969bb3c9da06cee7228634844c50f053ba444f",
       "path": "src/modules/caxecraft/localization/FirstPlayableCatalog.c",
       "kind": "source"
     },
     {
-      "sha256": "8105cd62849bda8e9ab75c4fc7776e5f03af56459a7eafa5e098fe628535fae5",
+      "sha256": "512858cd9b8e583556f2ef0f07d0d27b1193f40b6c2faf313882bb3736a4b586",
       "path": "src/modules/caxecraft/localization/UiCatalog.c",
       "kind": "source"
     }

@@ -2,6 +2,14 @@ package caxecraft.qa;
 
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
+import caxecraft.domain.Vitals.ATTACK_SAFE_TICKS;
+import caxecraft.domain.Vitals.MAX_HEALTH;
+import caxecraft.domain.Vitals.applyAttack as applyVitalsAttack;
+import caxecraft.domain.Vitals.isDefeated as vitalsAreDefeated;
+import caxecraft.domain.Vitals.revive as reviveVitals;
+import caxecraft.domain.Vitals.start as startVitals;
+import caxecraft.domain.Vitals.startAt as startVitalsAt;
+import caxecraft.domain.Vitals.step as stepVitals;
 import caxecraft.gameplay.GuideNpc;
 import caxecraft.gameplay.GuidePhase;
 import caxecraft.gameplay.BerryDrop.collectAmount as collectBerryDropAmount;
@@ -13,7 +21,6 @@ import caxecraft.gameplay.Mossling;
 import caxecraft.gameplay.MosslingMode;
 import caxecraft.gameplay.Mining.attempt as attemptMining;
 import caxecraft.gameplay.MiningOutcome;
-import caxecraft.gameplay.PlayerVitals;
 import caxecraft.gameplay.Recovery.BERRY_HEALTH;
 import caxecraft.gameplay.Recovery.applyInventory as applyRecoveryInventory;
 import caxecraft.gameplay.Recovery.applyVitals as applyRecoveryVitals;
@@ -126,20 +133,19 @@ final class GameplayProbe {
 		require(Mossling.canStrike(target, 10.5, 12.5, 1.0, 0.0), "near aimed sword reaches Mossling");
 		require(!Mossling.canStrike(target, 10.5, 12.5, -1.0, 0.0), "sword does not strike behind player");
 		var swordCombat = SwordCombat.start();
-		var swordDecision = SwordCombat.decide(swordCombat, inventory, PlayerVitals.start(), target, 10.5, 12.5, 1.0, 0.0);
+		var swordDecision = SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0);
 		require(swordDecision == SwordCombatDecision.Hit, "ready aimed sword action is admitted on the fixed clock");
 		swordCombat = SwordCombat.after(swordDecision, swordCombat);
 		swordCombat = SwordCombat.step(swordCombat);
-		require(SwordCombat.decide(swordCombat, inventory, PlayerVitals.start(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.CoolingDown,
+		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.CoolingDown,
 			"rapid display-frame presses cannot bypass the sword cooldown");
 		while (swordCombat.cooldownTicks > 0)
 			swordCombat = SwordCombat.step(swordCombat);
-		require(SwordCombat.decide(swordCombat, inventory, PlayerVitals.start(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.Hit,
+		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.Hit,
 			"sword becomes ready after exactly the declared fixed ticks");
-		require(SwordCombat.decide(swordCombat, Inventory.select(inventory, 0), PlayerVitals.start(), target, 10.5, 12.5, 1.0,
-			0.0) == SwordCombatDecision.NotSword,
+		require(SwordCombat.decide(swordCombat, Inventory.select(inventory, 0), startVitals(), target, 10.5, 12.5, 1.0, 0.0) == SwordCombatDecision.NotSword,
 			"non-sword primary actions remain outside combat");
-		require(SwordCombat.decide(swordCombat, inventory, PlayerVitals.start(), target, 10.5, 12.5, -1.0, 0.0) == SwordCombatDecision.TargetMissed,
+		require(SwordCombat.decide(swordCombat, inventory, startVitals(), target, 10.5, 12.5, -1.0, 0.0) == SwordCombatDecision.TargetMissed,
 			"fixed-step combat preserves the aiming boundary");
 		target = Mossling.strike(target);
 		target = Mossling.strike(target);
@@ -167,18 +173,17 @@ final class GameplayProbe {
 		require(fullAcceptedDrop == 0
 			&& collectBerryDropAmount(partialDrop, fullAcceptedDrop) == partialDrop, "full stack cannot destroy the remaining drop");
 
-		var vitals = PlayerVitals.start();
-		vitals = PlayerVitals.applyAttack(vitals, true);
-		require(vitals.health == PlayerVitals.MAX_HEALTH - 1 && vitals.safeTicks == PlayerVitals.ATTACK_SAFE_TICKS,
-			"first explicit impact deals one bounded point");
+		var vitals = startVitals();
+		vitals = applyVitalsAttack(vitals, true);
+		require(vitals.health == MAX_HEALTH - 1 && vitals.safeTicks == ATTACK_SAFE_TICKS, "first explicit impact deals one bounded point");
 		final healthAfterAttack = vitals.health;
-		vitals = PlayerVitals.applyAttack(vitals, true);
+		vitals = applyVitalsAttack(vitals, true);
 		require(vitals.health == healthAfterAttack, "safe ticks reject a repeated impact");
-		vitals = PlayerVitals.step(vitals);
-		require(vitals.safeTicks == PlayerVitals.ATTACK_SAFE_TICKS - 1, "safe period advances only on the fixed clock");
+		vitals = stepVitals(vitals);
+		require(vitals.safeTicks == ATTACK_SAFE_TICKS - 1, "safe period advances only on the fixed clock");
 
 		inventory = Inventory.select(inventory, 5);
-		vitals = PlayerVitals.startAt(PlayerVitals.MAX_HEALTH - BERRY_HEALTH);
+		vitals = startVitalsAt(MAX_HEALTH - BERRY_HEALTH);
 		final berriesBeforeRecovery = inventory.berries;
 		final safeTicksBeforeRecovery = vitals.safeTicks;
 		var recoveryDecision = decideRecovery(inventory, vitals);
@@ -186,23 +191,23 @@ final class GameplayProbe {
 		inventory = applyRecoveryInventory(recoveryDecision, inventory);
 		vitals = applyRecoveryVitals(recoveryDecision, vitals);
 		require(inventory.berries == berriesBeforeRecovery - 1
-			&& vitals.health == PlayerVitals.MAX_HEALTH
+			&& vitals.health == MAX_HEALTH
 			&& vitals.safeTicks == safeTicksBeforeRecovery,
 			"berries restore one heart without changing damage safety");
 		recoveryDecision = decideRecovery(inventory, vitals);
 		require(recoveryDecision == RecoveryDecision.HealthAlreadyFull && applyRecoveryInventory(recoveryDecision, inventory) == inventory,
 			"full health preserves the berry stack");
 		final emptyRecovery = Inventory.make(5, 0, 0, 0, 0, 0, 0, 0, 0);
-		require(decideRecovery(emptyRecovery, PlayerVitals.startAt(2)) == RecoveryDecision.RecoveryStackEmpty, "empty berry stack is explicit");
-		require(decideRecovery(Inventory.select(inventory, 0), PlayerVitals.startAt(2)) == RecoveryDecision.NotRecoveryItem,
+		require(decideRecovery(emptyRecovery, startVitalsAt(2)) == RecoveryDecision.RecoveryStackEmpty, "empty berry stack is explicit");
+		require(decideRecovery(Inventory.select(inventory, 0), startVitalsAt(2)) == RecoveryDecision.NotRecoveryItem,
 			"block placement remains a separate secondary action");
 
-		while (!PlayerVitals.isDefeated(vitals)) {
+		while (!vitalsAreDefeated(vitals)) {
 			while (vitals.safeTicks > 0)
-				vitals = PlayerVitals.step(vitals);
-			vitals = PlayerVitals.applyAttack(vitals, true);
+				vitals = stepVitals(vitals);
+			vitals = applyVitalsAttack(vitals, true);
 		}
-		require(PlayerVitals.revive(vitals).health == PlayerVitals.MAX_HEALTH, "return prompt restores full health");
+		require(reviveVitals(vitals).health == MAX_HEALTH, "return prompt restores full health");
 
 		require(decideRecovery(inventory, vitals) == RecoveryDecision.PlayerDefeated, "fallen player cannot consume recovery items");
 
@@ -219,5 +224,5 @@ final class GameplayProbe {
 
 	static inline function sameMossling(left:caxecraft.gameplay.MosslingState, right:caxecraft.gameplay.MosslingState):Bool
 		return left.x == right.x && left.y == right.y && left.z == right.z && left.homeX == right.homeX && left.homeZ == right.homeZ
-			&& left.modeCode == right.modeCode && left.phaseTicks == right.phaseTicks && left.health == right.health;
+			&& left.mode == right.mode && left.phaseTicks == right.phaseTicks && left.health == right.health;
 }

@@ -3,9 +3,11 @@ class AliasedRecord {
 }
 
 class Main {
+	static var escaped:AliasedRecord;
+
 	static function main():Void {
 		var first = new AliasedRecord();
 		var second = first;
-		while (second == null) {}
+		escaped = second;
 	}
 }

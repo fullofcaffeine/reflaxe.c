@@ -24,6 +24,10 @@ class TargetPlatform {
 			staticTypeSystem: true,
 			sys: environmentSupportsSys(environment),
 			capturePolicy: None,
+			// Keep omission visible in TypedExpr calls. Asking Haxe to pad calls
+			// with null would erase the difference between `f()` and `f(null)`.
+			// The direct-call lowerer instead copies the declaration's typed
+			// default, then gives fixed-arity HxcIR and C the complete argument list.
 			padNulls: false,
 			addFinalReturn: false,
 			overloadFunctions: false,

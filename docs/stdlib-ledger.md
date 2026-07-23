@@ -47,8 +47,12 @@ adapter, memory-model, collector-root, and race evidence.
 
 At this snapshot the ledger contains 183 source modules and 2,311 public API
 records. Exactly the typed `Std.int(Float):Int` row is `conformant`, based on the
-existing ADR 0008 differential, strict-C, optimization, and UBSan suite. The
-other 2,310 rows are `planned`. This deliberately preserves the current narrow
+existing ADR 0008 differential, strict-C, optimization, and UBSan suite. Twelve
+rows are `partial`: literal-only `Sys.println` and default `haxe.Log.trace`,
+plus the ten declared `haxe.io.Bytes` entries covered by the bounded Bytes
+slice. The other 2,298 rows are `planned`. A partial row means only its named
+operation shapes have executable evidence; it does not claim the entire type
+or neighboring overloads. This deliberately preserves the current narrow
 compiler claim.
 
 ## Per-row contract
@@ -92,9 +96,9 @@ means no `hxrt` include, source, define, library, or symbol.
 The global ownership ledger is distinct from a generated program's
 `hxc.stdlib-report.json`. The ledger says who must implement and test the pinned
 surface. The per-program report says which reachable stdlib operations were
-analyzed for one build; its first bounded selected form lists only literal
-`Sys.println` and default `haxe.Log.trace`. Neither artifact can substitute for
-generated-C behavior evidence.
+analyzed for one build; current selected forms cover literal `Sys.println`,
+default `haxe.Log.trace`, and the bounded Bytes operations named above. Neither
+artifact can substitute for generated-C behavior evidence.
 
 ## Review and update workflow
 

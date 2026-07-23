@@ -1449,7 +1449,11 @@ private class CBodyControlFlowAnalysis {
 	function completionSet(candidate:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Bool> {
 		final result:Map<String, Bool> = [];
 		result.set(candidate, true);
-		final continuation = forwardReachable(candidate, allowed);
+		// A loop's continue/header target starts a later iteration. Do not walk
+		// through it while deciding which abrupt paths belong to this iteration;
+		// otherwise a later iteration can make the current return arm look like
+		// part of the candidate's continuation and hide the real local join.
+		final continuation = forwardReachable(candidate, allowed, escapeTargets);
 		for (blockId in orderedReachable)
 			if (allowed.exists(blockId) && !continuation.exists(blockId) && isAbruptTerminal(requireBlock(blockId)))
 				result.set(blockId, true);
@@ -1506,7 +1510,7 @@ private class CBodyControlFlowAnalysis {
 		return true;
 	}
 
-	function forwardReachable(start:String, allowed:Map<String, Bool>):Map<String, Bool> {
+	function forwardReachable(start:String, allowed:Map<String, Bool>, escapeTargets:Map<String, Bool>):Map<String, Bool> {
 		final result:Map<String, Bool> = [];
 		final pending:Array<String> = [start];
 		var index = 0;
@@ -1516,7 +1520,7 @@ private class CBodyControlFlowAnalysis {
 				continue;
 			result.set(current, true);
 			for (target in successors(current))
-				if (!result.exists(target))
+				if (!escapeTargets.exists(target) && !result.exists(target))
 					pending.push(target);
 		}
 		return result;

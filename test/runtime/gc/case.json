@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "id": "gc-runtime",
+  "role": "fixture",
+  "type": "runtime",
+  "status": "active",
+  "requirements": [
+    "HXC-SEM-025",
+    "HXC-RT-003",
+    "HXC-RT-006"
+  ],
+  "sources": [
+    "docs/adr/0005-precise-nonmoving-collector.md",
+    "docs/gc-runtime.md",
+    "runtime/hxrt/include/hxrt/allocator.h",
+    "runtime/hxrt/include/hxrt/gc.h",
+    "runtime/hxrt/include/hxrt/object.h",
+    "runtime/hxrt/src/allocator.c",
+    "runtime/hxrt/src/gc.c",
+    "runtime/hxrt/src/object.c",
+    "runtime/hxrt/test/gc_contract.c",
+    "runtime/hxrt/test/gc_freestanding.c",
+    "runtime/hxrt/test/gc_header_cpp.cpp",
+    "runtime/hxrt/test/generated_root_frame_harness.c",
+    "test/runtime/gc/GeneratedRootFrameFixture.hx",
+    "test/runtime/gc/GeneratedRootFrameProbe.hx",
+    "test/runtime/gc/generated_root_frame.hxml",
+    "test/runtime/gc/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/runtime/gc",
+    "timeoutSeconds": 120,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "gc-runtime: OK: precise cycles, exact stack/global/thread roots, pins, pressure, reports, generated root lifetimes, freestanding allocation, C\\+\\+17, and sanitizers passed \\(.+\\)$"
+    },
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/gc.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

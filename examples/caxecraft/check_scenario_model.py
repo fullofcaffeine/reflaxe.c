@@ -15,7 +15,7 @@ MODEL = CASE / "src/caxecraft/scenario"
 FIXTURE = CASE / "test/fixtures/caxemap/minimal.caxemap"
 EXPECTED_TRACE = "scenario-model: 264908270\n"
 EXPECTED_CODEC_TRACE = (
-    "scenario-codec: 1192 + 4027 + 4488 bytes, staged round-trip and exact "
+    "scenario-codec: 1192 + 4027 + 4996 bytes, staged round-trip and exact "
     "malformed-input audit\n"
 )
 FORBIDDEN_MODEL_TEXT = (

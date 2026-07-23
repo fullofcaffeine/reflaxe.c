@@ -1,10 +1,12 @@
 {
   "capabilities": [
+    "static-value",
     "sys-println-literal",
     "trace-literal"
   ],
   "profile": "portable",
   "modules": [
+    "String",
     "Sys",
     "haxe.Log"
   ],

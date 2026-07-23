@@ -283,7 +283,7 @@ class CBodyValueCoalescingPlanner {
 
 	static function barrierReason(instruction:HxcIRInstruction):CBodyValueMaterializationReason {
 		return switch instruction.kind {
-			case IRIOLifetime(_, _, _, _) | IRIOAddress(_) | IRIOProjectTag(_, _, _, _):
+			case IRIOLifetime(_, _, _, _) | IRIOAddress(_) | IRIOBorrowClassField(_) | IRIOProjectTag(_, _, _, _):
 				CBVMRFailureOrLifetimeBoundary;
 			case IRIOConvert(_, _, _, _, failure) if (failure != null):
 				CBVMRFailureOrLifetimeBoundary;
@@ -347,9 +347,10 @@ class CBodyValueCoalescingPlanner {
 
 	function collectInstructionUses(kind:HxcIRInstructionKind, site:CBodyValueUseSite):Void {
 		switch kind {
-			case IRIOSequence(_) | IRIOConstant(_):
-			case IRIOLoad(place) | IRIOAddress(place) | IRIODeallocate(place, _) | IRIORetain(place, _) | IRIOTrace(place, _) |
-				IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+			case IRIOSequence(_) | IRIOConstant(_) | IRIOFunctionReference(_):
+			case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIODeallocate(place, _) | IRIORetain(place, _) |
+				IRIORelease(place, _) | IRIOTrace(place, _) | IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) |
+				IRIOLifetime(place, _, _, _):
 				collectPlaceUses(place, site);
 			case IRIOStore(place, valueId) | IRIOInitialize(place, valueId, _, _):
 				collectPlaceUses(place, site);
@@ -367,6 +368,8 @@ class CBodyValueCoalescingPlanner {
 			case IRIOConstructAggregate(_, fields):
 				for (field in fields)
 					addUse(field.valueId, site);
+			case IRIOConstructInterface(_, objectValueId, _):
+				addUse(objectValueId, site);
 			case IRIOProject(valueId, _) | IRIOMatchTag(valueId, _) | IRIOProjectTag(valueId, _, _, _):
 				addUse(valueId, site);
 			case IRIOConstructTag(_, _, payload):

@@ -8,10 +8,13 @@ import copy
 import difflib
 import json
 import os
+import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -23,7 +26,8 @@ POSITIVE = FIXTURES / "positive"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_AGGREGATE_LOWERING="
-PRODUCTION_FILES = {
+CONSTRUCTOR_REPORT_PREFIX = "HXC_CONSTRUCTOR_LOWERING="
+COMMON_PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -32,9 +36,37 @@ PRODUCTION_FILES = {
     "hxc.runtime-plan.json",
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
-    "include/hxc/program.h",
     "meson.build",
-    "src/program.c",
+}
+PRODUCTION_FILES_BY_LAYOUT = {
+    "split": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/detail/program_types.h",
+        "include/hxc/modules/AggregateFixture.h",
+        "include/hxc/program.h",
+        "src/hxc/main.c",
+        "src/hxc/support.c",
+        "src/modules/AggregateFixture.c",
+    },
+    "package": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/detail/program_types.h",
+        "include/hxc/packages/package.h",
+        "include/hxc/program.h",
+        "src/hxc/main.c",
+        "src/hxc/support.c",
+        "src/packages/package.c",
+    },
+    "unity": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/program.h",
+        "src/program.c",
+    },
+}
+TYPE_HEADER_BY_LAYOUT = {
+    "split": "include/hxc/modules/AggregateFixture.h",
+    "package": "include/hxc/packages/package.h",
+    "unity": "include/hxc/program.h",
 }
 
 if str(ROOT) not in sys.path:
@@ -90,18 +122,28 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def haxe_environment() -> dict[str, str]:
+def haxe_environment(*, server: bool = False) -> dict[str, str]:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    if server:
+        environment.pop("HAXE_NO_SERVER", None)
+    else:
+        environment["HAXE_NO_SERVER"] = "1"
     return environment
 
 
 def render(
-    label: str, *, reverse: bool = False, profile: str = "portable"
+    label: str,
+    *,
+    reverse: bool = False,
+    profile: str = "portable",
+    connect: str | None = None,
 ) -> tuple[str, dict[str, object]]:
     if profile not in ("portable", "metal"):
         raise AggregateLoweringFailure(f"unknown aggregate profile {profile!r}")
-    command = [development_tool("haxe"), str(HXML)]
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.append(str(HXML))
     if reverse:
         command.extend(["-D", "aggregate_lowering_reverse_input"])
     if profile == "metal":
@@ -109,7 +151,7 @@ def render(
     result = subprocess.run(
         command,
         cwd=ROOT,
-        env=haxe_environment(),
+        env=haxe_environment(server=connect is not None),
         check=False,
         capture_output=True,
         text=True,
@@ -126,6 +168,29 @@ def render(
     if not isinstance(report, dict):
         raise AggregateLoweringFailure(f"{label} report is not an object")
     return payload, report
+
+
+def available_port() -> int:
+    """Reserve an unused loopback port for this test's isolated Haxe server."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+        candidate.bind(("127.0.0.1", 0))
+        return int(candidate.getsockname()[1])
+
+
+def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            stdout, stderr = server.communicate()
+            raise AggregateLoweringFailure(
+                f"Haxe server exited early\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            )
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                return
+        except OSError:
+            time.sleep(0.05)
+    raise AggregateLoweringFailure("Haxe server did not accept connections")
 
 
 def required_text(report: dict[str, object], key: str) -> str:
@@ -172,9 +237,9 @@ def aggregate_records(report: dict[str, object]) -> list[dict[str, object]]:
 
 def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     records = aggregate_records(report)
-    if len(records) != 3:
+    if len(records) != 6:
         raise AggregateLoweringFailure(
-            "OrderA/OrderB did not deduplicate to one pair plus the envelope and enum-abstract record"
+            "OrderA/OrderB did not deduplicate beside the envelope, optional envelope, flow, enum-abstract, and ordinary-enum records"
         )
     by_fields = {
         tuple(field.get("semanticName") for field in record.get("fields", [])): record
@@ -182,22 +247,40 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     }
     pair = by_fields.get(("a", "z"))
     envelope = by_fields.get(("enabled", "point"))
+    optional_envelope = by_fields.get(("point",))
+    flow_record = by_fields.get(("first", "order", "second", "third"))
     switch_record = by_fields.get(("state",))
-    if not all(isinstance(record, dict) for record in (pair, envelope, switch_record)):
-        raise AggregateLoweringFailure("aggregate records lost their three closed structural shapes")
+    actor_record = by_fields.get(("phase",))
+    if not all(
+        isinstance(record, dict)
+        for record in (pair, envelope, optional_envelope, flow_record, switch_record, actor_record)
+    ):
+        raise AggregateLoweringFailure("aggregate records lost their five closed structural shapes")
     assert isinstance(pair, dict)
     assert isinstance(envelope, dict)
+    assert isinstance(optional_envelope, dict)
+    assert isinstance(flow_record, dict)
     assert isinstance(switch_record, dict)
+    assert isinstance(actor_record, dict)
     pair_fields = pair.get("fields")
     envelope_fields = envelope.get("fields")
+    optional_envelope_fields = optional_envelope.get("fields")
+    flow_fields = flow_record.get("fields")
     switch_fields = switch_record.get("fields")
+    actor_fields = actor_record.get("fields")
     if (
         not isinstance(pair_fields, list)
         or not all(isinstance(field, dict) for field in pair_fields)
         or not isinstance(envelope_fields, list)
         or not all(isinstance(field, dict) for field in envelope_fields)
+        or not isinstance(flow_fields, list)
+        or not all(isinstance(field, dict) for field in flow_fields)
         or not isinstance(switch_fields, list)
         or not all(isinstance(field, dict) for field in switch_fields)
+        or not isinstance(actor_fields, list)
+        or not all(isinstance(field, dict) for field in actor_fields)
+        or not isinstance(optional_envelope_fields, list)
+        or not all(isinstance(field, dict) for field in optional_envelope_fields)
     ):
         raise AggregateLoweringFailure("aggregate field records are malformed")
     if [field.get("semanticName") for field in pair_fields] != ["a", "z"]:
@@ -210,10 +293,55 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
     ]:
         raise AggregateLoweringFailure("nested fields are not in canonical UTF-8 order")
     if (
+        [field.get("semanticName") for field in flow_fields]
+        != ["first", "order", "second", "third"]
+        or [field.get("type") for field in flow_fields] != ["i32"] * 4
+    ):
+        raise AggregateLoweringFailure(
+            "flow record fields lost their canonical direct-Int shape"
+        )
+    if (
+        [field.get("semanticName") for field in optional_envelope_fields] != ["point"]
+        or len(optional_envelope_fields) != 1
+        or not str(optional_envelope_fields[0].get("type", "")).startswith("optional<instance:instance.closed-record.")
+    ):
+        raise AggregateLoweringFailure("optional envelope lost its tagged nullable-record field")
+    if (
         [field.get("semanticName") for field in switch_fields] != ["state"]
         or [field.get("type") for field in switch_fields] != ["i32"]
     ):
         raise AggregateLoweringFailure("enum-abstract field did not retain its direct Int representation")
+    if (
+        [field.get("semanticName") for field in actor_fields] != ["phase"]
+        or len(actor_fields) != 1
+        or not isinstance(actor_fields[0].get("type"), str)
+        or not str(actor_fields[0]["type"]).startswith("instance:instance.enum.")
+    ):
+        raise AggregateLoweringFailure("ordinary enum field did not retain its nominal HxcIR instance")
+    actor_cases = actor_fields[0].get("enumCases")
+    if not isinstance(actor_cases, list) or not all(isinstance(case, dict) for case in actor_cases):
+        raise AggregateLoweringFailure("ordinary enum field omitted its finalized cases")
+    cases_by_name = {case.get("semanticName"): case for case in actor_cases}
+    waiting = cases_by_name.get("Waiting")
+    moving = cases_by_name.get("Moving")
+    if (
+        not isinstance(waiting, dict)
+        or not isinstance(moving, dict)
+        or waiting.get("tagValue") != 0
+        or moving.get("tagValue") != 1
+        or len(cases_by_name) != 2
+    ):
+        raise AggregateLoweringFailure("ordinary enum cases lost their Haxe discriminants")
+    moving_payload = moving.get("payload")
+    if (
+        waiting.get("payload") != []
+        or not isinstance(moving_payload, list)
+        or len(moving_payload) != 1
+        or not isinstance(moving_payload[0], dict)
+        or moving_payload[0].get("semanticName") != "speed"
+        or moving_payload[0].get("type") != "i32"
+    ):
+        raise AggregateLoweringFailure("payload enum record field lost its typed Moving speed payload")
     pair_instance = pair.get("instanceId")
     if (
         not isinstance(pair_instance, str)
@@ -228,8 +356,25 @@ def aggregate_names(report: dict[str, object]) -> dict[str, str]:
         "envelope_tag": envelope.get("cTag"),
         "envelope_enabled": envelope_fields[0].get("cName"),
         "envelope_point": envelope_fields[1].get("cName"),
+        "flow_tag": flow_record.get("cTag"),
+        "flow_first": flow_fields[0].get("cName"),
+        "flow_order": flow_fields[1].get("cName"),
+        "flow_second": flow_fields[2].get("cName"),
+        "flow_third": flow_fields[3].get("cName"),
         "switch_tag": switch_record.get("cTag"),
         "switch_state": switch_fields[0].get("cName"),
+        "actor_tag": actor_record.get("cTag"),
+        "actor_phase": actor_fields[0].get("cName"),
+        "actor_phase_tag": actor_fields[0].get("enumTag"),
+        "actor_phase_discriminant_tag": actor_fields[0].get("enumDiscriminantTag"),
+        "actor_phase_payload_union_tag": actor_fields[0].get("enumPayloadUnionTag"),
+        "actor_phase_tag_member": actor_fields[0].get("enumTagMember"),
+        "actor_phase_payload_member": actor_fields[0].get("enumPayloadMember"),
+        "actor_phase_waiting": waiting.get("cName"),
+        "actor_phase_moving": moving.get("cName"),
+        "actor_phase_moving_payload_tag": moving.get("payloadStructTag"),
+        "actor_phase_moving_union_member": moving.get("unionMember"),
+        "actor_phase_moving_speed": moving_payload[0].get("cName"),
     }
     if not all(isinstance(value, str) and value for value in values.values()):
         raise AggregateLoweringFailure("aggregate report omitted finalized C identifiers")
@@ -284,8 +429,13 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     envelope_type = f'type "type.closed-record.{envelope_record["digest"]}"'
     if hxcir.find(pair_type) == -1 or hxcir.find(pair_type) > hxcir.find(envelope_type):
         raise AggregateLoweringFailure("nested HxcIR declarations are not dependency-first")
-    if hxcir.count(" representation=direct ") != 3:
-        raise AggregateLoweringFailure("closed record instances lost direct representation")
+    if (
+        hxcir.count(" representation=direct ") != 6
+        or hxcir.count(" representation=tagged ") != 1
+    ):
+        raise AggregateLoweringFailure(
+            "closed records or their bounded tagged enum lost direct by-value representation"
+        )
 
     make = function_section(hxcir, "make")
     calls = [make.find('call dispatch=direct("function.AggregateFixture.identity")')]
@@ -326,10 +476,45 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise AggregateLoweringFailure(
             "enum-abstract record projection lost its direct scalar comparison"
         )
+    actor_section = function_section(hxcir, "actorSpeed")
+    if (
+        actor_section.count('.record-field-project"') != 1
+        or ':instance("instance.enum.' not in actor_section
+        or 'terminator tag-switch value=' not in actor_section
+        or 'tag="Moving" payload-index=0' not in actor_section
+    ):
+        raise AggregateLoweringFailure(
+            "payload enum record projection lost its exhaustive tag switch or checked payload read"
+        )
+    flow_section = function_section(hxcir, "makeFlowRecord")
+    flow_markers = [
+        flow_section.find(".record-field-first-initialize"),
+        flow_section.find(".record-field-second-initialize"),
+        flow_section.find(".record-field-first-load"),
+        flow_section.find(".record-field-second-load"),
+        flow_section.find(".construct-record"),
+    ]
+    if (
+        min(flow_markers) < 0
+        or flow_markers != sorted(flow_markers)
+        or 'fields=["first"=' not in flow_section
+        or ',"order"=' not in flow_section
+        or ',"second"=' not in flow_section
+        or ',"third"=' not in flow_section
+    ):
+        raise AggregateLoweringFailure(
+            "record fields were not preserved and reloaded around later control flow"
+        )
 
     pair_definition = f"struct {names['pair_tag']} {{"
     envelope_definition = f"struct {names['envelope_tag']} {{"
+    flow_definition = f"struct {names['flow_tag']} {{"
     switch_definition = f"struct {names['switch_tag']} {{"
+    actor_enum_definition = f"enum {names['actor_phase_discriminant_tag']} {{"
+    actor_payload_definition = f"struct {names['actor_phase_moving_payload_tag']} {{"
+    actor_union_definition = f"union {names['actor_phase_payload_union_tag']} {{"
+    actor_value_definition = f"struct {names['actor_phase_tag']} {{"
+    actor_definition = f"struct {names['actor_tag']} {{"
     if (
         header.find(pair_definition) == -1
         or header.find(envelope_definition) == -1
@@ -338,17 +523,47 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or f"int32_t {names['pair_z']};" not in header
         or f"bool {names['envelope_enabled']};" not in header
         or f"struct {names['pair_tag']} {names['envelope_point']};" not in header
+        or header.find(flow_definition) == -1
+        or f"int32_t {names['flow_first']};" not in header
+        or f"int32_t {names['flow_order']};" not in header
+        or f"int32_t {names['flow_second']};" not in header
+        or f"int32_t {names['flow_third']};" not in header
         or header.find(switch_definition) == -1
         or f"int32_t {names['switch_state']};" not in header
+        or header.find(actor_enum_definition) == -1
+        or header.find(actor_payload_definition) == -1
+        or header.find(actor_union_definition) == -1
+        or header.find(actor_value_definition) == -1
+        or header.find(actor_definition) == -1
+        or not (
+            header.find(actor_enum_definition)
+            < header.find(actor_payload_definition)
+            < header.find(actor_union_definition)
+            < header.find(actor_value_definition)
+            < header.find(actor_definition)
+        )
+        or f"{names['actor_phase_waiting']} = 0" not in header
+        or f"{names['actor_phase_moving']} = 1" not in header
+        or f"int32_t {names['actor_phase_moving_speed']};" not in header
+        or f"struct {names['actor_phase_moving_payload_tag']} {names['actor_phase_moving_union_member']};" not in header
+        or f"enum {names['actor_phase_discriminant_tag']} {names['actor_phase_tag_member']};" not in header
+        or f"union {names['actor_phase_payload_union_tag']} {names['actor_phase_payload_member']};" not in header
+        or f"struct {names['actor_phase_tag']} {names['actor_phase']};" not in header
         or "#include <stddef.h>" not in header
     ):
         raise AggregateLoweringFailure("private dependency-first struct header drifted")
     if (
-        source.count("_Static_assert(") != 13
-        or source.count("offsetof(") < 8
+        source.count("_Static_assert(") != 36
+        or source.count("offsetof(") < 20
         or f"(struct {names['pair_tag']}){{" not in source
         or f"(struct {names['envelope_tag']}){{" not in source
+        or f"(struct {names['flow_tag']}){{" not in source
         or f"(struct {names['switch_tag']}){{" not in source
+        or f"(struct {names['actor_tag']}){{" not in source
+        or "(struct hxc_optional_OrderA){ .hxc_has_value = false }" not in source
+        or "(struct hxc_optional_OrderA){ .hxc_has_value = true, .hxc_value = " not in source
+        or ".hxc_has_value" not in source
+        or ".hxc_value" not in source
         or "int main(void)" not in source
     ):
         raise AggregateLoweringFailure("structural CAST construction/layout assertions drifted")
@@ -360,6 +575,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
 def normalized_profile(report: dict[str, object]) -> dict[str, object]:
     value = copy.deepcopy(report)
     value["profile"] = "<profile>"
+    hxcir = value.get("hxcir")
+    if isinstance(hxcir, str):
+        value["hxcir"] = hxcir.replace('profile="portable"', 'profile="<profile>"').replace(
+            'profile="metal"', 'profile="<profile>"'
+        )
     return value
 
 
@@ -417,6 +637,18 @@ def macro_definitions(report: dict[str, object]) -> tuple[str, ...]:
             ("HXC_ENVELOPE_TAG", "envelope_tag"),
             ("HXC_ENVELOPE_ENABLED", "envelope_enabled"),
             ("HXC_ENVELOPE_POINT", "envelope_point"),
+            ("HXC_ACTOR_TAG", "actor_tag"),
+            ("HXC_ACTOR_PHASE", "actor_phase"),
+            ("HXC_ACTOR_PHASE_VALUE_TAG", "actor_phase_tag"),
+            ("HXC_ACTOR_PHASE_DISCRIMINANT_TAG", "actor_phase_discriminant_tag"),
+            ("HXC_ACTOR_PHASE_PAYLOAD_UNION_TAG", "actor_phase_payload_union_tag"),
+            ("HXC_ACTOR_PHASE_TAG_MEMBER", "actor_phase_tag_member"),
+            ("HXC_ACTOR_PHASE_PAYLOAD_MEMBER", "actor_phase_payload_member"),
+            ("HXC_ACTOR_PHASE_WAITING", "actor_phase_waiting"),
+            ("HXC_ACTOR_PHASE_MOVING", "actor_phase_moving"),
+            ("HXC_ACTOR_PHASE_MOVING_PAYLOAD_TAG", "actor_phase_moving_payload_tag"),
+            ("HXC_ACTOR_PHASE_MOVING_UNION_MEMBER", "actor_phase_moving_union_member"),
+            ("HXC_ACTOR_PHASE_MOVING_SPEED", "actor_phase_moving_speed"),
         )
     )
 
@@ -583,6 +815,50 @@ def check_cpp_layout(
             )
 
 
+def check_managed_optional_cpp(
+    output: Path, build_root: Path, *, requested_toolchain: str
+) -> None:
+    """Compile the real generated optional header as strict C++17."""
+    for toolchain in resolve_toolchains(requested_toolchain, repository_root=ROOT):
+        cxx_name = CXX_COMMANDS[toolchain.family]
+        cxx = shutil.which(cxx_name)
+        if cxx is None or compiler_identity(cxx) != toolchain.family:
+            if requested_toolchain != "auto":
+                raise AggregateLoweringFailure(
+                    f"required {toolchain.family} C++17 companion {cxx_name!r} is unavailable"
+                )
+            print(
+                "aggregate-lowering: SKIP optional "
+                f"{toolchain.family} managed-optional C++17 consumer"
+            )
+            continue
+        for optimization in ("-O0", "-O2"):
+            destination = (
+                build_root
+                / toolchain.family
+                / optimization[1:].lower()
+                / "managed_optional_consumer.o"
+            )
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            require_silent_success(
+                [
+                    cxx,
+                    *CXX_STRICT_FLAGS,
+                    optimization,
+                    f"-I{output / 'include'}",
+                    f"-I{output / 'runtime/include'}",
+                    "-c",
+                    str(NATIVE / "managed_optional_consumer.cpp"),
+                    "-o",
+                    str(destination),
+                ],
+                label=(
+                    f"{toolchain.family} {optimization} managed-optional "
+                    "generated-header consumer"
+                ),
+            )
+
+
 def check_native(
     report: dict[str, object], *, requested_toolchain: str = "auto"
 ) -> None:
@@ -600,27 +876,39 @@ def custom_target(
     profile: str = "portable",
     runtime: str | None = None,
     lifecycle_probe: bool = False,
+    layout: str = "unity",
+    connect: str | None = None,
+    hxcir_report: bool = False,
+    reverse: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    command = [
-        development_tool("haxe"),
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend([
         "-cp",
         str(fixture),
         "-lib",
         "reflaxe.c",
         "-main",
         main,
-    ]
+        "-D",
+        "hxc_runtime_diagnostics=off",
+    ])
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
     if lifecycle_probe:
         command.extend(["-D", "reflaxe_c_lifecycle_probe"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    if hxcir_report:
+        command.extend(["-D", "reflaxe_c_constructor_lowering_report"])
+    if reverse:
+        command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,
-        env=haxe_environment(),
+        env=haxe_environment(server=connect is not None),
         check=False,
         capture_output=True,
         text=True,
@@ -651,10 +939,32 @@ def require_compile_success(result: subprocess.CompletedProcess[str], label: str
         )
 
 
-def validate_production(root: Path, *, profile: str, policy: str) -> None:
-    if generated_files(root) != PRODUCTION_FILES:
+def reported_hxcir(result: subprocess.CompletedProcess[str], label: str) -> str:
+    """Read the semantic tree emitted by a real custom-target compilation."""
+    lines = result.stdout.splitlines()
+    reports = [
+        line[len(CONSTRUCTOR_REPORT_PREFIX) :]
+        for line in lines
+        if line.startswith(CONSTRUCTOR_REPORT_PREFIX)
+    ]
+    other_output = [line for line in lines if not line.startswith(CONSTRUCTOR_REPORT_PREFIX)]
+    if result.returncode != 0 or result.stderr or other_output or len(reports) != 1:
         raise AggregateLoweringFailure(
-            f"{profile}/{policy} production artifact set drifted: "
+            f"{label} did not emit exactly one clean HxcIR report\n"
+            f"exit={result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    report = json.loads(reports[0])
+    hxcir = report.get("hxcir") if isinstance(report, dict) else None
+    if not isinstance(hxcir, str) or not hxcir:
+        raise AggregateLoweringFailure(f"{label} omitted its HxcIR semantic tree")
+    return hxcir
+
+
+def validate_production(root: Path, *, layout: str, profile: str, policy: str) -> None:
+    expected_files = PRODUCTION_FILES_BY_LAYOUT[layout]
+    if generated_files(root) != expected_files:
+        raise AggregateLoweringFailure(
+            f"{layout}/{profile}/{policy} production artifact set drifted: "
             f"{sorted(generated_files(root))!r}"
         )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
@@ -671,33 +981,155 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
         or runtime_plan.get("features") != []
         or runtime_plan.get("artifacts") != []
         or "closed-anonymous-value-records" not in runtime_plan.get("directDecisions", [])
+        or "bounded-haxe-enum-values" not in runtime_plan.get("directDecisions", [])
         or not isinstance(proof, dict)
         or proof.get("status") != "eligible"
         or proof.get("directDecisions") != runtime_plan.get("directDecisions")
         or reachability is None
-        or reachability.get("typeInstances") != 3
+        or reachability.get("typeInstances") != 7
         or reachability.get("runtimeIntents") != 0
     ):
-        raise AggregateLoweringFailure(f"{profile}/{policy} lost its runtime-free aggregate proof")
+        raise AggregateLoweringFailure(
+            f"{layout}/{profile}/{policy} lost its runtime-free aggregate proof"
+        )
     combined = b"\n".join(
         path.read_bytes()
         for path in root.rglob("*")
         if path.is_file() and path.suffix in {".c", ".h"}
     ).lower()
-    if b"hxrt" in combined or b"hxc_runtime" in combined:
-        raise AggregateLoweringFailure("aggregate production project selected runtime code")
+    for forbidden in (
+        rb"\bhxrt_",
+        rb"\bhxc_runtime\b",
+        rb"\bgoto\b",
+        rb"\bmalloc\s*\(",
+        rb"\bcalloc\s*\(",
+        rb"\brealloc\s*\(",
+        rb"\bfree\s*\(",
+    ):
+        if re.search(forbidden, combined):
+            raise AggregateLoweringFailure(
+                f"aggregate production project contains forbidden C pattern {forbidden!r}"
+            )
+
+    type_header = (root / TYPE_HEADER_BY_LAYOUT[layout]).read_text(encoding="utf-8")
+    enum_definition = type_header.find("enum hxc_ActorPhase_tag {")
+    enum_value_definition = type_header.find("struct hxc_ActorPhase {")
+    record_definition = type_header.find("struct hxc_ActorRecord {")
+    if (
+        enum_definition == -1
+        or enum_value_definition == -1
+        or record_definition == -1
+        or not enum_definition < enum_value_definition < record_definition
+        or "struct hxc_ActorPhase hxc_phase;" not in type_header
+    ):
+        raise AggregateLoweringFailure(
+            f"{layout} did not define the tagged enum before its by-value record field"
+        )
 
 
-def check_production() -> None:
+def check_production_native(
+    root: Path, *, layout: str, requested_toolchain: str
+) -> None:
+    """Compile and run each generated layout under the repository's strict C11 flags."""
+    sources = tuple(
+        path.relative_to(root).as_posix()
+        for path in sorted(root.rglob("*.c"))
+    )
+    headers = tuple(
+        path.relative_to(root).as_posix()
+        for path in sorted(root.rglob("*.h"))
+    )
+    project = CFixtureProject(
+        f"aggregate-enum-record-{layout}",
+        sources,
+        headers,
+        ("include",),
+        "",
+        (f"{layout}-layout", "enum-record", "generated-executable", "runtime-free"),
+    )
+    report = run_c_fixture_corpus(
+        suite=f"aggregate-enum-record-{layout}",
+        projects=(project,),
+        fixture_root=root,
+        build_root=root.parent / "layout-native" / layout,
+        repository_root=ROOT,
+        requested_toolchain=requested_toolchain,
+        strict_flags=(*C11_STRICT_FLAGS, "-O0"),
+    )
+    validate_report(
+        report,
+        required_coverage=frozenset(
+            {f"{layout}-layout", "enum-record", "generated-executable", "runtime-free"}
+        ),
+    )
+
+
+def check_production_server_determinism(root: Path, expected_hxcir: str) -> None:
+    """Compare cold output with two real custom-target requests on one Haxe server."""
+    port = available_port()
+    endpoint = str(port)
+    server = subprocess.Popen(
+        [development_tool("haxe"), "--wait", endpoint],
+        cwd=ROOT,
+        env=haxe_environment(server=True),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        wait_for_server(server, port)
+        server_hxcir: list[str] = []
+        for name in ("server-first", "server-warm"):
+            output = root / name
+            result = custom_target(
+                POSITIVE,
+                output,
+                main="AggregateFixture",
+                connect=endpoint,
+                hxcir_report=True,
+            )
+            server_hxcir.append(
+                reported_hxcir(result, f"{name} aggregate production compile")
+            )
+            validate_production(output, layout="unity", profile="portable", policy="auto")
+            if generated_tree(output) != generated_tree(root / "first"):
+                raise AggregateLoweringFailure(
+                    f"{name} aggregate artifacts differed from the cold custom-target build"
+                )
+        if server_hxcir != [expected_hxcir, expected_hxcir]:
+            comparisons = (
+                f"cold==server-first: {expected_hxcir == server_hxcir[0]}; "
+                f"cold==server-warm: {expected_hxcir == server_hxcir[1]}; "
+                f"server-first==server-warm: {server_hxcir[0] == server_hxcir[1]}; "
+                f"lengths: cold={len(expected_hxcir)}, first={len(server_hxcir[0])}, "
+                f"warm={len(server_hxcir[1])}"
+            )
+            raise AggregateLoweringFailure(
+                "cold and repeated warm-server custom-target HxcIR trees differed; "
+                + comparisons
+            )
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=5)
+
+
+def check_production(*, requested_toolchain: str) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-aggregate-production-") as temporary:
         root = Path(temporary)
+        cold_hxcir: str | None = None
         matrix = (
-            ("first", "portable", None, "auto"),
-            ("repeat", "portable", None, "auto"),
-            ("none", "portable", "none", "none"),
-            ("metal", "metal", None, "minimal"),
+            ("first", "unity", "portable", None, "auto"),
+            ("repeat", "unity", "portable", None, "auto"),
+            ("none", "unity", "portable", "none", "none"),
+            ("metal", "unity", "metal", None, "minimal"),
+            ("split", "split", "portable", None, "auto"),
+            ("package", "package", "portable", None, "auto"),
         )
-        for name, profile, runtime, policy in matrix:
+        for name, layout, profile, runtime, policy in matrix:
             output = root / name
             result = custom_target(
                 POSITIVE,
@@ -705,16 +1137,29 @@ def check_production() -> None:
                 main="AggregateFixture",
                 profile=profile,
                 runtime=runtime,
+                layout=layout,
+                hxcir_report=name == "first",
             )
-            require_compile_success(result, f"{name} aggregate production compile")
-            validate_production(output, profile=profile, policy=policy)
+            if name == "first":
+                cold_hxcir = reported_hxcir(result, "first aggregate production compile")
+            else:
+                require_compile_success(result, f"{name} aggregate production compile")
+            validate_production(output, layout=layout, profile=profile, policy=policy)
         if generated_tree(root / "first") != generated_tree(root / "repeat"):
             raise AggregateLoweringFailure("two aggregate production roots were not byte-identical")
+        if cold_hxcir is None:
+            raise AggregateLoweringFailure("cold aggregate production compile omitted HxcIR")
+        check_production_server_determinism(root, cold_hxcir)
         for relative in ("include/hxc/program.h", "src/program.c"):
             if (root / "first" / relative).read_bytes() != (root / "metal" / relative).read_bytes():
                 raise AggregateLoweringFailure(
                     f"portable and metal changed direct aggregate artifact {relative}"
                 )
+        for layout in ("unity", "split", "package"):
+            output = root / ("first" if layout == "unity" else layout)
+            check_production_native(
+                output, layout=layout, requested_toolchain=requested_toolchain
+            )
 
 
 def check_negative_cases() -> None:
@@ -765,6 +1210,220 @@ def check_negative_cases() -> None:
             )
 
 
+def check_managed_optional(*, requested_toolchain: str) -> None:
+    """Prove managed `Null<Record>` and `Null<Enum>` ownership in every mode."""
+    fixture = FIXTURES / "managed_optional"
+    oracle = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+        raise AggregateLoweringFailure(
+            "managed optional Eval oracle failed\n"
+            f"stdout:\n{oracle.stdout}\nstderr:\n{oracle.stderr}"
+        )
+
+    with tempfile.TemporaryDirectory(prefix="hxc-managed-optional-") as temporary:
+        root = Path(temporary)
+        expected_features = [
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "string-literal",
+            "bytes",
+        ]
+
+        def validate_output(output: Path, label: str) -> None:
+            runtime_plan = json.loads(
+                (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+            )
+            if runtime_plan.get("features") != expected_features:
+                raise AggregateLoweringFailure(
+                    f"{label} managed optional selected an unexpected runtime feature set"
+                )
+            generated_c = b"\n".join(
+                path.read_bytes() for path in sorted(output.rglob("*.c"))
+            ).lower()
+            for marker in (
+                b"hxc_optional_",
+                b"hxc_record_",
+                b"hxc_enum_",
+                b"hxc_bytes_ref_retain",
+            ):
+                if marker not in generated_c:
+                    raise AggregateLoweringFailure(
+                        f"{label} managed optional C omitted lifecycle marker {marker!r}"
+                    )
+
+        matrix = (
+            ("first", "unity", False),
+            ("repeat", "unity", False),
+            ("reverse", "unity", True),
+            ("split", "split", False),
+            ("package", "package", False),
+        )
+        for name, layout, reverse in matrix:
+            output = root / name
+            result = custom_target(
+                fixture,
+                output,
+                main="Main",
+                layout=layout,
+                reverse=reverse,
+                hxcir_report=name == "first",
+            )
+            if name == "first":
+                hxcir = reported_hxcir(result, "first managed optional compile")
+                for marker in (
+                    "optional-enum-switch-null-check",
+                    "optional-enum-switch-unwrap",
+                    "enum-parameter-HasValues-unwrap",
+                    "tag-switch value=",
+                    "project-tag value=",
+                    "retain-optional-alias",
+                    "release-optional-assignment-target",
+                    'implementation=program-local("optional-lifecycle:',
+                ):
+                    if marker not in hxcir:
+                        raise AggregateLoweringFailure(
+                            f"managed optional HxcIR omitted {marker!r}"
+                        )
+            else:
+                require_compile_success(result, f"{name} managed optional compile")
+            validate_output(output, name)
+        baseline = generated_tree(root / "first")
+        for name in ("repeat", "reverse"):
+            if generated_tree(root / name) != baseline:
+                raise AggregateLoweringFailure(
+                    f"{name} managed optional output differed from the first compile"
+                )
+
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            for name in ("server-first", "server-warm"):
+                output = root / name
+                result = custom_target(
+                    fixture, output, main="Main", connect=endpoint
+                )
+                require_compile_success(result, f"{name} managed optional compile")
+                validate_output(output, name)
+                if generated_tree(output) != baseline:
+                    raise AggregateLoweringFailure(
+                        f"{name} managed optional output differed from the cold compile"
+                    )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        def native_project(output: Path, label: str) -> CFixtureProject:
+            sources = tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.c"))
+            )
+            headers = tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.h"))
+            )
+            return CFixtureProject(
+                f"managed-optional-value-{label}",
+                sources,
+                headers,
+                ("include", "runtime/include"),
+                "",
+                (
+                    "generated-executable",
+                    f"{label}-layout",
+                    "managed-value-optional",
+                    "present-and-absent",
+                ),
+            )
+
+        for name in ("first", "split", "package"):
+            output = root / name
+            project = native_project(output, name)
+            normal = run_c_fixture_corpus(
+                suite=f"managed-optional-record-{name}",
+                projects=(project,),
+                fixture_root=output,
+                build_root=root / "native" / name,
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, "-O0"),
+            )
+            validate_report(normal, required_coverage=frozenset(project.coverage))
+
+        check_managed_optional_cpp(
+            root / "first",
+            root / "managed-optional-cxx",
+            requested_toolchain=requested_toolchain,
+        )
+
+        base = native_project(root / "first", "unity")
+        sanitized = CFixtureProject(
+            "managed-optional-value-sanitized",
+            base.sources,
+            base.headers,
+            base.include_directories,
+            base.expected_stdout,
+            (*base.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="managed-optional-record-sanitized",
+            projects=(sanitized,),
+            fixture_root=root / "first",
+            build_root=root / "sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitized.coverage)
+        )
+
+        rejected = custom_target(
+            fixture, root / "runtime-none", main="Main", runtime="none"
+        )
+        combined = (rejected.stdout + rejected.stderr).replace("\\", "/")
+        if (
+            rejected.returncode != 1
+            or "HXC2000" not in combined
+            or "runtime policy `none`" not in combined
+            or generated_files(root / "runtime-none")
+        ):
+            raise AggregateLoweringFailure(
+                "managed optional did not fail closed under runtime-none\n"
+                f"stdout:\n{rejected.stdout}\nstderr:\n{rejected.stderr}"
+            )
+
+
 def snapshot_report() -> dict[str, object]:
     return {
         "schemaVersion": 1,
@@ -789,6 +1448,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--managed-optional-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -798,6 +1458,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         print("aggregate-lowering: ERROR: pinned Haxe executable is unavailable", file=sys.stderr)
         return 1
     try:
+        if args.managed_optional_only:
+            check_managed_optional(requested_toolchain=args.toolchain)
+            print("aggregate-lowering: OK: managed optional focused matrix passed")
+            return 0
         if args.native_only:
             report = snapshot_report()
             validate(report)
@@ -819,7 +1483,8 @@ def main(arguments: Iterable[str] = ()) -> int:
             raise AggregateLoweringFailure("portable and metal aggregate lowering diverged")
         check_snapshots(first)
         check_native(first, requested_toolchain=args.toolchain)
-        check_production()
+        check_production(requested_toolchain=args.toolchain)
+        check_managed_optional(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         AggregateLoweringFailure,
@@ -833,8 +1498,10 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "aggregate-lowering: OK: structural deduplication, source-order evaluation, "
-        "explicit address/copy IR, strict C11 and C++17 layout agreement, runtime-free "
-        "production artifacts, and fail-closed identity/layout edges passed"
+        "bounded payload-enum records in cold/server split/package/unity builds, explicit "
+        "address/copy IR, strict C11 and C++17 layout agreement, runtime-free production "
+        "artifacts, managed optional Eval/native/sanitizer parity, and fail-closed "
+        "identity/layout edges passed"
     )
     return 0
 

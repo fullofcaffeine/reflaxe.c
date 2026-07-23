@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "id": "bytes-runtime",
+  "role": "fixture",
+  "type": "differential",
+  "status": "active",
+  "requirements": [
+    "HXC-PROD-002",
+    "HXC-SEM-008",
+    "HXC-RT-008",
+    "HXC-RT-009"
+  ],
+  "sources": [
+    "docs/bytes-runtime.md",
+    "runtime/hxrt/include/hxrt/bytes.h",
+    "runtime/hxrt/src/bytes.c",
+    "std/c/_std/haxe/io/Bytes.hx",
+    "test/differential/bytes-runtime/bytes_runtime.c",
+    "test/differential/bytes-runtime/generated/Main.hx",
+    "test/differential/bytes-runtime/generated/oracle.hxml",
+    "test/differential/bytes-runtime/negative/nested_temporary/Main.hx",
+    "test/differential/bytes-runtime/negative/return_escape/Main.hx",
+    "test/differential/bytes-runtime/negative/unsupported_method/Main.hx",
+    "test/differential/bytes-runtime/run.py"
+  ],
+  "runner": {
+    "command": [
+      "python3",
+      "run.py"
+    ],
+    "workingDirectory": "test/differential/bytes-runtime",
+    "timeoutSeconds": 180,
+    "network": false
+  },
+  "expected": {
+    "exitCode": 0,
+    "stdout": {
+      "mode": "regex",
+      "value": "bytes-runtime: OK: .*Eval plus generated ordinary-Haxe Bytes; aliasing, overlap, bounds, allocation rollback, ownership, sanitizers, and selective symbols passed$"
+    },
+    "oracle": "test/differential/bytes-runtime/generated/oracle.hxml",
+    "artifacts": [
+      {
+        "path": "runtime/hxrt/include/hxrt/bytes.h",
+        "format": "header",
+        "comparison": "layout"
+      }
+    ]
+  }
+}

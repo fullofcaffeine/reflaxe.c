@@ -1,10 +1,12 @@
 # reflaxe.c source-checkout library configuration.
 #
 # Do not replace ${SCOPE_DIR} with caller-relative paths. The target override
-# root will be added after `std/c/_std` is restored and provenance-registered.
+# follows the ordinary target library so Haxe gives its colliding core modules
+# the intended higher classpath precedence.
 
 -cp ${SCOPE_DIR}/src/
 -cp ${SCOPE_DIR}/std/
+-cp ${SCOPE_DIR}/std/c/_std/
 -lib reflaxe
 
 -D reflaxe.c=0.0.0-development

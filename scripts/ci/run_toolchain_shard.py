@@ -45,6 +45,7 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:typed-c",
         "test:c-import",
         "test:raylib-provisioning",
+        "test:raygui-binding",
         "test:typed-ast",
         "test:c-ast",
         "test:declaration-plan",
@@ -52,6 +53,8 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:project-emitter",
         "test:runtime-features",
         "test:array-runtime",
+        "test:bytes-runtime",
+        "test:gc-runtime",
         "test:string-runtime",
         "test:string-output",
         "test:hello",
@@ -83,6 +86,10 @@ SHARDS: dict[str, tuple[str, ...]] = {
         "test:caxecraft-level-adapter",
         "test:caxecraft-water",
         "test:caxecraft-aquatics",
+        "test:caxecraft-session",
+        "test:caxecraft-app-screen",
+        "test:caxecraft-presentation",
+        "test:caxecraft-terrain-chunks",
         "test:caxecraft-inventory",
         "test:caxecraft-gameplay",
         "test:caxecraft-pilot",
@@ -137,6 +144,7 @@ EVIDENCE_LOCK_PATHS = (
     Path("docs/specs/toolchain-lock.json"),
     Path("docs/specs/raylib-provisioning-lock.json"),
     Path("docs/specs/raylib-core-binding-lock.json"),
+    Path("docs/specs/raygui-core-binding-lock.json"),
 )
 
 # Shards inherit the runner's complete environment, so an arbitrary variable

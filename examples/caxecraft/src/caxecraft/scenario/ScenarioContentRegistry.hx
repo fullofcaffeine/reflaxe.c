@@ -16,6 +16,10 @@ interface ScenarioContentRegistry {
 
 	function hasFluid(id:ContentId):Bool;
 	function hasItem(id:ContentId):Bool;
+
+	/** Return the pack-local item code for a known item, or `-1` when unknown. */
+	function itemStorageCode(id:ContentId):Int;
+
 	function hasEntity(id:ContentId):Bool;
 	function hasNpc(id:ContentId):Bool;
 	function hasPrefab(id:ContentId):Bool;

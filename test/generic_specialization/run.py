@@ -113,6 +113,30 @@ def compile_fixture(
     )
 
 
+def check_structural_type_identity() -> None:
+    """Run the real macro type canonicalizer without claiming value lowering."""
+
+    result = subprocess.run(
+        [
+            development_tool("haxe"),
+            "--cwd",
+            str(FIXTURES / "type_identity"),
+            "build.hxml",
+        ],
+        cwd=ROOT,
+        env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0 or result.stdout or result.stderr:
+        raise GenericSpecializationFailure(
+            "closed structural type-identity fixture failed\n"
+            f"stdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+
+
 def load_json(path: Path, label: str) -> dict[str, object]:
     try:
         value = json.loads(path.read_text(encoding="utf-8"))
@@ -845,6 +869,7 @@ def main(arguments: Iterable[str] = ()) -> int:
                 f"{'/'.join(families)} closed-generic C11 O0/O2 matrix passed"
             )
             return 0
+        check_structural_type_identity()
         check_expected_snapshot()
         for fixture in NEGATIVE_EXPECTATIONS:
             check_negative(fixture)
@@ -862,7 +887,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         print(f"generic-specialization: ERROR: {error}", file=os.sys.stderr)
         return 1
     print(
-        "generic-specialization: OK: closed primitive/function/enum instances, "
+        "generic-specialization: OK: closed primitive/function/enum/Array identities, "
         "alias sharing, finite recursion, full-key collision checks, bounded code-size "
         f"reports, exact dynamic/open/function/type-count/code-size HXC1001, stale ownership, profile/policy isolation, and strict "
         f"{'/'.join(families)} C11 O0/O2 passed"

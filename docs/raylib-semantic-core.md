@@ -49,7 +49,9 @@ Admitted helpers allocate nothing, select no Haxe runtime feature, and add no
 failure edge. A direct C/Raylib call can still fail or have global effects
 according to raylib. Window, input, cursor, and drawing methods remain main or
 render-thread operations. `c.CString` currently requires an embedded-NUL-free
-literal whose storage lasts for the call.
+static literal or a conditional/switch proven to select only such literals.
+Program-local `c.CString` helpers may propagate that carrier; dynamic Haxe
+strings and retained foreign pointers remain unsupported.
 
 Begin/End calls stay explicit. A callback-style scope helper would need proven
 closure inlining and cleanup on every exit before making the same claim.

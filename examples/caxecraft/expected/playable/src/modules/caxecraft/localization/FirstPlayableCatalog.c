@@ -1,235 +1,197 @@
 #include "hxc/program.h"
 
-void hxc_caxecraft_localization_FirstPlayableCatalog_draw(int32_t hxc_locale, int32_t hxc_message, int32_t hxc_x, int32_t hxc_y, int32_t hxc_fontSize, struct Color hxc_color)
+const char *hxc_caxecraft_localization_FirstPlayableCatalog_text(int32_t hxc_locale, int32_t hxc_message)
 {
   switch (hxc_locale) {
     case 0:
       {
-        hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale0(hxc_message, hxc_x, hxc_y, hxc_fontSize, hxc_color);
         break;
       }
     case 1:
       {
-        hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale1(hxc_message, hxc_x, hxc_y, hxc_fontSize, hxc_color);
-        break;
+        const char *hxc_tmp_call_result_n1 = hxc_caxecraft_localization_FirstPlayableCatalog_textLocale1(hxc_message);
+        return hxc_tmp_call_result_n1;
       }
     default:
       {
-        hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale0(hxc_message, hxc_x, hxc_y, hxc_fontSize, hxc_color);
-        break;
+        const char *hxc_tmp_call_result_n2 = hxc_caxecraft_localization_FirstPlayableCatalog_textLocale0(hxc_message);
+        return hxc_tmp_call_result_n2;
       }
   }
-  return;
+  const char *hxc_tmp_call_result_n0 = hxc_caxecraft_localization_FirstPlayableCatalog_textLocale0(hxc_message);
+  return hxc_tmp_call_result_n0;
 }
 
-void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale0(int32_t hxc_message, int32_t hxc_x, int32_t hxc_y, int32_t hxc_fontSize, struct Color hxc_color)
+const char *hxc_caxecraft_localization_FirstPlayableCatalog_textLocale0(int32_t hxc_message)
 {
   switch (hxc_message) {
     case 0:
       {
-        DrawText("ADVENTURE: PROLOGUE IN PROGRESS", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
         break;
       }
     case 1:
       {
-        DrawText("SAVE CEESH. FIND IVVY. STOP BROWSER.", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "SAVE CEESH. FIND IVVY. STOP BROWSER.";
       }
     case 2:
       {
-        DrawText("+1 BERRY", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "+1 BERRY";
       }
     case 3:
       {
-        DrawText("+2 BERRIES", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "+2 BERRIES";
       }
     case 4:
       {
-        DrawText("BERRIES: +1 HEART", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "BERRIES: +1 HEART";
       }
     case 5:
       {
-        DrawText("BERRIES FULL: USE ONE FIRST", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "BERRIES FULL: USE ONE FIRST";
       }
     case 6:
       {
-        DrawText("BLOCK STACK FULL: USE ONE FIRST", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "BLOCK STACK FULL: USE ONE FIRST";
       }
     case 7:
       {
-        DrawText("COPPER STRIKE", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "COPPER STRIKE";
       }
     case 8:
       {
-        DrawText("HAXIRIO HAS FALLEN", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "HAXIRIO HAS FALLEN";
       }
     case 9:
       {
-        DrawText("MOSSLING ALERT", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "MOSSLING ALERT";
       }
     case 10:
       {
-        DrawText("MOSSLING DROPPED BERRIES", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "MOSSLING DROPPED BERRIES";
       }
     case 11:
       {
-        DrawText("MOSSLING WINDUP: DODGE", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "MOSSLING WINDUP: DODGE";
       }
     case 12:
       {
-        DrawText("NIA: BERRIES FOR THE ROAD, HAXIRIO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NIA: BERRIES FOR THE ROAD, HAXIRIO";
       }
     case 13:
       {
-        DrawText("E  TALK TO NIA", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "E  TALK TO NIA";
       }
     case 14:
       {
-        DrawText("NIA: THE GROVE LISTENS. E: A SMALL GIFT", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NIA: THE GROVE LISTENS. E: A SMALL GIFT";
       }
     case 15:
       {
-        DrawText("NO BERRIES LEFT", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NO BERRIES LEFT";
       }
     case 16:
       {
-        DrawText("E  RETURN TO THE MEADOW", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "E  RETURN TO THE MEADOW";
       }
     case 17:
       {
-        DrawText("Caxecraft: Evergrove Prologue", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "Caxecraft: Evergrove Prologue";
       }
     case 18:
       {
-        DrawText("TELEGRAPHED HIT: DODGE THE NEXT", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "TELEGRAPHED HIT: DODGE THE NEXT";
       }
     default:
       {
-        abort();
+        return "";
       }
   }
-  return;
+  return "ADVENTURE: PROLOGUE IN PROGRESS";
 }
 
-void hxc_caxecraft_localization_FirstPlayableCatalog_drawLocale1(int32_t hxc_message, int32_t hxc_x, int32_t hxc_y, int32_t hxc_fontSize, struct Color hxc_color)
+const char *hxc_caxecraft_localization_FirstPlayableCatalog_textLocale1(int32_t hxc_message)
 {
   switch (hxc_message) {
     case 0:
       {
-        DrawText("AVENTURA: PROLOGO EN CONSTRUCCION", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
         break;
       }
     case 1:
       {
-        DrawText("SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.";
       }
     case 2:
       {
-        DrawText("+1 BAYA", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "+1 BAYA";
       }
     case 3:
       {
-        DrawText("+2 BAYAS", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "+2 BAYAS";
       }
     case 4:
       {
-        DrawText("BAYAS: +1 CORAZON", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "BAYAS: +1 CORAZON";
       }
     case 5:
       {
-        DrawText("BAYAS LLENAS: USA UNA PRIMERO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "BAYAS LLENAS: USA UNA PRIMERO";
       }
     case 6:
       {
-        DrawText("PILA DE BLOQUES LLENA: USA UNO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "PILA DE BLOQUES LLENA: USA UNO";
       }
     case 7:
       {
-        DrawText("GOLPE DE COBRE", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "GOLPE DE COBRE";
       }
     case 8:
       {
-        DrawText("HAXIRIO HA CAIDO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "HAXIRIO HA CAIDO";
       }
     case 9:
       {
-        DrawText("MUSGUITO ALERTA", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "MUSGUITO ALERTA";
       }
     case 10:
       {
-        DrawText("EL MUSGUITO SOLTO BAYAS", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "EL MUSGUITO SOLTO BAYAS";
       }
     case 11:
       {
-        DrawText("MUSGUITO CARGANDO: ESQUIVA", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "MUSGUITO CARGANDO: ESQUIVA";
       }
     case 12:
       {
-        DrawText("NIA: BAYAS PARA EL CAMINO, HAXIRIO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NIA: BAYAS PARA EL CAMINO, HAXIRIO";
       }
     case 13:
       {
-        DrawText("E  HABLAR CON NIA", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "E  HABLAR CON NIA";
       }
     case 14:
       {
-        DrawText("NIA: EL BOSQUE TE ESCUCHA. E: REGALO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NIA: EL BOSQUE TE ESCUCHA. E: REGALO";
       }
     case 15:
       {
-        DrawText("NO QUEDAN BAYAS", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "NO QUEDAN BAYAS";
       }
     case 16:
       {
-        DrawText("E  VOLVER AL PRADO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "E  VOLVER AL PRADO";
       }
     case 17:
       {
-        DrawText("Caxecraft: Prologo de la Arboleda Eterna", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "Caxecraft: Prologo de la Arboleda Eterna";
       }
     case 18:
       {
-        DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", (int32_t)hxc_x, (int32_t)hxc_y, (int32_t)hxc_fontSize, hxc_color);
-        break;
+        return "ATAQUE AVISADO: ESQUIVA EL PROXIMO";
       }
     default:
       {
-        abort();
+        return "";
       }
   }
-  return;
+  return "AVENTURA: PROLOGO EN CONSTRUCCION";
 }

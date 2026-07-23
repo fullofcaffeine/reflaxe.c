@@ -78,8 +78,8 @@
       "fileOverrides": [
         {
           "path": "src/packages/caxecraft/domain/package.c",
-          "maxFileLines": 1364,
-          "reason": "Package layout intentionally groups the reviewed production domain modules into one package source. The aquatic slice extracts shared collision response into one ordinary generated C function; per-function limits remain unchanged."
+          "maxFileLines": 1424,
+          "reason": "Package layout intentionally groups the reviewed production domain modules into one package source. The aquatic slice extracts shared collision response, while exhaustive storage/edit switches now include the reviewed sand, forest, snow, and ash identities; per-function limits remain unchanged."
         },
         {
           "path": "src/packages/caxecraft/qa/package.c",
@@ -132,6 +132,11 @@
       ],
       "fileOverrides": [
         {
+          "path": "src/modules/caxecraft/domain/World.c",
+          "maxFileLines": 407,
+          "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Adding the reviewed sand, forest, snow, and ash identities grows exhaustive switches without weakening per-function or control-flow budgets."
+        },
+        {
           "path": "src/modules/caxecraft/qa/DomainProbe.c",
           "maxFileLines": 631,
           "reason": "The QA probe intentionally keeps the complete end-to-end domain oracle in one source-owned module; the corresponding function override remains separately bounded."
@@ -183,8 +188,8 @@
       "fileOverrides": [
         {
           "path": "src/program.c",
-          "maxFileLines": 2136,
-          "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit. The aquatic slice extracts shared collision response into one ordinary generated C function; per-function limits remain unchanged."
+          "maxFileLines": 2206,
+          "reason": "Unity layout intentionally amalgamates the same reviewed split program into one translation unit. The aquatic slice extracts shared collision response, while exhaustive storage/edit switches now include the reviewed sand, forest, snow, and ash identities; per-function limits remain unchanged."
         }
       ],
       "functionOverrides": [

@@ -5,7 +5,7 @@ package caxecraft.domain;
 
 	The engine never checks an item or campaign name. A built-in suit, a future
 	mod, or a temporary effect may resolve to this same bounded shape. Values are
-	created through `PlayerAquatics.profile`, which clamps malformed numeric input
+	created through `Aquatics.profile`, which clamps malformed numeric input
 	before it can affect fixed-tick physics.
 **/
 typedef AquaticProfile = {

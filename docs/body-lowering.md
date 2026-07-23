@@ -69,8 +69,9 @@ the stable-value and control-flow proof.
   borrows, checked element reads/writes, and `for` iteration over those views
   through explicit guarded HxcIR blocks;
 - closed anonymous records containing admitted primitive or nested closed-record
-  fields, including object literals, local copies, direct parameters/calls/
-  returns, and read-only field access;
+  fields, fieldless ordinary enums, and admitted header-owned by-value structs,
+  including object literals, local copies, direct parameters/calls/returns, and
+  read-only field access;
 - fieldless Haxe enums, payload enums whose fields are admitted primitive or
   enum values, distinct concrete primitive generic instances, exhaustive
   source `switch` patterns, and recursive enum values whose indirect backing
@@ -99,17 +100,27 @@ switch calls ISO C `abort()` if an invalid underlying value was forged. Thus no
 C path reads indeterminate storage, while general uninitialized Haxe locals and
 open integer switches remain fail-closed.
 
+Lazy `&&`/`||` chains can similarly arrive as one or more consecutive
+compiler-generated Boolean temporaries followed by nested `if` branches that
+assign them. Each temporary is admitted only when the same sequence proves
+that exact variable is assigned on every path before any read. Consecutive
+carriers are proved independently, then defensively initialized in HxcIR;
+their presence does not admit an authored uninitialized local.
+
 Return validity is checked twice. Frontend lowering maps the typed function and
 return expression independently, then `HxcIRValidator` rejects missing values,
 values on `Void` returns, and value/type mismatches as internal invariants. The
 C body emitter consumes only validated IR.
 
-Default/optional/rest parameters, indirect calls, arbitrary collection/iterator
-lowering, general Haxe arrays, escaping spans, string/Float switches, guarded
+Direct optional/default calls are completed by the function layer before this
+body pipeline consumes their arguments. Rest parameters, optional/default
+constructors, indirect calls, arbitrary collection/iterator lowering, general
+Haxe arrays, escaping spans, string/Float switches, guarded
 patterns outside the admitted enum form, recursive enum parameters/returns,
-reference or aggregate enum payloads, mutable/open/reflective records, record
-or enum identity/equality, strings, closures, general allocation, exceptions,
-cleanup, ABI-width integer conversions, checked conversions, and signed-target
+reference or aggregate enum payloads, payload enums embedded in direct records,
+mutable/open/reflective records, record identity/equality or payload-enum
+equality, strings, closures, general allocation, exceptions, cleanup, ABI-width
+integer conversions, checked conversions, and signed-target
 integer conversions that require reconstruction helpers remain outside this
 primitive slice. `exact` also rejects a non-contained source range, while
 `modulo` rejects a signed target. Those rejected operations produce
@@ -121,6 +132,15 @@ unsupported typed node fails with `HXC1001` at its exact Haxe range; lowering
 never substitutes `Dynamic`, `Any`, reflection, raw C, or an invented value.
 Source that remains after a terminating return or loop jump receives the same
 stable source-positioned `HXC1001` family.
+
+A managed temporary created while evaluating a loop condition or inside one
+iteration belongs to that iteration, not to the whole function. HxcIR releases
+condition temporaries before choosing the body/exit edge, and releases body
+locals before the back edge, `continue`, or `break`. A return or failure edge
+still runs the complete active cleanup list. This matters because the later C
+temporary is lexically inside the loop: postponing its release until function
+exit would both retain it too long and generate a reference outside its C
+scope.
 
 ## Names, source mapping, and C shape
 
@@ -162,7 +182,9 @@ structural discriminant enum, per-constructor payload structs, a payload union,
 and an outer value struct. Payload reads compare the tag before accessing the
 union member and call the registered C `abort` symbol on mismatch. Exhaustive
 HxcIR tag switches become structural C switches, and recursive local values use
-typed pointer declarators to function-local backing storage.
+typed pointers to allocator-backed uniquely owned children. Copies clone the
+tree and cleanup destroys it through the active tag; cyclic graphs remain
+outside this bounded ownership model.
 
 Bounded constructor sites use structural automatic class storage, explicit
 default initialization, and ordinary private C constructor calls. HxcIR keeps

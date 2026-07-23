@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "raylib-6.0-memory-macos-monotonic-clock",
+  "reason": "Raylib 6.0's Memory platform initializes and reads CLOCK_MONOTONIC on POSIX hosts but accidentally omits macOS, making GetTime() return 0 forever.",
+  "upstreamCommit": "dbc56a87da87d973a9c5baa4e7438a9d20121d28",
+  "platforms": [
+    "macos"
+  ],
+  "configurations": [
+    "memory-software"
+  ],
+  "files": [
+    {
+      "path": "src/platforms/rcore_memory.c",
+      "beforeSha256": "1f7f92694d696c81e631638d477354a275e1daf41dac31a89622aae1a66e2809",
+      "afterSha256": "ed4f5b8d6a616440b9bb64cc5d0724bf2722ff0a4880035e28f3673364291203",
+      "replacements": [
+        {
+          "before": "#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)",
+          "after": "#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__) || defined(__APPLE__)"
+        }
+      ]
+    },
+    {
+      "path": "src/rcore.c",
+      "beforeSha256": "502c3656661d07aa117a1f4b97dbfdd4a9b12cda6ee8eb4ab7afd31b657b5dd2",
+      "afterSha256": "f6c85f725838145b70372159c6a06e3dfd81554a94daa9f5059a9aae82e5acb1",
+      "replacements": [
+        {
+          "before": "#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__)\n    struct timespec now = { 0 };\n\n    if (clock_gettime(CLOCK_MONOTONIC, &now) == 0)",
+          "after": "#if defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__EMSCRIPTEN__) || defined(__APPLE__)\n    struct timespec now = { 0 };\n\n    if (clock_gettime(CLOCK_MONOTONIC, &now) == 0)"
+        }
+      ]
+    }
+  ]
+}

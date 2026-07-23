@@ -1,14 +1,15 @@
 package caxecraft.gameplay;
 
 /**
- * Small, serializable state for one friendly guide in the first sandbox.
+ * Small value snapshot for one friendly guide in the first sandbox.
  *
- * Callers use `GuideNpc.phase`; `phaseCode` is the narrow integer carrier
- * required until haxe_c-49y admits nominal values inside direct C records.
+ * The closed `GuidePhase` stays nominal in Haxe and becomes a native enum field
+ * in generated C. A save or network format should convert it to a versioned
+ * external code at that boundary instead of weakening the in-memory model.
  */
 typedef GuideState = {
 	final x:Float;
 	final y:Float;
 	final z:Float;
-	final phaseCode:Int;
+	final phase:GuidePhase;
 }

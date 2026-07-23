@@ -35,6 +35,11 @@ final class World {
 			case Dirt: 2;
 			case Stone: 3;
 			case Bedrock: 4;
+			case Sand: 5;
+			case Wood: 6;
+			case Leaves: 7;
+			case Snow: 8;
+			case Ash: 9;
 		};
 	}
 
@@ -44,6 +49,11 @@ final class World {
 			case 2: Dirt;
 			case 3: Stone;
 			case 4: Bedrock;
+			case 5: Sand;
+			case 6: Wood;
+			case 7: Leaves;
+			case 8: Snow;
+			case 9: Ash;
 			default: Air;
 		};
 	}
@@ -51,14 +61,14 @@ final class World {
 	public static function isSolid(kind:BlockKind):Bool {
 		return switch (kind) {
 			case Air: false;
-			case Grass | Dirt | Stone | Bedrock: true;
+			case Grass | Dirt | Stone | Bedrock | Sand | Wood | Leaves | Snow | Ash: true;
 		};
 	}
 
 	public static function isPlaceable(kind:BlockKind):Bool {
 		return switch (kind) {
 			case Grass | Dirt | Stone: true;
-			case Air | Bedrock: false;
+			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: false;
 		};
 	}
 
@@ -91,11 +101,18 @@ final class World {
 		return true;
 	}
 
-	/** Air and immutable bedrock cannot be removed. */
+	/**
+	 * Remove only materials whose current content definitions declare drops.
+	 *
+	 * The first inventory slice has grass, dirt, and stone items. Authored sand,
+	 * forest, snow, and ash remain scenery until the content pack gives them
+	 * matching items; silently deleting them would lose data in Adventure and
+	 * would make Creative promise an item model it does not have yet.
+	 */
 	public static function remove(cells:WorldCells, coord:BlockCoord):Bool {
 		final current = query(cells, coord);
 		return switch (current) {
-			case Air | Bedrock: false;
+			case Air | Bedrock | Sand | Wood | Leaves | Snow | Ash: false;
 			case Grass | Dirt | Stone: replace(cells, coord, Air);
 		};
 	}
@@ -106,7 +123,7 @@ final class World {
 			return false;
 		return switch (query(cells, coord)) {
 			case Air: replace(cells, coord, kind);
-			case Grass | Dirt | Stone | Bedrock: false;
+			case Grass | Dirt | Stone | Bedrock | Sand | Wood | Leaves | Snow | Ash: false;
 		};
 	}
 

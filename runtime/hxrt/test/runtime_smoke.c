@@ -2,7 +2,7 @@
  * Fixture-only all-seed native smoke executable.
  *
  * It includes the non-selective hxc_runtime.h umbrella to exercise bounded ABI,
- * status, allocator, array, string, and Int32 helper contracts together. It is
+ * status, allocator, array, Bytes, string, and Int32 helper contracts together. It is
  * separately authored native input, never generated Haxe output, and cannot
  * promote native-seed-only features to compiler-selectable support.
  */
@@ -24,6 +24,7 @@ int main(void) {
   hxc_allocation allocation = HXC_ALLOCATION_INITIALIZER;
   hxc_array array = HXC_ARRAY_INITIALIZER;
   hxc_array_element_ops array_elements;
+  hxc_bytes_ref *bytes = NULL;
   hxc_owned_string owned = HXC_OWNED_STRING_INITIALIZER;
   const hxc_string view = HXC_STRING_LITERAL("h\xC3\xA9");
   void *memory = NULL;
@@ -31,11 +32,12 @@ int main(void) {
   size_t checked_size = 0u;
   int32_t quotient = 0;
   int32_t remainder = 0;
+  int32_t byte_value = 0;
 
   HXC_CHECK(hxc_runtime_abi_version() == HXC_RUNTIME_ABI_VERSION);
   HXC_CHECK(
     HXC_RUNTIME_ABI_MAJOR == 0u
-    && HXC_RUNTIME_ABI_MINOR == 5u
+    && HXC_RUNTIME_ABI_MINOR == 8u
     && HXC_RUNTIME_ABI_PATCH == 0u
   );
   HXC_CHECK(strcmp(hxc_status_name(HXC_STATUS_OK), "HXC_STATUS_OK") == 0);
@@ -100,6 +102,12 @@ int main(void) {
   HXC_CHECK(hxc_array_push_copy(&array, &quotient) == HXC_STATUS_OK);
   HXC_CHECK(array.length == 1u && array.capacity >= array.length);
   HXC_CHECK(hxc_array_dispose(&array) == HXC_STATUS_OK);
+
+  HXC_CHECK(hxc_bytes_ref_create_zeroed(allocator, 2, &bytes) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_bytes_ref_set(bytes, 0, 0x141) == HXC_STATUS_OK);
+  HXC_CHECK(hxc_bytes_ref_get(bytes, 0, &byte_value) == HXC_STATUS_OK);
+  HXC_CHECK(byte_value == 0x41);
+  HXC_CHECK(hxc_bytes_ref_release(bytes) == HXC_STATUS_OK);
 
   HXC_CHECK(view.byte_length == 3u);
   HXC_CHECK(hxc_string_copy(view, &allocator, &owned) == HXC_STATUS_OK);

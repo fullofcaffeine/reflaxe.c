@@ -3,8 +3,10 @@ package reflaxe.c.lowering;
 #if (macro || reflaxe_runtime)
 import haxe.crypto.Sha256;
 import haxe.io.Bytes;
+import haxe.macro.Context;
 import haxe.macro.Expr.Position;
 import haxe.macro.Type;
+import haxe.macro.TypedExprTools;
 import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
@@ -55,6 +57,13 @@ class CPreparedBodyClass {
 	public var dispatchHeaderRequest:Null<CSymbolRequest> = null;
 	public var emptyAnchorRequest:Null<CSymbolRequest> = null;
 
+	/** True only when a reachable escaping graph requires stable GC storage. */
+	public var managedByCollector:Bool = false;
+
+	public var descriptorRequest:Null<CSymbolRequest> = null;
+	public var traceRequest:Null<CSymbolRequest> = null;
+	public var finalizerRequest:Null<CSymbolRequest> = null;
+
 	public function new(semanticKey:String, digest:String, haxePath:String, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
 		this.semanticKey = semanticKey;
 		this.digest = digest;
@@ -78,7 +87,7 @@ class CPreparedBodyClass {
 					mutable: field.mutable,
 					source: field.source
 				}),
-				header: dispatchLayoutId == null ? IRCHNone : IRCHVirtual(dispatchLayoutId)
+				header: managedByCollector ? IRCHRuntime("gc") : dispatchLayoutId == null ? IRCHNone : IRCHVirtual(dispatchLayoutId)
 			}),
 			source: source
 		};
@@ -89,7 +98,7 @@ class CPreparedBodyClass {
 			id: instanceId,
 			declarationId: declarationId,
 			arguments: [],
-			representation: IRRDirect,
+			representation: managedByCollector ? IRRManaged("gc") : IRRDirect,
 			source: source
 		};
 	}
@@ -139,15 +148,22 @@ class CLoweredBodyClass {
 	public final dispatchHeader:Null<CIdentifier>;
 	public final emptyAnchor:Null<CIdentifier>;
 	public final fields:Array<CLoweredBodyClassField>;
+	public final descriptorName:Null<CIdentifier>;
+	public final traceName:Null<CIdentifier>;
+	public final finalizerName:Null<CIdentifier>;
 
 	public function new(prepared:CPreparedBodyClass, cTag:CIdentifier, baseMember:Null<CIdentifier>, dispatchHeader:Null<CIdentifier>,
-			emptyAnchor:Null<CIdentifier>, fields:Array<CLoweredBodyClassField>) {
+			emptyAnchor:Null<CIdentifier>, fields:Array<CLoweredBodyClassField>, descriptorName:Null<CIdentifier>, traceName:Null<CIdentifier>,
+			finalizerName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.cTag = cTag;
 		this.baseMember = baseMember;
 		this.dispatchHeader = dispatchHeader;
 		this.emptyAnchor = emptyAnchor;
 		this.fields = fields.copy();
+		this.descriptorName = descriptorName;
+		this.traceName = traceName;
+		this.finalizerName = finalizerName;
 	}
 }
 
@@ -236,15 +252,35 @@ class CBodyClassRegistry {
 				return rejected(fail, field.pos, '$node:unsupported-instance-field:${field.name}');
 			if (prepared.base != null && prepared.base.field(field.name) != null)
 				return rejected(fail, field.pos, '$node:inherited-storage-field-shadowing:${field.name}');
-			final fieldType = resolveValue(field.type, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
-			if (fieldType.spanElement() != null)
-				return rejected(fail, field.pos, '$node.field:${field.name}:borrowed-span-field-escape');
-			if (fieldType.irType == IRTVoid)
-				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-field');
 			final mutable = switch field.kind {
 				case FVar(_, write): isDirectWrite(write);
 				case FMethod(_): false;
 			};
+			final fixedArray = CBodyFixedArray.shape(field.type, context.profile, field.pos, fail, '$node.field:${field.name}');
+			final fieldType = if (fixedArray == null) {
+				final resolved = resolveValue(field.type, field.pos, definition.module, sourcePath, fail, '$node.field:${field.name}');
+				final child = resolved.classValue();
+				final initializer = child == null ? null : fieldInitializer(definition, field, fail, '$node.field:${field.name}');
+				if (child != null && initializer != null && initializedClassPath(initializer) == child.haxePath) {
+					if (mutable)
+						return rejected(fail, field.pos, '$node.field:${field.name}:owned-class-field-must-be-final');
+					if (preparing.exists(child.haxePath))
+						return rejected(fail, field.pos, '$node.field:${field.name}:cyclic-owned-class-layout:$path->${child.haxePath}');
+					CBodyValueType.ownedClass(child);
+				} else {
+					resolved;
+				}
+			} else {
+				final initializer = fieldInitializer(definition, field, fail, '$node.field:${field.name}');
+				if (initializer == null)
+					return rejected(fail, field.pos, '$node.field:${field.name}:fixed-array-requires-initializer');
+				final length = CBodyFixedArray.zeroLength(initializer, fixedArray.element.irType, fail, '$node.field:${field.name}:CArray.zero');
+				CBodyValueType.fixedArray(fixedArray.element, length, fixedArray.witnessId);
+			};
+			if (fieldType.spanElement() != null)
+				return rejected(fail, field.pos, '$node.field:${field.name}:borrowed-span-field-escape');
+			if (fieldType.irType == IRTVoid)
+				return rejected(fail, field.pos, '$node.field:${field.name}:Void-not-an-object-field');
 			final request = new CSymbolRequest(CSKField, ["compiler", "haxe-class", path, "field", field.name], CNSMember(prepared.declarationId),
 				CSVInternal, null, [], [], storageOrdinal++, [field.name]);
 			context.symbols.register(request);
@@ -252,6 +288,63 @@ class CBodyClassRegistry {
 		}
 		preparing.remove(path);
 		return prepared;
+	}
+
+	/**
+		Recover Haxe's typed field-initializer assignment from the constructor.
+
+		After dead-code elimination, Haxe moves instance field initializers into the
+		constructor and clears `ClassField.expr()`. The initializer's source range is
+		still inside the field declaration, which distinguishes it from an ordinary
+		assignment written in the constructor body.
+	**/
+	static function fieldInitializer(definition:ClassType, field:ClassField, fail:(Position, String) -> Void, node:String):Null<TypedExpr> {
+		if (definition.constructor == null)
+			return null;
+		final constructorExpression = definition.constructor.get().expr();
+		if (constructorExpression == null)
+			return null;
+		final body = switch constructorExpression.expr {
+			case TFunction(fn): fn.expr;
+			case _: constructorExpression;
+		};
+		final matches:Array<TypedExpr> = [];
+		collectFieldInitializers(body, field, matches);
+		if (matches.length > 1)
+			return rejected(fail, field.pos, '$node:ambiguous-lowered-initializer:${matches.length}');
+		return matches.length == 1 ? matches[0] : null;
+	}
+
+	static function collectFieldInitializers(expression:TypedExpr, field:ClassField, matches:Array<TypedExpr>):Void {
+		switch expression.expr {
+			case TBinop(OpAssign, left, right):
+				switch left.expr {
+					case TField({expr: TConst(TThis)}, FInstance(_, _, fieldReference))
+						if (fieldReference.get().name == field.name && positionInside(right.pos, field.pos)):
+						matches.push(right);
+					case _:
+				}
+			case TFunction(_):
+				return;
+			case _:
+		}
+		TypedExprTools.iter(expression, child -> collectFieldInitializers(child, field, matches));
+	}
+
+	static function initializedClassPath(expression:TypedExpr):Null<String> {
+		return switch expression.expr {
+			case TNew(reference, _, _):
+				final value = reference.get();
+				value.pack.concat([value.name]).join(".");
+			case TParenthesis(inner) | TMeta(_, inner) | TCast(inner, _): initializedClassPath(inner);
+			case _: null;
+		};
+	}
+
+	static function positionInside(inner:Position, outer:Position):Bool {
+		final innerInfo = Context.getPosInfos(inner);
+		final outerInfo = Context.getPosInfos(outer);
+		return innerInfo.file == outerInfo.file && innerInfo.min >= outerInfo.min && innerInfo.max <= outerInfo.max;
 	}
 
 	/** Select one program-local vtable pointer on the hierarchy root only. */
@@ -283,13 +376,167 @@ class CBodyClassRegistry {
 		}
 	}
 
+	/**
+		Close the collector representation after every reachable type is known.
+
+		An `Array<Class>` or enum case carrying a class is an escaping graph: its
+		pointer must remain stable and may point back through another managed field.
+		Marking is a fixed point because a managed class can expose a second class
+		through one of its fields or inheritance prefix. Direct classes that never
+		enter such a graph remain unchanged and descriptor-free.
+	**/
+	public function completeManagedRepresentations(arrays:Array<reflaxe.c.lowering.CBodyArray.CPreparedBodyArray>,
+			enums:Array<reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance>):Void {
+		var changed = true;
+		while (changed) {
+			changed = false;
+			for (array in arrays)
+				if (markCollectorClasses(array.element, []))
+					changed = true;
+			for (enumValue in enums)
+				for (tagCase in enumValue.cases)
+					for (payload in tagCase.payload)
+						if (markCollectorClasses(payload.valueType, []))
+							changed = true;
+			for (value in canonicalClasses()) {
+				if (!value.managedByCollector)
+					continue;
+				if (value.dispatchLayoutId != null)
+					throw new CBodyEmissionError('managed class `${value.haxePath}` cannot yet combine collector and virtual headers');
+				if (value.base != null && !value.base.managedByCollector) {
+					value.base.managedByCollector = true;
+					changed = true;
+				}
+				for (field in value.fields) {
+					if (field.type.ownedClassValue() != null)
+						throw new CBodyEmissionError('managed class `${value.haxePath}` cannot yet contain an inline owned class `${field.name}`');
+					final target = field.type.classValue();
+					if (target != null && !target.managedByCollector) {
+						target.managedByCollector = true;
+						changed = true;
+					}
+				}
+			}
+		}
+		for (value in canonicalClasses())
+			if (value.managedByCollector)
+				registerManagedNames(value);
+	}
+
+	/** Mark every class reference reachable through one finite direct value. */
+	function markCollectorClasses(type:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+		final classValue = type.classValue();
+		if (classValue != null) {
+			if (classValue.managedByCollector)
+				return false;
+			classValue.managedByCollector = true;
+			return true;
+		}
+		var changed = false;
+		final array = type.arrayValue();
+		if (array != null)
+			return markCollectorClasses(array.element, visitedEnums);
+		final aggregate = type.aggregateValue();
+		if (aggregate != null) {
+			for (field in aggregate.fields)
+				if (markCollectorClasses(field.type, visitedEnums))
+					changed = true;
+			return changed;
+		}
+		final optional = type.optionalValue();
+		if (optional != null)
+			return markCollectorClasses(optional.payload, visitedEnums);
+		final enumValue = type.enumValue();
+		if (enumValue == null || visitedEnums.exists(enumValue.instanceId))
+			return false;
+		visitedEnums.set(enumValue.instanceId, true);
+		for (tagCase in enumValue.cases)
+			for (payload in tagCase.payload)
+				if (!payload.indirect && markCollectorClasses(payload.valueType, visitedEnums))
+					changed = true;
+		return changed;
+	}
+
+	function registerManagedNames(value:CPreparedBodyClass):Void {
+		if (value.descriptorRequest != null)
+			return;
+		value.descriptorRequest = new CSymbolRequest(CSKTypeDescriptor, ["compiler", "gc", "class", value.haxePath, "descriptor"],
+			CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 0, [value.haxePath, "descriptor"]);
+		context.symbols.register(value.descriptorRequest);
+		if (classNeedsTrace(value)) {
+			value.traceRequest = new CSymbolRequest(CSKMethod, ["compiler", "gc", "class", value.haxePath, "trace"], CNSOrdinary("translation-unit"),
+				CSVInternal, null, [], [], 1, [value.haxePath, "trace"]);
+			context.symbols.register(value.traceRequest);
+		}
+		if (classNeedsFinalizer(value)) {
+			value.finalizerRequest = new CSymbolRequest(CSKMethod, ["compiler", "gc", "class", value.haxePath, "finalize"], CNSOrdinary("translation-unit"),
+				CSVInternal, null, [], [], 2, [value.haxePath, "finalize"]);
+			context.symbols.register(value.finalizerRequest);
+		}
+	}
+
+	static function classNeedsTrace(value:CPreparedBodyClass):Bool {
+		if (value.base != null && classNeedsTrace(value.base))
+			return true;
+		for (field in value.fields)
+			if (containsManagedReference(field.type, []))
+				return true;
+		return false;
+	}
+
+	static function classNeedsFinalizer(value:CPreparedBodyClass):Bool {
+		if (value.base != null && classNeedsFinalizer(value.base))
+			return true;
+		for (field in value.fields) {
+			final array = field.type.arrayValue();
+			if (array != null && !array.managedByCollector)
+				return true;
+			if (field.type.bytesValue() != null)
+				return true;
+			final aggregate = field.type.aggregateValue();
+			if (aggregate != null && aggregate.managedLifetime)
+				return true;
+			final enumeration = field.type.enumValue();
+			if (enumeration != null && enumeration.managedLifetime)
+				return true;
+			final optional = field.type.optionalValue();
+			if (optional != null && optional.managedLifetime)
+				return true;
+		}
+		return false;
+	}
+
+	static function containsManagedReference(value:CBodyValueType, visitedEnums:Map<String, Bool>):Bool {
+		final classValue = value.classValue();
+		if (classValue != null)
+			return classValue.managedByCollector;
+		final arrayValue = value.arrayValue();
+		if (arrayValue != null)
+			return arrayValue.managedByCollector;
+		final aggregate = value.aggregateValue();
+		if (aggregate != null) {
+			for (field in aggregate.fields)
+				if (containsManagedReference(field.type, visitedEnums))
+					return true;
+			return false;
+		}
+		final optional = value.optionalValue();
+		if (optional != null)
+			return containsManagedReference(optional.payload, visitedEnums);
+		final enumValue = value.enumValue();
+		if (enumValue == null || visitedEnums.exists(enumValue.instanceId))
+			return false;
+		visitedEnums.set(enumValue.instanceId, true);
+		return enumValue.collectorPayload;
+	}
+
 	public function canonicalClasses():Array<CPreparedBodyClass> {
 		final values = [for (value in byPath) value];
 		values.sort((left, right) -> compareUtf8(left.semanticKey, right.semanticKey));
 		final result:Array<CPreparedBodyClass> = [];
 		final emitted:Map<String, Bool> = [];
 		for (value in values)
-			appendBaseFirst(value, result, emitted);
+			appendLayoutDependenciesFirst(value, result, emitted);
 		return result;
 	}
 
@@ -297,14 +544,22 @@ class CBodyClassRegistry {
 		return canonicalClasses().map(prepared -> new CLoweredBodyClass(prepared, symbols.identifierFor(prepared.typeRequest),
 			identifierOrNull(symbols, prepared.baseMemberRequest), identifierOrNull(symbols, prepared.dispatchHeaderRequest),
 			identifierOrNull(symbols, prepared.emptyAnchorRequest),
-			prepared.fields.map(field -> new CLoweredBodyClassField(field, symbols.identifierFor(field.request)))));
+			prepared.fields.map(field -> new CLoweredBodyClassField(field, symbols.identifierFor(field.request))),
+			identifierOrNull(symbols, prepared.descriptorRequest), identifierOrNull(symbols, prepared.traceRequest),
+			identifierOrNull(symbols, prepared.finalizerRequest)));
 	}
 
-	function appendBaseFirst(value:CPreparedBodyClass, result:Array<CPreparedBodyClass>, emitted:Map<String, Bool>):Void {
+	/** Order every by-value class dependency before the layout that contains it. */
+	function appendLayoutDependenciesFirst(value:CPreparedBodyClass, result:Array<CPreparedBodyClass>, emitted:Map<String, Bool>):Void {
 		if (emitted.exists(value.instanceId))
 			return;
 		if (value.base != null)
-			appendBaseFirst(value.base, result, emitted);
+			appendLayoutDependenciesFirst(value.base, result, emitted);
+		for (field in value.fields) {
+			final child = field.type.ownedClassValue();
+			if (child != null)
+				appendLayoutDependenciesFirst(child, result, emitted);
+		}
 		emitted.set(value.instanceId, true);
 		result.push(value);
 	}
@@ -314,7 +569,10 @@ class CBodyClassRegistry {
 
 	static function isDirectWrite(write:VarAccess):Bool {
 		return switch write {
-			case AccNormal | AccCtor: true;
+			// `AccCtor` is Haxe's constructor-only write permission for a final
+			// field. It permits initialization, but it does not make the completed
+			// object's field mutable.
+			case AccNormal: true;
 			case _: false;
 		};
 	}

@@ -31,6 +31,7 @@ PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
+    "hxc.dispatch.json",
     "hxc.initialization-plan.json",
     "hxc.manifest.json",
     "hxc.runtime-plan.json",
@@ -42,24 +43,41 @@ PRODUCTION_FILES = {
 }
 EXPECTED_CONSTRUCTORS = {
     "constructor.BaseRecord": (False, False),
+    "constructor.CounterOwner": (False, False),
     "constructor.EmptyBase": (True, False),
     "constructor.EmptyLeaf": (True, False),
     "constructor.FailableBase": (False, True),
     "constructor.FailableLeaf": (False, True),
     "constructor.LeafRecord": (False, False),
+    "constructor.OwnedCounter": (False, False),
 }
 NEGATIVE_CASES = {
+    "borrowed_alias": (
+        "TNew(stack-reference-escape:static-call-argument:0,"
+        "target=function.Main.alias)"
+    ),
+    "borrowed_constructor": (
+        "TNew(stack-reference-escape:static-call-argument:0,"
+        "target=function.Main.observe)"
+    ),
+    "borrowed_forward": (
+        "TCall(owned-class-borrow-escape:instance-call-argument:0,"
+        "target=method.BorrowedForwardSink.consume)"
+    ),
+    "borrowed_return": (
+        "TNew(stack-reference-escape:static-call-argument:0,"
+        "target=function.Main.expose)"
+    ),
     "conditional": "TNew(stack-construction-requires-unconditional-entry-block)",
     "cycle": "TNew(constructor-cycle:CycleA -> CycleB -> CycleA)",
-    "escape_alias": "TNew(stack-reference-escape:local-alias:second)",
-    "escape_argument": (
-        "TNew(stack-reference-escape:static-call-argument:0,"
-        "target=function.Main.present)"
-    ),
+    "escape_alias": "TNew(stack-reference-escape:assignment)",
     "escape_return": "TNew(stack-reference-escape:return)",
     "escape_self": "TNew(stack-reference-escape:assignment)",
     "generic": "TVar(box:type):generic-class-reference-requires-bounded-class-specialization:Box",
     "native_layout": "TNew(unsupported-native-layout:NativeRecord)",
+    "owned_fallible": "TNew(owned-field-fallible-construction-not-admitted:constructor.Child)",
+    "owned_mutable": "field:child:owned-class-field-must-be-final",
+    "owned_return": "TReturn(owned-class-borrow-escape)",
 }
 REQUIRED_NATIVE_COVERAGE = frozenset(
     {
@@ -68,6 +86,10 @@ REQUIRED_NATIVE_COVERAGE = frozenset(
         "constructor-generated-executable",
         "constructor-runtime-free",
         "field-initialization-order",
+        "owned-child-inline-layout",
+        "owned-child-inline-method-borrow",
+        "owned-child-lazy-borrow-alias",
+        "owned-child-stable-identity",
         "strict-c11",
         "super-constructor-order",
         "trivial-constructor-elision",
@@ -339,8 +361,8 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     for label, text in (("HxcIR", hxcir), ("header", header), ("source", source)):
         if str(ROOT) in text or "\\" in text or "hxrt" in text.lower():
             raise ConstructorLoweringFailure(f"{label} leaked a host path or runtime")
-    if not hxcir.startswith("hxcir schema=10\n"):
-        raise ConstructorLoweringFailure("constructor lowering did not use schema-10 HxcIR")
+    if not hxcir.startswith("hxcir schema=17\n"):
+        raise ConstructorLoweringFailure("constructor lowering did not use schema-17 HxcIR")
 
     leaf = function_section(hxcir, "constructor.LeafRecord")
     ordered(
@@ -369,7 +391,14 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     )
     failable_base = function_section(hxcir, "constructor.FailableBase")
     failable_leaf = function_section(hxcir, "constructor.FailableLeaf")
+    counter_owner = function_section(hxcir, "constructor.CounterOwner")
+    counter_run = function_section(hxcir, "method.CounterOwner.run")
+    drive = function_section(hxcir, "function.Main.drive")
     main = function_section(hxcir, "function.Main.main")
+    if drive.count("ownership=borrowed-class") != 1:
+        raise ConstructorLoweringFailure(
+            "direct helper lost its explicit caller-owned class parameter"
+        )
     if (
         "failure=status(exception)" not in failable_base
         or "failure=status(exception)" not in failable_leaf
@@ -380,6 +409,37 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "target=propagate" not in failable_leaf
     ):
         raise ConstructorLoweringFailure("constructor status/cleanup propagation drifted")
+    ordered(
+        counter_owner,
+        (
+            "constant value=int(11)",
+            'bind-virtual-table place=field(dereference("parameter.self"),"child")',
+            "owned-class-field-address",
+            'dispatch=direct("constructor.OwnedCounter")',
+            'dispatch=virtual(slot="slot.OwnedCounter.add"',
+            'store place=field(dereference("parameter.self"),"observedDuringConstruction")',
+        ),
+        "owned child constructor",
+    )
+    ordered(
+        counter_run,
+        (
+            "owned-class-field-borrow",
+            "compound-load",
+            "compound-store",
+            "class-field-load",
+        ),
+        "inlined owned child method",
+    )
+    if (
+        "ownership=borrowed-class storage=automatic" not in counter_run
+        or "initialize place=local" not in counter_run
+        or counter_run.count("load place=local") < 2
+        or "terminator branch" not in counter_run
+    ):
+        raise ConstructorLoweringFailure(
+            "inlined owned-child receiver lost its explicit non-owning local alias"
+        )
     ordered(
         main,
         (
@@ -411,13 +471,35 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
             raise ConstructorLoweringFailure(f"{identifier} was not elided")
     for identifier in (
         "constructor.BaseRecord",
+        "constructor.CounterOwner",
         "constructor.FailableBase",
         "constructor.FailableLeaf",
         "constructor.LeafRecord",
+        "constructor.OwnedCounter",
     ):
         name = emitted_names[identifier]
         if not isinstance(name, str) or f"{name}(" not in header or f"{name}(" not in source:
             raise ConstructorLoweringFailure(f"emitted constructor missing: {identifier}")
+    child_definition = header.find("struct hxc_OwnedCounter {")
+    parent_definition = header.find("struct hxc_CounterOwner {")
+    if (
+        child_definition == -1
+        or parent_definition == -1
+        or child_definition >= parent_definition
+        or "struct hxc_OwnedCounter hxc_child;" not in header
+        or "struct hxc_OwnedCounter *hxc_child;" in header
+    ):
+        raise ConstructorLoweringFailure(
+            "owned child did not remain an inline, dependency-ordered class subobject"
+        )
+    child_bind = source.find(
+        "hxc_child.hxc_vtable = &hxc_vtable_compiler_virtual_dispatch_OwnedCounter"
+    )
+    child_call = source.find("hxc_compiler_constructor_OwnedCounter(")
+    if child_bind == -1 or child_call == -1 or child_bind >= child_call:
+        raise ConstructorLoweringFailure(
+            "owned child virtual identity was not bound before construction"
+        )
     if (
         " = { 0 };" not in source
         or "if (!" not in source
@@ -426,6 +508,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "int main(void)" not in source
     ):
         raise ConstructorLoweringFailure("structural constructor C emission drifted")
+    for forbidden in ("goto ", "malloc(", "calloc(", "realloc(", "free("):
+        if forbidden in source:
+            raise ConstructorLoweringFailure(
+                f"constructor fixture unexpectedly emitted {forbidden.strip()!r}"
+            )
     validate_runtime_plan(report, profile=profile)
 
 
@@ -608,6 +695,10 @@ def check_native(
                     "constructor-generated-executable",
                     "constructor-runtime-free",
                     "field-initialization-order",
+                    "owned-child-inline-layout",
+                    "owned-child-inline-method-borrow",
+                    "owned-child-lazy-borrow-alias",
+                    "owned-child-stable-identity",
                     "super-constructor-order",
                     "trivial-constructor-elision",
                 ),
@@ -763,8 +854,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "constructor-lowering: OK: pinned super/field/body order, default storage, "
-        "status cleanup, trivial elision, runtime-free strict C11/C++17 consumers, "
-        "determinism, and fail-closed escape/cycle/native-layout/generic edges passed"
+        "status cleanup, direct caller-owned class parameters, trivial elision, "
+        "runtime-free strict C11/C++17 consumers, determinism, and fail-closed "
+        "borrow/escape/cycle/native-layout/generic edges passed"
     )
     return 0
 

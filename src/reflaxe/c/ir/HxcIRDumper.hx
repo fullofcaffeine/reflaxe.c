@@ -84,11 +84,16 @@ class HxcIRDumper {
 
 	function dumpFunction(fn:HxcIRFunction):Void {
 		line('  function ${quote(fn.id)} name=${quote(fn.displayName)} returns=${typeRef(fn.returnType)} failure=${functionFailure(fn.failureConvention)} entry=${quote(fn.entryBlockId)} ${source(fn.source)}');
+		final managedRoots = fn.managedRoots == null ? [] : fn.managedRoots;
+		for (root in managedRoots)
+			line('    managed-root ${quote(root.id)} value=${quote(root.valueId)} path=${quote(HxcIRManagedRootPaths.key(root.projections))} ${source(root.source)}');
 		for (parameter in fn.parameters) {
-			line('    parameter ${quote(parameter.id)} type=${typeRef(parameter.type)} ${source(parameter.source)}');
+			final ownership = fn.borrowedClassParameterIds.indexOf(parameter.id) < 0 ? "owned-or-value" : "borrowed-class";
+			line('    parameter ${quote(parameter.id)} type=${typeRef(parameter.type)} ownership=$ownership ${source(parameter.source)}');
 		}
 		for (local in sorted(fn.locals, item -> item.id)) {
-			line('    local ${quote(local.id)} type=${typeRef(local.type)} storage=${localStorage(local.storage)} state=${state(local.initialState)} ${source(local.source)}');
+			final ownership = fn.borrowedClassLocalIds.indexOf(local.id) < 0 ? "owned-or-value" : "borrowed-class";
+			line('    local ${quote(local.id)} type=${typeRef(local.type)} ownership=$ownership storage=${localStorage(local.storage)} state=${state(local.initialState)} ${source(local.source)}');
 		}
 		for (region in sorted(fn.cleanupRegions, item -> item.id)) {
 			line('    cleanup ${quote(region.id)} parent=${nullableQuote(region.parentId)} registration-order ${source(region.source)}');
@@ -123,9 +128,11 @@ class HxcIRDumper {
 		return switch kind {
 			case IRIOSequence(label): 'sequence label=${quote(label)}';
 			case IRIOConstant(value): 'constant value=${constant(value)}';
+			case IRIOFunctionReference(functionId): 'function-reference target=${quote(functionId)}';
 			case IRIOLoad(place): 'load place=${renderPlace(place)}';
 			case IRIOStore(place, valueId): 'store place=${renderPlace(place)} value=${quote(valueId)}';
 			case IRIOAddress(place): 'address place=${renderPlace(place)}';
+			case IRIOBorrowClassField(place): 'borrow-class-field place=${renderPlace(place)}';
 			case IRIOUnary(operationId, valueId, selected):
 				'unary operation=${quote(operationId)} value=${quote(valueId)} implementation=${implementation(selected)}';
 			case IRIOBinary(operationId, leftValueId, rightValueId, selected):
@@ -135,6 +142,8 @@ class HxcIRDumper {
 			case IRIOCall(call): renderCall(call);
 			case IRIOConstructAggregate(instanceId, fields):
 				'construct-aggregate instance=${quote(instanceId)} fields=[${fields.map(field -> quote(field.name) + "=" + quote(field.valueId)).join(",")}]';
+			case IRIOConstructInterface(interfaceInstanceId, objectValueId, tableId):
+				'construct-interface interface=${quote(interfaceInstanceId)} object=${quote(objectValueId)} table=${quote(tableId)}';
 			case IRIOProject(valueId, fieldName): 'project value=${quote(valueId)} field=${quote(fieldName)}';
 			case IRIOConstructTag(instanceId, tagName, payload):
 				'construct-tag instance=${quote(instanceId)} tag=${quote(tagName)} payload=${strings(payload)}';
@@ -145,6 +154,7 @@ class HxcIRDumper {
 				'allocate type=${typeRef(type)} intent=${allocation(intent)} implementation=${implementation(selected)} failure=${failure == null ? "none" : failureEdge(failure)}';
 			case IRIODeallocate(place, selected): 'deallocate place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIORetain(place, selected): 'retain place=${renderPlace(place)} implementation=${implementation(selected)}';
+			case IRIORelease(place, selected): 'release place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIOTrace(place, selected): 'trace place=${renderPlace(place)} implementation=${implementation(selected)}';
 			case IRIODefaultInitialize(place, from, to):
 				'default-initialize place=${renderPlace(place)} transition=${state(from)}->${state(to)}';

@@ -1,4 +1,4 @@
-hxcir schema=10
+hxcir schema=17
 module "app.SideEffectSupport" @"test/hxc_ir/fixtures/SideEffectSupport.hx":1:1-10:2
   function "fn.nextIndex" name="app.SideEffectSupport.nextIndex" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
     block "entry" @"test/hxc_ir/fixtures/SideEffectSupport.hx":2:1-2:2
@@ -24,9 +24,9 @@ module "app.SideEffects" @"test/hxc_ir/fixtures/SideEffects.hx":1:1-40:2
   instance "instance.error" declaration="type.error" arguments=[] representation=tagged @"test/hxc_ir/fixtures/SideEffects.hx":5:1-8:2
   global "global.calls" type=i32 mutable=true initialization=constant(int(0)) @"test/hxc_ir/fixtures/SideEffects.hx":10:1-10:2
   function "fn.main" name="app.SideEffects.main" returns=i32 failure=infallible entry="entry" @"test/hxc_ir/fixtures/SideEffects.hx":12:1-24:2
-    local "local.array" type=instance("instance.buffer") storage=automatic state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":14:1-14:2
-    local "local.scratch" type=i32 storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
-    local "local.token" type=pointer(nullable,void) storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2
+    local "local.array" type=instance("instance.buffer") ownership=owned-or-value storage=automatic state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":14:1-14:2
+    local "local.scratch" type=i32 ownership=owned-or-value storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
+    local "local.token" type=pointer(nullable,void) ownership=owned-or-value storage=region("cleanup.inner") state=initialized @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2
     cleanup "cleanup.inner" parent="cleanup.outer" registration-order @"test/hxc_ir/fixtures/SideEffects.hx":15:1-21:2
       action "destroy-scratch" idempotence=exactly-once destroy place=local("local.scratch") transition=initialized->destroyed @"test/hxc_ir/fixtures/SideEffects.hx":15:1-15:2
       action "release-token" idempotence=exactly-once release place=local("local.token") implementation=program-local("helper.release-token") @"test/hxc_ir/fixtures/SideEffects.hx":16:1-16:2

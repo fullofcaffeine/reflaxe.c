@@ -8,6 +8,14 @@
   ],
   "messages": [
     {
+      "id": "aquatic_gear_equipped",
+      "symbol": "AquaticGearEquipped",
+      "text": {
+        "en": "AQUATIC GEAR EQUIPPED",
+        "es-MX": "EQUIPO ACUATICO ACTIVADO"
+      }
+    },
+    {
       "id": "brand",
       "symbol": "Brand",
       "text": {
@@ -72,6 +80,110 @@
       }
     },
     {
+      "id": "editor_back",
+      "symbol": "EditorBack",
+      "text": {
+        "en": "BACK",
+        "es-MX": "VOLVER"
+      }
+    },
+    {
+      "id": "editor_canvas_help",
+      "symbol": "EditorCanvasHelp",
+      "text": {
+        "en": "WORLD VIEWPORT — VISUAL BLOCK TOOLS ARE NEXT",
+        "es-MX": "VISTA DEL MUNDO — HERRAMIENTAS DE BLOQUES MUY PRONTO"
+      }
+    },
+    {
+      "id": "editor_invalid",
+      "symbol": "EditorInvalid",
+      "text": {
+        "en": "THE DRAFT NEEDS REPAIR BEFORE TEST PLAY",
+        "es-MX": "CORRIGE EL BORRADOR ANTES DE PROBARLO"
+      }
+    },
+    {
+      "id": "editor_new_world",
+      "symbol": "EditorNewWorld",
+      "text": {
+        "en": "NEW WORLD",
+        "es-MX": "MUNDO NUEVO"
+      }
+    },
+    {
+      "id": "editor_ready",
+      "symbol": "EditorReady",
+      "text": {
+        "en": "READY — EDITS USE THE REAL CAXEMAP SESSION",
+        "es-MX": "LISTO — LOS CAMBIOS USAN LA SESION CAXEMAP REAL"
+      }
+    },
+    {
+      "id": "editor_redo",
+      "symbol": "EditorRedo",
+      "text": {
+        "en": "REDO",
+        "es-MX": "REHACER"
+      }
+    },
+    {
+      "id": "editor_stop_test",
+      "symbol": "EditorStopTest",
+      "text": {
+        "en": "STOP TEST",
+        "es-MX": "DETENER PRUEBA"
+      }
+    },
+    {
+      "id": "editor_test",
+      "symbol": "EditorTest",
+      "text": {
+        "en": "TEST PLAY",
+        "es-MX": "PROBAR"
+      }
+    },
+    {
+      "id": "editor_testing",
+      "symbol": "EditorTesting",
+      "text": {
+        "en": "TEST PLAY USES A DISPOSABLE COPY",
+        "es-MX": "LA PRUEBA USA UNA COPIA DESECHABLE"
+      }
+    },
+    {
+      "id": "editor_title",
+      "symbol": "EditorTitle",
+      "text": {
+        "en": "CAXECRAFT WORLD EDITOR",
+        "es-MX": "EDITOR DE MUNDOS CAXECRAFT"
+      }
+    },
+    {
+      "id": "editor_undo",
+      "symbol": "EditorUndo",
+      "text": {
+        "en": "UNDO",
+        "es-MX": "DESHACER"
+      }
+    },
+    {
+      "id": "editor_valid",
+      "symbol": "EditorValid",
+      "text": {
+        "en": "VALID CAXEMAP — READY TO TEST",
+        "es-MX": "CAXEMAP VALIDO — LISTO PARA PROBAR"
+      }
+    },
+    {
+      "id": "editor_validate",
+      "symbol": "EditorValidate",
+      "text": {
+        "en": "VALIDATE",
+        "es-MX": "VALIDAR"
+      }
+    },
+    {
       "id": "health_full",
       "symbol": "HealthFull",
       "text": {
@@ -93,6 +205,14 @@
       "text": {
         "en": "CREATIVE MODE",
         "es-MX": "MODO CREATIVO"
+      }
+    },
+    {
+      "id": "menu_editor",
+      "symbol": "MenuEditor",
+      "text": {
+        "en": "WORLD EDITOR",
+        "es-MX": "EDITOR DE MUNDOS"
       }
     },
     {

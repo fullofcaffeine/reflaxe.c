@@ -95,6 +95,42 @@ class CPreparedBodyEnumInstance {
 	public var recursive:Bool = false;
 	public var scopedLifetime:Bool = false;
 
+	/**
+		True when an active constructor owns any payload with managed lifetime.
+
+		A tagged C union stores every constructor in overlapping memory. Retain and
+		destroy helpers must therefore inspect the tag and visit only the active
+		constructor. This explicit fact covers Arrays, Bytes, records, optionals,
+		and nested enums without letting ordinary struct-copy code read an inactive
+		union member.
+	**/
+	public var managedPayload:Bool = false;
+
+	/**
+		True when an active payload can reach an exact tracing-GC pointer.
+
+		This is separate from `managedPayload`: garbage-collected class references
+		copy as ordinary pointers and need no retain/destroy operation, but stack
+		roots and heap-container trace callbacks must still visit them.
+	**/
+	public var collectorPayload:Bool = false;
+
+	/**
+		True when copying this value requires typed ownership work.
+
+		Managed payloads retain or deep-copy their owned state. Recursive payloads
+		use owned heap nodes and must be deep-copied. Keeping the combined fact
+		separate from `managedPayload` preserves the distinction between ordinary
+		active payload ownership and recursive enum storage.
+	**/
+	public var managedLifetime:Bool = false;
+
+	public var retainRequest:Null<CSymbolRequest> = null;
+	public var destroyRequest:Null<CSymbolRequest> = null;
+	public var retainParameterRequest:Null<CSymbolRequest> = null;
+	public var destroyParameterRequest:Null<CSymbolRequest> = null;
+	public var retainStatusRequest:Null<CSymbolRequest> = null;
+
 	public function new(shapeKey:String, digest:String, haxePath:String, displayName:String, ownerModule:String, source:HxcSourceSpan,
 			representation:CBodyEnumRepresentation, typeParameterNames:Array<String>, typeArguments:Array<CGenericTypeArgument>,
 			arguments:Array<CBodyValueType>, valueTagRequest:CSymbolRequest, discriminantTagRequest:CSymbolRequest, payloadUnionRequest:Null<CSymbolRequest>,
@@ -163,6 +199,12 @@ class CPreparedBodyEnumInstance {
 		}
 		return null;
 	}
+
+	public function retainImplementationId():Null<String>
+		return managedLifetime ? 'enum-lifecycle:$instanceId:retain' : null;
+
+	public function destroyImplementationId():Null<String>
+		return managedLifetime ? 'enum-lifecycle:$instanceId:destroy' : null;
 }
 
 class CLoweredBodyEnumPayload {
@@ -201,9 +243,15 @@ class CLoweredBodyEnum {
 	public final tagMember:Null<CIdentifier>;
 	public final payloadMember:Null<CIdentifier>;
 	public final cases:Array<CLoweredBodyEnumCase>;
+	public final retainName:Null<CIdentifier>;
+	public final destroyName:Null<CIdentifier>;
+	public final retainParameterName:Null<CIdentifier>;
+	public final destroyParameterName:Null<CIdentifier>;
+	public final retainStatusName:Null<CIdentifier>;
 
 	public function new(prepared:CPreparedBodyEnumInstance, valueTag:CIdentifier, discriminantTag:CIdentifier, payloadUnionTag:Null<CIdentifier>,
-			tagMember:Null<CIdentifier>, payloadMember:Null<CIdentifier>, cases:Array<CLoweredBodyEnumCase>) {
+			tagMember:Null<CIdentifier>, payloadMember:Null<CIdentifier>, cases:Array<CLoweredBodyEnumCase>, retainName:Null<CIdentifier>,
+			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.valueTag = valueTag;
 		this.discriminantTag = discriminantTag;
@@ -211,6 +259,11 @@ class CLoweredBodyEnum {
 		this.tagMember = tagMember;
 		this.payloadMember = payloadMember;
 		this.cases = cases.copy();
+		this.retainName = retainName;
+		this.destroyName = destroyName;
+		this.retainParameterName = retainParameterName;
+		this.destroyParameterName = destroyParameterName;
+		this.retainStatusName = retainStatusName;
 	}
 
 	public function tagCase(name:String):Null<CLoweredBodyEnumCase> {
@@ -260,6 +313,8 @@ class CBodyEnumRegistry {
 		final reason = HaxeSourceSpan.fromPosition(position, ownerSourcePath);
 		final existing = byShape.get(shapeKey);
 		if (existing != null) {
+			if (existing.recursive && existing.collectorPayload)
+				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:${existing.haxePath}');
 			existing.addReason(reason);
 			return existing;
 		}
@@ -281,7 +336,7 @@ class CBodyEnumRegistry {
 			final value = resolveValue(parameter, position, definition.module, sourcePath, fail, '$node.type-argument');
 			if (value.spanElement() != null)
 				return rejected(fail, position, '$node.type-argument:borrowed-span-escape');
-			if (value.irType == IRTVoid || value.aggregateValue() != null || value.classValue() != null) {
+			if (value.irType == IRTVoid) {
 				return rejected(fail, position, '$node:unsupported-enum-type-argument:${value.cSpelling}');
 			}
 			value;
@@ -341,11 +396,15 @@ class CBodyEnumRegistry {
 			final tagCase = new CPreparedBodyEnumCase(caseName, field.index, caseSource, discriminantRequest, payloadStructRequest, unionMemberRequest);
 			for (index in 0...constructor.arguments.length) {
 				final argument = constructor.arguments[index];
-				rejectDirectReference(argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
 				final valueType = resolveValue(argument.type, field.pos, definition.module, sourcePath, fail, '$node.$caseName.${argument.name}');
+				// String is a Haxe reference type, but the admitted literal-backed view has
+				// program-long storage and copies safely by value. Other direct references
+				// still need an explicit ownership or recursive-layout policy.
+				if (valueType.staticStringIdentity() == null && valueType.arrayValue() == null && valueType.classValue() == null)
+					rejectDirectReference(argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
 				if (valueType.spanElement() != null)
 					return rejected(fail, field.pos, '$node.$caseName.${argument.name}:borrowed-span-payload-escape');
-				if (valueType.irType == IRTVoid || valueType.aggregateValue() != null || valueType.classValue() != null) {
+				if (valueType.irType == IRTVoid) {
 					return rejected(fail, field.pos, '$node:unsupported-payload:$path.$caseName.${argument.name}:${valueType.cSpelling}');
 				}
 				final request = new CSymbolRequest(CSKField, symbolRoot.concat(["case", caseName, "payload", argument.name]),
@@ -358,6 +417,8 @@ class CBodyEnumRegistry {
 		preparationDepth--;
 		if (preparationDepth == 0) {
 			recomputeRecursion();
+			if (prepared.recursive && prepared.collectorPayload)
+				return rejected(fail, position, '$node:recursive-enum-with-collector-payload:$path');
 		}
 		return prepared;
 	}
@@ -384,12 +445,16 @@ class CBodyEnumRegistry {
 	}
 
 	public function finalize(symbols:CSymbolRegistry):Array<CLoweredBodyEnum> {
-		return canonicalEnums().map(prepared -> new CLoweredBodyEnum(prepared, symbols.identifierFor(prepared.valueTagRequest),
-			symbols.identifierFor(prepared.discriminantTagRequest), identifierOrNull(symbols, prepared.payloadUnionRequest),
-			identifierOrNull(symbols, prepared.tagMemberRequest), identifierOrNull(symbols, prepared.payloadMemberRequest),
-			prepared.cases.map(tagCase -> new CLoweredBodyEnumCase(tagCase, symbols.identifierFor(tagCase.discriminantRequest),
+		return canonicalEnums().map(prepared -> {
+			final cases = prepared.cases.map(tagCase -> new CLoweredBodyEnumCase(tagCase, symbols.identifierFor(tagCase.discriminantRequest),
 				identifierOrNull(symbols, tagCase.payloadStructRequest), identifierOrNull(symbols, tagCase.unionMemberRequest),
-				tagCase.payload.map(payload -> new CLoweredBodyEnumPayload(payload, symbols.identifierFor(payload.request)))))));
+				tagCase.payload.map(payload -> new CLoweredBodyEnumPayload(payload, symbols.identifierFor(payload.request)))));
+			return new CLoweredBodyEnum(prepared, symbols.identifierFor(prepared.valueTagRequest), symbols.identifierFor(prepared.discriminantTagRequest),
+				identifierOrNull(symbols, prepared.payloadUnionRequest), identifierOrNull(symbols, prepared.tagMemberRequest),
+				identifierOrNull(symbols, prepared.payloadMemberRequest), cases, identifierOrNull(symbols, prepared.retainRequest),
+				identifierOrNull(symbols, prepared.destroyRequest), identifierOrNull(symbols, prepared.retainParameterRequest),
+				identifierOrNull(symbols, prepared.destroyParameterRequest), identifierOrNull(symbols, prepared.retainStatusRequest));
+		});
 	}
 
 	function recomputeRecursion():Void {
@@ -406,6 +471,95 @@ class CBodyEnumRegistry {
 		}
 		for (value in byShape)
 			value.scopedLifetime = requiresScopedLifetime(value, []);
+		for (value in byShape) {
+			value.managedPayload = requiresManagedPayloadLifecycle(value, []);
+			value.collectorPayload = requiresCollectorPayload(value, []);
+			value.managedLifetime = value.managedPayload || value.recursive;
+			if (value.managedLifetime)
+				registerManagedLifecycle(value);
+		}
+	}
+
+	/** Whether a direct finite payload shape contains a tracing-GC reference. */
+	function requiresCollectorPayload(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {
+		if (visited.exists(value.instanceId))
+			return false;
+		visited.set(value.instanceId, true);
+		for (tagCase in value.cases)
+			for (payload in tagCase.payload) {
+				if (payload.indirect)
+					continue;
+				if (valueTypeContainsCollectorReference(payload.valueType, visited))
+					return true;
+			}
+		return false;
+	}
+
+	function valueTypeContainsCollectorReference(type:CBodyValueType, visited:Map<String, Bool>):Bool {
+		if (type.classValue() != null)
+			return true;
+		final array = type.arrayValue();
+		if (array != null && array.managedByCollector)
+			return true;
+		final aggregate = type.aggregateValue();
+		if (aggregate != null) {
+			for (field in aggregate.fields)
+				if (valueTypeContainsCollectorReference(field.type, visited))
+					return true;
+			return false;
+		}
+		final optional = type.optionalValue();
+		if (optional != null)
+			return valueTypeContainsCollectorReference(optional.payload, visited);
+		final nested = type.enumValue();
+		return nested != null && requiresCollectorPayload(nested, visited);
+	}
+
+	function requiresManagedPayloadLifecycle(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {
+		if (visited.exists(value.instanceId))
+			return false;
+		visited.set(value.instanceId, true);
+		for (tagCase in value.cases) {
+			for (payload in tagCase.payload) {
+				final array = payload.valueType.arrayValue();
+				if (array != null && !array.managedByCollector || payload.valueType.bytesValue() != null)
+					return true;
+				final aggregate = payload.valueType.aggregateValue();
+				if (aggregate != null && aggregate.managedLifetime)
+					return true;
+				final optional = payload.valueType.optionalValue();
+				if (optional != null && optional.managedLifetime)
+					return true;
+				final nested = payload.valueType.enumValue();
+				if (nested != null && !payload.indirect && requiresManagedPayloadLifecycle(nested, visited))
+					return true;
+			}
+		}
+		return false;
+	}
+
+	function registerManagedLifecycle(value:CPreparedBodyEnumInstance):Void {
+		if (value.retainRequest != null)
+			return;
+		final root = ["compiler", "haxe-enum", value.digest, "lifecycle"];
+		value.retainRequest = new CSymbolRequest(CSKMethod, root.concat(["retain"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 0,
+			["enum", value.digest.substr(0, 8), "retain"]);
+		value.destroyRequest = new CSymbolRequest(CSKMethod, root.concat(["destroy"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 1,
+			["enum", value.digest.substr(0, 8), "destroy"]);
+		context.symbols.register(value.retainRequest);
+		context.symbols.register(value.destroyRequest);
+		value.retainParameterRequest = lifecycleLocal(value.retainRequest, "value", 0);
+		value.destroyParameterRequest = lifecycleLocal(value.destroyRequest, "value", 0);
+		// Avoid shadowing the public `hxc_status` typedef in C's ordinary
+		// identifier namespace. GCC diagnoses that ambiguity in the strict lane.
+		value.retainStatusRequest = lifecycleLocal(value.retainRequest, "operation_status", 1);
+	}
+
+	function lifecycleLocal(owner:CSymbolRequest, role:String, ordinal:Int):CSymbolRequest {
+		final request = new CSymbolRequest(CSKLocal, owner.qualifiedName.concat([role]), CNSOrdinary(owner.stableKey()), CSVInternal, null, [], [], ordinal,
+			[role]);
+		context.symbols.register(request);
+		return request;
 	}
 
 	function requiresScopedLifetime(value:CPreparedBodyEnumInstance, visited:Map<String, Bool>):Bool {

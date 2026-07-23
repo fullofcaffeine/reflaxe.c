@@ -12,6 +12,10 @@
     "cName": "hxc_ClassLayoutFixture_asRoot"
   },
   {
+    "semanticName": "ClassLayoutFixture.branchProofDoesNotEscape",
+    "cName": "hxc_ClassLayoutFixture_branchProofDoesNotEscape"
+  },
+  {
     "semanticName": "ClassLayoutFixture.different",
     "cName": "hxc_ClassLayoutFixture_different"
   },
@@ -42,6 +46,10 @@
   {
     "semanticName": "ClassLayoutFixture.same",
     "cName": "hxc_ClassLayoutFixture_same"
+  },
+  {
+    "semanticName": "ClassLayoutFixture.sumAcrossBranch",
+    "cName": "hxc_ClassLayoutFixture_sumAcrossBranch"
   },
   {
     "semanticName": "ClassLayoutFixture.writeInherited",

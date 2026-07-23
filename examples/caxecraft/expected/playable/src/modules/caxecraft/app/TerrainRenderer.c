@@ -1,195 +1,11 @@
 #include "hxc/program.h"
 
-struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer_draw(uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_texture, bool hxc_textureReady, double hxc_playerX, double hxc_playerZ)
+void hxc_compiler_constructor_caxecraft_app_TerrainRenderer(struct hxc_caxecraft_app_TerrainRenderer *hxc_self)
 {
-  uint8_t *hxc_borrow = hxc_cells;
-  size_t hxc_tmp_length_n5 = hxc_length;
-  (void)hxc_borrow;
-  (void)hxc_tmp_length_n5;
-  if (!hxc_textureReady)
-  {
-    return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_drawCalls = 0, .hxc_visible = 0 };
-  }
-  double hxc_halfPixel = hxc_f64_divide_zero_safe(0.5, (double)(int32_t)hxc_texture.width);
-  int32_t hxc_playerCellX = hxc_f64_to_i32_saturating(hxc_playerX);
-  int32_t hxc_playerCellZ = hxc_f64_to_i32_saturating(hxc_playerZ);
-  int32_t hxc_visible = 0;
-  int32_t hxc_faces = 0;
-  struct Texture hxc_raw = hxc_texture;
-  uint32_t *hxc_tmp_imported_field_address_n2 = &hxc_raw.id;
-  uint32_t hxc_tmp_imported_field_load_result_n3 = *hxc_tmp_imported_field_address_n2;
-  rlSetTexture(hxc_tmp_imported_field_load_result_n3);
-  rlBegin((int32_t)7);
-  int32_t hxc_z = 0;
-  while (1)
-  {
-    if (!(hxc_z < 32))
-    {
-      break;
-    }
-    int32_t hxc_y = 0;
-    while (1)
-    {
-      if (!(hxc_y < 16))
-      {
-        break;
-      }
-      int32_t hxc_x = 0;
-      while (1)
-      {
-        if (!(hxc_x < 32))
-        {
-          break;
-        }
-        int32_t hxc_tmp_load_result_n7 = hxc_x;
-        int32_t hxc_tmp_load_result_n8 = hxc_y;
-        struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n10 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n7, hxc_tmp_load_result_n8, hxc_z);
-        enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n11 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n10);
-        enum hxc_caxecraft_domain_BlockKind hxc_kind = hxc_tmp_call_result_n11;
-        bool hxc_tmp_call_result_n13 = hxc_caxecraft_domain_World_isSolid(hxc_kind);
-        if (hxc_tmp_call_result_n13)
-        {
-          bool hxc_blockVisible = false;
-          int32_t hxc_tmp_load_result_n14 = hxc_x;
-          int32_t hxc_dx = hxc_i32_subtract_wrapping(hxc_tmp_load_result_n14, hxc_playerCellX);
-          if (hxc_dx < 0)
-          {
-            hxc_dx = hxc_i32_negate_wrapping(hxc_dx);
-          }
-          int32_t hxc_tmp_load_result_n18 = hxc_z;
-          int32_t hxc_dz = hxc_i32_subtract_wrapping(hxc_tmp_load_result_n18, hxc_playerCellZ);
-          if (hxc_dz < 0)
-          {
-            hxc_dz = hxc_i32_negate_wrapping(hxc_dz);
-          }
-          int32_t hxc_tmp_load_result_n22 = hxc_dx;
-          int32_t hxc_tmp_load_result_n23 = hxc_dz;
-          int32_t hxc_tmp_conditional_result_n20 = 0;
-          if (hxc_tmp_load_result_n22 > hxc_tmp_load_result_n23)
-          {
-            hxc_tmp_conditional_result_n20 = hxc_dx;
-          }
-          else
-          {
-            hxc_tmp_conditional_result_n20 = hxc_dz;
-          }
-          int32_t hxc_distance = hxc_tmp_conditional_result_n20;
-          int32_t hxc_tmp_load_result_n27 = hxc_x;
-          int32_t hxc_tmp_load_result_n28 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n30 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n27, hxc_i32_add_wrapping(hxc_tmp_load_result_n28, 1), hxc_z);
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n31 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n30);
-          bool hxc_tmp_call_result_n32 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n31);
-          if (!hxc_tmp_call_result_n32)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n33 = hxc_kind;
-            int32_t hxc_tmp_load_result_n35 = hxc_x;
-            int32_t hxc_tmp_load_result_n36 = hxc_y;
-            int32_t hxc_tmp_load_result_n37 = hxc_z;
-            double hxc_tmp_load_result_n38 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n33, hxc_caxecraft_app_VoxelFace_Top, hxc_tmp_load_result_n35, hxc_tmp_load_result_n36, hxc_tmp_load_result_n37, hxc_tmp_load_result_n38, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          int32_t hxc_tmp_load_result_n41 = hxc_x;
-          int32_t hxc_tmp_load_result_n42 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n44 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n41, hxc_i32_subtract_wrapping(hxc_tmp_load_result_n42, 1), hxc_z);
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n45 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n44);
-          bool hxc_tmp_call_result_n46 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n45);
-          if (!hxc_tmp_call_result_n46)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n47 = hxc_kind;
-            int32_t hxc_tmp_load_result_n49 = hxc_x;
-            int32_t hxc_tmp_load_result_n50 = hxc_y;
-            int32_t hxc_tmp_load_result_n51 = hxc_z;
-            double hxc_tmp_load_result_n52 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n47, hxc_caxecraft_app_VoxelFace_Bottom, hxc_tmp_load_result_n49, hxc_tmp_load_result_n50, hxc_tmp_load_result_n51, hxc_tmp_load_result_n52, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          int32_t hxc_tmp_load_result_n55 = hxc_x;
-          int32_t hxc_tmp_load_result_n56 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n58 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n55, hxc_tmp_load_result_n56, hxc_i32_subtract_wrapping(hxc_z, 1));
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n59 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n58);
-          bool hxc_tmp_call_result_n60 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n59);
-          if (!hxc_tmp_call_result_n60)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n61 = hxc_kind;
-            int32_t hxc_tmp_load_result_n63 = hxc_x;
-            int32_t hxc_tmp_load_result_n64 = hxc_y;
-            int32_t hxc_tmp_load_result_n65 = hxc_z;
-            double hxc_tmp_load_result_n66 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n61, hxc_caxecraft_app_VoxelFace_North, hxc_tmp_load_result_n63, hxc_tmp_load_result_n64, hxc_tmp_load_result_n65, hxc_tmp_load_result_n66, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          int32_t hxc_tmp_load_result_n69 = hxc_x;
-          int32_t hxc_tmp_load_result_n70 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n72 = hxc_caxecraft_domain_World_coord(hxc_tmp_load_result_n69, hxc_tmp_load_result_n70, hxc_i32_add_wrapping(hxc_z, 1));
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n73 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n72);
-          bool hxc_tmp_call_result_n74 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n73);
-          if (!hxc_tmp_call_result_n74)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n75 = hxc_kind;
-            int32_t hxc_tmp_load_result_n77 = hxc_x;
-            int32_t hxc_tmp_load_result_n78 = hxc_y;
-            int32_t hxc_tmp_load_result_n79 = hxc_z;
-            double hxc_tmp_load_result_n80 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n75, hxc_caxecraft_app_VoxelFace_South, hxc_tmp_load_result_n77, hxc_tmp_load_result_n78, hxc_tmp_load_result_n79, hxc_tmp_load_result_n80, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          int32_t hxc_tmp_load_result_n83 = hxc_x;
-          int32_t hxc_tmp_load_result_n84 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n86 = hxc_caxecraft_domain_World_coord(hxc_i32_add_wrapping(hxc_tmp_load_result_n83, 1), hxc_tmp_load_result_n84, hxc_z);
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n87 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n86);
-          bool hxc_tmp_call_result_n88 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n87);
-          if (!hxc_tmp_call_result_n88)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n89 = hxc_kind;
-            int32_t hxc_tmp_load_result_n91 = hxc_x;
-            int32_t hxc_tmp_load_result_n92 = hxc_y;
-            int32_t hxc_tmp_load_result_n93 = hxc_z;
-            double hxc_tmp_load_result_n94 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n89, hxc_caxecraft_app_VoxelFace_East, hxc_tmp_load_result_n91, hxc_tmp_load_result_n92, hxc_tmp_load_result_n93, hxc_tmp_load_result_n94, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          int32_t hxc_tmp_load_result_n97 = hxc_x;
-          int32_t hxc_tmp_load_result_n98 = hxc_y;
-          struct hxc_caxecraft_domain_BlockCoord hxc_tmp_call_result_n100 = hxc_caxecraft_domain_World_coord(hxc_i32_subtract_wrapping(hxc_tmp_load_result_n97, 1), hxc_tmp_load_result_n98, hxc_z);
-          enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n101 = hxc_caxecraft_domain_World_query(hxc_cells, hxc_length, hxc_tmp_call_result_n100);
-          bool hxc_tmp_call_result_n102 = hxc_caxecraft_domain_World_isSolid(hxc_tmp_call_result_n101);
-          if (!hxc_tmp_call_result_n102)
-          {
-            enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n103 = hxc_kind;
-            int32_t hxc_tmp_load_result_n105 = hxc_x;
-            int32_t hxc_tmp_load_result_n106 = hxc_y;
-            int32_t hxc_tmp_load_result_n107 = hxc_z;
-            double hxc_tmp_load_result_n108 = hxc_halfPixel;
-            hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n103, hxc_caxecraft_app_VoxelFace_West, hxc_tmp_load_result_n105, hxc_tmp_load_result_n106, hxc_tmp_load_result_n107, hxc_tmp_load_result_n108, hxc_distance);
-            hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
-            hxc_blockVisible = true;
-          }
-          if (hxc_blockVisible)
-          {
-            hxc_visible = hxc_i32_add_wrapping(hxc_visible, 1);
-          }
-        }
-        hxc_x = hxc_i32_add_wrapping(hxc_x, 1);
-      }
-      hxc_y = hxc_i32_add_wrapping(hxc_y, 1);
-    }
-    hxc_z = hxc_i32_add_wrapping(hxc_z, 1);
-  }
-  rlEnd();
-  rlSetTexture((uint32_t)0);
-  int32_t hxc_drawCalls = 0;
-  if (hxc_faces > 0)
-  {
-    hxc_drawCalls = 1;
-  }
-  int32_t hxc_tmp_load_result_n117 = hxc_visible;
-  return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_drawCalls = hxc_drawCalls, .hxc_visible = hxc_tmp_load_result_n117 };
+  (*hxc_self).hxc_totalRebuiltChunks = 0;
+  struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_cache;
+  hxc_compiler_constructor_caxecraft_app_TerrainChunkCache(hxc_tmp_owned_class_field_address_n0);
+  return;
 }
 
 void hxc_caxecraft_app_TerrainRenderer_emitFace(enum hxc_caxecraft_domain_BlockKind hxc_kind, enum hxc_caxecraft_app_VoxelFace hxc_face, int32_t hxc_x, int32_t hxc_y, int32_t hxc_z, double hxc_halfPixel, int32_t hxc_distance)
@@ -220,78 +36,102 @@ void hxc_caxecraft_app_TerrainRenderer_emitFace(enum hxc_caxecraft_domain_BlockK
       {
         rlNormal3f((float)0.0, (float)1.0, (float)0.0);
         double hxc_tmp_load_result_n18 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n18, hxc_v0, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n18, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         double hxc_tmp_load_result_n20 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n20, hxc_v1, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n20, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n22 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n22, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n22, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n24 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n24, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n24, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         break;
       }
     case hxc_caxecraft_app_VoxelFace_Bottom:
       {
         rlNormal3f((float)0.0, (float)-1.0, (float)0.0);
         double hxc_tmp_load_result_n26 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n26, hxc_v0, (double)hxc_x, (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n26, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_z);
         double hxc_tmp_load_result_n28 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n28, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n28, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_z);
         double hxc_tmp_load_result_n30 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n30, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n30, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n32 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n32, hxc_v1, (double)hxc_x, (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n32, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         break;
       }
     case hxc_caxecraft_app_VoxelFace_North:
       {
         rlNormal3f((float)0.0, (float)0.0, (float)-1.0);
         double hxc_tmp_load_result_n34 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n34, hxc_v1, (double)hxc_x, (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n34, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_z);
         double hxc_tmp_load_result_n36 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n36, hxc_v0, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n36, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         double hxc_tmp_load_result_n38 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n38, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n38, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         double hxc_tmp_load_result_n40 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n40, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n40, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_z);
         break;
       }
     case hxc_caxecraft_app_VoxelFace_South:
       {
         rlNormal3f((float)0.0, (float)0.0, (float)1.0);
         double hxc_tmp_load_result_n42 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n42, hxc_v1, (double)hxc_x, (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n42, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n44 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n44, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n44, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n46 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n46, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n46, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n48 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n48, hxc_v0, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n48, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         break;
       }
     case hxc_caxecraft_app_VoxelFace_East:
       {
         rlNormal3f((float)1.0, (float)0.0, (float)0.0);
         double hxc_tmp_load_result_n50 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n50, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n50, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_z);
         double hxc_tmp_load_result_n52 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n52, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n52, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         double hxc_tmp_load_result_n54 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n54, hxc_v0, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n54, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n56 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n56, hxc_v1, (double)hxc_i32_add_wrapping(hxc_x, 1), (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n56, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_i32_add_wrapping(hxc_x, 1), (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         break;
       }
     case hxc_caxecraft_app_VoxelFace_West:
       {
         rlNormal3f((float)-1.0, (float)0.0, (float)0.0);
         double hxc_tmp_load_result_n58 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n58, hxc_v1, (double)hxc_x, (double)hxc_y, (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n58, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_z);
         double hxc_tmp_load_result_n60 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n60, hxc_v1, (double)hxc_x, (double)hxc_y, (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n60, (float)hxc_v1);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_y, (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n62 = hxc_u1;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n62, hxc_v0, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_i32_add_wrapping(hxc_z, 1));
+        rlTexCoord2f((float)hxc_tmp_load_result_n62, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_i32_add_wrapping(hxc_z, 1));
         double hxc_tmp_load_result_n64 = hxc_u0;
-        hxc_caxecraft_app_TerrainRenderer_vertex(hxc_tmp_load_result_n64, hxc_v0, (double)hxc_x, (double)hxc_i32_add_wrapping(hxc_y, 1), (double)hxc_z);
+        rlTexCoord2f((float)hxc_tmp_load_result_n64, (float)hxc_v0);
+        rlVertex3f((float)(double)hxc_x, (float)(double)hxc_i32_add_wrapping(hxc_y, 1), (float)(double)hxc_z);
         break;
       }
   }
@@ -371,9 +211,193 @@ struct Color hxc_caxecraft_app_TerrainRenderer_faceTint(enum hxc_caxecraft_app_V
   return (struct Color){ .r = 220, .g = 235, .b = 226, .a = 255 };
 }
 
-void hxc_caxecraft_app_TerrainRenderer_vertex(double hxc_u, double hxc_v, double hxc_x, double hxc_y, double hxc_z)
+int32_t hxc_caxecraft_app_TerrainRenderer_squareDistance(int32_t hxc_x, int32_t hxc_z, int32_t hxc_playerX, int32_t hxc_playerZ)
 {
-  rlTexCoord2f((float)hxc_u, (float)hxc_v);
-  rlVertex3f((float)hxc_x, (float)hxc_y, (float)hxc_z);
-  return;
+  int32_t hxc_dx = hxc_i32_subtract_wrapping(hxc_x, hxc_playerX);
+  if (hxc_dx < 0)
+  {
+    hxc_dx = hxc_i32_negate_wrapping(hxc_dx);
+  }
+  int32_t hxc_dz = hxc_i32_subtract_wrapping(hxc_z, hxc_playerZ);
+  if (hxc_dz < 0)
+  {
+    hxc_dz = hxc_i32_negate_wrapping(hxc_dz);
+  }
+  int32_t hxc_tmp_load_result_n4 = hxc_dx;
+  if (!(hxc_tmp_load_result_n4 > hxc_dz))
+  {
+    return hxc_dz;
+  }
+  return hxc_dx;
+}
+
+struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_TerrainRenderer_draw(struct hxc_caxecraft_app_TerrainRenderer *hxc_self, uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_baseTexture, bool hxc_baseReady, struct Texture hxc_adventureTexture, bool hxc_adventureReady, double hxc_playerX, double hxc_playerZ)
+{
+  uint8_t *hxc_borrow = hxc_cells;
+  size_t hxc_tmp_length_n8 = hxc_length;
+  (void)hxc_borrow;
+  (void)hxc_tmp_length_n8;
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n0 = &(*hxc_self).hxc_cache;
+  if (hxc_tmp_owned_class_field_address_n0 == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_app_TerrainChunkPreparation hxc_tmp_instance_call_result_n1 = hxc_caxecraft_app_TerrainChunkCache_prepare(hxc_tmp_owned_class_field_address_n0, hxc_cells, hxc_length);
+  struct hxc_caxecraft_app_TerrainChunkPreparation hxc_preparation = hxc_tmp_instance_call_result_n1;
+  int32_t hxc_tmp_compound_load_result_n2 = (*hxc_self).hxc_totalRebuiltChunks;
+  (*hxc_self).hxc_totalRebuiltChunks = hxc_i32_add_wrapping(hxc_tmp_compound_load_result_n2, hxc_preparation.hxc_rebuiltChunks);
+  if (!!hxc_preparation.hxc_valid)
+  {
+    int32_t hxc_playerCellX = hxc_f64_to_i32_saturating(hxc_playerX);
+    int32_t hxc_playerCellZ = hxc_f64_to_i32_saturating(hxc_playerZ);
+    int32_t hxc_tmp_load_result_n9 = hxc_playerCellX;
+    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_tmp_instance_call_result_n11 = hxc_caxecraft_app_TerrainRenderer_drawSheet(hxc_self, hxc_baseTexture, hxc_baseReady, hxc_caxecraft_app_TerrainSheet_Base, hxc_tmp_load_result_n9, hxc_playerCellZ);
+    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_base = hxc_tmp_instance_call_result_n11;
+    int32_t hxc_tmp_load_result_n13 = hxc_playerCellX;
+    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_tmp_instance_call_result_n15 = hxc_caxecraft_app_TerrainRenderer_drawSheet(hxc_self, hxc_adventureTexture, hxc_adventureReady, hxc_caxecraft_app_TerrainSheet_Adventure, hxc_tmp_load_result_n13, hxc_playerCellZ);
+    struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_adventure = hxc_tmp_instance_call_result_n15;
+    int32_t hxc_tmp_record_field_load_result_n16 = hxc_base.hxc_visible;
+    int32_t hxc_tmp_record_field_load_result_n17 = hxc_adventure.hxc_visible;
+    int32_t hxc_tmp_record_field_load_result_n18 = hxc_base.hxc_faces;
+    int32_t hxc_tmp_record_field_load_result_n19 = hxc_adventure.hxc_faces;
+    int32_t hxc_tmp_record_field_load_result_n20 = hxc_base.hxc_drawCalls;
+    int32_t hxc_tmp_record_field_load_result_n21 = hxc_adventure.hxc_drawCalls;
+    int32_t hxc_tmp_record_field_load_result_n22 = hxc_preparation.hxc_rebuiltChunks;
+    int32_t hxc_tmp_class_field_load_result_n23 = (*hxc_self).hxc_totalRebuiltChunks;
+    return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_cacheValid = true, .hxc_drawCalls = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n20, hxc_tmp_record_field_load_result_n21), .hxc_faces = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n18, hxc_tmp_record_field_load_result_n19), .hxc_rebuiltChunks = hxc_tmp_record_field_load_result_n22, .hxc_totalRebuiltChunks = hxc_tmp_class_field_load_result_n23, .hxc_visible = hxc_i32_add_wrapping(hxc_tmp_record_field_load_result_n16, hxc_tmp_record_field_load_result_n17) };
+  }
+  int32_t hxc_tmp_record_field_load_result_n5 = hxc_preparation.hxc_rebuiltChunks;
+  int32_t hxc_tmp_class_field_load_result_n6 = (*hxc_self).hxc_totalRebuiltChunks;
+  return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_cacheValid = false, .hxc_drawCalls = 0, .hxc_faces = 0, .hxc_rebuiltChunks = hxc_tmp_record_field_load_result_n5, .hxc_totalRebuiltChunks = hxc_tmp_class_field_load_result_n6, .hxc_visible = 0 };
+}
+
+struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters hxc_caxecraft_app_TerrainRenderer_drawSheet(struct hxc_caxecraft_app_TerrainRenderer *hxc_self, struct Texture hxc_texture, bool hxc_textureReady, enum hxc_caxecraft_app_TerrainSheet hxc_sheet, int32_t hxc_playerCellX, int32_t hxc_playerCellZ)
+{
+  if (!hxc_textureReady)
+  {
+    return (struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters){ .hxc_drawCalls = 0, .hxc_faces = 0, .hxc_visible = 0 };
+  }
+  double hxc_halfPixel = hxc_f64_divide_zero_safe(0.5, (double)(int32_t)hxc_texture.width);
+  int32_t hxc_faces = 0;
+  struct Texture hxc_raw = hxc_texture;
+  uint32_t *hxc_tmp_imported_field_address_n2 = &hxc_raw.id;
+  uint32_t hxc_tmp_imported_field_load_result_n3 = *hxc_tmp_imported_field_address_n2;
+  rlSetTexture(hxc_tmp_imported_field_load_result_n3);
+  rlBegin((int32_t)7);
+  int32_t hxc_chunk = 0;
+  while (1)
+  {
+    if (!(hxc_chunk < 16))
+    {
+      break;
+    }
+    if (hxc_self == NULL)
+    {
+      abort();
+    }
+    struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n5 = &(*hxc_self).hxc_cache;
+    struct hxc_caxecraft_app_TerrainChunkCache *hxc_this = hxc_tmp_owned_class_field_address_n5;
+    (void)hxc_this;
+    int32_t hxc_tmp_call_result_n7 = hxc_caxecraft_app_TerrainChunkLayout_facePartitionStart(hxc_chunk);
+    int32_t hxc_start = hxc_tmp_call_result_n7;
+    struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n8 = &(*hxc_self).hxc_cache;
+    if (hxc_tmp_owned_class_field_address_n8 == NULL)
+    {
+      abort();
+    }
+    int32_t hxc_tmp_instance_call_result_n10 = hxc_caxecraft_app_TerrainChunkCache_chunkFaceCount(hxc_tmp_owned_class_field_address_n8, hxc_chunk);
+    int32_t hxc_count = hxc_tmp_instance_call_result_n10;
+    int32_t hxc_offset = 0;
+    while (1)
+    {
+      int32_t hxc_tmp_load_result_n11 = hxc_offset;
+      if (!(hxc_tmp_load_result_n11 < hxc_count))
+      {
+        break;
+      }
+      int32_t hxc_tmp_load_result_n13 = hxc_start;
+      int32_t hxc_index = hxc_i32_add_wrapping(hxc_tmp_load_result_n13, hxc_offset);
+      struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n15 = &(*hxc_self).hxc_cache;
+      int32_t hxc_tmp_load_result_n16 = hxc_index;
+      if (hxc_tmp_load_result_n16 < 0 || (size_t)hxc_tmp_load_result_n16 >= 49152)
+      {
+        abort();
+      }
+      uint8_t hxc_tmp_collection_index_load_result_n17 = (*hxc_tmp_owned_class_field_address_n15).hxc_packedFaces[(size_t)hxc_tmp_load_result_n16];
+      int32_t hxc_packed = (int32_t)hxc_tmp_collection_index_load_result_n17;
+      enum hxc_caxecraft_domain_BlockKind hxc_tmp_call_result_n19 = hxc_caxecraft_app_TerrainChunkLayout_unpackKind(hxc_packed);
+      enum hxc_caxecraft_domain_BlockKind hxc_kind = hxc_tmp_call_result_n19;
+      enum hxc_caxecraft_app_TerrainSheet hxc_tmp_call_result_n21 = hxc_caxecraft_app_TerrainAtlas_sheet(hxc_kind);
+      if (hxc_tmp_call_result_n21 == hxc_sheet)
+      {
+        struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n22 = &(*hxc_self).hxc_cache;
+        int32_t hxc_tmp_load_result_n23 = hxc_index;
+        if (hxc_tmp_load_result_n23 < 0 || (size_t)hxc_tmp_load_result_n23 >= 49152)
+        {
+          abort();
+        }
+        uint8_t hxc_tmp_collection_index_load_result_n24 = (*hxc_tmp_owned_class_field_address_n22).hxc_faceX[(size_t)hxc_tmp_load_result_n23];
+        int32_t hxc_x = (int32_t)hxc_tmp_collection_index_load_result_n24;
+        struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n25 = &(*hxc_self).hxc_cache;
+        int32_t hxc_tmp_load_result_n26 = hxc_index;
+        if (hxc_tmp_load_result_n26 < 0 || (size_t)hxc_tmp_load_result_n26 >= 49152)
+        {
+          abort();
+        }
+        uint8_t hxc_tmp_collection_index_load_result_n27 = (*hxc_tmp_owned_class_field_address_n25).hxc_faceY[(size_t)hxc_tmp_load_result_n26];
+        int32_t hxc_y = (int32_t)hxc_tmp_collection_index_load_result_n27;
+        struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n28 = &(*hxc_self).hxc_cache;
+        int32_t hxc_tmp_load_result_n29 = hxc_index;
+        if (hxc_tmp_load_result_n29 < 0 || (size_t)hxc_tmp_load_result_n29 >= 49152)
+        {
+          abort();
+        }
+        uint8_t hxc_tmp_collection_index_load_result_n30 = (*hxc_tmp_owned_class_field_address_n28).hxc_faceZ[(size_t)hxc_tmp_load_result_n29];
+        int32_t hxc_z = (int32_t)hxc_tmp_collection_index_load_result_n30;
+        enum hxc_caxecraft_domain_BlockKind hxc_tmp_load_result_n31 = hxc_kind;
+        enum hxc_caxecraft_app_VoxelFace hxc_tmp_call_result_n33 = hxc_caxecraft_app_TerrainChunkLayout_unpackFace(hxc_packed);
+        int32_t hxc_tmp_load_result_n34 = hxc_x;
+        int32_t hxc_tmp_load_result_n35 = hxc_y;
+        int32_t hxc_tmp_load_result_n36 = hxc_z;
+        double hxc_tmp_load_result_n37 = hxc_halfPixel;
+        int32_t hxc_tmp_load_result_n38 = hxc_x;
+        int32_t hxc_tmp_call_result_n40 = hxc_caxecraft_app_TerrainRenderer_squareDistance(hxc_tmp_load_result_n38, hxc_z, hxc_playerCellX, hxc_playerCellZ);
+        hxc_caxecraft_app_TerrainRenderer_emitFace(hxc_tmp_load_result_n31, hxc_tmp_call_result_n33, hxc_tmp_load_result_n34, hxc_tmp_load_result_n35, hxc_tmp_load_result_n36, hxc_tmp_load_result_n37, hxc_tmp_call_result_n40);
+        hxc_faces = hxc_i32_add_wrapping(hxc_faces, 1);
+      }
+      hxc_offset = hxc_i32_add_wrapping(hxc_offset, 1);
+    }
+    hxc_chunk = hxc_i32_add_wrapping(hxc_chunk, 1);
+  }
+  rlEnd();
+  rlSetTexture((uint32_t)0);
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  struct hxc_caxecraft_app_TerrainChunkCache *hxc_tmp_owned_class_field_address_n44 = &(*hxc_self).hxc_cache;
+  if (hxc_tmp_owned_class_field_address_n44 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_instance_call_result_n45 = hxc_caxecraft_app_TerrainChunkCache_visibleBlocks(hxc_tmp_owned_class_field_address_n44, hxc_sheet);
+  int32_t hxc_tmp_record_field_visible_n20 = hxc_tmp_instance_call_result_n45;
+  int32_t hxc_tmp_record_field_faces_n21 = hxc_faces;
+  int32_t hxc_tmp_load_result_n47 = hxc_faces;
+  int32_t hxc_tmp_conditional_result_n22 = 0;
+  if (hxc_tmp_load_result_n47 > 0)
+  {
+    hxc_tmp_conditional_result_n22 = 1;
+  }
+  else
+  {
+    hxc_tmp_conditional_result_n22 = 0;
+  }
+  int32_t hxc_tmp_conditional_load_result_n48 = hxc_tmp_conditional_result_n22;
+  int32_t hxc_tmp_record_field_faces_load_result_n49 = hxc_tmp_record_field_faces_n21;
+  return (struct hxc_caxecraft_app_TerrainRenderer_TerrainSheetCounters){ .hxc_drawCalls = hxc_tmp_conditional_load_result_n48, .hxc_faces = hxc_tmp_record_field_faces_load_result_n49, .hxc_visible = hxc_tmp_record_field_visible_n20 };
 }

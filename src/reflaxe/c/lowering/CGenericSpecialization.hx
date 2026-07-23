@@ -15,6 +15,18 @@ import reflaxe.c.semantics.CPrimitiveTypes;
 enum abstract CGenericArgumentRepresentation(String) to String {
 	var DirectPrimitive = "direct-primitive";
 	var DirectEnum = "direct-enum";
+
+	/** Runtime-sized `Array<T>` whose closed element identity remains structural. */
+	var ManagedArray = "managed-array";
+
+	/** Closed anonymous record carried by value after aggregate planning. */
+	var DirectRecord = "direct-record";
+
+	/** Immutable Haxe String identity; storage policy remains a later decision. */
+	var ImmutableString = "immutable-string";
+
+	/** Haxe `Null<T>` identity; the later representation still depends on `T`. */
+	var NullableValue = "nullable-value";
 }
 
 /** A validated closed type argument plus its raw compiler type for substitution. */
@@ -127,38 +139,103 @@ class CGenericTypeCanonicalizer {
 	}
 
 	public function normalize(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument
-		return normalizeType(type, 0, position, fail, node);
+		return normalizeType(type, 0, [], position, fail, node);
 
-	function normalizeType(type:Type, depth:Int, position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument {
+	function normalizeType(type:Type, depth:Int, activeAnonymous:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void,
+			node:String):CGenericTypeArgument {
 		if (depth > MAX_TYPE_ARGUMENT_DEPTH)
 			return rejected(fail, position, '$node:type-argument-depth-budget:$MAX_TYPE_ARGUMENT_DEPTH');
 		final resolved = unwrapAliases(type, MAX_ALIAS_EXPANSIONS, position, fail, node);
 		return switch resolved {
 			case TDynamic(_):
 				rejected(fail, position, '$node:dynamic-type-argument');
-			case TInst(reference, _):
+			case TInst(reference, parameters):
 				final definition = reference.get();
 				switch definition.kind {
 					case KTypeParameter(_): rejected(fail, position, '$node:open-type-argument:${qualifiedClassName(definition)}');
-					case _: rejected(fail, position, '$node:class-type-argument:${qualifiedClassName(definition)}');
+					case _:
+						final path = qualifiedClassName(definition);
+						if (path == "String") {
+							if (parameters.length != 0)
+								rejected(fail, position, '$node:String-type-argument-count:${parameters.length}');
+							new CGenericTypeArgument(TInst(reference, []), CGenericSpecializationContract.stringArgumentKey(), "String", ImmutableString);
+						} else if (path != "Array") {
+							rejected(fail, position, '$node:class-type-argument:$path');
+						} else {
+							if (parameters.length != 1)
+								rejected(fail, position, '$node:Array-type-argument-count:${parameters.length}');
+							final element = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Array-element');
+							final normalizedType:Type = TInst(reference, [element.type]);
+							new CGenericTypeArgument(normalizedType, CGenericSpecializationContract.arrayArgumentKey(element.key),
+								'Array<${element.displayName}>', ManagedArray);
+						}
 				}
 			case TEnum(reference, parameters):
 				final definition = reference.get();
 				final path = definition.pack.concat([definition.name]).join(".");
-				final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, position, fail, node));
+				final arguments = parameters.map(parameter -> normalizeType(parameter, depth + 1, activeAnonymous, position, fail, node));
 				final normalizedType:Type = TEnum(reference, arguments.map(argument -> argument.type));
 				new CGenericTypeArgument(normalizedType, CGenericSpecializationContract.enumArgumentKey(path, arguments.map(argument -> argument.key)),
 					arguments.length == 0 ? path : path
 						+ "<"
 						+ arguments.map(argument -> argument.displayName).join(", ")
 						+ ">", DirectEnum);
-			case TAnonymous(_):
-				rejected(fail, position, '$node:anonymous-type-argument-requires-E3.T04-representation-analysis');
+			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null"):
+				if (parameters.length != 1) rejected(fail, position, '$node:Null-type-argument-count:${parameters.length}'); else {
+					final value = normalizeType(parameters[0], depth + 1, activeAnonymous, position, fail, '$node:Null-value');
+					new CGenericTypeArgument(TAbstract(reference, [value.type]), CGenericSpecializationContract.nullableArgumentKey(value.key),
+						'Null<${value.displayName}>', NullableValue);
+				}
+			case TAnonymous(reference):
+				normalizeAnonymous(reference, depth, activeAnonymous, position, fail, node);
 			case TFun(_, _):
 				rejected(fail, position, '$node:function-type-argument-requires-E3.T08-closure-analysis');
 			case _:
 				primitiveArgument(resolved, position, fail, node);
 		};
+	}
+
+	/**
+		Build a stable structural identity for a closed anonymous record.
+
+		This records only type facts. It does not claim the record or an enclosing
+		Array can already be emitted; body lowering remains the representation gate.
+	**/
+	function normalizeAnonymous(reference:Ref<AnonType>, depth:Int, active:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void,
+			node:String):CGenericTypeArgument {
+		for (candidate in active)
+			if (candidate == reference)
+				return rejected(fail, position, '$node:recursive-anonymous-type-argument');
+		final anonymous = reference.get();
+		switch anonymous.status {
+			case AClosed | AConst:
+			case AOpened:
+				return rejected(fail, position, '$node:open-anonymous-type-argument');
+			case AExtend(_):
+				return rejected(fail, position, '$node:extended-anonymous-type-argument');
+			case AClassStatics(_) | AEnumStatics(_) | AAbstractStatics(_):
+				return rejected(fail, position, '$node:static-container-type-argument');
+		}
+		if (anonymous.fields.length == 0)
+			return rejected(fail, position, '$node:empty-anonymous-type-argument');
+		final nextActive = active.copy();
+		nextActive.push(reference);
+		final fields = anonymous.fields.copy();
+		fields.sort((left, right) -> compareUtf8(left.name, right.name));
+		final fieldKeys:Array<String> = [];
+		final fieldDisplays:Array<String> = [];
+		for (field in fields) {
+			final access = switch field.kind {
+				case FVar(read, write): 'var:${accessKey(read)}:${accessKey(write)}:${field.isFinal ? "final" : "nonfinal"}';
+				case FMethod(_): return rejected(fail, field.pos, '$node.field:${field.name}:method');
+			};
+			final fieldType = normalizeType(field.type, depth + 1, nextActive, field.pos, fail, '$node.field:${field.name}');
+			fieldKeys.push(CGenericSpecializationContract.recordFieldKey(field.name, access, fieldType.key));
+			fieldDisplays.push('${field.name}:${fieldType.displayName}');
+		}
+		final normalizedType:Type = TAnonymous(reference);
+		return new CGenericTypeArgument(normalizedType, CGenericSpecializationContract.recordArgumentKey(fieldKeys), '{${fieldDisplays.join(", ")}}',
+			DirectRecord);
 	}
 
 	function primitiveArgument(type:Type, position:Position, fail:(Position, String) -> Void, node:String):CGenericTypeArgument {
@@ -229,6 +306,21 @@ class CGenericTypeCanonicalizer {
 	static function qualifiedClassName(definition:ClassType):String
 		return definition.pack.concat([definition.name]).join(".");
 
+	static function accessKey(access:VarAccess):String {
+		return switch access {
+			case AccNormal: "normal";
+			case AccNo: "none";
+			case AccNever: "never";
+			case AccResolve: "resolve";
+			case AccCall: "call";
+			case AccPrivateCall: "private-call";
+			case AccInline: "inline";
+			case AccRequire(requirement, message):
+				'require:${CGenericSpecializationContract.canonicalPart(requirement)}:${CGenericSpecializationContract.canonicalPart(message == null ? "" : message)}';
+			case AccCtor: "constructor";
+		};
+	}
+
 	static function rejected<T>(fail:(Position, String) -> Void, position:Position, node:String):T {
 		fail(position, node);
 		throw new CBodyEmissionError("generic type rejection callback returned unexpectedly");
@@ -247,11 +339,16 @@ class CGenericCallResolver {
 		final declaredFunction = unwrap(fieldType, position, fail, 'TCall(generic-specialization:$baseFunctionId:declared-function)');
 		switch declaredFunction {
 			case TFun(declaredArguments, _):
-				if (declaredArguments.length != callArgumentTypes.length) {
+				if (callArgumentTypes.length > declaredArguments.length) {
 					return rejected(fail, position,
 						'TCall(generic-specialization:$baseFunctionId:argument-count:${callArgumentTypes.length}-for-${declaredArguments.length})');
 				}
-				for (index in 0...declaredArguments.length) {
+				for (index in callArgumentTypes.length...declaredArguments.length) {
+					if (!declaredArguments[index].opt) {
+						return rejected(fail, position, 'TCall(generic-specialization:$baseFunctionId:missing-required-argument:$index)');
+					}
+				}
+				for (index in 0...callArgumentTypes.length) {
 					match(declaredArguments[index].t, callArgumentTypes[index], typeParameters, bindings, caller, profile, position, fail,
 						'TCall(generic-specialization:$baseFunctionId:argument:$index)');
 				}

@@ -12,13 +12,27 @@ enum VoxelFace {
 	West;
 }
 
-/** Semantic names for the base terrain pictures used by the current world. */
+/** The reviewed image file that owns a terrain picture. */
+enum TerrainSheet {
+	Base;
+	Adventure;
+}
+
+/** Semantic names for reviewed terrain pictures; no gameplay code stores UVs. */
 enum TerrainTile {
 	MeadowGrassTop;
 	GrassSide;
 	RichSoil;
 	SlateStone;
 	FoundationRock;
+	RiverSand;
+	BarkSide;
+	LogTop;
+	LeafyCanopy;
+	SnowTop;
+	SnowSide;
+	AshTop;
+	AshSide;
 }
 
 /**
@@ -32,6 +46,14 @@ final class TerrainAtlas {
 	public static inline final COLUMNS:Int = 4;
 	public static inline final ROWS:Int = 4;
 
+	/** Select one texture before the renderer begins a coherent material batch. */
+	public static function sheet(kind:BlockKind):TerrainSheet {
+		return switch (kind) {
+			case Snow | Ash: Adventure;
+			case Air | Grass | Dirt | Stone | Bedrock | Sand | Wood | Leaves: Base;
+		};
+	}
+
 	public static function tile(kind:BlockKind, face:VoxelFace):TerrainTile {
 		return switch (kind) {
 			case Grass:
@@ -43,22 +65,41 @@ final class TerrainAtlas {
 			case Dirt: RichSoil;
 			case Stone: SlateStone;
 			case Bedrock: FoundationRock;
+			case Sand: RiverSand;
+			case Wood:
+				switch (face) {
+					case Top | Bottom: LogTop;
+					case North | South | East | West: BarkSide;
+				};
+			case Leaves: LeafyCanopy;
+			case Snow:
+				switch (face) {
+					case Top: SnowTop;
+					case Bottom | North | South | East | West: SnowSide;
+				};
+			case Ash:
+				switch (face) {
+					case Top: AshTop;
+					case Bottom | North | South | East | West: AshSide;
+				};
 			case Air: RichSoil;
 		};
 	}
 
 	public static function column(tile:TerrainTile):Int {
 		return switch (tile) {
-			case MeadowGrassTop: 0;
-			case GrassSide: 1;
-			case RichSoil: 2;
-			case SlateStone | FoundationRock: 3;
+			case MeadowGrassTop | RiverSand | LeafyCanopy | SnowTop | AshTop: 0;
+			case GrassSide | SnowSide | AshSide: 1;
+			case RichSoil | BarkSide: 2;
+			case SlateStone | FoundationRock | LogTop: 3;
 		};
 	}
 
 	public static function row(tile:TerrainTile):Int {
 		return switch (tile) {
-			case MeadowGrassTop | GrassSide | RichSoil | SlateStone: 0;
+			case MeadowGrassTop | GrassSide | RichSoil | SlateStone | SnowTop | SnowSide: 0;
+			case RiverSand | BarkSide | LogTop | AshTop | AshSide: 1;
+			case LeafyCanopy: 2;
 			case FoundationRock: 3;
 		};
 	}

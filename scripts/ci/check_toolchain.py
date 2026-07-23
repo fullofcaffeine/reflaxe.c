@@ -219,6 +219,8 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_project_emitter_script = "python3 test/project_emitter/run.py"
     expected_runtime_features_script = "python3 test/runtime/runtime-feature-graph/run.py"
     expected_array_runtime_script = "python3 test/differential/array-runtime/run.py"
+    expected_bytes_runtime_script = "python3 test/differential/bytes-runtime/run.py"
+    expected_gc_runtime_script = "python3 test/runtime/gc/run.py"
     expected_string_runtime_script = "python3 test/differential/string-runtime/run.py"
     expected_string_output_script = "python3 test/string_output/run.py"
     expected_hello_script = "python3 examples/hello/run.py"
@@ -258,6 +260,18 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_caxecraft_aquatics_script = (
         "python3 examples/caxecraft/run_haxe_c_test.py aquatics"
     )
+    expected_caxecraft_session_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py session"
+    )
+    expected_caxecraft_app_screen_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py app-screen"
+    )
+    expected_caxecraft_presentation_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py presentation"
+    )
+    expected_caxecraft_terrain_chunks_script = (
+        "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks"
+    )
     expected_caxecraft_gameplay_script = "python3 examples/caxecraft/check_gameplay.py"
     expected_caxecraft_pilot_script = "python3 examples/caxecraft/check_pilot.py"
     expected_caxecraft_caxeflow_script = (
@@ -274,6 +288,7 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_typed_ast_script = "python3 test/typed_ast/run.py"
     expected_c_import_script = "python3 test/c_import/run.py"
     expected_raylib_provisioning_script = "python3 test/raylib_provisioning/run.py"
+    expected_raygui_binding_script = "python3 test/raygui_binding/test_binding.py"
     expected_snapshot_script = "python3 scripts/test/snapshots.py --check"
     expected_snapshot_catalog_script = (
         "python3 scripts/test/snapshots.py --catalog-check"
@@ -281,13 +296,13 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
     expected_toolchain_script = (
         "npm run deps:verify && npm run test:beads-plan && npm run test:diagnostics && "
         "npm run test:hxc-config && npm run test:all-sources && "
-        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:typed-ast && npm run test:c-ast && "
+        "npm run test:bootstrap && npm run test:typed-c && npm run test:c-import && npm run test:raylib-provisioning && npm run test:raygui-binding && npm run test:typed-ast && npm run test:c-ast && "
         "npm run test:declaration-plan && npm run test:symbol-registry && npm run test:project-emitter && "
-        "npm run test:runtime-features && npm run test:array-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
+        "npm run test:runtime-features && npm run test:array-runtime && npm run test:bytes-runtime && npm run test:gc-runtime && npm run test:string-runtime && npm run test:string-output && npm run test:hello && npm run test:hxc-ir && npm run test:primitive-semantics && "
         "npm run test:stdlib-ledger && "
         "npm run test:body-lowering && "
         "npm run test:function-lowering && npm run test:aggregate-lowering && npm run test:class-layout && npm run test:constructor-lowering && npm run test:virtual-dispatch && npm run test:enum-lowering && npm run test:generic-specialization && npm run test:evaluation-order && npm run test:static-initialization && "
-        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-level-adapter && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
+        "npm run test:arithmetic-semantics && npm run test:primitive-differential && npm run test:span-lowering && npm run test:project-layout && npm run test:caxecraft-localization && npm run test:caxecraft-content-pack && npm run test:caxecraft-level-adapter && npm run test:caxecraft-water && npm run test:caxecraft-aquatics && npm run test:caxecraft-session && npm run test:caxecraft-app-screen && npm run test:caxecraft-presentation && npm run test:caxecraft-terrain-chunks && npm run test:caxecraft-inventory && npm run test:caxecraft-gameplay && npm run test:caxecraft-pilot && npm run test:caxecraft-scenario-model && npm run test:caxecraft-caxeflow && npm run test:caxecraft-editor && npm run test:caxecraft-scenario-determinism && npm run test:caxecraft-domain:full && npm run snapshots:catalog"
     )
     if (
         not isinstance(scripts, dict)
@@ -327,6 +342,11 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the locked Raylib provisioning gate")
     if (
         not isinstance(scripts, dict)
+        or scripts.get("test:raygui-binding") != expected_raygui_binding_script
+    ):
+        errors.append("package.json must retain the locked raygui binding gate")
+    if (
+        not isinstance(scripts, dict)
         or scripts.get("test:declaration-plan") != expected_declaration_plan_script
     ):
         errors.append("package.json must retain the declaration planning gate")
@@ -350,6 +370,16 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         or scripts.get("test:array-runtime") != expected_array_runtime_script
     ):
         errors.append("package.json must retain the typed array runtime gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:bytes-runtime") != expected_bytes_runtime_script
+    ):
+        errors.append("package.json must retain the fixed-length Bytes runtime gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:gc-runtime") != expected_gc_runtime_script
+    ):
+        errors.append("package.json must retain the precise collector runtime gate")
     if (
         not isinstance(scripts, dict)
         or scripts.get("test:string-runtime") != expected_string_runtime_script
@@ -487,6 +517,30 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the deterministic Caxecraft aquatics gate")
     if (
         not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-session")
+        != expected_caxecraft_session_script
+    ):
+        errors.append("package.json must retain the Caxecraft game-session gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-app-screen")
+        != expected_caxecraft_app_screen_script
+    ):
+        errors.append("package.json must retain the Caxecraft app-screen gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-presentation")
+        != expected_caxecraft_presentation_script
+    ):
+        errors.append("package.json must retain the Caxecraft presentation gate")
+    if (
+        not isinstance(scripts, dict)
+        or scripts.get("test:caxecraft-terrain-chunks")
+        != expected_caxecraft_terrain_chunks_script
+    ):
+        errors.append("package.json must retain the Caxecraft terrain-chunk gate")
+    if (
+        not isinstance(scripts, dict)
         or scripts.get("test:caxecraft-scenario-model")
         != expected_caxecraft_scenario_model_script
     ):
@@ -549,6 +603,12 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         errors.append("package.json must retain the one-command Caxecraft developer workflow")
     if (
         not isinstance(scripts, dict)
+        or scripts.get("benchmark:caxecraft-renderer")
+        != "python3 examples/caxecraft/benchmark_renderer.py"
+    ):
+        errors.append("package.json must retain the Caxecraft renderer comparison workflow")
+    if (
+        not isinstance(scripts, dict)
         or scripts.get("test:typed-ast") != expected_typed_ast_script
     ):
         errors.append("package.json must retain the typed-AST normalization gate")
@@ -595,14 +655,15 @@ def validate(root: Path, *, require_tools: bool) -> list[str]:
         "-cp test/all_sources/",
         "-lib reflaxe.c",
         '--macro include("reflaxe.c", true)',
-        '--macro include("c", true)',
+        '--macro include("c", true, ["c._std*"])',
         '--macro include("hxc", true)',
         '--macro include("raylib", true)',
+        '--macro include("raygui", true)',
         "-main AllSourcesProbe",
     ]
     if meaningful_hxml_lines(all_sources_hxml, errors) != expected_all_sources_hxml:
         errors.append(
-            "all_sources.hxml must include every reflaxe.c, c, hxc, and raylib module through the scoped target library"
+            "all_sources.hxml must include every reflaxe.c, c, hxc, raylib, and raygui module through the scoped target library"
         )
     if not (root / "test/all_sources/run.py").is_file():
         errors.append("dedicated all-source Haxe gate runner is missing")

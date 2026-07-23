@@ -12,7 +12,7 @@
   } while (0)
 
 #define HXC_TEST_BANK_SIZE 4096u
-#define HXC_TEST_BANK_COUNT 2u
+#define HXC_TEST_BANK_COUNT 3u
 
 typedef union hxc_test_bank {
   max_align_t alignment;
@@ -511,6 +511,142 @@ static int hxc_test_primitive_array(
   return 0;
 }
 
+/** Exercise the shared identity wrapper selected by generated Haxe Array<T>. */
+static int hxc_test_shared_array(
+  hxc_test_arena *arena,
+  const hxc_allocator *allocator
+) {
+  hxc_array_ref *array = NULL;
+  hxc_array_ref *managed = NULL;
+  hxc_array_ref embedded = {0};
+  hxc_test_lifecycle lifecycle = {0};
+  hxc_test_object first_object = {7, 1u};
+  hxc_test_object second_object = {11, 1u};
+  hxc_test_object *first_object_value = &first_object;
+  hxc_test_object *second_object_value = &second_object;
+  hxc_test_object *managed_output = NULL;
+  hxc_array_element_ops managed_elements = hxc_test_ref_ops(&lifecycle);
+  hxc_array_element_ops trivial_elements = {
+    sizeof(int32_t), HXC_ALIGNOF(int32_t), NULL, NULL, NULL, NULL
+  };
+  int32_t first = 7;
+  int32_t second = 11;
+  int32_t output = -1;
+  int32_t length = -1;
+  int32_t pushed_length = -1;
+
+  /*
+   * A collector owns the outer object, so its finalizer must release only the
+   * backing allocation. The same operation is safe on a zeroed object, which
+   * covers collection after allocation but before initialization completes.
+   */
+  HXC_TEST_CHECK(
+    hxc_array_ref_dispose_in_place(&embedded) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_init_in_place(*allocator, trivial_elements, &embedded)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(hxc_array_ref_is_valid(&embedded));
+  HXC_TEST_CHECK(
+    hxc_array_ref_init_in_place(*allocator, trivial_elements, &embedded)
+      == HXC_STATUS_INVALID_ARGUMENT
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(&embedded, &first, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(pushed_length == 1);
+  HXC_TEST_CHECK(
+    hxc_array_ref_dispose_in_place(&embedded) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_dispose_in_place(&embedded) == HXC_STATUS_OK
+  );
+
+  /*
+   * Explicit Haxe Null<Array<T>> reuses the Array pointer carrier. Lifecycle
+   * calls therefore accept NULL as an absent owner and leave it unchanged;
+   * malformed non-null pointers remain errors.
+   */
+  HXC_TEST_CHECK(hxc_array_ref_retain(NULL) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_release(NULL) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(
+    hxc_array_ref_create_trivial(
+      *allocator,
+      sizeof(int32_t),
+      HXC_ALIGNOF(int32_t),
+      &array
+    ) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(array != NULL && hxc_array_ref_is_valid(array));
+  HXC_TEST_CHECK(array->references == 1u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(array, &first, &pushed_length) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(pushed_length == 1);
+  HXC_TEST_CHECK(hxc_array_ref_retain(array) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(array->references == 2u);
+  HXC_TEST_CHECK(hxc_array_ref_length(array, &length) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(length == 1);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(array, 0u, &output) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(output == first);
+  HXC_TEST_CHECK(hxc_array_ref_set_copy(array, 0u, &second) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(hxc_array_ref_get_copy(array, 0u, &output) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(output == second);
+  output = -1;
+  HXC_TEST_CHECK(
+    hxc_array_ref_get_copy(array, 1u, &output) == HXC_STATUS_OUT_OF_RANGE
+  );
+  HXC_TEST_CHECK(output == -1);
+  HXC_TEST_CHECK(hxc_array_ref_release(array) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(array->references == 1u && hxc_array_ref_is_valid(array));
+  HXC_TEST_CHECK(hxc_array_ref_release(array) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(!arena->invalid_release);
+
+  /*
+   * The shared wrapper must use the same typed lifecycle as the low-level
+   * owner. In particular, get_copy constructs a new live value for its caller;
+   * the caller destroys that copy after use instead of borrowing array storage.
+   */
+  HXC_TEST_CHECK(
+    hxc_array_ref_create(*allocator, managed_elements, &managed)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    hxc_array_ref_push_copy(managed, &first_object_value, &pushed_length)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(first_object.references == 2u && pushed_length == 1);
+  HXC_TEST_CHECK(
+    hxc_array_ref_get_copy(managed, 0u, &managed_output) == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    managed_output == &first_object && first_object.references == 3u
+  );
+  managed_elements.destroy(managed_elements.context, &managed_output);
+  HXC_TEST_CHECK(first_object.references == 2u);
+  HXC_TEST_CHECK(
+    hxc_array_ref_set_copy(managed, 0u, &second_object_value)
+      == HXC_STATUS_OK
+  );
+  HXC_TEST_CHECK(
+    first_object.references == 1u && second_object.references == 2u
+  );
+  HXC_TEST_CHECK(hxc_array_ref_release(managed) == HXC_STATUS_OK);
+  HXC_TEST_CHECK(
+    first_object.references == 1u && second_object.references == 1u
+  );
+  hxc_test_drop(&lifecycle, &first_object);
+  hxc_test_drop(&lifecycle, &second_object);
+  HXC_TEST_CHECK(
+    first_object.references == 0u && second_object.references == 0u
+  );
+  HXC_TEST_CHECK(!lifecycle.invalid_release && !arena->invalid_release);
+  return 0;
+}
+
 int main(void) {
   hxc_test_arena arena = {0};
   hxc_allocator allocator = hxc_test_allocator(&arena);
@@ -537,8 +673,12 @@ int main(void) {
   }
   (void)putchar('\n');
   HXC_TEST_CHECK(hxc_array_dispose(&values) == HXC_STATUS_OK);
+
+  HXC_TEST_CHECK(hxc_test_shared_array(&arena, &allocator) == 0);
   HXC_TEST_CHECK(!arena.invalid_release);
   HXC_TEST_CHECK(arena.allocation_count == arena.release_count);
-  HXC_TEST_CHECK(!arena.used[0] && !arena.used[1]);
+  for (index = 0u; index < HXC_TEST_BANK_COUNT; index++) {
+    HXC_TEST_CHECK(!arena.used[index]);
+  }
   return 0;
 }

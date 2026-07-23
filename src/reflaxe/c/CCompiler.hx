@@ -220,13 +220,26 @@ class CCompiler {
 			final helperIds = lowered.helpers.map(helper -> helper.helperId);
 			final directInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.directCalls;
 			final indirectInstanceCallCount = dispatchReport == null ? 0 : dispatchReport.summary.indirectCalls;
+			var virtualInstanceCallCount = 0;
+			var interfaceInstanceCallCount = 0;
+			if (dispatchReport != null)
+				for (call in dispatchReport.calls)
+					switch call.dispatch {
+						case "virtual":
+							virtualInstanceCallCount++;
+						case "interface":
+							interfaceInstanceCallCount++;
+						case _:
+					}
+			final interfaceTypeCount = lowered.dispatch.layouts.filter(layout -> layout.prepared.isInterface()).length;
 			final genericFunctionCount = graph.specializations.length;
 			final genericTypeCount = lowered.enums.filter(value -> value.prepared.typeParameterNames.length > 0).length;
 			final registry = RuntimeFeatureCatalog.registry();
 			final runtimePlan = try {
 				directRuntimePlan(configuration, helperIds, staticInitialization.snapshot, lowered.program, lowered.runtimeRequirements,
 					lowered.aggregates.length, lowered.enums.length, lowered.classes.length, lowered.constructors.length, genericFunctionCount,
-					genericTypeCount, indirectInstanceCallCount, lowered.imports.functions.length + lowered.imports.constants.length, registry);
+					genericTypeCount, virtualInstanceCallCount, interfaceInstanceCallCount,
+					lowered.imports.functions.length + lowered.imports.constants.length, registry);
 			} catch (error:RuntimeFeatureError) {
 				CDiagnostic.fatal(error.diagnosticId, error.message, runtimeErrorPosition(error, lowered.runtimeRequirements, input.expression.pos),
 					context.profile);
@@ -280,6 +293,7 @@ class CCompiler {
 				directAggregateCount: lowered.aggregates.length,
 				directEnumCount: lowered.enums.length,
 				directClassCount: lowered.classes.length,
+				directInterfaceCount: interfaceTypeCount,
 				directConstructorCount: lowered.constructors.length,
 				directGenericFunctionCount: genericFunctionCount,
 				directGenericTypeCount: genericTypeCount,
@@ -321,7 +335,7 @@ class CCompiler {
 	function directRuntimePlan(configuration:ResolvedProjectConfiguration, helperIds:Array<String>,
 			staticInitialization:reflaxe.c.plan.CStaticInitializationModel.CStaticInitializationSnapshot, program:HxcIRProgram,
 			runtimeRequirements:Array<CBodyRuntimeRequirement>, aggregateCount:Int, enumCount:Int, classCount:Int, constructorCount:Int,
-			genericFunctionCount:Int, genericTypeCount:Int, indirectInstanceCallCount:Int, importOperationCount:Int,
+			genericFunctionCount:Int, genericTypeCount:Int, virtualInstanceCallCount:Int, interfaceInstanceCallCount:Int, importOperationCount:Int,
 			registry:reflaxe.c.runtime.RuntimeFeatureRegistry):RuntimeFeaturePlanSnapshot {
 		final directDecisions = [
 			"primitive-values",
@@ -350,18 +364,28 @@ class CCompiler {
 		if (genericFunctionCount + genericTypeCount > 0) {
 			directDecisions.push("closed-generic-specializations");
 		}
-		if (indirectInstanceCallCount > 0) {
+		if (virtualInstanceCallCount > 0) {
 			directDecisions.push("reachable-program-local-virtual-dispatch");
 		}
+		if (interfaceInstanceCallCount > 0)
+			directDecisions.push("reachable-program-local-interface-dispatch");
 		if (importOperationCount > 0) {
 			directDecisions.push("typed-header-owned-c-imports");
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			directDecisions.push("compiler-planned-eager-static-initialization");
 		}
-		if (runtimeRequirements.length > 0) {
+		if (hasRuntimeFeature(runtimeRequirements, "string-literal")
+			|| hasRuntimeFeature(runtimeRequirements, "io")
+			|| hasRuntimeFeature(runtimeRequirements, "bytes")) {
 			directDecisions.push("direct-utf8-string-literals");
 		}
+		if (hasRuntimeFeature(runtimeRequirements, "array"))
+			directDecisions.push("managed-haxe-arrays");
+		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
+			directDecisions.push("managed-haxe-bytes");
+		if (hasRuntimeFeature(runtimeRequirements, "gc"))
+			directDecisions.push("exact-traced-haxe-object-graph");
 		var proof = "reachable validated HxcIR contains only direct primitive storage, operations, functions, conversions, sequenced control flow, and calls";
 		if (helperIds.length > 0) {
 			proof = "reachable validated HxcIR contains only direct primitive storage, operations, request-local helpers, functions, conversions, sequenced control flow, and calls";
@@ -381,18 +405,22 @@ class CCompiler {
 		if (genericFunctionCount + genericTypeCount > 0) {
 			proof += ", with closed generic instances shared by collision-checked semantic keys and bounded code-size planning";
 		}
-		if (indirectInstanceCallCount > 0) {
+		if (virtualInstanceCallCount > 0) {
 			proof += ", with root-only program-local vtable pointers, reachable slots, concrete tables, and representation-checked override adapters selecting no runtime feature";
 		}
+		if (interfaceInstanceCallCount > 0)
+			proof += ", with compact program-local interface values, reachable itables, and typed object-pointer adapters selecting no runtime feature";
 		if (importOperationCount > 0) {
 			proof += ", plus exact non-variadic header-owned C calls and nominal by-value imports with no wrapper allocation";
 		}
 		if (staticInitialization.executionOrder.length > 0) {
 			proof += ", with eager static initialization planned and emitted entirely by the compiler";
 		}
+		if (hasRuntimeFeature(runtimeRequirements, "bytes"))
+			proof += ", plus fixed-length shared haxe.io.Bytes storage with explicit ownership and checked binary operations";
 		final candidates:Array<RuntimeRequirementCandidate> = [];
 		for (requirement in runtimeRequirements) {
-			candidates.push(new RuntimeRequirementCandidate(RuntimeFeatureId.parse(requirement.featureId), requirement.operationId, "hosted-output",
+			candidates.push(new RuntimeRequirementCandidate(RuntimeFeatureId.parse(requirement.featureId), requirement.operationId, requirement.kind,
 				requirement.surface, requirement.source));
 		}
 		final analysis = new RuntimeRequirementAnalyzer().analyze(program, candidates);
@@ -401,6 +429,13 @@ class CCompiler {
 		return new RuntimeFeaturePlanner(registry).plan(new RuntimePlanningRequest(RuntimePlanningPurpose.CompilerProgram, context.profile,
 			configuration.environment, configuration.runtimePolicy, configuration.runtimePolicyProvenance, configuration.runtimeDiagnostics,
 			configuration.runtimeDiagnosticsProvenance, analysis.reasons, [], directDecisions, noRuntimeEvidence));
+	}
+
+	static function hasRuntimeFeature(requirements:Array<CBodyRuntimeRequirement>, featureId:String):Bool {
+		for (requirement in requirements)
+			if (requirement.featureId == featureId)
+				return true;
+		return false;
 	}
 
 	static function runtimeErrorPosition(error:RuntimeFeatureError, requirements:Array<CBodyRuntimeRequirement>, fallback:Position):Position {
@@ -412,7 +447,8 @@ class CCompiler {
 					&& requirement.source.startColumn == source.startColumn
 					&& requirement.source.endLine == source.endLine
 					&& requirement.source.endColumn == source.endColumn) {
-					return requirement.position;
+					if (requirement.position != null)
+						return requirement.position;
 				}
 			}
 		}
@@ -426,21 +462,28 @@ class CCompiler {
 		}
 		if (mode == CProjectRuntimeDiagnostics.Summary) {
 			CDiagnostic.info(CDiagnosticId.RuntimeFeatureSelected,
-				'hxrt selected ${plan.features.length} dependency-closed feature(s) for ${requirements.length} hosted output root(s): ${plan.features.join(", ")}.',
+				'hxrt selected ${plan.features.length} dependency-closed feature(s) for ${requirements.length} typed runtime root(s): ${plan.features.join(", ")}.',
 				summaryPosition, Std.string(plan.profile));
 			return;
 		}
 		for (requirement in requirements) {
 			CDiagnostic.warning(CDiagnosticId.RuntimeFeatureSelected,
-				'Runtime feature `io` was selected for `${requirement.surface}`; transitive dependencies are recorded only in hxc.runtime-plan.json.',
-				requirement.position, Std.string(plan.profile));
+				'Runtime feature `${requirement.featureId}` was selected for `${requirement.surface}`; transitive dependencies are recorded only in hxc.runtime-plan.json.',
+				requirement.position == null ? summaryPosition : requirement.position, Std.string(plan.profile));
 		}
 	}
 
 	static function stdlibModules(requirements:Array<CBodyRuntimeRequirement>):Array<String> {
 		final modules:Array<String> = [];
 		for (requirement in requirements) {
-			final module = requirement.operationId == "trace-literal" ? "haxe.Log" : "Sys";
+			final module = switch requirement.featureId {
+				case "array": "Array";
+				case "bytes": "haxe.io.Bytes";
+				case "string-literal": "String";
+				case "io" if (requirement.operationId == "trace-literal"): "haxe.Log";
+				case "io": "Sys";
+				case _: requirement.featureId;
+			};
 			if (modules.indexOf(module) == -1) {
 				modules.push(module);
 			}

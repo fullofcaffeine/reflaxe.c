@@ -1,16 +1,21 @@
 package caxecraft.content;
 
 import caxecraft.domain.AquaticProfile;
-import caxecraft.domain.PlayerAquatics.profile as createAquaticProfile;
+import caxecraft.domain.Aquatics.profile as createAquaticProfile;
 import caxecraft.scenario.ContentId;
 import caxecraft.scenario.ScenarioContentRegistry;
 
 enum abstract BaseBlock(Int) {
 	var Air = 0;
-	var Bedrock = 1;
-	var Dirt = 2;
-	var Grass = 3;
-	var Stone = 4;
+	var Ash = 1;
+	var Bedrock = 2;
+	var Dirt = 3;
+	var Grass = 4;
+	var Leaves = 5;
+	var Sand = 6;
+	var Snow = 7;
+	var Stone = 8;
+	var Wood = 9;
 }
 
 enum abstract BaseFluid(Int) {
@@ -70,10 +75,15 @@ enum abstract BlockEdit(Int) {
 
 enum abstract BlockRenderProfile(Int) {
 	var Air = 0;
-	var FoundationRock = 1;
-	var MeadowGrass = 2;
-	var RichSoil = 3;
-	var SlateStone = 4;
+	var AshField = 1;
+	var ForestLeaves = 2;
+	var ForestWood = 3;
+	var FoundationRock = 4;
+	var MeadowGrass = 5;
+	var RichSoil = 6;
+	var RiverSand = 7;
+	var SlateStone = 8;
+	var SnowField = 9;
 }
 
 enum abstract FluidSimulationProfile(Int) {
@@ -135,46 +145,71 @@ final class BaseContentPack {
 	public static function blockId(value:BaseBlock):ContentId
 		return switch (value) {
 			case Air: new ContentId("caxecraft:air");
+			case Ash: new ContentId("caxecraft:ash");
 			case Bedrock: new ContentId("caxecraft:bedrock");
 			case Dirt: new ContentId("caxecraft:dirt");
 			case Grass: new ContentId("caxecraft:grass");
+			case Leaves: new ContentId("caxecraft:leaves");
+			case Sand: new ContentId("caxecraft:sand");
+			case Snow: new ContentId("caxecraft:snow");
 			case Stone: new ContentId("caxecraft:stone");
+			case Wood: new ContentId("caxecraft:wood");
 		}
 
 	public static function blockStorageCode(value:BaseBlock):Int
 		return switch (value) {
 			case Air: 0;
+			case Ash: 9;
 			case Bedrock: 4;
 			case Dirt: 2;
 			case Grass: 1;
+			case Leaves: 7;
+			case Sand: 5;
+			case Snow: 8;
 			case Stone: 3;
+			case Wood: 6;
 		}
 
 	public static function blockCollision(value:BaseBlock):BlockCollision
 		return switch (value) {
 			case Air: Passable;
+			case Ash: Solid;
 			case Bedrock: Solid;
 			case Dirt: Solid;
 			case Grass: Solid;
+			case Leaves: Solid;
+			case Sand: Solid;
+			case Snow: Solid;
 			case Stone: Solid;
+			case Wood: Solid;
 		}
 
 	public static function blockEdit(value:BaseBlock):BlockEdit
 		return switch (value) {
 			case Air: Immutable;
+			case Ash: Immutable;
 			case Bedrock: Immutable;
 			case Dirt: Collectable;
 			case Grass: Collectable;
+			case Leaves: Immutable;
+			case Sand: Immutable;
+			case Snow: Immutable;
 			case Stone: Collectable;
+			case Wood: Immutable;
 		}
 
 	public static function blockRenderProfile(value:BaseBlock):BlockRenderProfile
 		return switch (value) {
 			case Air: Air;
+			case Ash: AshField;
 			case Bedrock: FoundationRock;
 			case Dirt: RichSoil;
 			case Grass: MeadowGrass;
+			case Leaves: ForestLeaves;
+			case Sand: RiverSand;
+			case Snow: SnowField;
 			case Stone: SlateStone;
+			case Wood: ForestWood;
 		}
 
 	public static function fluidId(value:BaseFluid):ContentId
@@ -290,6 +325,51 @@ final class BaseContentPack {
 			case StoneBlock: new ContentId("caxecraft:stone-block");
 			case TideweaveSuit: new ContentId("caxecraft:tideweave-suit");
 		}
+
+	public static function itemStorageCode(value:BaseItem):Int
+		return switch (value) {
+			case Berries: 0;
+			case Bread: 1;
+			case CopperSword: 2;
+			case DirtBlock: 3;
+			case GrassBlock: 4;
+			case Haxeforge: 5;
+			case Lantern: 6;
+			case StoneBlock: 7;
+			case TideweaveSuit: 8;
+		}
+
+	/** True when a map-supplied item code can be converted to `BaseItem`. */
+	public static inline function isValidItemStorageCode(code:Int):Bool
+		return code >= 0 && code < 9;
+
+	/**
+	 * Convert a code after `isValidItemStorageCode` accepted it.
+	 *
+	 * The fallback is unreachable for validated generated levels. Keeping it
+	 * explicit lets ordinary Haxe retain a non-null closed result in native C.
+	 */
+	public static function itemFromValidatedStorageCode(code:Int):BaseItem {
+		if (code == 0)
+			return BaseItem.Berries;
+		if (code == 1)
+			return BaseItem.Bread;
+		if (code == 2)
+			return BaseItem.CopperSword;
+		if (code == 3)
+			return BaseItem.DirtBlock;
+		if (code == 4)
+			return BaseItem.GrassBlock;
+		if (code == 5)
+			return BaseItem.Haxeforge;
+		if (code == 6)
+			return BaseItem.Lantern;
+		if (code == 7)
+			return BaseItem.StoneBlock;
+		if (code == 8)
+			return BaseItem.TideweaveSuit;
+		return BaseItem.Berries;
+	}
 
 	public static function itemMaximumStack(value:BaseItem):Int
 		return switch (value) {
@@ -483,13 +563,23 @@ final class BaseContentRegistry implements ScenarioContentRegistry {
 	public function hasBlock(id:ContentId):Bool {
 		if (id.text() == "caxecraft:air")
 			return true;
+		if (id.text() == "caxecraft:ash")
+			return true;
 		if (id.text() == "caxecraft:bedrock")
 			return true;
 		if (id.text() == "caxecraft:dirt")
 			return true;
 		if (id.text() == "caxecraft:grass")
 			return true;
+		if (id.text() == "caxecraft:leaves")
+			return true;
+		if (id.text() == "caxecraft:sand")
+			return true;
+		if (id.text() == "caxecraft:snow")
+			return true;
 		if (id.text() == "caxecraft:stone")
+			return true;
+		if (id.text() == "caxecraft:wood")
 			return true;
 		return false;
 	}
@@ -497,14 +587,24 @@ final class BaseContentRegistry implements ScenarioContentRegistry {
 	public function blockStorageCode(id:ContentId):Int {
 		if (id.text() == "caxecraft:air")
 			return 0;
+		if (id.text() == "caxecraft:ash")
+			return 9;
 		if (id.text() == "caxecraft:bedrock")
 			return 4;
 		if (id.text() == "caxecraft:dirt")
 			return 2;
 		if (id.text() == "caxecraft:grass")
 			return 1;
+		if (id.text() == "caxecraft:leaves")
+			return 7;
+		if (id.text() == "caxecraft:sand")
+			return 5;
+		if (id.text() == "caxecraft:snow")
+			return 8;
 		if (id.text() == "caxecraft:stone")
 			return 3;
+		if (id.text() == "caxecraft:wood")
+			return 6;
 		return -1;
 	}
 
@@ -540,6 +640,28 @@ final class BaseContentRegistry implements ScenarioContentRegistry {
 		if (id.text() == "caxecraft:tideweave-suit")
 			return true;
 		return false;
+	}
+
+	public function itemStorageCode(id:ContentId):Int {
+		if (id.text() == "caxecraft:berries")
+			return 0;
+		if (id.text() == "caxecraft:bread")
+			return 1;
+		if (id.text() == "caxecraft:copper-sword")
+			return 2;
+		if (id.text() == "caxecraft:dirt-block")
+			return 3;
+		if (id.text() == "caxecraft:grass-block")
+			return 4;
+		if (id.text() == "caxecraft:haxeforge")
+			return 5;
+		if (id.text() == "caxecraft:lantern")
+			return 6;
+		if (id.text() == "caxecraft:stone-block")
+			return 7;
+		if (id.text() == "caxecraft:tideweave-suit")
+			return 8;
+		return -1;
 	}
 
 	public function hasEntity(id:ContentId):Bool {

@@ -54,6 +54,14 @@ test-temp/
 *.log
 *.tmp
 *.temp
+CMakeFiles/
+repomix-output*.xml
+repomix-output*.zip
+
+# Local decision trails are review aids, not product artifacts. The one
+# historical tracked readability trail remains tracked; new local trails stay
+# out of task commits unless a reviewer explicitly asks for them.
+.audit/
 
 # Editors, operating systems, and local agent settings
 .vscode/

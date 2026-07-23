@@ -13,8 +13,9 @@ shape documented by
 [`raylib-provisioning-lock.schema.json`](specs/raylib-provisioning-lock.schema.json).
 The lock records the immutable archive URL, archive byte size and SHA-256, a
 content identity for all 1,384 source-tree files, hashes for the reviewed API
-and build inputs, exact CMake configurations, and logical link facts for each
-admitted host. Validate it without downloading anything:
+and build inputs, exact CMake configurations, reviewed compatibility patches,
+and logical link facts for each admitted host. Validate it without downloading
+anything:
 
 ```sh
 python3 scripts/raylib/provision.py verify-lock
@@ -48,6 +49,41 @@ After the locked archive is present, omit `--allow-network`. The cache must
 retain both the verified archive and its verified extraction; a source tree
 without its archive is rejected. CMake uses the in-tree GLFW source and cannot
 silently fetch another dependency.
+
+### Reviewed macOS Memory-clock patch
+
+Raylib 6.0's Memory backend accidentally omits macOS from both halves of its
+monotonic clock implementation: `InitTimer()` does not record a starting value,
+and `GetTime()` never reads `CLOCK_MONOTONIC`. The observable result is that
+`GetTime()` returns `0` forever on a macOS Memory build. Linux/BSD/Emscripten
+already use the same POSIX clock, while Windows uses its performance counter.
+
+The repository fixes only that admitted host/backend pair with the locked
+[`memory-macos-monotonic-clock.json`](../scripts/raylib/patches/memory-macos-monotonic-clock.json)
+recipe. The recipe names the pinned upstream commit, explains the defect,
+contains exact before/after text, and records the expected SHA-256 of every
+source file before and after the change. Its own SHA-256 is then pinned in
+[`raylib-provisioning-lock.json`](specs/raylib-provisioning-lock.json). This is
+reviewable provenance, not an untracked edit to a downloaded dependency.
+
+No manual patch command is required. Run the ordinary `build-source` command
+above with `--platform macos --configuration memory-software`. The provisioner:
+
+1. verifies the complete pristine Raylib source tree;
+2. copies it to `hxc-patched-source` inside the isolated build root;
+3. requires every replacement to match exactly once and verifies all before
+   and after hashes;
+4. builds from that private copy while leaving the archive cache or supplied
+   offline source untouched; and
+5. records the recipe identity, changed-file hashes, and final effective source
+   tree identity in the provisioning report.
+
+Other platforms and the macOS desktop configuration select no patch. Caxecraft
+includes the selected recipe identity in its native-library cache key and
+rejects a prebuilt or cached library whose report does not match. To replace or
+remove the patch after an upstream upgrade, update the recipe, its lock entry,
+and the focused Memory-clock probe together; never edit the verified source
+cache in place.
 
 ### User-supplied offline source
 
@@ -96,8 +132,8 @@ headless system request fails instead of changing authority.
 
 | Configuration | Raylib platform / graphics API | Native evidence |
 | --- | --- | --- |
-| `memory-software` | `PLATFORM=Memory`, `OPENGL_VERSION=Software` | Compile, link, and deterministic execution in Linux CI |
-| `desktop` | `PLATFORM=Desktop` (bundled GLFW), `OPENGL_VERSION=3.3` | Compile and link on all three hosts; Caxecraft also runs a bounded graphical smoke under Linux's virtual display |
+| `memory-software` | `PLATFORM=Memory`, `OPENGL_VERSION=Software` | Compile/link/run the binding and monotonic-clock probes on Linux, macOS, and Windows; run the real Caxecraft movement/edit pilot in Linux CI |
+| `desktop` | `PLATFORM=Desktop` (bundled GLFW), `OPENGL_VERSION=3.3` | Compile and link on all three hosts; Caxecraft also runs a bounded title-and-resize pilot under Linux's virtual display |
 
 Both configurations are release static libraries with examples and audio
 disabled. Desktop builds use only the GLFW source bundled in the pinned Raylib
@@ -161,6 +197,18 @@ python3 test/raylib_provisioning/run.py \
 compile and link so they do not imply that CI opened a window or exercised a
 display server.
 
+Every Memory integration run also executes
+[`memory_clock_probe.c`](../test/raylib_provisioning/native/memory_clock_probe.c).
+It samples `GetTime()`, performs bounded observable CPU work, samples again,
+and requires a nondecreasing value with a positive interval. This checks the
+public Raylib behavior instead of merely searching its source for an Apple
+preprocessor branch.
+
+The pinned memory platform also reports `SetWindowSize` as unavailable. It can
+prove deterministic rendering at its initial framebuffer size, but not a live
+window resize. Caxecraft rejects that pilot/backend pair before compilation;
+the desktop/Xvfb lane owns live-resize evidence.
+
 The smoke imports the public generated `raylib.raw` package rather than
 redeclaring a fixture-local binding. It directly exercises by-value and
 struct-return calls, `Camera` alias identity, timing, input, camera/ray,
@@ -170,13 +218,29 @@ not part of the raw C declaration surface. The future semantic facade owns
 ergonomic value construction and named colors; the support header is not
 package API.
 
+The same Linux job reuses that exact verified library for Caxecraft rather than
+building a second copy. It compiles the flagship Haxe application through the
+production C target, runs `move-jump-edit` twice without a desktop, requires
+identical semantic reports, and uploads the normalized software-rendered frame.
+The report must identify the pinned release/commit/configuration, a final block
+selection, one removal, one placement, three bounded terrain batches, and clean
+script completion.
+
+The job has isolated GCC and Clang variants. In each, Caxecraft's generated
+translation units and final executable use the reviewed address/undefined
+sanitizer profile, fail on the first detected problem, retain frame pointers,
+and enable leak detection. The already checksum-verified Raylib library is not
+rebuilt with sanitizer compiler flags here, so this evidence does not claim
+source-level instrumentation inside every upstream Raylib function.
+
 ## Evidence and reproducibility
 
 Every native report records the authority, upstream identity, target
 architecture, compiler family/version/target, C++ compiler, CMake and build
 tool identities, configuration definitions, normalized command argument
-arrays, reviewed inputs, output hashes, exact libraries/frameworks, and the
-scope of compile/link/run claims. Source reports hash normalized
+arrays, reviewed inputs, selected patch recipes, pristine and effective source
+tree identities, output hashes, exact libraries/frameworks, and the scope of
+compile/link/run claims. Source reports hash normalized
 `compile_commands.json` content so temporary roots do not perturb that field.
 
 Host checkout, source, cache, build, generated, and temporary paths are replaced

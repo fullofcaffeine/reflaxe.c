@@ -16,6 +16,27 @@ typedef AggregateFieldRecord = {
 	final semanticName:String;
 	final cName:String;
 	final type:String;
+	final enumTag:Null<String>;
+	final enumDiscriminantTag:Null<String>;
+	final enumPayloadUnionTag:Null<String>;
+	final enumTagMember:Null<String>;
+	final enumPayloadMember:Null<String>;
+	final enumCases:Array<AggregateEnumCaseRecord>;
+}
+
+typedef AggregateEnumPayloadRecord = {
+	final semanticName:String;
+	final cName:String;
+	final type:String;
+}
+
+typedef AggregateEnumCaseRecord = {
+	final semanticName:String;
+	final cName:String;
+	final tagValue:Int;
+	final payloadStructTag:Null<String>;
+	final unionMember:Null<String>;
+	final payload:Array<AggregateEnumPayloadRecord>;
 }
 
 typedef AggregateRecord = {
@@ -90,6 +111,9 @@ class AggregateLoweringProbe {
 		final project = new CStaticFunctionProjectEmitter().plan(lowered, entryId, context.symbols.identifierFor(entryRequest),
 			context.symbols.identifierFor(guardRequest));
 		final aggregateRecords:Array<AggregateRecord> = [];
+		final enumsByInstance:Map<String, reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum> = [];
+		for (value in lowered.enums)
+			enumsByInstance.set(value.prepared.instanceId, value);
 		for (aggregate in lowered.aggregates) {
 			aggregateRecords.push({
 				declarationId: aggregate.prepared.declarationId,
@@ -97,9 +121,34 @@ class AggregateLoweringProbe {
 				digest: aggregate.prepared.digest,
 				cTag: aggregate.cTag.value,
 				fields: aggregate.fields.map(field -> {
-					semanticName: field.semanticName,
-					cName: field.cName.value,
-					type: typeName(field.type.irType)
+					final preparedEnum = field.type.enumValue();
+					final loweredEnum = preparedEnum == null ? null : enumsByInstance.get(preparedEnum.instanceId);
+					if (preparedEnum != null && loweredEnum == null)
+						return fatal('aggregate field `${field.semanticName}` lost enum `${preparedEnum.instanceId}`', Context.currentPos());
+					{
+						semanticName: field.semanticName,
+						cName: field.cName.value,
+						type: typeName(field.type.irType),
+						enumTag: loweredEnum == null ? null : loweredEnum.valueTag.value,
+						enumDiscriminantTag: loweredEnum == null ? null : loweredEnum.discriminantTag.value,
+						enumPayloadUnionTag: loweredEnum == null
+						|| loweredEnum.payloadUnionTag == null ? null : loweredEnum.payloadUnionTag.value,
+						enumTagMember: loweredEnum == null || loweredEnum.tagMember == null ? null : loweredEnum.tagMember.value,
+						enumPayloadMember: loweredEnum == null
+						|| loweredEnum.payloadMember == null ? null : loweredEnum.payloadMember.value,
+						enumCases: loweredEnum == null ? [] : loweredEnum.cases.map(tagCase -> {
+							semanticName: tagCase.prepared.name,
+							cName: tagCase.discriminant.value,
+							tagValue: tagCase.prepared.tagValue,
+							payloadStructTag: tagCase.payloadStructTag == null ? null : tagCase.payloadStructTag.value,
+							unionMember: tagCase.unionMember == null ? null : tagCase.unionMember.value,
+							payload: tagCase.payload.map(payload -> {
+								semanticName: payload.prepared.name,
+								cName: payload.cName.value,
+								type: typeName(payload.prepared.storageType())
+							})
+						})
+					};
 				})
 			});
 		}
@@ -129,6 +178,7 @@ class AggregateLoweringProbe {
 			case IRTInt(width, signed): '${signed ? "i" : "u"}$width';
 			case IRTFloat(width): 'f$width';
 			case IRTInstance(instanceId): 'instance:$instanceId';
+			case IRTNullable(payload, IRNTagged): 'optional<${typeName(payload)}>';
 			case _: fatal("aggregate fixture field escaped its direct-value subset", Context.currentPos());
 		};
 	}

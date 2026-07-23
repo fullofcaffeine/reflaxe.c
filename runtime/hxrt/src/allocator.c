@@ -1,8 +1,10 @@
 /*
- * Implementation of native-seed-only feature `alloc`.
+ * Implementation of compiler-selectable dependency feature `alloc`.
  *
- * Allocator/array/string native evidence calls these checked ownership helpers;
- * generated Haxe cannot select them yet. Every live owner stores its allocator
+ * Selected Array, Bytes, and GC closures plus independent string evidence call
+ * these checked ownership helpers. No source mention selects allocation by
+ * itself: representation and lifetime planning must first prove that direct or
+ * program-local storage is insufficient. Every live owner stores its allocator
  * identity, caller contexts must outlive allocations, and outputs publish only
  * after success. Hosted builds provide an aligned malloc adapter; freestanding
  * callers must supply callbacks. There is no hidden global or thread state and

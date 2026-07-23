@@ -9,9 +9,11 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
@@ -35,6 +37,8 @@ POSITIVE = FIXTURES / "positive"
 SPLIT_RECURSIVE = FIXTURES / "split_recursive"
 MODULE_FIELDS = FIXTURES / "module_fields"
 MODULE_FIELDS_UNSUPPORTED = FIXTURES / "module_fields_unsupported"
+DEFAULT_ARGUMENT = FIXTURES / "default"
+OPTIONAL_ARGUMENT = FIXTURES / "optional"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_FUNCTION_LOWERING="
@@ -329,7 +333,7 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         )
 
     functions = report.get("functions")
-    if not isinstance(functions, list) or len(functions) != 11:
+    if not isinstance(functions, list) or len(functions) != 14:
         raise FunctionLoweringFailure("function report omitted admitted functions")
     by_field = {
         entry.get("field"): entry
@@ -337,9 +341,10 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         if isinstance(entry, dict) and isinstance(entry.get("field"), str)
     }
     if (
-        len(by_field) != 11
+        len(by_field) != 14
         or by_field.get("main", {}).get("parameters") != []
         or len(by_field.get("first", {}).get("parameters", [])) != 2
+        or len(by_field.get("apply", {}).get("parameters", [])) != 2
         or len(by_field.get("recursive", {}).get("parameters", [])) != 2
     ):
         raise FunctionLoweringFailure("function parameter records drifted")
@@ -556,6 +561,7 @@ def custom_target(
     layout: str = "unity",
     main: str | None = None,
     defines: tuple[str, ...] = (),
+    connect: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
     command = [
         development_tool("haxe"),
@@ -579,8 +585,13 @@ def custom_target(
     for define in defines:
         command.extend(["-D", define])
     command.extend(["--custom-target", f"c={output}"])
+    if connect is not None:
+        command[1:1] = ["--connect", connect]
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    if connect is None:
+        environment["HAXE_NO_SERVER"] = "1"
+    else:
+        environment.pop("HAXE_NO_SERVER", None)
     return subprocess.run(
         command,
         cwd=ROOT,
@@ -598,6 +609,47 @@ def generated_tree(root: Path) -> dict[str, bytes]:
         for path in sorted(root.rglob("*"))
         if path.is_file() and path.name != "_GeneratedFiles.json"
     }
+
+
+def planned_runtime_sources(output: Path) -> tuple[Path, ...]:
+    """Resolve only the repository runtime sources selected by the compiler plan."""
+    plan_path = output / "hxc.runtime-plan.json"
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    details = plan.get("artifactDetails")
+    if not isinstance(details, list):
+        raise FunctionLoweringFailure("runtime plan omitted artifactDetails")
+    sources: set[Path] = set()
+    root = ROOT.resolve()
+    for index, detail in enumerate(details):
+        if not isinstance(detail, dict):
+            raise FunctionLoweringFailure(
+                f"runtime artifactDetails[{index}] is not an object"
+            )
+        if detail.get("kind") != "runtime-source":
+            continue
+        source_path = detail.get("sourcePath")
+        if not isinstance(source_path, str) or not source_path:
+            raise FunctionLoweringFailure(
+                f"runtime artifactDetails[{index}] omitted sourcePath"
+            )
+        relative = Path(source_path)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise FunctionLoweringFailure(
+                f"runtime source path is not repository-relative: {source_path!r}"
+            )
+        source = (ROOT / relative).resolve()
+        try:
+            source.relative_to(root)
+        except ValueError as error:
+            raise FunctionLoweringFailure(
+                f"runtime source escapes the repository: {source_path!r}"
+            ) from error
+        if not source.is_file():
+            raise FunctionLoweringFailure(
+                f"planned runtime source does not exist: {source_path!r}"
+            )
+        sources.add(source)
+    return tuple(sorted(sources))
 
 
 def check_production() -> None:
@@ -900,7 +952,7 @@ def check_module_fields() -> None:
         if (
             unsupported.returncode != 1
             or "HXC1001" not in unsupported_text
-            or "TFunction(optional-argument:value)" not in unsupported_text
+            or "TFunction(rest-argument:values)" not in unsupported_text
             or "module_fields_unsupported/UnsupportedModuleFunction.hx:2:" not in unsupported_text
             or list(unsupported_output.rglob("*"))
         ):
@@ -1032,12 +1084,239 @@ def check_nonreturn_partitions(selected: str | None) -> None:
         check_recursive_partition(selected, layout)
 
 
+def check_direct_argument_defaults(selected: str | None) -> None:
+    """Prove omission is completed before HxcIR/C emission, never at runtime."""
+    toolchain = available_compilers(selected)[0]
+    with tempfile.TemporaryDirectory(prefix="hxc-function-defaults-") as temporary:
+        root = Path(temporary)
+        for name, fixture in (
+            ("default", DEFAULT_ARGUMENT),
+            ("optional", OPTIONAL_ARGUMENT),
+        ):
+            oracle = subprocess.run(
+                [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+                cwd=ROOT,
+                env={**os.environ, "HAXE_NO_SERVER": "1"},
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if oracle.returncode != 0 or oracle.stdout or oracle.stderr:
+                raise FunctionLoweringFailure(
+                    f"{name} argument Eval oracle did not exit silently\n"
+                    f"stdout:\n{oracle.stdout}stderr:\n{oracle.stderr}"
+                )
+
+            outputs: dict[str, Path] = {}
+            for layout in ("unity", "split", "package"):
+                output = root / f"{name}-{layout}"
+                compiled = custom_target(fixture, output, layout=layout)
+                compile_messages = compiled.stdout + compiled.stderr
+                expected_runtime_notice = name == "optional" and "HXC2001" in compile_messages and "[ERROR]" not in compile_messages
+                if compiled.returncode != 0 or (compile_messages and not expected_runtime_notice):
+                    raise FunctionLoweringFailure(
+                        f"{name} argument {layout} compile failed\n"
+                        f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
+                    )
+                outputs[layout] = output
+
+            repeated = root / f"{name}-unity-repeat"
+            repeated_compile = custom_target(fixture, repeated, layout="unity")
+            repeated_messages = repeated_compile.stdout + repeated_compile.stderr
+            expected_repeated_notice = name == "optional" and "HXC2001" in repeated_messages and "[ERROR]" not in repeated_messages
+            if repeated_compile.returncode != 0 or (repeated_messages and not expected_repeated_notice):
+                raise FunctionLoweringFailure(f"repeated {name} argument compile failed")
+            if generated_tree(outputs["unity"]) != generated_tree(repeated):
+                raise FunctionLoweringFailure(
+                    f"repeated {name} argument output was not byte-identical"
+                )
+
+            generated_c = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in sorted(outputs["split"].rglob("*.c"))
+            )
+            generated_headers = "\n".join(
+                path.read_text(encoding="utf-8")
+                for path in sorted((outputs["split"] / "include").rglob("*.h"))
+            )
+            if name == "default":
+                if (
+                    "hxc_Main_defaultValue(7)" not in generated_c
+                    or "hxc_Main_defaultValue(9)" not in generated_c
+                    or "hxc_DefaultSupport_genericIdentity(8, 3)" not in generated_c
+                ):
+                    raise FunctionLoweringFailure(
+                        "default argument was not materialized as a full-arity typed C call"
+                    )
+            elif (
+                generated_c.count("hxc_Main_optionalValue((struct hxc_optional_Main_Choice){ .hxc_has_value = false })") < 2
+                or ".hxc_has_value = true" not in generated_c
+                or ".hxc_value = false" not in generated_c
+                or ".hxc_value = 0" not in generated_c
+                or ".hxc_value = 0.0" not in generated_c
+                or "bool hxc_value;" not in generated_headers
+                or "int32_t hxc_value;" not in generated_headers
+                or "uint32_t hxc_value;" not in generated_headers
+                or "double hxc_value;" not in generated_headers
+                or 'hxc_Main_acceptText((hxc_string){ (const uint8_t *)"haxe", 4, true })' not in generated_c
+            ):
+                raise FunctionLoweringFailure(
+                    "optional primitive/enum omission, false/zero, or presence lost its distinct tagged C value"
+                )
+
+            runtime_sources = planned_runtime_sources(outputs["split"])
+            for optimization in ("-O0", "-O2"):
+                executable = root / f"{name}-{toolchain.family}-{optimization[1:]}"
+                native = subprocess.run(
+                    [
+                        toolchain.compiler,
+                        *STRICT_FLAGS,
+                        optimization,
+                        "-I",
+                        str(outputs["split"] / "include"),
+                        "-I",
+                        str(ROOT / "runtime/hxrt/include"),
+                        *(str(path) for path in sorted((outputs["split"] / "src").rglob("*.c"))),
+                        *(str(path) for path in runtime_sources),
+                        "-o",
+                        str(executable),
+                    ],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                if native.returncode != 0 or native.stdout or native.stderr:
+                    raise FunctionLoweringFailure(
+                        f"{name} {optimization} generated C failed strict compilation\n"
+                        f"stdout:\n{native.stdout}stderr:\n{native.stderr}"
+                    )
+                ran = subprocess.run(
+                    [str(executable)],
+                    cwd=ROOT,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if ran.returncode != 0 or ran.stdout or ran.stderr:
+                    raise FunctionLoweringFailure(
+                        f"{name} {optimization} native behavior differed from Eval"
+                    )
+
+            sanitized = root / f"{name}-{toolchain.family}-sanitized"
+            sanitizer_flags = (
+                "-O1",
+                "-fno-omit-frame-pointer",
+                "-fsanitize=address,undefined",
+            )
+            sanitizer_compile = subprocess.run(
+                [
+                    toolchain.compiler,
+                    *STRICT_FLAGS,
+                    *sanitizer_flags,
+                    "-I",
+                    str(outputs["split"] / "include"),
+                    "-I",
+                    str(ROOT / "runtime/hxrt/include"),
+                    *(str(path) for path in sorted((outputs["split"] / "src").rglob("*.c"))),
+                    *(str(path) for path in runtime_sources),
+                    "-o",
+                    str(sanitized),
+                ],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            if sanitizer_compile.returncode != 0 or sanitizer_compile.stdout or sanitizer_compile.stderr:
+                raise FunctionLoweringFailure(
+                    f"{name} generated C failed the address/undefined-behavior sanitizer build\n"
+                    f"stdout:\n{sanitizer_compile.stdout}stderr:\n{sanitizer_compile.stderr}"
+                )
+            sanitized_run = subprocess.run(
+                [str(sanitized)],
+                cwd=ROOT,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if sanitized_run.returncode != 0 or sanitized_run.stdout or sanitized_run.stderr:
+                raise FunctionLoweringFailure(
+                    f"{name} generated C failed under address/undefined-behavior sanitizers"
+                )
+
+
+def wait_for_compiler_server(server: subprocess.Popen[str], endpoint: tuple[str, int]) -> None:
+    """Wait for the owned local server without hiding an early process failure."""
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            stdout, stderr = server.communicate()
+            raise FunctionLoweringFailure(
+                "Haxe compiler server exited before accepting default-argument requests\n"
+                f"stdout:\n{stdout}stderr:\n{stderr}"
+            )
+        try:
+            with socket.create_connection(endpoint, timeout=0.2):
+                return
+        except OSError:
+            time.sleep(0.05)
+    raise FunctionLoweringFailure("Haxe compiler server did not accept connections within 10 seconds")
+
+
+def check_default_argument_server_determinism() -> None:
+    """Prove repeated warm requests retain declaration defaults and clean state."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reservation:
+        reservation.bind(("127.0.0.1", 0))
+        port = reservation.getsockname()[1]
+    endpoint = str(port)
+    server = subprocess.Popen(
+        [development_tool("haxe"), "--wait", endpoint],
+        cwd=ROOT,
+        env={key: value for key, value in os.environ.items() if key != "HAXE_NO_SERVER"},
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        wait_for_compiler_server(server, ("127.0.0.1", port))
+        with tempfile.TemporaryDirectory(prefix="hxc-function-defaults-server-") as temporary:
+            root = Path(temporary)
+            for name, fixture in (
+                ("default", DEFAULT_ARGUMENT),
+                ("optional", OPTIONAL_ARGUMENT),
+            ):
+                first = root / f"{name}-first"
+                second = root / f"{name}-second"
+                for label, output in (("first", first), ("second", second)):
+                    compiled = custom_target(fixture, output, connect=endpoint)
+                    messages = compiled.stdout + compiled.stderr
+                    expected_notice = name == "optional" and "HXC2001" in messages and "[ERROR]" not in messages
+                    if compiled.returncode != 0 or (messages and not expected_notice):
+                        raise FunctionLoweringFailure(
+                            f"{name} {label} compiler-server request failed\n"
+                            f"stdout:\n{compiled.stdout}stderr:\n{compiled.stderr}"
+                        )
+                if generated_tree(first) != generated_tree(second):
+                    raise FunctionLoweringFailure(
+                        f"{name} optional/default output changed on a warm compiler server"
+                    )
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=5)
+
+
 def check_argument_diagnostics() -> None:
-    expected = {
-        "default": "TFunction(default-argument:value)",
-        "optional": "TFunction(optional-argument:value)",
-        "rest": "TFunction(rest-argument:values)",
-    }
+    expected = {"rest": "TFunction(rest-argument:values)"}
     with tempfile.TemporaryDirectory(prefix="hxc-function-negative-") as temporary:
         root = Path(temporary)
         for kind, marker in expected.items():
@@ -1106,6 +1385,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_production()
         check_module_fields()
         check_nonreturn_partitions(args.toolchain)
+        check_direct_argument_defaults(args.toolchain)
+        check_default_argument_server_determinism()
         check_argument_diagnostics()
     except (
         CFixtureFailure,
@@ -1119,7 +1400,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         return 1
     print(
         "function-lowering: OK: typed parameters/calls/conversions, recursive private "
-        "prototypes/unity+split+package source partitions, readable module-level functions, exact argument diagnostics, strict int main(void), "
+        "prototypes/unity+split+package source partitions, readable module-level functions, direct optional/default completion, exact rest diagnostics, strict int main(void), "
         "and zero-runtime production artifacts passed"
     )
     return 0

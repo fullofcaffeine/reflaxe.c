@@ -101,7 +101,18 @@ LOGICAL_PART_PATTERN = re.compile(r"^[a-z][a-z0-9-]{0,63}$")
 
 COLLISIONS = {"passable", "solid"}
 EDITS = {"collectable", "immutable"}
-BLOCK_RENDER_PROFILES = {"air", "foundation-rock", "meadow-grass", "rich-soil", "slate-stone"}
+BLOCK_RENDER_PROFILES = {
+    "air",
+    "ash-field",
+    "foundation-rock",
+    "forest-leaves",
+    "forest-wood",
+    "meadow-grass",
+    "rich-soil",
+    "river-sand",
+    "slate-stone",
+    "snow-field",
+}
 FLUID_SIMULATION_PROFILES = {"bounded-water"}
 FLUID_RENDER_PROFILES = {"translucent-voxel"}
 FLUID_CAMERA_PROFILES = {"clear-submersion"}
@@ -682,7 +693,7 @@ def render_haxe(pack: ContentPack) -> str:
         "package caxecraft.content;",
         "",
         "import caxecraft.domain.AquaticProfile;",
-        "import caxecraft.domain.PlayerAquatics.profile as createAquaticProfile;",
+        "import caxecraft.domain.Aquatics.profile as createAquaticProfile;",
         "import caxecraft.scenario.ContentId;",
         "import caxecraft.scenario.ScenarioContentRegistry;",
         "",
@@ -835,7 +846,27 @@ def render_haxe(pack: ContentPack) -> str:
             "",
         ]
     )
+    item_codes = {value.content_id: index for index, value in enumerate(pack.items)}
     lines.extend(switch_function("itemId", "BaseItem", "ContentId", pack.items, lambda value: f"new ContentId({haxe_string(value.content_id)})"))
+    lines.extend(switch_function("itemStorageCode", "BaseItem", "Int", pack.items, lambda value: str(item_codes[value.content_id])))
+    lines.extend(
+        [
+            "\t/** True when a map-supplied item code can be converted to `BaseItem`. */",
+            "\tpublic static inline function isValidItemStorageCode(code:Int):Bool",
+            f"\t\treturn code >= 0 && code < {len(pack.items)};",
+            "",
+            "\t/**",
+            "\t * Convert a code after `isValidItemStorageCode` accepted it.",
+            "\t *",
+            "\t * The fallback is unreachable for validated generated levels. Keeping it",
+            "\t * explicit lets ordinary Haxe retain a non-null closed result in native C.",
+            "\t */",
+            "\tpublic static function itemFromValidatedStorageCode(code:Int):BaseItem {",
+        ]
+    )
+    for index, item in enumerate(pack.items):
+        lines.extend([f"\t\tif (code == {index})", f"\t\t\treturn BaseItem.{haxe_symbol(item.content_id)};"])
+    lines.extend([f"\t\treturn BaseItem.{haxe_symbol(pack.items[0].content_id)};", "\t}", ""])
     lines.extend(switch_function("itemMaximumStack", "BaseItem", "Int", pack.items, lambda value: str(value.max_stack)))
     lines.extend(switch_function("itemUseProfile", "BaseItem", "ItemUseProfile", pack.items, lambda value: profile_symbol(value.use_profile)))
     lines.extend(
@@ -960,6 +991,10 @@ def render_haxe(pack: ContentPack) -> str:
         )
     lines.extend(["\t\treturn -1;", "\t}", ""])
     registry_membership("hasItem", item_ids)
+    lines.extend(["\tpublic function itemStorageCode(id:ContentId):Int {"])
+    for index, item in enumerate(pack.items):
+        lines.extend([f"\t\tif (id.text() == {haxe_string(item.content_id)})", f"\t\t\treturn {index};"])
+    lines.extend(["\t\treturn -1;", "\t}", ""])
     registry_membership("hasEntity", enemy_ids)
     registry_membership("hasNpc", npc_ids)
     for method in ("hasPrefab", "hasStatefulObject", "hasState", "hasSignal"):

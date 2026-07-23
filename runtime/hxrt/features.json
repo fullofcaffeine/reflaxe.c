@@ -31,16 +31,6 @@
       "ownerTask": "E5.T09"
     },
     {
-      "id": "gc",
-      "summary": "Precise non-moving tracing collector and exact roots.",
-      "ownerTask": "E4.T06"
-    },
-    {
-      "id": "object",
-      "summary": "Reachable object and type descriptors.",
-      "ownerTask": "E4.T05"
-    },
-    {
       "id": "process",
       "summary": "Hosted environment and process adapters.",
       "ownerTask": "E5.T09"
@@ -86,12 +76,17 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "Requested only by allocator, array, and string native seed fixtures; generated Haxe cannot select it yet.",
-            "id": "native-seed-fixture",
-            "kind": "native-seed-fixture"
+            "description": "A reachable compiler-owned allocation whose lifetime is explicit in HxcIR.",
+            "id": "allocation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "Selected transitively when a compiler-admitted runtime feature needs runtime-sized owned storage.",
+            "id": "runtime-sized-storage",
+            "kind": "transitive-dependency"
           }
         ],
-        "runtimeRationale": "Unknown runtime sizes and caller-supplied allocator identity need one shared ownership and failure contract, but compiler lowering for that case is still unsupported.",
+        "runtimeRationale": "Unknown runtime sizes and allocator identity need one shared ownership and failure contract. The compiler still keeps fixed, bounded, or nonescaping storage direct when it can prove that representation is sufficient.",
         "evidence": [
           "runtime/hxrt/test/allocator_abi.c",
           "runtime/hxrt/test/allocator_contract.c",
@@ -105,7 +100,7 @@
         "status"
       ],
       "id": "alloc",
-      "availability": "native-seed-only",
+      "availability": "compiler-selectable",
       "symbols": [
         "hxc_alloc",
         "hxc_allocation_allocate",
@@ -123,13 +118,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "5f01b19f66588f5c778ea5035aaaba0e2d5a48ff027c5810e32d20bb601d696a",
+          "sourceSha256": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/allocator.h",
           "sourcePath": "runtime/hxrt/include/hxrt/allocator.h"
         },
         {
-          "sourceSha256": "1f93b7f5724bf77b05204e20d96f9179582e070210bad2ec9dd7b89794e8a77c",
+          "sourceSha256": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e",
           "kind": "runtime-source",
           "outputPath": "runtime/src/allocator.c",
           "sourcePath": "runtime/hxrt/src/allocator.c"
@@ -149,12 +144,22 @@
         "referencePath": "docs/hxrt.md",
         "selectionRoots": [
           {
-            "description": "Requested only by the array differential and selective-package native fixtures; generated Haxe cannot select it yet.",
-            "id": "native-seed-fixture",
-            "kind": "native-seed-fixture"
+            "description": "A reachable ordinary Haxe Array length, checked indexing, or push operation.",
+            "id": "collection-operation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe Array literal for an admitted unboxed element representation.",
+            "id": "create-literal",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable ordinary Haxe Array<T> whose length and shared identity are decided at run time.",
+            "id": "managed-type-representation",
+            "kind": "hxc-ir-operation"
           }
         ],
-        "runtimeRationale": "Runtime-dependent capacity plus reusable allocator and element-lifecycle boundaries justify this shared seed only after future array lowering proves the need.",
+        "runtimeRationale": "Ordinary Haxe Array values combine run-time growth with shared mutable identity. A reference-counted container preserves that identity for the admitted acyclic element slice while the compiler keeps fixed arrays and spans direct and runtime-free.",
         "evidence": [
           "test/differential/array-runtime/run.py",
           "test/runtime/runtime-feature-graph/run.py"
@@ -167,7 +172,7 @@
         "alloc"
       ],
       "id": "array",
-      "availability": "native-seed-only",
+      "availability": "compiler-selectable",
       "symbols": [
         "hxc_array_at",
         "hxc_array_at_const",
@@ -178,6 +183,17 @@
         "hxc_array_is_valid",
         "hxc_array_move",
         "hxc_array_push_copy",
+        "hxc_array_ref_create",
+        "hxc_array_ref_create_trivial",
+        "hxc_array_ref_dispose_in_place",
+        "hxc_array_ref_get_copy",
+        "hxc_array_ref_init_in_place",
+        "hxc_array_ref_is_valid",
+        "hxc_array_ref_length",
+        "hxc_array_ref_push_copy",
+        "hxc_array_ref_release",
+        "hxc_array_ref_retain",
+        "hxc_array_ref_set_copy",
         "hxc_array_remove_at",
         "hxc_array_reserve",
         "hxc_array_resize",
@@ -185,13 +201,13 @@
       ],
       "artifacts": [
         {
-          "sourceSha256": "65ec3d1a86705030e42890de9af2b4b96a30062f0f0a8d127280fec693a02c7d",
+          "sourceSha256": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/array.h",
           "sourcePath": "runtime/hxrt/include/hxrt/array.h"
         },
         {
-          "sourceSha256": "85e958919867732af6371afb49983fe607335981f7cbaa893fdf6ca5b806c825",
+          "sourceSha256": "79e25b048ee656e4c98675a2c9e5bf30b5687764519d1c06883b524f07f05a2d",
           "kind": "runtime-source",
           "outputPath": "runtime/src/array.c",
           "sourcePath": "runtime/hxrt/src/array.c"
@@ -200,6 +216,144 @@
       "libraries": [],
       "minimalAllowed": true,
       "summary": "Resizable contiguous unboxed storage with checked growth and optional typed element lifecycle callbacks.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/hxrt.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable admitted Bytes allocation, range, copy, comparison, or mutation operation.",
+            "id": "binary-operation",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable haxe.io.Bytes value whose contents or identity live at run time.",
+            "id": "managed-type-representation",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General Bytes values have run-time size and shared mutable identity. The selected slice owns that storage without treating arbitrary bytes as text or boxed integers.",
+        "evidence": [
+          "test/differential/bytes-runtime/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Compiler-known immutable byte tables can remain direct const C data when Haxe identity and mutation are unobservable.",
+        "contract": "Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, and explicit UTF-8 String-to-bytes copying.",
+        "programLocalAlternative": "A closed bounded buffer can use a program-local specialization when it preserves the same alias and bounds contract."
+      },
+      "dependencies": [
+        "alloc",
+        "string-literal"
+      ],
+      "id": "bytes",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_bytes_ref_blit",
+        "hxc_bytes_ref_compare",
+        "hxc_bytes_ref_create_copy",
+        "hxc_bytes_ref_create_utf8_copy",
+        "hxc_bytes_ref_create_zeroed",
+        "hxc_bytes_ref_fill",
+        "hxc_bytes_ref_get",
+        "hxc_bytes_ref_is_valid",
+        "hxc_bytes_ref_length",
+        "hxc_bytes_ref_release",
+        "hxc_bytes_ref_retain",
+        "hxc_bytes_ref_set",
+        "hxc_bytes_ref_sub"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/bytes.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/bytes.h"
+        },
+        {
+          "sourceSha256": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/bytes.c",
+          "sourcePath": "runtime/hxrt/src/bytes.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.",
+      "defines": [],
+      "environments": [
+        "freestanding",
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/gc-runtime.md",
+        "selectionRoots": [
+          {
+            "description": "A reachable managed representation may contain a reference cycle that local retain/release ownership cannot reclaim.",
+            "id": "managed-cycle",
+            "kind": "hxc-ir-operation"
+          },
+          {
+            "description": "A reachable escaping identity-bearing graph cannot use a proven stack, region, or manual lifetime.",
+            "id": "managed-object-graph",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "General escaping Haxe graphs need stable identity, cyclic reclamation, and exact roots coordinated across functions. One selected backend owns those shared lifetimes without conservatively scanning arbitrary C memory.",
+        "evidence": [
+          "test/runtime/gc/run.py",
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Nonescaping values, static literals, bounded regions, and explicitly manual ownership remain direct and collector-free.",
+        "contract": "Implements the selected precise collector backend over immutable type descriptors and the reviewed allocator ABI.",
+        "programLocalAlternative": "A closed program-local region is preferred when the compiler can prove all identities, escapes, and destruction points."
+      },
+      "dependencies": [
+        "alloc",
+        "object"
+      ],
+      "id": "gc",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_gc_allocate",
+        "hxc_gc_collect",
+        "hxc_gc_dispose",
+        "hxc_gc_get_stats",
+        "hxc_gc_init",
+        "hxc_gc_owns_exact",
+        "hxc_gc_pin_object",
+        "hxc_gc_root_frame_pop",
+        "hxc_gc_root_frame_push",
+        "hxc_gc_root_table_register",
+        "hxc_gc_root_table_unregister",
+        "hxc_gc_safepoint",
+        "hxc_gc_thread_register",
+        "hxc_gc_thread_unregister",
+        "hxc_gc_unpin_object"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/gc.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/gc.h"
+        },
+        {
+          "sourceSha256": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/gc.c",
+          "sourcePath": "runtime/hxrt/src/gc.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Precise non-moving mark-and-sweep collection with explicit exact roots, pins, pressure thresholds, and reports.",
       "defines": [],
       "environments": [
         "freestanding",
@@ -259,6 +413,64 @@
       "summary": "Minimal hosted length-delimited literal output with explicit write and flush failure status.",
       "defines": [],
       "environments": [
+        "hosted"
+      ]
+    },
+    {
+      "documentation": {
+        "referencePath": "docs/object-descriptors.md",
+        "selectionRoots": [
+          {
+            "description": "Selected transitively by the precise collector for managed object allocation and tracing.",
+            "id": "dependency-only",
+            "kind": "transitive-dependency"
+          },
+          {
+            "description": "A reachable escaping object representation needs exact size, alignment, tracing, or cleanup facts.",
+            "id": "managed-object-descriptor",
+            "kind": "hxc-ir-operation"
+          }
+        ],
+        "runtimeRationale": "Escaping object graphs need one immutable, versioned description of payload layout and exact outgoing references. The descriptor remains separate from reflection names and collector-private mark state.",
+        "evidence": [
+          "test/runtime/runtime-feature-graph/run.py"
+        ],
+        "directAlternative": "Nonescaping classes and values with proven direct lifetimes keep ordinary private C storage and no descriptor.",
+        "contract": "Defines the collector-neutral internal descriptor and header contract for reachable managed payload types.",
+        "programLocalAlternative": "A closed bounded region may use a program-local ownership plan when identity, lifetime, and cleanup are fully proven."
+      },
+      "dependencies": [
+        "runtime-base"
+      ],
+      "id": "object",
+      "availability": "compiler-selectable",
+      "symbols": [
+        "hxc_object_header_init",
+        "hxc_object_header_is_valid",
+        "hxc_type_descriptor_finalize",
+        "hxc_type_descriptor_is_valid",
+        "hxc_type_descriptor_trace"
+      ],
+      "artifacts": [
+        {
+          "sourceSha256": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5",
+          "kind": "runtime-header",
+          "outputPath": "runtime/include/hxrt/object.h",
+          "sourcePath": "runtime/hxrt/include/hxrt/object.h"
+        },
+        {
+          "sourceSha256": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0",
+          "kind": "runtime-source",
+          "outputPath": "runtime/src/object.c",
+          "sourcePath": "runtime/hxrt/src/object.c"
+        }
+      ],
+      "libraries": [],
+      "minimalAllowed": true,
+      "summary": "Selective immutable object/type descriptors with exact trace and optional finalization dispatch.",
+      "defines": [],
+      "environments": [
+        "freestanding",
         "hosted"
       ]
     },
@@ -338,7 +550,7 @@
       "symbols": [],
       "artifacts": [
         {
-          "sourceSha256": "5727cd5798673e27f2215e7a3e1e2a1f92245510855903075caa71764181456d",
+          "sourceSha256": "138aaf48fdb3abbf00d0403f891c3779578e50c4cb7629c4cc30027702896966",
           "kind": "runtime-header",
           "outputPath": "runtime/include/hxrt/base.h",
           "sourcePath": "runtime/hxrt/include/hxrt/base.h"
@@ -525,6 +737,11 @@
             "description": "Selected transitively when a runtime operation consumes the compiler's direct literal representation.",
             "id": "dependency-only",
             "kind": "transitive-dependency"
+          },
+          {
+            "description": "A reachable immutable Haxe String value backed by compiler-owned literal storage.",
+            "id": "direct-string-value",
+            "kind": "hxc-ir-operation"
           }
         ],
         "runtimeRationale": "The header only shares the three-field call-boundary layout needed by selected consumers such as io.",
@@ -563,7 +780,12 @@
   "status": "selective-compiler-packaging",
   "schemaVersion": 3,
   "compilerSelectableFeatures": [
+    "alloc",
+    "array",
+    "bytes",
+    "gc",
     "io",
+    "object",
     "runtime-base",
     "status",
     "string-literal"
@@ -575,7 +797,7 @@
     "version": {
       "major": 0,
       "patch": 0,
-      "minor": 5
+      "minor": 8
     },
     "publicBoundary": {
       "applicationAbiStatus": "unsupported",
@@ -584,19 +806,31 @@
         "hxc_allocator",
         "hxc_array",
         "hxc_array_element_ops",
+        "hxc_array_ref",
         "hxc_borrowed_cstring",
         "hxc_byte_view",
+        "hxc_bytes_ref",
+        "hxc_gc",
+        "hxc_gc_allocation",
+        "hxc_gc_config",
+        "hxc_gc_pin",
+        "hxc_gc_root_frame",
+        "hxc_gc_root_table",
+        "hxc_gc_stats",
+        "hxc_gc_thread",
+        "hxc_object_header",
         "hxc_owned_cstring",
         "hxc_owned_string",
         "hxc_string",
-        "hxc_string_buffer"
+        "hxc_string_buffer",
+        "hxc_type_descriptor"
       ],
       "exportTypePolicy": "runtime-structs-forbidden"
     },
     "releaseProvenance": {
       "runtimeCStandard": "c11",
       "sourceHashAlgorithm": "sha256",
-      "sourceSetSha256": "332b6023df3f621f84fdc5447ed81dd398e12c93dc8649f5a66be019407c10b6",
+      "sourceSetSha256": "e1a2ed3f79888a3cb864d3ff55431d37e41f1da8269bb959c83809951de8f5fa",
       "publicHeaderCppStandard": "c++17"
     },
     "generatedCodeCompatibility": "same-major",

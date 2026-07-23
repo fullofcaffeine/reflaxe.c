@@ -2,10 +2,10 @@
 
 This directory contains the first original Caxecraft visual-design pack. The
 native game now packages and loads the title panorama, wordmark, HUD atlas,
-item atlas, entity atlas, and base terrain atlas as exact primary PNG bytes.
-Five atlases remain design inputs: their presence is not evidence that
-Adventure terrain/characters, Ivvy, Adventure props, or cutscene-editor icons
-are used by the native game yet. The
+base and Adventure item atlases, entity atlas, and base and Adventure terrain
+atlases as exact primary PNG bytes. Three atlases remain design inputs: their
+presence is not evidence that Adventure characters, Ivvy, or cutscene-editor
+icons are used by the native game yet. The
 complete scope is described by the
 [game design document](../../../docs/caxecraft-game-design.md) and
 [domain design](../../../docs/caxecraft-domain.md).
@@ -27,7 +27,7 @@ Any future resize, packing, compression, conversion, or runtime-ready derivative
 must have deterministic source-to-byte regeneration. `haxe_c-xge.15` still owns
 those derived-asset tools, runtime sampling/lifetime decisions, visual goldens,
 Git/LFS growth policy, and human review before these assets can be called
-shipped art. The six runtime files need no regeneration recipe because
+shipped art. The eight runtime files need no regeneration recipe because
 packaging copies the hash-verified primary bytes without changing them.
 
 The pack deliberately contains no official Haxe logo binary. The Haxe branding

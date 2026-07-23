@@ -193,7 +193,7 @@ The emitter owns these independently versioned sidecars:
   The emitter revalidates its counts, order, hashes, sources, reason totals, and
   complete payload totals before accepting it.
 - `hxc.dispatch.json`: omitted when no instance call is reachable; otherwise a
-  schema-1 `hxc-closed-world-virtual-dispatch-v1` report recording each
+  schema-2 `hxc-closed-world-instance-dispatch-v2` report recording each
   source-positioned direct/virtual choice, minimal hierarchy layouts and slots,
   selected concrete tables, representation-checked implementations, finalized
   adapter names, and exact counts. Its closed schema is
@@ -247,19 +247,30 @@ platform, or release artifact.
 
 `RuntimeFeaturePackager` materializes an already validated non-empty plan as
 exact runtime `GeneratedFile` values. The generated literal-output path packages
-only the compiler-selectable foundation/status/literal/I/O artifacts; the
-alloc/full-string fixtures remain native-seed evidence. `CProjectEmitter`
-rejects any unrelated runtime plan or payload. See
+only foundation/status/literal/I/O. The bounded managed Array path packages
+only foundation/status/allocator/array. The bounded Bytes path packages only
+foundation/status/allocator/literal/bytes. Full strings remain native-seed
+evidence. `CProjectEmitter` rejects any unrelated runtime plan or payload. See
 [runtime feature planning](runtime-feature-planning.md).
 
 Because every selected closure includes `runtime-base`, the private generated
 program header also carries one structural C11 assertion that the runtime ABI
-major matches the compiler's internal 0.5.0 contract. Same-major minor changes
+major matches the compiler's internal 0.8.0 contract. Same-major minor changes
 remain compatible; a changed major fails before linking. Runtime-free projects
 contain no `hxrt` include, version marker, or compatibility assertion. This is
 not a public application ABI: primitive production emission rejects public
 headers and records `analyzed-no-public-exports`; E7 owns the future typed export
 checker and wrappers.
+
+When validated HxcIR contains exact collector roots, project emission adds one
+private `hxc_gc` collector and one `hxc_gc_thread` execution-context chain. The
+umbrella/common private header declares them, the compiler-owned support unit
+defines their zero state, and generated `main` initializes/registers them before
+the Haxe entry call and unregisters/disposes them afterward. Unity keeps those
+pieces in its single source; split and package layouts place definitions in
+`src/hxc/support.c` and lifecycle code in `src/hxc/main.c`. This changes artifact
+ownership only, not the semantic root plan. A root-free program emits none of
+these declarations, calls, headers, or runtime features.
 
 `examples/hello` is the first product consumer of that same emission path. Its
 checked-in baseline retains the private header/source shape and runtime plan,

@@ -1,8 +1,24 @@
 #include "hxc/program.h"
 
+_Static_assert(offsetof(struct hxc_SpanFixture_OwnedSpanBuffer, hxc_bytes) == 0, "class hxc_SpanFixture_OwnedSpanBuffer first storage field begins at offset zero");
+
+_Static_assert(_Alignof(struct hxc_SpanFixture_OwnedSpanBuffer) >= _Alignof(uint8_t [4]), "class hxc_SpanFixture_OwnedSpanBuffer alignment admits field 0");
+
+_Static_assert(offsetof(struct hxc_SpanFixture_OwnedSpanBuffer, hxc_numbers) >= offsetof(struct hxc_SpanFixture_OwnedSpanBuffer, hxc_bytes) + sizeof(uint8_t [4]), "class hxc_SpanFixture_OwnedSpanBuffer field 1 follows the prior storage without overlap");
+
+_Static_assert(_Alignof(struct hxc_SpanFixture_OwnedSpanBuffer) >= _Alignof(int32_t [4]), "class hxc_SpanFixture_OwnedSpanBuffer alignment admits field 1");
+
+_Static_assert(sizeof(struct hxc_SpanFixture_OwnedSpanBuffer) >= offsetof(struct hxc_SpanFixture_OwnedSpanBuffer, hxc_numbers) + sizeof(int32_t [4]), "class hxc_SpanFixture_OwnedSpanBuffer size contains its final storage member");
+
 _Static_assert(offsetof(struct hxc_SpanFixture_FinalSpanMutator, hxc_storage) == 0, "class hxc_SpanFixture_FinalSpanMutator strict-C empty-storage anchor begins at zero");
 
 _Static_assert(sizeof(struct hxc_SpanFixture_FinalSpanMutator) >= 1, "class hxc_SpanFixture_FinalSpanMutator strict-C empty-storage anchor occupies one byte");
+
+void hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer(struct hxc_SpanFixture_OwnedSpanBuffer *hxc_self)
+{
+  (void)hxc_self;
+  return;
+}
 
 int32_t hxc_SpanFixture_checkedAt(int32_t hxc_index)
 {
@@ -98,6 +114,7 @@ void hxc_SpanFixture_main(void)
   hxc_SpanFixture_checkedAt(2);
   uint8_t hxc_tmp_call_result_n0 = hxc_SpanFixture_zeroedGridCell();
   hxc_SpanFixture_parameterRoundTrip(hxc_tmp_call_result_n0);
+  hxc_SpanFixture_ownedFieldRoundTrip((uint8_t)1);
   hxc_SpanFixture_spanBeforeConditionalArgument(true);
   hxc_SpanFixture_zeroedGridCell();
   uint8_t hxc_tmp_call_result_n1 = hxc_SpanFixture_zeroedGridCell();
@@ -174,6 +191,21 @@ uint8_t hxc_SpanFixture_mutatedGridCell(uint8_t hxc_replacement)
   uint8_t hxc_tmp_collection_index_load_result_n9 = hxc_readOnly[(size_t)hxc_tmp_load_result_n8];
   hxc_observed = hxc_tmp_collection_index_load_result_n9;
   return hxc_observed;
+}
+
+int32_t hxc_SpanFixture_ownedFieldRoundTrip(uint8_t hxc_replacement)
+{
+  struct hxc_SpanFixture_OwnedSpanBuffer hxc_tmp_object_storage_n2 = { 0 };
+  struct hxc_SpanFixture_OwnedSpanBuffer *hxc_tmp_class_object_address_n0 = &hxc_tmp_object_storage_n2;
+  hxc_compiler_constructor_SpanFixture_OwnedSpanBuffer(hxc_tmp_class_object_address_n0);
+  struct hxc_SpanFixture_OwnedSpanBuffer *hxc_buffer = hxc_tmp_class_object_address_n0;
+  struct hxc_SpanFixture_OwnedSpanBuffer *hxc_tmp_load_result_n1 = hxc_buffer;
+  if (hxc_tmp_load_result_n1 == NULL)
+  {
+    abort();
+  }
+  int32_t hxc_tmp_instance_call_result_n2 = hxc_SpanFixture_OwnedSpanBuffer_roundTrip(hxc_tmp_load_result_n1, hxc_replacement);
+  return hxc_tmp_instance_call_result_n2;
 }
 
 uint8_t hxc_SpanFixture_parameterRoundTrip(uint8_t hxc_replacement)
@@ -294,6 +326,25 @@ uint8_t hxc_SpanFixture_FinalSpanMutator_replace(struct hxc_SpanFixture_FinalSpa
   }
   uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_borrow[(size_t)hxc_index];
   return hxc_tmp_collection_index_load_result_n0;
+}
+
+int32_t hxc_SpanFixture_OwnedSpanBuffer_roundTrip(struct hxc_SpanFixture_OwnedSpanBuffer *hxc_self, uint8_t hxc_replacement)
+{
+  if (hxc_self == NULL)
+  {
+    abort();
+  }
+  (*hxc_self).hxc_bytes[(size_t)2] = hxc_replacement;
+  (*hxc_self).hxc_numbers[(size_t)1] = 41;
+  const uint8_t *hxc_readBytes = (*hxc_self).hxc_bytes;
+  size_t hxc_tmp_length_n2 = 4;
+  (void)hxc_tmp_length_n2;
+  const int32_t *hxc_readNumbers = (*hxc_self).hxc_numbers;
+  size_t hxc_tmp_length_n3 = 4;
+  (void)hxc_tmp_length_n3;
+  uint8_t hxc_tmp_collection_index_load_result_n0 = hxc_readBytes[(size_t)2];
+  int32_t hxc_tmp_collection_index_load_result_n1 = hxc_readNumbers[(size_t)1];
+  return hxc_i32_add_wrapping((int32_t)hxc_tmp_collection_index_load_result_n0, hxc_tmp_collection_index_load_result_n1);
 }
 
 int main(void)

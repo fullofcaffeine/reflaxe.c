@@ -154,10 +154,10 @@ void hxc_ArithmeticFixture_main(void)
   hxc_ArithmeticFixture_fmod(1.0, 0.0);
   hxc_ArithmeticFixture_fint(3.75);
   hxc_ArithmeticFixture_fequal(1.0, 2.0);
-  hxc_ArithmeticFixture_uadd((uint32_t)1, (uint32_t)2);
-  hxc_ArithmeticFixture_umod((uint32_t)1, (uint32_t)2);
-  hxc_ArithmeticFixture_ushl((uint32_t)1, -1);
-  hxc_ArithmeticFixture_ushr((uint32_t)1, -1);
+  hxc_ArithmeticFixture_uadd(1, 2);
+  hxc_ArithmeticFixture_umod(1, 2);
+  hxc_ArithmeticFixture_ushl(1, -1);
+  hxc_ArithmeticFixture_ushr(1, -1);
   hxc_ArithmeticFixture_literalToU8();
   hxc_ArithmeticFixture_i32ToU8(-1);
   hxc_ArithmeticFixture_u8ToI32((uint8_t)255);

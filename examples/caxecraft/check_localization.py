@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
-"""Check catalog completeness, generated adapters, and locale-blind app code."""
+"""Check catalog completeness, generated lookups, and locale-blind app code."""
 
 from __future__ import annotations
 
 import copy
 import json
+import os
+import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -14,7 +17,10 @@ from play import PlayFailure, prepare_output_root, stage_content_catalogs
 
 
 CASE = Path(__file__).resolve().parent
+ROOT = CASE.parents[1]
 APP_SOURCES = (
+    CASE / "src/caxecraft/app/CaxecraftApp.hx",
+    CASE / "src/caxecraft/app/CaxecraftEditorScreen.hx",
     CASE / "src/caxecraft/app/Main.hx",
     CASE / "src/caxecraft/app/TitleMenu.hx",
 )
@@ -22,6 +28,18 @@ APP_SOURCES = (
 
 class LocalizationCheckFailure(RuntimeError):
     pass
+
+
+def haxe_tool() -> str:
+    """Return the checkout-owned Haxe shim so Eval uses the reviewed pin."""
+
+    local = ROOT / "node_modules/.bin/haxe"
+    if local.is_file():
+        return str(local)
+    resolved = shutil.which("haxe")
+    if resolved is None:
+        raise LocalizationCheckFailure("pinned Haxe executable is unavailable")
+    return resolved
 
 
 def expect_rejected(document: dict[str, object], label: str) -> None:
@@ -95,9 +113,37 @@ def check_generated() -> None:
     rendered = catalog.rendered_catalogs()
     for path, expected in rendered.items():
         if not path.is_file() or path.read_text(encoding="utf-8") != expected:
-            raise LocalizationCheckFailure(f"generated adapter is stale: {path.relative_to(CASE)}")
-        if expected.count("Raylib.DrawText(") == 0:
-            raise LocalizationCheckFailure(f"generated adapter has no direct literal draws: {path.relative_to(CASE)}")
+            raise LocalizationCheckFailure(f"generated catalog is stale: {path.relative_to(CASE)}")
+        forbidden = ("raylib.", "Raylib.", "DrawText(", "function draw(")
+        leaked = [fragment for fragment in forbidden if fragment in expected]
+        if leaked:
+            raise LocalizationCheckFailure(f"generated catalog owns rendering details {leaked}: {path.relative_to(CASE)}")
+        for required in ("LocalizationText", "function text(", "return switch"):
+            if required not in expected:
+                raise LocalizationCheckFailure(f"generated catalog omitted {required!r}: {path.relative_to(CASE)}")
+
+
+def check_eval_lookup() -> None:
+    """Run the target-neutral catalog semantics without Raylib or native C."""
+
+    try:
+        result = subprocess.run(
+            [haxe_tool(), "--cwd", str(CASE), "localization.hxml"],
+            cwd=ROOT,
+            env={**os.environ, "HAXE_NO_SERVER": "1", "LC_ALL": "C"},
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise LocalizationCheckFailure("localization Eval lookup exceeded 30 seconds") from error
+    expected = "caxecraft-localization: typed Eval lookup passed\n"
+    if result.returncode != 0 or result.stdout != expected or result.stderr:
+        raise LocalizationCheckFailure(
+            f"localization Eval lookup changed; exit={result.returncode}, stdout={result.stdout!r}, stderr={result.stderr!r}"
+        )
 
 
 def check_native_package_boundary() -> None:
@@ -138,12 +184,13 @@ def main() -> int:
     try:
         check_negative_contracts()
         check_generated()
+        check_eval_lookup()
         check_app_boundary()
         check_native_package_boundary()
     except (OSError, UnicodeError, PlayFailure, catalog.CatalogFailure, LocalizationCheckFailure) as error:
         print(f"caxecraft-localization: ERROR: {error}", file=sys.stderr)
         return 1
-    print("caxecraft-localization: OK: complete catalogs, direct C literals, locale-blind app")
+    print("caxecraft-localization: OK: complete typed lookups, static C text, locale-blind app")
     return 0
 
 

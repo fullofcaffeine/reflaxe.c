@@ -13,6 +13,30 @@ private final class FinalSpanMutator {
 	}
 }
 
+/**
+	Owns two small fixed arrays for the complete lifetime of one stack object.
+
+	This is the focused source shape required by Caxecraft's `GameSession`: the
+	class owns the bytes, while each method borrow ends before the method returns.
+**/
+#if !span_lowering_report
+private final class OwnedSpanBuffer {
+	var bytes:CArray<UInt8, Length4> = CArray.zero(4);
+	var numbers:CArray<Int, Length4> = CArray.zero(4);
+
+	public function new() {}
+
+	/** Mutate both owned arrays and observe them through fresh read-only views. */
+	public function roundTrip(replacement:UInt8):Int {
+		bytes[2] = replacement;
+		numbers[1] = 41;
+		var readBytes:ConstSpan<UInt8> = bytes.constSpan();
+		var readNumbers:ConstSpan<Int> = numbers.constSpan();
+		return c.IntConvert.exact(readBytes[2]) + readNumbers[1];
+	}
+}
+#end
+
 class SpanFixture {
 	static inline final GRID_WIDTH = 32;
 	static inline final GRID_HEIGHT = 16;
@@ -93,6 +117,14 @@ class SpanFixture {
 	}
 
 	#if !span_lowering_report
+	/** Prove that a nonescaping class can own, borrow, and mutate fixed storage. */
+	static function ownedFieldRoundTrip(replacement:UInt8):Int {
+		final buffer = new OwnedSpanBuffer();
+		return buffer.roundTrip(replacement);
+	}
+	#end
+
+	#if !span_lowering_report
 	/** Exercise a module-level indexed store whose value joins two branches. */
 	static function conditionalAssignment(selectReplacement:Bool):UInt8 {
 		var values:CArray<UInt8, Length4> = CArray.zero(4);
@@ -131,6 +163,9 @@ class SpanFixture {
 		constSum();
 		checkedAt(2);
 		parameterRoundTrip(zeroedGridCell());
+		#if !span_lowering_report
+		ownedFieldRoundTrip(c.IntConvert.modulo(1));
+		#end
 		spanBeforeConditionalArgument(true);
 		zeroedGridCell();
 		mutatedGridCell(zeroedGridCell());

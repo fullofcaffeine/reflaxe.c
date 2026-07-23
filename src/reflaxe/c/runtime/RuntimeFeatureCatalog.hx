@@ -24,6 +24,9 @@ class RuntimeFeatureCatalog {
 		final statusName = RuntimeFeatureId.parse("status-name");
 		final alloc = RuntimeFeatureId.parse("alloc");
 		final array = RuntimeFeatureId.parse("array");
+		final bytes = RuntimeFeatureId.parse("bytes");
+		final object = RuntimeFeatureId.parse("object");
+		final gc = RuntimeFeatureId.parse("gc");
 		final stringLiteral = RuntimeFeatureId.parse("string-literal");
 		final string = RuntimeFeatureId.parse("string");
 		final io = RuntimeFeatureId.parse("io");
@@ -72,8 +75,8 @@ class RuntimeFeatureCatalog {
 					"A fixture could duplicate the switch, but that would stop testing the runtime's own status vocabulary.",
 					"The helper is shared native evidence, not a fallback selected for generated Haxe.", "docs/hxrt.md",
 					["scripts/ci/runtime_smoke.py", "runtime/hxrt/test/runtime_smoke.c"])),
-			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.", NativeSeedOnly,
-				true, environments, [status], [header("allocator.h"), source("allocator.c")], [
+			new RuntimeFeatureDefinition(alloc, "Hardened allocator ownership and failure contracts with hosted and custom native evidence.",
+				CompilerSelectable, true, environments, [status], [header("allocator.h"), source("allocator.c")], [
 					"hxc_default_allocator",
 					"hxc_allocator_is_valid",
 					"hxc_allocator_same_identity",
@@ -91,11 +94,14 @@ class RuntimeFeatureCatalog {
 				[], [],
 				documentation("Implements checked size arithmetic, explicit allocator identity, aligned allocation, failure-atomic resize, and move-only allocation owners.",
 					[
-						nativeSeedRoot("Requested only by allocator, array, and string native seed fixtures; generated Haxe cannot select it yet.")
+						new RuntimeFeatureSelectionRoot("allocation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable compiler-owned allocation whose lifetime is explicit in HxcIR."),
+						new RuntimeFeatureSelectionRoot("runtime-sized-storage", RuntimeFeatureSelectionRootKind.TransitiveDependency,
+							"Selected transitively when a compiler-admitted runtime feature needs runtime-sized owned storage.")
 					],
 					"Stack storage, fixed arrays, nonescaping spans, and bounded values remain direct C and never request allocation.",
 					"A program-local allocator is preferred when whole-program escape and size facts permit a narrower specialized owner.",
-					"Unknown runtime sizes and caller-supplied allocator identity need one shared ownership and failure contract, but compiler lowering for that case is still unsupported.",
+					"Unknown runtime sizes and allocator identity need one shared ownership and failure contract. The compiler still keeps fixed, bounded, or nonescaping storage direct when it can prove that representation is sufficient.",
 					"docs/hxrt.md",
 					[
 						"scripts/ci/runtime_smoke.py",
@@ -103,7 +109,7 @@ class RuntimeFeatureCatalog {
 						"runtime/hxrt/test/allocator_abi.c"
 					])),
 			new RuntimeFeatureDefinition(array, "Resizable contiguous unboxed storage with checked growth and optional typed element lifecycle callbacks.",
-				NativeSeedOnly, true, environments, [alloc], [header("array.h"), source("array.c")], [
+				CompilerSelectable, true, environments, [alloc], [header("array.h"), source("array.c")], [
 					"hxc_array_element_ops_is_valid",
 					"hxc_array_init",
 					"hxc_array_is_valid",
@@ -112,6 +118,17 @@ class RuntimeFeatureCatalog {
 					"hxc_array_at",
 					"hxc_array_at_const",
 					"hxc_array_push_copy",
+					"hxc_array_ref_create",
+					"hxc_array_ref_create_trivial",
+					"hxc_array_ref_dispose_in_place",
+					"hxc_array_ref_get_copy",
+					"hxc_array_ref_init_in_place",
+					"hxc_array_ref_is_valid",
+					"hxc_array_ref_length",
+					"hxc_array_ref_push_copy",
+					"hxc_array_ref_release",
+					"hxc_array_ref_retain",
+					"hxc_array_ref_set_copy",
 					"hxc_array_insert_copy",
 					"hxc_array_set_copy",
 					"hxc_array_remove_at",
@@ -121,21 +138,106 @@ class RuntimeFeatureCatalog {
 				[], [],
 				documentation("Implements a move-only resizable unboxed buffer with deterministic checked growth, borrow invalidation, and optional typed element lifecycle callbacks.",
 					[
-						nativeSeedRoot("Requested only by the array differential and selective-package native fixtures; generated Haxe cannot select it yet.")
+						new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe Array<T> whose length and shared identity are decided at run time."),
+						new RuntimeFeatureSelectionRoot("create-literal", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe Array literal for an admitted unboxed element representation."),
+						new RuntimeFeatureSelectionRoot("collection-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+							"A reachable ordinary Haxe Array length, checked indexing, or push operation.")
 					],
 					"Compiler-known fixed arrays and nonescaping spans use direct C storage and bounds checks.",
 					"Closed element types and bounded capacities should use a program-local specialized helper when that is smaller and equally correct.",
-					"Runtime-dependent capacity plus reusable allocator and element-lifecycle boundaries justify this shared seed only after future array lowering proves the need.",
+					"Ordinary Haxe Array values combine run-time growth with shared mutable identity. A reference-counted container preserves that identity for the admitted acyclic element slice while the compiler keeps fixed arrays and spans direct and runtime-free.",
 					"docs/hxrt.md",
 					[
 						"test/differential/array-runtime/run.py",
 						"test/runtime/runtime-feature-graph/run.py"
 					])),
+			new RuntimeFeatureDefinition(bytes, "Fixed-length mutable binary storage with checked ranges and shared Haxe identity.", CompilerSelectable, true,
+				environments, [alloc, stringLiteral], [header("bytes.h"), source("bytes.c")], [
+					"hxc_bytes_ref_create_zeroed",
+					"hxc_bytes_ref_create_copy",
+					"hxc_bytes_ref_create_utf8_copy",
+					"hxc_bytes_ref_is_valid",
+					"hxc_bytes_ref_retain",
+					"hxc_bytes_ref_release",
+					"hxc_bytes_ref_length",
+					"hxc_bytes_ref_get",
+					"hxc_bytes_ref_set",
+					"hxc_bytes_ref_sub",
+					"hxc_bytes_ref_blit",
+					"hxc_bytes_ref_fill",
+					"hxc_bytes_ref_compare"
+				],
+				[], [],
+				documentation("Implements exact-length arbitrary byte buffers, alias-visible mutation, checked copying, and explicit UTF-8 String-to-bytes copying.",
+					[
+					new RuntimeFeatureSelectionRoot("managed-type-representation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable haxe.io.Bytes value whose contents or identity live at run time."),
+					new RuntimeFeatureSelectionRoot("binary-operation", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable admitted Bytes allocation, range, copy, comparison, or mutation operation.")
+				],
+					"Compiler-known immutable byte tables can remain direct const C data when Haxe identity and mutation are unobservable.",
+					"A closed bounded buffer can use a program-local specialization when it preserves the same alias and bounds contract.",
+					"General Bytes values have run-time size and shared mutable identity. The selected slice owns that storage without treating arbitrary bytes as text or boxed integers.",
+					"docs/hxrt.md",
+					[
+						"test/differential/bytes-runtime/run.py",
+						"test/runtime/runtime-feature-graph/run.py"
+					])),
+			new RuntimeFeatureDefinition(object, "Selective immutable object/type descriptors with exact trace and optional finalization dispatch.",
+				CompilerSelectable, true, environments, [runtimeBase], [header("object.h"), source("object.c")], [
+					"hxc_type_descriptor_is_valid",
+					"hxc_object_header_init",
+					"hxc_object_header_is_valid",
+					"hxc_type_descriptor_trace",
+					"hxc_type_descriptor_finalize"
+				], [], [],
+				documentation("Defines the collector-neutral internal descriptor and header contract for reachable managed payload types.", [
+					new RuntimeFeatureSelectionRoot("managed-object-descriptor", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable escaping object representation needs exact size, alignment, tracing, or cleanup facts."),
+					dependencyRoot("Selected transitively by the precise collector for managed object allocation and tracing.")
+				],
+					"Nonescaping classes and values with proven direct lifetimes keep ordinary private C storage and no descriptor.",
+					"A closed bounded region may use a program-local ownership plan when identity, lifetime, and cleanup are fully proven.",
+					"Escaping object graphs need one immutable, versioned description of payload layout and exact outgoing references. The descriptor remains separate from reflection names and collector-private mark state.",
+					"docs/object-descriptors.md", ["test/runtime/runtime-feature-graph/run.py"])),
+			new RuntimeFeatureDefinition(gc,
+				"Precise non-moving mark-and-sweep collection with explicit exact roots, pins, pressure thresholds, and reports.", CompilerSelectable, true,
+				environments, [alloc, object], [header("gc.h"), source("gc.c")], [
+					"hxc_gc_init",
+					"hxc_gc_dispose",
+					"hxc_gc_allocate",
+					"hxc_gc_collect",
+					"hxc_gc_safepoint",
+					"hxc_gc_owns_exact",
+					"hxc_gc_get_stats",
+					"hxc_gc_thread_register",
+					"hxc_gc_thread_unregister",
+					"hxc_gc_root_frame_push",
+					"hxc_gc_root_frame_pop",
+					"hxc_gc_root_table_register",
+					"hxc_gc_root_table_unregister",
+					"hxc_gc_pin_object",
+					"hxc_gc_unpin_object"
+				], [], [],
+				documentation("Implements the selected precise collector backend over immutable type descriptors and the reviewed allocator ABI.", [
+					new RuntimeFeatureSelectionRoot("managed-object-graph", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable escaping identity-bearing graph cannot use a proven stack, region, or manual lifetime."),
+					new RuntimeFeatureSelectionRoot("managed-cycle", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable managed representation may contain a reference cycle that local retain/release ownership cannot reclaim.")
+				],
+					"Nonescaping values, static literals, bounded regions, and explicitly manual ownership remain direct and collector-free.",
+					"A closed program-local region is preferred when the compiler can prove all identities, escapes, and destruction points.",
+					"General escaping Haxe graphs need stable identity, cyclic reclamation, and exact roots coordinated across functions. One selected backend owns those shared lifetimes without conservatively scanning arbitrary C memory.",
+					"docs/gc-runtime.md", ["test/runtime/gc/run.py", "test/runtime/runtime-feature-graph/run.py"])),
 			new RuntimeFeatureDefinition(stringLiteral,
 				"Immutable valid UTF-8 literal carrier with explicit byte length and no allocation or object dependency.", CompilerSelectable, true,
 				environments, [runtimeBase], [header("string_literal.h")], [], [], [],
 				documentation("Defines the allocation-free private hxc_string view used for compiler-owned valid UTF-8 literal storage, including embedded NUL bytes.",
 					[
+					new RuntimeFeatureSelectionRoot("direct-string-value", RuntimeFeatureSelectionRootKind.HxcIrOperation,
+						"A reachable immutable Haxe String value backed by compiler-owned literal storage."),
 					dependencyRoot("Selected transitively when a runtime operation consumes the compiler's direct literal representation.")
 				],
 					"The literal bytes and length are emitted directly in generated C; no runtime source or constructor is used.",
@@ -209,8 +311,6 @@ class RuntimeFeatureCatalog {
 			reserved("exception", "E4.T09", "Contained general exception frames after result lowering is ineligible."),
 			reserved("export-error", "E7.T04", "Thread-safe exported status and error-detail boundary."),
 			reserved("filesystem", "E5.T09", "Hosted filesystem and file-resource adapters."),
-			reserved("gc", "E4.T06", "Precise non-moving tracing collector and exact roots."),
-			reserved("object", "E4.T05", "Reachable object and type descriptors."),
 			reserved("process", "E5.T09", "Hosted environment and process adapters."),
 			reserved("reflection", "E4.T08", "Reachability-selected type and member reflection metadata."),
 			reserved("regex", "E5.T07", "Selected regular-expression backend and adapter."),
@@ -239,10 +339,13 @@ class RuntimeFeatureCatalog {
 	static function headerSha256(name:String):String {
 		return switch name {
 			case "abi.h": "787d82dc867999ba8e8e6987cc6933ad6f6ab5d087b415e97042934c454ccf62";
-			case "allocator.h": "5f01b19f66588f5c778ea5035aaaba0e2d5a48ff027c5810e32d20bb601d696a";
-			case "array.h": "65ec3d1a86705030e42890de9af2b4b96a30062f0f0a8d127280fec693a02c7d";
-			case "base.h": "5727cd5798673e27f2215e7a3e1e2a1f92245510855903075caa71764181456d";
+			case "allocator.h": "6e21c0bc498eb40bcec901914a04dd1bee33b6b21e5a27f1ac5f169a8a1cc448";
+			case "array.h": "5fa277cf34f4b0e01c1a5d3b7152857cf6570d3a9d537cb2a18c41f444db3512";
+			case "base.h": "138aaf48fdb3abbf00d0403f891c3779578e50c4cb7629c4cc30027702896966";
+			case "bytes.h": "428c7879c1556fb3313c8135f7adf1ca4109dc5fe035efd5dabcf1eb653b1693";
+			case "gc.h": "2ca9523f1c74c62877c3f006bab9bd8a3a2a1eced93d67ad59d015a7c6ecb9de";
 			case "io.h": "4670078a26fb991c5de1f32ba3ab2c20cdc5e1d1b578dfe2504efe2b7e2f7d2e";
+			case "object.h": "779b452097e4c58c7971b90743ace19a2dc6c91e381557abc84fbd5f9b30f1e5";
 			case "status.h": "6bf20f5d82594014ad0f2b79a25cb81417791bd9c07375d2fb89835e415be1c4";
 			case "status_name.h": "64bf3917787ffcf924369c8e1c0a525cf10902d004d5bb4b898f2af46a7456cc";
 			case "string.h": "16860609c4cdb6e8e81f3b02f212edb40be3da01f053743cc087b897df16ba63";
@@ -254,9 +357,12 @@ class RuntimeFeatureCatalog {
 	static function sourceSha256(name:String):String {
 		return switch name {
 			case "abi.c": "3300a4498a7ca20f771b1334d7be8f2c908d2bb067ea8f2fe3c059300e680b32";
-			case "allocator.c": "1f93b7f5724bf77b05204e20d96f9179582e070210bad2ec9dd7b89794e8a77c";
-			case "array.c": "85e958919867732af6371afb49983fe607335981f7cbaa893fdf6ca5b806c825";
+			case "allocator.c": "13385273c7c3d4a15785caa3095dd82d97bda8a026ebd9b6d54e2f531eb3b10e";
+			case "array.c": "79e25b048ee656e4c98675a2c9e5bf30b5687764519d1c06883b524f07f05a2d";
+			case "bytes.c": "4db5d3ddcaf32684e900abe7d81ffe3a008edc53806573aaebe84089c0c6a787";
+			case "gc.c": "96cf942d6752070aaa5005eae3bc45c7d00aca37c360dfecaeb76d8db767b4cc";
 			case "io.c": "c390615feea7f81c404941412909037ead8eb0ee1d3163d17f14154c20968e1c";
+			case "object.c": "0e7fc6a55b562eaaf03fe63eca743dd73248f0bee1c09e21b79464917e8c89c0";
 			case "status.c": "0695ab2528db6e29d5cf29d905ad736b7c1a3a79333082347ec18faea2d4e6d8";
 			case "string.c": "abe937db71f7333d4a915d7b7e222384ceeba8815783e8fafffb1aeaeadfd5d4";
 			case _: throw 'runtime feature source `$name` has no reviewed SHA-256 provenance';

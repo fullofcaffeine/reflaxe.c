@@ -1,107 +1,107 @@
-hxcir schema=10
+hxcir schema=17
 module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-178:3
   function "function.ArithmeticFixture.fadd" name="ArithmeticFixture.fadd" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
       instruction "instruction.0.binary" result="value.0":f64 binary operation="haxe.f64.add" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:10-45:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":45:3-45:22
     end block "entry"
   end function "function.ArithmeticFixture.fadd"
   function "function.ArithmeticFixture.fdiv" name="ArithmeticFixture.fdiv" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
       instruction "instruction.0.binary" result="value.0":f64 binary operation="haxe.f64.divide" left="parameter.0" right="parameter.1" implementation=program-local("hxc.f64.divide.zero-safe") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:10-57:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":57:3-57:22
     end block "entry"
   end function "function.ArithmeticFixture.fdiv"
   function "function.ArithmeticFixture.fequal" name="ArithmeticFixture.fequal" returns=bool failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
       instruction "instruction.0.binary" result="value.0":bool binary operation="haxe.f64.equal" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:10-66:23
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":66:3-66:23
     end block "entry"
   end function "function.ArithmeticFixture.fequal"
   function "function.ArithmeticFixture.fint" name="ArithmeticFixture.fint" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
       instruction "instruction.0.std-int" result="value.0":i32 convert value="parameter.0" kind=numeric-saturating target=i32 implementation=program-local("hxc.f64.to.i32.saturating") failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:10-63:24
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":63:3-63:24
     end block "entry"
   end function "function.ArithmeticFixture.fint"
   function "function.ArithmeticFixture.fmod" name="ArithmeticFixture.fmod" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
       instruction "instruction.0.binary" result="value.0":f64 binary operation="haxe.f64.modulo" left="parameter.0" right="parameter.1" implementation=program-local("hxc.f64.modulo") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:10-60:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":60:3-60:22
     end block "entry"
   end function "function.ArithmeticFixture.fmod"
   function "function.ArithmeticFixture.fmul" name="ArithmeticFixture.fmul" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
       instruction "instruction.0.binary" result="value.0":f64 binary operation="haxe.f64.multiply" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:10-51:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":51:3-51:22
     end block "entry"
   end function "function.ArithmeticFixture.fmul"
   function "function.ArithmeticFixture.fneg" name="ArithmeticFixture.fneg" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
       instruction "instruction.0.unary" result="value.0":f64 unary operation="haxe.f64.negate" value="parameter.0" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:10-54:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":54:3-54:16
     end block "entry"
   end function "function.ArithmeticFixture.fneg"
   function "function.ArithmeticFixture.fsub" name="ArithmeticFixture.fsub" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
-    parameter "parameter.0" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
-    parameter "parameter.1" type=f64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
+    parameter "parameter.0" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
+    parameter "parameter.1" type=f64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
       instruction "instruction.0.binary" result="value.0":f64 binary operation="haxe.f64.subtract" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:10-48:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":48:3-48:22
     end block "entry"
   end function "function.ArithmeticFixture.fsub"
   function "function.ArithmeticFixture.i32ToU8" name="ArithmeticFixture.i32ToU8" returns=u8 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
       instruction "instruction.0.integer-conversion-modulo" result="value.0":u8 convert value="parameter.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:10-85:36
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":85:3-85:36
     end block "entry"
   end function "function.ArithmeticFixture.i32ToU8"
   function "function.ArithmeticFixture.i64ToU16" name="ArithmeticFixture.i64ToU16" returns=u16 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
-    parameter "parameter.0" type=i64 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
+    parameter "parameter.0" type=i64 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
       instruction "instruction.0.integer-conversion-modulo" result="value.0":u16 convert value="parameter.0" kind=numeric-wrapping target=u16 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:10-91:36
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":91:3-91:36
     end block "entry"
   end function "function.ArithmeticFixture.i64ToU16"
   function "function.ArithmeticFixture.i8ToI32" name="ArithmeticFixture.i8ToI32" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
-    parameter "parameter.0" type=i8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
+    parameter "parameter.0" type=i8 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
       instruction "instruction.0.integer-conversion-exact" result="value.0":i32 convert value="parameter.0" kind=numeric-exact target=i32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:10-103:35
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":103:3-103:35
     end block "entry"
   end function "function.ArithmeticFixture.i8ToI32"
   function "function.ArithmeticFixture.iadd" name="ArithmeticFixture.iadd" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.add" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.add.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:10-3:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":3:3-3:22
     end block "entry"
   end function "function.ArithmeticFixture.iadd"
   function "function.ArithmeticFixture.iand" name="ArithmeticFixture.iand" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.bit-and" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.bit-and") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:10-30:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":30:3-30:22
     end block "entry"
   end function "function.ArithmeticFixture.iand"
   function "function.ArithmeticFixture.idiv" name="ArithmeticFixture.idiv" returns=f64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:3-15:22
       instruction "instruction.0.convert" result="value.0":f64 convert value="parameter.0" kind=numeric-exact target=f64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:10-15:22
       instruction "instruction.1.convert" result="value.1":f64 convert value="parameter.1" kind=numeric-exact target=f64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":15:10-15:22
@@ -110,86 +110,86 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
     end block "entry"
   end function "function.ArithmeticFixture.idiv"
   function "function.ArithmeticFixture.iless" name="ArithmeticFixture.iless" returns=bool failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
       instruction "instruction.0.binary" result="value.0":bool binary operation="haxe.i32.less" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:10-42:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":42:3-42:22
     end block "entry"
   end function "function.ArithmeticFixture.iless"
   function "function.ArithmeticFixture.imod" name="ArithmeticFixture.imod" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.modulo" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.modulo.zero-safe") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:10-18:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":18:3-18:22
     end block "entry"
   end function "function.ArithmeticFixture.imod"
   function "function.ArithmeticFixture.imul" name="ArithmeticFixture.imul" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.multiply" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.multiply.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:10-9:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":9:3-9:22
     end block "entry"
   end function "function.ArithmeticFixture.imul"
   function "function.ArithmeticFixture.ineg" name="ArithmeticFixture.ineg" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
       instruction "instruction.0.unary" result="value.0":i32 unary operation="haxe.i32.negate" value="parameter.0" implementation=program-local("hxc.i32.negate.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:10-12:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":12:3-12:16
     end block "entry"
   end function "function.ArithmeticFixture.ineg"
   function "function.ArithmeticFixture.inot" name="ArithmeticFixture.inot" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
       instruction "instruction.0.unary" result="value.0":i32 unary operation="haxe.i32.bit-not" value="parameter.0" implementation=program-local("hxc.i32.bit-not") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:10-39:16
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":39:3-39:16
     end block "entry"
   end function "function.ArithmeticFixture.inot"
   function "function.ArithmeticFixture.ior" name="ArithmeticFixture.ior" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.bit-or" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.bit-or") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:10-33:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":33:3-33:22
     end block "entry"
   end function "function.ArithmeticFixture.ior"
   function "function.ArithmeticFixture.ishl" name="ArithmeticFixture.ishl" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.shift-left.masked" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.shift-left.masked") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:10-21:23
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":21:3-21:23
     end block "entry"
   end function "function.ArithmeticFixture.ishl"
   function "function.ArithmeticFixture.ishr" name="ArithmeticFixture.ishr" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.shift-right.masked" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.shift-right.masked") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:10-24:23
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":24:3-24:23
     end block "entry"
   end function "function.ArithmeticFixture.ishr"
   function "function.ArithmeticFixture.isub" name="ArithmeticFixture.isub" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.subtract" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.subtract.wrapping") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:10-6:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":6:3-6:22
     end block "entry"
   end function "function.ArithmeticFixture.isub"
   function "function.ArithmeticFixture.iushr" name="ArithmeticFixture.iushr" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.unsigned-shift-right.masked" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.unsigned-shift-right.masked") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:10-27:24
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":27:3-27:24
     end block "entry"
   end function "function.ArithmeticFixture.iushr"
   function "function.ArithmeticFixture.ixor" name="ArithmeticFixture.ixor" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
       instruction "instruction.0.binary" result="value.0":i32 binary operation="haxe.i32.bit-xor" left="parameter.0" right="parameter.1" implementation=program-local("hxc.i32.bit-xor") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:10-36:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":36:3-36:22
@@ -266,96 +266,90 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
       instruction "instruction.59.constant" result="value.59":f64 constant value=float(1.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:10-164:13
       instruction "instruction.60.constant" result="value.60":f64 constant value=float(2.0) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:15-164:18
       instruction "instruction.61.call" result="value.61":bool call dispatch=direct("function.ArithmeticFixture.fequal") arguments=["value.59","value.60"] returns=bool failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":164:3-164:19
-      instruction "instruction.62.constant" result="value.62":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:8-165:9
-      instruction "instruction.63.convert" result="value.63":u32 convert value="value.62" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:8-165:9
-      instruction "instruction.64.constant" result="value.64":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:11-165:12
-      instruction "instruction.65.convert" result="value.65":u32 convert value="value.64" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:11-165:12
-      instruction "instruction.66.call" result="value.66":u32 call dispatch=direct("function.ArithmeticFixture.uadd") arguments=["value.63","value.65"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:3-165:13
-      instruction "instruction.67.constant" result="value.67":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:8-166:9
-      instruction "instruction.68.convert" result="value.68":u32 convert value="value.67" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:8-166:9
-      instruction "instruction.69.constant" result="value.69":i32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:11-166:12
-      instruction "instruction.70.convert" result="value.70":u32 convert value="value.69" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:11-166:12
-      instruction "instruction.71.call" result="value.71":u32 call dispatch=direct("function.ArithmeticFixture.umod") arguments=["value.68","value.70"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:3-166:13
-      instruction "instruction.72.constant" result="value.72":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:8-167:9
-      instruction "instruction.73.convert" result="value.73":u32 convert value="value.72" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:8-167:9
-      instruction "instruction.74.constant" result="value.74":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:11-167:13
-      instruction "instruction.75.call" result="value.75":u32 call dispatch=direct("function.ArithmeticFixture.ushl") arguments=["value.73","value.74"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:3-167:14
-      instruction "instruction.76.constant" result="value.76":i32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:8-168:9
-      instruction "instruction.77.convert" result="value.77":u32 convert value="value.76" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:8-168:9
-      instruction "instruction.78.constant" result="value.78":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:11-168:13
-      instruction "instruction.79.call" result="value.79":u32 call dispatch=direct("function.ArithmeticFixture.ushr") arguments=["value.77","value.78"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:3-168:14
-      instruction "instruction.80.call" result="value.80":u8 call dispatch=direct("function.ArithmeticFixture.literalToU8") arguments=[] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":169:3-169:16
-      instruction "instruction.81.constant" result="value.81":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:11-170:13
-      instruction "instruction.82.call" result="value.82":u8 call dispatch=direct("function.ArithmeticFixture.i32ToU8") arguments=["value.81"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:3-170:14
-      instruction "instruction.83.constant" result="value.83":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:31-171:34
-      instruction "instruction.84.integer-conversion-modulo" result="value.84":u8 convert value="value.83" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:11-171:35
-      instruction "instruction.85.call" result="value.85":i32 call dispatch=direct("function.ArithmeticFixture.u8ToI32") arguments=["value.84"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:3-171:36
-      instruction "instruction.86.constant" result="value.86":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:31-172:33
-      instruction "instruction.87.integer-conversion-exact" result="value.87":i64 convert value="value.86" kind=numeric-exact target=i64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:12-172:34
-      instruction "instruction.88.call" result="value.88":u16 call dispatch=direct("function.ArithmeticFixture.i64ToU16") arguments=["value.87"] returns=u16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:3-172:35
-      instruction "instruction.89.constant" result="value.89":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:32-173:34
-      instruction "instruction.90.integer-conversion-modulo" result="value.90":u32 convert value="value.89" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:12-173:35
-      instruction "instruction.91.call" result="value.91":u64 call dispatch=direct("function.ArithmeticFixture.u32ToU64") arguments=["value.90"] returns=u64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:3-173:36
-      instruction "instruction.92.constant" result="value.92":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:31-174:33
-      instruction "instruction.93.integer-conversion-modulo" result="value.93":u32 convert value="value.92" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:11-174:34
-      instruction "instruction.94.call" result="value.94":u8 call dispatch=direct("function.ArithmeticFixture.u32ToU8") arguments=["value.93"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:3-174:35
-      instruction "instruction.95.constant" result="value.95":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:31-175:34
-      instruction "instruction.96.integer-conversion-modulo" result="value.96":u8 convert value="value.95" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:11-175:35
-      instruction "instruction.97.call" result="value.97":i16 call dispatch=direct("function.ArithmeticFixture.u8ToI16") arguments=["value.96"] returns=i16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:3-175:36
-      instruction "instruction.98.constant" result="value.98":i32 constant value=int(3) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:10-176:11
-      instruction "instruction.99.call" result="value.99":i32 call dispatch=direct("function.ArithmeticFixture.update") arguments=["value.98"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:3-176:12
+      instruction "instruction.62.constant" result="value.62":u32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:8-165:9
+      instruction "instruction.63.constant" result="value.63":u32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:11-165:12
+      instruction "instruction.64.call" result="value.64":u32 call dispatch=direct("function.ArithmeticFixture.uadd") arguments=["value.62","value.63"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":165:3-165:13
+      instruction "instruction.65.constant" result="value.65":u32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:8-166:9
+      instruction "instruction.66.constant" result="value.66":u32 constant value=int(2) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:11-166:12
+      instruction "instruction.67.call" result="value.67":u32 call dispatch=direct("function.ArithmeticFixture.umod") arguments=["value.65","value.66"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":166:3-166:13
+      instruction "instruction.68.constant" result="value.68":u32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:8-167:9
+      instruction "instruction.69.constant" result="value.69":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:11-167:13
+      instruction "instruction.70.call" result="value.70":u32 call dispatch=direct("function.ArithmeticFixture.ushl") arguments=["value.68","value.69"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":167:3-167:14
+      instruction "instruction.71.constant" result="value.71":u32 constant value=int(1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:8-168:9
+      instruction "instruction.72.constant" result="value.72":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:11-168:13
+      instruction "instruction.73.call" result="value.73":u32 call dispatch=direct("function.ArithmeticFixture.ushr") arguments=["value.71","value.72"] returns=u32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":168:3-168:14
+      instruction "instruction.74.call" result="value.74":u8 call dispatch=direct("function.ArithmeticFixture.literalToU8") arguments=[] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":169:3-169:16
+      instruction "instruction.75.constant" result="value.75":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:11-170:13
+      instruction "instruction.76.call" result="value.76":u8 call dispatch=direct("function.ArithmeticFixture.i32ToU8") arguments=["value.75"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":170:3-170:14
+      instruction "instruction.77.constant" result="value.77":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:31-171:34
+      instruction "instruction.78.integer-conversion-modulo" result="value.78":u8 convert value="value.77" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:11-171:35
+      instruction "instruction.79.call" result="value.79":i32 call dispatch=direct("function.ArithmeticFixture.u8ToI32") arguments=["value.78"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":171:3-171:36
+      instruction "instruction.80.constant" result="value.80":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:31-172:33
+      instruction "instruction.81.integer-conversion-exact" result="value.81":i64 convert value="value.80" kind=numeric-exact target=i64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:12-172:34
+      instruction "instruction.82.call" result="value.82":u16 call dispatch=direct("function.ArithmeticFixture.i64ToU16") arguments=["value.81"] returns=u16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":172:3-172:35
+      instruction "instruction.83.constant" result="value.83":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:32-173:34
+      instruction "instruction.84.integer-conversion-modulo" result="value.84":u32 convert value="value.83" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:12-173:35
+      instruction "instruction.85.call" result="value.85":u64 call dispatch=direct("function.ArithmeticFixture.u32ToU64") arguments=["value.84"] returns=u64 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":173:3-173:36
+      instruction "instruction.86.constant" result="value.86":i32 constant value=int(-1) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:31-174:33
+      instruction "instruction.87.integer-conversion-modulo" result="value.87":u32 convert value="value.86" kind=numeric-wrapping target=u32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:11-174:34
+      instruction "instruction.88.call" result="value.88":u8 call dispatch=direct("function.ArithmeticFixture.u32ToU8") arguments=["value.87"] returns=u8 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":174:3-174:35
+      instruction "instruction.89.constant" result="value.89":i32 constant value=int(255) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:31-175:34
+      instruction "instruction.90.integer-conversion-modulo" result="value.90":u8 convert value="value.89" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:11-175:35
+      instruction "instruction.91.call" result="value.91":i16 call dispatch=direct("function.ArithmeticFixture.u8ToI16") arguments=["value.90"] returns=i16 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":175:3-175:36
+      instruction "instruction.92.constant" result="value.92":i32 constant value=int(3) @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:10-176:11
+      instruction "instruction.93.call" result="value.93":i32 call dispatch=direct("function.ArithmeticFixture.update") arguments=["value.92"] returns=i32 failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":176:3-176:12
       terminator return value=none cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":115:30-178:3
     end block "entry"
   end function "function.ArithmeticFixture.main"
   function "function.ArithmeticFixture.u32ToU64" name="ArithmeticFixture.u32ToU64" returns=u64 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
       instruction "instruction.0.integer-conversion-exact" result="value.0":u64 convert value="parameter.0" kind=numeric-exact target=u64 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:10-94:35
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":94:3-94:35
     end block "entry"
   end function "function.ArithmeticFixture.u32ToU64"
   function "function.ArithmeticFixture.u32ToU8" name="ArithmeticFixture.u32ToU8" returns=u8 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
       instruction "instruction.0.integer-conversion-modulo" result="value.0":u8 convert value="parameter.0" kind=numeric-wrapping target=u8 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:10-97:36
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":97:3-97:36
     end block "entry"
   end function "function.ArithmeticFixture.u32ToU8"
   function "function.ArithmeticFixture.u8ToI16" name="ArithmeticFixture.u8ToI16" returns=i16 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
-    parameter "parameter.0" type=u8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
+    parameter "parameter.0" type=u8 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
       instruction "instruction.0.integer-conversion-exact" result="value.0":i16 convert value="parameter.0" kind=numeric-exact target=i16 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:10-100:35
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":100:3-100:35
     end block "entry"
   end function "function.ArithmeticFixture.u8ToI16"
   function "function.ArithmeticFixture.u8ToI32" name="ArithmeticFixture.u8ToI32" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
-    parameter "parameter.0" type=u8 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
+    parameter "parameter.0" type=u8 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
       instruction "instruction.0.integer-conversion-exact" result="value.0":i32 convert value="parameter.0" kind=numeric-exact target=i32 implementation=static failure=none @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:10-88:35
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":88:3-88:35
     end block "entry"
   end function "function.ArithmeticFixture.u8ToI32"
   function "function.ArithmeticFixture.uadd" name="ArithmeticFixture.uadd" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
-    parameter "parameter.1" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
+    parameter "parameter.1" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
       instruction "instruction.0.uint-intrinsic" result="value.0":u32 binary operation="haxe.u32.add" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:10-69:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":69:3-69:22
     end block "entry"
   end function "function.ArithmeticFixture.uadd"
   function "function.ArithmeticFixture.umod" name="ArithmeticFixture.umod" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
-    parameter "parameter.1" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
+    parameter "parameter.1" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
       instruction "instruction.0.uint-intrinsic" result="value.0":u32 binary operation="haxe.u32.modulo" left="parameter.0" right="parameter.1" implementation=program-local("hxc.u32.modulo.zero-safe") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:10-72:22
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":72:3-72:22
     end block "entry"
   end function "function.ArithmeticFixture.umod"
   function "function.ArithmeticFixture.update" name="ArithmeticFixture.update" returns=i32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
-    parameter "parameter.0" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
-    local "local.1" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":107:3-107:23
-    local "local.2" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:3-108:23
-    local "local.3" type=i32 storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:3-109:25
+    parameter "parameter.0" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
+    local "local.1" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":107:3-107:23
+    local "local.2" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:3-108:23
+    local "local.3" type=i32 ownership=owned-or-value storage=automatic state=uninitialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":109:3-109:25
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":106:40-113:3
       instruction "instruction.0.initialize" result=- initialize place=local("local.1") value="parameter.0" transition=uninitialized->initialized @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":107:3-107:23
       instruction "instruction.1.increment-load" result="value.0":i32 load place=local("local.1") @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":108:13-108:20
@@ -381,16 +375,16 @@ module "ArithmeticFixture" @"test/arithmetic_semantics/fixtures/ArithmeticFixtur
     end block "entry"
   end function "function.ArithmeticFixture.update"
   function "function.ArithmeticFixture.ushl" name="ArithmeticFixture.ushl" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
       instruction "instruction.0.uint-intrinsic" result="value.0":u32 binary operation="haxe.u32.shift-left.masked" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:10-75:23
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":75:3-75:23
     end block "entry"
   end function "function.ArithmeticFixture.ushl"
   function "function.ArithmeticFixture.ushr" name="ArithmeticFixture.ushr" returns=u32 failure=infallible entry="entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
-    parameter "parameter.0" type=u32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
-    parameter "parameter.1" type=i32 @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
+    parameter "parameter.0" type=u32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
+    parameter "parameter.1" type=i32 ownership=owned-or-value @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
     block "entry" @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23
       instruction "instruction.0.uint-intrinsic" result="value.0":u32 binary operation="haxe.u32.unsigned-shift-right.masked" left="parameter.0" right="parameter.1" implementation=static @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:10-78:23
       terminator return value="value.0" cleanup=[] @"test/arithmetic_semantics/fixtures/ArithmeticFixture.hx":78:3-78:23

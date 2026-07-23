@@ -60,6 +60,11 @@ bool hxc_caxecraft_domain_World_isPlaceable(enum hxc_caxecraft_domain_BlockKind 
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return false;
       }
@@ -78,6 +83,11 @@ bool hxc_caxecraft_domain_World_isSolid(enum hxc_caxecraft_domain_BlockKind hxc_
     case hxc_caxecraft_domain_BlockKind_Dirt:
     case hxc_caxecraft_domain_BlockKind_Stone:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return true;
       }
@@ -108,6 +118,26 @@ int32_t hxc_caxecraft_domain_World_kindCode(enum hxc_caxecraft_domain_BlockKind 
       {
         return 4;
       }
+    case hxc_caxecraft_domain_BlockKind_Sand:
+      {
+        return 5;
+      }
+    case hxc_caxecraft_domain_BlockKind_Wood:
+      {
+        return 6;
+      }
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+      {
+        return 7;
+      }
+    case hxc_caxecraft_domain_BlockKind_Snow:
+      {
+        return 8;
+      }
+    case hxc_caxecraft_domain_BlockKind_Ash:
+      {
+        return 9;
+      }
   }
   return 0;
 }
@@ -130,6 +160,26 @@ enum hxc_caxecraft_domain_BlockKind hxc_caxecraft_domain_World_kindFromCode(int3
     case 4:
       {
         return hxc_caxecraft_domain_BlockKind_Bedrock;
+      }
+    case 5:
+      {
+        return hxc_caxecraft_domain_BlockKind_Sand;
+      }
+    case 6:
+      {
+        return hxc_caxecraft_domain_BlockKind_Wood;
+      }
+    case 7:
+      {
+        return hxc_caxecraft_domain_BlockKind_Leaves;
+      }
+    case 8:
+      {
+        return hxc_caxecraft_domain_BlockKind_Snow;
+      }
+    case 9:
+      {
+        return hxc_caxecraft_domain_BlockKind_Ash;
       }
     default:
       {
@@ -173,6 +223,11 @@ bool hxc_caxecraft_domain_World_remove(uint8_t *hxc_cells, size_t hxc_length, st
       }
     case hxc_caxecraft_domain_BlockKind_Air:
     case hxc_caxecraft_domain_BlockKind_Bedrock:
+    case hxc_caxecraft_domain_BlockKind_Sand:
+    case hxc_caxecraft_domain_BlockKind_Wood:
+    case hxc_caxecraft_domain_BlockKind_Leaves:
+    case hxc_caxecraft_domain_BlockKind_Snow:
+    case hxc_caxecraft_domain_BlockKind_Ash:
       {
         return false;
       }

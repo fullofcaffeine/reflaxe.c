@@ -32,7 +32,10 @@ direct, non-failing subset of `c.IntConvert.exact` and
 `c.IntConvert.modulo`. The first E6 vertical slice admits reached hand-authored
 extern C declarations with exact names and headers for scalars, typedefs,
 fieldless enums/constants, by-value structs, explicit binary32 `c.Float32`
-values, and literal borrowed `CString` arguments. Other `c.*` operations remain
+values, and statically selected borrowed `CString` arguments. An ordinary
+closed Haxe record may contain one of those already admitted by-value structs;
+the imported header still owns its layout, and the containing generated record
+remains a private Haxe implementation detail. Other `c.*` operations remain
 fail-closed. `c.Syntax` and `c.Unsafe` are deliberately empty authority markers
 until their owning safety and inspection work is complete.
 
@@ -122,9 +125,12 @@ import has these properties:
   parameter and result types are exact scalars or by-value imported values;
 - imported struct fields are ordinary typed HxcIR places, so reads and writes
   stay structural rather than becoming C fragments;
-- a `String` literal can be borrowed as `c.CString` only at a direct call site.
-  The compiler validates its UTF-8 byte length, rejects embedded NUL, emits
-  immutable translation-unit literal storage, and performs no allocation; and
+- a `String` literal, or a conditional/switch whose every reachable result is a
+  literal, can construct the program-local `c.CString` carrier. Helpers and
+  locals may propagate that proven carrier to a direct native call. The
+  compiler validates every literal's UTF-8 byte length, rejects embedded NUL,
+  emits immutable translation-unit storage, and performs no allocation.
+  Dynamic `String` conversion and retained foreign pointers remain rejected; and
 - reached include, logical library, pkg-config, and framework facts are
   deduplicated with declaration provenance in the neutral build plan. Merely
   declaring an unused extern selects no fact and no runtime feature.

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://reflaxe.c.dev/schemas/raygui-core-selection.schema.json",
+  "title": "Curated raygui 5.0 by-value editor-shell selection",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "functions",
+    "implementation",
+    "canonicalAbi",
+    "omissions"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "functions": { "$ref": "#/$defs/names" },
+    "implementation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["macro", "owner", "translationUnits", "sourceTemplateSha256"],
+      "properties": {
+        "macro": { "const": "RAYGUI_IMPLEMENTATION" },
+        "owner": { "const": "raygui-static-library" },
+        "translationUnits": { "const": 1 },
+        "sourceTemplateSha256": {
+          "const": "3c206e58f97342b6b2359be7e28c49620b9045efc9b04fa89fe70102d0b7ce73"
+        }
+      }
+    },
+    "canonicalAbi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "languageStandard", "defines"],
+      "properties": {
+        "target": { "const": "x86_64-unknown-linux-gnu" },
+        "languageStandard": { "const": "c11" },
+        "defines": { "type": "array", "maxItems": 0 }
+      }
+    },
+    "omissions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/omission" }
+    }
+  },
+  "$defs": {
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "names": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["family", "reason", "owner"],
+      "properties": {
+        "family": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "reason": { "type": "string", "minLength": 40 },
+        "owner": {
+          "type": "string",
+          "pattern": "^haxe_c-[a-z0-9]+(?:\\.[0-9]+)*$"
+        }
+      }
+    }
+  }
+}

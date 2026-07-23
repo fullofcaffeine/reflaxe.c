@@ -32,7 +32,7 @@ final class Mossling {
 			z: z,
 			homeX: x,
 			homeZ: z,
-			modeCode: MosslingMode.Resting,
+			mode: MosslingMode.Resting,
 			phaseTicks: 0,
 			health: MAX_HEALTH
 		};
@@ -156,16 +156,15 @@ final class Mossling {
 		var nextHealth = state.health;
 		if (nextHealth > 0)
 			nextHealth--;
-		final currentMode = mode(state);
-		return make(state.x, state.y, state.z, state.homeX, state.homeZ, currentMode, state.phaseTicks, nextHealth);
+		return make(state.x, state.y, state.z, state.homeX, state.homeZ, mode(state), state.phaseTicks, nextHealth);
 	}
 
 	public static inline function isAlive(state:MosslingState):Bool
 		return state.health > 0;
 
-	/** Recover the closed movement mode from its validated record carrier. */
+	/** Read the creature's closed movement mode. */
 	public static inline function mode(state:MosslingState):MosslingMode
-		return MosslingMode.fromCode(state.modeCode);
+		return state.mode;
 
 	static inline function make(x:Float, y:Float, z:Float, homeX:Float, homeZ:Float, mode:MosslingMode, phaseTicks:Int, health:Int):MosslingState
 		return {
@@ -174,7 +173,7 @@ final class Mossling {
 			z: z,
 			homeX: homeX,
 			homeZ: homeZ,
-			modeCode: mode,
+			mode: mode,
 			phaseTicks: phaseTicks,
 			health: health
 		};

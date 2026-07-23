@@ -23,7 +23,7 @@ from run import (  # noqa: E402
 )
 
 EXPECTED = "caxecraft-gameplay: lossless mining/items, paced Mossling encounter, berry recovery, and bounded player health passed\n"
-EXPECTED_TERRAIN = "caxecraft-terrain-atlas: typed faces, material cells, and inset UV bounds passed\n"
+EXPECTED_TERRAIN = "caxecraft-terrain-atlas: two typed sheets, material faces, and inset UV bounds passed\n"
 FORBIDDEN = tuple(
     re.compile(pattern)
     for pattern in (r"#if\b", r"\bDynamic\b", r"\bAny\b", r"\bReflect\b", r"\buntyped\b", r"\b__c__\b", r"\bc\.", r"\braylib\.")

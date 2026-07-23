@@ -40,6 +40,11 @@
     ],
     "fileOverrides": [
       {
+        "path": "src/modules/caxecraft/domain/World.c",
+        "maxFileLines": 407,
+        "reason": "The finite world module keeps every stable solid-material storage code and edit rule together. Adding the reviewed sand, forest, snow, and ash identities grows exhaustive switches without weakening per-function or control-flow budgets."
+      },
+      {
         "path": "src/modules/caxecraft/qa/DomainProbe.c",
         "maxFileLines": 631,
         "reason": "The QA probe intentionally keeps the complete end-to-end domain oracle in one source-owned module; the corresponding function override remains separately bounded."
@@ -55,12 +60,12 @@
         "reason": "The QA-only self-check is a deliberate aggregate oracle. Production domain functions remain under the ordinary budget."
       }
     ],
-    "sha256": "3c54636e2eb31258869565fcd42e5420dc8e87f91caf28470c68096be891cec6"
+    "sha256": "f4f688b8c50964c59f60e22dfbef994f20f803b7ae35746664e153646953f2dc"
   },
   "inputs": [
     {
       "path": "include/hxc/detail/program_types.h",
-      "sha256": "90407ac2a6a5f8d6d6be5364ecfbe022ef86483569fc43b2ce72fa8fb652e5ba"
+      "sha256": "7c62d532d2b9a64efc8ef71371b9f785e48ac11b676d7de01985ac9b804a1de9"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/AxisMove.h",
@@ -72,19 +77,19 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/BlockKind.h",
-      "sha256": "e21a24514adc50993891c78bc260603bdd5ab3f96d5f111c98b934395bcb3c3a"
+      "sha256": "57d8b9a44f29f4bcbde5817651f45cae1c051115b396b42f7f0d18e1a8f2b205"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
       "sha256": "c12e4e378297f552490a6e3bd59c0cd1b1dcbddbbde2b48a4989206eca281519"
     },
     {
-      "path": "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
-      "sha256": "f446e5ca5355017ac10c8e2bc02f0a61efdea51dcc42b7492eaf7f10ff6758d2"
+      "path": "include/hxc/modules/caxecraft/domain/CharacterBody.h",
+      "sha256": "fab6f748ff3a354451b6f50dbefb557343ffadcc55ebf70517d468293055636f"
     },
     {
-      "path": "include/hxc/modules/caxecraft/domain/PlayerState.h",
-      "sha256": "1bfe033b1930cca6b256fe31a4d72c857b5ca6b21e79d15e7166945c624e5947"
+      "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
+      "sha256": "92fbf04c5c05dad15dabe3f9cffbdf251872730e514d49118e1060b2e569018b"
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/RaycastHit.h",
@@ -112,7 +117,7 @@
     },
     {
       "path": "include/hxc/program.h",
-      "sha256": "5e8ad8bcdd2a1029b8d1279476826ce64c900a1e251d9a4944691fcd571cc151"
+      "sha256": "66cde573a55228b324910d555f759a24b985d8cc102ed4d039233e5d8b45d3fd"
     },
     {
       "path": "src/hxc/main.c",
@@ -120,15 +125,15 @@
     },
     {
       "path": "src/hxc/support.c",
-      "sha256": "0ebb6310a2226eee4605709355424665c30510ce780f3957b11dbfda39166e02"
+      "sha256": "fc1b40b4d3bed52e2dd4444102e2fc20e0b8de3037279daafde9a6811c91e9af"
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "bdc3c340ecc41292763af05f134ccf5a858d50f4b6722b792f8822200dc53fbd"
+      "sha256": "f8f88cd79c423429905dba9fb373de404b0aa306339db77565d7fdcaef430c08"
     },
     {
-      "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
-      "sha256": "b61e8c6edd98bd91dad0447726830ecb091fe2a3b2e06ccd6867219967b1e117"
+      "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
+      "sha256": "c59469be8ccd503ca85cae45e2e7807150a214b937c3c7ef1fc6416bb14cb13f"
     },
     {
       "path": "src/modules/caxecraft/domain/VoxelRaycast.c",
@@ -136,7 +141,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "0336e408dd960245011446b66678b151e82998e206f0541e2d86957227fddc4f"
+      "sha256": "84f4347c58008fc1c5f401fd7d4fa068186317a011a7684943909034bf41f99e"
     },
     {
       "path": "src/modules/caxecraft/domain/WorldStorage.c",
@@ -144,13 +149,13 @@
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "073b6f3a6ef98ef6023784d6fc062ccbd55608b639f55430f4fc8102cc9519c9"
+      "sha256": "d8d96d761fc1c1b13d2ff1c9f41fe5ea8c91758786b5b0b93bc81753796fd558"
     }
   ],
   "summary": {
     "artifactCount": 22,
-    "physicalLineCount": 2474,
-    "codeLineCount": 2269,
+    "physicalLineCount": 2549,
+    "codeLineCount": 2339,
     "lineDirectiveCount": 0,
     "mappedPathCount": 0,
     "mappedPaths": [],
@@ -163,17 +168,17 @@
     "lineMappedFunctionBasisPoints": 0,
     "ownerMappedArtifactCount": 22,
     "ownerMappedArtifactBasisPoints": 10000,
-    "branchCount": 238,
+    "branchCount": 268,
     "temporaryDeclarationCount": 521,
     "temporaryReferenceCount": 764,
-    "temporaryDeclarationsPerKFunctionCodeLines": 258,
+    "temporaryDeclarationsPerKFunctionCodeLines": 250,
     "maxIdentifier": {
-      "name": "hxc_caxecraft_domain_CaxecraftTrace_collisionTrace",
-      "bytes": 50,
+      "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
+      "bytes": 53,
       "coordinate": {
-        "path": "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
-        "line": 6,
-        "column": 9,
+        "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
+        "line": 22,
+        "column": 43,
         "functionId": null
       }
     },
@@ -208,7 +213,7 @@
   "files": [
     {
       "path": "include/hxc/detail/program_types.h",
-      "sha256": "90407ac2a6a5f8d6d6be5364ecfbe022ef86483569fc43b2ce72fa8fb652e5ba",
+      "sha256": "7c62d532d2b9a64efc8ef71371b9f785e48ac11b676d7de01985ac9b804a1de9",
       "owner": {
         "kind": "compiler-support",
         "modulePath": null,
@@ -537,19 +542,19 @@
     },
     {
       "path": "include/hxc/modules/caxecraft/domain/BlockKind.h",
-      "sha256": "e21a24514adc50993891c78bc260603bdd5ab3f96d5f111c98b934395bcb3c3a",
+      "sha256": "57d8b9a44f29f4bcbde5817651f45cae1c051115b396b42f7f0d18e1a8f2b205",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.BlockKind",
         "source": null
       },
-      "physicalLineCount": 14,
-      "codeLineCount": 11,
+      "physicalLineCount": 19,
+      "codeLineCount": 16,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 13,
+      "identifierCount": 18,
       "maxIdentifier": {
         "name": "HXC_CAXECRAFT_DOMAIN_BLOCK_KIND_H_INCLUDED",
         "bytes": 42,
@@ -586,36 +591,11 @@
       "functions": []
     },
     {
-      "path": "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
-      "sha256": "f446e5ca5355017ac10c8e2bc02f0a61efdea51dcc42b7492eaf7f10ff6758d2",
+      "path": "include/hxc/modules/caxecraft/domain/CharacterBody.h",
+      "sha256": "fab6f748ff3a354451b6f50dbefb557343ffadcc55ebf70517d468293055636f",
       "owner": {
         "kind": "source-module",
-        "modulePath": "caxecraft.domain.PlayerPhysics",
-        "source": null
-      },
-      "physicalLineCount": 26,
-      "codeLineCount": 14,
-      "lineDirectiveCount": 0,
-      "mappedPathCount": 0,
-      "mappedPaths": [],
-      "lineDirectives": [],
-      "identifierCount": 108,
-      "maxIdentifier": {
-        "name": "hxc_caxecraft_domain_PlayerPhysics_resolveVelocity",
-        "bytes": 50,
-        "line": 22,
-        "column": 41
-      },
-      "temporaryDeclarationCount": 0,
-      "temporaryReferenceCount": 0,
-      "functions": []
-    },
-    {
-      "path": "include/hxc/modules/caxecraft/domain/PlayerState.h",
-      "sha256": "1bfe033b1930cca6b256fe31a4d72c857b5ca6b21e79d15e7166945c624e5947",
-      "owner": {
-        "kind": "source-module",
-        "modulePath": "caxecraft.domain.PlayerState",
+        "modulePath": "caxecraft.domain.CharacterBody",
         "source": null
       },
       "physicalLineCount": 16,
@@ -626,10 +606,35 @@
       "lineDirectives": [],
       "identifierCount": 22,
       "maxIdentifier": {
-        "name": "HXC_CAXECRAFT_DOMAIN_PLAYER_STATE_H_INCLUDED",
-        "bytes": 44,
+        "name": "HXC_CAXECRAFT_DOMAIN_CHARACTER_BODY_H_INCLUDED",
+        "bytes": 46,
         "line": 1,
         "column": 9
+      },
+      "temporaryDeclarationCount": 0,
+      "temporaryReferenceCount": 0,
+      "functions": []
+    },
+    {
+      "path": "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
+      "sha256": "92fbf04c5c05dad15dabe3f9cffbdf251872730e514d49118e1060b2e569018b",
+      "owner": {
+        "kind": "source-module",
+        "modulePath": "caxecraft.domain.CharacterPhysics",
+        "source": null
+      },
+      "physicalLineCount": 26,
+      "codeLineCount": 14,
+      "lineDirectiveCount": 0,
+      "mappedPathCount": 0,
+      "mappedPaths": [],
+      "lineDirectives": [],
+      "identifierCount": 108,
+      "maxIdentifier": {
+        "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
+        "bytes": 53,
+        "line": 22,
+        "column": 43
       },
       "temporaryDeclarationCount": 0,
       "temporaryReferenceCount": 0,
@@ -787,7 +792,7 @@
     },
     {
       "path": "include/hxc/program.h",
-      "sha256": "5e8ad8bcdd2a1029b8d1279476826ce64c900a1e251d9a4944691fcd571cc151",
+      "sha256": "66cde573a55228b324910d555f759a24b985d8cc102ed4d039233e5d8b45d3fd",
       "owner": {
         "kind": "compiler-support",
         "modulePath": null,
@@ -861,19 +866,19 @@
     },
     {
       "path": "src/hxc/support.c",
-      "sha256": "0ebb6310a2226eee4605709355424665c30510ce780f3957b11dbfda39166e02",
+      "sha256": "fc1b40b4d3bed52e2dd4444102e2fc20e0b8de3037279daafde9a6811c91e9af",
       "owner": {
         "kind": "compiler-support",
         "modulePath": null,
         "source": null
       },
-      "physicalLineCount": 137,
-      "codeLineCount": 69,
+      "physicalLineCount": 147,
+      "codeLineCount": 74,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 524,
+      "identifierCount": 534,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_BlockKind_Bedrock",
         "bytes": 38,
@@ -886,7 +891,7 @@
     },
     {
       "path": "src/modules/caxecraft/domain/CaxecraftTrace.c",
-      "sha256": "bdc3c340ecc41292763af05f134ccf5a858d50f4b6722b792f8822200dc53fbd",
+      "sha256": "f8f88cd79c423429905dba9fb373de404b0aa306339db77565d7fdcaef430c08",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.CaxecraftTrace",
@@ -1191,11 +1196,11 @@
       ]
     },
     {
-      "path": "src/modules/caxecraft/domain/PlayerPhysics.c",
-      "sha256": "b61e8c6edd98bd91dad0447726830ecb091fe2a3b2e06ccd6867219967b1e117",
+      "path": "src/modules/caxecraft/domain/CharacterPhysics.c",
+      "sha256": "c59469be8ccd503ca85cae45e2e7807150a214b937c3c7ef1fc6416bb14cb13f",
       "owner": {
         "kind": "source-module",
-        "modulePath": "caxecraft.domain.PlayerPhysics",
+        "modulePath": "caxecraft.domain.CharacterPhysics",
         "source": null
       },
       "physicalLineCount": 342,
@@ -1206,23 +1211,23 @@
       "lineDirectives": [],
       "identifierCount": 857,
       "maxIdentifier": {
-        "name": "hxc_caxecraft_domain_PlayerPhysics_resolveVelocity",
-        "bytes": 50,
+        "name": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
+        "bytes": 53,
         "line": 250,
-        "column": 41
+        "column": 43
       },
       "temporaryDeclarationCount": 67,
       "temporaryReferenceCount": 83,
       "functions": [
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.abs",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_abs",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.abs",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_abs",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 203,
               "startColumn": 41,
               "endLine": 205,
@@ -1230,7 +1235,7 @@
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 203,
             "startColumn": 41,
             "endLine": 205,
@@ -1250,29 +1255,64 @@
           "temporaryDeclarationsPerKCodeLines": 0
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.canPlaceAt",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_canPlaceAt",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.body",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_body",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
+              "startLine": 22,
+              "startColumn": 56,
+              "endLine": 32,
+              "endColumn": 2
+            }
+          },
+          "source": {
+            "path": "caxecraft/domain/CharacterPhysics.hx",
+            "startLine": 22,
+            "startColumn": 56,
+            "endLine": 32,
+            "endColumn": 2
+          },
+          "startLine": 12,
+          "endLine": 15,
+          "physicalLineCount": 4,
+          "codeLineCount": 4,
+          "bodyCodeLineCount": 1,
+          "mappedBodyLineCount": 0,
+          "mappedPaths": [],
+          "branchCount": 0,
+          "maxNestingDepth": 1,
+          "temporaryDeclarationCount": 0,
+          "temporaryReferenceCount": 0,
+          "temporaryDeclarationsPerKCodeLines": 0
+        },
+        {
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.canPlaceAt",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_canPlaceAt",
+          "identityMapped": true,
+          "owner": {
+            "kind": "source-module",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
+            "source": {
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 44,
-              "startColumn": 63,
+              "startColumn": 65,
               "endLine": 65,
               "endColumn": 2
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 44,
-            "startColumn": 63,
+            "startColumn": 65,
             "endLine": 65,
             "endColumn": 2
           },
-          "startLine": 12,
-          "endLine": 46,
+          "startLine": 17,
+          "endLine": 51,
           "physicalLineCount": 35,
           "codeLineCount": 35,
           "bodyCodeLineCount": 32,
@@ -1285,14 +1325,14 @@
           "temporaryDeclarationsPerKCodeLines": 0
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.floorToInt",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_floorToInt",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.floorToInt",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_floorToInt",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 198,
               "startColumn": 46,
               "endLine": 201,
@@ -1300,14 +1340,14 @@
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 198,
             "startColumn": 46,
             "endLine": 201,
             "endColumn": 2
           },
-          "startLine": 48,
-          "endLine": 56,
+          "startLine": 53,
+          "endLine": 61,
           "physicalLineCount": 9,
           "codeLineCount": 9,
           "bodyCodeLineCount": 6,
@@ -1320,14 +1360,14 @@
           "temporaryDeclarationsPerKCodeLines": 0
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.input",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_input",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.input",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_input",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 35,
               "startColumn": 63,
               "endLine": 41,
@@ -1335,14 +1375,14 @@
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 35,
             "startColumn": 63,
             "endLine": 41,
             "endColumn": 2
           },
-          "startLine": 58,
-          "endLine": 61,
+          "startLine": 63,
+          "endLine": 66,
           "physicalLineCount": 4,
           "codeLineCount": 4,
           "bodyCodeLineCount": 1,
@@ -1355,14 +1395,14 @@
           "temporaryDeclarationsPerKCodeLines": 0
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.moveAxis",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_moveAxis",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.moveAxis",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_moveAxis",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 132,
               "startColumn": 104,
               "endLine": 171,
@@ -1370,14 +1410,14 @@
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 132,
             "startColumn": 104,
             "endLine": 171,
             "endColumn": 2
           },
-          "startLine": 63,
-          "endLine": 149,
+          "startLine": 68,
+          "endLine": 154,
           "physicalLineCount": 87,
           "codeLineCount": 87,
           "bodyCodeLineCount": 84,
@@ -1390,14 +1430,14 @@
           "temporaryDeclarationsPerKCodeLines": 184
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.overlaps",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_overlaps",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_overlaps",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 173,
               "startColumn": 77,
               "endLine": 196,
@@ -1405,14 +1445,14 @@
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 173,
             "startColumn": 77,
             "endLine": 196,
             "endColumn": 2
           },
-          "startLine": 151,
-          "endLine": 217,
+          "startLine": 156,
+          "endLine": 222,
           "physicalLineCount": 67,
           "codeLineCount": 67,
           "bodyCodeLineCount": 64,
@@ -1425,59 +1465,24 @@
           "temporaryDeclarationsPerKCodeLines": 254
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.player",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_player",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.recoverSpawn",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_recoverSpawn",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
-              "startLine": 22,
-              "startColumn": 56,
-              "endLine": 32,
-              "endColumn": 2
-            }
-          },
-          "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
-            "startLine": 22,
-            "startColumn": 56,
-            "endLine": 32,
-            "endColumn": 2
-          },
-          "startLine": 219,
-          "endLine": 222,
-          "physicalLineCount": 4,
-          "codeLineCount": 4,
-          "bodyCodeLineCount": 1,
-          "mappedBodyLineCount": 0,
-          "mappedPaths": [],
-          "branchCount": 0,
-          "maxNestingDepth": 1,
-          "temporaryDeclarationCount": 0,
-          "temporaryReferenceCount": 0,
-          "temporaryDeclarationsPerKCodeLines": 0
-        },
-        {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.recoverSpawn",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_recoverSpawn",
-          "identityMapped": true,
-          "owner": {
-            "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
-            "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 68,
-              "startColumn": 72,
+              "startColumn": 76,
               "endLine": 84,
               "endColumn": 2
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 68,
-            "startColumn": 72,
+            "startColumn": 76,
             "endLine": 84,
             "endColumn": 2
           },
@@ -1495,24 +1500,24 @@
           "temporaryDeclarationsPerKCodeLines": 120
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.resolveVelocity",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_resolveVelocity",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.resolveVelocity",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 104,
-              "startColumn": 135,
+              "startColumn": 139,
               "endLine": 130,
               "endColumn": 2
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 104,
-            "startColumn": 135,
+            "startColumn": 139,
             "endLine": 130,
             "endColumn": 2
           },
@@ -1530,24 +1535,24 @@
           "temporaryDeclarationsPerKCodeLines": 371
         },
         {
-          "functionId": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.step",
-          "cName": "hxc_caxecraft_domain_PlayerPhysics_step",
+          "functionId": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.step",
+          "cName": "hxc_caxecraft_domain_CharacterPhysics_step",
           "identityMapped": true,
           "owner": {
             "kind": "source-module",
-            "modulePath": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_",
+            "modulePath": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_",
             "source": {
-              "path": "caxecraft/domain/PlayerPhysics.hx",
+              "path": "caxecraft/domain/CharacterPhysics.hx",
               "startLine": 87,
-              "startColumn": 86,
+              "startColumn": 90,
               "endLine": 95,
               "endColumn": 2
             }
           },
           "source": {
-            "path": "caxecraft/domain/PlayerPhysics.hx",
+            "path": "caxecraft/domain/CharacterPhysics.hx",
             "startLine": 87,
-            "startColumn": 86,
+            "startColumn": 90,
             "endLine": 95,
             "endColumn": 2
           },
@@ -1769,19 +1774,19 @@
     },
     {
       "path": "src/modules/caxecraft/domain/World.c",
-      "sha256": "0336e408dd960245011446b66678b151e82998e206f0541e2d86957227fddc4f",
+      "sha256": "84f4347c58008fc1c5f401fd7d4fa068186317a011a7684943909034bf41f99e",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.domain.World",
         "source": null
       },
-      "physicalLineCount": 347,
-      "codeLineCount": 333,
+      "physicalLineCount": 407,
+      "codeLineCount": 393,
       "lineDirectiveCount": 0,
       "mappedPathCount": 0,
       "mappedPaths": [],
       "lineDirectives": [],
-      "identifierCount": 647,
+      "identifierCount": 717,
       "maxIdentifier": {
         "name": "hxc_caxecraft_domain_WorldStorage_writeCode",
         "bytes": 43,
@@ -1870,17 +1875,17 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 114,
+              "startLine": 131,
               "startColumn": 67,
-              "endLine": 143,
+              "endLine": 160,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 114,
+            "startLine": 131,
             "startColumn": 67,
-            "endLine": 143,
+            "endLine": 160,
             "endColumn": 3
           },
           "startLine": 42,
@@ -1940,27 +1945,27 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 58,
+              "startLine": 68,
               "startColumn": 58,
-              "endLine": 63,
+              "endLine": 73,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 58,
+            "startLine": 68,
             "startColumn": 58,
-            "endLine": 63,
+            "endLine": 73,
             "endColumn": 3
           },
           "startLine": 139,
-          "endLine": 155,
-          "physicalLineCount": 17,
-          "codeLineCount": 17,
-          "bodyCodeLineCount": 14,
+          "endLine": 160,
+          "physicalLineCount": 22,
+          "codeLineCount": 22,
+          "bodyCodeLineCount": 19,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 6,
+          "branchCount": 11,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -1975,27 +1980,27 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 51,
+              "startLine": 61,
               "startColumn": 54,
-              "endLine": 56,
+              "endLine": 66,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 51,
+            "startLine": 61,
             "startColumn": 54,
-            "endLine": 56,
+            "endLine": 66,
             "endColumn": 3
           },
-          "startLine": 157,
-          "endLine": 173,
-          "physicalLineCount": 17,
-          "codeLineCount": 17,
-          "bodyCodeLineCount": 14,
+          "startLine": 162,
+          "endLine": 183,
+          "physicalLineCount": 22,
+          "codeLineCount": 22,
+          "bodyCodeLineCount": 19,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 6,
+          "branchCount": 11,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2012,7 +2017,7 @@
               "path": "caxecraft/domain/World.hx",
               "startLine": 31,
               "startColumn": 54,
-              "endLine": 39,
+              "endLine": 44,
               "endColumn": 3
             }
           },
@@ -2020,17 +2025,17 @@
             "path": "caxecraft/domain/World.hx",
             "startLine": 31,
             "startColumn": 54,
-            "endLine": 39,
+            "endLine": 44,
             "endColumn": 3
           },
-          "startLine": 175,
-          "endLine": 200,
-          "physicalLineCount": 26,
-          "codeLineCount": 26,
-          "bodyCodeLineCount": 23,
+          "startLine": 185,
+          "endLine": 230,
+          "physicalLineCount": 46,
+          "codeLineCount": 46,
+          "bodyCodeLineCount": 43,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 6,
+          "branchCount": 11,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2045,27 +2050,27 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 41,
+              "startLine": 46,
               "startColumn": 58,
-              "endLine": 49,
+              "endLine": 59,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 41,
+            "startLine": 46,
             "startColumn": 58,
-            "endLine": 49,
+            "endLine": 59,
             "endColumn": 3
           },
-          "startLine": 202,
-          "endLine": 227,
-          "physicalLineCount": 26,
-          "codeLineCount": 26,
-          "bodyCodeLineCount": 23,
+          "startLine": 232,
+          "endLine": 277,
+          "physicalLineCount": 46,
+          "codeLineCount": 46,
+          "bodyCodeLineCount": 43,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 6,
+          "branchCount": 11,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 0,
           "temporaryReferenceCount": 0,
@@ -2080,31 +2085,31 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 104,
+              "startLine": 121,
               "startColumn": 88,
-              "endLine": 111,
+              "endLine": 128,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 104,
+            "startLine": 121,
             "startColumn": 88,
-            "endLine": 111,
+            "endLine": 128,
             "endColumn": 3
           },
-          "startLine": 229,
-          "endLine": 256,
-          "physicalLineCount": 28,
-          "codeLineCount": 28,
-          "bodyCodeLineCount": 25,
+          "startLine": 279,
+          "endLine": 311,
+          "physicalLineCount": 33,
+          "codeLineCount": 33,
+          "bodyCodeLineCount": 30,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 7,
+          "branchCount": 12,
           "maxNestingDepth": 3,
           "temporaryDeclarationCount": 4,
           "temporaryReferenceCount": 4,
-          "temporaryDeclarationsPerKCodeLines": 143
+          "temporaryDeclarationsPerKCodeLines": 122
         },
         {
           "functionId": "caxecraft.domain.World.query",
@@ -2115,21 +2120,21 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 78,
+              "startLine": 88,
               "startColumn": 77,
-              "endLine": 83,
+              "endLine": 93,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 78,
+            "startLine": 88,
             "startColumn": 77,
-            "endLine": 83,
+            "endLine": 93,
             "endColumn": 3
           },
-          "startLine": 258,
-          "endLine": 273,
+          "startLine": 313,
+          "endLine": 328,
           "physicalLineCount": 16,
           "codeLineCount": 16,
           "bodyCodeLineCount": 13,
@@ -2150,31 +2155,31 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 95,
+              "startLine": 112,
               "startColumn": 73,
-              "endLine": 101,
+              "endLine": 118,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 95,
+            "startLine": 112,
             "startColumn": 73,
-            "endLine": 101,
+            "endLine": 118,
             "endColumn": 3
           },
-          "startLine": 275,
-          "endLine": 298,
-          "physicalLineCount": 24,
-          "codeLineCount": 24,
-          "bodyCodeLineCount": 21,
+          "startLine": 330,
+          "endLine": 358,
+          "physicalLineCount": 29,
+          "codeLineCount": 29,
+          "bodyCodeLineCount": 26,
           "mappedBodyLineCount": 0,
           "mappedPaths": [],
-          "branchCount": 6,
+          "branchCount": 11,
           "maxNestingDepth": 2,
           "temporaryDeclarationCount": 3,
           "temporaryReferenceCount": 3,
-          "temporaryDeclarationsPerKCodeLines": 125
+          "temporaryDeclarationsPerKCodeLines": 104
         },
         {
           "functionId": "caxecraft.domain.World.replace",
@@ -2185,21 +2190,21 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 86,
+              "startLine": 96,
               "startColumn": 90,
-              "endLine": 92,
+              "endLine": 102,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 86,
+            "startLine": 96,
             "startColumn": 90,
-            "endLine": 92,
+            "endLine": 102,
             "endColumn": 3
           },
-          "startLine": 300,
-          "endLine": 316,
+          "startLine": 360,
+          "endLine": 376,
           "physicalLineCount": 17,
           "codeLineCount": 17,
           "bodyCodeLineCount": 14,
@@ -2220,21 +2225,21 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 177,
+              "startLine": 194,
               "startColumn": 57,
-              "endLine": 185,
+              "endLine": 202,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 177,
+            "startLine": 194,
             "startColumn": 57,
-            "endLine": 185,
+            "endLine": 202,
             "endColumn": 3
           },
-          "startLine": 318,
-          "endLine": 338,
+          "startLine": 378,
+          "endLine": 398,
           "physicalLineCount": 21,
           "codeLineCount": 21,
           "bodyCodeLineCount": 18,
@@ -2255,21 +2260,21 @@
             "modulePath": "caxecraft.domain.World",
             "source": {
               "path": "caxecraft/domain/World.hx",
-              "startLine": 187,
+              "startLine": 204,
               "startColumn": 59,
-              "endLine": 191,
+              "endLine": 208,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/domain/World.hx",
-            "startLine": 187,
+            "startLine": 204,
             "startColumn": 59,
-            "endLine": 191,
+            "endLine": 208,
             "endColumn": 3
           },
-          "startLine": 340,
-          "endLine": 347,
+          "startLine": 400,
+          "endLine": 407,
           "physicalLineCount": 8,
           "codeLineCount": 8,
           "bodyCodeLineCount": 5,
@@ -2381,7 +2386,7 @@
     },
     {
       "path": "src/modules/caxecraft/qa/DomainProbe.c",
-      "sha256": "073b6f3a6ef98ef6023784d6fc062ccbd55608b639f55430f4fc8102cc9519c9",
+      "sha256": "d8d96d761fc1c1b13d2ff1c9f41fe5ea8c91758786b5b0b93bc81753796fd558",
       "owner": {
         "kind": "source-module",
         "modulePath": "caxecraft.qa.DomainProbe",
@@ -2395,10 +2400,10 @@
       "lineDirectives": [],
       "identifierCount": 1429,
       "maxIdentifier": {
-        "name": "hxc_caxecraft_domain_PlayerPhysics_recoverSpawn",
-        "bytes": 47,
+        "name": "hxc_caxecraft_domain_CharacterPhysics_recoverSpawn",
+        "bytes": 50,
         "line": 592,
-        "column": 72
+        "column": 74
       },
       "temporaryDeclarationCount": 206,
       "temporaryReferenceCount": 356,
@@ -2412,17 +2417,17 @@
             "modulePath": "caxecraft.qa.DomainProbe",
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
-              "startLine": 199,
+              "startLine": 198,
               "startColumn": 47,
-              "endLine": 205,
+              "endLine": 204,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
-            "startLine": 199,
+            "startLine": 198,
             "startColumn": 47,
-            "endLine": 205,
+            "endLine": 204,
             "endColumn": 3
           },
           "startLine": 3,
@@ -2482,17 +2487,17 @@
             "modulePath": "caxecraft.qa.DomainProbe",
             "source": {
               "path": "caxecraft/qa/DomainProbe.hx",
-              "startLine": 207,
+              "startLine": 206,
               "startColumn": 53,
-              "endLine": 210,
+              "endLine": 209,
               "endColumn": 3
             }
           },
           "source": {
             "path": "caxecraft/qa/DomainProbe.hx",
-            "startLine": 207,
+            "startLine": 206,
             "startColumn": 53,
-            "endLine": 210,
+            "endLine": 209,
             "endColumn": 3
           },
           "startLine": 32,
@@ -2519,7 +2524,7 @@
               "path": "caxecraft/qa/DomainProbe.hx",
               "startLine": 52,
               "startColumn": 41,
-              "endLine": 197,
+              "endLine": 196,
               "endColumn": 3
             }
           },
@@ -2527,7 +2532,7 @@
             "path": "caxecraft/qa/DomainProbe.hx",
             "startLine": 52,
             "startColumn": 41,
-            "endLine": 197,
+            "endLine": 196,
             "endColumn": 3
           },
           "startLine": 47,

@@ -65,4 +65,9 @@ extern class PointLib {
 	@:c.name("pointlib_float32_verify")
 	public static function verifyFloat32(point:FloatPoint, dot:c.Float32, widened:Float, tie:c.Float32, subnormal:c.Float32, positiveInfinity:c.Float32,
 		nan:c.Float32, negativeZero:c.Float32, finiteOverflow:c.Float32):Bool;
+
+	/** Verify the values crossing the focused inline-parameter regression. */
+	@:c.name("pointlib_inline_float32_verify")
+	public static function verifyInlineFloat32(fromIntegerLocal:c.Float32, fromIntegerArithmetic:c.Float32, fromFloatLocal:c.Float32,
+		fromSideEffect:c.Float32, fromNonInline:c.Float32):Bool;
 }

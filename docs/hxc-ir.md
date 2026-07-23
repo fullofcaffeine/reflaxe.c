@@ -1,7 +1,7 @@
 # HxcIR semantic contract
 
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
-the structural C AST. Its schema is internal to the compiler: schema version 10
+the structural C AST. Its schema is internal to the compiler: schema version 17
 is deterministic and validation-backed, but it is not a public file format or
 ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
@@ -34,6 +34,68 @@ to version 9.
 The reusable C-facing binary32 carrier adds distinct, validated
 binary64-to-binary32 rounding and binary32-to-binary64 widening operations,
 advancing the schema to version 10.
+The bounded caller-owned class-reference extension marks ordinary function and
+method parameters that may use an object for the duration of a known direct
+call without taking ownership, advancing the schema to version 11. Validation
+allows reads, scalar field mutation, and nested direct calls with the same
+declared contract. It rejects storing, returning, throwing, aliasing through a
+local, carrying the reference across a block edge, or forwarding it to a call
+whose ownership behavior is not proven.
+Schema version 12 distinguishes borrowing an embedded class field from taking
+an ordinary address. It also lets a function declare an automatic pointer local
+as a borrowed alias. That local may be initialized once from a proven borrowed
+class value and reloaded after a branch, which is how an inlined Haxe method's
+compiler-created `_this` survives lazy `&&` or `||` evaluation. The alias never
+owns or extends the child's lifetime: validation rejects reassignment, return,
+storage into an owning place, unchecked forwarding, and every non-automatic or
+non-class alias declaration. The ordinary address operation remains available
+for construction storage and does not silently acquire borrow semantics.
+Schema version 13 adds explicit interface-value construction. The operation
+names the interface type, the concrete object reference, and the selected
+interface table as three separate semantic facts. Validation proves that the
+result has the named interface type, the object is a concrete class reference,
+the table belongs to that interface, and the table's concrete class is
+compatible with the object. This is intentionally earlier than C emission:
+the later C layer may spell the value as a two-pointer struct, but it may not
+guess or repair an object/table pairing. Production construction, interface
+calls in generated C, inherited interfaces, and casts remain owned by E3.T07.
+Schema version 14 adds `IRIORelease`, the explicit counterpart to
+`IRIORetain`. A release names the owned place and the selected direct,
+program-local, or runtime implementation before C syntax is chosen. This lets
+the validator and cleanup planner see exactly where a managed enum, Array, or
+closed record gives up ownership; the emitter may not hide that decision in a
+printer helper. Managed closed records compose their fields through one typed
+retain/destroy plan, and recursive enums use allocator-backed uniquely owned
+tree links. Cycle-capable graphs remain outside this bounded ownership model.
+Schema version 15 adds an explicit `managedRoots` plan to every function. A
+root names one immutable HxcIR parameter or instruction result whose finalized
+type representation is `IRRManaged("gc")`. The validator rejects unknown,
+duplicate, scalar, direct, or block-parameter roots before C is selected.
+Block parameters are intentionally not admitted yet: their value changes on an
+incoming edge, so safely rooting one requires an edge-owned slot update rather
+than the simpler update-after-definition rule.
+The first production consumer is the bounded concrete `Array<Class>` graph.
+Its class and array allocations name `gc` explicitly, a fresh class result is
+rooted before constructor execution, and array `create`, `push`, `get`, and
+`set` remain typed operations rather than printer-invented runtime calls.
+Exact descriptor generation happens only after the same settled
+representations are validated. Direct classes and ordinary arrays therefore do
+not acquire roots or a collector merely because this path exists.
+Schema version 16 extends each managed root with an exact typed projection
+path. A root can now start at a direct record, an active enum payload, or a
+present optional and walk to each embedded collector-managed reference. The
+validator proves every step before C syntax is selected. This keeps useful
+by-value C records and tagged unions without hiding their managed children from
+the collector or conservatively treating unrelated memory as a pointer.
+Schema version 17 adds typed references to reachable non-capturing functions.
+The reference names one known HxcIR function and its result retains the exact
+parameter and return types. Calling the value uses the existing callable-value
+dispatch form. That dispatch name does not imply that a capture environment
+exists: in this slice it emits an ordinary C function pointer. Haxe enum
+constructors used as values receive deterministic HxcIR adapter functions, so
+constructing the enum remains visible to validation rather than becoming a
+printer repair. Capturing closures and managed or recursive constructor
+payload adapters remain explicit unsupported boundaries.
 All other frontend and C lowering remains explicitly gated.
 
 The IR exists because C syntax cannot safely carry several Haxe decisions by
@@ -278,7 +340,7 @@ instances, not C declarator spelling. `IRTDynamic` is the explicit Haxe
 `Dynamic` type; it must never be used as a placeholder for an unsupported typed
 AST node. Exact-width integers retain width and signedness, while `size_t`,
 `ptrdiff_t`, `intptr_t`, and `uintptr_t` retain distinct unresolved target-ABI
-identities. Nullability records either a tagged scalar payload or a pointer
+identities. Nullability records either a tagged scalar/direct-record payload or a pointer
 representation rather than being inferred from the eventual C spelling.
 `IRTFloat(64)` is ordinary Haxe `Float`; `IRTFloat(32)` is the explicit
 `c.Float32` foreign carrier. `IRCNumericRoundBinary32` and
@@ -291,6 +353,20 @@ pretending a borrowed view is an owned aggregate or runtime object.
 For closed records, the declaration owns canonical ordered fields and the
 instance records direct representation; C naming and layout remain later
 emission decisions.
+`IRTNullable(value, IRNTagged)` keeps a `Null<Record>` or `Null<Enum>`
+distinction that the selected C value cannot express by itself.
+`IRCNullableInject` names the present case,
+`IRIOConstant(IRCNull)` names the absent case, and
+`IRCNullableUnwrap` may expose the payload only after a dominating
+`IRIONullCheck`. CAST later spells this as a small `{has_value, value}` struct;
+the semantic IR never depends on those C member names. When the record is
+managed, explicit `IRIORetain`/`IRIORelease` instructions name the optional's
+program-local lifecycle helper. That helper consults the presence tag before
+delegating to the record lifecycle, so inactive storage is never treated as an
+owner. A managed enum uses the same optional operations and delegates to the
+enum's tag-aware lifecycle helper. Pattern matching first checks and unwraps a
+nullable enum, then dispatches on the ordinary enum value; no C pass is allowed
+to infer that the optional payload was present.
 For Haxe enums, the declaration owns source-ordered cases, explicit integer
 discriminants, and named source-ordered payload fields. A concrete instance
 records either direct or tagged representation intent. Construction names the
@@ -301,16 +377,26 @@ an infinitely recursive by-value instance.
 For Haxe classes, the declaration owns one optional direct base instance,
 source-ordered own storage fields, and explicit absent, named virtual-layout,
 or named-runtime header intent. The concrete class instance describes private
-direct storage, while a source-level class value is a nullable pointer to that
-instance. A safe upcast is retained as a representation conversion rather than
-inferred from C pointer spelling.
+direct storage, while an ordinary source-level class value is a nullable pointer
+to that instance. A compiler-proven nonescaping `final` child field instead
+retains the direct `IRTInstance`: the parent owns the child's storage and later
+operations borrow its address without turning that borrow into independent
+ownership. A safe upcast is retained as a representation conversion rather
+than inferred from C pointer spelling.
 `IRTString` is the immutable valid-UTF-8 Haxe value contract. Its
 `IRCString` constant records source text and an independently checked byte
 length, so embedded NUL and non-ASCII scalars cannot be confused with C string
-termination or character count.
+termination or character count. A constant's bytes have program-long storage,
+so the resulting view can be copied through direct values without ownership
+work. `haxe.string.equal` and `haxe.string.not-equal` compare canonical byte
+length and content; they do not compare the view's data pointers. Operations
+that create new bytes at run time still require the separately owned String
+lifetime slice.
 `IRTCString` is a separate borrowed, NUL-terminated C view. Its only admitted
 constructor is `IRCCStringLiteral`: immutable literal storage with a validated
-UTF-8 byte count and no embedded NUL. `IRCNativeConstant` retains the exact
+UTF-8 byte count and no embedded NUL. Typed locals, block parameters,
+conditionals, switches, and program-local calls may propagate that carrier, but
+none can construct it from a dynamic Haxe `String`. `IRCNativeConstant` retains the exact
 header-owned constant identity and a nominal imported value retains its Haxe
 type identity through `IRTInstance`; neither is guessed from a host value or
 redeclared as generated C. A native constant may use a scalar, imported extern,
@@ -341,7 +427,9 @@ slot and receiver separately from the explicit source arguments.
   that block;
 - values never leak directly between blocks. A control or failure edge passes
   them through typed target-block parameters, with arity and type validation;
-- direct and closure calls match known parameter and return signatures;
+- a function reference names one reachable, infallible function whose exact
+  parameter and return types match the callable result; direct calls and calls
+  through a callable value preserve those same signatures;
 - every value-producing instruction has exactly one typed result, every
   effect-only instruction has none, every block terminates, and every branch,
   switch, failure, and `finally` target exists;
@@ -354,10 +442,13 @@ slot and receiver separately from the explicit source arguments.
   recorded UTF-8 byte length is exact, including embedded NUL bytes; every C
   string literal also has an exact byte length and rejects embedded NUL;
 - element-list fixed-array initialization supplies exactly the declared number
-  and element type of values; zero initialization targets exact-size integer or
-  binary32 or binary64 storage, has a positive length, cannot overflow its byte count, and
-  remains within the shared 65,536-byte per-array automatic-storage ceiling;
-  span initialization borrows compatible fixed storage; index places resolve
+  and element type of values; local zero initialization targets exact-size
+  integer or binary32 or binary64 storage, has a positive length, cannot
+  overflow its byte count, and remains within the shared 65,536-byte per-array
+  automatic-storage ceiling; a fixed-array class field is validated under the
+  same policy and initialized as part of its enclosing nonescaping object's
+  structural zero state; span initialization borrows compatible local or field
+  fixed storage through a validated place; index places resolve
   to the collection element type; and every admitted collection access has a
   preceding checked-abort, compile-time static, or compiler loop-guard proof
   for the same collection and immutable index;
@@ -366,9 +457,9 @@ slot and receiver separately from the explicit source arguments.
   declaration order, with a matching value type; projection names a real field
   and returns its exact type; and a field place resolves only from a compatible
   aggregate base;
-- every class base names a known direct class instance, class storage fields are
-  unique and typed, direct layouts are finite, and a class instance is
-  specialized before emission;
+- every class base and owned-child field names a known direct class instance,
+  class storage fields are unique and typed, direct layouts are finite, and a
+  class instance is specialized before emission;
 - virtual layouts, slots, and tables have unique stable IDs and strict UTF-8
   order; one root selects each layout; every slot belongs to exactly one layout;
   every table class descends from that root; and every table entry follows the
@@ -384,9 +475,15 @@ slot and receiver separately from the explicit source arguments.
   equality/inequality is a static `Bool` identity operation, and representation
   conversion admits only a proven derived-to-ancestor path with matching
   nullability;
-- dereferencing a nullable class reference requires an earlier same-block
-  `IRIONullCheck` for that immutable value. Its checked-abort policy records a
-  valid profile and build mode rather than relying on C undefined behavior;
+- enum-tag equality/inequality uses matching instances of one payload-free
+  direct enum, returns `Bool`, and has a static implementation. Tagged payload
+  structs are deliberately excluded until their recursive value semantics are
+  defined;
+- dereferencing a nullable class reference or unwrapping a tagged nullable
+  record requires an earlier dominating `IRIONullCheck` for that exact
+  immutable value. “Dominating” means the check runs on every route to the use.
+  The validator rejects branch-local proofs at a later join and checks the
+  recorded profile/build policy instead of relying on C undefined behavior;
 - tagged construction names a declared case and supplies exactly its ordered
   payload types; matching uses a case from the value's concrete instance;
   payload projection returns the exact named field type and carries the
@@ -398,20 +495,23 @@ slot and receiver separately from the explicit source arguments.
   be represented indirectly so every emitted C object has finite size;
 - return terminators carry no value for `Void`, carry exactly one value for a
   non-`Void` function, and match the declared return type;
-- calls, conversions, allocation, deallocation, retain, and trace operations
+- calls, conversions, allocation, deallocation, retain, release, and trace operations
   identify their implementation as static/direct, program-local specialized,
   or a named runtime feature;
 - primitive conversions identify exact, binary32 rounding, binary64 widening,
   wrapping, checked, saturating, nullable-inject, or nullable-unwrap intent.
   Binary32 rounding is exactly `f64 -> f32` with direct static intent;
-  binary64 widening is exactly `f32 -> f64` with direct static intent. Checked numeric and nullable
-  unwrap forms require an explicit failure edge; the remaining primitive forms
-  reject one;
+  binary64 widening is exactly `f32 -> f64` with direct static intent. Checked
+  numeric conversions require an explicit failure edge. A nullable unwrap
+  instead requires either its own explicit failure edge or an earlier
+  dominating null check; a proven unwrap must not repeat the failure edge. The
+  remaining primitive forms reject one;
 - exact, wrapping, checked, saturating, and nullable primitive operations may
   use only direct/static or program-local implementation. A named runtime
   feature is an internal invariant failure, not a fallback;
 - local entry states and every explicit lifetime transition are legal. An
-  initialization ends in `initialized`; a destroy cleanup ends in `destroyed`;
+  initialization ends in `initialized`; retain/release operations name a
+  type-compatible owned place; a destroy cleanup ends in `destroyed`;
 - default initialization targets a structurally resolvable class-instance
   place whose storage type matches the instruction exactly;
 - a deferred global names an existing zero-argument `Void` initializer, and
@@ -495,12 +595,20 @@ Override implementations must preserve the slot's target representation;
 typed receiver adapters are explicit program-local C emission facts rather
 than runtime intent. See [closed-world virtual dispatch](virtual-dispatch.md).
 
+For the first E3.T07 semantic slice, an interface layout uses a direct reference
+instance as its root and each implementation table still names its concrete
+class. `IRIOConstructInterface` then pairs one concrete object reference with
+one of those tables. An interface call consumes that validated value and names
+the interface and slot explicitly. The C representation and cast rules are not
+inferred by the printer and are not yet claimed complete.
+
 For the bounded E6 direct-import slice, reached typed extern declarations lower
 to exact native dispatch only after their names, headers, fixed arity, calling
 convention, argument types, and return type validate. Imported struct field
 places remain ordinary structural HxcIR places; the authoritative header owns
-their layout and definition. Literal `String -> c.CString` borrowing is static,
-allocation-free storage local to the generated translation unit. Callbacks,
+their layout and definition. A literal or proven literal-only selection can
+construct `c.CString`; propagation through typed program-local flow preserves
+its static, allocation-free translation-unit storage. Callbacks,
 variadics, pointer lifetimes, retained strings, opaque ownership, and inferred
 ABI facts remain fail-closed with `HXC3000`.
 
@@ -523,18 +631,66 @@ constructing a concrete class, checking a class reference/tag/bounds,
 performing a safe upcast, binding or calling a program-local virtual table, or
 using cleanup selects nothing from `hxrt`.
 
-E2.T07 is the first bounded compiler-selected exception: a compiler-known
-literal remains direct static UTF-8 storage, while its observable hosted output
-requests the `io` feature. The exact closure is `runtime-base + status +
-string-literal + io`; it contains no allocator, full string operations, object,
-collector, dynamic, reflection, or exception machinery. Each source call is a
-root reason, and transitive dependencies remain plan evidence rather than
-duplicate warnings.
+A compiler-known String literal remains direct static UTF-8 storage and can
+flow through `IRTString` values without allocation. Its `string-literal`
+requirement records the private carrier needed by generated C; it does not
+select the full String runtime. `haxe.string.equal` and
+`haxe.string.not-equal` compare the canonical byte length and bytes, never the
+storage pointer. Observable hosted output separately requests `io`. An output
+program's exact closure is `runtime-base + status + string-literal + io`; it
+contains no allocator, full string operations, object, collector, dynamic,
+reflection, or exception machinery. Each semantic requirement is a root reason,
+and transitive dependencies remain plan evidence rather than duplicate
+warnings.
 
 Portable and metal share this IR. Later analyses decide whether a representation
 is legal under the resolved profile and runtime policy. The IR must preserve the
 reason and source span needed for those decisions; it must not preselect a broad
 runtime slice to make validation pass.
+
+Ordinary resizable `Array<T>` is an explicit managed representation, not a C
+pointer guessed by the printer. Its runtime calls name the operation—create,
+length, checked copy, or push—and retain the concrete element type. When
+checked indexing copies an element that owns Bytes fields, HxcIR gives the copy
+a compiler-owned local, exposes only a short-lived borrow to the enclosing
+expression, and attaches the matching program-local typed destroy cleanup.
+Validation proves that the element type encoded by that cleanup matches the
+local being destroyed. Managed enum and record values use the same explicit
+owned-local rule. A record-level plan retains fields in order, rolls back a
+partial retain on failure, and releases them in reverse order. Recursive enum
+children are unique allocator-backed owners, so a copy clones the tree and a
+release recursively destroys it. Borrows still cannot escape their proven
+lifetime, and cyclic graphs remain rejected.
+
+## Exact managed roots
+
+The root planner runs after type representations settle. It scans each function
+in stable program order, roots collector-managed parameters at entry, and roots
+collector-managed instruction results immediately after their defining
+instruction. A root may be the value itself or a typed path through ordinary
+value storage: a record field, an active enum payload, or a present optional
+payload. These paths let a value such as `Array<EnumWithClass>` remain a normal,
+readable C struct while still telling the collector exactly where its class
+references live. Enum tags and optional-presence flags guard union reads, so
+inactive storage is never inspected. The first implementation conservatively
+keeps those slots live until the function exits. Shortening a slot's lifetime
+later is an optimization; it must not change which objects remain reachable at
+a collector safepoint.
+
+The C emitter turns the plan into one stack array of `const void *` values and
+one `hxc_gc_root_frame`. Parameter slots start with the incoming pointer or the
+guarded pointer selected by their path; result slots start null and are assigned
+as soon as the result exists. The
+frame is pushed before the body can allocate and popped after semantic cleanup
+on ordinary returns, throws, and early propagated constructor failures. Abort
+paths do not resume and therefore need no recovery. A managed function that
+would currently use the tail-loop rewrite fails closed because reusing one C
+stack frame across logical iterations needs a separate root-reset proof.
+
+This plan belongs in HxcIR because a C local declaration cannot say whether an
+address is a collector-managed base or merely an ordinary pointer. `CAST` owns
+the safe declarator and calls; it does not rediscover liveness or repair a
+missing root.
 
 ## Unsupported typed AST nodes
 
@@ -545,12 +701,14 @@ must not insert a `Dynamic`, null, raw C string, or invented constant in place
 of an unsupported node. A fully admitted primitive, local fixed-array/span,
 closed anonymous-record, bounded direct-value enum, concrete class-reference,
 bounded nonescaping constructor, or reachable closed-world class-dispatch
-static graph reaches
-validated HxcIR, structural C, and an owned runtime-free executable project.
-Recursive enum parameters and returns remain rejected until escape/lifetime
-analysis can choose owned storage. The separately admitted literal-output edge
-reaches the exact selective runtime plan above; nonliteral strings and broader
-output APIs still stop without output. See
+static graph reaches validated HxcIR and structural C. A program containing
+only direct values remains runtime-free; admitted Arrays or recursive enum
+trees instead select the narrow dependency-closed runtime slices recorded in
+the plan. Literal-backed String values can cross
+parameters, returns, direct closed aggregates, tagged enums, tagged optionals,
+and managed Array elements because their bytes have program-long storage.
+Runtime-created or owned Strings and broader output APIs still stop without
+output. See
 [primitive function-body lowering](body-lowering.md) and [static function
 lowering](function-lowering.md), plus [closed anonymous-record
 lowering](aggregate-lowering.md), [Haxe enum lowering](enum-lowering.md), and
@@ -586,7 +744,7 @@ runtime request. The checked-in Haxe fixture runs independently under Eval and
 asserts the oracle trace `nextIndex,produce:8`. `coverage.hxcir` exercises all
 dispatch forms plus ABI integers, tagged/pointer nullability, an exact UTF-8
 string constant and hosted-output failure edge, explicit primitive
-conversion/failure forms, aggregate/tag, allocation, retain/trace, lifetime,
+conversion/failure forms, aggregate/tag, allocation, retain/release/trace, lifetime,
 default initialization, and function failure conventions. Its named runtime
 requests are explicit non-primitive coverage.
 `diagnostics.json` covers missing termination, use-before-definition, invalid
@@ -595,12 +753,16 @@ mismatches, primitive runtime rejection, missing nullable-unwrap failure,
 switch subject/case-family mismatch, void/value return mismatches, return-type
 mismatch, tag construction/projection mismatches, invalid enum representation,
 non-exhaustive and redundant-default tag switches, illegal direct recursive
-layout, unchecked class dereference, unsafe class representation conversion,
-mismatched class-reference equality, a bad UTF-8 byte length, missing
-hosted-output failure, invalid default initialization, inconsistent status
+layout, unchecked and non-dominating class null proofs, unsafe class representation conversion,
+mismatched class-reference equality, missing payload-free representation for
+enum-tag equality, a bad UTF-8 byte length, missing hosted-output failure,
+invalid default initialization, inconsistent status
 conventions, a throw without status propagation, and `HXC1001`.
 The runner renders twice and reverses unordered inputs before comparing the
 canonical bytes.
+It also runs the receiver-check coalescer over a mutable local that changes from
+one class reference to another: duplicate checks of each immutable load collapse,
+while the post-assignment load keeps its own proof.
 
 The direct HxcIR suite itself emits no C. The body-lowering suite generates a
 test translation unit from real typed Haxe. The function-lowering suite extends
@@ -609,7 +771,8 @@ production private header/source-set/entry project. The evaluation-order suite
 adds source-backed calls, assignments, static fields, short circuit, ternary,
 and increments, and retains the representation-neutral general indexed
 compound-assignment IR. The span-lowering suite adds source-backed literal and
-zero-initialized fixed arrays, exact-width mutable/const views,
+zero-initialized local arrays, zero-initialized inline arrays owned by a
+nonescaping class object, exact-width mutable/const views from either place,
 checked/static/loop bounds policies, ordinary-Haxe three-dimensional indexing,
 direct guarded iteration, storage-budget negatives, and strict generated-C
 execution. The arithmetic
@@ -620,12 +783,19 @@ The aggregate-lowering suite adds source-backed named construction, direct
 record instances, explicit copies and field addresses, dependency-first private
 structs, and exact C/C++17 layout agreement under both required compiler
 families.
+The constructor suite additionally embeds a constructed child class directly
+inside a nonescaping parent, verifies child-before-parent C definitions and
+virtual-table binding before construction, and rejects every admitted path
+that would escape or reassign the borrowed child reference.
 The enum-lowering suite adds source-backed native fieldless enums and payload
 tagged unions, two concrete primitive generic specializations, checked payload
-projection, exhaustive tag switches, and a recursive local value with explicit
-indirect storage. Its C and C++17 consumers verify private tags, size,
-alignment, offsets, construction, and recursive layout under both compiler
-families without claiming general generic monomorphization or public ABI.
+projection, exhaustive tag switches, and allocator-backed uniquely owned
+recursive trees. The managed fixture adds a closed record containing managed
+and recursive enums, Array element copies, call/return ownership, failure
+rollback, and lexical cleanup. Its C and C++17 consumers verify private tags,
+size, alignment, offsets, construction, and recursive layout under both
+compiler families without claiming cyclic graphs, general generic
+monomorphization, or public ABI.
 The class-layout suite adds source-backed private concrete structs, embedded
 base prefixes, explicit null checks, inherited field places, identity
 operations, and null-preserving upcasts. Its independent C and C++17 consumers
@@ -637,7 +807,9 @@ default-initialized automatic storage, trivial-chain elision, typed status
 propagation, and ordered partial-initialization cleanup. It remains bounded to
 unconditional nonescaping locals and does not claim heap allocation, general
 exceptions, dispatch, object runtime, or public ABI.
-The separate string-output suite selects only the four-feature literal/I/O
-closure, compares exact UTF-8 and embedded-NUL stdout against Eval, forces a
-closed-stdout failure, and runs the generated project at both optimization
-levels.
+The enum suite includes a nominal abstract-over-String payload and proves
+construction, copy, projection, and byte-content equality across all project
+layouts. The separate string-output suite selects only the four-feature
+literal/I/O closure, compares exact UTF-8 and embedded-NUL stdout against Eval,
+forces a closed-stdout failure, and runs the generated project at both
+optimization levels.

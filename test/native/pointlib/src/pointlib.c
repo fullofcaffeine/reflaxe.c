@@ -87,4 +87,13 @@ bool pointlib_float32_verify(pointlib_float_point point, float dot, double widen
     && !signbit(finite_overflow);
 }
 
+bool pointlib_inline_float32_verify(float from_integer_local, float from_integer_arithmetic, float from_float_local,
+    float from_side_effect, float from_non_inline) {
+  return from_integer_local == 3.0f
+    && from_integer_arithmetic == 5.0f
+    && from_float_local == 6.5f
+    && from_side_effect == 7.0f
+    && from_non_inline == 8.0f;
+}
+
 void pointlib_build_fact_probe(void) {}

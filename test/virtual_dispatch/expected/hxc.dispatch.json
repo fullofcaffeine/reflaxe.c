@@ -11,7 +11,7 @@
     }
   ],
   "status": "analyzed-reachable-instance-dispatch",
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "tables": [
     {
       "entries": [
@@ -40,9 +40,9 @@
       "id": "vtable.MiddleWorker"
     }
   ],
-  "adapterPolicy": "representation-identical-overrides-with-typed-self-thunks",
+  "adapterPolicy": "representation-identical-overrides-with-typed-receiver-thunks",
   "runtimeFeatures": [],
-  "tablePolicy": "one-root-layout-reachable-virtual-slots-only",
+  "tablePolicy": "reachable-class-vtables-and-per-interface-itables-only",
   "calls": [
     {
       "methodFunctionId": "method.BaseWorker.privateValue",
@@ -217,5 +217,5 @@
     "adapters": 2,
     "layouts": 1
   },
-  "algorithm": "hxc-closed-world-virtual-dispatch-v1"
+  "algorithm": "hxc-closed-world-instance-dispatch-v2"
 }

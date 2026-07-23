@@ -111,7 +111,7 @@ class NegativeCase:
 
 
 NEGATIVE_CASES = (
-    NegativeCase("NonLiteralFixture", "TFunction(return-type):reference-Array-non-null"),
+    NegativeCase("NonLiteralFixture", "TVar(values:fixed-array-requires-direct-literal)"),
     NegativeCase("ZeroLengthFixture", "TArrayDecl(empty-fixed-array-not-strict-c11)"),
     NegativeCase("LookalikeFixture", "TVar(Span:requires-fixed-array-borrow)"),
     NegativeCase(
@@ -165,6 +165,36 @@ NEGATIVE_CASES = (
         "StoredSpanFieldFixture.hx:6: characters 2-34",
     ),
     NegativeCase(
+        "OwnedArrayMissingInitializerFixture",
+        "fixed-array-requires-initializer",
+        "OwnedArrayMissingInitializerFixture.hx:5: characters 2-35",
+    ),
+    NegativeCase(
+        "OwnedArrayWholeAssignmentFixture",
+        "TBinop(OpAssign:fixed-array-whole-value-not-admitted)",
+        "OwnedArrayWholeAssignmentFixture.hx:10: characters 3-25",
+    ),
+    NegativeCase(
+        "OwnedArrayUnsupportedElementFixture",
+        "collection-element:bool",
+        "OwnedArrayUnsupportedElementFixture.hx:4: characters 2-51",
+    ),
+    NegativeCase(
+        "OwnedArrayZeroLengthFixture",
+        "length-must-be-positive:0",
+        "OwnedArrayZeroLengthFixture.hx:5: characters 49-50",
+    ),
+    NegativeCase(
+        "OwnedArrayOversizedFixture",
+        "automatic-storage-over-budget:length=65537,element-bytes=1,total-bytes=65537,limit-bytes=65536",
+        "OwnedArrayOversizedFixture.hx:5: characters 49-54",
+    ),
+    NegativeCase(
+        "OwnedArrayDynamicLengthFixture",
+        "length-must-be-compile-time-product:TCall",
+        "OwnedArrayDynamicLengthFixture.hx:5: characters 49-65",
+    ),
+    NegativeCase(
         "StoredSpanGlobalFixture",
         "TField(static:borrowed:abstract `c.Span` is not an admitted primitive",
         "StoredSpanGlobalFixture.hx:9: characters 3-11",
@@ -176,7 +206,7 @@ NEGATIVE_CASES = (
     ),
     NegativeCase(
         "CallbackSpanParameterFixture",
-        "TVar(callback:type):function values await closure/function representation lowering",
+        "TVar(callback:type).function-argument-0:borrowed-span-indirect-call-not-admitted",
         "CallbackSpanParameterFixture.hx:13: characters 3-56",
     ),
     NegativeCase(
@@ -355,11 +385,11 @@ class HaxeHarness:
     def validate_topology(self) -> None:
         cold = sum(value.transport == "cold" for value in self.invocations)
         warm = sum(value.transport == "warm-server" for value in self.invocations)
-        if len(self.invocations) != 54 or cold != 8 or warm != 46:
+        if len(self.invocations) != 66 or cold != 8 or warm != 58:
             raise SpanLoweringFailure(
                 "span Haxe request topology drifted: "
                 f"total={len(self.invocations)}, cold={cold}, warm={warm}; "
-                "expected total=54, cold=8, warm=46"
+                "expected total=66, cold=8, warm=58"
             )
 
     def timing_report(self, *, outcome: str) -> dict[str, object]:
@@ -506,6 +536,7 @@ def function_names(
     if require_final_class_case:
         expected.add("finalClassParameterRoundTrip")
         expected.add("conditionalAssignment")
+        expected.add("ownedFieldRoundTrip")
     if set(names) != expected:
         raise SpanLoweringFailure(f"span fixture symbol set drifted: {sorted(names)!r}")
     return names
@@ -720,11 +751,11 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or reachability
         != {
             "modules": 2,
-            "typeInstances": 1,
-            "functions": 17,
-            "blocks": 35,
-            "instructions": 207,
-            "cleanupActions": 2,
+            "typeInstances": 2,
+            "functions": 20,
+            "blocks": 38,
+            "instructions": 237,
+            "cleanupActions": 4,
             "runtimeIntents": 0,
         }
         or runtime_absence
@@ -750,8 +781,8 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         raise SpanLoweringFailure(f"{profile}/{build} build plan retained an hxrt input")
     calls = dispatch.get("calls")
     if (
-        dispatch.get("schemaVersion") != 1
-        or dispatch.get("algorithm") != "hxc-closed-world-virtual-dispatch-v1"
+        dispatch.get("schemaVersion") != 2
+        or dispatch.get("algorithm") != "hxc-closed-world-instance-dispatch-v2"
         or dispatch.get("runtimeFeatures") != []
         or dispatch.get("slots") != []
         or dispatch.get("layouts") != []
@@ -760,19 +791,22 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         != {
             "indirectCalls": 0,
             "slots": 0,
-            "instanceCalls": 1,
+            "instanceCalls": 2,
             "tables": 0,
-            "directCalls": 1,
+            "directCalls": 2,
             "adapters": 0,
             "layouts": 0,
         }
         or not isinstance(calls, list)
-        or len(calls) != 1
-        or not isinstance(calls[0], dict)
-        or calls[0].get("dispatch") != "direct"
-        or calls[0].get("reason") != "final-receiver-class"
-        or calls[0].get("slotId") is not None
-        or calls[0].get("methodFunctionId") != calls[0].get("targetFunctionId")
+        or len(calls) != 2
+        or any(
+            not isinstance(call, dict)
+            or call.get("dispatch") != "direct"
+            or call.get("reason") != "final-receiver-class"
+            or call.get("slotId") is not None
+            or call.get("methodFunctionId") != call.get("targetFunctionId")
+            for call in calls
+        )
     ):
         raise SpanLoweringFailure(
             f"{profile}/{build} final-class span call lost direct dispatch proof"
@@ -803,17 +837,24 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
     if "runtimeTypeOnly" in source or "runtimeTypeOnly" in header:
         raise SpanLoweringFailure("an unreachable String-typed declaration entered generated output")
     if (
+        not re.search(r"struct [A-Za-z0-9_]*OwnedSpanBuffer \{\n  uint8_t [A-Za-z0-9_]+\[4\];\n  int32_t [A-Za-z0-9_]+\[4\];\n\};", header)
+        or "memset(" in source
+    ):
+        raise SpanLoweringFailure(
+            f"{profile}/{build} class-owned arrays stopped using direct inline C storage"
+        )
+    if (
         len(re.findall(r"int32_t [A-Za-z0-9_]+\[4\] = \{", source)) != 3
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[4\] = \{", source)) != 4
         or len(re.findall(r"uint8_t [A-Za-z0-9_]+\[16384\] = \{ 0 \};", source)) != 2
-        or source.count("const int32_t *") != 2
+        or source.count("const int32_t *") != 3
         or len(re.findall(r"(?m)^  int32_t \*[A-Za-z0-9_]+ =", source)) != 1
-        or source.count("const uint8_t *") != 9
+        or source.count("const uint8_t *") != 10
         or len(re.findall(r"(?m)^  uint8_t \*[A-Za-z0-9_]+ =", source)) != 8
         or source.count(" = sizeof(") != 11
         or source.count("bounds") != 0
-        or source.count("abort();") != 13
-        or source.count("[(size_t)") != 18
+        or source.count("abort();") != 15
+        or source.count("[(size_t)") != 22
     ):
         raise SpanLoweringFailure(f"{profile}/{build} fixed-array/span C shape drifted")
     if (
@@ -822,7 +863,7 @@ def validate_project(root: Path, *, profile: str, build: str) -> dict[str, objec
         or source.count(" + 1;") != 3
     ):
         raise SpanLoweringFailure("span iteration stopped being a direct guarded index loop")
-    if source.count(" < 0 || (size_t)") != 12 or source.count(" >= ") != 13:
+    if source.count(" < 0 || (size_t)") != 12 or source.count(" >= ") != 17:
         raise SpanLoweringFailure("dynamic span access lost its signed/size_t bounds check")
     parameter_signatures = re.findall(
         r"(?m)^uint8_t [^(]+\((?:const )?uint8_t \*[^,]+, size_t [^,]+,",
@@ -988,7 +1029,37 @@ int main(void)
   if ({names["finalClassParameterRoundTrip"]}(UINT8_C(201)) != UINT8_C(201)) return 9;
   if ({names["conditionalAssignment"]}(true) != UINT8_C(37)) return 10;
   if ({names["conditionalAssignment"]}(false) != UINT8_C(73)) return 11;
+  if ({names["ownedFieldRoundTrip"]}(UINT8_C(201)) != INT32_C(242)) return 12;
   return 0;
+}}
+'''
+
+
+def owned_array_cpp_source(header: str) -> str:
+    layout = re.search(
+        r"struct (?P<tag>[A-Za-z0-9_]*OwnedSpanBuffer) \{\n"
+        r"  uint8_t (?P<bytes>[A-Za-z0-9_]+)\[4\];\n"
+        r"  int32_t (?P<numbers>[A-Za-z0-9_]+)\[4\];\n\};",
+        header,
+    )
+    if layout is None:
+        raise SpanLoweringFailure("cannot derive the owned-array C++ layout consumer")
+    tag = layout.group("tag")
+    bytes_field = layout.group("bytes")
+    numbers_field = layout.group("numbers")
+    return f'''#include "hxc/program.h"
+
+#include <type_traits>
+
+static_assert(std::extent<decltype(((struct {tag} *)nullptr)->{bytes_field})>::value == 4, "byte array extent");
+static_assert(std::extent<decltype(((struct {tag} *)nullptr)->{numbers_field})>::value == 4, "integer array extent");
+
+int hxc_owned_array_cpp_probe()
+{{
+  struct {tag} value{{}};
+  value.{bytes_field}[2] = UINT8_C(7);
+  value.{numbers_field}[1] = INT32_C(41);
+  return static_cast<int>(value.{bytes_field}[2]) + value.{numbers_field}[1];
 }}
 '''
 
@@ -1022,6 +1093,8 @@ def check_native_artifacts(
         renamed.write_text("int hxc_generated_main(void);\n", encoding="utf-8", newline="\n")
         harness = root / "harness.c"
         harness.write_text(harness_source(symbols), encoding="utf-8", newline="\n")
+        cpp_consumer = root / "owned_array_consumer.cpp"
+        cpp_consumer.write_text(owned_array_cpp_source(header), encoding="utf-8", newline="\n")
         native_lanes = (
             ("O0", ["-O0"], []),
             ("O2", ["-O2"], []),
@@ -1037,6 +1110,29 @@ def check_native_artifacts(
             ),
         )
         for toolchain in available_compilers(selected):
+            cxx_name = "clang++" if toolchain.family == "clang" else "g++"
+            cxx = shutil.which(cxx_name)
+            if cxx is None:
+                raise SpanLoweringFailure(
+                    f"required {toolchain.family} C++17 companion {cxx_name!r} is unavailable"
+                )
+            run_command(
+                [
+                    cxx,
+                    "-std=c++17",
+                    "-Wall",
+                    "-Wextra",
+                    "-Werror",
+                    "-pedantic-errors",
+                    "-I",
+                    str(root / "include"),
+                    "-c",
+                    str(cpp_consumer),
+                    "-o",
+                    str(root / f"owned-array-{toolchain.family}.o"),
+                ],
+                f"{toolchain.family} C++17 owned-array layout consumer",
+            )
             for lane, compile_flags, link_flags in native_lanes:
                 generated_object = root / f"generated-{toolchain.family}-{lane}.o"
                 harness_object = root / f"harness-{toolchain.family}-{lane}.o"

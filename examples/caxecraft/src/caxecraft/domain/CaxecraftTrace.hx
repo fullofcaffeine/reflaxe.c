@@ -1,9 +1,9 @@
 package caxecraft.domain;
 
-import caxecraft.domain.PlayerPhysics.input as playerInput;
-import caxecraft.domain.PlayerPhysics.player as createPlayer;
-import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
-import caxecraft.domain.PlayerPhysics.step as stepPlayer;
+import caxecraft.domain.CharacterPhysics.input as playerInput;
+import caxecraft.domain.CharacterPhysics.body as createPlayer;
+import caxecraft.domain.CharacterPhysics.recoverSpawn as recoverPlayerSpawn;
+import caxecraft.domain.CharacterPhysics.step as stepPlayer;
 #if c
 // C-only fixed storage imports are absent from the non-C oracle program.
 import c.CArray;

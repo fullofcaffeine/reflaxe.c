@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate Caxecraft text sources and generate narrow C rendering adapters.
+"""Validate Caxecraft text sources and generate typed lookup catalogs.
 
 Reusable interface copy comes from one JSON catalog. Authored Adventure copy
 comes from the same CaxeMap that owns its world and story references. Generated
@@ -303,11 +303,10 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
     lines = [
         "package caxecraft.localization;",
         "",
-        "#if c",
     ]
     if scenario:
         lines.append("import caxecraft.localization.UiCatalog.LocaleCursor;")
-    lines.extend(["import raylib.Color;", "import raylib.Raylib;", ""])
+    lines.extend(["import caxecraft.localization.LocalizationText;", ""])
     if not scenario:
         lines.extend(enum_abstract("LocaleCursor", tuple(f"Locale{index}" for index in range(len(catalog.locales)))))
         lines.append("")
@@ -316,11 +315,12 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
         [
             "",
             "/**",
-            f" * C rendering adapter generated from `{source_name}`.",
+            f" * Typed text catalog generated from `{source_name}`.",
             " *",
-            f" * The {'embedded CaxeMap catalog' if scenario else 'JSON catalog'} is the editable source of truth. Each branch keeps a",
-            " * direct string literal at the raylib call so haxe.c can prove static C",
-            " * lifetime. Gameplay and UI code choose only typed message IDs.",
+            f" * The {'embedded CaxeMap catalog' if scenario else 'JSON catalog'} is the editable source of truth. Callers choose a",
+            " * typed message ID and receive text; rendering, layout, and input remain",
+            " * outside localization. The C carrier borrows only generated literals",
+            " * with static lifetime and therefore allocates nothing.",
             " */",
             f"final class {class_name} {{",
         ]
@@ -331,6 +331,10 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
                 "\tpublic static inline function defaultLocale():LocaleCursor",
                 "\t\treturn LocaleCursor.Locale0;",
                 "",
+                "\t/** Reject an unknown raw locale code before constructing a typed cursor. */",
+                "\tpublic static inline function isValidLocaleStorageCode(code:Int):Bool",
+                f"\t\treturn code >= 0 && code < {len(catalog.locales)};",
+                "",
                 "\tpublic static function nextLocale(locale:LocaleCursor):LocaleCursor",
                 "\t\treturn switch (locale) {",
             ]
@@ -340,42 +344,41 @@ def render_catalog(catalog: Catalog, *, scenario: bool) -> str:
             lines.append(f"\t\t\tcase Locale{index}: Locale{next_index};")
         # Enum abstracts have a primitive representation, so a foreign or
         # corrupted value is theoretically possible. Recover to the reviewed
-        # default instead of letting an invalid value escape this adapter.
+        # default instead of letting an invalid value escape this catalog.
         lines.append("\t\t\tcase _: Locale0;")
         lines.extend(["\t\t}", ""])
     lines.extend(
         [
-            f"\tpublic static function draw(locale:LocaleCursor, message:{message_type}, x:Int, y:Int, fontSize:Int, color:Color):Void {{",
-            "\t\tswitch (locale) {",
+            "\t/** Reject an unknown raw message code before constructing a typed ID. */",
+            "\tpublic static inline function isValidMessageStorageCode(code:Int):Bool",
+            f"\t\treturn code >= 0 && code < {len(catalog.messages)};",
+            "",
+        ]
+    )
+    lines.extend(
+        [
+            f"\tpublic static function text(locale:LocaleCursor, message:{message_type}):LocalizationText {{",
+            "\t\treturn switch (locale) {",
         ]
     )
     for index in range(len(catalog.locales)):
-        lines.extend(
-            [
-                f"\t\t\tcase Locale{index}:",
-                f"\t\t\t\tdrawLocale{index}(message, x, y, fontSize, color);",
-            ]
-        )
-    lines.extend(["\t\t\tcase _:", "\t\t\t\tdrawLocale0(message, x, y, fontSize, color);"])
+        lines.append(f"\t\t\tcase Locale{index}: textLocale{index}(message);")
+    lines.append("\t\t\tcase _: textLocale0(message);")
     lines.extend(["\t\t}", "\t}", ""])
     for locale_index, locale in enumerate(catalog.locales):
         lines.extend(
             [
-                f"\t/** Direct C literals for the validated `{locale}` catalog. */",
-                f"\tstatic function drawLocale{locale_index}(message:{message_type}, x:Int, y:Int, fontSize:Int, color:Color):Void {{",
-                "\t\tswitch (message) {",
+                f"\t/** Select one validated `{locale}` literal without allocation. */",
+                f"\tstatic function textLocale{locale_index}(message:{message_type}):LocalizationText {{",
+                "\t\treturn switch (message) {",
             ]
         )
         for message in catalog.messages:
-            lines.extend(
-                [
-                    f"\t\t\tcase {message.symbol}:",
-                    f"\t\t\t\tRaylib.DrawText({haxe_string(message.text[locale_index])}, x, y, fontSize, color);",
-                ]
-            )
+            lines.append(f"\t\t\tcase {message.symbol}: {haxe_string(message.text[locale_index])};")
+        lines.append('\t\t\tcase _: "";')
         lines.extend(["\t\t}", "\t}", ""])
     lines.pop()
-    lines.extend(["}", "#end", ""])
+    lines.extend(["}", ""])
     return "\n".join(lines)
 
 
@@ -388,14 +391,6 @@ def rendered_catalogs() -> dict[Path, str]:
         UI_OUTPUT: render_catalog(ui, scenario=False),
         SCENARIO_OUTPUT: render_catalog(scenario, scenario=True),
     }
-
-
-def expected_draw_call_count() -> int:
-    """Return the direct raylib literal calls required by the source catalogs."""
-
-    ui = load_catalog(UI_SOURCE, expected_id="caxecraft.ui")
-    scenario = load_scenario_catalog(SCENARIO_SOURCE, expected_id="adventure.first-playable")
-    return len(ui.locales) * len(ui.messages) + len(scenario.locales) * len(scenario.messages)
 
 
 def write_catalogs() -> None:
@@ -413,14 +408,14 @@ def main() -> int:
         if arguments.check:
             stale = [path.relative_to(CASE) for path, text in rendered.items() if not path.is_file() or path.read_text(encoding="utf-8") != text]
             if stale:
-                raise CatalogFailure(f"generated localization adapters are stale: {stale}")
+                raise CatalogFailure(f"generated localization catalogs are stale: {stale}")
         else:
             write_catalogs()
     except (OSError, UnicodeError, CatalogFailure) as error:
         print(f"caxecraft-localization: ERROR: {error}")
         return 1
     action = "current" if arguments.check else "generated"
-    print(f"caxecraft-localization: OK: catalogs validated and adapters {action}")
+    print(f"caxecraft-localization: OK: catalogs validated and lookups {action}")
     return 0
 
 

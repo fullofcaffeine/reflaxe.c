@@ -1,7 +1,7 @@
 package caxecraft.app;
 
 #if (c && caxecraft_pilot)
-import caxecraft.domain.PlayerState;
+import caxecraft.domain.CharacterBody;
 import caxecraft.domain.RaycastHit;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
@@ -15,11 +15,11 @@ import raylib.Raylib;
  * Pilot-only bridge from native game state to the external test runner.
  *
  * The current compiler intentionally has no general file or socket runtime.
- * Instead of hiding that gap with raw C, a pilot build paints 32 fixed-width
- * words into a two-pixel-high strip at the bottom of the real framebuffer.
+ * Instead of hiding that gap with raw C, a pilot build paints a small closed
+ * set of fixed-width words into a two-pixel-high strip at the bottom of the real framebuffer.
  * Each hexadecimal digit has one exact opaque color. The Python runner reads
  * the final flushed frame, validates the magic, version, and field count, and
- * writes the human-readable JSON report. `Main` presents that same frame after
+ * writes the human-readable JSON report. `CaxecraftApp` presents that same frame after
  * the capture, avoiding desktop back-buffer ambiguity.
  *
  * This is test evidence, not a gameplay protocol. Ordinary builds do not
@@ -38,9 +38,11 @@ import raylib.Raylib;
  * to thousandths of a world unit. Hashes preserve their complete 32-bit bit
  * patterns even when Haxe `Int` represents them as negative numbers.
  */
-function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:PlayerState, cells:WorldCells, selection:RaycastHit,
+function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completedTicks:Int, player:CharacterBody, cells:WorldCells, selection:RaycastHit,
 		removedBlocks:Int, placedBlocks:Int, rejectedEdits:Int, visibleBlocks:Int, terrainDrawCalls:Int, health:Int, hotbarSlot:Int, guidePhase:GuidePhase,
-		mosslingAlive:Bool, onTitle:Bool, paused:Bool, captured:Bool):Void {
+		mosslingAlive:Bool, onTitle:Bool, paused:Bool, captured:Bool, aquaticGearEquipped:Bool, interpolationObserved:Bool, visibleTerrainFaces:Int,
+		rebuiltTerrainChunks:Int, totalRebuiltTerrainChunks:Int, terrainCacheValid:Bool, measuredTerrainMicroseconds:Int, measuredTerrainFrames:Int,
+		measuredUpdateMicroseconds:Int, measuredPreparationMicroseconds:Int):Void {
 	var flags = 0;
 	if (onTitle)
 		flags |= 1;
@@ -48,11 +50,15 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 		flags |= 2;
 	if (captured)
 		flags |= 4;
+	if (aquaticGearEquipped)
+		flags |= 8;
+	if (interpolationObserved)
+		flags |= 16;
 
 	var word = 0;
 	word = drawWord(word, 0x43585054); // "CXPT": Caxecraft pilot telemetry.
-	word = drawWord(word, 1); // Protocol version.
-	word = drawWord(word, 32); // Number of words in this closed version.
+	word = drawWord(word, 5); // Protocol version.
+	word = drawWord(word, 40); // Number of words in this closed version.
 	word = drawWord(word, PilotScript.scriptCode(name));
 	word = drawWord(word, PilotScript.inputHash(name));
 	word = drawWord(word, completedFrames);
@@ -79,9 +85,26 @@ function drawPilotTelemetry(name:PilotScriptName, completedFrames:Int, completed
 	word = drawWord(word, terrainDrawCalls);
 	word = drawWord(word, health);
 	word = drawWord(word, hotbarSlot);
-	word = drawWord(word, guidePhase);
+	word = drawWord(word, guidePhaseCode(guidePhase));
 	word = drawWord(word, mosslingAlive ? 1 : 0);
-	drawWord(word, flags);
+	word = drawWord(word, flags);
+	word = drawWord(word, visibleTerrainFaces);
+	word = drawWord(word, rebuiltTerrainChunks);
+	word = drawWord(word, totalRebuiltTerrainChunks);
+	word = drawWord(word, terrainCacheValid ? 1 : 0);
+	word = drawWord(word, measuredTerrainMicroseconds);
+	word = drawWord(word, measuredTerrainFrames);
+	word = drawWord(word, measuredUpdateMicroseconds);
+	drawWord(word, measuredPreparationMicroseconds);
+}
+
+/** Convert the nominal game state to the pilot protocol's stable integer code. */
+private function guidePhaseCode(value:GuidePhase):Int {
+	return switch value {
+		case Waiting: 0;
+		case Welcomed: 1;
+		case SharedBerries: 2;
+	};
 }
 
 /** Draw eight high-to-low hexadecimal digits and return the next word slot. */

@@ -71,6 +71,16 @@ final class WaterProbe {
 		water.tick(cells, pending, 1);
 		if (WorldStorage.readCode(cells, World.indexOf(malformed)) != 99)
 			return 2;
+		var solidCode = 5;
+		while (solidCode <= 9) {
+			WorldStorage.writeCode(cells, World.indexOf(malformed), solidCode);
+			switch water.cellState(cells, malformed) {
+				case Blocked:
+				case Empty | Source | Flowing(_, _) | InvalidStorage(_):
+					return 3;
+			}
+			solidCode++;
+		}
 
 		clear(cells);
 		makeFloor(cells);

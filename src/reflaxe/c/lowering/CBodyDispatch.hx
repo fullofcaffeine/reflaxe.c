@@ -14,6 +14,7 @@ import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyAggregate.CBodyAggregateRegistry;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
+import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
 import reflaxe.c.lowering.CBodyLowering.CBodyFunctionInput;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
@@ -33,6 +34,7 @@ typedef CBodyInstanceCallAccess = {
 enum CBodyDispatchCallKind {
 	CBDDirect(targetFunctionId:String, reason:String);
 	CBDVirtual(slotId:String, reason:String);
+	CBDInterface(slotId:String, reason:String);
 }
 
 /** Source-rooted explanation for one reachable instance call. */
@@ -167,8 +169,6 @@ class CBodyDispatchCatalog {
 			calls.push(new CBodyDispatchCallInput(callerFunctionId, methodId, receiverPath, CBDDirect(methodId, directReason), source));
 			return target == null ? [] : [target];
 		}
-		if (declaration.get().isInterface)
-			unsupportedAt(expression.pos, callerSourcePath, 'TCall(interface-dispatch-requires-E3.T07:$methodId)');
 		switch field.kind {
 			case FMethod(MethDynamic):
 				unsupportedAt(field.pos, sourcePath(declaration), 'TCall(dynamic-instance-method-requires-E3.T08:$methodId)');
@@ -177,6 +177,13 @@ class CBodyDispatchCatalog {
 			case FMethod(MethNormal) | FMethod(MethInline):
 			case FVar(_, _):
 				unsupportedAt(field.pos, sourcePath(declaration), 'TCall(instance-field-not-method:$methodId)');
+		}
+		if (declaration.get().isInterface) {
+			final receiverInterface = staticReceiver != null && staticReceiver.get().isInterface ? staticReceiver : declaration;
+			final slot = requireInterfaceSlot(receiverInterface, field);
+			slotsByMethodId.set(methodId, slot);
+			calls.push(new CBodyDispatchCallInput(callerFunctionId, methodId, receiverPath, CBDInterface(slot.id, "ordinary-interface-method"), source));
+			return selectedImplementations();
 		}
 		final slot = requireSlot(declaration, call.field);
 		slotsByMethodId.set(methodId, slot);
@@ -197,20 +204,50 @@ class CBodyDispatchCatalog {
 				continue;
 			final root = hierarchyRoot(classReference);
 			final layoutId = layoutId(root);
-			final layoutSlots = slots.filter(slot -> slot.layoutId == layoutId);
-			if (layoutSlots.length == 0)
-				continue;
-			final entries:Array<CBodyVirtualTableEntryInput> = [];
-			for (slot in layoutSlots) {
-				final required = isDescendant(classReference, slot.owner);
-				final implementation = required ? effectiveMethod(classReference, slot) : null;
-				if (implementation != null) {
-					slot.implementationIds.set(CBodyLowering.functionInputId(implementation), true);
-					slotsByMethodId.set(CBodyLowering.functionInputId(implementation), slot);
+			final layoutSlots = slots.filter(slot -> !slot.owner.get().isInterface && slot.layoutId == layoutId);
+			if (layoutSlots.length > 0) {
+				final entries:Array<CBodyVirtualTableEntryInput> = [];
+				for (slot in layoutSlots) {
+					final required = isDescendant(classReference, slot.owner);
+					final implementation = required ? effectiveMethod(classReference, slot) : null;
+					if (implementation != null) {
+						slot.implementationIds.set(CBodyLowering.functionInputId(implementation), true);
+						slotsByMethodId.set(CBodyLowering.functionInputId(implementation), slot);
+					}
+					entries.push({slotId: slot.id, implementation: implementation, required: required});
 				}
-				entries.push({slotId: slot.id, implementation: implementation, required: required});
+				tables.push(new CBodyVirtualTableInput(tableId(classReference), layoutId, classReference, root, sourcePath(classReference), entries));
 			}
-			tables.push(new CBodyVirtualTableInput(tableId(classReference), layoutId, classReference, root, sourcePath(classReference), entries));
+			final interfaceLayouts:Map<String, Array<CBodyVirtualSlotInput>> = [];
+			for (slot in slots) {
+				if (!slot.owner.get().isInterface || !implementsInterface(classReference, slot.owner))
+					continue;
+				var interfaceSlots = interfaceLayouts.get(slot.layoutId);
+				if (interfaceSlots == null) {
+					interfaceSlots = [];
+					interfaceLayouts.set(slot.layoutId, interfaceSlots);
+				}
+				interfaceSlots.push(slot);
+			}
+			final interfaceLayoutIds = [for (interfaceLayoutId in interfaceLayouts.keys()) interfaceLayoutId];
+			interfaceLayoutIds.sort(compareUtf8);
+			for (interfaceLayoutId in interfaceLayoutIds) {
+				final interfaceSlots = interfaceLayouts.get(interfaceLayoutId);
+				if (interfaceSlots == null || interfaceSlots.length == 0)
+					continue;
+				final interfaceReference = interfaceSlots[0].rootClass;
+				final interfaceEntries:Array<CBodyVirtualTableEntryInput> = [];
+				for (slot in interfaceSlots) {
+					final implementation = effectiveMethod(classReference, slot);
+					if (implementation != null) {
+						slot.implementationIds.set(CBodyLowering.functionInputId(implementation), true);
+						slotsByMethodId.set(CBodyLowering.functionInputId(implementation), slot);
+					}
+					interfaceEntries.push({slotId: slot.id, implementation: implementation, required: true});
+				}
+				tables.push(new CBodyVirtualTableInput(interfaceTableId(classReference, interfaceReference), interfaceLayoutId, classReference,
+					interfaceReference, sourcePath(classReference), interfaceEntries));
+			}
 		}
 		tables.sort((left, right) -> compareUtf8(left.id, right.id));
 		calls.sort(compareCalls);
@@ -265,11 +302,32 @@ class CBodyDispatchCatalog {
 		return slot;
 	}
 
+	/**
+		Create a slot for the receiver's interface, including an inherited method.
+
+		A child interface has its own fat-value type and table shape. Repeating an
+		inherited method in that shape keeps the receiver identity exact instead of
+		pretending that a child-interface value is a parent-interface value.
+	**/
+	function requireInterfaceSlot(interfaceReference:Ref<ClassType>, field:ClassField):CBodyVirtualSlotInput {
+		final interfacePath = classPath(interfaceReference.get());
+		final id = interfaceSlotId(interfaceReference, field.name);
+		var slot = slotsById.get(id);
+		if (slot == null) {
+			slot = new CBodyVirtualSlotInput(id, interfaceLayoutId(interfaceReference), interfaceReference, interfaceReference, field,
+				sourcePath(interfaceReference));
+			slotsById.set(id, slot);
+		}
+		slotsByMethodId.set(CBodyLowering.methodId(interfacePath, field.name), slot);
+		return slot;
+	}
+
 	function selectedImplementations():Array<CBodyFunctionInput> {
 		final result:Map<String, CBodyFunctionInput> = [];
 		for (classReference in constructedClasses) {
 			for (slot in slotsById) {
-				if (!isDescendant(classReference, slot.owner))
+				final applicable = slot.owner.get().isInterface ? implementsInterface(classReference, slot.owner) : isDescendant(classReference, slot.owner);
+				if (!applicable)
 					continue;
 				final implementation = effectiveMethod(classReference, slot);
 				if (implementation == null)
@@ -303,7 +361,7 @@ class CBodyDispatchCatalog {
 						unsupportedAt(field.pos, sourcePath(current), 'virtual-implementation-not-normal-method:${field.name}');
 				}
 			}
-			if (sameClass(current, slot.owner))
+			if (!slot.owner.get().isInterface && sameClass(current, slot.owner))
 				break;
 			current = definition.superClass == null ? null : definition.superClass.t;
 		}
@@ -346,6 +404,9 @@ class CBodyDispatchCatalog {
 
 	public static function declaringClass(owner:Ref<ClassType>, fieldReference:Ref<ClassField>):Ref<ClassType> {
 		final target = fieldReference.get();
+		final interfaceOwner = declaringInterface(owner, target, []);
+		if (interfaceOwner != null)
+			return interfaceOwner;
 		var current:Null<Ref<ClassType>> = owner;
 		while (current != null) {
 			for (field in current.get().fields.get()) {
@@ -355,6 +416,23 @@ class CBodyDispatchCatalog {
 			current = current.get().superClass == null ? null : current.get().superClass.t;
 		}
 		return owner;
+	}
+
+	static function declaringInterface(owner:Ref<ClassType>, target:ClassField, visited:Map<String, Bool>):Null<Ref<ClassType>> {
+		final path = classPath(owner.get());
+		if (visited.exists(path))
+			return null;
+		visited.set(path, true);
+		if (owner.get().isInterface)
+			for (field in owner.get().fields.get())
+				if (field == target)
+					return owner;
+		for (implemented in owner.get().interfaces) {
+			final found = declaringInterface(implemented.t, target, visited);
+			if (found != null)
+				return found;
+		}
+		return owner.get().superClass == null ? null : declaringInterface(owner.get().superClass.t, target, visited);
 	}
 
 	public static function methodIdForAccess(owner:Ref<ClassType>, fieldReference:Ref<ClassField>):String {
@@ -422,6 +500,22 @@ class CBodyDispatchCatalog {
 		return false;
 	}
 
+	static function implementsInterface(candidate:Ref<ClassType>, target:Ref<ClassType>):Bool
+		return implementsInterfacePath(candidate, classPath(target.get()), []);
+
+	static function implementsInterfacePath(candidate:Ref<ClassType>, targetPath:String, visited:Map<String, Bool>):Bool {
+		final candidatePath = classPath(candidate.get());
+		if (visited.exists(candidatePath))
+			return false;
+		visited.set(candidatePath, true);
+		if (candidatePath == targetPath)
+			return true;
+		for (implemented in candidate.get().interfaces)
+			if (implementsInterfacePath(implemented.t, targetPath, visited))
+				return true;
+		return candidate.get().superClass != null && implementsInterfacePath(candidate.get().superClass.t, targetPath, visited);
+	}
+
 	static function sameClass(left:Ref<ClassType>, right:Ref<ClassType>):Bool
 		return classPath(left.get()) == classPath(right.get());
 
@@ -442,6 +536,15 @@ class CBodyDispatchCatalog {
 
 	public static function tableId(classReference:Ref<ClassType>):String
 		return 'vtable.${classPath(classReference.get())}';
+
+	public static function interfaceSlotId(interfaceReference:Ref<ClassType>, name:String):String
+		return 'interface-slot.${classPath(interfaceReference.get())}.$name';
+
+	public static function interfaceLayoutId(interfaceReference:Ref<ClassType>):String
+		return 'itable.layout.${classPath(interfaceReference.get())}';
+
+	public static function interfaceTableId(classReference:Ref<ClassType>, interfaceReference:Ref<ClassType>):String
+		return 'itable.${classPath(classReference.get())}.${classPath(interfaceReference.get())}';
 
 	function unsupportedAt<T>(position:Position, sourcePath:String, node:String):T {
 		final source = HaxeSourceSpan.fromPosition(position, sourcePath);
@@ -481,24 +584,37 @@ class CBodyDispatchCatalog {
 /** One representation-checked virtual slot before C names are finalized. */
 class CPreparedVirtualSlot {
 	public final input:CBodyVirtualSlotInput;
-	public final owner:CPreparedBodyClass;
+	public final ownerClass:Null<CPreparedBodyClass>;
+	public final ownerInterface:Null<CPreparedBodyInterface>;
 	public final parameters:Array<CBodyValueType>;
 	public final returnType:CBodyValueType;
 	public final memberRequest:CSymbolRequest;
 
-	public function new(input:CBodyVirtualSlotInput, owner:CPreparedBodyClass, parameters:Array<CBodyValueType>, returnType:CBodyValueType,
-			memberRequest:CSymbolRequest) {
+	public function new(input:CBodyVirtualSlotInput, ownerClass:Null<CPreparedBodyClass>, ownerInterface:Null<CPreparedBodyInterface>,
+			parameters:Array<CBodyValueType>, returnType:CBodyValueType, memberRequest:CSymbolRequest) {
 		this.input = input;
-		this.owner = owner;
+		this.ownerClass = ownerClass;
+		this.ownerInterface = ownerInterface;
 		this.parameters = parameters.copy();
 		this.returnType = returnType;
 		this.memberRequest = memberRequest;
 	}
 
+	public function ownerInstanceId():String {
+		if (ownerClass != null)
+			return ownerClass.instanceId;
+		if (ownerInterface != null)
+			return ownerInterface.instanceId;
+		throw new CBodyEmissionError('dispatch slot `${input.id}` lost its owner');
+	}
+
+	public function isInterface():Bool
+		return ownerInterface != null;
+
 	public function ir():HxcIRVirtualSlot
 		return {
 			id: input.id,
-			ownerInstanceId: owner.instanceId,
+			ownerInstanceId: ownerInstanceId(),
 			parameterTypes: parameters.map(value -> value.irType),
 			returnType: returnType.irType,
 			source: HaxeSourceSpan.fromPosition(input.field.pos, input.sourcePath)
@@ -508,23 +624,44 @@ class CPreparedVirtualSlot {
 /** One hierarchy-wide table shape before tag finalization. */
 class CPreparedVirtualLayout {
 	public final id:String;
-	public final root:CPreparedBodyClass;
+	public final rootClass:Null<CPreparedBodyClass>;
+	public final rootInterface:Null<CPreparedBodyInterface>;
 	public final source:HxcSourceSpan;
 	public final tagRequest:CSymbolRequest;
+	public final valueTagRequest:Null<CSymbolRequest>;
+	public final objectMemberRequest:Null<CSymbolRequest>;
+	public final tableMemberRequest:Null<CSymbolRequest>;
 	public final slots:Array<CPreparedVirtualSlot>;
 
-	public function new(id:String, root:CPreparedBodyClass, source:HxcSourceSpan, tagRequest:CSymbolRequest, slots:Array<CPreparedVirtualSlot>) {
+	public function new(id:String, rootClass:Null<CPreparedBodyClass>, rootInterface:Null<CPreparedBodyInterface>, source:HxcSourceSpan,
+			tagRequest:CSymbolRequest, valueTagRequest:Null<CSymbolRequest>, objectMemberRequest:Null<CSymbolRequest>,
+			tableMemberRequest:Null<CSymbolRequest>, slots:Array<CPreparedVirtualSlot>) {
 		this.id = id;
-		this.root = root;
+		this.rootClass = rootClass;
+		this.rootInterface = rootInterface;
 		this.source = source;
 		this.tagRequest = tagRequest;
+		this.valueTagRequest = valueTagRequest;
+		this.objectMemberRequest = objectMemberRequest;
+		this.tableMemberRequest = tableMemberRequest;
 		this.slots = slots.copy();
 	}
+
+	public function rootInstanceId():String {
+		if (rootClass != null)
+			return rootClass.instanceId;
+		if (rootInterface != null)
+			return rootInterface.instanceId;
+		throw new CBodyEmissionError('dispatch layout `$id` lost its root');
+	}
+
+	public function isInterface():Bool
+		return rootInterface != null;
 
 	public function ir():HxcIRVirtualTableLayout
 		return {
 			id: id,
-			rootInstanceId: root.instanceId,
+			rootInstanceId: rootInstanceId(),
 			slotIds: slots.map(slot -> slot.input.id),
 			source: source
 		};
@@ -607,25 +744,38 @@ class CPreparedBodyDispatch {
 	public final thunks:Array<CPreparedVirtualThunk>;
 
 	final slotsByMethodId:Map<String, CPreparedVirtualSlot>;
-	final tablesByInstanceId:Map<String, CPreparedVirtualTable>;
+	final tablesByInstanceAndLayout:Map<String, CPreparedVirtualTable>;
 
 	public function new(graph:CBodyDispatchGraph, layouts:Array<CPreparedVirtualLayout>, slots:Array<CPreparedVirtualSlot>,
 			tables:Array<CPreparedVirtualTable>, thunks:Array<CPreparedVirtualThunk>, slotsByMethodId:Map<String, CPreparedVirtualSlot>,
-			tablesByInstanceId:Map<String, CPreparedVirtualTable>) {
+			tablesByInstanceAndLayout:Map<String, CPreparedVirtualTable>) {
 		this.graph = graph;
 		this.layouts = layouts.copy();
 		this.slots = slots.copy();
 		this.tables = tables.copy();
 		this.thunks = thunks.copy();
 		this.slotsByMethodId = slotsByMethodId;
-		this.tablesByInstanceId = tablesByInstanceId;
+		this.tablesByInstanceAndLayout = tablesByInstanceAndLayout;
 	}
 
 	public function slotForMethodId(methodId:String):Null<CPreparedVirtualSlot>
 		return slotsByMethodId.get(methodId);
 
+	public function slotForInterface(interfaceInstanceId:String, fieldName:String):Null<CPreparedVirtualSlot> {
+		for (slot in slots)
+			if (slot.ownerInstanceId() == interfaceInstanceId && slot.input.field.name == fieldName)
+				return slot;
+		return null;
+	}
+
 	public function tableForInstance(instanceId:String):Null<CPreparedVirtualTable>
-		return tablesByInstanceId.get(instanceId);
+		return tablesByInstanceAndLayout.get(tableLookupKey(instanceId, null));
+
+	public function tableForInterface(classInstanceId:String, interfaceInstanceId:String):Null<CPreparedVirtualTable>
+		return tablesByInstanceAndLayout.get(tableLookupKey(classInstanceId, interfaceInstanceId));
+
+	static function tableLookupKey(classInstanceId:String, interfaceInstanceId:Null<String>):String
+		return interfaceInstanceId == null ? 'class:$classInstanceId' : 'interface:$classInstanceId:$interfaceInstanceId';
 
 	public function ir():HxcIRDispatchPlan
 		return {
@@ -646,6 +796,9 @@ class CPreparedBodyDispatch {
 		final layoutValues:Array<CLoweredVirtualLayout> = [];
 		for (layout in layouts) {
 			final value = new CLoweredVirtualLayout(layout, symbols.identifierFor(layout.tagRequest),
+				layout.valueTagRequest == null ? null : symbols.identifierFor(layout.valueTagRequest),
+				layout.objectMemberRequest == null ? null : symbols.identifierFor(layout.objectMemberRequest),
+				layout.tableMemberRequest == null ? null : symbols.identifierFor(layout.tableMemberRequest),
 				layout.slots.map(slot -> requireLoweredSlot(loweredSlots, slot.input.id)));
 			loweredLayouts.set(layout.id, value);
 			layoutValues.push(value);
@@ -694,11 +847,18 @@ class CLoweredVirtualSlot {
 class CLoweredVirtualLayout {
 	public final prepared:CPreparedVirtualLayout;
 	public final cTag:CIdentifier;
+	public final cValueTag:Null<CIdentifier>;
+	public final cObjectMember:Null<CIdentifier>;
+	public final cTableMember:Null<CIdentifier>;
 	public final slots:Array<CLoweredVirtualSlot>;
 
-	public function new(prepared:CPreparedVirtualLayout, cTag:CIdentifier, slots:Array<CLoweredVirtualSlot>) {
+	public function new(prepared:CPreparedVirtualLayout, cTag:CIdentifier, cValueTag:Null<CIdentifier>, cObjectMember:Null<CIdentifier>,
+			cTableMember:Null<CIdentifier>, slots:Array<CLoweredVirtualSlot>) {
 		this.prepared = prepared;
 		this.cTag = cTag;
+		this.cValueTag = cValueTag;
+		this.cObjectMember = cObjectMember;
+		this.cTableMember = cTableMember;
 		this.slots = slots.copy();
 	}
 }
@@ -779,7 +939,10 @@ class CBodyDispatchPreparer {
 			if (input.field.overloads.get().length != 0)
 				unsupportedAt(input.field.pos, input.sourcePath, 'virtual-slot-overloads-not-admitted:${input.id}');
 			final signature = functionSignature(input.field.type, input.field.pos, input.sourcePath, 'virtual-slot:${input.id}');
-			final owner = requireClass(input.owner, input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:owner');
+			final ownerClass = input.owner.get()
+				.isInterface ? null : requireClass(input.owner, input.field.pos, input.sourcePath, 'virtual-slot:${input.id}:owner');
+			final ownerInterface = input.owner.get()
+				.isInterface ? requireInterface(input.owner, input.field.pos, input.sourcePath, 'interface-slot:${input.id}:owner') : null;
 			final parameterTypes:Array<CBodyValueType> = [];
 			for (index => argument in signature.arguments) {
 				if (argument.opt)
@@ -802,7 +965,7 @@ class CBodyDispatchPreparer {
 			final memberRequest = new CSymbolRequest(CSKField, ["compiler", "virtual-dispatch", input.layoutId, input.id], CNSMember(input.layoutId),
 				CSVInternal, null, [], [], layoutSlots.length);
 			context.symbols.register(memberRequest);
-			final slot = new CPreparedVirtualSlot(input, owner, parameterTypes, returnType, memberRequest);
+			final slot = new CPreparedVirtualSlot(input, ownerClass, ownerInterface, parameterTypes, returnType, memberRequest);
 			layoutSlots.push(slot);
 			slots.push(slot);
 			slotsById.set(input.id, slot);
@@ -817,16 +980,37 @@ class CBodyDispatchPreparer {
 		layoutIds.sort(CBodyDispatchCatalog.compareUtf8);
 		for (id in layoutIds) {
 			final rawSlot = firstRawSlot(id);
-			final root = requireClass(rawSlot.rootClass, rawSlot.rootClass.get().pos, rawSlot.sourcePath, 'virtual-layout:$id:root');
+			final rootClass = rawSlot.rootClass.get()
+				.isInterface ? null : requireClass(rawSlot.rootClass, rawSlot.rootClass.get().pos, rawSlot.sourcePath, 'virtual-layout:$id:root');
+			final rootInterface = rawSlot.rootClass.get()
+				.isInterface ? requireInterface(rawSlot.rootClass, rawSlot.rootClass.get().pos, rawSlot.sourcePath, 'interface-layout:$id:root') : null;
 			final source = HaxeSourceSpan.fromPosition(rawSlot.rootClass.get().pos, rawSlot.sourcePath);
-			final tagRequest = new CSymbolRequest(CSKType, ["compiler", "virtual-dispatch", root.haxePath, "table-layout"], CNSTag("translation-unit"),
-				CSVInternal);
+			final rootPath = rootClass == null ?rootInterface == null ? throw new CBodyEmissionError('dispatch layout `$id` lost its root'):rootInterface.haxePath : rootClass.haxePath;
+			final tagRequest = new CSymbolRequest(CSKType, [
+				"compiler", rawSlot.rootClass.get().isInterface ? "interface-dispatch" : "virtual-dispatch",
+				  rootPath,                                                                  "table-layout"
+			], CNSTag("translation-unit"), CSVInternal);
 			context.symbols.register(tagRequest);
+			var valueTagRequest:Null<CSymbolRequest> = null;
+			var objectMemberRequest:Null<CSymbolRequest> = null;
+			var tableMemberRequest:Null<CSymbolRequest> = null;
+			if (rootInterface != null) {
+				valueTagRequest = new CSymbolRequest(CSKType, ["compiler", "interface-dispatch", rootPath, "value"], CNSTag("translation-unit"), CSVInternal);
+				objectMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", rootPath, "value", "object"],
+					CNSMember('interface-value:$id'), CSVInternal, "object", [], [], 0);
+				tableMemberRequest = new CSymbolRequest(CSKField, ["compiler", "interface-dispatch", rootPath, "value", "table"],
+					CNSMember('interface-value:$id'), CSVInternal, "table", [], [], 1);
+				context.symbols.register(valueTagRequest);
+				context.symbols.register(objectMemberRequest);
+				context.symbols.register(tableMemberRequest);
+			}
 			final layoutSlots = layoutInputs.get(id);
 			if (layoutSlots == null)
 				throw new CBodyEmissionError('dispatch preparation lost slots for layout `$id`');
-			final layout = new CPreparedVirtualLayout(id, root, source, tagRequest, layoutSlots);
-			aggregates.requireVirtualHeader(root, id);
+			final layout = new CPreparedVirtualLayout(id, rootClass, rootInterface, source, tagRequest, valueTagRequest, objectMemberRequest,
+				tableMemberRequest, layoutSlots);
+			if (rootClass != null)
+				aggregates.requireVirtualHeader(rootClass, id);
 			layouts.push(layout);
 			layoutsById.set(id, layout);
 		}
@@ -834,13 +1018,14 @@ class CBodyDispatchPreparer {
 		final thunks:Array<CPreparedVirtualThunk> = [];
 		final thunksById:Map<String, CPreparedVirtualThunk> = [];
 		final tables:Array<CPreparedVirtualTable> = [];
-		final tablesByInstanceId:Map<String, CPreparedVirtualTable> = [];
+		final tablesByInstanceAndLayout:Map<String, CPreparedVirtualTable> = [];
 		for (input in graph.tables) {
 			final layout = layoutsById.get(input.layoutId);
 			if (layout == null)
 				throw new CBodyEmissionError('dispatch table `${input.id}` refers to unknown layout `${input.layoutId}`');
 			final classValue = requireClass(input.classReference, input.classReference.get().pos, input.sourcePath, 'virtual-table:${input.id}:class');
-			final tableRequest = new CSymbolRequest(CSKVTable, ["compiler", "virtual-dispatch", classValue.haxePath], CNSOrdinary("translation-unit"),
+			final tablePath = layout.isInterface() ? ["compiler", "interface-dispatch", classValue.haxePath, layout.id] : ["compiler", "virtual-dispatch", classValue.haxePath];
+			final tableRequest = new CSymbolRequest(layout.isInterface() ? CSKInterfaceTable : CSKVTable, tablePath, CNSOrdinary("translation-unit"),
 				CSVInternal);
 			context.symbols.register(tableRequest);
 			final entries:Array<CPreparedVirtualTableEntry> = [];
@@ -864,7 +1049,7 @@ class CBodyDispatchPreparer {
 				validateImplementation(slot, implementation, implementationOwnerReference);
 				final implementationId = CBodyLowering.functionInputId(implementation);
 				var thunk:Null<CPreparedVirtualThunk> = null;
-				if (implementationOwner.instanceId != slot.owner.instanceId) {
+				if (slot.isInterface() || slot.ownerClass == null || implementationOwner.instanceId != slot.ownerClass.instanceId) {
 					final thunkId = 'thunk.${slot.input.id}.$implementationId';
 					thunk = thunksById.get(thunkId);
 					if (thunk == null) {
@@ -878,10 +1063,11 @@ class CBodyDispatchPreparer {
 			final table = new CPreparedVirtualTable(input, layout, classValue, HaxeSourceSpan.fromPosition(input.classReference.get().pos, input.sourcePath),
 				tableRequest, entries);
 			tables.push(table);
-			tablesByInstanceId.set(classValue.instanceId, table);
+			final lookupKey = layout.isInterface() ? 'interface:${classValue.instanceId}:${layout.rootInstanceId()}' : 'class:${classValue.instanceId}';
+			tablesByInstanceAndLayout.set(lookupKey, table);
 		}
 		thunks.sort((left, right) -> CBodyDispatchCatalog.compareUtf8(left.id, right.id));
-		return new CPreparedBodyDispatch(graph, layouts, slots, tables, thunks, slotsByMethodId, tablesByInstanceId);
+		return new CPreparedBodyDispatch(graph, layouts, slots, tables, thunks, slotsByMethodId, tablesByInstanceAndLayout);
 	}
 
 	function validateImplementation(slot:CPreparedVirtualSlot, input:CBodyFunctionInput, owner:Ref<ClassType>):Void {
@@ -913,7 +1099,9 @@ class CBodyDispatchPreparer {
 	}
 
 	function prepareThunk(id:String, slot:CPreparedVirtualSlot, implementationId:String, implementationOwner:CPreparedBodyClass):CPreparedVirtualThunk {
-		final signature = [typeKey(IRTPointer(IRTInstance(slot.owner.instanceId), true))].concat(slot.parameters.map(value -> typeKey(value.irType)));
+		final signature = [
+			slot.isInterface() ? 'interface-object:${slot.ownerInstanceId()}' : typeKey(IRTPointer(IRTInstance(slot.ownerInstanceId()), true))
+		].concat(slot.parameters.map(value -> typeKey(value.irType)));
 		final functionRequest = new CSymbolRequest(CSKMethod, ["compiler", "virtual-dispatch", "thunk", slot.input.id, implementationId],
 			CNSOrdinary("translation-unit"), CSVInternal, null, signature);
 		context.symbols.register(functionRequest);
@@ -957,6 +1145,10 @@ class CBodyDispatchPreparer {
 			return unsupportedAt(position, sourcePath, '$node:not-concrete-class');
 		return value;
 	}
+
+	function requireInterface(reference:Ref<ClassType>, position:Position, sourcePath:String, node:String):CPreparedBodyInterface
+		return aggregates.requireInterface(reference, [], position, sourcePath,
+			(failurePosition, failureNode) -> unsupportedAt(failurePosition, sourcePath, failureNode), node);
 
 	function valueType(type:Type, owner:Ref<ClassType>, position:Position, sourcePath:String, node:String):CBodyValueType
 		return aggregates.valueType(type, position, owner.get().module, sourcePath,

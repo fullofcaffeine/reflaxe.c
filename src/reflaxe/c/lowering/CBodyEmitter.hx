@@ -13,10 +13,16 @@ import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.ir.HxcSourceSpan;
 import reflaxe.c.lowering.CBodyRuntimeNames.CBodyRuntimeName;
 import reflaxe.c.lowering.CBodyAggregate.CLoweredBodyAggregate;
+import reflaxe.c.lowering.CBodyArray.CLoweredBodyArray;
+import reflaxe.c.emit.CObjectDescriptorEmitter;
+import reflaxe.c.emit.CObjectDescriptorEmitter.CObjectDescriptorSpec;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayElementLifecycle;
+import reflaxe.c.lowering.CBodyBytes.CPreparedBodyBytes;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyDispatch.CLoweredBodyDispatch;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
+import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowCompletion;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowNode;
 import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowPlan;
@@ -26,6 +32,7 @@ import reflaxe.c.lowering.CBodyControlFlow.CBodyControlFlowSwitchArm;
 import reflaxe.c.lowering.CBodyControlFlow.CBodySwitchLabel;
 import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlan;
 import reflaxe.c.lowering.CBodyValueCoalescing.CBodyValueCoalescingPlanner;
+import reflaxe.c.lowering.CBodyLowering.CManagedProgramNames;
 
 private enum CBodyEnumCRepresentation {
 	CBECNative;
@@ -44,6 +51,9 @@ private typedef CBodyEmitterVirtualLayout = {
 	final id:String;
 	final rootInstanceId:String;
 	final cTag:CIdentifier;
+	final cValueTag:Null<CIdentifier>;
+	final cObjectMember:Null<CIdentifier>;
+	final cTableMember:Null<CIdentifier>;
 	final slots:Array<CBodyEmitterVirtualSlot>;
 }
 
@@ -71,6 +81,51 @@ private typedef CBodyEmitterVirtualTable = {
 	final entries:Array<CBodyEmitterVirtualTableEntry>;
 }
 
+/** Final callback selected by one HxcIR managed-element cleanup action. */
+private typedef CBodyEmitterArrayElementCleanup = {
+	final elementType:HxcIRTypeRef;
+	final destroyName:CIdentifier;
+}
+
+/** Final helpers selected by one tagged enum's managed-Array ownership plan. */
+private typedef CBodyEmitterEnumArrayLifecycle = {
+	final instanceId:String;
+	final retainName:CIdentifier;
+	final destroyName:CIdentifier;
+}
+
+/** Final helpers selected by one managed closed record's ownership plan. */
+private typedef CBodyEmitterAggregateLifecycle = {
+	final instanceId:String;
+	final retainName:CIdentifier;
+	final destroyName:CIdentifier;
+}
+
+/** Final helpers selected by one managed tagged optional's ownership plan. */
+private typedef CBodyEmitterOptionalLifecycle = {
+	final type:HxcIRTypeRef;
+	final retainName:CIdentifier;
+	final destroyName:CIdentifier;
+}
+
+/** Shared callable shape for record and enum retain/destroy helpers. */
+private typedef CBodyEmitterProgramLocalLifecycle = {
+	final instanceId:String;
+	final retainName:CIdentifier;
+	final destroyName:CIdentifier;
+}
+
+private typedef CBodyEmitterManagedOperation = {
+	final retain:CExpr;
+	final release:CExpr;
+}
+
+/** One C root-array slot fed by one semantic value and projection path. */
+private typedef CBodyEmitterManagedRootSlot = {
+	final index:Int;
+	final root:HxcIRManagedRoot;
+}
+
 /** Request-local mutable emission facts shared by structural region recursion. */
 private typedef CBodyEmissionState = {
 	final values:Map<String, CExpr>;
@@ -93,6 +148,9 @@ private typedef CBodyEmissionState = {
 	final lineDirectives:Bool;
 	final labeledTargets:Map<String, Bool>;
 	final coalescing:CBodyValueCoalescingPlan;
+	final managedRootSlots:Map<String, Array<CBodyEmitterManagedRootSlot>>;
+	var managedRootArray:Null<CIdentifier>;
+	var managedRootFrame:Null<CIdentifier>;
 	var terminatedByTailLoop:Bool;
 }
 
@@ -103,6 +161,8 @@ class CBodyEmitter {
 	final aggregateFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final aggregateFieldOrder:Map<String, Array<String>> = [];
 	final aggregateInstanceOrder:Array<String> = [];
+	final aggregatesByInstance:Map<String, CLoweredBodyAggregate> = [];
+	final aggregateLifecycles:Map<String, CBodyEmitterAggregateLifecycle> = [];
 	final enumRepresentations:Map<String, CBodyEnumCRepresentation> = [];
 	final enumValueTags:Map<String, CIdentifier> = [];
 	final enumDiscriminantTags:Map<String, CIdentifier> = [];
@@ -118,6 +178,8 @@ class CBodyEmitter {
 	final enumPayloadFieldNames:Map<String, CIdentifier> = [];
 	final enumPayloadFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final enumInstanceOrder:Array<String> = [];
+	final enumsByInstance:Map<String, CLoweredBodyEnum> = [];
+	final enumArrayLifecycles:Map<String, CBodyEmitterEnumArrayLifecycle> = [];
 	final classTags:Map<String, CIdentifier> = [];
 	final classBaseInstances:Map<String, String> = [];
 	final classBaseMembers:Map<String, CIdentifier> = [];
@@ -126,21 +188,36 @@ class CBodyEmitter {
 	final classFieldTypes:Map<String, HxcIRTypeRef> = [];
 	final classFieldOrder:Map<String, Array<String>> = [];
 	final classInstanceOrder:Array<String> = [];
+	final classesByInstance:Map<String, CLoweredBodyClass> = [];
+	final managedDescriptorNames:Map<String, CIdentifier> = [];
+	final arrayElementTypes:Map<String, HxcIRTypeRef> = [];
+	final arraysByInstance:Map<String, CLoweredBodyArray> = [];
+	final arrayElementCleanups:Map<String, CBodyEmitterArrayElementCleanup> = [];
+	final bytesInstanceIds:Map<String, Bool> = [];
+	final optionalsByType:Map<String, CLoweredBodyOptional> = [];
+	final optionalsByPlan:Map<String, CLoweredBodyOptional> = [];
+	final optionalPlanOrder:Array<String> = [];
+	final optionalLifecycles:Map<String, CBodyEmitterOptionalLifecycle> = [];
 	final classDispatchLayoutIds:Map<String, String> = [];
 	final classDispatchHeaders:Map<String, CIdentifier> = [];
 	final virtualLayouts:Map<String, CBodyEmitterVirtualLayout> = [];
+	final interfaceLayoutsByInstance:Map<String, CBodyEmitterVirtualLayout> = [];
 	final virtualSlots:Map<String, CBodyEmitterVirtualSlot> = [];
 	final virtualTables:Map<String, CBodyEmitterVirtualTable> = [];
 	final virtualThunks:Array<CBodyEmitterVirtualThunk> = [];
 	final imports:CLoweredImports;
+	final managedProgram:Null<CManagedProgramNames>;
 
 	#if (macro || reflaxe_runtime)
 	public function new(?aggregates:Array<CLoweredBodyAggregate>, ?enums:Array<CLoweredBodyEnum>, ?classes:Array<CLoweredBodyClass>,
-			?dispatch:CLoweredBodyDispatch, ?imports:CLoweredImports) {
+			?arrays:Array<CLoweredBodyArray>, ?bytes:Array<CPreparedBodyBytes>, ?optionals:Array<CLoweredBodyOptional>, ?dispatch:CLoweredBodyDispatch,
+			?imports:CLoweredImports, ?managedProgram:CManagedProgramNames) {
 		this.imports = imports == null ? CLoweredImports.empty() : imports;
+		this.managedProgram = managedProgram;
 		if (aggregates != null) {
 			for (aggregate in aggregates) {
 				final instanceId = aggregate.prepared.instanceId;
+				aggregatesByInstance.set(instanceId, aggregate);
 				aggregateInstanceOrder.push(instanceId);
 				aggregateTags.set(instanceId, aggregate.cTag);
 				final order:Array<String> = [];
@@ -150,6 +227,19 @@ class CBodyEmitter {
 					aggregateFieldTypes.set(aggregateFieldKey(instanceId, field.semanticName), field.type.irType);
 				}
 				aggregateFieldOrder.set(instanceId, order);
+				if (aggregate.prepared.managedLifetime) {
+					final lifecycle:CBodyEmitterAggregateLifecycle = {
+						instanceId: instanceId,
+						retainName: requireAggregateLifecycleName(aggregate.retainName, aggregate, "retain"),
+						destroyName: requireAggregateLifecycleName(aggregate.destroyName, aggregate, "destroy")
+					};
+					final retainId = aggregate.prepared.retainImplementationId();
+					final destroyId = aggregate.prepared.destroyImplementationId();
+					if (retainId == null || destroyId == null)
+						throw new CBodyEmissionError('managed aggregate `$instanceId` lost its lifecycle implementation IDs');
+					aggregateLifecycles.set(retainId, lifecycle);
+					aggregateLifecycles.set(destroyId, lifecycle);
+				}
 			}
 		}
 		for (imported in this.imports.types) {
@@ -167,6 +257,7 @@ class CBodyEmitter {
 		if (enums != null) {
 			for (value in enums) {
 				final instanceId = value.prepared.instanceId;
+				enumsByInstance.set(instanceId, value);
 				enumInstanceOrder.push(instanceId);
 				enumRepresentations.set(instanceId, value.prepared.representation == CBERNativeEnum ? CBECNative : CBECTagged);
 				enumValueTags.set(instanceId, value.valueTag);
@@ -198,12 +289,33 @@ class CBodyEmitter {
 					enumPayloadNames.set(caseKey, payloadNames);
 				}
 				enumCaseOrder.set(instanceId, caseOrder);
+				if (value.prepared.managedLifetime) {
+					final retainName = requireEnumLifecycleName(value.retainName, value, "retain");
+					final destroyName = requireEnumLifecycleName(value.destroyName, value, "destroy");
+					final lifecycle:CBodyEmitterEnumArrayLifecycle = {
+						instanceId: instanceId,
+						retainName: retainName,
+						destroyName: destroyName
+					};
+					final retainId = value.prepared.retainImplementationId();
+					final destroyId = value.prepared.destroyImplementationId();
+					if (retainId == null || destroyId == null)
+						throw new CBodyEmissionError('managed enum `$instanceId` lost its lifecycle implementation IDs');
+					enumArrayLifecycles.set(retainId, lifecycle);
+					enumArrayLifecycles.set(destroyId, lifecycle);
+				}
 			}
 		}
 		if (classes != null) {
 			for (value in classes) {
 				final instanceId = value.prepared.instanceId;
+				classesByInstance.set(instanceId, value);
 				classInstanceOrder.push(instanceId);
+				if (value.prepared.managedByCollector) {
+					if (value.descriptorName == null)
+						throw new CBodyEmissionError('managed class `$instanceId` lost its descriptor name');
+					managedDescriptorNames.set(instanceId, value.descriptorName);
+				}
 				classTags.set(instanceId, value.cTag);
 				if (value.prepared.base != null) {
 					classBaseInstances.set(instanceId, value.prepared.base.instanceId);
@@ -228,11 +340,58 @@ class CBodyEmitter {
 				classFieldOrder.set(instanceId, order);
 			}
 		}
+		if (arrays != null)
+			for (value in arrays) {
+				arrayElementTypes.set(value.prepared.instanceId, value.prepared.element.irType);
+				arraysByInstance.set(value.prepared.instanceId, value);
+				if (value.prepared.managedByCollector) {
+					if (value.descriptorName == null)
+						throw new CBodyEmissionError('collector-managed Array `${value.prepared.instanceId}` lost its descriptor name');
+					managedDescriptorNames.set(value.prepared.instanceId, value.descriptorName);
+				}
+				final implementationId = value.prepared.destroyImplementationId();
+				if (implementationId != null) {
+					final destroyName = requireArrayCallbackName(value.destroyName, value, "destroy");
+					final existing = arrayElementCleanups.get(implementationId);
+					if (existing != null
+						&& (typeKey(existing.elementType) != typeKey(value.prepared.element.irType)
+							|| existing.destroyName.value != destroyName.value))
+						throw new CBodyEmissionError('Array element cleanup `$implementationId` resolved to conflicting callbacks');
+					arrayElementCleanups.set(implementationId, {elementType: value.prepared.element.irType, destroyName: destroyName});
+				}
+			}
+		if (bytes != null)
+			for (_ in bytes)
+				bytesInstanceIds.set(CPreparedBodyBytes.INSTANCE_ID, true);
+		if (optionals != null) {
+			for (value in optionals) {
+				final key = exactTypeKey(value.prepared.irType());
+				if (optionalsByType.exists(key))
+					throw new CBodyEmissionError('duplicate direct optional type `$key`');
+				optionalsByType.set(key, value);
+				optionalsByPlan.set(value.prepared.planId, value);
+				optionalPlanOrder.push(value.prepared.planId);
+				if (value.prepared.managedLifetime) {
+					final lifecycle:CBodyEmitterOptionalLifecycle = {
+						type: value.prepared.irType(),
+						retainName: requireOptionalLifecycleName(value.retainName, value, "retain"),
+						destroyName: requireOptionalLifecycleName(value.destroyName, value, "destroy")
+					};
+					final retainId = value.prepared.retainImplementationId();
+					final destroyId = value.prepared.destroyImplementationId();
+					if (retainId == null || destroyId == null)
+						throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its lifecycle implementation IDs');
+					optionalLifecycles.set(retainId, lifecycle);
+					optionalLifecycles.set(destroyId, lifecycle);
+				}
+			}
+			optionalPlanOrder.sort(compareUtf8);
+		}
 		if (dispatch != null) {
 			for (slot in dispatch.slots) {
 				virtualSlots.set(slot.prepared.input.id, {
 					id: slot.prepared.input.id,
-					ownerInstanceId: slot.prepared.owner.instanceId,
+					ownerInstanceId: slot.prepared.ownerInstanceId(),
 					parameterTypes: slot.prepared.parameters.map(value -> value.irType),
 					returnType: slot.prepared.returnType.irType,
 					cMember: slot.cMember
@@ -242,12 +401,18 @@ class CBodyEmitter {
 				final slots:Array<CBodyEmitterVirtualSlot> = [];
 				for (slot in layout.slots)
 					slots.push(requireVirtualSlot(slot.prepared.input.id));
-				virtualLayouts.set(layout.prepared.id, {
+				final emittedLayout:CBodyEmitterVirtualLayout = {
 					id: layout.prepared.id,
-					rootInstanceId: layout.prepared.root.instanceId,
+					rootInstanceId: layout.prepared.rootInstanceId(),
 					cTag: layout.cTag,
+					cValueTag: layout.cValueTag,
+					cObjectMember: layout.cObjectMember,
+					cTableMember: layout.cTableMember,
 					slots: slots
-				});
+				};
+				virtualLayouts.set(layout.prepared.id, emittedLayout);
+				if (layout.prepared.isInterface())
+					interfaceLayoutsByInstance.set(layout.prepared.rootInstanceId(), emittedLayout);
 			}
 			final thunksById:Map<String, CBodyEmitterVirtualThunk> = [];
 			for (thunk in dispatch.thunks) {
@@ -286,6 +451,7 @@ class CBodyEmitter {
 	#else
 	public function new() {
 		this.imports = CLoweredImports.empty();
+		this.managedProgram = null;
 	}
 	#end
 
@@ -322,8 +488,12 @@ class CBodyEmitter {
 			lineDirectives: lineDirectives,
 			labeledTargets: [],
 			coalescing: coalescing,
+			managedRootSlots: [],
+			managedRootArray: null,
+			managedRootFrame: null,
 			terminatedByTailLoop: false
 		};
+		prepareManagedRootFrame(statements, state, fn);
 		for (parameter in fn.parameters) {
 			final name = requireParameterName(parameterNames, parameter.id, fn.id);
 			state.values.set(parameter.id, EIdentifier(name));
@@ -355,12 +525,145 @@ class CBodyEmitter {
 		}
 		CPhaseTiming.stopDetail(emissionTimer);
 		if (state.terminatedByTailLoop) {
+			if (state.managedRootFrame != null)
+				fail('managed-root function `${fn.id}` cannot use the tail-loop rewrite until iteration-owned root reset is explicit');
 			if (fn.blocks.length != 1) {
 				fail('tail-loop lowering in `${fn.id}` requires one HxcIR block');
 			}
 			return SBlock([SWhile(EInt(CIntegerLiteral.decimal("1")), SBlock(statements))]);
 		}
 		return SBlock(statements);
+	}
+
+	/**
+		Declare and register one exact root frame before the function can allocate.
+
+		Parameter roots enter with their incoming value. Instruction-result slots
+		start null and are updated immediately after the defining instruction. The
+		frame therefore never contains uninitialized bytes or a guessed C address.
+	**/
+	function prepareManagedRootFrame(statements:Array<CStmt>, state:CBodyEmissionState, fn:HxcIRFunction):Void {
+		final roots = fn.managedRoots == null ? [] : fn.managedRoots;
+		if (roots.length == 0)
+			return;
+		if (managedProgram == null)
+			fail('managed-root function `${fn.id}` has no finalized executable collector plan');
+		final rootArray = managedProgram.rootArrays.get(fn.id);
+		final rootFrame = managedProgram.rootFrames.get(fn.id);
+		if (rootArray == null || rootFrame == null)
+			fail('managed-root function `${fn.id}` lost its finalized frame names');
+		state.managedRootArray = rootArray;
+		state.managedRootFrame = rootFrame;
+		final initializers:Array<CInitializerItem> = [];
+		for (index => root in roots) {
+			var slots = state.managedRootSlots.get(root.valueId);
+			if (slots == null) {
+				slots = [];
+				state.managedRootSlots.set(root.valueId, slots);
+			}
+			slots.push({index: index, root: root});
+			var initial:CExpr = ENull;
+			for (parameter in fn.parameters)
+				if (parameter.id == root.valueId)
+					initial = managedRootPointer(EIdentifier(requireParameterName(state.parameterNames, parameter.id, fn.id)), parameter.type,
+						root.projections, fn.id);
+			initializers.push({designators: [], value: IExpr(initial)});
+		}
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TVoid, [QConst]),
+			declarator: DArray(DPointer(DName(rootArray), []), ABFixed(EInt(CIntegerLiteral.decimal(Std.string(roots.length)))), []),
+			initializer: IList(initializers),
+			attributes: []
+		}));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TStruct(CBodyRuntimeNames.identifier(CBRNGcRootFrameType))),
+			declarator: DName(rootFrame),
+			initializer: IExpr(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFrameInitializer))),
+			attributes: []
+		}));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFramePush)), [
+			EUnary(AddressOf, EIdentifier(managedProgram.thread)),
+			EIdentifier(rootArray),
+			EInt(CIntegerLiteral.decimal(Std.string(roots.length))),
+			EUnary(AddressOf, EIdentifier(rootFrame))
+		]), state.boundsAbortName, 'managed-root-frame-push', fn.id);
+	}
+
+	/** Publish one newly defined managed value to its already-registered slot. */
+	function emitManagedRootUpdate(statements:Array<CStmt>, state:CBodyEmissionState, valueId:String, fn:HxcIRFunction):Void {
+		final functionId = fn.id;
+		final slots = state.managedRootSlots.get(valueId);
+		if (slots == null)
+			return;
+		final rootArray = state.managedRootArray;
+		if (rootArray == null)
+			fail('managed value `$valueId` in `$functionId` has no root array');
+		final type = valueType(fn, valueId);
+		if (type == null)
+			fail('managed value `$valueId` in `$functionId` lost its HxcIR type');
+		for (slot in slots)
+			statements.push(SExpr(EBinary(Assign, EIndex(EIdentifier(rootArray), EInt(CIntegerLiteral.decimal(Std.string(slot.index)))),
+				managedRootPointer(requireValue(state.values, valueId, functionId), type, slot.root.projections, functionId))));
+	}
+
+	/** Unlink a function frame after semantic cleanup and before returning. */
+	function emitManagedRootFramePop(statements:Array<CStmt>, fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>):Void {
+		if (fn.managedRoots == null || fn.managedRoots.length == 0)
+			return;
+		if (managedProgram == null)
+			fail('managed-root function `${fn.id}` has no finalized executable collector plan');
+		final frame = managedProgram.rootFrames.get(fn.id);
+		if (frame == null)
+			fail('managed-root function `${fn.id}` lost its finalized frame name');
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcRootFramePop)), [EUnary(AddressOf, EIdentifier(frame))]),
+			boundsAbortName, 'managed-root-frame-pop', fn.id);
+	}
+
+	function managedRootPointer(value:CExpr, type:HxcIRTypeRef, projections:Array<HxcIRManagedRootProjection>, functionId:String):CExpr {
+		var current = value;
+		var currentType = type;
+		final guards:Array<CExpr> = [];
+		for (projection in projections)
+			switch projection {
+				case IRMRPAggregateField(instanceId, fieldName):
+					switch currentType {
+						case IRTInstance(actual) if (actual == instanceId):
+						case _: fail('managed root in `$functionId` applies record `$instanceId` to `${typeKey(currentType)}`');
+					}
+					current = EMember(current, requireAggregateFieldName(instanceId, fieldName, "managed-root", functionId), false);
+					currentType = requireAggregateFieldIrType(instanceId, fieldName);
+				case IRMRPTagPayload(instanceId, tagName, payloadIndex):
+					switch currentType {
+						case IRTInstance(actual) if (actual == instanceId):
+						case _: fail('managed root in `$functionId` applies enum `$instanceId` to `${typeKey(currentType)}`');
+					}
+					guards.push(EBinary(Equal, enumTagExpression(current, instanceId), EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName))));
+					final payloadNames = requireEnumPayloadNames(instanceId, tagName);
+					if (payloadIndex < 0 || payloadIndex >= payloadNames.length)
+						fail('managed root in `$functionId` has invalid `$tagName` payload index `$payloadIndex`');
+					final payloadName = payloadNames[payloadIndex];
+					current = EMember(EMember(EMember(current, requireEnumPayloadMember(instanceId), false), requireEnumCaseUnionMember(instanceId, tagName),
+						false),
+						requireEnumPayloadFieldName(instanceId, tagName, payloadName), false);
+					currentType = requireEnumPayloadFieldType(instanceId, tagName, payloadName);
+				case IRMRPNullablePayload:
+					final optional = requireOptional(currentType);
+					guards.push(EMember(current, optional.presenceName, false));
+					current = EMember(current, optional.payloadName, false);
+					currentType = optional.prepared.payload.irType;
+			}
+		var pointer:CExpr = ECast(new CType(TVoid, [QConst]), DPointer(DName(null), []), current);
+		if (guards.length > 0) {
+			var condition = guards[0];
+			for (index in 1...guards.length)
+				condition = EBinary(LogicalAnd, condition, guards[index]);
+			pointer = EConditional(condition, pointer, ENull);
+		}
+		return pointer;
 	}
 
 	/** The legacy graph form is retained only for a planner-proven irreducible CFG. */
@@ -373,7 +676,8 @@ class CBodyEmitter {
 				continue;
 			final terminator = requireTerminator(block.terminator, fn.id);
 			addLineDirective(statements, terminator.source, state.lineDirectives);
-			emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName);
+			emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
+				state.spanLengthNames);
 		}
 	}
 
@@ -506,7 +810,8 @@ class CBodyEmitter {
 				final block = requireBlock(fn, ownerBlockId);
 				final terminator = requireTerminator(block.terminator, fn.id);
 				addLineDirective(statements, terminator.source, state.lineDirectives);
-				emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName);
+				emitTerminator(statements, state.values, terminator, state.labelNames, fn, state.boundsAbortName, state.localNames, state.globalNames,
+					state.spanLengthNames);
 			case CFCUnreachable(ownerBlockId):
 				final block = requireBlock(fn, ownerBlockId);
 				addTerminatorLineDirective(statements, block, state.lineDirectives, fn.id);
@@ -531,7 +836,10 @@ class CBodyEmitter {
 			switch instruction.kind {
 				case IRIOConstant(value):
 					final result = requireResult(instruction, fn.id);
-					state.values.set(result.id, constantExpression(value));
+					state.values.set(result.id, constantExpressionForType(value, result.type));
+				case IRIOFunctionReference(functionId):
+					final result = requireResult(instruction, fn.id);
+					state.values.set(result.id, EIdentifier(requireFunctionName(state.functionNames, functionId, fn.id)));
 				case IRIOLoad(place):
 					final result = requireResult(instruction, fn.id);
 					switch result.type {
@@ -543,12 +851,15 @@ class CBodyEmitter {
 								placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values), state.temporaryNames,
 								state.lineDirectives, fn.id, state.coalescing.shouldInlineSequencedLoad(result.id));
 					}
-				case IRIOAddress(place):
+				case IRIOAddress(place) | IRIOBorrowClassField(place):
 					emitAddress(statements, state.values, state.referencedValues, instruction, place, fn, state.localNames, state.globalNames,
 						state.spanLengthNames, state.temporaryNames, state.lineDirectives);
 				case IRIOConstructAggregate(instanceId, fields):
 					emitAggregateConstruction(statements, state.values, state.referencedValues, instruction, instanceId, fields, state.temporaryNames,
 						state.lineDirectives, fn.id, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
+				case IRIOConstructInterface(interfaceInstanceId, objectValueId, tableId):
+					emitInterfaceConstruction(statements, state.values, state.referencedValues, instruction, interfaceInstanceId, objectValueId, tableId,
+						state.temporaryNames, state.lineDirectives, fn.id);
 				case IRIOProject(valueId, fieldName):
 					emitAggregateProjection(statements, state.values, state.referencedValues, instruction, valueId, fieldName, fn, state.temporaryNames,
 						state.lineDirectives, state.coalescing.shouldInlinePure(requireResult(instruction, fn.id).id));
@@ -564,8 +875,9 @@ class CBodyEmitter {
 				case IRIODefaultInitialize(IRPLocal(localId), from, to):
 					emitDefaultInitialize(statements, state.declared, state.referencedLocals, instruction, localId, from, to, fn, state.localNames,
 						state.lineDirectives);
-				case IRIOBindVirtualTable(IRPLocal(localId), tableId):
-					emitBindVirtualTable(statements, instruction, localId, tableId, fn, state.localNames, state.lineDirectives);
+				case IRIOBindVirtualTable(place, tableId):
+					emitBindVirtualTable(statements, instruction, place, tableId, fn, state.localNames, state.globalNames, state.spanLengthNames,
+						state.values, state.lineDirectives);
 				case IRIOInitialize(IRPLocal(localId), valueId, IRISUninitialized, IRISInitialized):
 					switch requireLocal(fn, localId).type {
 						case IRTSpan(_, _):
@@ -589,15 +901,15 @@ class CBodyEmitter {
 					emitZeroFixedArrayInitialize(statements, state.declared, state.referencedLocals, instruction, localId, fn, state.localNames,
 						state.lineDirectives);
 				case IRIOInitializeSpan(IRPLocal(localId), sourceArray, IRISUninitialized, IRISInitialized):
-					emitSpanInitialize(statements, state.declared, state.referencedLocals, state.referencedSpanLengths, instruction, localId, sourceArray, fn,
-						state.localNames, state.spanLengthNames, state.globalNames, state.lineDirectives);
+					emitSpanInitialize(statements, state.values, state.declared, state.referencedLocals, state.referencedSpanLengths, instruction, localId,
+						sourceArray, fn, state.localNames, state.spanLengthNames, state.globalNames, state.lineDirectives);
 				case IRIOBoundsCheck(collection, indexValueId, IRBPCheckedAbort(_, _)):
 					emitBoundsCheck(statements, state.values, instruction, collection, indexValueId, fn, state.localNames, state.globalNames,
 						state.spanLengthNames, state.boundsAbortName, state.lineDirectives);
 				case IRIOBoundsCheck(_, _, IRBPStaticProof(_, _) | IRBPLoopGuarded(_, _, _)):
 					// The semantic proof remains reviewable in HxcIR; no redundant C check survives.
 				case IRIONullCheck(valueId, IRNCPCheckedAbort(_, _)):
-					emitNullCheck(statements, state.values, instruction, valueId, state.boundsAbortName, state.lineDirectives, fn.id);
+					emitNullCheck(statements, state.values, instruction, valueId, state.boundsAbortName, state.lineDirectives, fn);
 				case IRIOStore(place, valueId):
 					if (instruction.result != null)
 						fail('store `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
@@ -607,8 +919,15 @@ class CBodyEmitter {
 						requireValue(state.values, valueId, fn.id))));
 				case IRIOUnary(operationId, valueId, implementation):
 					final result = requireResult(instruction, fn.id);
-					final expression = operationExpression(operationId, implementation, [requireValue(state.values, valueId, fn.id)], state.helperNames,
-						instruction.id, fn.id);
+					final expression = if (operationId == "haxe.direct-optional.is-null"
+						|| operationId == "haxe.direct-optional.is-not-null") {
+						final optional = requireOptional(valueType(fn, valueId));
+						final present = EMember(requireValue(state.values, valueId, fn.id), optional.presenceName, false);
+						operationId == "haxe.direct-optional.is-null" ? EUnary(LogicalNot, present) : present;
+					} else {
+						operationExpression(operationId, implementation, [requireValue(state.values, valueId, fn.id)], state.helperNames, instruction.id,
+							fn.id);
+					};
 					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
 				case IRIOBinary(operationId, leftValueId, rightValueId, implementation):
 					final result = requireResult(instruction, fn.id);
@@ -622,10 +941,18 @@ class CBodyEmitter {
 					final expression = classUpcastExpression(requireValue(state.values, valueId, fn.id), valueType(fn, valueId), targetType, instruction.id,
 						fn.id);
 					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
-				case IRIOConvert(valueId, IRCNullableInject, _, IRIStatic, null):
+				case IRIOConvert(valueId, IRCNullableInject, targetType, IRIStatic, null):
 					final result = requireResult(instruction, fn.id);
-					recordPureResult(statements, state.values, state.referencedValues, instruction, result, requireValue(state.values, valueId, fn.id),
-						state.lineDirectives, fn.id);
+					final expression = switch targetType {
+						case IRTNullable(_, IRNTagged): directOptionalValueExpression(targetType, requireValue(state.values, valueId, fn.id));
+						case _: requireValue(state.values, valueId, fn.id);
+					};
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
+				case IRIOConvert(valueId, IRCNullableUnwrap, _, IRIStatic, null):
+					final result = requireResult(instruction, fn.id);
+					final optional = requireOptional(valueType(fn, valueId));
+					final expression = EMember(requireValue(state.values, valueId, fn.id), optional.payloadName, false);
+					recordPureResult(statements, state.values, state.referencedValues, instruction, result, expression, state.lineDirectives, fn.id);
 				case IRIOConvert(valueId, kind, targetType, IRIStatic, null):
 					final result = requireResult(instruction, fn.id);
 					final expression = switch kind {
@@ -655,13 +982,59 @@ class CBodyEmitter {
 						state.terminatedByTailLoop = true;
 					} else {
 						terminatedByNonReturningCall = emitCall(statements, state.values, state.spanValueLengths, state.referencedValues, instruction, call,
-							state.temporaryNames, state.functionNames, state.lineDirectives, state.nonReturningFunctionIds, state.boundsAbortName, fn);
+							state.temporaryNames, state.functionNames, state.localNames, state.globalNames, state.spanLengthNames, state.lineDirectives,
+							state.nonReturningFunctionIds, state.boundsAbortName, fn);
+					}
+				case IRIOAllocate(type, IRAOwned, IRIRuntime("alloc"), {target: IRFTAbort}):
+					emitOwnedAllocation(statements, state.values, state.referencedValues, instruction, type, state.temporaryNames, state.lineDirectives,
+						state.boundsAbortName, fn);
+				case IRIOAllocate(type, IRAShared, IRIRuntime("gc"), {target: IRFTAbort}):
+					emitCollectorAllocation(statements, state.values, state.referencedValues, instruction, type, state.temporaryNames, state.lineDirectives,
+						state.boundsAbortName, fn);
+				case IRIORetain(place, IRIRuntime("array")):
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRetain)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORetain(place, IRIRuntime("bytes")):
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORetain(place, IRIProgramLocal(implementationId)):
+					final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);
+					addLineDirective(statements, instruction.source, state.lineDirectives);
+					emitStatusAbort(statements, ECall(EIdentifier(lifecycle.retainName), [
+						EUnary(AddressOf, placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values))
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORelease(place, IRIRuntime("array")):
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRelease)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORelease(place, IRIRuntime("bytes")):
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)), [
+						placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values)
+					]), state.boundsAbortName, instruction.id, fn.id);
+				case IRIORelease(place, IRIProgramLocal(implementationId)):
+					final cleanup = arrayElementCleanups.get(implementationId);
+					if (cleanup != null)
+						statements.push(SExpr(ECall(EIdentifier(cleanup.destroyName), [
+							ENull,
+							EUnary(AddressOf, placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values))
+						])));
+					else {
+						final lifecycle = programLocalLifecycle(implementationId, instruction.id, fn.id);
+						statements.push(SExpr(ECall(EIdentifier(lifecycle.destroyName), [
+							EUnary(AddressOf, placeExpression(place, fn, state.localNames, state.globalNames, state.spanLengthNames, state.values))
+						])));
 					}
 				case IRIOLifetime(_, _, _, _):
 					// Direct stack-object lifetime transitions are semantic proof only.
 				case _:
 					fail('HxcIR instruction `${instruction.id}` in `${fn.id}` is outside the sequenced direct-value function subset');
 			}
+			if (instruction.result != null)
+				emitManagedRootUpdate(statements, state, instruction.result.id, fn);
 			if (terminatedByNonReturningCall)
 				break;
 		}
@@ -690,6 +1063,9 @@ class CBodyEmitter {
 
 	static function referencedValueIds(fn:HxcIRFunction):Map<String, Bool> {
 		final referenced:Map<String, Bool> = [];
+		if (fn.managedRoots != null)
+			for (root in fn.managedRoots)
+				referenced.set(root.valueId, true);
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
@@ -698,12 +1074,14 @@ class CBodyEmitter {
 						markPlaceValues(place, referenced);
 					case IRIOConvert(valueId, _, _, _, _):
 						referenced.set(valueId, true);
-					case IRIOLoad(place) | IRIOAddress(place):
+					case IRIOLoad(place) | IRIOAddress(place) | IRIOBorrowClassField(place):
 						markPlaceValues(place, referenced);
 					case IRIOConstructAggregate(_, fields):
 						for (field in fields) {
 							referenced.set(field.valueId, true);
 						}
+					case IRIOConstructInterface(_, objectValueId, _):
+						referenced.set(objectValueId, true);
 					case IRIOProject(valueId, _):
 						referenced.set(valueId, true);
 					case IRIOConstructTag(_, _, payload):
@@ -715,8 +1093,12 @@ class CBodyEmitter {
 						for (valueId in valueIds) {
 							referenced.set(valueId, true);
 						}
-					case IRIOBoundsCheck(_, indexValueId, _):
+					case IRIOInitializeSpan(place, sourceArray, _, _):
+						markPlaceValues(place, referenced);
+						markPlaceValues(sourceArray, referenced);
+					case IRIOBoundsCheck(collection, indexValueId, _):
 						referenced.set(indexValueId, true);
+						markPlaceValues(collection, referenced);
 					case IRIONullCheck(valueId, _):
 						referenced.set(valueId, true);
 					case IRIOUnary(_, valueId, _):
@@ -730,6 +1112,7 @@ class CBodyEmitter {
 						}
 						switch call.dispatch {
 							case IRCDVirtual(_, receiverValueId) | IRCDInterface(_, _, receiverValueId): referenced.set(receiverValueId, true);
+							case IRCDClosure(callableValueId): referenced.set(callableValueId, true);
 							case _:
 						}
 					case _:
@@ -772,8 +1155,8 @@ class CBodyEmitter {
 		for (block in fn.blocks) {
 			for (instruction in block.instructions) {
 				switch instruction.kind {
-					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBoundsCheck(place, _, _) | IRIODefaultInitialize(place, _, _) |
-						IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
+					case IRIOLoad(place) | IRIOStore(place, _) | IRIOAddress(place) | IRIOBorrowClassField(place) | IRIOBoundsCheck(place, _, _) |
+						IRIODefaultInitialize(place, _, _) | IRIOBindVirtualTable(place, _) | IRIOLifetime(place, _, _, _):
 						markReferencedLocals(place, referenced);
 					case IRIOInitializeSpan(place, sourceArray, _, _):
 						markReferencedLocals(place, referenced);
@@ -861,6 +1244,92 @@ class CBodyEmitter {
 		}
 	}
 
+	/**
+		Allocate one compiler-proven concrete value through hxrt's checked allocator.
+
+		The finalized result temporary is also the stable root for the private
+		allocator local name. Appending a reserved compiler suffix cannot collide
+		with another emitted temporary because the symbol registry has already made
+		the base temporary unique in this function.
+	**/
+	function emitOwnedAllocation(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			type:HxcIRTypeRef, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		if (typeKey(result.type) != typeKey(IRTPointer(type, false)))
+			return fail('owned allocation `${instruction.id}` in `${fn.id}` must return a non-null pointer to its allocated type');
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('owned allocation `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final allocator = new CIdentifier(temporary.value + "_allocator");
+		final allocated = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: allocated.type,
+			declarator: allocated.declarator,
+			initializer: IExpr(ENull),
+			attributes: []
+		}));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNAllocatorType))),
+			declarator: DName(allocator),
+			initializer: IExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), [])),
+			attributes: []
+		}));
+		final allocatedType = typedDeclarator(type, DName(null));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNAllocate)), [
+			EUnary(AddressOf, EIdentifier(allocator)),
+			ESizeOfType(allocatedType.type, allocatedType.declarator),
+			EAlignOfType(allocatedType.type, allocatedType.declarator),
+			ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			return fail('owned allocation `${instruction.id}` in `${fn.id}` produced an unreferenced owner');
+	}
+
+	/** Allocate one zeroed, stable payload using its finalized exact descriptor. */
+	function emitCollectorAllocation(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			type:HxcIRTypeRef, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final instanceId = switch type {
+			case IRTInstance(value): value;
+			case _: return fail('collector allocation `${instruction.id}` in `${fn.id}` lost its managed instance payload');
+		};
+		final result = requireResult(instruction, fn.id);
+		if (typeKey(result.type) != typeKey(IRTPointer(type, false)))
+			return fail('collector allocation `${instruction.id}` in `${fn.id}` must return its exact non-null payload pointer');
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('collector allocation `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final descriptor = managedDescriptorNames.get(instanceId);
+		if (descriptor == null)
+			return fail('collector allocation `${instruction.id}` in `${fn.id}` has no descriptor for `$instanceId`');
+		final program = managedProgram;
+		if (program == null)
+			return fail('collector allocation `${instruction.id}` in `${fn.id}` has no executable collector context');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: IExpr(ENull),
+			attributes: []
+		}));
+		addLineDirective(statements, instruction.source, lineDirectives);
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+			EUnary(AddressOf, EIdentifier(program.collector)),
+			EUnary(AddressOf, EIdentifier(descriptor)),
+			ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+		]), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			return fail('collector allocation `${instruction.id}` in `${fn.id}` produced an unreferenced managed value');
+	}
+
 	function emitSpanLoad(statements:Array<CStmt>, values:Map<String, CExpr>, spanValueLengths:Map<String, CExpr>, referencedValues:Map<String, Bool>,
 			instruction:HxcIRInstruction, place:HxcIRPlace, fn:HxcIRFunction, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
 			spanLengthNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
@@ -932,6 +1401,27 @@ class CBodyEmitter {
 		final result = requireResult(instruction, functionId);
 		final expression = ECompoundLiteral(cType(result.type), DName(null), IList(initializers));
 		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, coalesce);
+	}
+
+	function emitInterfaceConstruction(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			interfaceInstanceId:String, objectValueId:String, tableId:String, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool,
+			functionId:String):Void {
+		final layout = requireInterfaceLayout(interfaceInstanceId);
+		final table = requireVirtualTable(tableId);
+		if (table.layout.id != layout.id)
+			fail('interface construction `${instruction.id}` in `$functionId` selected a table for another interface');
+		final result = requireResult(instruction, functionId);
+		final expression = ECompoundLiteral(cType(result.type), DName(null), IList([
+			{
+				designators: [DField(requireInterfaceObjectMember(layout))],
+				value: IExpr(requireValue(values, objectValueId, functionId))
+			},
+			{
+				designators: [DField(requireInterfaceTableMember(layout))],
+				value: IExpr(EUnary(AddressOf, EIdentifier(table.cName)))
+			}
+		]));
+		emitLoad(statements, values, referencedValues, instruction, expression, temporaryNames, lineDirectives, functionId, false);
 	}
 
 	function emitAggregateProjection(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
@@ -1037,20 +1527,20 @@ class CBodyEmitter {
 		}
 	}
 
-	function emitBindVirtualTable(statements:Array<CStmt>, instruction:HxcIRInstruction, localId:String, tableId:String, fn:HxcIRFunction,
-			localNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
+	function emitBindVirtualTable(statements:Array<CStmt>, instruction:HxcIRInstruction, place:HxcIRPlace, tableId:String, fn:HxcIRFunction,
+			localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>, values:Map<String, CExpr>,
+			lineDirectives:Bool):Void {
 		if (instruction.result != null)
 			fail('virtual-table bind `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
 		final table = requireVirtualTable(tableId);
-		final local = requireLocal(fn, localId);
-		final instanceId = switch local.type {
+		final instanceId = switch placeType(place, fn) {
 			case IRTInstance(value): value;
 			case _: return fail('virtual-table bind `${instruction.id}` in `${fn.id}` does not target concrete object storage');
 		};
 		if (instanceId != table.classInstanceId)
 			fail('virtual-table bind `${instruction.id}` in `${fn.id}` selected table `$tableId` for the wrong concrete class');
 		final path = classBasePath(instanceId, table.layout.rootInstanceId, instruction.id, fn.id, true);
-		var rootObject:CExpr = EIdentifier(requireLocalName(localNames, localId, fn.id));
+		var rootObject:CExpr = placeExpression(place, fn, localNames, globalNames, spanLengthNames, values);
 		for (member in path)
 			rootObject = EMember(rootObject, member, false);
 		final header = EMember(rootObject, requireClassDispatchHeader(table.layout.rootInstanceId), false);
@@ -1159,7 +1649,7 @@ class CBodyEmitter {
 		}
 	}
 
-	function emitSpanInitialize(statements:Array<CStmt>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
+	function emitSpanInitialize(statements:Array<CStmt>, values:Map<String, CExpr>, declared:Map<String, Bool>, referencedLocals:Map<String, Bool>,
 			referencedSpanLengths:Map<String, Bool>, instruction:HxcIRInstruction, localId:String, sourceArray:HxcIRPlace, fn:HxcIRFunction,
 			localNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, lineDirectives:Bool):Void {
 		if (instruction.result != null || declared.exists(localId)) {
@@ -1172,7 +1662,7 @@ class CBodyEmitter {
 		};
 		final name = requireLocalName(localNames, localId, fn.id);
 		final lengthName = requireSpanLengthName(spanLengthNames, localId, fn.id);
-		final sourceExpression = placeExpression(sourceArray, fn, localNames, globalNames, spanLengthNames);
+		final sourceExpression = placeExpression(sourceArray, fn, localNames, globalNames, spanLengthNames, values);
 		final sourceLength = collectionLengthExpression(sourceArray, fn, localNames, globalNames, spanLengthNames);
 		addLineDirective(statements, instruction.source, lineDirectives);
 		statements.push(SDecl({
@@ -1255,12 +1745,18 @@ class CBodyEmitter {
 	}
 
 	function emitNullCheck(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, valueId:String,
-			boundsAbortName:Null<CIdentifier>, lineDirectives:Bool, functionId:String):Void {
+			boundsAbortName:Null<CIdentifier>, lineDirectives:Bool, fn:HxcIRFunction):Void {
+		final functionId = fn.id;
 		if (instruction.result != null)
 			fail('null check `${instruction.id}` in `$functionId` unexpectedly defines a value');
+		final absent = switch valueType(fn, valueId) {
+			case IRTNullable(_, IRNTagged):
+				final optional = requireOptional(valueType(fn, valueId));
+				EUnary(LogicalNot, EMember(requireValue(values, valueId, functionId), optional.presenceName, false));
+			case _: EBinary(Equal, requireValue(values, valueId, functionId), ENull);
+		};
 		addLineDirective(statements, instruction.source, lineDirectives);
-		statements.push(SIf(EBinary(Equal, requireValue(values, valueId, functionId), ENull),
-			SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, instruction.id, functionId)), [])), null));
+		statements.push(SIf(absent, SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, instruction.id, functionId)), [])), null));
 	}
 
 	function classUpcastExpression(value:CExpr, sourceType:Null<HxcIRTypeRef>, targetType:HxcIRTypeRef, instructionId:String, functionId:String):CExpr {
@@ -1283,11 +1779,13 @@ class CBodyEmitter {
 	}
 
 	function emitTerminator(statements:Array<CStmt>, values:Map<String, CExpr>, terminator:HxcIRTerminator, labelNames:Map<String, CIdentifier>,
-			fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>):Void {
+			fn:HxcIRFunction, boundsAbortName:Null<CIdentifier>, localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>,
+			spanLengthNames:Map<String, CIdentifier>):Void {
 		final functionId = fn.id;
 		switch terminator.kind {
 			case IRTReturn(valueId, cleanup):
-				emitCleanupSteps(statements, cleanup, fn);
+				emitCleanupSteps(statements, cleanup, fn, values, localNames, globalNames, spanLengthNames, boundsAbortName);
+				emitManagedRootFramePop(statements, fn, boundsAbortName);
 				switch fn.failureConvention {
 					case IRFCInfallible:
 						statements.push(SReturn(valueId == null ? null : requireValue(values, valueId, functionId)));
@@ -1344,7 +1842,8 @@ class CBodyEmitter {
 				statements.push(SSwitch(enumTagExpression(requireValue(values, valueId, functionId), instanceId), emittedCases));
 			case IRTThrow(valueId, failure):
 				statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, valueId, functionId))));
-				emitCleanupSteps(statements, failure.cleanup, fn);
+				emitCleanupSteps(statements, failure.cleanup, fn, values, localNames, globalNames, spanLengthNames, boundsAbortName);
+				emitManagedRootFramePop(statements, fn, boundsAbortName);
 				emitFailureTarget(statements, failure, fn, boundsAbortName, "throw");
 			case IRTUnreachable:
 				statements.push(SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, "unreachable", functionId)), [])));
@@ -1367,6 +1866,39 @@ class CBodyEmitter {
 							case _:
 								fail('construction cleanup `${action.id}` in `${fn.id}` does not own direct class storage');
 						}
+					case IRCARelease(place, IRIRuntime("array")):
+						switch placeType(place, fn) {
+							case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)):
+							case _:
+								fail('Array cleanup `${action.id}` in `${fn.id}` does not own a managed Array place');
+						}
+					case IRCARelease(place, IRIRuntime("bytes")):
+						switch placeType(place, fn) {
+							case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)):
+							case _:
+								fail('Bytes cleanup `${action.id}` in `${fn.id}` does not own a managed Bytes place');
+						}
+					case IRCARelease(place, IRIProgramLocal(implementationId)):
+						final cleanup = arrayElementCleanups.get(implementationId);
+						final enumLifecycle = enumArrayLifecycles.get(implementationId);
+						final aggregateLifecycle = aggregateLifecycles.get(implementationId);
+						final optionalLifecycle = optionalLifecycles.get(implementationId);
+						final actualType = placeType(place, fn);
+						if (cleanup != null) {
+							if (actualType == null || typeKey(actualType) != typeKey(cleanup.elementType))
+								fail('managed Array element cleanup `${action.id}` in `${fn.id}` does not own the planned element type');
+						} else if (enumLifecycle != null) {
+							if (actualType == null || typeKey(actualType) != typeKey(IRTInstance(enumLifecycle.instanceId)))
+								fail('managed enum cleanup `${action.id}` in `${fn.id}` does not own the planned enum type');
+						} else if (aggregateLifecycle != null) {
+							if (actualType == null || typeKey(actualType) != typeKey(IRTInstance(aggregateLifecycle.instanceId)))
+								fail('managed aggregate cleanup `${action.id}` in `${fn.id}` does not own the planned record type');
+						} else if (optionalLifecycle != null) {
+							if (actualType == null || typeKey(actualType) != typeKey(optionalLifecycle.type))
+								fail('managed optional cleanup `${action.id}` in `${fn.id}` does not own the planned optional type');
+						} else {
+							fail('program-local cleanup `${action.id}` in `${fn.id}` names unknown plan `$implementationId`');
+						}
 					case _:
 						fail('construction cleanup `${action.id}` in `${fn.id}` is outside the direct stack-object subset');
 				}
@@ -1374,13 +1906,38 @@ class CBodyEmitter {
 		}
 	}
 
-	function emitCleanupSteps(statements:Array<CStmt>, steps:Array<HxcIRCleanupStep>, fn:HxcIRFunction):Void {
+	function emitCleanupSteps(statements:Array<CStmt>, steps:Array<HxcIRCleanupStep>, fn:HxcIRFunction, values:Map<String, CExpr>,
+			localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>,
+			boundsAbortName:Null<CIdentifier>):Void {
 		for (step in steps) {
 			final action = requireCleanupAction(fn, step);
 			switch action.kind {
 				case IRCADestroy(IRPLocal(_), IRISInitializing | IRISInitialized, IRISDestroyed):
 					// Direct class storage currently contains only borrowed/direct fields, so
 					// destruction is a proven no-op. The ordered HxcIR edge remains authoritative.
+				case IRCARelease(place, IRIRuntime("array")):
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRelease)),
+							[placeExpression(place, fn, localNames, globalNames, spanLengthNames, values)]),
+						boundsAbortName, action.id, fn.id);
+				case IRCARelease(place, IRIRuntime("bytes")):
+					emitStatusAbort(statements,
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)),
+							[placeExpression(place, fn, localNames, globalNames, spanLengthNames, values)]),
+						boundsAbortName, action.id, fn.id);
+				case IRCARelease(place, IRIProgramLocal(implementationId)):
+					final cleanup = arrayElementCleanups.get(implementationId);
+					if (cleanup != null) {
+						statements.push(SExpr(ECall(EIdentifier(cleanup.destroyName), [
+							ENull,
+							EUnary(AddressOf, placeExpression(place, fn, localNames, globalNames, spanLengthNames, values))
+						])));
+					} else {
+						final lifecycle = programLocalLifecycle(implementationId, action.id, fn.id);
+						statements.push(SExpr(ECall(EIdentifier(lifecycle.destroyName), [
+							EUnary(AddressOf, placeExpression(place, fn, localNames, globalNames, spanLengthNames, values))
+						])));
+					}
 				case _:
 					fail('cleanup `${step.regionId}.${step.actionId}` in `${fn.id}` is not directly emittable');
 			}
@@ -1464,7 +2021,10 @@ class CBodyEmitter {
 			case IRPGlobal(globalId):
 				fail('function `${fn.id}` does not yet admit fixed-array/span global `$globalId`');
 			case _:
-				fail('function `${fn.id}` requested a collection length from a non-root place');
+				switch placeType(place, fn) {
+					case IRTFixedArray(_, length, _): EInt(CIntegerLiteral.decimal(Std.string(length)));
+					case _: fail('function `${fn.id}` requested a collection length from a non-array field place');
+				}
 		};
 	}
 
@@ -1526,16 +2086,38 @@ class CBodyEmitter {
 			case "haxe.u32.bit-and": widenedUInt32Binary(BitAnd, left, right);
 			case "haxe.u32.bit-or": widenedUInt32Binary(BitOr, left, right);
 			case "haxe.u32.bit-xor": widenedUInt32Binary(BitXor, left, right);
-			case "haxe.bool.equal" | "haxe.i32.equal" | "haxe.u32.equal" | "haxe.f64.equal": EBinary(Equal, left, right);
-			case "haxe.class-reference.equal": EBinary(Equal, left, right);
-			case "haxe.bool.not-equal" | "haxe.i32.not-equal" | "haxe.u32.not-equal" | "haxe.f64.not-equal": EBinary(NotEqual, left, right);
-			case "haxe.class-reference.not-equal": EBinary(NotEqual, left, right);
+			case "haxe.bool.equal" | "haxe.i32.equal" | "haxe.u32.equal" | "haxe.f64.equal" | "haxe.enum-tag.equal": EBinary(Equal, left, right);
+			case "haxe.class-reference.equal" | "haxe.array-reference.equal": EBinary(Equal, left, right);
+			case "haxe.bool.not-equal" | "haxe.i32.not-equal" | "haxe.u32.not-equal" | "haxe.f64.not-equal" | "haxe.enum-tag.not-equal":
+				EBinary(NotEqual, left, right);
+			case "haxe.class-reference.not-equal" | "haxe.array-reference.not-equal": EBinary(NotEqual, left, right);
+			case "haxe.string.equal": stringViewEqualExpression(left, right);
+			case "haxe.string.not-equal": EUnary(LogicalNot, stringViewEqualExpression(left, right));
 			case "haxe.i32.less" | "haxe.u32.less" | "haxe.f64.less": EBinary(Less, left, right);
 			case "haxe.i32.less-equal" | "haxe.u32.less-equal" | "haxe.f64.less-equal": EBinary(LessEqual, left, right);
 			case "haxe.i32.greater" | "haxe.u32.greater" | "haxe.f64.greater": EBinary(Greater, left, right);
 			case "haxe.i32.greater-equal" | "haxe.u32.greater-equal" | "haxe.f64.greater-equal": EBinary(GreaterEqual, left, right);
 			case _: fail('binary instruction `$instructionId` in `$functionId` has unsupported direct operation `$operationId`');
 		};
+	}
+
+	/**
+		Compare Haxe String contents without allocating or comparing data pointers.
+
+		Equal byte length is checked first. Empty strings compare equal without
+		calling `memcmp`, so a valid empty view may use a null data pointer. Canonical
+		UTF-8 makes byte equality exactly String equality for this admitted slice.
+	**/
+	static function stringViewEqualExpression(left:CExpr, right:CExpr):CExpr {
+		final data = new CIdentifier("data");
+		final byteLength = new CIdentifier("byte_length");
+		final leftLength = EMember(left, byteLength, false);
+		final rightLength = EMember(right, byteLength, false);
+		final sameLength = EBinary(Equal, leftLength, rightLength);
+		final empty = EBinary(Equal, leftLength, EInt(CIntegerLiteral.decimal("0")));
+		final sameBytes = EBinary(Equal, ECall(EIdentifier(new CIdentifier("memcmp")), [EMember(left, data, false), EMember(right, data, false), leftLength]),
+			EInt(CIntegerLiteral.decimal("0")));
+		return EBinary(LogicalAnd, sameLength, EBinary(LogicalOr, empty, sameBytes));
 	}
 
 	/**
@@ -1580,7 +2162,12 @@ class CBodyEmitter {
 			case IRTFloat(32): new CType(TFloat);
 			case IRTFloat(64): new CType(TDouble);
 			case IRTString: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStringType)));
+			case IRTNullable(_, IRNTagged): new CType(TStruct(requireOptional(type).cTag));
 			case IRTInstance(instanceId):
+				if (arrayElementTypes.exists(instanceId))
+					throw new CBodyEmissionError('managed Array instance `$instanceId` requires pointer declarator context');
+				if (bytesInstanceIds.exists(instanceId))
+					throw new CBodyEmissionError('managed Bytes instance `$instanceId` requires pointer declarator context');
 				final imported = imports.typeByInstance(instanceId);
 				if (imported != null) {
 					switch imported.prepared.kind {
@@ -1589,17 +2176,25 @@ class CBodyEmitter {
 						case CITTypedef: new CType(TNamed(imported.cName));
 					}
 				} else {
-					final aggregateTag = aggregateTags.get(instanceId);
-					if (aggregateTag != null) {
-						new CType(TStruct(aggregateTag));
+					final interfaceLayout = interfaceLayoutsByInstance.get(instanceId);
+					if (interfaceLayout != null) {
+						final valueTag = interfaceLayout.cValueTag;
+						if (valueTag == null)
+							throw new CBodyEmissionError('interface instance `$instanceId` lost its finalized value tag');
+						new CType(TStruct(valueTag));
 					} else {
-						final classTag = classTags.get(instanceId);
-						if (classTag != null) {
-							new CType(TStruct(classTag));
+						final aggregateTag = aggregateTags.get(instanceId);
+						if (aggregateTag != null) {
+							new CType(TStruct(aggregateTag));
 						} else {
-							switch requireEnumRepresentation(instanceId) {
-								case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
-								case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+							final classTag = classTags.get(instanceId);
+							if (classTag != null) {
+								new CType(TStruct(classTag));
+							} else {
+								switch requireEnumRepresentation(instanceId) {
+									case CBECNative: new CType(TEnum(requireEnumValueTag(instanceId)));
+									case CBECTagged: new CType(TStruct(requireEnumValueTag(instanceId)));
+								}
 							}
 						}
 					}
@@ -1611,10 +2206,27 @@ class CBodyEmitter {
 
 	public function typedDeclarator(type:HxcIRTypeRef, inner:CDeclarator):CTypedDeclarator {
 		return switch type {
+			case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)):
+				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DPointer(inner, [])};
+			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)):
+				{type: new CType(TStruct(new CIdentifier("hxc_bytes_ref"))), declarator: DPointer(inner, [])};
 			case IRTCString:
 				{type: new CType(TChar(null), [QConst]), declarator: DPointer(inner, [])};
+			case IRTFunction(parameters, result):
+				final cParameters:Array<CParam> = [];
+				for (parameter in parameters) {
+					final value = typedDeclarator(parameter, DName(null));
+					cParameters.push({type: value.type, declarator: value.declarator, attributes: []});
+				}
+				// C requires parentheses around `*name` before the function suffix:
+				// `Result (*name)(Args)`, not `Result *name(Args)`.
+				final callable = DFunction(DGroup(DPointer(inner, [])), FPPrototype(cParameters, false));
+				typedDeclarator(result, callable);
 			case IRTPointer(pointee, _):
 				final nested = typedDeclarator(pointee, DPointer(inner, []));
+				{type: nested.type, declarator: nested.declarator};
+			case IRTFixedArray(element, length, _):
+				final nested = typedDeclarator(element, DArray(inner, ABFixed(EInt(CIntegerLiteral.decimal(Std.string(length)))), []));
 				{type: nested.type, declarator: nested.declarator};
 			case _:
 				{type: cType(type), declarator: inner};
@@ -1643,6 +2255,10 @@ class CBodyEmitter {
 
 	public function requiredHeaders(fn:HxcIRFunction):Array<String> {
 		final headers:Array<String> = [];
+		if (fn.managedRoots != null && fn.managedRoots.length > 0) {
+			addUnique(headers, "hxrt/gc.h");
+			addUnique(headers, "stdlib.h");
+		}
 		switch fn.failureConvention {
 			case IRFCStatus(_):
 				addUnique(headers, "stdbool.h");
@@ -1664,6 +2280,8 @@ class CBodyEmitter {
 					case IRIOCall(call) if (isHostedOutputDispatch(call.dispatch)):
 						addUnique(headers, "hxrt/io.h");
 						addUnique(headers, "stdlib.h");
+					case IRIOBinary("haxe.string.equal" | "haxe.string.not-equal", _, _, IRIStatic):
+						addUnique(headers, "string.h");
 					case IRIOBoundsCheck(_, _, IRBPCheckedAbort(_, _)):
 						addUnique(headers, "stddef.h");
 						addUnique(headers, "stdlib.h");
@@ -1673,6 +2291,9 @@ class CBodyEmitter {
 						addUnique(headers, "stddef.h");
 						addUnique(headers, "stdlib.h");
 					case IRIOCall({failure: {target: IRFTAbort}}):
+						addUnique(headers, "stdlib.h");
+					case IRIOAllocate(_, _, IRIRuntime("alloc"), _):
+						addUnique(headers, "hxrt/allocator.h");
 						addUnique(headers, "stdlib.h");
 					case _:
 				}
@@ -1740,9 +2361,11 @@ class CBodyEmitter {
 		final order = requireAggregateFieldOrder(instanceId);
 		final fields:Array<CField> = [];
 		for (fieldName in order) {
+			final declaration = typedDeclarator(requireAggregateFieldIrType(instanceId, fieldName),
+				DName(requireAggregateFieldName(instanceId, fieldName, "definition", instanceId)));
 			fields.push({
-				type: requireAggregateFieldType(instanceId, fieldName),
-				declarator: DName(requireAggregateFieldName(instanceId, fieldName, "definition", instanceId)),
+				type: declaration.type,
+				declarator: declaration.declarator,
 				bitWidth: null,
 				alignments: [],
 				attributes: []
@@ -1751,12 +2374,56 @@ class CBodyEmitter {
 		return DStruct(requireAggregateTag(instanceId), fields, []);
 	}
 
+	/** Forward declarations for direct optional values used across module headers. */
+	public function optionalForwardDeclarations():Array<CDecl>
+		return [
+			for (planId in optionalPlanOrder)
+				DForwardStruct(requireOptionalPlan(planId).cTag, [])
+		];
+
+	/** Stable semantic plan order used by project-layout assignment. */
+	public function orderedOptionalPlanIds():Array<String>
+		return optionalPlanOrder.copy();
+
+	/** One readable `{ has_value, value }` C definition for a nullable record. */
+	public function optionalDefinition(planId:String):CDecl {
+		final optional = requireOptionalPlan(planId);
+		final payload = typedDeclarator(optional.prepared.payload.irType, DName(optional.payloadName));
+		return DStruct(optional.cTag, [
+			{
+				type: new CType(TBool),
+				declarator: DName(optional.presenceName),
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			},
+			{
+				type: payload.type,
+				declarator: payload.declarator,
+				bitWidth: null,
+				alignments: [],
+				attributes: []
+			}
+		], []);
+	}
+
+	public function optionalPayloadType(planId:String):HxcIRTypeRef
+		return requireOptionalPlan(planId).prepared.payload.irType;
+
+	/** Resolve a tagged nullable type to the stable plan that owns its C struct. */
+	public function optionalPlanId(type:HxcIRTypeRef):String
+		return requireOptional(type).prepared.planId;
+
 	public function virtualTableForwardDeclarations():Array<CDecl> {
 		final result:Array<CDecl> = [];
 		final ids = [for (id in virtualLayouts.keys()) id];
 		ids.sort(compareUtf8);
-		for (id in ids)
-			result.push(DForwardStruct(requireVirtualLayout(id).cTag, []));
+		for (id in ids) {
+			final layout = requireVirtualLayout(id);
+			result.push(DForwardStruct(layout.cTag, []));
+			if (layout.cValueTag != null)
+				result.push(DForwardStruct(layout.cValueTag, []));
+		}
 		return result;
 	}
 
@@ -1769,7 +2436,7 @@ class CBodyEmitter {
 			final fields:Array<CField> = [];
 			for (slot in layout.slots) {
 				final parameters:Array<CParam> = [];
-				final receiver = typedDeclarator(IRTPointer(IRTInstance(slot.ownerInstanceId), true), DName(null));
+				final receiver = dispatchReceiverDeclarator(layout, slot, DName(null));
 				parameters.push({type: receiver.type, declarator: receiver.declarator, attributes: []});
 				for (parameterType in slot.parameterTypes) {
 					final parameter = typedDeclarator(parameterType, DName(null));
@@ -1787,6 +2454,26 @@ class CBodyEmitter {
 			if (fields.length == 0)
 				fail('virtual layout `${layout.id}` has no reachable slots');
 			result.push(DStruct(layout.cTag, fields, []));
+			if (layout.cValueTag != null) {
+				final objectMember = requireInterfaceObjectMember(layout);
+				final tableMember = requireInterfaceTableMember(layout);
+				result.push(DStruct(layout.cValueTag, [
+					{
+						type: new CType(TVoid),
+						declarator: DPointer(DName(objectMember), []),
+						bitWidth: null,
+						alignments: [],
+						attributes: []
+					},
+					{
+						type: new CType(TStruct(layout.cTag), [QConst]),
+						declarator: DPointer(DName(tableMember), []),
+						bitWidth: null,
+						alignments: [],
+						attributes: []
+					}
+				], []));
+			}
 		}
 		return result;
 	}
@@ -1798,6 +2485,1106 @@ class CBodyEmitter {
 			result.push(DPrototype([SStatic], [], declaration.type, declaration.declarator, []));
 		}
 		return result;
+	}
+
+	/**
+		Declare program-local Array element callbacks in the shared private header.
+
+		The signatures use only runtime-owned `void *`/status types, so declarations
+		do not force a record definition into the common header. Definitions are
+		emitted after every private record layout is complete.
+	**/
+	public function arrayElementLifecyclePrototypes():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (value in canonicalManagedAggregates()) {
+			result.push(enumLifecyclePrototype(requireAggregateLifecycleName(value.retainName, value, "retain"),
+				requireAggregateLifecycleParameter(value.retainParameterName, value, "retain"), false));
+			result.push(enumLifecyclePrototype(requireAggregateLifecycleName(value.destroyName, value, "destroy"),
+				requireAggregateLifecycleParameter(value.destroyParameterName, value, "destroy"), true));
+		}
+		for (value in canonicalManagedEnums()) {
+			result.push(enumLifecyclePrototype(requireEnumLifecycleName(value.retainName, value, "retain"),
+				requireEnumLifecycleParameter(value.retainParameterName, value, "retain"), false));
+			result.push(enumLifecyclePrototype(requireEnumLifecycleName(value.destroyName, value, "destroy"),
+				requireEnumLifecycleParameter(value.destroyParameterName, value, "destroy"), true));
+			if (value.prepared.recursive) {
+				result.push(enumRecursivePointerPrototype(recursiveCloneName(value), recursiveCloneParameter(value), true));
+				result.push(enumRecursivePointerPrototype(recursiveDestroyName(value), recursiveDestroyParameter(value), false));
+			}
+		}
+		for (value in canonicalManagedOptionals()) {
+			result.push(enumLifecyclePrototype(requireOptionalLifecycleName(value.retainName, value, "retain"),
+				requireOptionalLifecycleParameter(value.retainParameterName, value, "retain"), false));
+			result.push(enumLifecyclePrototype(requireOptionalLifecycleName(value.destroyName, value, "destroy"),
+				requireOptionalLifecycleParameter(value.destroyParameterName, value, "destroy"), true));
+		}
+		for (array in canonicalManagedArrays()) {
+			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.copyName, array, "copy"), array.copyParameterNames, false));
+			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.assignName, array, "assign"), array.assignParameterNames, false));
+			result.push(arrayLifecyclePrototype(requireArrayCallbackName(array.destroyName, array, "destroy"), array.destroyParameterNames, true));
+		}
+		return result;
+	}
+
+	/** Emit the typed retain/release policy for every managed Array element. */
+	public function arrayElementLifecycleDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (value in canonicalManagedAggregates()) {
+			result.push(aggregateRetainDefinition(value));
+			result.push(aggregateDestroyDefinition(value));
+		}
+		for (value in canonicalManagedEnums()) {
+			result.push(enumRetainDefinition(value));
+			result.push(enumDestroyDefinition(value));
+			if (value.prepared.recursive) {
+				result.push(enumRecursiveCloneDefinition(value));
+				result.push(enumRecursiveDestroyDefinition(value));
+			}
+		}
+		for (value in canonicalManagedOptionals()) {
+			result.push(optionalRetainDefinition(value));
+			result.push(optionalDestroyDefinition(value));
+		}
+		for (array in canonicalManagedArrays()) {
+			result.push(arrayCopyDefinition(array));
+			result.push(arrayAssignDefinition(array));
+			result.push(arrayDestroyDefinition(array));
+		}
+		return result;
+	}
+
+	/** Private-header declarations for descriptors referenced by split modules. */
+	public function managedObjectDescriptorDeclarations():Array<CDecl>
+		return new CObjectDescriptorEmitter().externDeclarations(managedObjectDescriptorSpecs());
+
+	/**
+		Emit exact trace/finalizer functions followed by immutable descriptors.
+
+		Only collector-selected instances appear here. Direct classes and ordinary
+		reference-counted Arrays therefore keep their prior C output byte shape and do
+		not pull object/collector names into runtime-free programs.
+	**/
+	public function managedObjectDefinitions():Array<CDecl> {
+		final result:Array<CDecl> = [];
+		for (instanceId in classInstanceOrder) {
+			final value = classesByInstance.get(instanceId);
+			if (value != null && value.prepared.managedByCollector) {
+				if (value.traceName != null)
+					result.push(classTraceDefinition(value));
+				if (value.finalizerName != null)
+					result.push(classFinalizerDefinition(value));
+			}
+		}
+		final arrays = [for (value in arraysByInstance) if (value.prepared.managedByCollector) value];
+		arrays.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		for (array in arrays) {
+			result.push(arrayTraceDefinition(array));
+			result.push(arrayFinalizerDefinition(array));
+		}
+		for (declaration in new CObjectDescriptorEmitter().declarations(managedObjectDescriptorSpecs()))
+			result.push(declaration);
+		return result;
+	}
+
+	function managedObjectDescriptorSpecs():Array<CObjectDescriptorSpec> {
+		final result:Array<CObjectDescriptorSpec> = [];
+		for (instanceId in classInstanceOrder) {
+			final value = classesByInstance.get(instanceId);
+			if (value == null || !value.prepared.managedByCollector)
+				continue;
+			if (value.descriptorName == null)
+				throw new CBodyEmissionError('managed class `$instanceId` lost its descriptor');
+			result.push(new CObjectDescriptorSpec('class.${value.prepared.digest}', value.descriptorName,
+				{type: new CType(TStruct(value.cTag)), declarator: DName(null)}, value.traceName, value.finalizerName, true));
+		}
+		for (array in arraysByInstance) {
+			if (!array.prepared.managedByCollector)
+				continue;
+			if (array.descriptorName == null || array.traceName == null || array.finalizerName == null)
+				throw new CBodyEmissionError('collector-managed Array `${array.prepared.instanceId}` lost descriptor callbacks');
+			result.push(new CObjectDescriptorSpec('array.${array.prepared.digest}', array.descriptorName,
+				{type: new CType(TStruct(new CIdentifier("hxc_array_ref"))), declarator: DName(null)}, array.traceName, array.finalizerName, true));
+		}
+		return result;
+	}
+
+	function classTraceDefinition(value:CLoweredBodyClass):CDecl {
+		if (value.traceName == null)
+			throw new CBodyEmissionError('managed class `${value.prepared.instanceId}` lost its trace function');
+		final objectName = new CIdentifier(value.traceName.value + "_object");
+		final visitName = new CIdentifier(value.traceName.value + "_visit");
+		final contextName = new CIdentifier(value.traceName.value + "_context");
+		final typedName = new CIdentifier(value.traceName.value + "_typed");
+		final typed = EIdentifier(typedName);
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(value.cTag), [QConst]),
+				declarator: DPointer(DName(typedName), []),
+				initializer: IExpr(ECast(new CType(TStruct(value.cTag), [QConst]), DPointer(DName(null), []), EIdentifier(objectName))),
+				attributes: []
+			})
+		];
+		appendClassTraceStatements(statements, value.prepared.instanceId, EUnary(Dereference, typed), visitName, contextName);
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(value.traceName), FPPrototype([
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(objectName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visitName), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(contextName), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function appendClassTraceStatements(statements:Array<CStmt>, instanceId:String, object:CExpr, visitName:CIdentifier, contextName:CIdentifier):Void {
+		final base = classBaseInstances.get(instanceId);
+		if (base != null)
+			appendClassTraceStatements(statements, base, EMember(object, requireClassBaseMember(instanceId), false), visitName, contextName);
+		for (fieldName in requireClassFieldOrder(instanceId)) {
+			final type = requireClassFieldType(instanceId, fieldName);
+			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
+			appendManagedTraceStatements(statements, field, type, visitName, contextName);
+		}
+	}
+
+	/**
+		Visit every exact collector pointer reachable through one finite C value.
+
+		This is the heap-container counterpart to HxcIR managed-root projections.
+		Tags and optional presence are checked before an overlapping or inactive
+		payload is read. Recursive enum nodes remain outside this helper until they
+		have a separately validated recursive trace contract.
+	**/
+	function appendManagedTraceStatements(statements:Array<CStmt>, value:CExpr, type:HxcIRTypeRef, visitName:CIdentifier, contextName:CIdentifier):Void {
+		final directManaged = switch type {
+			case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
+			case _: false;
+		};
+		if (directManaged) {
+			statements.push(SIf(EBinary(NotEqual, value, ENull), SExpr(ECall(EIdentifier(visitName), [EIdentifier(contextName), value])), null));
+			return;
+		}
+		switch type {
+			case IRTInstance(instanceId) if (aggregateFieldOrder.exists(instanceId)):
+				for (fieldName in requireAggregateFieldOrder(instanceId))
+					appendManagedTraceStatements(statements,
+						EMember(value, requireAggregateFieldName(instanceId, fieldName, "managed-trace", instanceId), false),
+						requireAggregateFieldIrType(instanceId, fieldName), visitName, contextName);
+			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId) && requireEnumRepresentation(instanceId) == CBECTagged):
+				final cases:Array<CCase> = [];
+				for (tagName in requireEnumCaseOrder(instanceId)) {
+					final body:Array<CStmt> = [];
+					for (payloadName in requireEnumPayloadNames(instanceId, tagName)) {
+						final payload = EMember(EMember(EMember(value, requireEnumPayloadMember(instanceId), false),
+							requireEnumCaseUnionMember(instanceId, tagName), false),
+							requireEnumPayloadFieldName(instanceId, tagName, payloadName), false);
+						appendManagedTraceStatements(body, payload, requireEnumPayloadFieldType(instanceId, tagName, payloadName), visitName, contextName);
+					}
+					body.push(SBreak);
+					cases.push({values: [EIdentifier(requireEnumCaseDiscriminant(instanceId, tagName))], isDefault: false, body: body});
+				}
+				statements.push(SSwitch(enumTagExpression(value, instanceId), cases));
+			case IRTNullable(_, IRNTagged):
+				final optional = requireOptional(type);
+				final body:Array<CStmt> = [];
+				appendManagedTraceStatements(body, EMember(value, optional.payloadName, false), optional.prepared.payload.irType, visitName, contextName);
+				if (body.length > 0)
+					statements.push(SIf(EMember(value, optional.presenceName, false), SBlock(body), null));
+			case _:
+		}
+	}
+
+	function arrayTraceDefinition(array:CLoweredBodyArray):CDecl {
+		if (array.traceName == null)
+			throw new CBodyEmissionError('collector-managed Array `${array.prepared.instanceId}` lost its trace function');
+		final objectName = new CIdentifier(array.traceName.value + "_object");
+		final visitName = new CIdentifier(array.traceName.value + "_visit");
+		final contextName = new CIdentifier(array.traceName.value + "_context");
+		final typedName = new CIdentifier(array.traceName.value + "_typed");
+		final indexName = new CIdentifier(array.traceName.value + "_index");
+		final typed = EIdentifier(typedName);
+		final value = EMember(typed, CBodyRuntimeNames.identifier(CBRNArrayValueMember), true);
+		final storage = EMember(EMember(value, new CIdentifier("storage"), false), new CIdentifier("memory"), false);
+		final element = typedDeclarator(array.prepared.element.irType, DName(null));
+		final elementType = new CType(element.type.spec, element.type.qualifiers.concat([QConst]));
+		final elements = ECast(elementType, DPointer(element.declarator, []), storage);
+		final loop:Array<CStmt> = [];
+		appendManagedTraceStatements(loop, EIndex(elements, EIdentifier(indexName)), array.prepared.element.irType, visitName, contextName);
+		loop.push(SExpr(EUnary(PostIncrement, EIdentifier(indexName))));
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(array.traceName), FPPrototype([
+				{type: new CType(TVoid, [QConst]), declarator: DPointer(DName(objectName), []), attributes: []},
+				{type: new CType(TNamed(new CIdentifier("hxc_trace_visit_fn"))), declarator: DName(visitName), attributes: []},
+				{type: new CType(TVoid), declarator: DPointer(DName(contextName), []), attributes: []}
+			], false)),
+			body: SBlock([
+				SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TStruct(new CIdentifier("hxc_array_ref")), [QConst]),
+					declarator: DPointer(DName(typedName), []),
+					initializer: IExpr(ECast(new CType(TStruct(new CIdentifier("hxc_array_ref")), [QConst]), DPointer(DName(null), []),
+						EIdentifier(objectName))),
+					attributes: []
+				}),
+				SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TSizeT),
+					declarator: DName(indexName),
+					initializer: IExpr(EInt(CIntegerLiteral.decimal("0"))),
+					attributes: []
+				}),
+				SWhile(EBinary(Less, EIdentifier(indexName), EMember(value, new CIdentifier("length"), false)), SBlock(loop))
+			]),
+			attributes: []
+		});
+	}
+
+	function classFinalizerDefinition(value:CLoweredBodyClass):CDecl {
+		if (value.finalizerName == null)
+			throw new CBodyEmissionError('managed class `${value.prepared.instanceId}` lost its finalizer function');
+		final objectName = new CIdentifier(value.finalizerName.value + "_object");
+		final typedName = new CIdentifier(value.finalizerName.value + "_typed");
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TStruct(value.cTag)),
+				declarator: DPointer(DName(typedName), []),
+				initializer: IExpr(ECast(new CType(TStruct(value.cTag)), DPointer(DName(null), []), EIdentifier(objectName))),
+				attributes: []
+			})
+		];
+		appendClassFinalizerStatements(statements, value.prepared.instanceId, EUnary(Dereference, EIdentifier(typedName)));
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(value.finalizerName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(objectName), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function appendClassFinalizerStatements(statements:Array<CStmt>, instanceId:String, object:CExpr):Void {
+		final base = classBaseInstances.get(instanceId);
+		if (base != null)
+			appendClassFinalizerStatements(statements, base, EMember(object, requireClassBaseMember(instanceId), false));
+		for (fieldName in requireClassFieldOrder(instanceId)) {
+			final type = requireClassFieldType(instanceId, fieldName);
+			final managedByCollector = switch type {
+				case IRTPointer(IRTInstance(target), _) | IRTInstance(target): managedDescriptorNames.exists(target);
+				case _: false;
+			};
+			if (managedByCollector)
+				continue;
+			final field = EMember(object, requireClassFieldName(instanceId, fieldName), false);
+			appendManagedReleases(statements, managedValueOperations(field, type));
+		}
+	}
+
+	function arrayFinalizerDefinition(array:CLoweredBodyArray):CDecl {
+		if (array.finalizerName == null)
+			throw new CBodyEmissionError('collector-managed Array `${array.prepared.instanceId}` lost its finalizer');
+		final objectName = new CIdentifier(array.finalizerName.value + "_object");
+		return DFunction({
+			storage: [SStatic],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(array.finalizerName), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(objectName), []), attributes: []}
+			], false)),
+			body: SBlock([
+				ignoreExpression(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayDisposeInPlace)), [
+					ECast(new CType(TStruct(new CIdentifier("hxc_array_ref"))), DPointer(DName(null), []), EIdentifier(objectName))
+				]))
+			]),
+			attributes: []
+		});
+	}
+
+	function aggregateRetainDefinition(value:CLoweredBodyAggregate):CDecl {
+		final name = requireAggregateLifecycleName(value.retainName, value, "retain");
+		final parameter = requireAggregateLifecycleParameter(value.retainParameterName, value, "retain");
+		final status = requireAggregateLifecycleStatus(value.retainStatusName, value);
+		final recordValue = aggregateLifecycleStorageValue(value, EIdentifier(parameter));
+		final operations = managedValueOperations(recordValue, IRTInstance(value.prepared.instanceId));
+		final statements:Array<CStmt> = [statusDeclaration(status)];
+		for (index in 0...operations.length) {
+			statements.push(SExpr(EBinary(Assign, EIdentifier(status), operations[index].retain)));
+			final rollback:Array<CStmt> = [];
+			var prior = index;
+			while (prior != 0) {
+				prior--;
+				rollback.push(ignoreExpression(operations[prior].release));
+			}
+			rollback.push(SReturn(EIdentifier(status)));
+			statements.push(SIf(EBinary(NotEqual, EIdentifier(status), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock(rollback), null));
+		}
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype([
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(parameter), []),
+					attributes: []
+				}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function aggregateDestroyDefinition(value:CLoweredBodyAggregate):CDecl {
+		final name = requireAggregateLifecycleName(value.destroyName, value, "destroy");
+		final parameter = requireAggregateLifecycleParameter(value.destroyParameterName, value, "destroy");
+		final recordValue = aggregateLifecycleStorageValue(value, EIdentifier(parameter));
+		final operations = managedValueOperations(recordValue, IRTInstance(value.prepared.instanceId));
+		final statements:Array<CStmt> = [];
+		appendManagedReleases(statements, operations);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function aggregateLifecycleStorageValue(value:CLoweredBodyAggregate, rawPointer:CExpr):CExpr {
+		final type = new CType(TStruct(value.cTag));
+		return EUnary(Dereference, ECast(type, DPointer(DName(null), []), rawPointer));
+	}
+
+	function optionalRetainDefinition(value:CLoweredBodyOptional):CDecl {
+		final name = requireOptionalLifecycleName(value.retainName, value, "retain");
+		final parameter = requireOptionalLifecycleParameter(value.retainParameterName, value, "retain");
+		final status = requireOptionalLifecycleStatus(value.retainStatusName, value);
+		final optionalValue = optionalLifecycleStorageValue(value, EIdentifier(parameter));
+		final payload = EMember(optionalValue, value.payloadName, false);
+		final statements:Array<CStmt> = [statusDeclaration(status)];
+		statements.push(SIf(EUnary(LogicalNot, EMember(optionalValue, value.presenceName, false)),
+			SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), null));
+		statements.push(SExpr(EBinary(Assign, EIdentifier(status), managedOptionalRetainCall(value, payload))));
+		statements.push(SIf(EBinary(NotEqual, EIdentifier(status), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SReturn(EIdentifier(status)),
+			null));
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype([
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(parameter), []),
+					attributes: []
+				}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function optionalDestroyDefinition(value:CLoweredBodyOptional):CDecl {
+		final name = requireOptionalLifecycleName(value.destroyName, value, "destroy");
+		final parameter = requireOptionalLifecycleParameter(value.destroyParameterName, value, "destroy");
+		final optionalValue = optionalLifecycleStorageValue(value, EIdentifier(parameter));
+		final payload = EMember(optionalValue, value.payloadName, false);
+		final statements:Array<CStmt> = [
+			SIf(EMember(optionalValue, value.presenceName, false), SBlock([SExpr(managedOptionalDestroyCall(value, payload))]), null)
+		];
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function optionalLifecycleStorageValue(value:CLoweredBodyOptional, rawPointer:CExpr):CExpr {
+		final type = new CType(TStruct(value.cTag));
+		return EUnary(Dereference, ECast(type, DPointer(DName(null), []), rawPointer));
+	}
+
+	/** Retain the one closed managed payload family selected by this optional. */
+	function managedOptionalRetainCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+		final preparedAggregate = value.prepared.payload.aggregateValue();
+		if (preparedAggregate != null && preparedAggregate.managedLifetime) {
+			final aggregate = aggregatesByInstance.get(preparedAggregate.instanceId);
+			if (aggregate == null)
+				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized record `${preparedAggregate.instanceId}`');
+			return ECall(EIdentifier(requireAggregateLifecycleName(aggregate.retainName, aggregate, "retain")), [EUnary(AddressOf, payload)]);
+		}
+		final preparedEnum = value.prepared.payload.enumValue();
+		if (preparedEnum != null && preparedEnum.managedLifetime) {
+			final enumValue = enumsByInstance.get(preparedEnum.instanceId);
+			if (enumValue == null)
+				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
+			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.retainName, enumValue, "retain")), [EUnary(AddressOf, payload)]);
+		}
+		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed record or enum payload');
+	}
+
+	/** Destroy the present payload through the same family chosen for retain. */
+	function managedOptionalDestroyCall(value:CLoweredBodyOptional, payload:CExpr):CExpr {
+		final preparedAggregate = value.prepared.payload.aggregateValue();
+		if (preparedAggregate != null && preparedAggregate.managedLifetime) {
+			final aggregate = aggregatesByInstance.get(preparedAggregate.instanceId);
+			if (aggregate == null)
+				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized record `${preparedAggregate.instanceId}`');
+			return ECall(EIdentifier(requireAggregateLifecycleName(aggregate.destroyName, aggregate, "destroy")), [EUnary(AddressOf, payload)]);
+		}
+		final preparedEnum = value.prepared.payload.enumValue();
+		if (preparedEnum != null && preparedEnum.managedLifetime) {
+			final enumValue = enumsByInstance.get(preparedEnum.instanceId);
+			if (enumValue == null)
+				throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost finalized enum `${preparedEnum.instanceId}`');
+			return ECall(EIdentifier(requireEnumLifecycleName(enumValue.destroyName, enumValue, "destroy")), [EUnary(AddressOf, payload)]);
+		}
+		throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its managed record or enum payload');
+	}
+
+	function enumLifecyclePrototype(name:CIdentifier, parameter:CIdentifier, destroy:Bool):CDecl {
+		final returnType = destroy ? new CType(TVoid) : new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType)));
+		return DPrototype([], [], returnType, DFunction(DName(name), FPPrototype([
+			{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+		], false)), []);
+	}
+
+	function enumRecursivePointerPrototype(name:CIdentifier, parameter:CIdentifier, returnsStatus:Bool):CDecl {
+		final returnType = returnsStatus ? new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))) : new CType(TVoid);
+		return DPrototype([], [], returnType, DFunction(DName(name), FPPrototype([
+			{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+		], false)), []);
+	}
+
+	function enumRetainDefinition(value:CLoweredBodyEnum):CDecl {
+		final name = requireEnumLifecycleName(value.retainName, value, "retain");
+		final parameter = requireEnumLifecycleParameter(value.retainParameterName, value, "retain");
+		final status = requireEnumLifecycleStatus(value.retainStatusName, value);
+		final enumValue = enumLifecycleStorageValue(value, EIdentifier(parameter), false);
+		final cases:Array<CCase> = [];
+		for (tagCase in value.cases) {
+			final operations = enumManagedOperations(value, tagCase, enumValue);
+			final body:Array<CStmt> = [];
+			for (index in 0...operations.length) {
+				body.push(SExpr(EBinary(Assign, EIdentifier(status), operations[index].retain)));
+				final rollback:Array<CStmt> = [];
+				var prior = index;
+				while (prior != 0) {
+					prior--;
+					rollback.push(ignoreExpression(operations[prior].release));
+				}
+				rollback.push(SReturn(EIdentifier(status)));
+				body.push(SIf(EBinary(NotEqual, EIdentifier(status), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock(rollback), null));
+			}
+			body.push(SBreak);
+			cases.push({values: [EIdentifier(tagCase.discriminant)], isDefault: false, body: body});
+		}
+		final statements:Array<CStmt> = [
+			statusDeclaration(status),
+			SSwitch(enumTagExpression(enumValue, value.prepared.instanceId), cases),
+			SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk)))
+		];
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype([
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(parameter), []),
+					attributes: []
+				}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function enumDestroyDefinition(value:CLoweredBodyEnum):CDecl {
+		final name = requireEnumLifecycleName(value.destroyName, value, "destroy");
+		final parameter = requireEnumLifecycleParameter(value.destroyParameterName, value, "destroy");
+		final enumValue = enumLifecycleStorageValue(value, EIdentifier(parameter), false);
+		final cases:Array<CCase> = [];
+		for (tagCase in value.cases) {
+			final operations = enumManagedOperations(value, tagCase, enumValue);
+			final body:Array<CStmt> = [];
+			var index = operations.length;
+			while (index != 0) {
+				index--;
+				body.push(ignoreExpression(operations[index].release));
+			}
+			body.push(SBreak);
+			cases.push({values: [EIdentifier(tagCase.discriminant)], isDefault: false, body: body});
+		}
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+			], false)),
+			body: SBlock([SSwitch(enumTagExpression(enumValue, value.prepared.instanceId), cases)]),
+			attributes: []
+		});
+	}
+
+	function enumManagedOperations(value:CLoweredBodyEnum, tagCase:reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnumCase,
+			enumValue:CExpr):Array<CBodyEmitterManagedOperation> {
+		final result:Array<CBodyEmitterManagedOperation> = [];
+		for (payload in tagCase.payload) {
+			final field = EMember(EMember(EMember(enumValue, requireEnumPayloadMember(value.prepared.instanceId), false),
+				requireEnumCaseUnionMember(value.prepared.instanceId, tagCase.prepared.name), false),
+				payload.cName, false);
+			if (payload.prepared.indirect) {
+				final nestedPrepared = payload.prepared.valueType.enumValue();
+				final nested = nestedPrepared == null ? null : enumsByInstance.get(nestedPrepared.instanceId);
+				if (nested == null || !nested.prepared.recursive)
+					throw new CBodyEmissionError('recursive enum `${value.prepared.instanceId}` lost nested payload `${payload.prepared.name}`');
+				result.push({
+					retain: ECall(EIdentifier(recursiveCloneName(nested)), [EUnary(AddressOf, field)]),
+					release: ECall(EIdentifier(recursiveDestroyName(nested)), [EUnary(AddressOf, field)])
+				});
+			} else {
+				final aggregatePrepared = payload.prepared.valueType.aggregateValue();
+				if (aggregatePrepared != null && aggregatePrepared.managedLifetime) {
+					final aggregate = aggregatesByInstance.get(aggregatePrepared.instanceId);
+					if (aggregate == null)
+						throw new CBodyEmissionError('managed enum `${value.prepared.instanceId}` lost record payload `${aggregatePrepared.instanceId}`');
+					result.push({
+						retain: ECall(EIdentifier(requireAggregateLifecycleName(aggregate.retainName, aggregate, "retain")), [EUnary(AddressOf, field)]),
+						release: ECall(EIdentifier(requireAggregateLifecycleName(aggregate.destroyName, aggregate, "destroy")), [EUnary(AddressOf, field)])
+					});
+					continue;
+				}
+				for (operation in managedValueOperations(field, payload.prepared.storageType()))
+					result.push(operation);
+			}
+		}
+		return result;
+	}
+
+	/** Deep-copy one unique recursive enum node after its containing value was copied. */
+	function enumRecursiveCloneDefinition(value:CLoweredBodyEnum):CDecl {
+		final name = recursiveCloneName(value);
+		final parameter = recursiveCloneParameter(value);
+		final typedSlotName = derivedLifecycleName(name, "typed_slot");
+		final sourceName = derivedLifecycleName(name, "source");
+		final copyName = derivedLifecycleName(name, "copy");
+		final allocatorName = derivedLifecycleName(name, "allocator");
+		final statusName = derivedLifecycleName(name, "operation_status");
+		final enumType = new CType(TStruct(value.valueTag));
+		final typedSlot = EIdentifier(typedSlotName);
+		final source = EIdentifier(sourceName);
+		final copy = EIdentifier(copyName);
+		final allocator = EIdentifier(allocatorName);
+		final status = EIdentifier(statusName);
+		final statements:Array<CStmt> = [
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: enumType,
+				declarator: DPointer(DPointer(DName(typedSlotName), []), []),
+				initializer: IExpr(ECast(enumType, DPointer(DPointer(DName(null), []), []), EIdentifier(parameter))),
+				attributes: []
+			}),
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: enumType,
+				declarator: DPointer(DName(sourceName), []),
+				initializer: IExpr(EUnary(Dereference, typedSlot)),
+				attributes: []
+			}),
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: enumType,
+				declarator: DPointer(DName(copyName), []),
+				initializer: IExpr(ENull),
+				attributes: []
+			}),
+			SDecl({
+				storage: [],
+				alignments: [],
+				type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNAllocatorType))),
+				declarator: DName(allocatorName),
+				initializer: IExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), [])),
+				attributes: []
+			}),
+			statusDeclaration(statusName),
+			SExpr(EBinary(Assign, status,
+				ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNAllocate)),
+					[
+						EUnary(AddressOf, allocator),
+						ESizeOfType(enumType, DName(null)),
+						EAlignOfType(enumType, DName(null)),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, copy))
+					]))),
+			SIf(EBinary(NotEqual, status, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock([SReturn(status)]), null),
+			SExpr(EBinary(Assign, EUnary(Dereference, copy), EUnary(Dereference, source))),
+			SExpr(EBinary(Assign, status, ECall(EIdentifier(requireEnumLifecycleName(value.retainName, value, "retain")), [copy]))),
+			SIf(EBinary(NotEqual, status, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock([
+				ignoreExpression(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNFree)),
+					[
+						EUnary(AddressOf, allocator),
+						copy,
+						ESizeOfType(enumType, DName(null)),
+						EAlignOfType(enumType, DName(null))
+					])),
+				SReturn(status)
+			]), null),
+			SExpr(EBinary(Assign, EUnary(Dereference, typedSlot), copy)),
+			SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk)))
+		];
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype([
+				{
+					type: new CType(TVoid),
+					declarator: DPointer(DName(parameter), []),
+					attributes: []
+				}
+			], false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	/** Destroy and free one unique recursive enum node, then clear its owner slot. */
+	function enumRecursiveDestroyDefinition(value:CLoweredBodyEnum):CDecl {
+		final name = recursiveDestroyName(value);
+		final parameter = recursiveDestroyParameter(value);
+		final typedSlotName = derivedLifecycleName(name, "typed_slot");
+		final ownedName = derivedLifecycleName(name, "owned");
+		final allocatorName = derivedLifecycleName(name, "allocator");
+		final enumType = new CType(TStruct(value.valueTag));
+		final typedSlot = EIdentifier(typedSlotName);
+		final owned = EIdentifier(ownedName);
+		final allocator = EIdentifier(allocatorName);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype([
+				{type: new CType(TVoid), declarator: DPointer(DName(parameter), []), attributes: []}
+			], false)),
+			body: SBlock([
+				SDecl({
+					storage: [],
+					alignments: [],
+					type: enumType,
+					declarator: DPointer(DPointer(DName(typedSlotName), []), []),
+					initializer: IExpr(ECast(enumType, DPointer(DPointer(DName(null), []), []), EIdentifier(parameter))),
+					attributes: []
+				}),
+				SDecl({
+					storage: [],
+					alignments: [],
+					type: enumType,
+					declarator: DPointer(DName(ownedName), []),
+					initializer: IExpr(EUnary(Dereference, typedSlot)),
+					attributes: []
+				}),
+				SDecl({
+					storage: [],
+					alignments: [],
+					type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNAllocatorType))),
+					declarator: DName(allocatorName),
+					initializer: IExpr(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), [])),
+					attributes: []
+				}),
+				SExpr(ECall(EIdentifier(requireEnumLifecycleName(value.destroyName, value, "destroy")), [owned])),
+				ignoreExpression(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNFree)), [
+					      EUnary(AddressOf, allocator),                             owned,
+					ESizeOfType(enumType, DName(null)), EAlignOfType(enumType, DName(null))
+				])),
+				SExpr(EBinary(Assign, EUnary(Dereference, typedSlot), ENull))
+			]),
+			attributes: []
+		});
+	}
+
+	static function recursiveCloneName(value:CLoweredBodyEnum):CIdentifier
+		return derivedLifecycleName(requireEnumLifecycleName(value.retainName, value, "retain"), "recursive_clone");
+
+	static function recursiveDestroyName(value:CLoweredBodyEnum):CIdentifier
+		return derivedLifecycleName(requireEnumLifecycleName(value.destroyName, value, "destroy"), "recursive_destroy");
+
+	static function recursiveCloneParameter(value:CLoweredBodyEnum):CIdentifier
+		return derivedLifecycleName(recursiveCloneName(value), "slot");
+
+	static function recursiveDestroyParameter(value:CLoweredBodyEnum):CIdentifier
+		return derivedLifecycleName(recursiveDestroyName(value), "slot");
+
+	static function derivedLifecycleName(base:CIdentifier, suffix:String):CIdentifier
+		return new CIdentifier(base.value + "_" + suffix);
+
+	function enumLifecycleStorageValue(value:CLoweredBodyEnum, rawPointer:CExpr, readOnly:Bool):CExpr {
+		final type = new CType(TStruct(value.valueTag), readOnly ? [QConst] : []);
+		return EUnary(Dereference, ECast(type, DPointer(DName(null), []), rawPointer));
+	}
+
+	function arrayLifecyclePrototype(name:CIdentifier, parameters:Array<CIdentifier>, destroy:Bool):CDecl {
+		final returnType = destroy ? new CType(TVoid) : new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType)));
+		return DPrototype([], [], returnType, DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, destroy), false)), []);
+	}
+
+	function arrayCopyDefinition(array:CLoweredBodyArray):CDecl {
+		final name = requireArrayCallbackName(array.copyName, array, "copy");
+		final parameters = requireArrayCallbackParameters(array.copyParameterNames, 3, array, "copy");
+		final statusName = requireArrayStatusName(array.copyStatusName, array, "copy");
+		final source = arrayElementStorageValue(array, EIdentifier(parameters[2]), true);
+		final destination = arrayElementStorageValue(array, EIdentifier(parameters[1]), false);
+		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(parameters[0])), statusDeclaration(statusName)];
+		// Retain the destination copy, not the caller's source. Most managed leaves
+		// merely increment a counter, but recursive enum retain replaces pointer
+		// fields with deep copies. Mutating a const source would steal its owner.
+		statements.push(SExpr(EBinary(Assign, destination, source)));
+		appendArrayElementRetains(statements, destination, array, statusName);
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, false), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function arrayAssignDefinition(array:CLoweredBodyArray):CDecl {
+		final name = requireArrayCallbackName(array.assignName, array, "assign");
+		final parameters = requireArrayCallbackParameters(array.assignParameterNames, 3, array, "assign");
+		final statusName = requireArrayStatusName(array.assignStatusName, array, "assign");
+		final source = arrayElementStorageValue(array, EIdentifier(parameters[2]), true);
+		final destination = arrayElementStorageValue(array, EIdentifier(parameters[1]), false);
+		final statements:Array<CStmt> = [
+			ignoreExpression(EIdentifier(parameters[0])),
+			SIf(EBinary(Equal, EIdentifier(parameters[1]), EIdentifier(parameters[2])), SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), null),
+			statusDeclaration(statusName)
+		];
+		// Build a fully retained replacement before touching the old destination.
+		// This provides strong failure behavior and lets retain deep-copy fields in
+		// place without ever casting away the source callback's const contract.
+		final replacementName = derivedLifecycleName(name, "replacement");
+		final replacement = EIdentifier(replacementName);
+		final replacementType = typedDeclarator(array.prepared.element.irType, DName(replacementName));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: replacementType.type,
+			declarator: replacementType.declarator,
+			initializer: IExpr(source),
+			attributes: []
+		}));
+		appendArrayElementRetains(statements, replacement, array, statusName);
+		appendArrayElementReleases(statements, destination, array);
+		statements.push(SExpr(EBinary(Assign, destination, replacement)));
+		statements.push(SReturn(EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))));
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, false), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function arrayDestroyDefinition(array:CLoweredBodyArray):CDecl {
+		final name = requireArrayCallbackName(array.destroyName, array, "destroy");
+		final parameters = requireArrayCallbackParameters(array.destroyParameterNames, 2, array, "destroy");
+		final element = arrayElementStorageValue(array, EIdentifier(parameters[1]), false);
+		final statements:Array<CStmt> = [ignoreExpression(EIdentifier(parameters[0]))];
+		appendArrayElementReleases(statements, element, array);
+		return DFunction({
+			storage: [],
+			functionSpecifiers: [],
+			returnType: new CType(TVoid),
+			declarator: DFunction(DName(name), FPPrototype(arrayLifecycleParameters(parameters, true), false)),
+			body: SBlock(statements),
+			attributes: []
+		});
+	}
+
+	function appendManagedRetains(statements:Array<CStmt>, operations:Array<CBodyEmitterManagedOperation>, statusName:CIdentifier):Void {
+		for (index in 0...operations.length) {
+			statements.push(SExpr(EBinary(Assign, EIdentifier(statusName), operations[index].retain)));
+			final rollback:Array<CStmt> = [];
+			var prior = index;
+			while (prior != 0) {
+				prior--;
+				rollback.push(ignoreExpression(operations[prior].release));
+			}
+			rollback.push(SReturn(EIdentifier(statusName)));
+			statements.push(SIf(EBinary(NotEqual, EIdentifier(statusName), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))), SBlock(rollback), null));
+		}
+	}
+
+	function appendArrayElementRetains(statements:Array<CStmt>, value:CExpr, array:CLoweredBodyArray, statusName:CIdentifier):Void {
+		switch array.prepared.lifecycle {
+			case CBAELEnum(enumValue):
+				final lowered = enumsByInstance.get(enumValue.instanceId);
+				if (lowered == null)
+					throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost enum `${enumValue.instanceId}`');
+				statements.push(SExpr(EBinary(Assign, EIdentifier(statusName),
+					ECall(EIdentifier(requireEnumLifecycleName(lowered.retainName, lowered, "retain")), [EUnary(AddressOf, value)]))));
+				statements.push(SIf(EBinary(NotEqual, EIdentifier(statusName), EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))),
+					SReturn(EIdentifier(statusName)), null));
+			case _:
+				appendManagedRetains(statements, managedValueOperations(value, array.prepared.element.irType), statusName);
+		}
+	}
+
+	function appendArrayElementReleases(statements:Array<CStmt>, value:CExpr, array:CLoweredBodyArray):Void {
+		switch array.prepared.lifecycle {
+			case CBAELEnum(enumValue):
+				final lowered = enumsByInstance.get(enumValue.instanceId);
+				if (lowered == null)
+					throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost enum `${enumValue.instanceId}`');
+				statements.push(SExpr(ECall(EIdentifier(requireEnumLifecycleName(lowered.destroyName, lowered, "destroy")), [EUnary(AddressOf, value)])));
+			case _:
+				appendManagedReleases(statements, managedValueOperations(value, array.prepared.element.irType));
+		}
+	}
+
+	function appendManagedReleases(statements:Array<CStmt>, operations:Array<CBodyEmitterManagedOperation>):Void {
+		var index = operations.length;
+		while (index != 0) {
+			index--;
+			statements.push(ignoreExpression(operations[index].release));
+		}
+	}
+
+	function managedValueOperations(value:CExpr, type:HxcIRTypeRef):Array<CBodyEmitterManagedOperation> {
+		return switch type {
+			case IRTInstance(instanceId) if (bytesInstanceIds.exists(instanceId)): [
+					{
+						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRetain)), [value]),
+						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNBytesRelease)), [value])
+					}
+				];
+			case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)):
+				final array = arraysByInstance.get(instanceId);
+				if (array != null && array.prepared.managedByCollector) []; else [
+					{
+						retain: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRetain)), [value]),
+						release: ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayRelease)), [value])
+					}
+				];
+			case IRTInstance(instanceId) if (enumRepresentations.get(instanceId) == CBECNative): [];
+			case IRTInstance(instanceId) if (enumsByInstance.exists(instanceId)):
+				final nested = enumsByInstance.get(instanceId);
+				if (nested == null || !nested.prepared.managedLifetime) []; else [
+					{
+						retain: ECall(EIdentifier(requireEnumLifecycleName(nested.retainName, nested, "retain")), [EUnary(AddressOf, value)]),
+						release: ECall(EIdentifier(requireEnumLifecycleName(nested.destroyName, nested, "destroy")), [EUnary(AddressOf, value)])
+					}
+				];
+			case IRTInstance(instanceId) if (aggregateFieldOrder.exists(instanceId)):
+				final result:Array<CBodyEmitterManagedOperation> = [];
+				for (fieldName in requireAggregateFieldOrder(instanceId)) {
+					final field = EMember(value, requireAggregateFieldName(instanceId, fieldName, "array-lifecycle", instanceId), false);
+					for (operation in managedValueOperations(field, requireAggregateFieldIrType(instanceId, fieldName)))
+						result.push(operation);
+				}
+				result;
+			case IRTNullable(_, IRNTagged):
+				final optional = requireOptional(type);
+				if (!optional.prepared.managedLifetime) []; else [
+					{
+						retain: ECall(EIdentifier(requireOptionalLifecycleName(optional.retainName, optional, "retain")), [EUnary(AddressOf, value)]),
+						release: ECall(EIdentifier(requireOptionalLifecycleName(optional.destroyName, optional, "destroy")), [EUnary(AddressOf, value)])
+					}
+				];
+			case IRTInstance(instanceId) if (interfaceLayoutsByInstance.exists(instanceId)): [];
+			case IRTBool | IRTInt(_,
+				_) | IRTAbiInteger(_) | IRTFloat(_) | IRTString | IRTCString | IRTPointer(_, _) | IRTFixedArray(_, _, _) | IRTSpan(_, _): [];
+			case _:
+				throw new CBodyEmissionError('managed Array element lifecycle reached unsupported nested type `${typeKey(type)}`');
+		};
+	}
+
+	function arrayElementStorageValue(array:CLoweredBodyArray, rawPointer:CExpr, readOnly:Bool):CExpr {
+		final element = typedDeclarator(array.prepared.element.irType, DName(null));
+		final baseType = readOnly ? new CType(element.type.spec, element.type.qualifiers.concat([QConst])) : element.type;
+		return EUnary(Dereference, ECast(baseType, DPointer(element.declarator, []), rawPointer));
+	}
+
+	static function arrayLifecycleParameters(names:Array<CIdentifier>, destroy:Bool):Array<CParam> {
+		final expected = destroy ? 2 : 3;
+		if (names.length != expected)
+			throw new CBodyEmissionError('Array element callback expected $expected finalized parameters but received ${names.length}');
+		final result:Array<CParam> = [
+			{type: new CType(TVoid), declarator: DPointer(DName(names[0]), []), attributes: []},
+			{type: new CType(TVoid), declarator: DPointer(DName(names[1]), []), attributes: []}
+		];
+		if (!destroy)
+			result.push({type: new CType(TVoid, [QConst]), declarator: DPointer(DName(names[2]), []), attributes: []});
+		return result;
+	}
+
+	static function statusDeclaration(name:CIdentifier):CStmt
+		return SDecl({
+			storage: [],
+			alignments: [],
+			type: new CType(TNamed(CBodyRuntimeNames.identifier(CBRNStatusType))),
+			declarator: DName(name),
+			initializer: null,
+			attributes: []
+		});
+
+	static function ignoreExpression(value:CExpr):CStmt
+		return SExpr(ECast(new CType(TVoid), DName(null), value));
+
+	function canonicalManagedArrays():Array<CLoweredBodyArray> {
+		final result = [for (value in arraysByInstance) if (value.hasLifecycle()) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
+	function canonicalManagedAggregates():Array<CLoweredBodyAggregate> {
+		final result:Array<CLoweredBodyAggregate> = [];
+		for (instanceId in aggregateInstanceOrder) {
+			final value = aggregatesByInstance.get(instanceId);
+			if (value != null && value.prepared.managedLifetime)
+				result.push(value);
+		}
+		return result;
+	}
+
+	function canonicalManagedEnums():Array<CLoweredBodyEnum> {
+		final result = [for (value in enumsByInstance) if (value.prepared.managedLifetime) value];
+		result.sort((left, right) -> compareUtf8(left.prepared.digest, right.prepared.digest));
+		return result;
+	}
+
+	function canonicalManagedOptionals():Array<CLoweredBodyOptional> {
+		final result:Array<CLoweredBodyOptional> = [];
+		for (planId in optionalPlanOrder) {
+			final value = optionalsByPlan.get(planId);
+			if (value != null && value.prepared.managedLifetime)
+				result.push(value);
+		}
+		return result;
+	}
+
+	static function requireEnumLifecycleName(name:Null<CIdentifier>, value:CLoweredBodyEnum, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed enum `${value.prepared.instanceId}` lost its $operation helper name');
+		return name;
+	}
+
+	static function requireAggregateLifecycleName(name:Null<CIdentifier>, value:CLoweredBodyAggregate, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed aggregate `${value.prepared.instanceId}` lost its $operation helper name');
+		return name;
+	}
+
+	static function requireAggregateLifecycleParameter(name:Null<CIdentifier>, value:CLoweredBodyAggregate, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed aggregate `${value.prepared.instanceId}` lost its $operation parameter name');
+		return name;
+	}
+
+	static function requireAggregateLifecycleStatus(name:Null<CIdentifier>, value:CLoweredBodyAggregate):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed aggregate `${value.prepared.instanceId}` lost its retain status local');
+		return name;
+	}
+
+	static function requireOptionalLifecycleName(name:Null<CIdentifier>, value:CLoweredBodyOptional, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its $operation helper name');
+		return name;
+	}
+
+	static function requireOptionalLifecycleParameter(name:Null<CIdentifier>, value:CLoweredBodyOptional, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its $operation parameter name');
+		return name;
+	}
+
+	static function requireOptionalLifecycleStatus(name:Null<CIdentifier>, value:CLoweredBodyOptional):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed optional `${value.prepared.planId}` lost its retain status local');
+		return name;
+	}
+
+	static function requireEnumLifecycleParameter(name:Null<CIdentifier>, value:CLoweredBodyEnum, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed enum `${value.prepared.instanceId}` lost its $operation parameter name');
+		return name;
+	}
+
+	static function requireEnumLifecycleStatus(name:Null<CIdentifier>, value:CLoweredBodyEnum):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed enum `${value.prepared.instanceId}` lost its retain status local');
+		return name;
+	}
+
+	function requireEnumArrayLifecycle(implementationId:String, actionId:String, functionId:String):CBodyEmitterEnumArrayLifecycle {
+		final value = enumArrayLifecycles.get(implementationId);
+		if (value == null)
+			throw new CBodyEmissionError('program-local enum lifecycle `$implementationId` for `$actionId` in `$functionId` is not finalized');
+		return value;
+	}
+
+	function programLocalLifecycle(implementationId:String, actionId:String, functionId:String):CBodyEmitterProgramLocalLifecycle {
+		final aggregate = aggregateLifecycles.get(implementationId);
+		if (aggregate != null)
+			return aggregate;
+		final optional = optionalLifecycles.get(implementationId);
+		if (optional != null)
+			return {
+				instanceId: typeKey(optional.type),
+				retainName: optional.retainName,
+				destroyName: optional.destroyName
+			};
+		return requireEnumArrayLifecycle(implementationId, actionId, functionId);
+	}
+
+	static function requireArrayCallbackName(name:Null<CIdentifier>, array:CLoweredBodyArray, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost its $operation callback name');
+		return name;
+	}
+
+	static function requireArrayCallbackParameters(names:Array<CIdentifier>, expected:Int, array:CLoweredBodyArray, operation:String):Array<CIdentifier> {
+		if (names.length != expected)
+			throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost its $operation callback parameters');
+		return names;
+	}
+
+	static function requireArrayStatusName(name:Null<CIdentifier>, array:CLoweredBodyArray, operation:String):CIdentifier {
+		if (name == null)
+			throw new CBodyEmissionError('managed Array `${array.prepared.semanticKey}` lost its $operation callback status local');
+		return name;
 	}
 
 	public function virtualTableObjectDeclarations():Array<CDecl> {
@@ -1876,7 +3663,7 @@ class CBodyEmitter {
 
 	function virtualThunkParameters(thunk:CBodyEmitterVirtualThunk):Array<CParam> {
 		final result:Array<CParam> = [];
-		final receiver = typedDeclarator(IRTPointer(IRTInstance(thunk.slot.ownerInstanceId), true), DName(thunk.receiverName));
+		final receiver = dispatchReceiverDeclarator(requireLayoutForSlot(thunk.slot), thunk.slot, DName(thunk.receiverName));
 		result.push({type: receiver.type, declarator: receiver.declarator, attributes: []});
 		for (index in 0...thunk.slot.parameterTypes.length) {
 			final parameter = typedDeclarator(thunk.slot.parameterTypes[index], DName(thunk.argumentNames[index]));
@@ -1887,6 +3674,12 @@ class CBodyEmitter {
 
 	function virtualThunkDeclarator(thunk:CBodyEmitterVirtualThunk, inner:CDeclarator):CTypedDeclarator
 		return typedDeclarator(thunk.slot.returnType, inner);
+
+	function dispatchReceiverDeclarator(layout:CBodyEmitterVirtualLayout, slot:CBodyEmitterVirtualSlot, inner:CDeclarator):CTypedDeclarator
+		return layout.cValueTag == null ? typedDeclarator(IRTPointer(IRTInstance(slot.ownerInstanceId), true), inner) : {
+			type: new CType(TVoid),
+			declarator: DPointer(inner, [])
+		};
 
 	public function classDefinitions():Array<CDecl> {
 		final result = classForwardDeclarations();
@@ -2068,7 +3861,7 @@ class CBodyEmitter {
 			for (index in 0...order.length) {
 				final fieldName = order[index];
 				final member = requireAggregateFieldName(instanceId, fieldName, "layout", instanceId);
-				final fieldType = requireAggregateFieldType(instanceId, fieldName);
+				final field = typedDeclarator(requireAggregateFieldIrType(instanceId, fieldName), DName(null));
 				final offset = EOffsetOf(structType, DName(null), member);
 				if (index == 0) {
 					result.push(DStaticAssert(EBinary(Equal, offset, EInt(CIntegerLiteral.decimal("0"))),
@@ -2076,20 +3869,20 @@ class CBodyEmitter {
 				} else {
 					final previousName = order[index - 1];
 					final previousMember = requireAggregateFieldName(instanceId, previousName, "layout", instanceId);
-					final previousType = requireAggregateFieldType(instanceId, previousName);
+					final previous = typedDeclarator(requireAggregateFieldIrType(instanceId, previousName), DName(null));
 					result.push(DStaticAssert(EBinary(GreaterEqual, offset,
-						EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(previousType, DName(null)))),
+						EBinary(Add, EOffsetOf(structType, DName(null), previousMember), ESizeOfType(previous.type, previous.declarator))),
 						'closed record ${tag.value} field $index follows the prior field without overlap'));
 				}
-				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(fieldType, DName(null))),
+				result.push(DStaticAssert(EBinary(GreaterEqual, EAlignOfType(structType, DName(null)), EAlignOfType(field.type, field.declarator)),
 					'closed record ${tag.value} alignment admits field $index'));
 			}
 			final lastIndex = order.length - 1;
 			final lastName = order[lastIndex];
 			final lastMember = requireAggregateFieldName(instanceId, lastName, "layout", instanceId);
-			final lastType = requireAggregateFieldType(instanceId, lastName);
+			final last = typedDeclarator(requireAggregateFieldIrType(instanceId, lastName), DName(null));
 			result.push(DStaticAssert(EBinary(GreaterEqual, ESizeOfType(structType, DName(null)),
-				EBinary(Add, EOffsetOf(structType, DName(null), lastMember), ESizeOfType(lastType, DName(null)))),
+				EBinary(Add, EOffsetOf(structType, DName(null), lastMember), ESizeOfType(last.type, last.declarator))),
 				'closed record ${tag.value} size contains its final field'));
 		}
 		return result;
@@ -2240,6 +4033,15 @@ class CBodyEmitter {
 				addUnique(headers, "hxrt/string_literal.h");
 			case IRTCString:
 			case IRTInstance(instanceId):
+				if (arrayElementTypes.exists(instanceId)) {
+					addUnique(headers, "hxrt/array.h");
+					addTypeHeaders(headers, requireArrayElementType(instanceId), visited);
+					return;
+				}
+				if (bytesInstanceIds.exists(instanceId)) {
+					addUnique(headers, "hxrt/bytes.h");
+					return;
+				}
 				if (imports.typeByInstance(instanceId) != null)
 					return;
 				if (visited.exists(instanceId))
@@ -2273,6 +4075,8 @@ class CBodyEmitter {
 							throw new CBodyEmissionError('class instance `$instanceId` lost field type `$fieldName`');
 						addTypeHeaders(headers, fieldType, visited);
 					}
+				} else if (interfaceLayoutsByInstance.exists(instanceId)) {
+					// The private fat value contains only `void *` and an interface-table pointer.
 				} else {
 					throw new CBodyEmissionError('direct instance `$instanceId` has no finalized C layout');
 				}
@@ -2284,6 +4088,13 @@ class CBodyEmitter {
 			case IRTSpan(element, _):
 				addTypeHeaders(headers, element, visited);
 				addUnique(headers, "stddef.h");
+			case IRTNullable(payload, IRNTagged):
+				addUnique(headers, "stdbool.h");
+				addTypeHeaders(headers, payload, visited);
+			case IRTFunction(parameters, result):
+				for (parameter in parameters)
+					addTypeHeaders(headers, parameter, visited);
+				addTypeHeaders(headers, result, visited);
 			case IRTVoid | IRTFloat(32) | IRTFloat(64):
 			case _:
 				throw new CBodyEmissionError('HxcIR type `${typeKey(type)}` has no admitted strict-C direct-value header mapping');
@@ -2305,6 +4116,33 @@ class CBodyEmitter {
 				constant == null ? fail('native constant `$constantId` has no finalized import') : EIdentifier(constant.cName);
 			case IRCNull: ENull;
 		};
+	}
+
+	/**
+	 * Render a literal with the representation selected for its result type.
+	 *
+	 * Pointer-like values can use C's `NULL` token directly. A nullable record is
+	 * a struct, however, so its absent value is `{ .has_value = false }`; C then
+	 * zero-initializes the unused payload without reading or inventing a value.
+	 */
+	function constantExpressionForType(value:HxcIRConstant, type:HxcIRTypeRef):CExpr {
+		return switch [value, type] {
+			case [IRCNull, IRTNullable(_, IRNTagged)]: directOptionalNullExpression(type);
+			case _: constantExpression(value);
+		};
+	}
+
+	function directOptionalNullExpression(type:HxcIRTypeRef):CExpr {
+		final optional = requireOptional(type);
+		return ECompoundLiteral(cType(type), DName(null), IList([{designators: [DField(optional.presenceName)], value: IExpr(EBool(false))}]));
+	}
+
+	function directOptionalValueExpression(type:HxcIRTypeRef, value:CExpr):CExpr {
+		final optional = requireOptional(type);
+		return ECompoundLiteral(cType(type), DName(null), IList([
+			{designators: [DField(optional.presenceName)], value: IExpr(EBool(true))},
+			{designators: [DField(optional.payloadName)], value: IExpr(value)}
+		]));
 	}
 
 	static function stringLiteralExpression(text:String, byteLength:Int):CExpr {
@@ -2356,7 +4194,8 @@ class CBodyEmitter {
 
 	function emitCall(statements:Array<CStmt>, values:Map<String, CExpr>, spanValueLengths:Map<String, CExpr>, referencedValues:Map<String, Bool>,
 			instruction:HxcIRInstruction, call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, functionNames:Map<String, CIdentifier>,
-			lineDirectives:Bool, nonReturningFunctionIds:Null<Map<String, Bool>>, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Bool {
+			localNames:Map<String, CIdentifier>, globalNames:Map<String, CIdentifier>, spanLengthNames:Map<String, CIdentifier>, lineDirectives:Bool,
+			nonReturningFunctionIds:Null<Map<String, Bool>>, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Bool {
 		final functionId = fn.id;
 		var doesNotReturn = false;
 		final callExpression:CExpr = switch call.dispatch {
@@ -2381,6 +4220,20 @@ class CBodyEmitter {
 					}
 				}
 				virtualCallExpression(slotId, receiverValueId, call.arguments, values, fn, instruction.id);
+			case IRCDInterface(interfaceTypeId, slotId, receiverValueId):
+				for (argument in call.arguments)
+					switch valueType(fn, argument) {
+						case IRTSpan(_, _): return fail('interface call `${instruction.id}` in `$functionId` cannot carry a borrowed span');
+						case _:
+					}
+				interfaceCallExpression(interfaceTypeId, slotId, receiverValueId, call.arguments, values, fn, instruction.id);
+			case IRCDClosure(callableValueId):
+				for (argument in call.arguments)
+					switch valueType(fn, argument) {
+						case IRTSpan(_, _): return fail('function-value call `${instruction.id}` in `$functionId` cannot carry a borrowed span');
+						case _:
+					}
+				ECall(requireValue(values, callableValueId, functionId), call.arguments.map(argument -> requireValue(values, argument, functionId)));
 			case IRCDNative(importId):
 				final imported = imports.functionById(importId);
 				if (imported == null)
@@ -2405,6 +4258,12 @@ class CBodyEmitter {
 			case dispatch if (isHostedOutputDispatch(dispatch)):
 				emitHostedPrintln(statements, values, instruction, call, lineDirectives, functionId);
 				return false;
+			case IRCDRuntime("array", _):
+				emitManagedArrayCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
+			case IRCDRuntime("bytes", _):
+				emitManagedBytesCall(statements, values, referencedValues, instruction, call, temporaryNames, lineDirectives, boundsAbortName, fn);
+				return false;
 			case _: return fail('call `${instruction.id}` in `$functionId` has no admitted static or runtime dispatch');
 		};
 		addLineDirective(statements, instruction.source, lineDirectives);
@@ -2414,7 +4273,11 @@ class CBodyEmitter {
 				return fail('failable direct call `${instruction.id}` in `$functionId` is outside the constructor-status subset');
 			}
 			final failedStatements:Array<CStmt> = [];
-			emitCleanupSteps(failedStatements, failure.cleanup, fn);
+			emitCleanupSteps(failedStatements, failure.cleanup, fn, values, localNames, globalNames, spanLengthNames, boundsAbortName);
+			// A propagated constructor failure returns from this function before its
+			// terminator runs. Unlink the exact-root frame on that early exit too;
+			// otherwise the collector would retain a pointer to dead C stack storage.
+			emitManagedRootFramePop(failedStatements, fn, boundsAbortName);
 			emitFailureTarget(failedStatements, failure, fn, boundsAbortName, 'call `${instruction.id}`');
 			statements.push(SIf(EUnary(LogicalNot, callExpression), SBlock(failedStatements), null));
 			return false;
@@ -2456,6 +4319,245 @@ class CBodyEmitter {
 		return doesNotReturn;
 	}
 
+	/** Emit one validator-approved managed Array operation through checked hxrt calls. */
+	function emitManagedArrayCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final operation = switch call.dispatch {
+			case IRCDRuntime("array", value): value;
+			case _: return fail('managed Array emitter received a non-Array call in `${fn.id}`');
+		};
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('managed Array call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		addLineDirective(statements, instruction.source, lineDirectives);
+		switch operation {
+			case "create-literal":
+				final instanceId = requireArrayInstanceId(result.type, instruction.id, fn.id);
+				final elementType = requireArrayElementType(instanceId);
+				final arrayPlan = requireArrayPlan(instanceId);
+				final resultDeclaration = typedDeclarator(result.type, DName(temporary));
+				statements.push(SDecl({
+					storage: [],
+					alignments: [],
+					type: resultDeclaration.type,
+					declarator: resultDeclaration.declarator,
+					initializer: IExpr(ENull),
+					attributes: []
+				}));
+				final elementDeclaration = typedDeclarator(elementType, DName(null));
+				final elementOperations = if (arrayPlan.hasLifecycle()) {
+					if (arrayPlan.copyName == null || arrayPlan.assignName == null || arrayPlan.destroyName == null)
+						return fail('managed Array `$instanceId` lost its finalized lifecycle callback names');
+					ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNArrayElementOpsType))), DName(null), IList([
+						{designators: [], value: IExpr(ESizeOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(EAlignOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(ENull)},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.copyName))},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.assignName))},
+						{designators: [], value: IExpr(EIdentifier(arrayPlan.destroyName))}
+					]));
+				} else {
+					ECompoundLiteral(new CType(TNamed(CBodyRuntimeNames.identifier(CBRNArrayElementOpsType))), DName(null), IList([
+						{designators: [], value: IExpr(ESizeOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(EAlignOfType(elementDeclaration.type, elementDeclaration.declarator))},
+						{designators: [], value: IExpr(ENull)},
+						{designators: [], value: IExpr(ENull)},
+						{designators: [], value: IExpr(ENull)},
+						{designators: [], value: IExpr(ENull)}
+					]));
+				};
+				if (arrayPlan.prepared.managedByCollector) {
+					final descriptor = arrayPlan.descriptorName;
+					final program = managedProgram;
+					if (descriptor == null || program == null)
+						return fail('collector-managed Array `$instanceId` lost its descriptor or program context');
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNGcAllocate)), [
+						EUnary(AddressOf, EIdentifier(program.collector)),
+						EUnary(AddressOf, EIdentifier(descriptor)),
+						ECast(new CType(TVoid), DPointer(DPointer(DName(null), []), []), EUnary(AddressOf, EIdentifier(temporary)))
+					]), boundsAbortName, instruction.id, fn.id);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayInitInPlace)), [
+						ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+						elementOperations,
+						EIdentifier(temporary)
+					]), boundsAbortName, instruction.id, fn.id);
+				} else {
+					final createCall = if (arrayPlan.hasLifecycle()) ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCreate)),
+						[
+							ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+							elementOperations,
+							EUnary(AddressOf, EIdentifier(temporary))
+						]) else ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayCreateTrivial)), [
+							ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []),
+							ESizeOfType(elementDeclaration.type, elementDeclaration.declarator),
+							EAlignOfType(elementDeclaration.type, elementDeclaration.declarator),
+							EUnary(AddressOf, EIdentifier(temporary))
+					]);
+					emitStatusAbort(statements, createCall, boundsAbortName, instruction.id, fn.id);
+				}
+				for (argumentId in call.arguments) {
+					final element = requireValue(values, argumentId, fn.id);
+					final storage = EMember(EIdentifier(temporary), CBodyRuntimeNames.identifier(CBRNArrayValueMember), true);
+					emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArrayStoragePushCopy)), [
+						EUnary(AddressOf, storage),
+						arrayElementPointer(element, elementType, elementDeclaration)
+					]), boundsAbortName, instruction.id, fn.id);
+				}
+				values.set(result.id, EIdentifier(temporary));
+			case "length":
+				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayLength, boundsAbortName, fn);
+			case "get-checked":
+				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayGetCopy, boundsAbortName, fn);
+			case "push":
+				emitManagedArrayOutCall(statements, values, instruction, call, temporary, CBRNArrayPushCopy, boundsAbortName, fn);
+			case "set":
+				if (call.arguments.length != 3)
+					return fail('Array set `${instruction.id}` in `${fn.id}` lost its three arguments');
+				final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+				arguments[1] = ECast(new CType(TSizeT), DName(null), arguments[1]);
+				final elementType = valueType(fn, call.arguments[2]);
+				if (elementType == null)
+					return fail('Array set `${instruction.id}` in `${fn.id}` lost its element type');
+				final elementDeclaration = typedDeclarator(elementType, DName(null));
+				arguments[2] = arrayElementPointer(arguments[2], elementType, elementDeclaration);
+				emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNArraySetCopy)), arguments), boundsAbortName, instruction.id,
+					fn.id);
+				values.set(result.id, requireValue(values, call.arguments[2], fn.id));
+				if (!referencedValues.exists(result.id))
+					statements.push(SExpr(ECast(new CType(TVoid), DName(null), requireValue(values, result.id, fn.id))));
+				return;
+			case _:
+				fail('managed Array call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		}
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	function emitManagedArrayOutCall(statements:Array<CStmt>, values:Map<String, CExpr>, instruction:HxcIRInstruction, call:HxcIRCall, temporary:CIdentifier,
+			runtimeName:CBodyRuntimeName, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final result = requireResult(instruction, fn.id);
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: null,
+			attributes: []
+		}));
+		final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+		if (runtimeName == CBRNArrayGetCopy && arguments.length == 2)
+			arguments[1] = ECast(new CType(TSizeT), DName(null), arguments[1]);
+		if (runtimeName == CBRNArrayPushCopy && arguments.length == 2) {
+			final elementType = valueType(fn, call.arguments[1]);
+			if (elementType == null)
+				return fail('Array push `${instruction.id}` in `${fn.id}` lost its element type');
+			final elementDeclaration = typedDeclarator(elementType, DName(null));
+			arguments[1] = arrayElementPointer(arguments[1], elementType, elementDeclaration);
+		}
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+	}
+
+	/** Emit one validator-approved fixed-length Bytes operation. */
+	function emitManagedBytesCall(statements:Array<CStmt>, values:Map<String, CExpr>, referencedValues:Map<String, Bool>, instruction:HxcIRInstruction,
+			call:HxcIRCall, temporaryNames:Map<String, CIdentifier>, lineDirectives:Bool, boundsAbortName:Null<CIdentifier>, fn:HxcIRFunction):Void {
+		final operation = switch call.dispatch {
+			case IRCDRuntime("bytes", value): value;
+			case _: return fail('managed Bytes emitter received a non-Bytes call in `${fn.id}`');
+		};
+		final arguments = call.arguments.map(valueId -> requireValue(values, valueId, fn.id));
+		var runtimeName:CBodyRuntimeName;
+		switch operation {
+			case "alloc":
+				runtimeName = CBRNBytesCreateZeroed;
+				arguments.unshift(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []));
+			case "of-string-utf8":
+				runtimeName = CBRNBytesCreateUtf8Copy;
+				arguments.unshift(ECall(EIdentifier(CBodyRuntimeNames.identifier(CBRNDefaultAllocator)), []));
+			case "length":
+				runtimeName = CBRNBytesLength;
+			case "get":
+				runtimeName = CBRNBytesGet;
+			case "set":
+				runtimeName = CBRNBytesSet;
+			case "sub":
+				runtimeName = CBRNBytesSub;
+			case "blit":
+				runtimeName = CBRNBytesBlit;
+			case "fill":
+				runtimeName = CBRNBytesFill;
+			case "compare":
+				runtimeName = CBRNBytesCompare;
+			case _:
+				return fail('managed Bytes call `${instruction.id}` in `${fn.id}` names unsupported operation `$operation`');
+		}
+		addLineDirective(statements, instruction.source, lineDirectives);
+		if (call.returnType == IRTVoid) {
+			if (instruction.result != null)
+				return fail('Void Bytes call `${instruction.id}` in `${fn.id}` unexpectedly defines a value');
+			emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
+			return;
+		}
+		final result = requireResult(instruction, fn.id);
+		final temporary = temporaryNames.get(result.id);
+		if (temporary == null)
+			return fail('managed Bytes call `${instruction.id}` in `${fn.id}` has no finalized result temporary');
+		final declaration = typedDeclarator(result.type, DName(temporary));
+		final ownsBytes = switch result.type {
+			case IRTInstance(instanceId): bytesInstanceIds.exists(instanceId);
+			case _: false;
+		};
+		statements.push(SDecl({
+			storage: [],
+			alignments: [],
+			type: declaration.type,
+			declarator: declaration.declarator,
+			initializer: ownsBytes ? IExpr(ENull) : null,
+			attributes: []
+		}));
+		arguments.push(EUnary(AddressOf, EIdentifier(temporary)));
+		emitStatusAbort(statements, ECall(EIdentifier(CBodyRuntimeNames.identifier(runtimeName)), arguments), boundsAbortName, instruction.id, fn.id);
+		values.set(result.id, EIdentifier(temporary));
+		if (!referencedValues.exists(result.id))
+			statements.push(SExpr(ECast(new CType(TVoid), DName(null), EIdentifier(temporary))));
+	}
+
+	/**
+		Pass one element by address without wrapping an aggregate inside itself.
+
+		A scalar expression such as `12` is not addressable in C, so it becomes the
+		compound literal `(int32_t){12}` first. Struct-valued carriers—including
+		closed records, literal-backed Strings, tagged optionals, and tagged enums—are
+		already emitted as addressable values (normally their own compound literal or
+		temporary). Adding another struct initializer would incorrectly try to
+		initialize the first field with the whole value.
+	**/
+	function arrayElementPointer(value:CExpr, type:HxcIRTypeRef, declaration:CTypedDeclarator):CExpr {
+		switch type {
+			case IRTString | IRTNullable(_, IRNTagged):
+				return EUnary(AddressOf, value);
+			case IRTInstance(instanceId):
+				if (aggregateTags.exists(instanceId))
+					return EUnary(AddressOf, value);
+				final representation = enumRepresentations.get(instanceId);
+				if (representation != null) {
+					switch representation {
+						case CBECTagged: return EUnary(AddressOf, value);
+						case CBECNative:
+					}
+				}
+			case _:
+		}
+		return EUnary(AddressOf, ECompoundLiteral(declaration.type, declaration.declarator, IList([{designators: [], value: IExpr(value)}])));
+	}
+
+	static function emitStatusAbort(statements:Array<CStmt>, call:CExpr, boundsAbortName:Null<CIdentifier>, instructionId:String, functionId:String):Void
+		statements.push(SIf(EBinary(NotEqual, call, EIdentifier(CBodyRuntimeNames.identifier(CBRNStatusOk))),
+			SExpr(ECall(EIdentifier(requireBoundsAbortName(boundsAbortName, instructionId, functionId)), [])), null));
+
 	function virtualCallExpression(slotId:String, receiverValueId:String, argumentValueIds:Array<String>, values:Map<String, CExpr>, fn:HxcIRFunction,
 			instructionId:String):CExpr {
 		final slot = requireVirtualSlot(slotId);
@@ -2482,6 +4584,21 @@ class CBodyEmitter {
 		final header = EMember(rootObject, requireClassDispatchHeader(layout.rootInstanceId), rootPath.length == 0);
 		final functionPointer = EMember(header, slot.cMember, true);
 		final arguments:Array<CExpr> = [slotReceiver];
+		for (argumentValueId in argumentValueIds)
+			arguments.push(requireValue(values, argumentValueId, fn.id));
+		return ECall(functionPointer, arguments);
+	}
+
+	function interfaceCallExpression(interfaceTypeId:String, slotId:String, receiverValueId:String, argumentValueIds:Array<String>, values:Map<String, CExpr>,
+			fn:HxcIRFunction, instructionId:String):CExpr {
+		final layout = requireInterfaceLayout(interfaceTypeId);
+		final slot = requireVirtualSlot(slotId);
+		if (slot.ownerInstanceId != interfaceTypeId || requireLayoutForSlot(slot).id != layout.id)
+			return fail('interface call `$instructionId` in `${fn.id}` selected a slot from another interface');
+		final receiver = requireValue(values, receiverValueId, fn.id);
+		final table = EMember(receiver, requireInterfaceTableMember(layout), false);
+		final functionPointer = EMember(table, slot.cMember, true);
+		final arguments:Array<CExpr> = [EMember(receiver, requireInterfaceObjectMember(layout), false)];
 		for (argumentValueId in argumentValueIds)
 			arguments.push(requireValue(values, argumentValueId, fn.id));
 		return ECall(functionPointer, arguments);
@@ -2613,6 +4730,20 @@ class CBodyEmitter {
 		return tag;
 	}
 
+	function requireOptional(type:HxcIRTypeRef):CLoweredBodyOptional {
+		final value = optionalsByType.get(exactTypeKey(type));
+		if (value == null)
+			throw new CBodyEmissionError('direct optional type `${exactTypeKey(type)}` has no finalized C plan');
+		return value;
+	}
+
+	function requireOptionalPlan(planId:String):CLoweredBodyOptional {
+		final value = optionalsByPlan.get(planId);
+		if (value == null)
+			throw new CBodyEmissionError('direct optional plan `$planId` has no finalized C plan');
+		return value;
+	}
+
 	function requireAggregateFieldName(instanceId:String, fieldName:String, instructionId:String, functionId:String):CIdentifier {
 		final name = aggregateFieldNames.get(aggregateFieldKey(instanceId, fieldName));
 		if (name == null) {
@@ -2632,12 +4763,12 @@ class CBodyEmitter {
 		return requireAggregateFieldName(instanceId, fieldName, instructionId, functionId);
 	}
 
-	function requireAggregateFieldType(instanceId:String, fieldName:String):CType {
+	function requireAggregateFieldIrType(instanceId:String, fieldName:String):HxcIRTypeRef {
 		final type = aggregateFieldTypes.get(aggregateFieldKey(instanceId, fieldName));
 		if (type == null) {
 			throw new CBodyEmissionError('direct aggregate instance `$instanceId` has no finalized type for member `$fieldName`');
 		}
-		return cType(type);
+		return type;
 	}
 
 	function requireAggregateFieldOrder(instanceId:String):Array<String> {
@@ -2739,6 +4870,28 @@ class CBodyEmitter {
 		return type;
 	}
 
+	function requireArrayElementType(instanceId:String):HxcIRTypeRef {
+		final type = arrayElementTypes.get(instanceId);
+		if (type == null)
+			throw new CBodyEmissionError('managed Array instance `$instanceId` has no element representation');
+		return type;
+	}
+
+	function requireArrayPlan(instanceId:String):CLoweredBodyArray {
+		final value = arraysByInstance.get(instanceId);
+		if (value == null)
+			throw new CBodyEmissionError('managed Array instance `$instanceId` has no finalized element-lifecycle plan');
+		return value;
+	}
+
+	function requireArrayInstanceId(type:HxcIRTypeRef, instructionId:String, functionId:String):String {
+		return switch type {
+			case IRTInstance(instanceId) if (arrayElementTypes.exists(instanceId)): instanceId;
+			case _:
+				throw new CBodyEmissionError('managed Array use `$instructionId` in `$functionId` lost its specialized instance type');
+		};
+	}
+
 	function requireClassDispatchHeader(instanceId:String):CIdentifier {
 		final value = classDispatchHeaders.get(instanceId);
 		if (value == null)
@@ -2750,6 +4903,27 @@ class CBodyEmitter {
 		final value = virtualLayouts.get(id);
 		if (value == null)
 			throw new CBodyEmissionError('virtual dispatch has no finalized layout `$id`');
+		return value;
+	}
+
+	function requireInterfaceLayout(instanceId:String):CBodyEmitterVirtualLayout {
+		final value = interfaceLayoutsByInstance.get(instanceId);
+		if (value == null)
+			throw new CBodyEmissionError('interface dispatch has no finalized value layout for `$instanceId`');
+		return value;
+	}
+
+	function requireInterfaceObjectMember(layout:CBodyEmitterVirtualLayout):CIdentifier {
+		final value = layout.cObjectMember;
+		if (value == null)
+			throw new CBodyEmissionError('interface layout `${layout.id}` lost its object member');
+		return value;
+	}
+
+	function requireInterfaceTableMember(layout:CBodyEmitterVirtualLayout):CIdentifier {
+		final value = layout.cTableMember;
+		if (value == null)
+			throw new CBodyEmissionError('interface layout `${layout.id}` lost its table member');
 		return value;
 	}
 
@@ -3028,6 +5202,26 @@ class CBodyEmitter {
 			case IRTFunction(_, _): "function";
 			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${typeKey(element)}>';
 			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${typeKey(element)}>';
+			case IRTDynamic: "dynamic";
+		};
+	}
+
+	/** Exact structural type key used when a representation plan owns C layout. */
+	static function exactTypeKey(type:HxcIRTypeRef):String {
+		return switch type {
+			case IRTBool: "bool";
+			case IRTInt(width, signed): 'int:$width:${signed ? "signed" : "unsigned"}';
+			case IRTAbiInteger(kind): 'abi-int:$kind';
+			case IRTFloat(width): 'float:$width';
+			case IRTString: "string-utf8";
+			case IRTCString: "cstring";
+			case IRTVoid: "void";
+			case IRTInstance(instanceId): 'instance:$instanceId';
+			case IRTPointer(pointee, nullable): 'pointer:${nullable ? "nullable" : "non-null"}<${exactTypeKey(pointee)}>';
+			case IRTNullable(inner, representation): 'nullable:$representation<${exactTypeKey(inner)}>';
+			case IRTFunction(parameters, result): 'function(${parameters.map(exactTypeKey).join(",")})->${exactTypeKey(result)}';
+			case IRTFixedArray(element, length, witnessId): 'fixed-array:$length:$witnessId<${exactTypeKey(element)}>';
+			case IRTSpan(element, mutable): 'span:${mutable ? "mutable" : "const"}<${exactTypeKey(element)}>';
 			case IRTDynamic: "dynamic";
 		};
 	}

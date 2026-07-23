@@ -16,23 +16,89 @@ see [deterministic static initialization](static-initialization.md).
 ## Typed function boundary
 
 Every admitted function has a compiler-provided `TFun` contract. Parameters and
-results must resolve to the already admitted direct primitive or bounded enum
-representations. Non-generic primitive functions map `Void`, `Bool`, `Int`,
-`UInt`, and `Float` through `CPrimitiveSemantics`; closed generic calls first
-apply their normalized type arguments and then enter the same typed boundary.
+results must resolve to a representation already admitted by the compiler, such
+as a direct primitive, record, enum, class reference, or string. Non-generic
+primitive functions map `Void`, `Bool`, `Int`, `UInt`, and `Float` through
+`CPrimitiveSemantics`; closed generic calls first apply their normalized type
+arguments and then enter the same typed boundary.
 Parameters become immutable HxcIR values and structural C parameters. The
 compiler never reconstructs a signature from text and never uses `Reflect`,
 `Dynamic`, `Any`, an unchecked cast, or raw C as a missing-type escape.
 
-Only direct calls to typed static Haxe fields are admitted. The graph collector
-walks real `TypedExpr` nodes with the typed compiler API, is cycle-safe, and
-normalizes the reachable set before lowering. An unavailable body, indirect
-call, unsupported type, or other unimplemented semantic form stops with exact
-source-positioned `HXC1001`.
+Direct calls remain the smallest path, but exact non-capturing function values
+are also admitted. Assigning or passing a static Haxe function preserves its
+complete parameter and result types in HxcIR and emits an ordinary C function
+pointer such as `int32_t (*operation)(int32_t)`. Calling that value uses the
+pointer directly; it does not box arguments, erase them to `void *`, or select a
+runtime feature.
 
-Default, optional, and rest parameters are not silently approximated. Until
-their complete Haxe semantics are implemented, each has a distinct scoped
-`HXC1001` detail naming the affected parameter, and the build owns no output.
+Haxe enum constructors can also be function values. For example,
+`parseId(token, ShowDialogue)` passes the typed constructor
+`ScenarioId -> FlowAction`. C has no standalone constructor symbol for a tagged
+union, so haxe.c creates one deterministic adapter function. The adapter is a
+normal validated HxcIR function that accepts the constructor payload and returns
+the exact enum value. This keeps it visible to naming, project layout, snapshots,
+and native validation instead of hiding semantic work in the printer. The first
+slice admits non-recursive payloads that need no retain operation; managed or
+recursive constructor adapters remain fail-closed until their ownership steps
+are explicit.
+
+The graph collector walks real `TypedExpr` nodes with the typed compiler API, is
+cycle-safe, and normalizes the reachable set before lowering. An unavailable
+body, unsupported callable signature, capturing closure, or other unimplemented
+semantic form stops with exact source-positioned `HXC1001`.
+
+## Optional and default arguments
+
+Haxe and C describe omitted arguments differently. Haxe lets a direct call
+leave off trailing parameters that have defaults. C calls always pass exactly
+the number of arguments in the function prototype. haxe.c bridges that gap at
+compile time:
+
+```haxe
+function tile(x:Int, y:Int = 4):Int
+  return x * 10 + y;
+
+tile(2);       // omitted: use the declaration default 4
+tile(2, 7);    // explicit: use 7
+```
+
+Both calls become ordinary full-arity C calls:
+
+```c
+hxc_tile(2, 4);
+hxc_tile(2, 7);
+```
+
+The compiler captures the default as a Haxe-typed expression while preparing
+the reached function. At a proven direct static or direct instance call, it
+appends any omitted trailing defaults, lowers every completed value through
+the normal representation and ownership rules, and records the full argument
+list in HxcIR. The C emitter therefore needs no arity flag, wrapper overload,
+or runtime "was this supplied?" branch.
+
+An optional spelling such as `?catalog:ScenarioMessages` is the same mechanism
+with a typed `null` default. A written `null` is already present in the call's
+argument list; an omitted value is absent until haxe.c copies the declaration
+default. Keeping those cases separate matters for non-null defaults.
+
+The target deliberately configures Haxe with `padNulls: false`. `padNulls`
+means "insert null placeholders into a shorter typed call." Enabling it would
+hide omission and could incorrectly replace `y = 4` with `null`. haxe.c instead
+keeps the shorter call visible and applies the one authoritative declaration
+default itself.
+
+This support is bounded by the value representations already implemented.
+Primitive optionals such as `?value:Bool`, `?value:Int`, `?value:UInt`, and
+`?value:Float` use the same direct tagged representation as other non-pointer
+values: one presence bit plus the exact primitive payload. Consequently,
+omitted/null, false/zero, and nonzero values remain distinct without boxing or
+a magic sentinel. Literal `String` defaults and nullable admitted records,
+enums, Arrays, and class references also work through their selected
+representations. Constructors, indirect function values, unresolved
+virtual/interface omission, exports, and rest parameters remain fail-closed.
+Rest parameters still report the parameter-specific `HXC1001`; they are not C
+variadics.
 
 ## Module-level functions and fields
 
@@ -59,9 +125,9 @@ The focused `ModuleFunctions.hx` fixture covers a module constant, public and
 private functions, an inline helper, startup initialization, the Haxe entry
 function, split project ownership, Eval parity, and strict native C. Its typed
 inventory, symbol table, project plan, header, module source, and entry source
-are registered snapshots. A module function using a not-yet-supported optional
-argument proves that unsupported module fields still stop at the source with
-`HXC1001` and leave no output.
+are registered snapshots. A module function using a rest argument proves that
+unsupported module fields still stop at the source with `HXC1001` and leave no
+output.
 
 ## Closed generic functions
 
@@ -190,18 +256,28 @@ npm run snapshots:check
 
 The suite renders twice, reverses discovery order, compares portable and metal,
 checks exact HxcIR/header/C-source-set/symbol snapshots, proves explicit
-argument conversion order, verifies direct and mutual recursion planning, and
+argument conversion order, exact non-capturing function pointers and indirect
+calls, verifies direct and mutual recursion planning, and
 checks readable module-level fields under Eval, generated C, and a strict native
-compiler. It also exercises the scoped
-default/optional/rest plus non-hosted-entry diagnostics, then runs portable,
+compiler. Focused direct-call fixtures cover omitted versus explicit primitive
+defaults, multiple trailing defaults, nesting, recursion, source-order side
+effects, cross-module calls, optional record/enum/class values, explicit null,
+a literal string default, and direct instance methods. They compile in unity,
+split, and package layouts, repeat byte-identically, match Eval, and run as
+strict native C at `-O0`, `-O2`, and under address/undefined-behavior
+sanitizers. Repeated requests through one warm Haxe compiler server remain
+byte-identical. The suite also exercises scoped rest and non-hosted-entry
+diagnostics, then runs portable,
 metal, and explicit `hxc_runtime=none` production builds, compares isolated
 output roots byte for byte, validates the analyzed sidecars, and compiles/runs
 both fixture and production C under strict GCC and Clang lanes at `-O0` and
 `-O2`.
 
-Objects, strings, general arrays, generic classes/references, descriptor-driven
-generic bodies, instance/virtual calls, closures, exceptions, allocation,
-public exports, user arguments, and general standard-library lowering remain
+Broader object/string operations, general arrays, generic classes/references,
+descriptor-driven generic bodies, unresolved virtual/interface omission,
+capturing closures and closure environments, exceptions, escaping allocation,
+managed or recursive enum-constructor adapters, optional/default constructors,
+public exports, rest arguments, and general standard-library lowering remain
 outside this slice and fail closed. Native
 build orchestration is still future `hxc`/adapter work; direct Haxe invocation
 emits the owned C project but does not replace the C compiler invocation.

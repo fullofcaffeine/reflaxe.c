@@ -13,12 +13,18 @@
     "src/reflaxe/c/lowering/CBodyConstructor.hx",
     "test/constructor_lowering/fixtures/conditional/Main.hx",
     "test/constructor_lowering/fixtures/cycle/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_alias/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_constructor/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_forward/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_return/Main.hx",
     "test/constructor_lowering/fixtures/escape_alias/Main.hx",
-    "test/constructor_lowering/fixtures/escape_argument/Main.hx",
     "test/constructor_lowering/fixtures/escape_return/Main.hx",
     "test/constructor_lowering/fixtures/escape_self/Main.hx",
     "test/constructor_lowering/fixtures/generic/Main.hx",
     "test/constructor_lowering/fixtures/native_layout/Main.hx",
+    "test/constructor_lowering/fixtures/owned_fallible/Main.hx",
+    "test/constructor_lowering/fixtures/owned_mutable/Main.hx",
+    "test/constructor_lowering/fixtures/owned_return/Main.hx",
     "test/constructor_lowering/run.py"
   ],
   "runner": {
@@ -37,7 +43,7 @@
     ],
     "stdout": {
       "mode": "regex",
-      "value": "fail-closed escape/cycle/native-layout/generic edges passed$"
+      "value": "fail-closed borrow/escape/cycle/native-layout/generic edges passed$"
     }
   }
 }

@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "functions": [
+    "GuiButton",
+    "GuiDisable",
+    "GuiDummyRec",
+    "GuiEnable",
+    "GuiGetState",
+    "GuiGetStyle",
+    "GuiGetTextWidth",
+    "GuiGroupBox",
+    "GuiIsLocked",
+    "GuiLabel",
+    "GuiLabelButton",
+    "GuiLine",
+    "GuiLoadStyleDefault",
+    "GuiLock",
+    "GuiPanel",
+    "GuiSetAlpha",
+    "GuiSetState",
+    "GuiSetStyle",
+    "GuiStatusBar",
+    "GuiUnlock",
+    "GuiWindowBox"
+  ],
+  "implementation": {
+    "macro": "RAYGUI_IMPLEMENTATION",
+    "owner": "raygui-static-library",
+    "translationUnits": 1,
+    "sourceTemplateSha256": "3c206e58f97342b6b2359be7e28c49620b9045efc9b04fa89fe70102d0b7ce73"
+  },
+  "canonicalAbi": {
+    "target": "x86_64-unknown-linux-gnu",
+    "languageStandard": "c11",
+    "defines": []
+  },
+  "omissions": [
+    {
+      "family": "pointer-mutating-controls",
+      "reason": "Text boxes, lists, toggles, sliders, color controls, grids, scroll panels, tabs, and message boxes require typed mutable-borrow and buffer-capacity contracts before the ergonomic facade can expose them.",
+      "owner": "haxe_c-xge.19.6.1"
+    },
+    {
+      "family": "style-and-icon-file-loading",
+      "reason": "Style and icon loading allocate or retain Raylib resources and need explicit ownership, cleanup, failure, and packaged-file policies.",
+      "owner": "haxe_c-xge.19.6.1"
+    },
+    {
+      "family": "remaining-public-header",
+      "reason": "The first binding is a coherent editor-shell subset and does not claim complete raygui 5.0 coverage.",
+      "owner": "haxe_c-xge.19.6.1"
+    }
+  ]
+}

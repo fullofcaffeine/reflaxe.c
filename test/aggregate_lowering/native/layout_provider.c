@@ -10,6 +10,9 @@ size_t hxc_test_envelope_size(void);
 size_t hxc_test_envelope_alignment(void);
 size_t hxc_test_envelope_enabled_offset(void);
 size_t hxc_test_envelope_point_offset(void);
+size_t hxc_test_actor_size(void);
+size_t hxc_test_actor_alignment(void);
+size_t hxc_test_actor_phase_offset(void);
 
 size_t hxc_test_pair_size(void)
 {
@@ -49,4 +52,19 @@ size_t hxc_test_envelope_enabled_offset(void)
 size_t hxc_test_envelope_point_offset(void)
 {
   return offsetof(struct HXC_ENVELOPE_TAG, HXC_ENVELOPE_POINT);
+}
+
+size_t hxc_test_actor_size(void)
+{
+  return sizeof(struct HXC_ACTOR_TAG);
+}
+
+size_t hxc_test_actor_alignment(void)
+{
+  return _Alignof(struct HXC_ACTOR_TAG);
+}
+
+size_t hxc_test_actor_phase_offset(void)
+{
+  return offsetof(struct HXC_ACTOR_TAG, HXC_ACTOR_PHASE);
 }

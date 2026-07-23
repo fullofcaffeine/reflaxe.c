@@ -22,11 +22,12 @@ native pointers, and other open or representation-dependent arguments fail at
 the source call with exact `HXC1001`. No boxed or descriptor-driven fallback is
 selected implicitly, and rejection leaves no plausible output.
 
-Type arguments are inferred from typed call arguments first and, when needed,
-from the compiler-resolved callee function type. Repeated occurrences of the
-same type parameter must resolve to the same canonical type. Default, optional,
-rest, indirect, instance, virtual, and interface calls retain their existing
-fail-closed boundaries.
+Type arguments are inferred from the written typed call arguments first and,
+when needed, from the compiler-resolved callee function type. A shorter direct
+call is accepted only when every omitted declaration argument is optional; the
+function layer then supplies its typed default. Repeated occurrences of the
+same type parameter must resolve to the same canonical type. Rest, indirect,
+and unresolved virtual or interface omission retain fail-closed boundaries.
 
 ## Semantic identity and sharing
 

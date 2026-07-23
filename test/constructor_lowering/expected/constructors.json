@@ -8,6 +8,14 @@
     "haxePath": "BaseRecord"
   },
   {
+    "instanceId": "instance.class.445e668dc10d9b0786580ae268da848cba775ff445dade8e1aef82c1590e9b20",
+    "elided": false,
+    "cName": "hxc_compiler_constructor_CounterOwner",
+    "canFail": false,
+    "id": "constructor.CounterOwner",
+    "haxePath": "CounterOwner"
+  },
+  {
     "instanceId": "instance.class.2dd778e14cb710013ad030edefa961284618b305f3b865084d3bd57c341fb911",
     "elided": true,
     "cName": null,
@@ -46,5 +54,13 @@
     "canFail": false,
     "id": "constructor.LeafRecord",
     "haxePath": "LeafRecord"
+  },
+  {
+    "instanceId": "instance.class.a095ab85ab47f0a42fdf4b4481d77d9c964a28a1c98eea73b260cf0f96a74be7",
+    "elided": false,
+    "cName": "hxc_compiler_constructor_OwnedCounter",
+    "canFail": false,
+    "id": "constructor.OwnedCounter",
+    "haxePath": "OwnedCounter"
   }
 ]

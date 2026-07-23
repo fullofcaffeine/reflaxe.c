@@ -1,10 +1,12 @@
 # Concrete class instance layouts
 
 E3.T04 adds a bounded production representation for ordinary non-generic Haxe
-classes. Reachable class declarations lower through schema-10 HxcIR to private
+classes. Reachable class declarations lower through schema-17 HxcIR to private
 concrete C structs, while Haxe class values remain nullable references to that
-storage. The slice is available in both `portable` and `metal`, selects no
-`hxrt` feature, and does not establish a public C ABI.
+storage. A class proven not to escape keeps this direct, runtime-free form. The
+bounded `Array<Class>` graph path instead gives the same payload an exact
+traced representation backed by the selective collector. Neither form
+establishes a public C ABI.
 
 This task defines storage and reference operations. E3.T05 separately adds a
 bounded `new` path for unconditional, nonescaping local objects, including
@@ -38,9 +40,11 @@ program-local virtual-table layout on the root of a hierarchy with a reachable
 polymorphic call; derived classes inherit that pointer through their embedded
 base and unrelated/final-only hierarchies remain header-free. No descriptor,
 collector word, reflection record, or other unconditional object header is
-added. HxcIR can name a specific runtime feature if a later semantic pass
-proves that metadata is required; merely declaring or referencing a class does
-not make that request. The separate typed `@:c.layout(Struct|Opaque)`
+added. E4.T05 now provides the separate immutable descriptor and runtime-owned
+header contract for a later managed representation. HxcIR can request that
+feature only after escape/lifetime planning proves it is required; merely
+declaring or referencing a class does not make that request. The separate typed
+`@:c.layout(Struct|Opaque)`
 contracts remain the metal value/opaque route and do not turn an ordinary Haxe
 class into exported ABI.
 
@@ -59,17 +63,48 @@ Unrelated conversions and base-to-derived downcasts fail with source-positioned
 `HXC1001` and leave no plausible output.
 
 Field access also keeps the safety decision above C syntax. Before a nullable
-class reference becomes an `IRPDereference` place, the same block must contain
-an `IRIONullCheck` for that value and its resolved profile/build policy. The
-current checked policy emits a fail-stop `abort()` edge in every build mode;
-optimization may remove it only after a future proof makes that safe. Inherited
+class reference becomes an `IRPDereference` place, an `IRIONullCheck` for that
+exact immutable value must run first on every control-flow route. The current
+checked policy emits a fail-stop `abort()` edge in every build mode.
+
+The body builder initially places a check beside every field or method use. A
+named HxcIR pass then keeps the first check and removes a later one only when
+the first check *dominates* it—meaning every route to the later use passes
+through the earlier check. A check inside only one branch does not prove
+anything after the branches rejoin. Reloading or reassigning a reference also
+creates a new immutable HxcIR value, so it keeps a check of its own. Validation
+recomputes the same dominance proof before C syntax is selected. Inherited
 field access walks through the embedded base members to the declaring storage.
 
 Reference equality and inequality use explicit
 `haxe.class-reference.equal`/`not-equal` operations and compare normalized
 object identity. They remain pointer comparisons, never structural field
-comparison. Allocation, ownership, lifetime, and collection are deliberately
-absent from this slice.
+comparison.
+
+## When a class becomes traced
+
+The compiler settles representation from the reachable program rather than
+from a class declaration in isolation. If a concrete class is used as the
+element of a reachable `Array<Class>`, that array can hold aliases and cycles,
+so reference counting alone is insufficient. The class and that array then use
+`IRRManaged("gc")`; a direct class that never enters such a graph remains
+ordinary C storage and keeps the collector out of the program.
+
+A managed `new` allocates the exact class payload through `hxc_gc_allocate`.
+Generated HxcIR publishes the returned pointer in an exact root slot before it
+calls the constructor, so another allocation or collection cannot reclaim the
+half-built object. The generated class descriptor traces only fields whose
+settled representation is also collector-managed. Its optional finalizer
+releases independently reference-counted fields, such as `Array<Int>`, without
+trying to release collector-owned links. A generated `Array<Class>` descriptor
+visits each live pointer slot and disposes only its backing element buffer when
+the array payload itself is swept.
+
+This is deliberately a bounded graph path, not a claim of general heap-class
+support. Managed virtual headers, inline owned-class fields, interfaces,
+generic classes, and other unproved escape shapes still fail with a
+source-positioned diagnostic. They must gain their own representation and
+lifetime evidence rather than inheriting this result by accident.
 
 ## Layout and ABI boundary
 
@@ -79,6 +114,9 @@ field alignment, non-overlap, final extent, and the empty-root anchor. The
 focused native fixture additionally uses an independent C provider and C++17
 consumer to compare `sizeof`, alignment, offsets, base-prefix access, field
 reads/writes, upcasts, null preservation, and identity at `-O0` and `-O2`.
+Branch/join fixtures inspect both HxcIR and generated C guard counts, a null
+receiver must still terminate with `SIGABRT`, and normal paths run under address
+and undefined-behavior sanitizers when the installed compiler provides them.
 
 `include/hxc/program.h` is the generated program's private compilation header,
 not a public export. Production evidence requires the ABI report to retain
@@ -89,10 +127,13 @@ is stable across compiler versions.
 Ordinary reachable instance methods and minimal closed-world virtual dispatch
 are admitted by E3.T06; see [closed-world virtual
 dispatch](virtual-dispatch.md). Interfaces remain E3.T07, and the object
-descriptor plus tracing policy belongs to E4.T05. Constructors are admitted
+descriptor/header contract is supplied by E4.T05. E4.T06 owns managed
+allocation, explicit roots, tracing, and collection; `haxe_c-53k.2.1.2`
+connects that backend to the bounded concrete `Array<Class>` graph described
+above. Constructors are admitted
 only through E3.T05's bounded nonescaping stack model. Generic class
-specialization, dynamic methods, reflection, dynamic casts/type tests, general
-allocation, escaping ownership, and public class ABI remain fail-closed.
+specialization, dynamic methods, reflection, dynamic casts/type tests, broader
+escaping ownership, and public class ABI remain fail-closed.
 
 ## Evidence
 
@@ -100,6 +141,7 @@ Run:
 
 ```sh
 npm run test:class-layout
+npm run test:array-runtime
 npm run test:virtual-dispatch
 npm run test:hxc-ir
 npm run test:typed-boundaries

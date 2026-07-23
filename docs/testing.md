@@ -41,7 +41,10 @@ runtime-free strict C11 evidence.
 The Raylib provisioning suite composes that bounded compiler slice with an
 immutable Raylib 6.0 source authority. It adds adversarial archive and
 pkg-config checks, five neutral build-plan snapshots, real Linux/macOS/Windows
-compile/link jobs, and one deterministic Linux memory/software execution lane.
+compile/link jobs, and one deterministic Linux memory/software lane that runs
+both the focused binding probe and Caxecraft's real movement/edit application
+pilot. Isolated GCC and Clang variants compile every generated game C file and
+the final link with address and undefined-behavior checks enabled.
 The fixture-local extern subset is integration evidence, not yet the public
 RaylibHx raw binding.
 The generic-specialization suite adds full semantic-key sharing, closed
@@ -54,8 +57,11 @@ and the exact compiler-selected literal-output closure. The string-runtime suite
 adds a bounded native UTF-8/scalar/CString contract plus an Eval differential
 trace. The array-runtime suite adds bounded native primitive/reference growth,
 aliasing, lifecycle, and failure evidence plus a common Eval mutation trace.
-The string-output suite adds the narrow generated-Haxe `Sys.println` and
-default `trace` proof. The declared `examples/hello` product proof composes that
+The enum suite also carries a nominal abstract-over-String literal through
+construction, copy, projection, and content equality. The string-output suite
+adds the narrow generated-Haxe `Sys.println` and default `trace` proof. These
+are bounded literal-backed String tests, not general runtime-created String
+support. The declared `examples/hello` product proof composes that
 same reusable compiler slice into the first ordinary Haxe-to-C executable. The
 declared `examples/caxecraft` domain proof adds a realistic 16 KiB finite voxel
 world, deterministic terrain/edits/DDA/fixed-step collision, a shared Eval
@@ -137,6 +143,11 @@ a small closed result protocol and process-level facts; it does not recompute
 the expected product state. Caxecraft uses the shared
 `examples/caxecraft/run_haxe_c_test.py` runner for focused Haxe-authored cases
 instead of adding one Python semantics runner per mechanic.
+Its default selects one available compiler to keep the local loop short. When a
+host exposes a second compiler under a versioned name, pass it explicitly—for
+example, `python3 examples/caxecraft/run_haxe_c_test.py aquatics --cc gcc-16`.
+The exhaustive CI lanes still own the required identity-checked GCC/Clang
+matrix.
 
 These roles provide different evidence:
 
@@ -320,8 +331,10 @@ runtime-free E2.T03 project. See
 for typed primitive parameters, explicit HxcIR conversion/call order, direct
 static calls, direct self-tail lowering, mutually recursive source partitioning,
 recursive prototype planning, and executable entry emission. It
-checks deterministic portable/metal renders, scoped default/optional/rest
-`HXC1001`, byte-identical production roots, explicit `hxc_runtime=none`, analyzed
+checks deterministic portable/metal renders, compile-time completion of direct
+optional/default calls across primitive/string/record/enum/class-safe values,
+scoped rest `HXC1001`, byte-identical production roots, explicit
+`hxc_runtime=none`, warm-server determinism, sanitizer execution, analyzed
 empty runtime/ABI/stdlib sidecars, and no `hxrt` artifact or symbol. Required CI
 lanes compile and run its checked-in and production-generated strict C under GCC
 and Clang. See [static function lowering](function-lowering.md).
@@ -382,14 +395,18 @@ compiles as C++17. See [closed-world virtual dispatch](virtual-dispatch.md).
 positive/negative/snapshot/runtime suite. It distinguishes native fieldless
 enums from payload tagged unions, emits two concrete primitive generic
 instances, preserves constructor operand order, and records checked projection
-plus exhaustive tag-switch edges in schema-10 HxcIR. A recursive local uses an
-explicit finite pointer edge, while recursive signatures, reference/aggregate
-payloads, and non-exhaustive source patterns fail closed without artifacts.
+plus exhaustive tag-switch edges in schema-17 HxcIR. Recursive values use
+allocator-backed uniquely owned tree edges, and closed records compose managed
+enum fields through explicit retain/release helpers. Cycle-capable graphs,
+unsupported reference payloads, and non-exhaustive source patterns fail closed
+without artifacts.
 Generated private layout assertions compile under strict C11; independent C
 and C++17 consumers verify tags, size, alignment, offsets, construction, and
-recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Production roots are
-deterministic and runtime-free across portable, metal, and explicit
-runtime-none policies. See [Haxe enum lowering](enum-lowering.md).
+recursive layout at O0/O2 under GCC/G++ and Clang/Clang++. Unmanaged enum
+programs remain runtime-free. The managed fixture proves dependency-closed
+runtime selection, normal/reversed/cold/warm-server determinism, unity/split/
+package execution, and AddressSanitizer plus UndefinedBehaviorSanitizer. See
+[Haxe enum lowering](enum-lowering.md).
 
 `test/generic_specialization` is the focused E3.T03
 positive/negative/snapshot/runtime suite. A real typed program shares
@@ -475,7 +492,7 @@ a 32 × 16 × 32 `UInt8` volume; mutable and const local borrows; direct indexin
 ordinary-Haxe three-dimensional linearization; and exact-width span `for`
 iteration. Repeated and reversed renders cover both profiles and all three
 build modes. The suite keeps zero initialization and checked/static/loop bounds
-policies visible in schema-10 HxcIR, executes mutation and iteration at O0/O2,
+policies visible in schema-17 HxcIR, executes mutation and iteration at O0/O2,
 and runs dynamic negative and upper fail-stop paths across the six-way
 configuration matrix. Exact-span negatives reject zero/negative/nonconstant/
 overflowing/over-budget lengths, unsupported element storage, static out-of-
@@ -490,8 +507,8 @@ positive/negative/snapshot/runtime/ABI suite for the bounded hand-authored
 direct-import slice. Its Haxe fixture reaches an authoritative independent
 pointlib header and source through exact names, calls scalar and by-value struct
 functions in both directions, reads and writes an imported field, uses typedef
-and enum/constant identities, and passes a non-ASCII literal borrowed
-`c.CString`. Repeated isolated roots plus reversed typed modules and locale
+and enum/constant identities, and passes a non-ASCII borrowed `c.CString`
+selected through program-local switch and conditional helpers. Repeated isolated roots plus reversed typed modules and locale
 changes must produce byte-identical normal artifacts. The neutral build plan
 must contain one reached header and logical library with all sorted declaration
 owners, while the runtime plan records `typed-header-owned-c-imports` and no
@@ -500,7 +517,7 @@ none of its header/library/package/framework facts. A separately compiled probe 
 header's size, alignment, offsets, and constant values; identity-verified GCC
 and Clang link the generated program with pointlib at O0/O2. Callback return,
 variadic, native-pointer return, invalid inferred external name, unsupported preprocessor
-definition, embedded-NUL literal, and nonliteral `CString` fixtures fail with
+definition, embedded-NUL literal, and mixed literal/dynamic `CString` fixtures fail with
 source-positioned `HXC3000` and no
 plausible artifact. See [typed C authoring](typed-c-authoring.md).
 
@@ -513,9 +530,16 @@ selection. Separate source-authority CI jobs acquire only the immutable archive
 from a previously absent cache, build static Raylib, compile the production
 custom-target output with strict warnings, and link Linux GCC, Apple Clang, and
 Windows clang-cl consumers. Only the Linux `PLATFORM=Memory` software renderer
-executes, with exact stdout and empty stderr; desktop jobs make compile/link
-claims only. Normalized JSON evidence retains compiler targets, argument
-arrays, input/output hashes, and actual claim scope without host paths. See
+executes. That job also reuses the verified library to compile and run the
+complete Caxecraft movement/edit pilot twice, validate its scene and semantic
+report, and preserve the software-rendered image. Both GCC and Clang game
+builds stop at the first AddressSanitizer or UndefinedBehaviorSanitizer finding,
+retain frame pointers for useful stack traces, and enable leak detection. The
+verified Raylib library runs inside that executable, but this lane does not
+rebuild Raylib itself with sanitizer flags. Desktop jobs make compile/link
+claims only except for the separately documented Linux virtual-display
+Caxecraft title-and-resize pilot. Normalized JSON evidence retains compiler targets,
+argument arrays, input/output hashes, and actual claim scope without host paths. See
 [Raylib 6.0 provisioning](raylib-provisioning.md).
 
 `test/runtime/runtime-feature-graph` is the focused
@@ -577,7 +601,7 @@ or a public layout. See the [array runtime contract](array-runtime.md).
 `test/string_output` is the focused E2.T07
 positive/negative/AST/snapshot/runtime/differential suite. It lowers real
 compiler-known ASCII, non-ASCII, embedded-NUL, and default-trace literals through
-schema-10 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
+schema-17 HxcIR; checks exact byte lengths, runtime root reasons, stdlib reachability,
 and the `runtime-base + status + string-literal + io` closure; and compares the
 generated executable's raw stdout with Eval. Portable `auto` and metal `minimal`
 both pass, `runtime=none` and freestanding fail before output, and diagnostic

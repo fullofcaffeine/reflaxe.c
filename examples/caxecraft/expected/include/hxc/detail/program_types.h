@@ -98,6 +98,6 @@ struct hxc_caxecraft_domain_StepInput;
 
 struct hxc_caxecraft_domain_AxisMove;
 
-struct hxc_caxecraft_domain_PlayerState;
+struct hxc_caxecraft_domain_CharacterBody;
 
 #endif /* HXC_DETAIL_PROGRAM_TYPES_H_INCLUDED */

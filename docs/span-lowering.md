@@ -12,12 +12,13 @@ and it cannot be saved somewhere that outlives that array.
 
 **Lowering** is the compiler step that turns a typed Haxe operation into a more
 concrete representation. Here, a nonempty literal or
-`c.CArray.zero<T, N>(length)` lowers to an automatic C array (normally local
-stack storage). `span()` and `constSpan()` lower to an element pointer plus an
-element count. A Haxe `for` loop becomes a direct indexed C loop. An admitted
-private helper function receives the same pointer and count. There is no
-allocated array object, span wrapper, or iterator object in the generated C;
-this is what this document means by **runtime-free**.
+`c.CArray.zero<T, N>(length)` lowers to an automatic C array. It may be a local
+array or an inline field of a compiler-proven nonescaping class object. Both
+forms normally live in the current C stack frame. `span()` and `constSpan()`
+lower to an element pointer plus an element count. A Haxe `for` loop becomes a
+direct indexed C loop. An admitted private helper function receives the same
+pointer and count. There is no allocated array object, span wrapper, or iterator
+object in the generated C; this is what this document means by **runtime-free**.
 
 The compiler first records and validates these choices in HxcIR, its typed
 semantic intermediate representation. That extra representation lets the
@@ -44,6 +45,31 @@ var voxels:c.CArray<c.UInt8, GridVolume> =
   c.CArray.zero(WIDTH * HEIGHT * DEPTH);
 ```
 
+A bounded nonescaping class may own the same zero-initialized storage inline:
+
+```haxe
+private final class WorldBuffer {
+  var cells:c.CArray<c.UInt8, GridVolume> =
+    c.CArray.zero(WIDTH * HEIGHT * DEPTH);
+
+  public function new() {}
+
+  public function replace(index:Int, value:c.UInt8):Void {
+    var view:c.Span<c.UInt8> = cells.span();
+    view[index] = value;
+  }
+}
+```
+
+The generated object contains an ordinary C array member. Class preparation
+validates the typed field initializer, element type, length, and storage budget.
+The stack object is then structurally zero-initialized once before its Haxe
+constructor runs, so the compiler does not emit an illegal whole-array C
+assignment. A method may create a fresh scoped view of the field; the span still
+cannot be stored or returned. Whole-array reset/copy, a missing initializer,
+literal-initialized fields, heap or escaping owners, and dynamic lengths remain
+unsupported and fail at the Haxe source location.
+
 `N` is a phantom Haxe type identity. HxcIR records that identity together with
 the concrete element count. It does not use reflection, `Dynamic`, `Any`, or an
 untyped value to recover the size. The explicit `length` argument makes the
@@ -60,7 +86,7 @@ length whose result exceeds the storage policy emits source-positioned
 
 The initial automatic-storage policy admits at most 65,536 bytes per
 zero-initialized fixed array. Element storage must have an exact compiler-owned
-size: 8/16/32/64-bit integers and binary64 floats are currently accepted. For
+size: 8/16/32/64-bit integers and binary32/binary64 floats are currently accepted. For
 example, `CArray<UInt8, GridVolume>` with `32 * 16 * 32` elements occupies
 16,384 bytes. `Bool` is deliberately rejected here because the target contract
 does not yet assign it an exact storage size. This is a per-array ceiling, not
@@ -171,11 +197,15 @@ required span type, parameter, ordered call, typed initialization, place, and
 bounds operations. Adding a separate “span parameter” type would duplicate a
 source/call-site distinction that is not a distinct semantic value.
 
-The zero-initialization instruction is an effect on one fixed-array place with
-an explicit uninitialized-to-initialized transition. The shared typed storage
-policy is checked by both HxcIR validation and C emission. It rejects invalid
-lengths, unsupported element sizes, byte-count overflow, and storage beyond the
-65,536-byte ceiling before a C declarator is emitted.
+The zero-initialization instruction is an effect on one local fixed-array place
+with an explicit uninitialized-to-initialized transition. A class-owned array
+instead participates in the enclosing object's validated structural default
+initialization; its field initializer is consumed exactly once during
+constructor lowering. In both cases, the shared typed storage policy rejects
+invalid lengths, unsupported element sizes, byte-count overflow, and storage
+beyond the 65,536-byte ceiling before a C declarator is emitted. Span
+initialization can name either the local array place or a typed fixed-array
+field reached through a checked live class receiver.
 
 The bounds policy is semantic evidence, not an emitter guess:
 

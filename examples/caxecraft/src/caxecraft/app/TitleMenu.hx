@@ -25,6 +25,9 @@ final class TitleMenu {
 			final secondTop = firstTop + BUTTON_HEIGHT + BUTTON_GAP;
 			if (mouseY >= secondTop && mouseY < secondTop + BUTTON_HEIGHT)
 				return 1;
+			final thirdTop = secondTop + BUTTON_HEIGHT + BUTTON_GAP;
+			if (mouseY >= thirdTop && mouseY < thirdTop + BUTTON_HEIGHT)
+				return 2;
 		}
 		return -1;
 	}
@@ -43,14 +46,15 @@ final class TitleMenu {
 		if (wordmarkReady)
 			CaxecraftTextures.drawContained(wordmark, Std.int(width / 2), 28, 560, 132, Color.rgba(255, 255, 255));
 		else
-			UiCatalog.draw(locale, UiMessage.TitleFallback, Std.int(width / 2) - 92, 52, 34, Color.rgba(242, 249, 245));
+			drawUiText(locale, UiMessage.TitleFallback, Std.int(width / 2) - 92, 52, 34, Color.rgba(242, 249, 245));
 
 		final firstTop = buttonTop(height);
 		drawButton(firstTop, selected == GameMode.Creative, UiMessage.MenuCreative, locale, width);
 		drawButton(firstTop + BUTTON_HEIGHT + BUTTON_GAP, selected == GameMode.Adventure, UiMessage.MenuAdventure, locale, width);
-		UiCatalog.draw(locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
+		drawButton(firstTop + (BUTTON_HEIGHT + BUTTON_GAP) * 2, false, UiMessage.MenuEditor, locale, width);
+		drawUiText(locale, UiMessage.MenuInstructions, Std.int(width / 2) - 285, height - 58, 16, Color.rgba(229, 241, 235));
 		if (selected == GameMode.Adventure)
-			FirstPlayableCatalog.draw(locale, ScenarioMessage.AdventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
+			drawScenarioText(locale, ScenarioMessage.AdventureTagline, Std.int(width / 2) - 230, firstTop - 36, 17, Color.rgba(255, 205, 91));
 	}
 
 	static inline function drawButton(top:Int, active:Bool, message:UiMessage, locale:LocaleCursor, width:Int):Void {
@@ -62,10 +66,18 @@ final class TitleMenu {
 			Raylib.DrawRectangle(left, top, BUTTON_WIDTH, BUTTON_HEIGHT, Color.rgba(6, 26, 36, 218));
 			Raylib.DrawRectangleLines(left, top, BUTTON_WIDTH, BUTTON_HEIGHT, Color.rgba(92, 194, 188));
 		}
-		UiCatalog.draw(locale, message, left + 28, top + 16, 21, Color.rgba(242, 249, 245));
+		drawUiText(locale, message, left + 28, top + 16, 21, Color.rgba(242, 249, 245));
 	}
 
+	/** Keep native drawing separate from reusable locale and message lookup. */
+	static inline function drawUiText(locale:LocaleCursor, message:UiMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
+		Raylib.DrawText(UiCatalog.text(locale, message), x, y, fontSize, color);
+
+	/** Render campaign copy selected by the campaign-owned catalog. */
+	static inline function drawScenarioText(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void
+		Raylib.DrawText(FirstPlayableCatalog.text(locale, message), x, y, fontSize, color);
+
 	static inline function buttonTop(height:Int):Int
-		return height - 225;
+		return height - 293;
 }
 #end

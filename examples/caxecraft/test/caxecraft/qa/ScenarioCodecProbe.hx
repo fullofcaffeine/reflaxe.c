@@ -627,7 +627,9 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 		return id.text() == "caxecraft:air";
 
 	public function hasBlock(id:ContentId):Bool
-		return id.text() == "caxecraft:air" || id.text() == "caxecraft:bedrock" || id.text() == "caxecraft:dirt" || id.text() == "caxecraft:grass";
+		return id.text() == "caxecraft:air" || id.text() == "caxecraft:ash" || id.text() == "caxecraft:bedrock" || id.text() == "caxecraft:dirt"
+			|| id.text() == "caxecraft:grass" || id.text() == "caxecraft:leaves" || id.text() == "caxecraft:sand" || id.text() == "caxecraft:snow"
+			|| id.text() == "caxecraft:stone" || id.text() == "caxecraft:wood";
 
 	public function blockStorageCode(id:ContentId):Int {
 		if (id.text() == "caxecraft:air")
@@ -638,6 +640,18 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 			return 2;
 		if (id.text() == "caxecraft:grass")
 			return 1;
+		if (id.text() == "caxecraft:stone")
+			return 3;
+		if (id.text() == "caxecraft:sand")
+			return 5;
+		if (id.text() == "caxecraft:wood")
+			return 6;
+		if (id.text() == "caxecraft:leaves")
+			return 7;
+		if (id.text() == "caxecraft:snow")
+			return 8;
+		if (id.text() == "caxecraft:ash")
+			return 9;
 		return -1;
 	}
 
@@ -646,6 +660,14 @@ private final class ProbeContentRegistry implements ScenarioContentRegistry {
 
 	public function hasItem(id:ContentId):Bool
 		return id.text() == "caxecraft:haxe-pick" || id.text() == "caxecraft:tideweave-suit";
+
+	public function itemStorageCode(id:ContentId):Int {
+		if (id.text() == "caxecraft:haxe-pick")
+			return 0;
+		if (id.text() == "caxecraft:tideweave-suit")
+			return 1;
+		return -1;
+	}
 
 	public function hasEntity(id:ContentId):Bool
 		return id.text() == "caxecraft:browser";

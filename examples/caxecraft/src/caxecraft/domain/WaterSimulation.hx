@@ -28,6 +28,13 @@ import caxecraft.domain.WaterCellCodec.stateAt as waterStateAt;
 	sources in this first model: authored source cells are the only permanent
 	water. Rendering, player physics, save files, and campaign content consume
 	this state in later vertical slices; they never advance it themselves.
+
+	A class is used because the scheduler owns counters that persist across ticks
+	and must agree with one pending-work buffer. A pure module function would make
+	every caller carry and commit those invariants separately. The class remains
+	`final` and stores no borrowed buffer; `GameSession` owns both objects and
+	passes a short-lived view to each operation. Haxe.c embeds the simulation in
+	the session C struct without a heap allocation.
 **/
 final class WaterSimulation {
 	var pendingCount:Int;

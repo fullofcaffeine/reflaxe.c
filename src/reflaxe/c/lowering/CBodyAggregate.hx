@@ -16,12 +16,22 @@ import reflaxe.c.interop.CImportRegistry.CLoweredImports;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportConstant;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportFunction;
 import reflaxe.c.interop.CImportRegistry.CPreparedImportType;
+import reflaxe.c.lowering.CBodyArray.CBodyArrayRegistry;
+import reflaxe.c.lowering.CBodyArray.CPreparedBodyArray;
+import reflaxe.c.lowering.CBodyBytes.CBodyBytesRegistry;
+import reflaxe.c.lowering.CBodyBytes.CPreparedBodyBytes;
 import reflaxe.c.lowering.CBodyClass.CBodyClassRegistry;
 import reflaxe.c.lowering.CBodyClass.CLoweredBodyClass;
 import reflaxe.c.lowering.CBodyClass.CPreparedBodyClass;
 import reflaxe.c.lowering.CBodyEnum.CBodyEnumRegistry;
+import reflaxe.c.lowering.CBodyEnum.CBodyEnumRepresentation;
 import reflaxe.c.lowering.CBodyEnum.CLoweredBodyEnum;
 import reflaxe.c.lowering.CBodyEnum.CPreparedBodyEnumInstance;
+import reflaxe.c.lowering.CBodyInterface.CBodyInterfaceRegistry;
+import reflaxe.c.lowering.CBodyInterface.CPreparedBodyInterface;
+import reflaxe.c.lowering.CBodyOptional.CBodyOptionalRegistry;
+import reflaxe.c.lowering.CBodyOptional.CLoweredBodyOptional;
+import reflaxe.c.lowering.CBodyOptional.CPreparedBodyOptional;
 import reflaxe.c.naming.CSymbolRegistry;
 import reflaxe.c.naming.CSymbolRequest;
 import reflaxe.c.semantics.CPrimitiveTypeMapper;
@@ -35,12 +45,31 @@ class CBodyAggregate {
 /** A closed body value category; aggregate values never enter primitive semantics. */
 enum CBodyValueKind {
 	CBVKPrimitive(mapping:CPrimitiveTypeMapping);
+
+	/**
+		An immutable Haxe String view whose bytes have program-long storage.
+
+		This is deliberately not a numeric "primitive" and not a generally owned
+		String. The separate category lets later lifetime work add owned strings
+		without silently changing how today's allocation-free literal values copy.
+	**/
+	CBVKStaticString(sourceIdentity:String);
+
+	CBVKFixedArray(element:CPrimitiveTypeMapping, length:Int, witnessId:String);
 	CBVKSpan(element:CPrimitiveTypeMapping, mutable:Bool);
 	CBVKCString;
 	CBVKImport(value:CPreparedImportType);
 	CBVKAggregate(aggregate:CPreparedBodyAggregate);
 	CBVKEnum(value:CPreparedBodyEnumInstance);
+	CBVKOwnedClass(value:CPreparedBodyClass);
 	CBVKClass(value:CPreparedBodyClass, nullable:Bool);
+	CBVKInterface(value:CPreparedBodyInterface);
+	CBVKArray(value:CPreparedBodyArray);
+	CBVKBytes(value:CPreparedBodyBytes);
+	CBVKOptional(value:CPreparedBodyOptional);
+
+	/** An allocation-free callable with one exact source-level signature. */
+	CBVKFunction(parameters:Array<CBodyValueType>, result:CBodyValueType);
 }
 
 /** The exact admitted representation of one Haxe body value. */
@@ -55,6 +84,12 @@ class CBodyValueType {
 			case CBVKPrimitive(mapping):
 				this.irType = mapping.irType;
 				this.cSpelling = mapping.cSpelling;
+			case CBVKStaticString(sourceIdentity):
+				this.irType = IRTString;
+				this.cSpelling = 'static-haxe-string-view:$sourceIdentity';
+			case CBVKFixedArray(element, length, witnessId):
+				this.irType = IRTFixedArray(element.irType, length, witnessId);
+				this.cSpelling = 'fixed-array:$length:$witnessId<${element.cSpelling}>';
 			case CBVKSpan(element, mutable):
 				this.irType = IRTSpan(element.irType, mutable);
 				this.cSpelling = '${mutable ? "mutable" : "const"}-span:${element.cSpelling}';
@@ -70,14 +105,39 @@ class CBodyValueType {
 			case CBVKEnum(value):
 				this.irType = IRTInstance(value.instanceId);
 				this.cSpelling = 'haxe-enum:${value.digest}';
+			case CBVKOwnedClass(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'owned-haxe-class:${value.digest}';
 			case CBVKClass(value, nullable):
 				this.irType = IRTPointer(IRTInstance(value.instanceId), nullable);
 				this.cSpelling = 'haxe-class-reference:${nullable ? "nullable" : "nonnull"}:${value.digest}';
+			case CBVKInterface(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'haxe-interface-reference:${value.digest}';
+			case CBVKArray(value):
+				this.irType = IRTInstance(value.instanceId);
+				this.cSpelling = 'haxe-array-reference:${value.digest}<${value.element.cSpelling}>';
+			case CBVKBytes(value):
+				this.irType = IRTInstance(CPreparedBodyBytes.INSTANCE_ID);
+				this.cSpelling = "haxe-bytes-reference";
+			case CBVKOptional(value):
+				this.irType = value.irType();
+				this.cSpelling = 'direct-optional:${value.digest}<${value.payload.cSpelling}>';
+			case CBVKFunction(parameters, result):
+				this.irType = IRTFunction(parameters.map(parameter -> parameter.irType), result.irType);
+				this.cSpelling = 'direct-function:(${parameters.map(parameter -> parameter.cSpelling).join(",")})->${result.cSpelling}';
 		}
 	}
 
 	public static function primitive(mapping:CPrimitiveTypeMapping):CBodyValueType
 		return new CBodyValueType(CBVKPrimitive(mapping));
+
+	/** Preserve the Haxe/abstract identity while selecting the shared C view. */
+	public static function staticString(sourceIdentity:String):CBodyValueType
+		return new CBodyValueType(CBVKStaticString(sourceIdentity));
+
+	public static function fixedArray(element:CPrimitiveTypeMapping, length:Int, witnessId:String):CBodyValueType
+		return new CBodyValueType(CBVKFixedArray(element, length, witnessId));
 
 	public static function span(element:CPrimitiveTypeMapping, mutable:Bool):CBodyValueType
 		return new CBodyValueType(CBVKSpan(element, mutable));
@@ -94,13 +154,47 @@ class CBodyValueType {
 	public static function enumeration(value:CPreparedBodyEnumInstance):CBodyValueType
 		return new CBodyValueType(CBVKEnum(value));
 
+	public static function ownedClass(value:CPreparedBodyClass):CBodyValueType
+		return new CBodyValueType(CBVKOwnedClass(value));
+
 	public static function classReference(value:CPreparedBodyClass, nullable:Bool = true):CBodyValueType
 		return new CBodyValueType(CBVKClass(value, nullable));
+
+	public static function interfaceReference(value:CPreparedBodyInterface):CBodyValueType
+		return new CBodyValueType(CBVKInterface(value));
+
+	public static function arrayReference(value:CPreparedBodyArray):CBodyValueType
+		return new CBodyValueType(CBVKArray(value));
+
+	public static function bytesReference(value:CPreparedBodyBytes):CBodyValueType
+		return new CBodyValueType(CBVKBytes(value));
+
+	public static function optional(value:CPreparedBodyOptional):CBodyValueType
+		return new CBodyValueType(CBVKOptional(value));
+
+	public static function directFunction(parameters:Array<CBodyValueType>, result:CBodyValueType):CBodyValueType
+		return new CBodyValueType(CBVKFunction(parameters, result));
 
 	public function primitiveMapping():Null<CPrimitiveTypeMapping> {
 		return switch kind {
 			case CBVKPrimitive(mapping): mapping;
-			case CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKClass(_, _): null;
+			case CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) |
+				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+		};
+	}
+
+	/** Return the nominal Haxe identity carried by a direct literal-backed String. */
+	public function staticStringIdentity():Null<String> {
+		return switch kind {
+			case CBVKStaticString(value): value;
+			case _: null;
+		};
+	}
+
+	public function fixedArrayShape():Null<{element:CPrimitiveTypeMapping, length:Int, witnessId:String}> {
+		return switch kind {
+			case CBVKFixedArray(element, length, witnessId): {element: element, length: length, witnessId: witnessId};
+			case _: null;
 		};
 	}
 
@@ -137,7 +231,8 @@ class CBodyValueType {
 
 	public function aggregateValue():Null<CPreparedBodyAggregate> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKOwnedClass(_) |
+				CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKAggregate(aggregate): aggregate;
 			case CBVKEnum(_) | CBVKClass(_, _): null;
 		};
@@ -145,24 +240,84 @@ class CBodyValueType {
 
 	public function enumValue():Null<CPreparedBodyEnumInstance> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKClass(_, _): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
+				CBVKOwnedClass(_) | CBVKClass(_, _) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 			case CBVKEnum(value): value;
 		};
 	}
 
 	public function classValue():Null<CPreparedBodyClass> {
 		return switch kind {
-			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
-			case CBVKClass(value, _): value;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
+				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
+			case CBVKOwnedClass(value) | CBVKClass(value, _): value;
+		};
+	}
+
+	public function ownedClassValue():Null<CPreparedBodyClass> {
+		return switch kind {
+			case CBVKOwnedClass(value): value;
+			case _: null;
+		};
+	}
+
+	public function interfaceValue():Null<CPreparedBodyInterface> {
+		return switch kind {
+			case CBVKInterface(value): value;
+			case _: null;
+		};
+	}
+
+	public function arrayValue():Null<CPreparedBodyArray> {
+		return switch kind {
+			case CBVKArray(value): value;
+			case _: null;
+		};
+	}
+
+	public function bytesValue():Null<CPreparedBodyBytes> {
+		return switch kind {
+			case CBVKBytes(value): value;
+			case _: null;
+		};
+	}
+
+	public function optionalValue():Null<CPreparedBodyOptional> {
+		return switch kind {
+			case CBVKOptional(value): value;
+			case _: null;
+		};
+	}
+
+	public function functionValue():Null<{parameters:Array<CBodyValueType>, result:CBodyValueType}> {
+		return switch kind {
+			case CBVKFunction(parameters, result): {parameters: parameters, result: result};
+			case _: null;
 		};
 	}
 
 	public function classNullable():Null<Bool> {
 		return switch kind {
+			case CBVKOwnedClass(_): false;
 			case CBVKClass(_, nullable): nullable;
-			case CBVKPrimitive(_) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_): null;
+			case CBVKPrimitive(_) | CBVKStaticString(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKCString | CBVKImport(_) | CBVKAggregate(_) |
+				CBVKEnum(_) | CBVKInterface(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOptional(_) | CBVKFunction(_, _): null;
 		};
 	}
+
+	/**
+		Whether this value's selected C carrier already represents absence exactly.
+
+		A nullable class reference and an ordinary Haxe `Array<T>` both lower to C
+		pointers, so `NULL` is enough. Keeping that fact here prevents
+		`Null<Array<T>>` from acquiring a second `{ has_value, value }` wrapper merely
+		because the source used Haxe's explicit `Null<T>` spelling.
+	**/
+	public function hasExactNullCarrier():Bool
+		return switch kind {
+			case CBVKClass(_, true) | CBVKArray(_): true;
+			case _: false;
+		};
 }
 
 /** One canonical field before C names are finalized. */
@@ -199,6 +354,12 @@ class CPreparedBodyAggregate {
 	public final source:HxcSourceSpan;
 	public final typeRequest:CSymbolRequest;
 	public final fields:Array<CPreparedBodyAggregateField>;
+	public var managedLifetime:Bool = false;
+	public var retainRequest:Null<CSymbolRequest> = null;
+	public var destroyRequest:Null<CSymbolRequest> = null;
+	public var retainParameterRequest:Null<CSymbolRequest> = null;
+	public var destroyParameterRequest:Null<CSymbolRequest> = null;
+	public var retainStatusRequest:Null<CSymbolRequest> = null;
 
 	public function new(shapeKey:String, digest:String, displayName:Null<String>, ownerModule:String, source:HxcSourceSpan, typeRequest:CSymbolRequest) {
 		this.shapeKey = shapeKey;
@@ -235,6 +396,12 @@ class CPreparedBodyAggregate {
 			source: source
 		};
 	}
+
+	public function retainImplementationId():Null<String>
+		return managedLifetime ? 'aggregate-lifecycle:$instanceId:retain' : null;
+
+	public function destroyImplementationId():Null<String>
+		return managedLifetime ? 'aggregate-lifecycle:$instanceId:destroy' : null;
 }
 
 /** One finalized aggregate member used by structural C emission. */
@@ -257,11 +424,22 @@ class CLoweredBodyAggregate {
 	public final prepared:CPreparedBodyAggregate;
 	public final cTag:CIdentifier;
 	public final fields:Array<CLoweredBodyAggregateField>;
+	public final retainName:Null<CIdentifier>;
+	public final destroyName:Null<CIdentifier>;
+	public final retainParameterName:Null<CIdentifier>;
+	public final destroyParameterName:Null<CIdentifier>;
+	public final retainStatusName:Null<CIdentifier>;
 
-	public function new(prepared:CPreparedBodyAggregate, cTag:CIdentifier, fields:Array<CLoweredBodyAggregateField>) {
+	public function new(prepared:CPreparedBodyAggregate, cTag:CIdentifier, fields:Array<CLoweredBodyAggregateField>, retainName:Null<CIdentifier>,
+			destroyName:Null<CIdentifier>, retainParameterName:Null<CIdentifier>, destroyParameterName:Null<CIdentifier>, retainStatusName:Null<CIdentifier>) {
 		this.prepared = prepared;
 		this.cTag = cTag;
 		this.fields = fields.copy();
+		this.retainName = retainName;
+		this.destroyName = destroyName;
+		this.retainParameterName = retainParameterName;
+		this.destroyParameterName = destroyParameterName;
+		this.retainStatusName = retainStatusName;
 	}
 
 	public function field(semanticName:String):Null<CLoweredBodyAggregateField> {
@@ -286,6 +464,10 @@ class CBodyAggregateRegistry {
 	final byShape:Map<String, CPreparedBodyAggregate> = [];
 	final enumRegistry:CBodyEnumRegistry;
 	final classRegistry:CBodyClassRegistry;
+	final interfaceRegistry:CBodyInterfaceRegistry;
+	final arrayRegistry:CBodyArrayRegistry;
+	final bytesRegistry:CBodyBytesRegistry;
+	final optionalRegistry:CBodyOptionalRegistry;
 	final importRegistry:Null<CImportRegistry>;
 	final sourcePathsByModule:Map<String, String> = [];
 
@@ -296,6 +478,10 @@ class CBodyAggregateRegistry {
 				sourcePathsByModule.set(module.path, module.sourcePath);
 		this.enumRegistry = new CBodyEnumRegistry(context, valueType);
 		this.classRegistry = new CBodyClassRegistry(context, valueType);
+		this.interfaceRegistry = new CBodyInterfaceRegistry(program);
+		this.arrayRegistry = new CBodyArrayRegistry(context, valueType);
+		this.bytesRegistry = new CBodyBytesRegistry();
+		this.optionalRegistry = new CBodyOptionalRegistry(context);
 		this.importRegistry = program == null || contract == null ? null : new CImportRegistry(context, program, contract, valueType);
 	}
 
@@ -304,11 +490,23 @@ class CBodyAggregateRegistry {
 		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
 		if (imported != null)
 			return imported;
+		final stringIdentity = staticStringIdentity(type);
+		if (stringIdentity != null)
+			return CBodyValueType.staticString(stringIdentity);
 		final aliasOwner = anonymousTypedefOwner(type);
 		final resolved = unwrapAliases(type, position, fail, node);
 		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
 		if (resolvedImport != null)
 			return resolvedImport;
+		final functionValue = directFunctionValueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (functionValue != null)
+			return functionValue;
+		final array = arrayRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (array != null)
+			return CBodyValueType.arrayReference(array);
+		final bytes = bytesRegistry.valueType(resolved, position, ownerModule, sourcePath);
+		if (bytes != null)
+			return CBodyValueType.bytesReference(bytes);
 		final primitive = switch CPrimitiveTypeMapper.map(resolved, context.profile) {
 			case CTPrimitive(mapping) if (mapping.nullability == CPNonNullable): mapping;
 			case _: null;
@@ -320,19 +518,25 @@ class CBodyAggregateRegistry {
 				final span = reference.get();
 				final element = admittedSpanElement(parameters[0], position, fail, node);
 				CBodyValueType.span(element, span.name == "Span");
+			case TInst(reference, parameters) if (!reference.get().isExtern && reference.get().isInterface):
+				CBodyValueType.interfaceReference(interfaceRegistry.require(reference, parameters, position, sourcePath, fail, node));
 			case TInst(reference, parameters) if (!reference.get().isExtern):
 				classRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
 			case TEnum(reference, parameters):
 				enumRegistry.valueType(reference, parameters, position, ownerModule, sourcePath, fail, node);
 			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null" && parameters.length == 1):
 				final nullable = valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node.nullable');
-				nullable.classValue() == null ? CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node)) : nullable;
+				if (nullable.hasExactNullCarrier()) {
+					nullable;
+				} else {
+					CBodyValueType.optional(optionalRegistry.require(nullable, ownerModule, sourcePath, position, fail, node));
+				}
 			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
 				final definition = reference.get();
 				valueType(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), position, ownerModule, sourcePath, fail,
 					'$node.abstract-representation');
 			case TAnonymous(reference):
-				final shape = anonymousShape(reference, [], position, fail, node);
+				final shape = anonymousShape(reference, [], position, ownerModule, sourcePath, fail, node);
 				var aggregate = byShape.get(shape);
 				if (aggregate == null) {
 					final aggregateOwner = aliasOwner == null ? ownerModule : aliasOwner.modulePath;
@@ -347,6 +551,40 @@ class CBodyAggregateRegistry {
 				CBodyValueType.aggregate(aggregate);
 			case _:
 				CBodyValueType.primitive(admittedPrimitive(resolved, position, fail, node));
+		};
+	}
+
+	/**
+		Map one exact non-capturing callable signature without erasing its values.
+
+		Optional and rest-style indirect calls need their own argument-completion
+		contract, so this first direct-function-pointer slice rejects them instead
+		of silently giving C a different calling convention.
+	**/
+	function directFunctionValueType(type:Type, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):Null<CBodyValueType> {
+		return switch type {
+			case TFun(arguments, resultType):
+				final parameters:Array<CBodyValueType> = [];
+				for (index => argument in arguments) {
+					if (argument.opt)
+						return rejected(fail, position, '$node.function-argument-$index:optional-indirect-call-not-admitted');
+					final parameter = valueType(argument.t, position, ownerModule, sourcePath, fail, '$node.function-argument-$index');
+					if (parameter.irType == IRTVoid)
+						return rejected(fail, position, '$node.function-argument-$index:Void');
+					if (parameter.spanElement() != null)
+						return rejected(fail, position, '$node.function-argument-$index:borrowed-span-indirect-call-not-admitted');
+					if (parameter.functionValue() != null)
+						return rejected(fail, position, '$node.function-argument-$index:nested-function-value-not-admitted');
+					parameters.push(parameter);
+				}
+				final result = valueType(resultType, position, ownerModule, sourcePath, fail, '$node.function-result');
+				if (result.spanElement() != null)
+					return rejected(fail, position, '$node.function-result:borrowed-span-escape');
+				if (result.functionValue() != null)
+					return rejected(fail, position, '$node.function-result:nested-function-value-not-admitted');
+				CBodyValueType.directFunction(parameters, result);
+			case _: null;
 		};
 	}
 
@@ -386,6 +624,28 @@ class CBodyAggregateRegistry {
 	public function canonicalClasses():Array<CPreparedBodyClass>
 		return classRegistry.canonicalClasses();
 
+	public function canonicalInterfaces():Array<CPreparedBodyInterface>
+		return interfaceRegistry.canonicalInterfaces();
+
+	public function canonicalArrays():Array<CPreparedBodyArray>
+		return arrayRegistry.canonicalArrays();
+
+	public function finalizeArrays(symbols:CSymbolRegistry):Array<reflaxe.c.lowering.CBodyArray.CLoweredBodyArray>
+		return arrayRegistry.finalize(symbols);
+
+	public function canonicalBytes():Array<CPreparedBodyBytes>
+		return bytesRegistry.canonicalBytes();
+
+	public function canonicalOptionals():Array<CPreparedBodyOptional>
+		return optionalRegistry.canonicalOptionals();
+
+	public function finalizeOptionals(symbols:CSymbolRegistry):Array<CLoweredBodyOptional>
+		return optionalRegistry.finalize(symbols);
+
+	public function requireInterface(reference:Ref<ClassType>, parameters:Array<Type>, position:Position, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):CPreparedBodyInterface
+		return interfaceRegistry.require(reference, parameters, position, sourcePath, fail, node);
+
 	public function finalizeClasses(symbols:CSymbolRegistry):Array<CLoweredBodyClass>
 		return classRegistry.finalize(symbols);
 
@@ -394,6 +654,10 @@ class CBodyAggregateRegistry {
 
 	public function completeClassLayouts():Void
 		classRegistry.completeLayouts();
+
+	/** Settle the selective GC graph before any function chooses stack or heap construction. */
+	public function completeManagedRepresentations():Void
+		classRegistry.completeManagedRepresentations(arrayRegistry.canonicalArrays(), enumRegistry.canonicalEnums());
 
 	public function canonicalAggregates():Array<CPreparedBodyAggregate> {
 		final values = [for (aggregate in byShape) aggregate];
@@ -410,10 +674,16 @@ class CBodyAggregateRegistry {
 		final result:Array<CLoweredBodyAggregate> = [];
 		for (aggregate in canonicalAggregates()) {
 			result.push(new CLoweredBodyAggregate(aggregate, symbols.identifierFor(aggregate.typeRequest),
-				aggregate.fields.map(field -> new CLoweredBodyAggregateField(field.name, field.type, field.mutable, symbols.identifierFor(field.request)))));
+				aggregate.fields.map(field -> new CLoweredBodyAggregateField(field.name, field.type, field.mutable, symbols.identifierFor(field.request))),
+				identifierOrNull(symbols, aggregate.retainRequest), identifierOrNull(symbols, aggregate.destroyRequest),
+				identifierOrNull(symbols, aggregate.retainParameterRequest), identifierOrNull(symbols, aggregate.destroyParameterRequest),
+				identifierOrNull(symbols, aggregate.retainStatusRequest)));
 		}
 		return result;
 	}
+
+	static function identifierOrNull(symbols:CSymbolRegistry, request:Null<CSymbolRequest>):Null<CIdentifier>
+		return request == null ? null : symbols.identifierFor(request);
 
 	function prepareAggregate(reference:Ref<AnonType>, shape:String, displayName:Null<String>, position:Position, ownerModule:String, sourcePath:String,
 			fail:(Position, String) -> Void, node:String):CPreparedBodyAggregate {
@@ -444,10 +714,48 @@ class CBodyAggregateRegistry {
 			context.symbols.register(request);
 			aggregate.fields.push(new CPreparedBodyAggregateField(field.name, fieldType, mutable, HaxeSourceSpan.fromPosition(field.pos, sourcePath), request));
 		}
+		for (field in aggregate.fields) {
+			if (valueHasManagedLifetime(field.type)) {
+				aggregate.managedLifetime = true;
+				break;
+			}
+		}
+		if (aggregate.managedLifetime)
+			registerAggregateLifecycle(aggregate);
 		return aggregate;
 	}
 
-	function anonymousShape(reference:Ref<AnonType>, stack:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void, node:String):String {
+	static function valueHasManagedLifetime(value:CBodyValueType):Bool
+		return switch value.kind {
+			case CBVKArray(_) | CBVKBytes(_): true;
+			case CBVKEnum(enumValue): enumValue.managedLifetime;
+			case CBVKAggregate(aggregate): aggregate.managedLifetime;
+			case CBVKOptional(optional): optional.managedLifetime;
+			case _: false;
+		};
+
+	function registerAggregateLifecycle(value:CPreparedBodyAggregate):Void {
+		final root = ["compiler", "closed-record", value.digest, "lifecycle"];
+		value.retainRequest = new CSymbolRequest(CSKMethod, root.concat(["retain"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 0,
+			["record", value.digest.substr(0, 8), "retain"]);
+		value.destroyRequest = new CSymbolRequest(CSKMethod, root.concat(["destroy"]), CNSOrdinary("translation-unit"), CSVInternal, null, [], [], 1,
+			["record", value.digest.substr(0, 8), "destroy"]);
+		context.symbols.register(value.retainRequest);
+		context.symbols.register(value.destroyRequest);
+		value.retainParameterRequest = aggregateLifecycleLocal(value.retainRequest, "value", 0);
+		value.destroyParameterRequest = aggregateLifecycleLocal(value.destroyRequest, "value", 0);
+		value.retainStatusRequest = aggregateLifecycleLocal(value.retainRequest, "operation_status", 1);
+	}
+
+	function aggregateLifecycleLocal(owner:CSymbolRequest, role:String, ordinal:Int):CSymbolRequest {
+		final request = new CSymbolRequest(CSKLocal, owner.qualifiedName.concat([role]), CNSOrdinary(owner.stableKey()), CSVInternal, null, [], [], ordinal,
+			[role]);
+		context.symbols.register(request);
+		return request;
+	}
+
+	function anonymousShape(reference:Ref<AnonType>, stack:Array<Ref<AnonType>>, position:Position, ownerModule:String, sourcePath:String,
+			fail:(Position, String) -> Void, node:String):String {
 		for (active in stack) {
 			if (active == reference) {
 				return rejected(fail, position, '$node:recursive-by-value-shape');
@@ -478,15 +786,45 @@ class CBodyAggregateRegistry {
 			};
 			parts.push(canonicalPart(field.name)
 				+ canonicalPart(access)
-				+ canonicalPart(typeShape(field.type, nextStack, field.pos, fail, '$node.field:${field.name}')));
+				+ canonicalPart(typeShape(field.type, nextStack, field.pos, ownerModule, sourcePath, fail, '$node.field:${field.name}')));
 		}
 		return 'closed-record-v1(${parts.join("")})';
 	}
 
-	function typeShape(type:Type, stack:Array<Ref<AnonType>>, position:Position, fail:(Position, String) -> Void, node:String):String {
+	function typeShape(type:Type, stack:Array<Ref<AnonType>>, position:Position, ownerModule:String, sourcePath:String, fail:(Position, String) -> Void,
+			node:String):String {
+		final imported = importRegistry == null ? null : importRegistry.valueType(type, position, ownerModule, sourcePath, fail, node);
+		if (imported != null)
+			return importedTypeShape(imported);
+		final stringIdentity = staticStringIdentity(type);
+		if (stringIdentity != null)
+			return 'static-haxe-string-view(${canonicalPart(stringIdentity)})';
 		final resolved = unwrapAliases(type, position, fail, node);
+		final resolvedImport = importRegistry == null ? null : importRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (resolvedImport != null)
+			return importedTypeShape(resolvedImport);
+		final array = arrayRegistry.valueType(resolved, position, ownerModule, sourcePath, fail, node);
+		if (array != null)
+			return 'haxe-array-reference(${canonicalPart(array.semanticKey)})';
+		if (bytesRegistry.valueType(resolved, position, ownerModule, sourcePath) != null)
+			return "haxe-bytes-reference-v1";
 		return switch resolved {
-			case TAnonymous(reference): anonymousShape(reference, stack, position, fail, node);
+			case TAnonymous(reference): anonymousShape(reference, stack, position, ownerModule, sourcePath, fail, node);
+			case TAbstract(reference, parameters) if (reference.get().pack.length == 0 && reference.get().name == "Null" && parameters.length == 1):
+				final payload = valueType(parameters[0], position, ownerModule, sourcePath, fail, '$node.nullable');
+				if (payload.hasExactNullCarrier()) {
+					typeShape(parameters[0], stack, position, ownerModule, sourcePath, fail, '$node.nullable-carrier');
+				} else {
+					final optional = optionalRegistry.require(payload, ownerModule, sourcePath, position, fail, node);
+					'direct-optional(${canonicalPart(optional.semanticKey)})';
+				}
+			case TEnum(reference, parameters):
+				final value = enumRegistry.require(reference, parameters, position, ownerModule, sourcePath, fail, node);
+				// Haxe enums are nominal: two declarations with the same constructors are
+				// still different types. Keep the registry's complete semantic key so
+				// structural record deduplication cannot merge records whose by-value C
+				// fields use incompatible native-enum or tagged-union definitions.
+				'haxe-enum(${canonicalPart(value.shapeKey)})';
 			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
 				// Haxe abstracts are compile-time types over another representation.
 				// Use that representation in the record's structural identity just as
@@ -494,11 +832,48 @@ class CBodyAggregateRegistry {
 				// `enum abstract ... (Int)` remains a useful closed Haxe domain while
 				// occupying one ordinary Int field in generated C.
 				final definition = reference.get();
-				typeShape(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), stack, position, fail,
-					'$node.abstract-representation');
+				typeShape(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), stack, position, ownerModule, sourcePath,
+					fail, '$node.abstract-representation');
 			case _:
 				final mapping = admittedPrimitive(resolved, position, fail, node);
 				mapping.irType == IRTVoid ? rejected(fail, position, '$node:Void-not-an-object-type') : primitiveTypeKey(mapping.irType);
+		};
+	}
+
+	/** Use the validated imported semantic identity in the enclosing record hash. */
+	static function importedTypeShape(type:CBodyValueType):String {
+		return switch type.irType {
+			case IRTInstance(instanceId): 'c-import(${canonicalPart(instanceId)})';
+			case _: throw new CBodyEmissionError("C import registry returned a non-value record field type");
+		};
+	}
+
+	/**
+		Recognize `String` and nominal abstracts whose runtime carrier is String.
+
+		The returned name is a source identity, not a C type name. Keeping it in
+		plans means diagnostics can still say `LogicalPath` even though C stores the
+		same immutable three-field view as ordinary `String`.
+	**/
+	static function staticStringIdentity(type:Type, depth:Int = 0, ?outerIdentity:String):Null<String> {
+		if (depth > 32)
+			return null;
+		return switch type {
+			case TMono(reference):
+				final resolved = reference.get();
+				resolved == null ? null : staticStringIdentity(resolved, depth + 1, outerIdentity);
+			case TLazy(resolve):
+				staticStringIdentity(resolve(), depth + 1, outerIdentity);
+			case TType(reference, parameters):
+				final definition = reference.get();
+				staticStringIdentity(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1, outerIdentity);
+			case TInst(reference, parameters): final definition = reference.get(); parameters.length == 0 && definition.pack.length == 0 && definition.name == "String" ? (outerIdentity == null ? "String" : outerIdentity) : null;
+			case TAbstract(reference, parameters) if (!reference.get().meta.has(":coreType")):
+				final definition = reference.get();
+				final identity = outerIdentity == null ? definition.pack.concat([definition.name]).join(".") : outerIdentity;
+				staticStringIdentity(haxe.macro.TypeTools.applyTypeParameters(definition.type, definition.params, parameters), depth + 1, identity);
+			case _:
+				null;
 		};
 	}
 

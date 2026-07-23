@@ -59,6 +59,9 @@ class RuntimeRequirementAnalyzer {
 			}
 			functionCount += module.functions.length;
 			for (fn in module.functions) {
+				if (fn.managedRoots != null)
+					for (root in fn.managedRoots)
+						observations.push(new RuntimeIntentObservation("gc", "root-frame", root.source));
 				blockCount += fn.blocks.length;
 				for (block in fn.blocks) {
 					instructionCount += block.instructions.length;
@@ -98,6 +101,11 @@ class RuntimeRequirementAnalyzer {
 
 	static function collectInstruction(instruction:HxcIRInstruction, observations:Array<RuntimeIntentObservation>):Void {
 		switch instruction.kind {
+			case IRIOConstant(IRCString(_, _)):
+				// The value itself is direct data, but generated C needs the selected
+				// allocation-free `hxc_string` carrier header. Record that representation
+				// intent just as managed type instances record their runtime owner.
+				observations.push(new RuntimeIntentObservation("string-literal", "static-value", instruction.source));
 			case IRIOUnary(operationId, _, implementation) | IRIOBinary(operationId, _, _, implementation):
 				collectImplementation(implementation, operationId, instruction.source, observations);
 			case IRIOConvert(_, kind, _, implementation, _):
@@ -114,6 +122,11 @@ class RuntimeRequirementAnalyzer {
 				collectImplementation(implementation, "deallocation", instruction.source, observations);
 			case IRIORetain(_, implementation):
 				collectImplementation(implementation, "retain", instruction.source, observations);
+			case IRIORelease(_, implementation):
+				// This instruction is the in-block form of an owned cleanup action.
+				// Keep the same runtime-plan operation ID used by edge cleanup so moving
+				// a lexical boundary does not invent a second semantic requirement.
+				collectImplementation(implementation, "cleanup-release", instruction.source, observations);
 			case IRIOTrace(_, implementation):
 				collectImplementation(implementation, "trace", instruction.source, observations);
 			case _:

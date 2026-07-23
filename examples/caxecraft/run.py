@@ -61,8 +61,8 @@ SPLIT_HEADERS = (
     "include/hxc/modules/caxecraft/domain/BlockCoord.h",
     "include/hxc/modules/caxecraft/domain/BlockKind.h",
     "include/hxc/modules/caxecraft/domain/CaxecraftTrace.h",
-    "include/hxc/modules/caxecraft/domain/PlayerPhysics.h",
-    "include/hxc/modules/caxecraft/domain/PlayerState.h",
+    "include/hxc/modules/caxecraft/domain/CharacterBody.h",
+    "include/hxc/modules/caxecraft/domain/CharacterPhysics.h",
     "include/hxc/modules/caxecraft/domain/RaycastHit.h",
     "include/hxc/modules/caxecraft/domain/StepInput.h",
     "include/hxc/modules/caxecraft/domain/VoxelRaycast.h",
@@ -75,7 +75,7 @@ SPLIT_SOURCES = (
     "src/hxc/main.c",
     "src/hxc/support.c",
     "src/modules/caxecraft/domain/CaxecraftTrace.c",
-    "src/modules/caxecraft/domain/PlayerPhysics.c",
+    "src/modules/caxecraft/domain/CharacterPhysics.c",
     "src/modules/caxecraft/domain/VoxelRaycast.c",
     "src/modules/caxecraft/domain/World.c",
     "src/modules/caxecraft/domain/WorldStorage.c",
@@ -726,8 +726,8 @@ def validate_method_symbols(projection: dict[str, object]) -> None:
     missing = sorted(required - readable_sources)
     if missing:
         raise CaxecraftFailure(f"Caxecraft callable symbols omitted {missing!r}")
-    if "caxecraft.domain.PlayerPhysics.step" not in readable_sources:
-        raise CaxecraftFailure("Caxecraft callable symbols omitted PlayerPhysics.step")
+    if "caxecraft.domain.CharacterPhysics.step" not in readable_sources:
+        raise CaxecraftFailure("Caxecraft callable symbols omitted CharacterPhysics.step")
     report_values = [
         value
         for entry in methods
@@ -832,10 +832,10 @@ def projected_semantic_function_id(
 
 def validate_hxcir(hxcir: str, projection: dict[str, object]) -> None:
     player_step_id = projected_semantic_function_id(
-        projection, "caxecraft.domain.PlayerPhysics.step"
+        projection, "caxecraft.domain.CharacterPhysics.step"
     )
     for marker in (
-        "hxcir schema=10",
+        "hxcir schema=17",
         'function "function.caxecraft.domain.World.generate"',
         'function "function.caxecraft.domain.VoxelRaycast.trace"',
         f'function "{player_step_id}"',
@@ -878,7 +878,7 @@ def validate_generated_text(
             "caxecraft.domain.VoxelRaycast.trace(span:mutable<u8>, f64, f64, f64, f64, f64, f64, f64)",
         ),
         projected_method_name(
-            method_symbols, "caxecraft.domain.PlayerPhysics.step", prefix=True
+            method_symbols, "caxecraft.domain.CharacterPhysics.step", prefix=True
         ),
         projected_method_name(
             method_symbols, "caxecraft.qa.DomainProbe.selfCheck"
@@ -1365,7 +1365,12 @@ def render_project(
         or build.get("sources") != list(SOURCES_BY_LAYOUT[layout])
         or build.get("privateHeaders") != list(HEADERS_BY_LAYOUT[layout])
     ):
-        raise CaxecraftFailure(f"{label} layout/build manifest drifted")
+        raise CaxecraftFailure(
+            f"{label} layout/build manifest drifted: "
+            f"projectLayout={configuration.get('projectLayout') if isinstance(configuration, dict) else None!r}, "
+            f"sources={build.get('sources') if isinstance(build, dict) else None!r}, "
+            f"privateHeaders={build.get('privateHeaders') if isinstance(build, dict) else None!r}"
+        )
     runtime_plan = load_json(output / "hxc.runtime-plan.json", f"{label} runtime plan")
     validate_runtime_plan(runtime_plan)
     stdlib = load_json(output / "hxc.stdlib-report.json", f"{label} stdlib report")

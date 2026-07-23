@@ -51,63 +51,63 @@
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.abs(f64)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.abs",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_abs",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.abs(f64)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.abs",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_abs",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.canPlaceAt(instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.canPlaceAt",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_canPlaceAt",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.body(f64, f64, f64)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.body",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_body",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.floorToInt(f64)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.floorToInt",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_floorToInt",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.canPlaceAt(instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.4aec2e39ec8810b7a1e1fcaf6d9e8d814f0669cbda1d84c602ab5badb7373793)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.canPlaceAt",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_canPlaceAt",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.input(f64, f64, bool)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.input",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_input",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.floorToInt(f64)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.floorToInt",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_floorToInt",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.moveAxis(span:mutable<u8>, f64, f64, f64, f64, i32)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.moveAxis",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_moveAxis",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.input(f64, f64, bool)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.input",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_input",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.overlaps(span:mutable<u8>, f64, f64, f64)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.overlaps",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_overlaps",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.moveAxis(span:mutable<u8>, f64, f64, f64, f64, i32)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.moveAxis",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_moveAxis",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.player(f64, f64, f64)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.player",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_player",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.overlaps(span:mutable<u8>, f64, f64, f64)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.overlaps",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_overlaps",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.recoverSpawn(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.recoverSpawn",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_recoverSpawn",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.recoverSpawn(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.recoverSpawn",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_recoverSpawn",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.resolveVelocity(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, f64, f64, f64)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.resolveVelocity",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_resolveVelocity",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.resolveVelocity(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, f64, f64, f64)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.resolveVelocity",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_resolveVelocity",
       "kind": "method"
     },
     {
-      "sourceSymbol": "caxecraft.domain._PlayerPhysics.PlayerPhysics_Fields_.step(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09)",
-      "readableSymbol": "caxecraft.domain.PlayerPhysics.step",
-      "cName": "hxc_caxecraft_domain_PlayerPhysics_step",
+      "sourceSymbol": "caxecraft.domain._CharacterPhysics.CharacterPhysics_Fields_.step(span:mutable<u8>, instance:instance.closed-record.e096fe3dbe05d1c9c3f2116889cae7ff854f387b562648a36fb62ef8dc1c1001, instance:instance.closed-record.bc04a64b56baa2f3e6cd72087421c3aca30316ecd3e8002f46391dbd97835c09)",
+      "readableSymbol": "caxecraft.domain.CharacterPhysics.step",
+      "cName": "hxc_caxecraft_domain_CharacterPhysics_step",
       "kind": "method"
     },
     {

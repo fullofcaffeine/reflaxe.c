@@ -666,6 +666,11 @@ def virtual_dispatch_artifacts() -> list[Artifact]:
         ("program.h", "header"),
         ("program.c", "c"),
         ("symbols.json", "json"),
+        ("interface-dispatch.hxcir", "hxcir"),
+        ("interface-hxc.dispatch.json", "json"),
+        ("interface-program.h", "header"),
+        ("interface-program.c", "c"),
+        ("interface-symbols.json", "json"),
     ):
         value = values.get(name)
         if format_name == "json":

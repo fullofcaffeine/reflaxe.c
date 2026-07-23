@@ -158,7 +158,7 @@ complete rationale, direct-lowering alternative, sibling comparison, extraction
 criteria, and implementation-language analysis are in [the HxcIR semantic
 contract](hxc-ir.md#why-a-second-ir-when-haxe-already-has-one).
 
-The schema-10 semantic core is implemented under `src/reflaxe/c/ir/` and its
+The schema-17 semantic core is implemented under `src/reflaxe/c/ir/` and its
 normative internal invariants are documented in [HxcIR semantic
 contract](hxc-ir.md). Immutable values are block-local and definition-ordered;
 mutable storage uses structural places; cross-block data uses typed block
@@ -166,11 +166,25 @@ parameters. Cleanup actions are registered in source order while every edge
 records their validated reverse, inner-to-outer execution order. Calls and
 memory operations distinguish static/direct, program-local, and named runtime
 implementations, so the IR never selects an implicit runtime core.
-Validated UTF-8 String constants additionally retain their exact byte length;
-the only admitted String consumer is the explicit hosted literal-output call
-with a native-status abort edge.
-The bounded direct-import slice keeps borrowed literal C strings distinct as
-`IRTCString`, retains header-owned constants as `IRCNativeConstant`, and uses
+Explicit retain and release instructions make managed ownership visible before
+C syntax. Closed records compose field lifetimes in one typed helper plan;
+recursive enums use uniquely owned allocator-backed tree links. Copies clone a
+recursive tree, cleanup destroys it, and graphs that require cycle collection
+remain rejected.
+An embedded class-field borrow is distinct from an ordinary address. A named
+automatic borrow alias may reload that pointer in a later control-flow block,
+but cannot be reassigned, returned, stored as an owner, or forwarded without a
+checked borrow contract.
+Validated UTF-8 String constants additionally retain their exact byte length.
+Their immutable views may flow through parameters, returns, closed aggregates,
+tagged enums, tagged optionals, and managed Arrays because literal storage lives
+for the whole program. Byte-content equality is explicit HxcIR; hosted literal
+output remains a separate operation with a native-status abort edge. This does
+not admit runtime-created or owned Strings.
+The bounded direct-import slice keeps borrowed, statically selected literal C
+strings distinct as `IRTCString`. Typed program-local flow may propagate the
+carrier but cannot create it from a dynamic Haxe String. The slice retains
+header-owned constants as `IRCNativeConstant`, and uses
 `IRCDNative` only after exact import validation. Imported nominal values remain
 structural HxcIR types and places even though their definitions belong to the
 authoritative header; no import selects runtime intent.
@@ -181,8 +195,12 @@ null-preserving embedded-member address. See [concrete class instance
 layouts](class-layout.md).
 Bounded constructors add default-initialized automatic storage, explicit
 function failure conventions, ordinary private C constructor calls, and
-validated partial/initialized cleanup edges. They remain limited to proven
-nonescaping entry-block locals and select no runtime; see [bounded constructor
+validated partial/initialized cleanup edges. A nonescaping parent may also own
+a `final` child object directly in its C struct: HxcIR records the child as a
+by-value instance, definition planning emits the child first, and uses of its
+address remain parent-bound borrows. Locals and owned children select no
+runtime, while aliases, escapes, reassignment, recursive direct layouts, and
+fallible child construction remain fail-closed; see [bounded constructor
 lowering](constructor-lowering.md).
 Closed-world class dispatch adds a request-local reachable call catalog,
 hierarchy-root table layouts, representation-checked slots, typed receiver
@@ -289,7 +307,8 @@ lowering](function-lowering.md). The E2.T04 stable-value and CFG contract is in
 in [UB-safe primitive arithmetic](arithmetic-semantics.md). E2.T08 and its
 bounded storage extension add typed literal and compile-time-sized zero-
 initialized fixed arrays, a shared 65,536-byte per-array automatic-storage
-ceiling, borrowed span views, explicit static/dynamic bounds policies, and
+ceiling, bounded inline fixed-array fields in nonescaping class objects,
+borrowed span views from local or owned field storage, explicit static/dynamic bounds policies, and
 direct guarded exact-width span iteration; their representation and proof
 matrix are in
 [fixed arrays and span-based iteration](span-lowering.md).
@@ -336,23 +355,32 @@ initialization](static-initialization.md).
 
 E3.T01 adds request-local closed-record representation selection.
 Typedef-expanded anonymous shapes are accepted only when every field is a direct
-primitive or a nested admitted record. Canonical UTF-8 field structure
-determines one shared HxcIR instance and finalized C tag across structurally
-equal aliases; source expression evaluation remains ordered separately.
-Construction and projection stay typed HxcIR operations, addressable local
-fields use structural field/address/dereference places, and dependency-first
-private `DStruct` declarations carry structural layout assertions. See [closed
-anonymous-record lowering](aggregate-lowering.md).
+primitive, a nested admitted record, a fieldless ordinary enum, or an admitted
+header-owned by-value C struct. Canonical UTF-8 field structure determines one
+shared HxcIR instance and finalized C tag across structurally equal aliases,
+while enum fields contribute their full nominal instance identity; source
+expression evaluation remains ordered separately. Construction and projection
+stay typed HxcIR operations, addressable local fields use structural
+field/address/dereference places, and dependency-first private declarations
+define every complete native enum or struct before a record stores it by value.
+An admitted managed enum or Array field gives the record one composed
+retain/destroy plan with failure rollback and reverse-order cleanup; unmanaged
+records remain direct and runtime-free. See [closed anonymous-record
+lowering](aggregate-lowering.md).
 
 E3.T02 adds request-local concrete enum representation. Fieldless declarations
 may use native C enums; payload declarations become discriminant enums,
 constructor payload structs, a payload union, and an outer value struct.
 Constructor operands remain ordered before named HxcIR construction, payload
 projection retains a profile/build tag check, and exhaustive Haxe matches use
-typed tag-switch edges. Recursive local payload edges use explicit pointers to
-stable automatic backing storage, while recursive parameters and returns fail
-closed pending escape/lifetime analysis. Concrete primitive type arguments are
-specialized deterministically and now participate in the shared E3.T03 report.
+typed tag-switch edges. Equality and inequality on the same fieldless enum are
+explicit validated enum-tag operations and become direct C tag comparisons;
+payload-enum equality remains fail-closed rather than comparing C structs.
+Recursive payload edges use explicit pointers to uniquely owned
+allocator-backed children. Copying deep-copies the tree; calls borrow; returns
+transfer or retain; destruction follows the active tag recursively. Cyclic
+graphs still fail closed pending tracing-collector ownership. Concrete primitive type arguments are specialized
+deterministically and now participate in the shared E3.T03 report.
 See [Haxe enum lowering](enum-lowering.md).
 
 E3.T03 extends the reachable static-function worklist with closed generic
@@ -389,6 +417,10 @@ semantic identity retained in `hxc.symbols.json`; a compact hash appears only
 when the whole-program namespace pass finds a real collision or length limit.
 `CBodyEmitter` receives only validated HxcIR and finalized `CIdentifier` values,
 and builds strict structural statements plus optional typed `#line` nodes.
+Before validation, `CBodyNullCheckCoalescing` uses the shared HxcIR control-flow
+analysis to remove repeated checks of one immutable class receiver only when an
+earlier check runs on every route to the use. The validator recomputes that
+dominance proof; neither the CAST builder nor printer repairs missing safety.
 Direct-call arguments remain ordered HxcIR instructions, conversions precede
 their calls, and each consumed call result plus every observable or aliased load
 becomes a typed stable-value temporary instead of a C subexpression with weaker
@@ -554,7 +586,7 @@ artifact read for an empty plan.
 
 The schema-3 feature catalog also owns each feature's semantic contract,
 selection roots, rejected direct/local alternatives, executable evidence,
-internal runtime ABI 0.5.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
+internal runtime ABI 0.8.0, and exact source/build provenance. Every artifact has a reviewed SHA-256, packaging
 rechecks those bytes, and the sorted source set has one aggregate digest. Every
 nonempty closure contains `runtime-base`; generated private headers therefore
 emit a structural same-major assertion against `HXC_RUNTIME_ABI_MAJOR`. Empty
@@ -582,11 +614,24 @@ allocation-aware concatenation and building, and explicit borrowed/owned
 CString lifetimes without object, GC, reflection, or dynamic dependencies. The
 E4.T04 array contract adds overflow-safe contiguous growth, exact-slot aliasing,
 and optional typed element lifecycle callbacks without selecting those adjacent
-features. The full allocator, string-operation, and array features remain
-`native-seed-only`; only
-the runtime foundation, status definitions, literal carrier, and minimal hosted
-output are compiler-selectable. See [allocator ownership](allocator-abi.md),
-[string runtime](string-runtime.md), [array runtime](array-runtime.md), and
+features. Bounded Array and Bytes lowering can now select their exact managed
+storage closures. E4.T05 adds immutable, versioned object descriptors with
+exact trace/finalizer callbacks; a nonempty managed representation plan emits
+sorted `static const` descriptors, while direct classes and empty plans remain
+header-free and runtime-free. This contract does not allocate or collect an
+object. E4.T06 supplies the selective precise, non-moving collector backend,
+explicit root chains/pins, pressure thresholds, and reports. Schema-15 HxcIR
+now names exact collector-managed parameters and instruction results; generated
+C registers those stack slots and the project emitter owns one executable
+collector context across all three file layouts. The bounded concrete
+`Array<Class>` path now settles its class and array as collector-managed, emits
+exact trace/finalizer descriptors, roots allocation before construction, and
+preserves identity through array operations. Direct classes and primitive
+arrays remain collector-free; broader escaping object shapes still fail
+closed. Full runtime String operations remain `native-seed-only`. See [allocator ownership](allocator-abi.md),
+[string runtime](string-runtime.md), [array runtime](array-runtime.md),
+[object and type descriptors](object-descriptors.md),
+[precise non-moving collection](gc-runtime.md), and
 [runtime feature planning](runtime-feature-planning.md). The normative
 [hxrt architecture and source guide](hxrt.md) explains plan inspection,
 runtime minimization, file-level contracts, and source classifications.

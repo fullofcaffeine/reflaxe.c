@@ -27,6 +27,9 @@ CATALOG_SCHEMA = ROOT / "docs/specs/runtime-features.schema.json"
 RUNTIME_SOURCE_ROOT = ROOT / "runtime/hxrt"
 ALLOC_CONSUMER = CASE / "alloc_consumer.c"
 ARRAY_CONSUMER = CASE / "array_consumer.c"
+BYTES_CONSUMER = CASE / "bytes_consumer.c"
+OBJECT_CONSUMER = CASE / "object_consumer.c"
+GC_CONSUMER = ROOT / "runtime/hxrt/test/gc_contract.c"
 STRING_CONSUMER = CASE / "string_consumer.c"
 IO_CONSUMER = CASE / "io_consumer.c"
 CATALOG_PREFIX = "HXC_RUNTIME_FEATURE_CATALOG="
@@ -164,7 +167,12 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     if catalog.get("status") != "selective-compiler-packaging":
         raise RuntimeFeatureFailure("runtime feature catalog readiness drifted")
     if catalog.get("noUnconditionalCore") is not True or catalog.get("compilerSelectableFeatures") != [
+        "alloc",
+        "array",
+        "bytes",
+        "gc",
         "io",
+        "object",
         "runtime-base",
         "status",
         "string-literal",
@@ -176,7 +184,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     provenance = record(runtime_abi.get("releaseProvenance"), "runtime release provenance")
     if (
         runtime_abi.get("stability") != "internal-versioned"
-        or version != {"major": 0, "minor": 5, "patch": 0}
+        or version != {"major": 0, "minor": 8, "patch": 0}
         or runtime_abi.get("generatedCodeCompatibility") != "same-major"
         or runtime_abi.get("generatedCodeCheck") != "c11-static-assert"
         or runtime_abi.get("runtimeMajorMacro") != "HXC_RUNTIME_ABI_MAJOR"
@@ -190,8 +198,15 @@ def validate_catalog(catalog: dict[str, object]) -> None:
     forbidden_types = text_list(public_boundary.get("forbiddenRuntimeTypes"), "forbidden runtime export types")
     declared_runtime_structs: set[str] = set()
     for header in (ROOT / "runtime/hxrt/include/hxrt").glob("*.h"):
+        header_text = header.read_text(encoding="utf-8")
+        declared_runtime_structs.update(re.findall(r"typedef struct (hxc_[A-Za-z0-9_]+)\s*\{", header_text))
         declared_runtime_structs.update(
-            re.findall(r"typedef struct (hxc_[A-Za-z0-9_]+)\s*\{", header.read_text(encoding="utf-8"))
+            match.group(1)
+            for match in re.finditer(
+                r"typedef struct (hxc_[A-Za-z0-9_]+)\s+(hxc_[A-Za-z0-9_]+)\s*;",
+                header_text,
+            )
+            if match.group(1) == match.group(2)
         )
     expected_forbidden_types = sorted(declared_runtime_structs, key=lambda value: value.encode("utf-8"))
     if forbidden_types != expected_forbidden_types:
@@ -205,6 +220,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name",
         "alloc",
         "array",
+        "bytes",
+        "gc",
+        "object",
         "string-literal",
         "string",
         "io",
@@ -217,6 +235,9 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "status-name": ["status"],
         "alloc": ["status"],
         "array": ["alloc"],
+        "bytes": ["alloc", "string-literal"],
+        "gc": ["alloc", "object"],
+        "object": ["runtime-base"],
         "string-literal": ["runtime-base"],
         "string": ["alloc", "string-literal"],
         "io": ["status", "string-literal"],
@@ -226,8 +247,11 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         "runtime-abi": "native-seed-only",
         "status": "compiler-selectable",
         "status-name": "native-seed-only",
-        "alloc": "native-seed-only",
-        "array": "native-seed-only",
+        "alloc": "compiler-selectable",
+        "array": "compiler-selectable",
+        "bytes": "compiler-selectable",
+        "gc": "compiler-selectable",
+        "object": "compiler-selectable",
         "string-literal": "compiler-selectable",
         "string": "native-seed-only",
         "io": "compiler-selectable",
@@ -362,7 +386,7 @@ def validate_catalog(catalog: dict[str, object]) -> None:
         str(record(value, "reserved feature").get("id"))
         for value in records(catalog.get("reservedFeatures"), "reserved features")
     }
-    for required in ("object", "gc", "dynamic", "reflection", "exception", "thread"):
+    for required in ("dynamic", "reflection", "exception", "thread"):
         if required not in reserved:
             raise RuntimeFeatureFailure(f"catalog omitted reserved independent feature {required}")
     if "io" in reserved:
@@ -460,6 +484,9 @@ def validate_plans(plans: dict[str, object]) -> None:
 
     alloc = record(plans.get("alloc"), "alloc plan")
     array = record(plans.get("array"), "array plan")
+    bytes_plan = record(plans.get("bytes"), "bytes plan")
+    object_plan = record(plans.get("object"), "object plan")
+    gc_plan = record(plans.get("gc"), "gc plan")
     string = record(plans.get("string"), "string plan")
     minimal = record(plans.get("minimalString"), "minimal string plan")
     compiler_io = record(plans.get("compilerIo"), "compiler io plan")
@@ -467,10 +494,19 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("alloc closure is incomplete or nondeterministic")
     if array.get("features") != ["runtime-base", "status", "alloc", "array"]:
         raise RuntimeFeatureFailure("array closure is incomplete or nondeterministic")
+    if bytes_plan.get("features") != ["runtime-base", "status", "alloc", "string-literal", "bytes"]:
+        raise RuntimeFeatureFailure("Bytes closure is incomplete or nondeterministic")
+    if object_plan.get("features") != ["runtime-base", "object"]:
+        raise RuntimeFeatureFailure("object descriptor closure is incomplete or nondeterministic")
+    if gc_plan.get("features") != ["runtime-base", "status", "alloc", "object", "gc"]:
+        raise RuntimeFeatureFailure("collector closure is incomplete or nondeterministic")
     if string.get("features") != ["runtime-base", "status", "alloc", "string-literal", "string"]:
         raise RuntimeFeatureFailure("string closure is incomplete or nondeterministic")
     validate_selected_reasons(alloc, "alloc")
     validate_selected_reasons(array, "array")
+    validate_selected_reasons(bytes_plan, "Bytes")
+    validate_selected_reasons(object_plan, "object")
+    validate_selected_reasons(gc_plan, "gc")
     validate_selected_reasons(string, "string")
     validate_selected_reasons(minimal, "minimal string")
     if (
@@ -493,6 +529,12 @@ def validate_plans(plans: dict[str, object]) -> None:
         raise RuntimeFeatureFailure("string build plan omitted its selected source")
     if "runtime/src/array.c" not in text_list(array.get("artifacts"), "array artifacts"):
         raise RuntimeFeatureFailure("array build plan omitted its selected source")
+    if "runtime/src/bytes.c" not in text_list(bytes_plan.get("artifacts"), "Bytes artifacts"):
+        raise RuntimeFeatureFailure("Bytes build plan omitted its selected source")
+    if "runtime/src/object.c" not in text_list(object_plan.get("artifacts"), "object artifacts"):
+        raise RuntimeFeatureFailure("object build plan omitted its selected source")
+    if "runtime/src/gc.c" not in text_list(gc_plan.get("artifacts"), "gc artifacts"):
+        raise RuntimeFeatureFailure("collector build plan omitted its selected source")
     if "hxc_array_resize" not in text_list(array.get("symbols"), "array symbols"):
         raise RuntimeFeatureFailure("array build plan omitted its selected symbol")
     if "hxc_string_copy" not in text_list(string.get("symbols"), "string symbols"):
@@ -569,7 +611,7 @@ def validate_plans(plans: dict[str, object]) -> None:
 
 
 def validate_package(package: dict[str, object], plans: dict[str, object]) -> None:
-    for name in ("alloc", "array", "string", "io"):
+    for name in ("alloc", "array", "bytes", "object", "gc", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         expected_paths = text_list(plan.get("artifacts"), f"{name} plan artifacts")
@@ -768,7 +810,7 @@ def package_from_snapshots(
     catalog: dict[str, object], plans: dict[str, object]
 ) -> dict[str, object]:
     package: dict[str, object] = {}
-    for name in ("alloc", "array", "string", "io"):
+    for name in ("alloc", "array", "bytes", "object", "gc", "string", "io"):
         plan_key = "compilerIo" if name == "io" else name
         plan = record(plans.get(plan_key), f"{name} plan")
         files: list[dict[str, object]] = []
@@ -837,11 +879,12 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
             if (
                 symbols.returncode != 0
                 or "hxc_array_" in symbols.stdout
+                or "hxc_bytes_" in symbols.stdout
                 or "hxc_string_" in symbols.stdout
                 or "hxc_owned_string" in symbols.stdout
             ):
                 raise RuntimeFeatureFailure(
-                    f"{toolchain.family} alloc-only link retained an array/string runtime symbol"
+                    f"{toolchain.family} alloc-only link retained an array/Bytes/string runtime symbol"
                 )
     if name == "array":
         nm = shutil.which("nm")
@@ -849,17 +892,21 @@ def run_native_case(toolchain: Toolchain, name: str, package: list[object], cons
             symbols = subprocess.run([nm, str(executable)], cwd=ROOT, check=False, capture_output=True, text=True, timeout=30)
             if (
                 symbols.returncode != 0
+                or "hxc_bytes_" in symbols.stdout
                 or "hxc_string_" in symbols.stdout
                 or "hxc_owned_string" in symbols.stdout
             ):
                 raise RuntimeFeatureFailure(
-                    f"{toolchain.family} array link retained a string runtime symbol"
+                    f"{toolchain.family} array link retained a Bytes/string runtime symbol"
                 )
 
 
 def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
     alloc = records(package.get("alloc"), "alloc package")
     array = records(package.get("array"), "array package")
+    bytes_package = records(package.get("bytes"), "Bytes package")
+    object_package = records(package.get("object"), "object package")
+    gc_package = records(package.get("gc"), "gc package")
     string = records(package.get("string"), "string package")
     io = records(package.get("io"), "io package")
     with tempfile.TemporaryDirectory(prefix="reflaxe-c-runtime-feature-") as temporary:
@@ -868,6 +915,16 @@ def run_native(package: dict[str, object], toolchains: list[Toolchain]) -> None:
             family_root = root / toolchain.family
             run_native_case(toolchain, "alloc", alloc, ALLOC_CONSUMER, "runtime-feature-alloc: OK\n", family_root)
             run_native_case(toolchain, "array", array, ARRAY_CONSUMER, "runtime-feature-array: OK\n", family_root)
+            run_native_case(toolchain, "bytes", bytes_package, BYTES_CONSUMER, "runtime-feature-bytes: OK\n", family_root)
+            run_native_case(toolchain, "object", object_package, OBJECT_CONSUMER, "runtime-feature-object: OK\n", family_root)
+            run_native_case(
+                toolchain,
+                "gc",
+                gc_package,
+                GC_CONSUMER,
+                "gc-contract: OK allocations=265 collections=137 reclaimed=265 pause_ticks=973\n",
+                family_root,
+            )
             run_native_case(toolchain, "string", string, STRING_CONSUMER, "runtime-feature-string: OK\n", family_root)
             run_native_case(toolchain, "io", io, IO_CONSUMER, "runtime-feature-io\n", family_root)
 

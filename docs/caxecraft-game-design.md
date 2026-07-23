@@ -762,10 +762,12 @@ catalog loading exists. [`examples/caxecraft/locales/ui.json`](../examples/caxec
 owns reusable interface copy, while
 [`examples/caxecraft/scenarios/first-playable/map.caxemap`](../examples/caxecraft/scenarios/first-playable/map.caxemap)
 owns Nia, Mossling, and Adventure prose together with scenario structure. A
-deterministic build step validates both sources and emits a small typed
-C/raylib adapter whose direct literals have static C lifetime. The UI JSON and
+deterministic build step validates both sources and emits a small typed lookup
+catalog. Eval returns ordinary Haxe `String`; C returns only a `c.CString`
+selected from embedded-NUL-free literals with static lifetime. Rendering remains
+in the application/UI layer. The UI JSON and
 complete CaxeMap are also packaged beside the executable. This build-time
-adapter is an explicit bridge: native String/Bytes/filesystem support will let
+catalog is an explicit bridge: native String/Bytes/filesystem support will let
 the game load the already-shared CaxeMap model directly. It must not become a
 permanent alternate content path.
 
@@ -927,6 +929,29 @@ and renderer-independent semantic tests. Target-specific code is isolated in
 narrow platform adapters. Repeated `#if c` branches, dynamic bags, raw C,
 string-built foreign calls, unchecked casts, or game-specific compiler name
 checks are architecture failures, not acceptable showcase shortcuts.
+
+The accepted staged runtime design is documented in
+[Caxecraft runtime architecture](caxecraft-architecture.md). It keeps the
+existing deterministic functional mechanics, adds a stateful application and
+session shell, composes shared character capabilities once, binds human, AI,
+cutscene, and test controllers to the same intent and mechanic paths,
+constructs generic actors from content, communicates cross-system effects
+through typed events and commands, and keeps presentation read-only. A weapon,
+life rule, water response, inventory operation, or status effect is shared by
+every eligible character role; authored profiles decide who has or modifies
+that capability. The action descriptor connects that same Haxe mechanic to
+CaxeFlow, the visual/text editor, cutscenes, console commands, and CaxeTest with
+explicit authority per consumer. `haxe_c-xge.20.4.2` owns this active migration;
+this is not a claim that the current `Main.hx` already has that shape.
+
+Ordinary typed Haxe is the default implementation tool. A compile-time macro
+may later derive repeated registry/schema/editor/console/test descriptors from
+one typed capability declaration, but only after the explicit form demonstrates
+real duplication. It cannot inject a second copy of gameplay behavior into
+player and NPC types, hide simulation order, add runtime reflection, or make
+authored content executable. The macro-admission and mixin rules are defined in
+the runtime architecture record and owned by `haxe_c-xge.19.9` for the shared
+action catalog.
 
 When the game finds a compiler gap:
 

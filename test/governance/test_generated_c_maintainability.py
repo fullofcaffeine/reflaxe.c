@@ -493,7 +493,8 @@ hxc_label:
             evaluation.limits.min_source_span_mapped_functions_basis_points,
             9000,
         )
-        self.assertEqual(split.file_overrides[0].path, "src/modules/caxecraft/qa/DomainProbe.c")
+        self.assertEqual(split.file_overrides[0].path, "src/modules/caxecraft/domain/World.c")
+        self.assertEqual(split.file_overrides[1].path, "src/modules/caxecraft/qa/DomainProbe.c")
         self.assertEqual(package.file_overrides[0].path, "src/packages/caxecraft/domain/package.c")
         self.assertEqual(package.file_overrides[1].path, "src/packages/caxecraft/qa/package.c")
         self.assertEqual(unity.file_overrides[0].path, "src/program.c")

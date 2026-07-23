@@ -1493,6 +1493,18 @@ def check_flow_carrier_production(selected: str | None = None) -> None:
                 raise EvaluationOrderFailure(
                     f"{source_symbol} lost its structural lazy helper call"
                 )
+        consecutive = generated_c_function(
+            source,
+            symbol_name(symbols, "FlowCarrierFixture.consecutiveInlineCarriers"),
+        )
+        if (
+            consecutive.count("if (") < 2
+            or " && " in consecutive
+            or " || " in consecutive
+        ):
+            raise EvaluationOrderFailure(
+                "consecutive inline flow carriers lost their structured lazy branches"
+            )
 
         for toolchain in available_compilers(selected):
             for optimization in ("-O0", "-O2"):

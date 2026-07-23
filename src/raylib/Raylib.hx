@@ -13,8 +13,9 @@ package raylib;
  * it forwards to the same `raylib.raw.Raylib` function, allocates nothing,
  * selects no `hxrt` feature, creates no ownership, and adds no failure path.
  * Window, input, and drawing calls remain main/render-thread operations.
- * `c.CString` parameters currently accept only embedded-NUL-free literals with
- * static borrowed lifetime. Resource, pointer, callback, and variadic APIs are
+ * `c.CString` parameters accept embedded-NUL-free static literals and closed
+ * selections composed only from those literals. Resource, pointer, callback,
+ * and variadic APIs are
  * intentionally absent; use the public raw layer only where its explicit C
  * lifetime or unsafe contract is acceptable.
  */
@@ -129,7 +130,7 @@ class Raylib {
 	 *
 	 * Raylib reads `fileName` only during this call; it does not keep the
 	 * pointer. The current facade therefore admits the same embedded-NUL-free,
-	 * statically borrowed string literals as `InitWindow` and `DrawText`.
+	 * statically borrowed literal selections as `InitWindow` and `DrawText`.
 	 */
 	public static inline function TakeScreenshot(fileName:c.CString):Void
 		raylib.raw.Raylib.TakeScreenshot(fileName);

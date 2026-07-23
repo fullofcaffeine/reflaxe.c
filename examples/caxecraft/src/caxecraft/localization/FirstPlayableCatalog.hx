@@ -1,9 +1,7 @@
 package caxecraft.localization;
 
-#if c
 import caxecraft.localization.UiCatalog.LocaleCursor;
-import raylib.Color;
-import raylib.Raylib;
+import caxecraft.localization.LocalizationText;
 
 enum abstract ScenarioMessage(Int) {
 	var AdventureProgress = 0;
@@ -28,110 +26,75 @@ enum abstract ScenarioMessage(Int) {
 }
 
 /**
- * C rendering adapter generated from `scenarios/first-playable/map.caxemap`.
+ * Typed text catalog generated from `scenarios/first-playable/map.caxemap`.
  *
- * The embedded CaxeMap catalog is the editable source of truth. Each branch keeps a
- * direct string literal at the raylib call so haxe.c can prove static C
- * lifetime. Gameplay and UI code choose only typed message IDs.
+ * The embedded CaxeMap catalog is the editable source of truth. Callers choose a
+ * typed message ID and receive text; rendering, layout, and input remain
+ * outside localization. The C carrier borrows only generated literals
+ * with static lifetime and therefore allocates nothing.
  */
 final class FirstPlayableCatalog {
-	public static function draw(locale:LocaleCursor, message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void {
-		switch (locale) {
-			case Locale0:
-				drawLocale0(message, x, y, fontSize, color);
-			case Locale1:
-				drawLocale1(message, x, y, fontSize, color);
-			case _:
-				drawLocale0(message, x, y, fontSize, color);
+	/** Reject an unknown raw message code before constructing a typed ID. */
+	public static inline function isValidMessageStorageCode(code:Int):Bool
+		return code >= 0 && code < 19;
+
+	public static function text(locale:LocaleCursor, message:ScenarioMessage):LocalizationText {
+		return switch (locale) {
+			case Locale0: textLocale0(message);
+			case Locale1: textLocale1(message);
+			case _: textLocale0(message);
 		}
 	}
 
-	/** Direct C literals for the validated `en` catalog. */
-	static function drawLocale0(message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void {
-		switch (message) {
-			case AdventureProgress:
-				Raylib.DrawText("ADVENTURE: PROLOGUE IN PROGRESS", x, y, fontSize, color);
-			case AdventureTagline:
-				Raylib.DrawText("SAVE CEESH. FIND IVVY. STOP BROWSER.", x, y, fontSize, color);
-			case BerryPickupOne:
-				Raylib.DrawText("+1 BERRY", x, y, fontSize, color);
-			case BerryPickupTwo:
-				Raylib.DrawText("+2 BERRIES", x, y, fontSize, color);
-			case BerryRecovery:
-				Raylib.DrawText("BERRIES: +1 HEART", x, y, fontSize, color);
-			case BerryStackFull:
-				Raylib.DrawText("BERRIES FULL: USE ONE FIRST", x, y, fontSize, color);
-			case BlockStackFull:
-				Raylib.DrawText("BLOCK STACK FULL: USE ONE FIRST", x, y, fontSize, color);
-			case CopperStrike:
-				Raylib.DrawText("COPPER STRIKE", x, y, fontSize, color);
-			case HaxirioFallen:
-				Raylib.DrawText("HAXIRIO HAS FALLEN", x, y, fontSize, color);
-			case MosslingAlert:
-				Raylib.DrawText("MOSSLING ALERT", x, y, fontSize, color);
-			case MosslingDroppedBerries:
-				Raylib.DrawText("MOSSLING DROPPED BERRIES", x, y, fontSize, color);
-			case MosslingWindup:
-				Raylib.DrawText("MOSSLING WINDUP: DODGE", x, y, fontSize, color);
-			case NiaGift:
-				Raylib.DrawText("NIA: BERRIES FOR THE ROAD, HAXIRIO", x, y, fontSize, color);
-			case NiaTalk:
-				Raylib.DrawText("E  TALK TO NIA", x, y, fontSize, color);
-			case NiaWelcome:
-				Raylib.DrawText("NIA: THE GROVE LISTENS. E: A SMALL GIFT", x, y, fontSize, color);
-			case NoBerries:
-				Raylib.DrawText("NO BERRIES LEFT", x, y, fontSize, color);
-			case ReturnToMeadow:
-				Raylib.DrawText("E  RETURN TO THE MEADOW", x, y, fontSize, color);
-			case ScenarioTitle:
-				Raylib.DrawText("Caxecraft: Evergrove Prologue", x, y, fontSize, color);
-			case TelegraphedHit:
-				Raylib.DrawText("TELEGRAPHED HIT: DODGE THE NEXT", x, y, fontSize, color);
+	/** Select one validated `en` literal without allocation. */
+	static function textLocale0(message:ScenarioMessage):LocalizationText {
+		return switch (message) {
+			case AdventureProgress: "ADVENTURE: PROLOGUE IN PROGRESS";
+			case AdventureTagline: "SAVE CEESH. FIND IVVY. STOP BROWSER.";
+			case BerryPickupOne: "+1 BERRY";
+			case BerryPickupTwo: "+2 BERRIES";
+			case BerryRecovery: "BERRIES: +1 HEART";
+			case BerryStackFull: "BERRIES FULL: USE ONE FIRST";
+			case BlockStackFull: "BLOCK STACK FULL: USE ONE FIRST";
+			case CopperStrike: "COPPER STRIKE";
+			case HaxirioFallen: "HAXIRIO HAS FALLEN";
+			case MosslingAlert: "MOSSLING ALERT";
+			case MosslingDroppedBerries: "MOSSLING DROPPED BERRIES";
+			case MosslingWindup: "MOSSLING WINDUP: DODGE";
+			case NiaGift: "NIA: BERRIES FOR THE ROAD, HAXIRIO";
+			case NiaTalk: "E  TALK TO NIA";
+			case NiaWelcome: "NIA: THE GROVE LISTENS. E: A SMALL GIFT";
+			case NoBerries: "NO BERRIES LEFT";
+			case ReturnToMeadow: "E  RETURN TO THE MEADOW";
+			case ScenarioTitle: "Caxecraft: Evergrove Prologue";
+			case TelegraphedHit: "TELEGRAPHED HIT: DODGE THE NEXT";
+			case _: "";
 		}
 	}
 
-	/** Direct C literals for the validated `es-mx` catalog. */
-	static function drawLocale1(message:ScenarioMessage, x:Int, y:Int, fontSize:Int, color:Color):Void {
-		switch (message) {
-			case AdventureProgress:
-				Raylib.DrawText("AVENTURA: PROLOGO EN CONSTRUCCION", x, y, fontSize, color);
-			case AdventureTagline:
-				Raylib.DrawText("SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.", x, y, fontSize, color);
-			case BerryPickupOne:
-				Raylib.DrawText("+1 BAYA", x, y, fontSize, color);
-			case BerryPickupTwo:
-				Raylib.DrawText("+2 BAYAS", x, y, fontSize, color);
-			case BerryRecovery:
-				Raylib.DrawText("BAYAS: +1 CORAZON", x, y, fontSize, color);
-			case BerryStackFull:
-				Raylib.DrawText("BAYAS LLENAS: USA UNA PRIMERO", x, y, fontSize, color);
-			case BlockStackFull:
-				Raylib.DrawText("PILA DE BLOQUES LLENA: USA UNO", x, y, fontSize, color);
-			case CopperStrike:
-				Raylib.DrawText("GOLPE DE COBRE", x, y, fontSize, color);
-			case HaxirioFallen:
-				Raylib.DrawText("HAXIRIO HA CAIDO", x, y, fontSize, color);
-			case MosslingAlert:
-				Raylib.DrawText("MUSGUITO ALERTA", x, y, fontSize, color);
-			case MosslingDroppedBerries:
-				Raylib.DrawText("EL MUSGUITO SOLTO BAYAS", x, y, fontSize, color);
-			case MosslingWindup:
-				Raylib.DrawText("MUSGUITO CARGANDO: ESQUIVA", x, y, fontSize, color);
-			case NiaGift:
-				Raylib.DrawText("NIA: BAYAS PARA EL CAMINO, HAXIRIO", x, y, fontSize, color);
-			case NiaTalk:
-				Raylib.DrawText("E  HABLAR CON NIA", x, y, fontSize, color);
-			case NiaWelcome:
-				Raylib.DrawText("NIA: EL BOSQUE TE ESCUCHA. E: REGALO", x, y, fontSize, color);
-			case NoBerries:
-				Raylib.DrawText("NO QUEDAN BAYAS", x, y, fontSize, color);
-			case ReturnToMeadow:
-				Raylib.DrawText("E  VOLVER AL PRADO", x, y, fontSize, color);
-			case ScenarioTitle:
-				Raylib.DrawText("Caxecraft: Prologo de la Arboleda Eterna", x, y, fontSize, color);
-			case TelegraphedHit:
-				Raylib.DrawText("ATAQUE AVISADO: ESQUIVA EL PROXIMO", x, y, fontSize, color);
+	/** Select one validated `es-mx` literal without allocation. */
+	static function textLocale1(message:ScenarioMessage):LocalizationText {
+		return switch (message) {
+			case AdventureProgress: "AVENTURA: PROLOGO EN CONSTRUCCION";
+			case AdventureTagline: "SALVA A CEESH. ENCUENTRA A IVVY. DETEN A BROWSER.";
+			case BerryPickupOne: "+1 BAYA";
+			case BerryPickupTwo: "+2 BAYAS";
+			case BerryRecovery: "BAYAS: +1 CORAZON";
+			case BerryStackFull: "BAYAS LLENAS: USA UNA PRIMERO";
+			case BlockStackFull: "PILA DE BLOQUES LLENA: USA UNO";
+			case CopperStrike: "GOLPE DE COBRE";
+			case HaxirioFallen: "HAXIRIO HA CAIDO";
+			case MosslingAlert: "MUSGUITO ALERTA";
+			case MosslingDroppedBerries: "EL MUSGUITO SOLTO BAYAS";
+			case MosslingWindup: "MUSGUITO CARGANDO: ESQUIVA";
+			case NiaGift: "NIA: BAYAS PARA EL CAMINO, HAXIRIO";
+			case NiaTalk: "E  HABLAR CON NIA";
+			case NiaWelcome: "NIA: EL BOSQUE TE ESCUCHA. E: REGALO";
+			case NoBerries: "NO QUEDAN BAYAS";
+			case ReturnToMeadow: "E  VOLVER AL PRADO";
+			case ScenarioTitle: "Caxecraft: Prologo de la Arboleda Eterna";
+			case TelegraphedHit: "ATAQUE AVISADO: ESQUIVA EL PROXIMO";
+			case _: "";
 		}
 	}
 }
-#end

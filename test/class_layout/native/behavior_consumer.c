@@ -53,5 +53,11 @@ int main(void)
       HXC_FN_AS_ROOT(NULL) != NULL) {
     return 4;
   }
+  if (HXC_FN_SUM_ACROSS_BRANCH(&leaf, true) != 24.5 ||
+      HXC_FN_SUM_ACROSS_BRANCH(&leaf, false) != 22.0 ||
+      HXC_FN_BRANCH_PROOF_DOES_NOT_ESCAPE(&leaf.HXC_LEAF_BASE.HXC_MIDDLE_BASE, &root, true) != INT32_C(29) ||
+      HXC_FN_BRANCH_PROOF_DOES_NOT_ESCAPE(&leaf.HXC_LEAF_BASE.HXC_MIDDLE_BASE, &root, false) != INT32_C(25)) {
+    return 5;
+  }
   return 0;
 }

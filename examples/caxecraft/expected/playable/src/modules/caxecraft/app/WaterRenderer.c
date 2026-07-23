@@ -1,6 +1,6 @@
 #include "hxc/program.h"
 
-struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_WaterRenderer_draw(uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_texture, bool hxc_textureReady, int32_t hxc_presentationCell)
+struct hxc_caxecraft_app_WaterRenderCounters hxc_caxecraft_app_WaterRenderer_draw(uint8_t *hxc_cells, size_t hxc_length, struct Texture hxc_texture, bool hxc_textureReady, int32_t hxc_presentationCell)
 {
   uint8_t *hxc_borrow = hxc_cells;
   size_t hxc_tmp_length_n4 = hxc_length;
@@ -13,7 +13,7 @@ struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_WaterRenderer_d
   }
   if (hxc_tmp_short_circuit_result_n5)
   {
-    return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_drawCalls = 0, .hxc_visible = 0 };
+    return (struct hxc_caxecraft_app_WaterRenderCounters){ .hxc_drawCalls = 0, .hxc_visible = 0 };
   }
   int32_t hxc_column = hxc_i32_modulo_zero_safe(hxc_presentationCell, 4);
   int32_t hxc_row = hxc_f64_to_i32_saturating(hxc_f64_divide_zero_safe((double)hxc_presentationCell, (double)4));
@@ -186,7 +186,7 @@ struct hxc_caxecraft_app_TerrainRenderCounters hxc_caxecraft_app_WaterRenderer_d
     hxc_drawCalls = 1;
   }
   int32_t hxc_tmp_load_result_n122 = hxc_visible;
-  return (struct hxc_caxecraft_app_TerrainRenderCounters){ .hxc_drawCalls = hxc_drawCalls, .hxc_visible = hxc_tmp_load_result_n122 };
+  return (struct hxc_caxecraft_app_WaterRenderCounters){ .hxc_drawCalls = hxc_drawCalls, .hxc_visible = hxc_tmp_load_result_n122 };
 }
 
 void hxc_caxecraft_app_WaterRenderer_emitEast(double hxc_x, double hxc_bottom, double hxc_top, double hxc_z, double hxc_u0, double hxc_u1, double hxc_v0, double hxc_v1)

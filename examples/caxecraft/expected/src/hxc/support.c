@@ -96,35 +96,35 @@ _Static_assert(_Alignof(struct hxc_caxecraft_domain_AxisMove) >= _Alignof(double
 
 _Static_assert(sizeof(struct hxc_caxecraft_domain_AxisMove) >= offsetof(struct hxc_caxecraft_domain_AxisMove, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_AxisMove size contains its final field");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_grounded) == 0, "closed record hxc_caxecraft_domain_PlayerState first field begins at offset zero");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_grounded) == 0, "closed record hxc_caxecraft_domain_CharacterBody first field begins at offset zero");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(bool), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 0");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(bool), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 0");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityX) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_grounded) + sizeof(bool), "closed record hxc_caxecraft_domain_PlayerState field 1 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityX) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_grounded) + sizeof(bool), "closed record hxc_caxecraft_domain_CharacterBody field 1 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 1");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 1");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityY) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityX) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 2 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityY) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityX) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 2 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 2");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 2");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityZ) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityY) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 3 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityZ) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityY) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 3 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 3");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 3");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_x) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_velocityZ) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 4 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_x) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_velocityZ) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 4 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 4");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 4");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_y) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_x) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 5 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_y) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_x) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 5 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 5");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 5");
 
-_Static_assert(offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_z) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_y) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState field 6 follows the prior field without overlap");
+_Static_assert(offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_z) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_y) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody field 6 follows the prior field without overlap");
 
-_Static_assert(_Alignof(struct hxc_caxecraft_domain_PlayerState) >= _Alignof(double), "closed record hxc_caxecraft_domain_PlayerState alignment admits field 6");
+_Static_assert(_Alignof(struct hxc_caxecraft_domain_CharacterBody) >= _Alignof(double), "closed record hxc_caxecraft_domain_CharacterBody alignment admits field 6");
 
-_Static_assert(sizeof(struct hxc_caxecraft_domain_PlayerState) >= offsetof(struct hxc_caxecraft_domain_PlayerState, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_PlayerState size contains its final field");
+_Static_assert(sizeof(struct hxc_caxecraft_domain_CharacterBody) >= offsetof(struct hxc_caxecraft_domain_CharacterBody, hxc_z) + sizeof(double), "closed record hxc_caxecraft_domain_CharacterBody size contains its final field");
 
 _Static_assert(hxc_caxecraft_domain_BlockKind_Air == 0, "enum hxc_caxecraft_domain_BlockKind case Air retains its Haxe discriminant");
 
@@ -135,3 +135,13 @@ _Static_assert(hxc_caxecraft_domain_BlockKind_Dirt == 2, "enum hxc_caxecraft_dom
 _Static_assert(hxc_caxecraft_domain_BlockKind_Stone == 3, "enum hxc_caxecraft_domain_BlockKind case Stone retains its Haxe discriminant");
 
 _Static_assert(hxc_caxecraft_domain_BlockKind_Bedrock == 4, "enum hxc_caxecraft_domain_BlockKind case Bedrock retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Sand == 5, "enum hxc_caxecraft_domain_BlockKind case Sand retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Wood == 6, "enum hxc_caxecraft_domain_BlockKind case Wood retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Leaves == 7, "enum hxc_caxecraft_domain_BlockKind case Leaves retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Snow == 8, "enum hxc_caxecraft_domain_BlockKind case Snow retains its Haxe discriminant");
+
+_Static_assert(hxc_caxecraft_domain_BlockKind_Ash == 9, "enum hxc_caxecraft_domain_BlockKind case Ash retains its Haxe discriminant");

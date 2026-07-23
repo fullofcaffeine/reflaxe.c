@@ -86,6 +86,7 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/include/hxrt/status_name.h",
     "runtime/hxrt/include/hxrt/allocator.h",
     "runtime/hxrt/include/hxrt/array.h",
+    "runtime/hxrt/include/hxrt/bytes.h",
     "runtime/hxrt/include/hxrt/io.h",
     "runtime/hxrt/include/hxrt/string.h",
     "runtime/hxrt/include/hxrt/string_literal.h",
@@ -93,6 +94,7 @@ REQUIRED_GATE_FILES = (
     "runtime/hxrt/src/status.c",
     "runtime/hxrt/src/allocator.c",
     "runtime/hxrt/src/array.c",
+    "runtime/hxrt/src/bytes.c",
     "runtime/hxrt/src/io.c",
     "runtime/hxrt/src/string.c",
     "runtime/hxrt/features.json",
@@ -101,6 +103,7 @@ REQUIRED_GATE_FILES = (
     "docs/runtime-feature-planning.md",
     "docs/allocator-abi.md",
     "docs/array-runtime.md",
+    "docs/bytes-runtime.md",
     "docs/string-runtime.md",
     "runtime/hxrt/test/allocator_abi.c",
     "runtime/hxrt/test/allocator_contract.c",
@@ -112,6 +115,11 @@ REQUIRED_GATE_FILES = (
     "test/differential/array-runtime/case.json",
     "test/differential/array-runtime/oracle.hxml",
     "test/differential/array-runtime/run.py",
+    "test/differential/bytes-runtime/bytes_runtime.c",
+    "test/differential/bytes-runtime/case.json",
+    "test/differential/bytes-runtime/generated/Main.hx",
+    "test/differential/bytes-runtime/generated/oracle.hxml",
+    "test/differential/bytes-runtime/run.py",
     "test/differential/string-runtime/StringRuntimeOracle.hx",
     "test/differential/string-runtime/case.json",
     "test/differential/string-runtime/oracle.hxml",
@@ -328,12 +336,18 @@ REQUIRED_GATE_FILES = (
     "test/constructor_lowering/fixtures/failure_runtime/Main.hx",
     "test/constructor_lowering/fixtures/conditional/Main.hx",
     "test/constructor_lowering/fixtures/cycle/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_alias/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_constructor/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_forward/Main.hx",
+    "test/constructor_lowering/fixtures/borrowed_return/Main.hx",
     "test/constructor_lowering/fixtures/escape_alias/Main.hx",
-    "test/constructor_lowering/fixtures/escape_argument/Main.hx",
     "test/constructor_lowering/fixtures/escape_return/Main.hx",
     "test/constructor_lowering/fixtures/escape_self/Main.hx",
     "test/constructor_lowering/fixtures/generic/Main.hx",
     "test/constructor_lowering/fixtures/native_layout/Main.hx",
+    "test/constructor_lowering/fixtures/owned_fallible/Main.hx",
+    "test/constructor_lowering/fixtures/owned_mutable/Main.hx",
+    "test/constructor_lowering/fixtures/owned_return/Main.hx",
     "test/constructor_lowering/native/constructor_header_cpp.cpp",
     "test/constructor_lowering/expected/constructors.hxcir",
     "test/constructor_lowering/expected/constructors.json",
@@ -585,8 +599,8 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/src/caxecraft/domain/BlockCoord.hx",
     "examples/caxecraft/src/caxecraft/domain/BlockKind.hx",
     "examples/caxecraft/src/caxecraft/domain/CaxecraftTrace.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerPhysics.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerState.hx",
+    "examples/caxecraft/src/caxecraft/domain/CharacterPhysics.hx",
+    "examples/caxecraft/src/caxecraft/domain/CharacterBody.hx",
     "examples/caxecraft/src/caxecraft/domain/RaycastHit.hx",
     "examples/caxecraft/src/caxecraft/domain/StepInput.hx",
     "examples/caxecraft/src/caxecraft/domain/VoxelRaycast.hx",
@@ -602,7 +616,7 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/AxisMove.h",
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/BlockCoord.h",
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/BlockKind.h",
-    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/PlayerState.h",
+    "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/CharacterBody.h",
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/RaycastHit.h",
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/StepInput.h",
     "examples/caxecraft/expected/include/hxc/modules/caxecraft/domain/World.h",
@@ -624,13 +638,22 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/aquatics-c.hxml",
     "examples/caxecraft/water.hxml",
     "examples/caxecraft/water-c.hxml",
-    "examples/caxecraft/src/caxecraft/domain/AquaticInput.hx",
+    "examples/caxecraft/src/caxecraft/domain/CharacterIntent.hx",
     "examples/caxecraft/src/caxecraft/domain/AquaticProfile.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerAquaticState.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerAquaticStep.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerAquatics.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerImmersion.hx",
-    "examples/caxecraft/src/caxecraft/domain/PlayerMedium.hx",
+    "examples/caxecraft/src/caxecraft/domain/AquaticState.hx",
+    "examples/caxecraft/src/caxecraft/domain/AquaticStep.hx",
+    "examples/caxecraft/src/caxecraft/domain/Aquatics.hx",
+    "examples/caxecraft/src/caxecraft/domain/Character.hx",
+    "examples/caxecraft/src/caxecraft/domain/CharacterDamagePolicy.hx",
+    "examples/caxecraft/src/caxecraft/domain/CharacterStep.hx",
+    "examples/caxecraft/src/caxecraft/domain/EntityId.hx",
+    "examples/caxecraft/src/caxecraft/domain/EntityStore.hx",
+    "examples/caxecraft/src/caxecraft/domain/GameSession.hx",
+    "examples/caxecraft/src/caxecraft/domain/Immersion.hx",
+    "examples/caxecraft/src/caxecraft/domain/AquaticMedium.hx",
+    "examples/caxecraft/src/caxecraft/domain/PlayerAgent.hx",
+    "examples/caxecraft/src/caxecraft/domain/Vitals.hx",
+    "examples/caxecraft/src/caxecraft/domain/VitalsState.hx",
     "examples/caxecraft/src/caxecraft/domain/WaterCellCodec.hx",
     "examples/caxecraft/src/caxecraft/domain/WaterCellState.hx",
     "examples/caxecraft/src/caxecraft/domain/WaterLevel.hx",
@@ -645,10 +668,25 @@ REQUIRED_GATE_FILES = (
     "examples/caxecraft/expected/playable/hxc.manifest.json",
     "examples/caxecraft/expected/playable/hxc.runtime-plan.json",
     "examples/caxecraft/expected/playable/include/hxc/program.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/AquaticState.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/Character.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/CharacterBody.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/CharacterIntent.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/CharacterStep.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/EntityStore.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/GameSession.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/PlayerAgent.h",
+    "examples/caxecraft/expected/playable/include/hxc/modules/caxecraft/domain/VitalsState.h",
     "examples/caxecraft/expected/playable/src/modules/caxecraft/app/HudDigits.c",
     "examples/caxecraft/expected/playable/src/modules/caxecraft/app/Main.c",
     "examples/caxecraft/expected/playable/src/modules/caxecraft/app/TerrainAtlas.c",
     "examples/caxecraft/expected/playable/src/modules/caxecraft/app/TerrainRenderer.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/Aquatics.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/Character.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/EntityStore.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/GameSession.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/PlayerAgent.c",
+    "examples/caxecraft/expected/playable/src/modules/caxecraft/domain/Vitals.c",
     "scripts/test/generated_c_maintainability.py",
     "docs/generated-c-maintainability.md",
     "docs/specs/generated-c-maintainability.schema.json",
@@ -738,9 +776,22 @@ REQUIRED_GATE_FILES = (
     "docs/specs/raylib-rlgl-selection.schema.json",
     "docs/specs/raylib-rlgl-binding-lock.json",
     "docs/specs/raylib-rlgl-binding-lock.schema.json",
+    "docs/specs/raygui-core-selection.json",
+    "docs/specs/raygui-core-selection.schema.json",
+    "docs/specs/raygui-core-binding-lock.json",
+    "docs/specs/raygui-core-binding-lock.schema.json",
     "scripts/raylib/provision.py",
     "scripts/raylib/core_binding.py",
     "scripts/raylib/rlgl_binding.py",
+    "scripts/raygui/core_binding.py",
+    "scripts/raygui/provision.py",
+    "src/raygui/raw/Raygui.hx",
+    "src/raygui/GuiControl.hx",
+    "src/raygui/GuiControlProperty.hx",
+    "src/raygui/GuiDefaultProperty.hx",
+    "src/raygui/GuiResult.hx",
+    "src/raygui/GuiState.hx",
+    "src/raygui/Raygui.hx",
     "src/raylib/raw/BoundingBox.hx",
     "src/raylib/raw/Camera.hx",
     "src/raylib/raw/Camera3D.hx",
@@ -809,6 +860,12 @@ REQUIRED_GATE_FILES = (
     "test/raylib_provisioning/test_core_binding.py",
     "test/raylib_provisioning/test_provision.py",
     "test/raylib_provisioning/run.py",
+    "test/raygui_binding/fixtures/semantic/Main.hx",
+    "test/raygui_binding/fixtures/semantic/build.hxml",
+    "test/raygui_binding/native/core_consumer.c",
+    "test/raygui_binding/native/core_consumer.cpp",
+    "test/raygui_binding/native.py",
+    "test/raygui_binding/test_binding.py",
     "test/positive/raylib-provisioning/case.json",
     "test/negative/raylib-provisioning/case.json",
     "test/snapshot/raylib-provisioning/case.json",
@@ -836,6 +893,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "  build-adapters:\n",
     "  raylib-headless:\n",
     "  raylib-desktop:\n",
+    "          python3 test/raygui_binding/native.py \\\n",
     "          clang --version\n",
     "            --clang clang \\\n",
     "  license-and-provenance:\n",
@@ -864,6 +922,7 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     'python3 test/span_lowering/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     'python3 examples/caxecraft/run.py --native-only --toolchain "${{ matrix.toolchain }}"',
     "python3 examples/caxecraft/play.py \\",
+    "python3 examples/caxecraft/benchmark_renderer.py \\",
     "--prebuilt-raylib-cache",
     "--prebuilt-raylib-build",
     "--prebuilt-raylib-report",
@@ -871,11 +930,11 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "--optimization 2 \\",
     'if [ "${{ matrix.platform }}" = linux ]; then',
     'xvfb-run --auto-servernum --server-args="-screen 0 1280x720x24"',
-    "--smoke \\",
+    "--pilot resize-layout \\",
     "      - name: Preserve Caxecraft graphical pilot evidence\n",
     "          name: caxecraft-pilot-${{ matrix.name }}\n",
-    "caxecraft-pilot-report.json\n",
-    "caxecraft-smoke.png\n",
+    "linux-split-pilot-resize-layout/bin/caxecraft-pilot-report.json\n",
+    "linux-split-pilot-resize-layout/bin/caxecraft-pilot-resize.png\n",
     "            xvfb \\",
     "            xauth\n",
     "--require-hashes",
@@ -886,6 +945,18 @@ REQUIRED_WORKFLOW_SNIPPETS = (
     "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
     "--authority pinned-source",
     "--configuration memory-software",
+    "--raylib-configuration memory-software",
+    "--pilot move-jump-edit",
+    "--sanitizers",
+    'caxecraft-renderer-comparison-${{ matrix.name }}.json',
+    "linux-memory-software-split-pilot-move-jump-edit-benchmark/bin/caxecraft-pilot-report.json",
+    "linux-memory-software-split-pilot-move-jump-edit-immediate-baseline-benchmark/bin/caxecraft-pilot-report.json",
+    'ASAN_OPTIONS="detect_leaks=1:halt_on_error=1:strict_string_checks=1"',
+    'UBSAN_OPTIONS="halt_on_error=1:print_stacktrace=1"',
+    "name: linux-clang",
+    "name: raylib-headless-${{ matrix.name }}",
+    "caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-report.json",
+    "caxecraft-headless/variants/linux-memory-software-split-sanitized-pilot-move-jump-edit/bin/caxecraft-pilot-move.png",
     "--configuration desktop",
     "--platform linux",
     ' --platform "${{ matrix.platform }}"',
@@ -996,6 +1067,8 @@ def validate() -> list[str]:
         != "python3 test/raylib_provisioning/run.py"
     ):
         errors.append("package.json must retain the test:raylib-provisioning entry point")
+    if scripts.get("test:raygui-binding") != "python3 test/raygui_binding/test_binding.py":
+        errors.append("package.json must retain the test:raygui-binding entry point")
     if scripts.get("test:declaration-plan") != "python3 test/declaration_plan/run.py":
         errors.append("package.json must retain the test:declaration-plan entry point")
     if scripts.get("test:symbol-registry") != "python3 test/symbol_registry/run.py":
@@ -1011,6 +1084,10 @@ def validate() -> list[str]:
         errors.append("package.json must retain the test:runtime-features entry point")
     if scripts.get("test:array-runtime") != "python3 test/differential/array-runtime/run.py":
         errors.append("package.json must retain the test:array-runtime entry point")
+    if scripts.get("test:bytes-runtime") != "python3 test/differential/bytes-runtime/run.py":
+        errors.append("package.json must retain the test:bytes-runtime entry point")
+    if scripts.get("test:gc-runtime") != "python3 test/runtime/gc/run.py":
+        errors.append("package.json must retain the test:gc-runtime entry point")
     if scripts.get("test:string-runtime") != "python3 test/differential/string-runtime/run.py":
         errors.append("package.json must retain the test:string-runtime entry point")
     if scripts.get("test:string-output") != "python3 test/string_output/run.py":
@@ -1075,6 +1152,14 @@ def validate() -> list[str]:
         errors.append("package.json must retain the deterministic Caxecraft water gate")
     if scripts.get("test:caxecraft-aquatics") != "python3 examples/caxecraft/run_haxe_c_test.py aquatics":
         errors.append("package.json must retain the deterministic Caxecraft aquatics gate")
+    if scripts.get("test:caxecraft-session") != "python3 examples/caxecraft/run_haxe_c_test.py session":
+        errors.append("package.json must retain the Caxecraft game-session gate")
+    if scripts.get("test:caxecraft-app-screen") != "python3 examples/caxecraft/run_haxe_c_test.py app-screen":
+        errors.append("package.json must retain the Caxecraft app-screen gate")
+    if scripts.get("test:caxecraft-presentation") != "python3 examples/caxecraft/run_haxe_c_test.py presentation":
+        errors.append("package.json must retain the Caxecraft presentation gate")
+    if scripts.get("test:caxecraft-terrain-chunks") != "python3 examples/caxecraft/run_haxe_c_test.py terrain-chunks":
+        errors.append("package.json must retain the Caxecraft terrain-chunk gate")
     if scripts.get("test:caxecraft-domain:full") != "python3 examples/caxecraft/run.py --full":
         errors.append("package.json must retain the exhaustive Caxecraft CI entry point")
     if scripts.get("test:caxecraft-playable") != "python3 examples/caxecraft/play.py --check-snapshots":
@@ -1083,6 +1168,8 @@ def validate() -> list[str]:
         errors.append("package.json must retain the deterministic Caxecraft pilot contract gate")
     if scripts.get("caxecraft:play") != "python3 examples/caxecraft/play.py":
         errors.append("package.json must retain the one-command Caxecraft developer workflow")
+    if scripts.get("benchmark:caxecraft-renderer") != "python3 examples/caxecraft/benchmark_renderer.py":
+        errors.append("package.json must retain the Caxecraft renderer comparison workflow")
     beads_plan_script = str(scripts.get("test:beads-plan", ""))
     for required_beads_command in (
         "python3 scripts/beads/validate_plan.py",
@@ -1151,6 +1238,10 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:runtime-features")
     if "npm run test:array-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:array-runtime")
+    if "npm run test:bytes-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:bytes-runtime")
+    if "npm run test:gc-runtime" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:gc-runtime")
     if "npm run test:string-runtime" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:string-runtime")
     if "npm run test:string-output" not in str(scripts.get("test:toolchain", "")):
@@ -1207,6 +1298,14 @@ def validate() -> list[str]:
         errors.append("package.json test:toolchain must execute test:caxecraft-water")
     if "npm run test:caxecraft-aquatics" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-aquatics")
+    if "npm run test:caxecraft-session" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-session")
+    if "npm run test:caxecraft-app-screen" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-app-screen")
+    if "npm run test:caxecraft-presentation" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-presentation")
+    if "npm run test:caxecraft-terrain-chunks" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:caxecraft-terrain-chunks")
     if "npm run test:caxecraft-domain:full" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:caxecraft-domain:full")
     if "npm run test:typed-ast" not in str(scripts.get("test:toolchain", "")):
@@ -1219,6 +1318,8 @@ def validate() -> list[str]:
         errors.append(
             "package.json test:toolchain must execute test:raylib-provisioning"
         )
+    if "npm run test:raygui-binding" not in str(scripts.get("test:toolchain", "")):
+        errors.append("package.json test:toolchain must execute test:raygui-binding")
     if "npm run test:beads-plan" not in str(scripts.get("test:toolchain", "")):
         errors.append("package.json test:toolchain must execute test:beads-plan")
     if "npm run snapshots:catalog" not in str(scripts.get("test:toolchain", "")):
@@ -1345,6 +1446,8 @@ def validate() -> list[str]:
         errors.append("pre-commit must run the selective runtime feature test")
     if "test/differential/array-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the typed array runtime test")
+    if "test/differential/bytes-runtime/run.py" not in pre_commit:
+        errors.append("pre-commit must run the fixed-length Bytes runtime test")
     if "test/differential/string-runtime/run.py" not in pre_commit:
         errors.append("pre-commit must run the UTF-8 scalar string runtime test")
     if "test/string_output/run.py" not in pre_commit:
@@ -1487,6 +1590,8 @@ def validate() -> list[str]:
         errors.append("native smoke runner must execute selective runtime packaging in each toolchain lane")
     if "array-runtime-contract" not in runner or "ARRAY_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the typed array contract in each toolchain lane")
+    if "bytes-runtime-contract" not in runner or "BYTES_RUNTIME" not in runner:
+        errors.append("native smoke runner must execute the fixed-length Bytes contract in each toolchain lane")
     if "string-runtime-contract" not in runner or "STRING_RUNTIME" not in runner:
         errors.append("native smoke runner must execute the UTF-8 scalar string contract in each toolchain lane")
     if "generated-hello-example-run" not in runner or "HELLO_EXAMPLE" not in runner:
@@ -1609,6 +1714,29 @@ def validate() -> list[str]:
             errors.append(
                 "array runtime runner lost growth/alias/lifecycle/selective-link evidence: "
                 + required_array_runtime_contract
+            )
+
+    bytes_runtime_runner = read_text(
+        ROOT / "test/differential/bytes-runtime/run.py", errors
+    )
+    for required_bytes_runtime_contract in (
+        "-std=c11",
+        "-Werror",
+        "-pedantic",
+        "-Wconversion",
+        "-Wsign-conversion",
+        "--toolchain",
+        "--native-only",
+        "run_eval_oracle",
+        "-fsanitize=address,undefined",
+        "hxc_bytes_ref_blit",
+        "hxc_gc",
+        "nm",
+    ):
+        if required_bytes_runtime_contract not in bytes_runtime_runner:
+            errors.append(
+                "Bytes runtime runner lost binary/ownership/selective-link evidence: "
+                + required_bytes_runtime_contract
             )
 
     primitive_runner = read_text(ROOT / "test/primitive_semantics/run.py", errors)
@@ -1781,7 +1909,7 @@ def validate() -> list[str]:
         "dispatch-report",
         "reflaxe_c_virtual_dispatch_report",
         "virtual-override-representation-mismatch",
-        "one-root-layout-reachable-virtual-slots-only",
+        "reachable-class-vtables-and-per-interface-itables-only",
         "warm server after rejected override requests",
     ):
         if required_virtual_dispatch_contract not in virtual_dispatch_runner:
@@ -1813,7 +1941,8 @@ def validate() -> list[str]:
         "layout_consumer.cpp",
         "_Static_assert(",
         "checked-abort",
-        "recursive-enum-requires-escape-analysis",
+        "payload-enum-equality-requires-structural-semantics",
+        "recursive-enum-with-collector-payload",
     ):
         if required_enum_contract not in enum_runner:
             errors.append(

@@ -20,6 +20,23 @@ class CGenericSpecializationContract {
 	public static function enumArgumentKey(haxePath:String, argumentKeys:Array<String>):String
 		return 'enum(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
 
+	/** Preserve each nested element identity instead of collapsing every Array to one key. */
+	public static function arrayArgumentKey(elementKey:String):String
+		return 'array(${canonicalPart(elementKey)})';
+
+	public static function stringArgumentKey():String
+		return "string(utf8-scalar-indexed)";
+
+	/** Preserve a closed inner identity when Haxe's `Null<T>` wrapper is inferred. */
+	public static function nullableArgumentKey(valueKey:String):String
+		return 'nullable(${canonicalPart(valueKey)})';
+
+	public static function recordArgumentKey(fieldKeys:Array<String>):String
+		return 'closed-record(${canonicalArray(fieldKeys)})';
+
+	public static function recordFieldKey(name:String, access:String, typeKey:String):String
+		return '${canonicalPart(name)}${canonicalPart(access)}${canonicalPart(typeKey)}';
+
 	public static function enumInstanceKey(haxePath:String, argumentKeys:Array<String>):String
 		return 'haxe-enum-v1(${canonicalPart(haxePath)}${canonicalArray(argumentKeys)})';
 

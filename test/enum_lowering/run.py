@@ -9,9 +9,11 @@ import difflib
 import json
 import os
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -23,7 +25,7 @@ POSITIVE = FIXTURES / "positive"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ENUM_LOWERING="
-PRODUCTION_FILES = {
+COMMON_PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
     "hxc.abi.json",
@@ -33,10 +35,49 @@ PRODUCTION_FILES = {
     "hxc.specializations.json",
     "hxc.stdlib-report.json",
     "hxc.symbols.json",
-    "include/hxc/program.h",
     "meson.build",
-    "src/program.c",
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/array.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/src/allocator.c",
+    "runtime/src/array.c",
 }
+PRODUCTION_FILES_BY_LAYOUT = {
+    "split": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/detail/program_types.h",
+        "include/hxc/modules/EnumFixture.h",
+        "include/hxc/program.h",
+        "src/hxc/main.c",
+        "src/hxc/support.c",
+        "src/modules/EnumFixture.c",
+    },
+    "package": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/detail/program_types.h",
+        "include/hxc/packages/package.h",
+        "include/hxc/program.h",
+        "src/hxc/main.c",
+        "src/hxc/support.c",
+        "src/packages/package.c",
+    },
+    "unity": COMMON_PRODUCTION_FILES
+    | {
+        "include/hxc/program.h",
+        "src/program.c",
+    },
+}
+
+RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "array"]
+RUNTIME_ARTIFACTS = [
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/array.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/src/allocator.c",
+    "runtime/src/array.c",
+]
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -74,9 +115,11 @@ REQUIRED_COVERAGE = frozenset(
         "c-consumer",
         "exhaustive-tag-switch",
         "fieldless-native-enum",
+        "fieldless-enum-equality",
         "generated-executable",
         "recursive-finite-layout",
-        "runtime-free",
+        "managed-record-lifecycle",
+        "recursive-owned-enum",
         "tagged-union",
     }
 )
@@ -91,10 +134,37 @@ def development_tool(name: str) -> str:
     return str(local) if local.is_file() else name
 
 
-def haxe_environment() -> dict[str, str]:
+def haxe_environment(*, server: bool = False) -> dict[str, str]:
     environment = os.environ.copy()
-    environment["HAXE_NO_SERVER"] = "1"
+    if server:
+        environment.pop("HAXE_NO_SERVER", None)
+    else:
+        environment["HAXE_NO_SERVER"] = "1"
     return environment
+
+
+def available_port() -> int:
+    """Reserve an unused loopback port for this test's isolated Haxe server."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as candidate:
+        candidate.bind(("127.0.0.1", 0))
+        return int(candidate.getsockname()[1])
+
+
+def wait_for_server(server: subprocess.Popen[str], port: int) -> None:
+    """Wait for the isolated server instead of racing the first compile request."""
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        if server.poll() is not None:
+            stdout, stderr = server.communicate()
+            raise EnumLoweringFailure(
+                f"Haxe server exited early\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            )
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.2):
+                return
+        except OSError:
+            time.sleep(0.05)
+    raise EnumLoweringFailure("Haxe server did not accept connections")
 
 
 def render(
@@ -261,29 +331,42 @@ def function_section(hxcir: str, field: str) -> str:
 def validate(report: dict[str, object], *, profile: str = "portable") -> None:
     if (
         report.get("schemaVersion") != 1
-        or report.get("status") != "haxe-enums-direct-runtime-free"
+        or report.get("status") != "haxe-enums-owned-managed-values"
         or report.get("profile") != profile
-        or report.get("runtimeFeatures") != []
-        or report.get("runtimeArtifacts") != []
+        or report.get("runtimeFeatures") != RUNTIME_FEATURES
+        or report.get("runtimeArtifacts") != RUNTIME_ARTIFACTS
     ):
         raise EnumLoweringFailure(f"enum report contract drifted for {profile}")
     records = enum_records(report)
-    if len(records) != 4:
-        raise EnumLoweringFailure(f"expected four concrete enum instances, found {len(records)}")
+    if len(records) != 7:
+        raise EnumLoweringFailure(f"expected seven concrete enum instances, found {len(records)}")
     names = enum_names(report)
     mode = enum_by_name(report, "Mode")
     option_int = enum_by_name(report, "Option<i32>")
     option_bool = enum_by_name(report, "Option<bool>")
+    option_rule_candidates = [
+        record
+        for record in records
+        if str(record.get("displayName", "")).startswith("Option<closed-record(")
+    ]
+    if len(option_rule_candidates) != 1:
+        raise EnumLoweringFailure("expected one generic Option specialization for Rule")
+    option_rule = option_rule_candidates[0]
     chain = enum_by_name(report, "Chain<i32>")
+    rule_envelope = enum_by_name(report, "RuleEnvelope")
     if (
         mode.get("representation") != "native-enum"
         or mode.get("recursive") is not False
         or mode.get("scopedLifetime") is not False
         or option_int.get("representation") != "tagged-union"
         or option_bool.get("representation") != "tagged-union"
+        or option_rule.get("representation") != "tagged-union"
         or chain.get("representation") != "tagged-union"
         or chain.get("recursive") is not True
         or chain.get("scopedLifetime") is not True
+        or rule_envelope.get("representation") != "tagged-union"
+        or rule_envelope.get("recursive") is not False
+        or rule_envelope.get("scopedLifetime") is not False
     ):
         raise EnumLoweringFailure("enum representation or recursion policy drifted")
     link_next = payload_by_name(case_by_name(chain, "Link"), "next")
@@ -291,6 +374,11 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         "pointer:nonnull<instance:"
     ):
         raise EnumLoweringFailure("recursive Chain edge is not an explicit non-null pointer")
+    wrapped_rule = payload_by_name(case_by_name(rule_envelope, "WrappedRule"), "rule")
+    if wrapped_rule.get("indirect") is not False or not str(
+        wrapped_rule.get("type", "")
+    ).startswith("instance:instance.closed-record."):
+        raise EnumLoweringFailure("managed closed record is not a direct typed enum payload")
     for record in records:
         cases = record.get("cases")
         if not isinstance(cases, list) or [case.get("tagValue") for case in cases] != list(
@@ -305,13 +393,18 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         raise EnumLoweringFailure(f"enum source partition drifted: {sorted(sources)!r}")
     source = sources["src/program.c"]
     for label, value in (("HxcIR", hxcir), ("header", header), ("source", source)):
-        if str(ROOT) in value or "\\" in value or "hxrt" in value.lower():
-            raise EnumLoweringFailure(f"{label} leaked a host path or runtime dependency")
-    if not hxcir.startswith("hxcir schema=10\n") or hxcir.count(" representation=tagged ") != 3:
-        raise EnumLoweringFailure("schema-10 tagged-union HxcIR inventory drifted")
+        if str(ROOT) in value or "\\" in value:
+            raise EnumLoweringFailure(f"{label} leaked a host path")
+    if not hxcir.startswith("hxcir schema=17\n") or hxcir.count(" representation=tagged ") != 6:
+        raise EnumLoweringFailure("schema-17 tagged-union HxcIR inventory drifted")
     option_section = function_section(hxcir, "optionValue")
     recursive_section = function_section(hxcir, "recursiveLocal")
     main_section = function_section(hxcir, "main")
+    mode_equality_section = function_section(hxcir, "modeEquality")
+    wrap_rule_section = function_section(hxcir, "wrapRule")
+    envelope_value_section = function_section(hxcir, "envelopeValue")
+    apply_option_section = function_section(hxcir, "applyOption")
+    constructor_value_section = function_section(hxcir, "constructorValue")
     option_int_instance = required_identifier(option_int, "instanceId")
     identity_call = main_section.find(
         'call dispatch=direct("function.EnumFixture.identity")'
@@ -325,11 +418,20 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or 'project-tag value=' not in option_section
         or f'check=checked-abort(profile="{profile}",build="debug")'
         not in option_section
-        or "enum-recursive-payload-address" not in recursive_section
+        or "enum-recursive-payload-allocate" not in recursive_section
         or "enum-recursive-payload-load" not in recursive_section
+        or 'binary operation="haxe.enum-tag.equal"' not in mode_equality_section
+        or 'binary operation="haxe.enum-tag.not-equal"' not in mode_equality_section
         or identity_call == -1
         or identity_result_constructor == -1
         or identity_call > identity_result_constructor
+        or 'implementation=program-local("aggregate-lifecycle:' not in wrap_rule_section
+        or "terminator tag-switch" not in envelope_value_section
+        or 'project-tag value=' not in envelope_value_section
+        or "dispatch=closure(" not in apply_option_section
+        or "enum-constructor-function-reference" not in constructor_value_section
+        or "function.enum-constructor-adapter." not in constructor_value_section
+        or 'instruction "instruction.0.construct-enum-adapter"' not in hxcir
     ):
         raise EnumLoweringFailure("enum construction, checking, switch, or recursive HxcIR drifted")
     if (
@@ -347,9 +449,37 @@ def validate(report: dict[str, object], *, profile: str = "portable") -> None:
         or "switch (" not in source
         or "abort();" not in source
         or f"(struct {names['option_int_tag']}){{" not in source
+        or " == " not in source
+        or " != " not in source
         or "int main(void)" not in source
+        or "hxc_record_" not in source
+        or "_retain(void *" not in source
+        or "_destroy(void *" not in source
     ):
         raise EnumLoweringFailure("structural enum CAST emission or checks drifted")
+    record_retain_start = source.find("hxc_status hxc_record_")
+    record_destroy_start = source.find("\nvoid hxc_record_", record_retain_start)
+    recursive_clone_start = source.find("_retain_recursive_clone(void *")
+    recursive_destroy_start = source.find("\nvoid ", recursive_clone_start)
+    if (
+        record_retain_start == -1
+        or record_destroy_start == -1
+        or recursive_clone_start == -1
+        or recursive_destroy_start == -1
+    ):
+        raise EnumLoweringFailure("managed lifecycle helper boundaries disappeared")
+    record_retain = source[record_retain_start:record_destroy_start]
+    recursive_clone = source[recursive_clone_start:recursive_destroy_start]
+    if (
+        record_retain.count("_retain(") < 3
+        or record_retain.count("hxc_array_ref_release(") < 2
+        or "_destroy(&" not in record_retain
+        or record_retain.count("return hxc_operation_status;") < 3
+        or "hxc_free(" not in recursive_clone
+    ):
+        raise EnumLoweringFailure(
+            "managed record or recursive clone lost failure rollback before ownership transfer"
+        )
     symbols = report.get("symbols")
     if not isinstance(symbols, dict) or symbols.get("algorithm") != "hxc-c-symbol-v2":
         raise EnumLoweringFailure("enum report omitted its finalized symbol table")
@@ -448,6 +578,13 @@ def write_native_fixture(report: dict[str, object], root: Path) -> None:
     header.write_text(required_text(report, "header"), encoding="utf-8", newline="\n")
     source.write_text(source_records(report)["src/program.c"], encoding="utf-8", newline="\n")
     shutil.copyfile(NATIVE / "layout_consumer.c", native)
+    for relative in RUNTIME_ARTIFACTS:
+        destination = root / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        source_path = ROOT / relative.replace(
+            "runtime/include", "runtime/hxrt/include"
+        ).replace("runtime/src", "runtime/hxrt/src")
+        shutil.copyfile(source_path, destination)
 
 
 def run_harness_matrix(
@@ -460,7 +597,7 @@ def run_harness_matrix(
             "enum-layout",
             ("native/layout_consumer.c",),
             ("include/hxc/program.h",),
-            ("include",),
+            ("include", "runtime/include"),
             "",
             (
                 "c-consumer",
@@ -471,15 +608,17 @@ def run_harness_matrix(
         ),
         CFixtureProject(
             "generated-program",
-            ("src/program.c",),
+            ("src/program.c", "runtime/src/allocator.c", "runtime/src/array.c"),
             ("include/hxc/program.h",),
-            ("include",),
+            ("include", "runtime/include"),
             "",
             (
                 "checked-payload-projection",
                 "exhaustive-tag-switch",
+                "fieldless-enum-equality",
                 "generated-executable",
-                "runtime-free",
+                "managed-record-lifecycle",
+                "recursive-owned-enum",
             ),
         ),
     )
@@ -571,6 +710,7 @@ def check_cpp_layout(
                     optimization,
                     *definitions,
                     f"-I{root / 'fixture/include'}",
+                    f"-I{root / 'fixture/runtime/include'}",
                     "-c",
                     str(NATIVE / "layout_provider.c"),
                     "-o",
@@ -585,6 +725,7 @@ def check_cpp_layout(
                     optimization,
                     *definitions,
                     f"-I{root / 'fixture/include'}",
+                    f"-I{root / 'fixture/runtime/include'}",
                     "-c",
                     str(NATIVE / "layout_consumer.cpp"),
                     "-o",
@@ -619,25 +760,34 @@ def custom_target(
     main: str,
     profile: str = "portable",
     runtime: str | None = None,
+    layout: str = "unity",
+    reverse: bool = False,
+    connect: str | None = None,
 ) -> subprocess.CompletedProcess[str]:
-    command = [
-        development_tool("haxe"),
+    command = [development_tool("haxe")]
+    if connect is not None:
+        command.extend(["--connect", connect])
+    command.extend([
         "-cp",
         str(fixture),
         "-lib",
         "reflaxe.c",
         "-main",
         main,
-    ]
+        "-D",
+        "hxc_runtime_diagnostics=off",
+    ])
+    if reverse:
+        command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
         command.extend(["-D", f"hxc_runtime={runtime}"])
-    command.extend(["-D", "hxc_project_layout=unity", "--custom-target", f"c={output}"])
+    command.extend(["-D", f"hxc_project_layout={layout}", "--custom-target", f"c={output}"])
     return subprocess.run(
         command,
         cwd=ROOT,
-        env=haxe_environment(),
+        env=haxe_environment(server=connect is not None),
         check=False,
         capture_output=True,
         text=True,
@@ -668,10 +818,10 @@ def require_compile_success(result: subprocess.CompletedProcess[str], label: str
         )
 
 
-def validate_production(root: Path, *, profile: str, policy: str) -> None:
-    if generated_files(root) != PRODUCTION_FILES:
+def validate_production(root: Path, *, layout: str, profile: str, policy: str) -> None:
+    if generated_files(root) != PRODUCTION_FILES_BY_LAYOUT[layout]:
         raise EnumLoweringFailure(
-            f"{profile}/{policy} production artifact set drifted: "
+            f"{layout}/{profile}/{policy} production artifact set drifted: "
             f"{sorted(generated_files(root))!r}"
         )
     manifest = json.loads((root / "hxc.manifest.json").read_text(encoding="utf-8"))
@@ -679,58 +829,171 @@ def validate_production(root: Path, *, profile: str, policy: str) -> None:
     specializations = json.loads(
         (root / "hxc.specializations.json").read_text(encoding="utf-8")
     )
-    proof = runtime_plan.get("noRuntimeProof")
-    reachability = proof.get("reachability") if isinstance(proof, dict) else None
     specialization_summary = specializations.get("summary")
     if (
         manifest.get("compilationStatus") != "lowered-direct-value-executable"
         or manifest.get("configuration", {}).get("profile") != profile
         or runtime_plan.get("schemaVersion") != 2
-        or runtime_plan.get("status") != "analyzed-runtime-free"
+        or runtime_plan.get("status") != "analyzed-runtime-features"
         or runtime_plan.get("profile") != profile
         or runtime_plan.get("resolvedPolicy") != policy
-        or runtime_plan.get("features") != []
-        or runtime_plan.get("artifacts") != []
+        or runtime_plan.get("features") != RUNTIME_FEATURES
+        or runtime_plan.get("artifacts") != RUNTIME_ARTIFACTS
         or "bounded-haxe-enum-values" not in runtime_plan.get("directDecisions", [])
         or "closed-generic-specializations"
         not in runtime_plan.get("directDecisions", [])
-        or "closed-anonymous-value-records" in runtime_plan.get("directDecisions", [])
+        or "closed-anonymous-value-records" not in runtime_plan.get("directDecisions", [])
+        or "managed-haxe-arrays" not in runtime_plan.get("directDecisions", [])
         or specializations.get("schemaVersion") != 1
         or specializations.get("algorithm") != "hxc-generic-specialization-v1"
         or specializations.get("status") != "analyzed-closed-specializations"
         or specializations.get("functionSpecializations") != []
         or not isinstance(specializations.get("typeSpecializations"), list)
-        or len(specializations["typeSpecializations"]) != 3
+        or len(specializations["typeSpecializations"]) != 4
         or not isinstance(specialization_summary, dict)
         or specialization_summary.get("functionSpecializations") != 0
-        or specialization_summary.get("typeSpecializations") != 3
-        or not isinstance(proof, dict)
-        or proof.get("status") != "eligible"
-        or proof.get("directDecisions") != runtime_plan.get("directDecisions")
-        or reachability is None
-        or reachability.get("typeInstances") != 4
-        or reachability.get("runtimeIntents") != 0
+        or specialization_summary.get("typeSpecializations") != 4
+        or runtime_plan.get("noRuntimeProof") is not None
+        or not isinstance(runtime_plan.get("rootReasons"), list)
+        or not any(
+            isinstance(reason, dict)
+            and reason.get("featureId") == "alloc"
+            and reason.get("operationId") == "allocation"
+            for reason in runtime_plan["rootReasons"]
+        )
     ):
-        raise EnumLoweringFailure(f"{profile}/{policy} lost its runtime-free enum proof")
+        raise EnumLoweringFailure(
+            f"{layout}/{profile}/{policy} lost its owned enum/record runtime proof"
+        )
     combined = b"\n".join(
         path.read_bytes()
         for path in root.rglob("*")
         if path.is_file() and path.suffix in {".c", ".h"}
     ).lower()
-    if b"hxrt" in combined or b"hxc_runtime" in combined:
-        raise EnumLoweringFailure("enum production project selected runtime code")
+    for marker in (b"hxc_alloc", b"hxc_array_ref", b"hxc_record_"):
+        if marker not in combined:
+            raise EnumLoweringFailure(f"enum production project omitted {marker!r}")
+
+
+def check_production_server_determinism(root: Path) -> None:
+    """Prove cold, first-server, and warm-server outputs are byte-identical."""
+    port = available_port()
+    endpoint = str(port)
+    server = subprocess.Popen(
+        [development_tool("haxe"), "--wait", endpoint],
+        cwd=ROOT,
+        env=haxe_environment(server=True),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        wait_for_server(server, port)
+        for name in ("server-first", "server-warm"):
+            output = root / name
+            result = custom_target(
+                POSITIVE,
+                output,
+                main="EnumFixture",
+                connect=endpoint,
+            )
+            require_compile_success(result, f"{name} enum production compile")
+            validate_production(
+                output, layout="unity", profile="portable", policy="auto"
+            )
+            if generated_tree(output) != generated_tree(root / "first"):
+                raise EnumLoweringFailure(
+                    f"{name} enum artifacts differed from the cold custom-target build"
+                )
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+            server.wait(timeout=5)
+
+
+def production_project(root: Path, *, layout: str) -> CFixtureProject:
+    """Describe one emitted layout without assuming which files contain its code."""
+    sources = tuple(path.relative_to(root).as_posix() for path in sorted(root.rglob("*.c")))
+    headers = tuple(path.relative_to(root).as_posix() for path in sorted(root.rglob("*.h")))
+    return CFixtureProject(
+        f"production-enum-program-{layout}",
+        sources,
+        headers,
+        ("include", "runtime/include"),
+        "",
+        (
+            "generated-executable",
+            f"{layout}-layout",
+            "managed-record-lifecycle",
+            "managed-record-enum-payload",
+            "recursive-owned-enum",
+        ),
+    )
+
+
+def check_production_native(
+    root: Path, *, layout: str, requested_toolchain: str
+) -> None:
+    project = production_project(root, layout=layout)
+    required = frozenset(project.coverage)
+    report = run_c_fixture_corpus(
+        suite=f"enum-production-{layout}-o0",
+        projects=(project,),
+        fixture_root=root,
+        build_root=root.parent / "production-layout-build" / layout,
+        repository_root=ROOT,
+        requested_toolchain=requested_toolchain,
+        strict_flags=(*C11_STRICT_FLAGS, "-O0"),
+    )
+    validate_report(report, required_coverage=required)
+
+
+def check_production_sanitizers(root: Path, *, requested_toolchain: str) -> None:
+    sanitizer_flags = (
+        *C11_STRICT_FLAGS,
+        "-O1",
+        "-g",
+        "-fno-omit-frame-pointer",
+        "-fno-sanitize-recover=all",
+        "-fsanitize=address,undefined",
+    )
+    base = production_project(root, layout="unity")
+    project = CFixtureProject(
+        "production-enum-program-sanitized",
+        base.sources,
+        base.headers,
+        base.include_directories,
+        base.expected_stdout,
+        (*base.coverage, "asan-ubsan"),
+        link_arguments=("-fsanitize=address,undefined",),
+    )
+    report = run_c_fixture_corpus(
+        suite="enum-production-sanitized",
+        projects=(project,),
+        fixture_root=root,
+        build_root=root.parent / "production-sanitized-build",
+        repository_root=ROOT,
+        requested_toolchain=requested_toolchain,
+        strict_flags=sanitizer_flags,
+    )
+    validate_report(report, required_coverage=frozenset(project.coverage))
 
 
 def check_production(*, requested_toolchain: str) -> None:
     with tempfile.TemporaryDirectory(prefix="hxc-enum-production-") as temporary:
         root = Path(temporary)
         matrix = (
-            ("first", "portable", None, "auto"),
-            ("repeat", "portable", None, "auto"),
-            ("none", "portable", "none", "none"),
-            ("metal", "metal", None, "minimal"),
+            ("first", "unity", "portable", None, "auto", False),
+            ("repeat", "unity", "portable", None, "auto", False),
+            ("reverse", "unity", "portable", None, "auto", True),
+            ("metal", "unity", "metal", None, "minimal", False),
+            ("split", "split", "portable", None, "auto", False),
+            ("package", "package", "portable", None, "auto", False),
         )
-        for name, profile, runtime, policy in matrix:
+        for name, layout, profile, runtime, policy, reverse in matrix:
             output = root / name
             result = custom_target(
                 POSITIVE,
@@ -738,11 +1001,18 @@ def check_production(*, requested_toolchain: str) -> None:
                 main="EnumFixture",
                 profile=profile,
                 runtime=runtime,
+                layout=layout,
+                reverse=reverse,
             )
             require_compile_success(result, f"{name} enum production compile")
-            validate_production(output, profile=profile, policy=policy)
+            validate_production(output, layout=layout, profile=profile, policy=policy)
         if generated_tree(root / "first") != generated_tree(root / "repeat"):
             raise EnumLoweringFailure("two enum production roots were not byte-identical")
+        if generated_tree(root / "first") != generated_tree(root / "reverse"):
+            raise EnumLoweringFailure(
+                "reversed typed-module discovery changed enum production artifacts"
+            )
+        check_production_server_determinism(root)
         for relative in ("include/hxc/program.h", "src/program.c"):
             if (root / "first" / relative).read_bytes() != (
                 root / "metal" / relative
@@ -750,14 +1020,7 @@ def check_production(*, requested_toolchain: str) -> None:
                 raise EnumLoweringFailure(
                     f"portable and metal changed direct enum artifact {relative}"
                 )
-        project = CFixtureProject(
-            "production-enum-program",
-            ("src/program.c",),
-            ("include/hxc/program.h",),
-            ("include",),
-            "",
-            ("generated-executable", "runtime-free"),
-        )
+        project = production_project(root / "first", layout="unity")
         for optimization in ("-O0", "-O2"):
             native_report = run_c_fixture_corpus(
                 suite=f"enum-production-{optimization[1:].lower()}",
@@ -770,23 +1033,29 @@ def check_production(*, requested_toolchain: str) -> None:
             )
             validate_report(
                 native_report,
-                required_coverage=frozenset({"generated-executable", "runtime-free"}),
+                required_coverage=frozenset(
+                    project.coverage
+                ),
             )
+        for layout in ("split", "package"):
+            check_production_native(
+                root / layout,
+                layout=layout,
+                requested_toolchain=requested_toolchain,
+            )
+        check_production_sanitizers(
+            root / "first", requested_toolchain=requested_toolchain
+        )
 
 
 def check_negative_cases() -> None:
     cases = {
-        "recursive_escape": (
-            "HXC1001",
-            "TFunction(argument:value:recursive-enum-requires-escape-analysis)",
-        ),
-        "recursive_return": (
-            "HXC1001",
-            "TFunction(return-type:recursive-enum-requires-escape-analysis)",
-        ),
-        "reference_payload": ("HXC1001", "Text.value:reference-String-non-null"),
-        "aggregate_payload": ("HXC1001", "unsupported-payload:Bad.PairValue.value:closed-record:"),
+        "payload_equality": ("HXC1001", "payload-enum-equality-requires-structural-semantics:PayloadValue"),
         "nonexhaustive": ("Unmatched patterns: On", "fixtures/nonexhaustive/Main.hx:"),
+        "recursive_managed_class": (
+            "HXC1001",
+            "recursive-enum-with-collector-payload:ManagedChain",
+        ),
     }
     with tempfile.TemporaryDirectory(prefix="hxc-enum-negative-") as temporary:
         root = Path(temporary)
@@ -806,10 +1075,296 @@ def check_negative_cases() -> None:
                 )
 
 
+def check_string_payload(*, requested_toolchain: str) -> None:
+    """Prove that nominal literal-backed String values survive enum storage."""
+    fixture = FIXTURES / "string_payload"
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-string-payload-") as temporary:
+        root = Path(temporary)
+        for layout in ("unity", "split", "package"):
+            output = root / layout
+            result = custom_target(fixture, output, main="Main", layout=layout)
+            require_compile_success(result, f"{layout} String-payload enum compile")
+            runtime_plan = json.loads(
+                (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+            )
+            if runtime_plan.get("features") != ["runtime-base", "string-literal"]:
+                raise EnumLoweringFailure(
+                    f"{layout} String payload selected more than the direct literal carrier"
+                )
+            reasons = runtime_plan.get("rootReasons")
+            if (
+                not isinstance(reasons, list)
+                or not reasons
+                or any(
+                    not isinstance(reason, dict)
+                    or reason.get("featureId") != "string-literal"
+                    or reason.get("operationId") != "static-value"
+                    or reason.get("kind") != "direct-string-value"
+                    for reason in reasons
+                )
+            ):
+                raise EnumLoweringFailure(
+                    f"{layout} String payload lost its typed literal-storage reasons"
+                )
+            generated_c = b"\n".join(
+                path.read_bytes() for path in sorted(output.rglob("*.c"))
+            )
+            for marker in (b"hxc_string", b"memcmp", b"caf"):
+                if marker not in generated_c.lower():
+                    raise EnumLoweringFailure(
+                        f"{layout} String-payload C omitted {marker!r}"
+                    )
+            if b"malloc" in generated_c or b"hxc_string_copy" in generated_c:
+                raise EnumLoweringFailure(
+                    f"{layout} static String payload unexpectedly allocated or copied bytes"
+                )
+            sources = tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.c"))
+            )
+            headers = tuple(
+                path.relative_to(output).as_posix()
+                for path in sorted(output.rglob("*.h"))
+            )
+            project = CFixtureProject(
+                f"enum-string-payload-{layout}",
+                sources,
+                headers,
+                ("include", "runtime/include"),
+                "",
+                (
+                    "generated-executable",
+                    "literal-backed-string-value",
+                    "tagged-union",
+                ),
+            )
+            report = run_c_fixture_corpus(
+                suite=f"enum-string-payload-{layout}",
+                projects=(project,),
+                fixture_root=output,
+                build_root=root / f"native-{layout}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=C11_STRICT_FLAGS,
+            )
+            validate_report(
+                report,
+                required_coverage=frozenset(
+                    {
+                        "generated-executable",
+                        "literal-backed-string-value",
+                        "tagged-union",
+                    }
+                ),
+            )
+
+
+def check_managed_class_payload(*, requested_toolchain: str) -> None:
+    """Prove exact GC roots and traces for class references inside value enums."""
+    fixture = FIXTURES / "managed_class_payload"
+    eval_result = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require_compile_success(eval_result, "managed-class enum Eval oracle")
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-managed-class-") as temporary:
+        root = Path(temporary)
+        outputs: dict[str, Path] = {}
+        for name, layout, reverse in (
+            ("unity", "unity", False),
+            ("repeat", "unity", False),
+            ("reverse", "unity", True),
+            ("split", "split", False),
+            ("package", "package", False),
+        ):
+            output = root / name
+            result = custom_target(
+                fixture, output, main="Main", layout=layout, reverse=reverse
+            )
+            require_compile_success(result, f"{name} managed-class enum compile")
+            outputs[name] = output
+        if generated_tree(outputs["unity"]) != generated_tree(outputs["repeat"]):
+            raise EnumLoweringFailure(
+                "managed-class enum changed across repeated cold compiles"
+            )
+        if generated_tree(outputs["unity"]) != generated_tree(outputs["reverse"]):
+            raise EnumLoweringFailure(
+                "managed-class enum changed with typed-module discovery order"
+            )
+
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            for name in ("server-first", "server-warm"):
+                output = root / name
+                result = custom_target(
+                    fixture, output, main="Main", connect=endpoint
+                )
+                require_compile_success(
+                    result, f"{name} managed-class enum compile"
+                )
+                if generated_tree(output) != generated_tree(outputs["unity"]):
+                    raise EnumLoweringFailure(
+                        f"{name} managed-class enum output differed from cold output"
+                    )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        plan = json.loads(
+            (outputs["unity"] / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+        )
+        if plan.get("features") != [
+            "runtime-base",
+            "status",
+            "alloc",
+            "array",
+            "object",
+            "gc",
+        ] or "exact-traced-haxe-object-graph" not in plan.get("directDecisions", []):
+            raise EnumLoweringFailure(
+                "managed-class enum lost its exact collector/runtime plan"
+            )
+        generated_c = b"\n".join(
+            path.read_bytes() for path in sorted(outputs["unity"].rglob("*.c"))
+        )
+        for marker in (
+            b"hxc_SessionEvent",
+            b"hxc_gc_root_frame_push",
+            b"hxc_SessionEvent_Opened",
+            b"hxc_array_",
+            b"_trace_visit",
+        ):
+            if marker not in generated_c:
+                raise EnumLoweringFailure(
+                    f"managed-class enum generated C omitted {marker!r}"
+                )
+
+        def project(output: Path, label: str) -> CFixtureProject:
+            return CFixtureProject(
+                label,
+                tuple(
+                    path.relative_to(output).as_posix()
+                    for path in sorted(output.rglob("*.c"))
+                ),
+                tuple(
+                    path.relative_to(output).as_posix()
+                    for path in sorted(output.rglob("*.h"))
+                ),
+                ("include", "runtime/include"),
+                "",
+                (
+                    "enum-managed-class-payload",
+                    "exact-root-projection",
+                    "recursive-container-trace",
+                    "generated-executable",
+                ),
+            )
+
+        unity_project = project(outputs["unity"], "enum-managed-class-unity")
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"enum-managed-class-{optimization[1:].lower()}",
+                projects=(unity_project,),
+                fixture_root=outputs["unity"],
+                build_root=root / f"native-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(report, required_coverage=frozenset(unity_project.coverage))
+        sanitizer_project = CFixtureProject(
+            "enum-managed-class-sanitized",
+            unity_project.sources,
+            unity_project.headers,
+            unity_project.include_directories,
+            "",
+            (*unity_project.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="enum-managed-class-sanitized",
+            projects=(sanitizer_project,),
+            fixture_root=outputs["unity"],
+            build_root=root / "native-sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report, required_coverage=frozenset(sanitizer_project.coverage)
+        )
+
+        for layout in ("split", "package"):
+            output = outputs[layout]
+            layout_project = project(output, f"enum-managed-class-{layout}")
+            report = run_c_fixture_corpus(
+                suite=f"enum-managed-class-{layout}",
+                projects=(layout_project,),
+                fixture_root=output,
+                build_root=root / f"native-{layout}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=C11_STRICT_FLAGS,
+            )
+            validate_report(report, required_coverage=frozenset(layout_project.coverage))
+
+        toolchain = resolve_toolchains(
+            requested_toolchain, repository_root=ROOT
+        )[0]
+        cxx = shutil.which(CXX_COMMANDS[toolchain.family])
+        if cxx is not None:
+            consumer = root / "private-layout-consumer.cpp"
+            consumer.write_text(
+                '#include "hxc/program.h"\nint enum_layout_consumer() { return 0; }\n',
+                encoding="utf-8",
+            )
+            require_silent_success(
+                [
+                    cxx,
+                    *CXX_STRICT_FLAGS,
+                    "-I",
+                    str(outputs["split"] / "include"),
+                    "-I",
+                    str(outputs["split"] / "runtime/include"),
+                    "-c",
+                    str(consumer),
+                    "-o",
+                    str(root / "private-layout-consumer.o"),
+                ],
+                label="managed-class enum C++17 private-header consumer",
+            )
+
+
 def snapshot_report() -> dict[str, object]:
     return {
         "schemaVersion": 1,
-        "status": "haxe-enums-direct-runtime-free",
+        "status": "haxe-enums-owned-managed-values",
         "profile": "portable",
         "hxcir": (EXPECTED / "enums.hxcir").read_text(encoding="utf-8"),
         "header": (EXPECTED / "program.h").read_text(encoding="utf-8"),
@@ -821,8 +1376,8 @@ def snapshot_report() -> dict[str, object]:
         ],
         "enums": json.loads((EXPECTED / "enums.json").read_text(encoding="utf-8")),
         "symbols": json.loads((EXPECTED / "symbols.json").read_text(encoding="utf-8")),
-        "runtimeFeatures": [],
-        "runtimeArtifacts": [],
+        "runtimeFeatures": RUNTIME_FEATURES,
+        "runtimeArtifacts": RUNTIME_ARTIFACTS,
     }
 
 
@@ -861,6 +1416,8 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_snapshots(first)
         check_native(first, requested_toolchain=args.toolchain)
         check_production(requested_toolchain=args.toolchain)
+        check_string_payload(requested_toolchain=args.toolchain)
+        check_managed_class_payload(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         EnumLoweringFailure,
@@ -875,7 +1432,10 @@ def main(arguments: Iterable[str] = ()) -> int:
     print(
         "enum-lowering: OK: native and tagged representations, concrete generic "
         "specialization, checked exhaustive matches, finite recursive layout, strict "
-        "C11 and C++17 agreement, runtime-free production, and fail-closed edges passed"
+        "C11 and C++17 agreement, owned recursive records, cold/warm-server and "
+        "split/package/unity determinism, ASan/UBSan, literal-backed String payloads "
+        "and exact managed-class enum roots/traces across layouts, and fail-closed "
+        "edges passed"
     )
     return 0
 

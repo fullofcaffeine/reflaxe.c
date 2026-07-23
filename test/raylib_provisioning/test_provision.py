@@ -28,7 +28,9 @@ from scripts.raylib.provision import (
     load_lock,
     normalize_text,
     path_replacements,
+    patch_report_identity,
     pinned_source,
+    prepare_build_source,
     resolve_system_pkg_config,
     run_command,
     safe_extract_archive,
@@ -102,6 +104,97 @@ def synthetic_source_lock(root: Path) -> dict[str, object]:
 
 
 class RaylibProvisioningTests(unittest.TestCase):
+    def test_patch_application_uses_a_private_exact_hash_copy(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="hxc-raylib-patch-") as raw_root:
+            root = Path(raw_root)
+            source = root / "source"
+            build = root / "build"
+            target = source / "src/example.c"
+            target.parent.mkdir(parents=True)
+            target.write_text("before\n", encoding="utf-8")
+            build.mkdir()
+            recipe = {
+                "reason": "synthetic exact-text patch",
+                "files": [
+                    {
+                        "path": "src/example.c",
+                        "beforeSha256": sha256_file(target),
+                        "afterSha256": "",
+                        "replacements": [{"before": "before", "after": "after"}],
+                    }
+                ],
+            }
+            expected_after = root / "expected.c"
+            expected_after.write_text("after\n", encoding="utf-8")
+            recipe["files"][0]["afterSha256"] = sha256_file(expected_after)
+            entry = {
+                "id": "synthetic-patch",
+                "path": "scripts/raylib/patches/synthetic.json",
+                "sha256": "a" * 64,
+            }
+
+            with patch(
+                "scripts.raylib.provision.selected_patch_entries",
+                return_value=(entry,),
+            ), patch(
+                "scripts.raylib.provision.load_patch_recipe",
+                return_value=recipe,
+            ):
+                staged, reports = prepare_build_source(
+                    source,
+                    build,
+                    {},
+                    "macos",
+                    "memory-software",
+                )
+
+            self.assertEqual(target.read_text(encoding="utf-8"), "before\n")
+            self.assertEqual(
+                (staged / "src/example.c").read_text(encoding="utf-8"),
+                "after\n",
+            )
+            self.assertEqual(
+                patch_report_identity({"patches": reports}),
+                [{"id": "synthetic-patch", "sha256": "a" * 64}],
+            )
+
+    def test_patch_application_rejects_drift_before_writing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="hxc-raylib-patch-drift-") as raw_root:
+            root = Path(raw_root)
+            source = root / "source"
+            build = root / "build"
+            target = source / "src/example.c"
+            target.parent.mkdir(parents=True)
+            target.write_text("unexpected\n", encoding="utf-8")
+            build.mkdir()
+            entry = {
+                "id": "synthetic-patch",
+                "path": "scripts/raylib/patches/synthetic.json",
+                "sha256": "a" * 64,
+            }
+            recipe = {
+                "reason": "synthetic exact-text patch",
+                "files": [
+                    {
+                        "path": "src/example.c",
+                        "beforeSha256": "b" * 64,
+                        "afterSha256": "c" * 64,
+                        "replacements": [{"before": "before", "after": "after"}],
+                    }
+                ],
+            }
+
+            with patch(
+                "scripts.raylib.provision.selected_patch_entries",
+                return_value=(entry,),
+            ), patch(
+                "scripts.raylib.provision.load_patch_recipe",
+                return_value=recipe,
+            ), self.assertRaisesRegex(ProvisionFailure, "patch input hash mismatch"):
+                prepare_build_source(source, build, {}, "macos", "memory-software")
+
+            self.assertEqual(target.read_text(encoding="utf-8"), "unexpected\n")
+
     def test_desktop_backend_is_selected_once_for_each_host(self) -> None:
         lock = load_lock()
         expected = {

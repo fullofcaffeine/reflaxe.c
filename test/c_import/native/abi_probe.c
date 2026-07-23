@@ -40,7 +40,8 @@ int main(void) {
   float_point = pointlib_float_point_scale(float_point, 2.0f);
   const float float_dot = pointlib_float_point_dot(float_point, float_point);
   if (!pointlib_float32_verify(float_point, float_dot, (double)float_dot, 1.0f, 0x1p-149f,
-      INFINITY, NAN, -0.0f, INFINITY)) {
+      INFINITY, NAN, -0.0f, INFINITY)
+      || !pointlib_inline_float32_verify(3.0f, 5.0f, 6.5f, 7.0f, 8.0f)) {
     return 1;
   }
   (void)puts("pointlib-abi: OK");

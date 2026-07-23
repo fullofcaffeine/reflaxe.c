@@ -53,7 +53,7 @@ NEGATIVE_CASES = {
     "nonliteral_cstring": (
         "HXC3000",
         "Main.hx:3",
-        "requires a direct String literal so its borrowed lifetime is static",
+        "requires a proven static String-literal selection so its borrowed lifetime is static",
     ),
     "pointer_return": (
         "HXC3000",
@@ -97,7 +97,9 @@ REQUIRED_COVERAGE = frozenset(
         "float32-conversions",
         "generated-haxe-program",
         "header-owned-structs",
+        "imported-struct-record-field",
         "imported-struct-construction",
+        "inline-float-parameter-conversion",
         "runtime-free",
         "strict-c11",
     }
@@ -297,6 +299,15 @@ def validate_positive(project: RenderedProject) -> None:
     source = project.source
     if header.count('#include "pointlib.h"') != 1:
         raise CImportFailure("generated header did not include pointlib.h exactly once")
+    if (
+        "struct hxc_PointResources {\n"
+        "  struct pointlib_point hxc_point;\n"
+        "  bool hxc_ready;\n"
+        "};"
+    ) not in header:
+        raise CImportFailure(
+            "closed Haxe record lost its exact imported by-value struct field"
+        )
     for spelling in (
         "#include <float.h>",
         "#include <limits.h>",
@@ -320,6 +331,7 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_float_point_scale(",
         "pointlib_float_point_dot(",
         "pointlib_float32_verify(",
+        "pointlib_inline_float32_verify(",
         "struct pointlib_point",
         "struct pointlib_float_point",
         "pointlib_coord",
@@ -344,6 +356,7 @@ def validate_positive(project: RenderedProject) -> None:
         "raylib",
         "unused_pointlib",
         "UnusedPointlib",
+        "goto ",
     )
     for spelling in forbidden:
         if spelling.lower() in (header + source).lower():
@@ -356,7 +369,12 @@ def validate_positive(project: RenderedProject) -> None:
         "float hxc_floatDot",
         "struct pointlib_point hxc_pointAlias",
         "double hxc_widened",
-        "return (struct pointlib_point){ .x = hxc_x, .y = hxc_y };",
+        "struct pointlib_point hxc_Main_localPoint(pointlib_coord hxc_y, bool hxc_useY)",
+        "pointlib_coord hxc_tmp = hxc_tmp_native_call_result",
+        "pointlib_coord hxc_tmp_load_result",
+        ".x = hxc_tmp_load_result",
+        ".y =",
+        "return (struct hxc_PointResources){ .hxc_point = hxc_point, .hxc_ready = true };",
     ):
         if spelling not in source:
             raise CImportFailure(
@@ -364,6 +382,27 @@ def validate_positive(project: RenderedProject) -> None:
             )
     if "StructInit" in header + source:
         raise CImportFailure("typed imported-struct construction leaked an intrinsic symbol")
+
+    # Haxe inserts an implicit Int-to-Float conversion at a declared Float
+    # parameter. Inlining removes the call node but must not remove that
+    # language rule. These shapes prove the generated C converts to binary64
+    # (`double`) before the explicit c.Float32 binary32 (`float`) narrowing,
+    # just as the retained non-inline helper does.
+    for spelling in (
+        "float hxc_fromIntegerLocal = (float)(double)hxc_integerLocal;",
+        "float hxc_fromIntegerArithmetic = (float)(double)hxc_i32_add_wrapping(hxc_integerLocal, 2);",
+        "float hxc_fromFloatLocal = (float)hxc_floatLocal;",
+        "float hxc_fromSideEffect = (float)(double)hxc_tmp_call_result_",
+        "hxc_InlineFloat32Probe_narrowWithoutInlining((double)hxc_i32_add_wrapping(hxc_integerLocal, 5))",
+    ):
+        if spelling not in source:
+            raise CImportFailure(
+                f"inline Float parameter lost its ordered conversion shape {spelling!r}"
+            )
+    if source.count("hxc_InlineFloat32Probe_nextInteger();") != 1:
+        raise CImportFailure(
+            "inline Float parameter evaluated its side-effecting argument more than once"
+        )
 
     manifest = project.manifest
     if (
@@ -436,6 +475,7 @@ def validate_positive(project: RenderedProject) -> None:
         "pointlib_float_point_scale",
         "pointlib_float_point_dot",
         "pointlib_float32_verify",
+        "pointlib_inline_float32_verify",
     ):
         if spelling not in external:
             raise CImportFailure(f"symbol table omitted exact external name {spelling!r}")
@@ -591,7 +631,9 @@ def check_native(
                 "float32-conversions",
                 "generated-haxe-program",
                 "header-owned-structs",
+                "imported-struct-record-field",
                 "imported-struct-construction",
+                "inline-float-parameter-conversion",
                 "runtime-free",
             ),
         ),

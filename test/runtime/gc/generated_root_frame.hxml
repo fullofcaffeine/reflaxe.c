@@ -1,0 +1,5 @@
+-cp test/runtime/gc
+-lib reflaxe.c
+--macro GeneratedRootFrameProbe.install()
+-main GeneratedRootFrameFixture
+--interp

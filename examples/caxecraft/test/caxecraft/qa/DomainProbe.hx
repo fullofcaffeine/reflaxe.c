@@ -2,11 +2,11 @@ package caxecraft.qa;
 
 import caxecraft.domain.BlockKind;
 import caxecraft.domain.CaxecraftTrace;
-import caxecraft.domain.PlayerPhysics.canPlaceAt as playerCanPlaceAt;
-import caxecraft.domain.PlayerPhysics.input as playerInput;
-import caxecraft.domain.PlayerPhysics.player as createPlayer;
-import caxecraft.domain.PlayerPhysics.recoverSpawn as recoverPlayerSpawn;
-import caxecraft.domain.PlayerPhysics.step as stepPlayer;
+import caxecraft.domain.CharacterPhysics.canPlaceAt as playerCanPlaceAt;
+import caxecraft.domain.CharacterPhysics.input as playerInput;
+import caxecraft.domain.CharacterPhysics.body as createPlayer;
+import caxecraft.domain.CharacterPhysics.recoverSpawn as recoverPlayerSpawn;
+import caxecraft.domain.CharacterPhysics.step as stepPlayer;
 import caxecraft.domain.VoxelRaycast;
 import caxecraft.domain.World;
 import caxecraft.domain.WorldCells;
@@ -77,7 +77,6 @@ final class DomainProbe {
 			return 4;
 		if (!World.replace(cells, World.coord(8, 8, 8), BlockKind.Stone))
 			return 5;
-
 		final axis = VoxelRaycast.trace(cells, 2.5, 8.5, 8.5, 1.0, 0.0, 0.0, 12.0);
 		if (!axis.hit || axis.cellX != 8 || axis.cellY != 8 || axis.cellZ != 8 || axis.previousX != 7 || axis.normalX != -1 || !near(axis.distance, 5.5)
 			|| axis.visited != 7)

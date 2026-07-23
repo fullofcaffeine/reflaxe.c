@@ -13,9 +13,10 @@ import reflaxe.c.runtime.RuntimeFeatureModel.RuntimePublicExportTypePolicy;
 /** One internal runtime compatibility contract shared by headers, manifests, and generated C. */
 class RuntimeAbiContract {
 	public static inline final MAJOR = 0;
-	public static inline final MINOR = 5;
+	public static inline final MINOR = 8;
 	public static inline final PATCH = 0;
 	public static inline final MAJOR_MACRO = "HXC_RUNTIME_ABI_MAJOR";
+	public static inline final MAJOR_CHECK_TYPE = "hxc_runtime_abi_major_must_match";
 	public static inline final SOURCE_HASH_ALGORITHM = "sha256";
 	public static inline final RUNTIME_C_STANDARD = "c11";
 	public static inline final PUBLIC_HEADER_CPP_STANDARD = "c++17";
@@ -25,12 +26,24 @@ class RuntimeAbiContract {
 		"hxc_allocator",
 		"hxc_array",
 		"hxc_array_element_ops",
+		"hxc_array_ref",
 		"hxc_borrowed_cstring",
 		"hxc_byte_view",
+		"hxc_bytes_ref",
+		"hxc_gc",
+		"hxc_gc_allocation",
+		"hxc_gc_config",
+		"hxc_gc_pin",
+		"hxc_gc_root_frame",
+		"hxc_gc_root_table",
+		"hxc_gc_stats",
+		"hxc_gc_thread",
+		"hxc_object_header",
 		"hxc_owned_cstring",
 		"hxc_owned_string",
 		"hxc_string",
-		"hxc_string_buffer"
+		"hxc_string_buffer",
+		"hxc_type_descriptor"
 	];
 
 	public static function snapshot(definitions:Array<RuntimeFeatureDefinition>):RuntimeAbiContractRecord {
