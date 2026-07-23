@@ -44,9 +44,9 @@ initializers, so it does not depend on C initializer evaluation order.
 
 The focused slice accepts payloads composed of admitted primitive values,
 literal-backed String views, other admitted enum instances, private managed
-Array references, managed private class references, and closed records whose
-admitted fields have a complete lifecycle or tracing plan. This applies both to
-a concrete constructor such as
+Array or `haxe.io.Bytes` references, managed private class references, and
+closed records whose admitted fields have a complete lifecycle or tracing plan.
+This applies both to a concrete constructor such as
 `WrappedRule(rule:Rule)` and to a closed generic instance such as
 `Option<Rule>`: the record remains an unboxed C struct inside the active union
 member. `Option<Int>` and `Option<Bool>` therefore receive distinct
@@ -61,9 +61,11 @@ see [deterministic generic specialization](generic-specialization.md).
 
 ## Managed payload ownership
 
-A private tagged enum may carry an admitted `Array<T>` or closed record with
-managed fields. Construction either moves a fresh owner into the active payload
-or retains an existing alias.
+A private tagged enum may carry an admitted `Array<T>`, `haxe.io.Bytes`, or
+closed record with managed fields. “Managed” means that a value can outlive the
+expression that created it, so the compiler must record who keeps it alive and
+who releases it. Construction either moves a fresh owner into the active
+payload or retains an existing alias.
 Copying the enum calls one generated retain helper; cleanup calls the matching
 destroy helper. Both helpers switch on the tag before touching the union, so a
 constructor without managed data performs no ownership operation and inactive
@@ -78,11 +80,16 @@ keeps the value unboxed and supports nested shapes such as Caxecraft's
 Array callbacks. Function parameters borrow enum values. A fresh constructor
 returned from a function transfers its owner to the caller; a named owning
 local can transfer its cleanup on return. Pattern-projected Array values borrow
-from the enum for the duration of the arm.
+from the enum for the duration of the arm. Pattern-projected Bytes values use
+the same rule: the enum remains the owner while the switch arm reads or mutates
+the shared byte buffer, so the short-lived local does not retain and release a
+redundant second owner.
 
-Array-backed paths select the existing `array` runtime slice. Recursive enum
-links also select the allocator slice described below. These helpers do not
-establish a public enum ABI, general garbage collection, or arbitrary cyclic
+Array-backed paths select the existing `array` runtime slice. Bytes-backed paths
+select the existing `bytes` slice and its allocator, status, base, and
+literal-view dependencies. Recursive enum links also select the allocator slice
+described below. These helpers do not establish a public enum application
+binary interface (ABI), general garbage collection, or arbitrary cyclic
 collection support.
 
 ### Managed class references are traced, not retained
@@ -169,9 +176,13 @@ checks validate the generated private representation for this compiler
 invocation; public exported enums still require the E7 ABI contract for layout,
 ownership, calling convention, and versioning.
 
-Owned/dynamic String payloads, payload-enum equality, reflection, arbitrary
-patterns, recursive enums containing collector references, cycle-capable
-recursive graphs, and public export remain unsupported.
+Owned/dynamic String payloads, StringMap payloads, interface payloads,
+payload-enum equality, reflection, arbitrary patterns, recursive enums
+containing collector references, cycle-capable recursive graphs, and public
+export remain unsupported. StringMap is useful elsewhere in the admitted
+compiler slice, but an enum-specific copy/destroy policy for it has not been
+implemented. Rejecting that combination prevents a generated enum copy from
+holding a freed map or leaking it.
 The first unsupported typed node emits source-positioned `HXC1001` and leaves
 no plausible output.
 
@@ -180,6 +191,7 @@ no plausible output.
 Run:
 
 ```sh
+npm run test:enum-lowering:bytes
 npm run test:enum-lowering
 npm run test:generic-specialization
 npm run test:hxc-ir
@@ -198,7 +210,18 @@ callbacks. A second managed-class fixture covers construction, copy,
 assignment, parameters and returns, nullable class payloads, checked
 projection, records and Arrays containing the enum, pressure-triggered tracing,
 and class finalization. It also runs the generated managed programs with
-AddressSanitizer and UndefinedBehaviorSanitizer. The required native matrix
-uses GCC/G++ and Clang/Clang++ at `-O0` and `-O2`, while negative fixtures cover
-unsupported references, source non-exhaustiveness, recursive collector payloads,
-and validator-only malformed tag/root operations.
+AddressSanitizer and UndefinedBehaviorSanitizer.
+
+The narrower `test:enum-lowering:bytes` lane compares the same ordinary Haxe
+program under Eval and generated C. It constructs, returns, copies, matches,
+mutates, and destroys an enum that owns one shared Bytes buffer. The lane checks
+the HxcIR ownership operations, exact runtime slice, active-tag retain/destroy
+helpers, cold/repeated/reversed/server determinism, unity/split/package layouts,
+strict native execution, sanitizers, and the source-positioned rejection of a
+StringMap payload. It is the fast diagnostic for this rule; the complete enum
+runner retains the integrated proof.
+
+The required native matrix uses GCC/G++ and Clang/Clang++ at `-O0` and `-O2`,
+while negative fixtures cover unsupported references, source
+non-exhaustiveness, recursive collector payloads, and validator-only malformed
+tag/root operations.

@@ -2673,7 +2673,14 @@ private class FunctionBuilder {
 			unsupportedAt(position, 'TVar(${variable.name}:Void)');
 		}
 		final source = HaxeSourceSpan.fromPosition(position, input.sourcePath);
-		final borrowedEnumArrayPayload = localMapping.arrayValue() != null && initializer != null && isEnumPayloadProjection(initializer);
+		// A switch-pattern binding views the active payload while its enum owner
+		// remains live for the branch. Ref-counted Array and Bytes values therefore
+		// borrow that owner instead of retaining and releasing a redundant local
+		// copy. Returning the binding still fails closed because a borrowed local
+		// has no cleanup owner that can be transferred across the function boundary.
+		final borrowedEnumManagedPayload = initializer != null
+			&& isEnumPayloadProjection(initializer)
+			&& (localMapping.arrayValue() != null || localMapping.bytesValue() != null);
 		final value:Null<LoweredValue> = switch initializer {
 			case null if (compilerFlowCarrier):
 				// Reflaxe can expose a value-producing if/switch as a temporary followed
@@ -2717,7 +2724,7 @@ private class FunctionBuilder {
 			appendInstruction(null, IRIOInitialize(IRPLocal(localId), value.id, IRISUninitialized, IRISInitialized), source, "initialize");
 		}
 		final localArray = localMapping.arrayValue();
-		if (localArray != null && !localArray.managedByCollector && !borrowedEnumArrayPayload) {
+		if (localArray != null && !localArray.managedByCollector && !borrowedEnumManagedPayload) {
 			final transferredFreshOwner = value != null && freshManagedArrayValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("array")), source, "retain-array-alias");
@@ -2751,7 +2758,7 @@ private class FunctionBuilder {
 			stringMapCleanupActionIdsByCompilerId.set(variable.id, cleanupId);
 			runtimeRequirements.push(new CBodyRuntimeRequirement("string-map", "cleanup-release", "ordinary Haxe StringMap local lifetime", source, position));
 		}
-		if (localMapping.bytesValue() != null) {
+		if (localMapping.bytesValue() != null && !borrowedEnumManagedPayload) {
 			final transferredFreshOwner = value != null && freshManagedBytesValueIds.remove(value.id);
 			if (!transferredFreshOwner) {
 				appendInstruction(null, IRIORetain(IRPLocal(localId), IRIRuntime("bytes")), source, "retain-bytes-alias");

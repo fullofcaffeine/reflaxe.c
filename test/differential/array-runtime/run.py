@@ -634,20 +634,23 @@ def prove_caxecraft_state_boundary(root: Path) -> None:
     )
     if result.returncode == 0:
         return
-    # Full Caxecraft now also passes the nominal LogicalPath(String) field inside
-    # ScenarioParser's generic return record. Naming the next Bytes enum-payload
-    # guard proves the compiler traversed all earlier Array, function-value,
-    # StringMap, and abstract-record features; merely checking for any failure
-    # would let a regression pass. haxe_c-djl.4 owns that general Bytes payload
-    # admission bug.
+    # Full Caxecraft now passes the Bytes value carried by
+    # EditorValidationResult.ValidationPassed. The next unsupported construct is
+    # ScenarioValidationContext.sequenceTable: a StringMap stored in a class
+    # field whose values are closed FlowSequence records. Naming that exact next
+    # boundary proves the compiler traversed the earlier Array, function-value,
+    # StringMap, abstract-record, and Bytes-enum paths; accepting any later
+    # failure would let one of those regressions pass unnoticed. haxe_c-djl.7
+    # owns the general StringMap record-value capability.
     if (
-        "EditorTypes.hx:129:" not in result.stderr
-        or "ValidationPassed.canonical:reference-haxe.io.Bytes-non-null"
+        "ScenarioValidationContext.hx:41:" not in result.stderr
+        or "sequenceTable:StringMap-value-not-yet-admitted:closed-record:"
         not in result.stderr
         or "CaxeFlowState" in result.stderr
         or "CaxeFlowRulePlanner" in result.stderr
         or "EditorScenarioFactory" in result.stderr
         or "ScenarioMessageValidator" in result.stderr
+        or "EditorValidationResult" in result.stderr
     ):
         raise ArrayRuntimeFailure(
             "Caxecraft did not compile past its former Array/Class/StringMap/nominal-abstract boundaries\n"

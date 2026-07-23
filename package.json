@@ -67,6 +67,7 @@
     "test:constructor-lowering": "python3 test/constructor_lowering/run.py",
     "test:virtual-dispatch": "python3 test/virtual_dispatch/run.py",
     "test:enum-lowering": "python3 test/enum_lowering/run.py",
+    "test:enum-lowering:bytes": "python3 test/enum_lowering/run.py --bytes-payload-only",
     "test:generic-specialization": "python3 test/generic_specialization/run.py",
     "test:evaluation-order": "python3 test/evaluation_order/run.py",
     "test:static-initialization": "python3 test/static_initialization/run.py",

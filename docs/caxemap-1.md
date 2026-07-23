@@ -381,13 +381,14 @@ are stable message IDs; translated visual-card copy remains part of the planned
 visual editor rather than a shipped UI claim.
 
 The current catalog, parser/writer parity, validator/executor guards, and editor
-palette are executable under the pinned Eval oracle. A production haxe.c probe
-fails closed before output because `FlowAction` carries nominal String IDs and
-Haxe Arrays inside enum payloads, two managed representations the compiler does
-not yet admit there. `haxe_c-2ph` owns String-backed enum payloads and
-`haxe_c-45z` owns Array-backed enum payloads. Until both land, this section is
-not evidence that the complete CaxeFlow registry or executor runs in generated
-C; unrelated DomainProbe output does not fill that gap.
+palette are executable under the pinned Eval oracle. haxe.c now admits the
+nominal String IDs and managed Arrays carried by `FlowAction`; the complete
+Caxecraft compile passes those former boundaries. It currently stops later at
+`ScenarioValidationContext.sequenceTable`, where an ordinary Haxe StringMap
+stored in a class field needs to own closed `FlowSequence` record values.
+`haxe_c-djl.7` owns that general compiler capability. Until it lands, this
+section is not evidence that the complete CaxeFlow registry or executor runs in
+generated C; unrelated DomainProbe output does not fill that gap.
 
 Arguments are `value flag <bool>`, `value counter <int>`, `value state
 <content-id>`, or `variable <variable-id>`. CAXEMAP 1 does not admit an object

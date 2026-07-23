@@ -965,9 +965,10 @@
       "status": "implemented",
       "disposition": "available",
       "summary": "A bounded ordinary-Haxe haxe.io.Bytes slice provides shared fixed-length binary storage and compiler-owned lifetimes.",
-      "scope": "Bytes.alloc, literal Bytes.ofString, length, get, set, sub, blit, fill, compare, aliases, and owned returns lower through validated HxcIR into an exact allocator/string-literal/bytes closure. Strict C11 and Eval evidence cover byte masking, copy independence, overlap, bounds, allocation rollback, deterministic output, and cleanup.",
+      "scope": "Bytes.alloc, literal Bytes.ofString, length, get, set, sub, blit, fill, compare, aliases, owned returns, and private tagged-enum payload ownership lower through validated HxcIR into an exact allocator/string-literal/bytes closure. Strict C11 and Eval evidence cover byte masking, copy independence, overlap, bounds, allocation rollback, shared mutation through an enum projection, active-tag retain/destroy behavior, deterministic output, and cleanup.",
       "evidence": [
         "docs/bytes-runtime.md",
+        "docs/enum-lowering.md",
         "runtime/hxrt/features.json",
         "runtime/hxrt/include/hxrt/bytes.h",
         "runtime/hxrt/src/bytes.c",
@@ -975,7 +976,9 @@
         "test/differential/bytes-runtime/bytes_runtime.c",
         "test/differential/bytes-runtime/case.json",
         "test/differential/bytes-runtime/generated/Main.hx",
-        "test/differential/bytes-runtime/run.py"
+        "test/differential/bytes-runtime/run.py",
+        "test/enum_lowering/fixtures/bytes_payload/Main.hx",
+        "test/enum_lowering/run.py"
       ],
       "owners": [
         "E5.T04"

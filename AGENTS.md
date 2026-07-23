@@ -80,6 +80,13 @@ used, explain its tradeoff in plain language, and link to
 focused guide for the deeper lesson. Keep every lesson evidence-bounded: clean
 prose must never turn planned behavior or unsupported lowering into fact.
 
+- Before writing or materially revising technical documentation or comments
+  whose meaning depends on specialized domain knowledge, use
+  `$explain-technical-work`. Apply its first-read check: state the practical
+  outcome first, give the smallest useful mental model, define exact terms
+  before they carry the explanation, and connect the mechanism to an observable
+  consequence or failure. The skill improves clarity and completeness; it does
+  not relax this repository's evidence, precision, or scope rules.
 - Prefer common, concrete words whenever they express the same idea. Do not use
   specialist vocabulary merely because it sounds more formal.
 - When an exact technical term is necessary, define it in plain language the

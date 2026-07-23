@@ -25,6 +25,7 @@ POSITIVE = FIXTURES / "positive"
 NATIVE = Path(__file__).with_name("native")
 EXPECTED = Path(__file__).with_name("expected")
 REPORT_PREFIX = "HXC_ENUM_LOWERING="
+STATIC_REPORT_PREFIX = "HXC_STATIC_INITIALIZATION="
 COMMON_PRODUCTION_FILES = {
     "_GeneratedFiles.json",
     "cmake/CMakeLists.txt",
@@ -77,6 +78,16 @@ RUNTIME_ARTIFACTS = [
     "runtime/include/hxrt/status.h",
     "runtime/src/allocator.c",
     "runtime/src/array.c",
+]
+BYTES_RUNTIME_FEATURES = ["runtime-base", "status", "alloc", "string-literal", "bytes"]
+BYTES_RUNTIME_ARTIFACTS = [
+    "runtime/include/hxrt/allocator.h",
+    "runtime/include/hxrt/base.h",
+    "runtime/include/hxrt/bytes.h",
+    "runtime/include/hxrt/status.h",
+    "runtime/include/hxrt/string_literal.h",
+    "runtime/src/allocator.c",
+    "runtime/src/bytes.c",
 ]
 
 if str(ROOT) not in sys.path:
@@ -763,6 +774,7 @@ def custom_target(
     layout: str = "unity",
     reverse: bool = False,
     connect: str | None = None,
+    report: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     command = [development_tool("haxe")]
     if connect is not None:
@@ -779,6 +791,8 @@ def custom_target(
     ])
     if reverse:
         command.extend(["-D", "reflaxe_c_test_reverse_typed_modules"])
+    if report:
+        command.extend(["-D", "reflaxe_c_static_initialization_report"])
     if profile == "metal":
         command.extend(["-D", "reflaxe_c_profile=metal"])
     if runtime is not None:
@@ -816,6 +830,32 @@ def require_compile_success(result: subprocess.CompletedProcess[str], label: str
         raise EnumLoweringFailure(
             f"{label} failed\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
         )
+
+
+def extract_static_hxcir(
+    result: subprocess.CompletedProcess[str], label: str
+) -> str:
+    """Read the one explicit compiler report while rejecting other output."""
+    reports = [
+        line[len(STATIC_REPORT_PREFIX) :]
+        for line in result.stdout.splitlines()
+        if line.startswith(STATIC_REPORT_PREFIX)
+    ]
+    other_stdout = [
+        line
+        for line in result.stdout.splitlines()
+        if not line.startswith(STATIC_REPORT_PREFIX)
+    ]
+    if result.returncode != 0 or result.stderr or other_stdout or len(reports) != 1:
+        raise EnumLoweringFailure(
+            f"{label} emitted an invalid HxcIR report\n"
+            f"exit={result.returncode}\nstdout:\n{result.stdout}\nstderr:\n{result.stderr}"
+        )
+    report = json.loads(reports[0])
+    hxcir = report.get("hxcir") if isinstance(report, dict) else None
+    if not isinstance(hxcir, str) or not hxcir:
+        raise EnumLoweringFailure(f"{label} omitted validated HxcIR text")
+    return hxcir
 
 
 def validate_production(root: Path, *, layout: str, profile: str, policy: str) -> None:
@@ -1055,6 +1095,10 @@ def check_negative_cases() -> None:
         "recursive_managed_class": (
             "HXC1001",
             "recursive-enum-with-collector-payload:ManagedChain",
+        ),
+        "unsupported_reference_payload": (
+            "HXC1001",
+            "UnsupportedValue.values:reference-policy-not-admitted:haxe-string-map-reference:",
         ),
     }
     with tempfile.TemporaryDirectory(prefix="hxc-enum-negative-") as temporary:
@@ -1361,6 +1405,269 @@ def check_managed_class_payload(*, requested_toolchain: str) -> None:
             )
 
 
+def check_bytes_payload(*, requested_toolchain: str) -> None:
+    """Prove shared Bytes identity and active-case cleanup inside a value enum."""
+    fixture = FIXTURES / "bytes_payload"
+    eval_result = subprocess.run(
+        [development_tool("haxe"), "-cp", str(fixture), "-main", "Main", "--interp"],
+        cwd=ROOT,
+        env=haxe_environment(),
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    require_compile_success(eval_result, "Bytes-payload enum Eval oracle")
+
+    with tempfile.TemporaryDirectory(prefix="hxc-enum-bytes-payload-") as temporary:
+        root = Path(temporary)
+        outputs: dict[str, Path] = {}
+        hxcir = ""
+        for name, layout, reverse, report in (
+            ("unity", "unity", False, True),
+            ("repeat", "unity", False, False),
+            ("reverse", "unity", True, False),
+            ("split", "split", False, False),
+            ("package", "package", False, False),
+        ):
+            output = root / name
+            result = custom_target(
+                fixture,
+                output,
+                main="Main",
+                layout=layout,
+                reverse=reverse,
+                report=report,
+            )
+            if report:
+                hxcir = extract_static_hxcir(
+                    result, f"{name} Bytes-payload enum compile"
+                )
+            else:
+                require_compile_success(
+                    result, f"{name} Bytes-payload enum compile"
+                )
+            outputs[name] = output
+
+        if generated_tree(outputs["unity"]) != generated_tree(outputs["repeat"]):
+            raise EnumLoweringFailure(
+                "Bytes-payload enum changed across repeated cold compiles"
+            )
+        if generated_tree(outputs["unity"]) != generated_tree(outputs["reverse"]):
+            raise EnumLoweringFailure(
+                "Bytes-payload enum changed with typed-module discovery order"
+            )
+
+        port = available_port()
+        endpoint = str(port)
+        server = subprocess.Popen(
+            [development_tool("haxe"), "--wait", endpoint],
+            cwd=ROOT,
+            env=haxe_environment(server=True),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        try:
+            wait_for_server(server, port)
+            for name in ("server-first", "server-warm"):
+                output = root / name
+                result = custom_target(
+                    fixture, output, main="Main", connect=endpoint
+                )
+                require_compile_success(
+                    result, f"{name} Bytes-payload enum compile"
+                )
+                if generated_tree(output) != generated_tree(outputs["unity"]):
+                    raise EnumLoweringFailure(
+                        f"{name} Bytes-payload enum output differed from cold output"
+                    )
+        finally:
+            server.terminate()
+            try:
+                server.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                server.kill()
+                server.wait(timeout=5)
+
+        for marker in (
+            'name="ValidationResult" kind=tagged-union',
+            'representation=managed("bytes")',
+            "retain-enum-return",
+            "enum-payload-project",
+            'implementation=runtime("bytes")',
+            'runtime(feature="bytes",operation="get")',
+            'runtime(feature="bytes",operation="set")',
+        ):
+            if marker not in hxcir:
+                raise EnumLoweringFailure(
+                    f"Bytes-payload enum HxcIR omitted {marker!r}"
+                )
+        if " raw" in hxcir or str(ROOT) in hxcir:
+            raise EnumLoweringFailure(
+                "Bytes-payload enum HxcIR used raw syntax or leaked the checkout path"
+            )
+
+        for name, output in outputs.items():
+            plan = json.loads(
+                (output / "hxc.runtime-plan.json").read_text(encoding="utf-8")
+            )
+            operations = {
+                reason.get("operationId")
+                for reason in plan.get("rootReasons", [])
+                if isinstance(reason, dict) and reason.get("featureId") == "bytes"
+            }
+            if (
+                plan.get("features") != BYTES_RUNTIME_FEATURES
+                or plan.get("artifacts") != BYTES_RUNTIME_ARTIFACTS
+                or "bounded-haxe-enum-values"
+                not in plan.get("directDecisions", [])
+                or "managed-haxe-bytes" not in plan.get("directDecisions", [])
+                or operations
+                != {
+                    "alloc",
+                    "cleanup-release",
+                    "get",
+                    "managed-type-representation",
+                    "retain",
+                    "set",
+                }
+            ):
+                raise EnumLoweringFailure(
+                    f"{name} Bytes-payload enum selected the wrong runtime/lifetime plan"
+                )
+
+        generated_c = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in sorted(outputs["unity"].rglob("*.c"))
+            if "runtime/" not in path.relative_to(outputs["unity"]).as_posix()
+        )
+        retain_start = generated_c.find("hxc_status hxc_enum_")
+        destroy_start = generated_c.find("\nvoid hxc_enum_", retain_start)
+        destroy_end = generated_c.find("\nstruct hxc_ValidationResult ", destroy_start)
+        if retain_start == -1 or destroy_start == -1 or destroy_end == -1:
+            raise EnumLoweringFailure(
+                "Bytes-payload enum lifecycle helper boundaries disappeared"
+            )
+        retain_helper = generated_c[retain_start:destroy_start]
+        destroy_helper = generated_c[destroy_start:destroy_end]
+        failed_case = "case hxc_ValidationResult_ValidationFailed:"
+        passed_case = "case hxc_ValidationResult_ValidationPassed:"
+        for label, helper, operation in (
+            ("retain", retain_helper, "hxc_bytes_ref_retain"),
+            ("destroy", destroy_helper, "hxc_bytes_ref_release"),
+        ):
+            failed_start = helper.find(failed_case)
+            passed_start = helper.find(passed_case)
+            if (
+                failed_start == -1
+                or passed_start == -1
+                or failed_start > passed_start
+                or "hxc_bytes_ref_" in helper[failed_start:passed_start]
+                or operation not in helper[passed_start:]
+            ):
+                raise EnumLoweringFailure(
+                    f"Bytes-payload enum {label} helper touched an inactive union case"
+                )
+        for marker in (
+            "struct hxc_ValidationResult",
+            "hxc_bytes_ref_create_zeroed",
+            "hxc_bytes_ref_get",
+            "hxc_bytes_ref_set",
+            "hxc_enum_",
+        ):
+            if marker not in generated_c:
+                raise EnumLoweringFailure(
+                    f"Bytes-payload generated C omitted {marker!r}"
+                )
+        if "goto " in generated_c:
+            raise EnumLoweringFailure(
+                "Bytes-payload enum unexpectedly required goto-based C lowering"
+            )
+
+        def project(output: Path, label: str) -> CFixtureProject:
+            return CFixtureProject(
+                label,
+                tuple(
+                    path.relative_to(output).as_posix()
+                    for path in sorted(output.rglob("*.c"))
+                ),
+                tuple(
+                    path.relative_to(output).as_posix()
+                    for path in sorted(output.rglob("*.h"))
+                ),
+                ("include", "runtime/include"),
+                "",
+                (
+                    "enum-managed-bytes-payload",
+                    "active-tag-lifecycle",
+                    "shared-mutable-identity",
+                    "generated-executable",
+                ),
+            )
+
+        unity_project = project(outputs["unity"], "enum-bytes-payload-unity")
+        for optimization in ("-O0", "-O2"):
+            report = run_c_fixture_corpus(
+                suite=f"enum-bytes-payload-{optimization[1:].lower()}",
+                projects=(unity_project,),
+                fixture_root=outputs["unity"],
+                build_root=root / f"native-{optimization[1:].lower()}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=(*C11_STRICT_FLAGS, optimization),
+            )
+            validate_report(
+                report, required_coverage=frozenset(unity_project.coverage)
+            )
+
+        sanitizer_project = CFixtureProject(
+            "enum-bytes-payload-sanitized",
+            unity_project.sources,
+            unity_project.headers,
+            unity_project.include_directories,
+            "",
+            (*unity_project.coverage, "asan-ubsan"),
+            link_arguments=("-fsanitize=address,undefined",),
+        )
+        sanitizer_report = run_c_fixture_corpus(
+            suite="enum-bytes-payload-sanitized",
+            projects=(sanitizer_project,),
+            fixture_root=outputs["unity"],
+            build_root=root / "native-sanitized",
+            repository_root=ROOT,
+            requested_toolchain=requested_toolchain,
+            strict_flags=(
+                *C11_STRICT_FLAGS,
+                "-O1",
+                "-g",
+                "-fno-omit-frame-pointer",
+                "-fno-sanitize-recover=all",
+                "-fsanitize=address,undefined",
+            ),
+        )
+        validate_report(
+            sanitizer_report,
+            required_coverage=frozenset(sanitizer_project.coverage),
+        )
+
+        for layout in ("split", "package"):
+            output = outputs[layout]
+            layout_project = project(output, f"enum-bytes-payload-{layout}")
+            report = run_c_fixture_corpus(
+                suite=f"enum-bytes-payload-{layout}",
+                projects=(layout_project,),
+                fixture_root=output,
+                build_root=root / f"native-{layout}",
+                repository_root=ROOT,
+                requested_toolchain=requested_toolchain,
+                strict_flags=C11_STRICT_FLAGS,
+            )
+            validate_report(
+                report, required_coverage=frozenset(layout_project.coverage)
+            )
+
+
 def snapshot_report() -> dict[str, object]:
     return {
         "schemaVersion": 1,
@@ -1385,6 +1692,7 @@ def parse_args(arguments: Iterable[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--toolchain", choices=("auto", "gcc", "clang"), default="auto")
     parser.add_argument("--native-only", action="store_true")
+    parser.add_argument("--bytes-payload-only", action="store_true")
     return parser.parse_args(list(arguments))
 
 
@@ -1399,6 +1707,14 @@ def main(arguments: Iterable[str] = ()) -> int:
             validate(report)
             check_native(report, requested_toolchain=args.toolchain)
             print("enum-lowering: OK: required enum native matrix passed")
+            return 0
+        if args.bytes_payload_only:
+            check_bytes_payload(requested_toolchain=args.toolchain)
+            check_negative_cases()
+            print(
+                "enum-lowering: OK: Bytes payload ownership, active-tag cleanup, "
+                "determinism, native safety, and unsupported-reference rejection passed"
+            )
             return 0
 
         first_payload, first = render("first enum render")
@@ -1418,6 +1734,7 @@ def main(arguments: Iterable[str] = ()) -> int:
         check_production(requested_toolchain=args.toolchain)
         check_string_payload(requested_toolchain=args.toolchain)
         check_managed_class_payload(requested_toolchain=args.toolchain)
+        check_bytes_payload(requested_toolchain=args.toolchain)
         check_negative_cases()
     except (
         EnumLoweringFailure,
@@ -1433,9 +1750,9 @@ def main(arguments: Iterable[str] = ()) -> int:
         "enum-lowering: OK: native and tagged representations, concrete generic "
         "specialization, checked exhaustive matches, finite recursive layout, strict "
         "C11 and C++17 agreement, owned recursive records, cold/warm-server and "
-        "split/package/unity determinism, ASan/UBSan, literal-backed String payloads "
-        "and exact managed-class enum roots/traces across layouts, and fail-closed "
-        "edges passed"
+        "split/package/unity determinism, ASan/UBSan, literal-backed String payloads, "
+        "exact managed-class enum roots/traces, managed Bytes payload ownership "
+        "across layouts, and fail-closed edges passed"
     )
     return 0
 

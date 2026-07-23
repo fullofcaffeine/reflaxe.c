@@ -10,6 +10,7 @@ import reflaxe.c.CompilationContext;
 import reflaxe.c.ast.CAST.CIdentifier;
 import reflaxe.c.ir.HxcIR;
 import reflaxe.c.ir.HxcSourceSpan;
+import reflaxe.c.lowering.CBodyAggregate.CBodyValueKind;
 import reflaxe.c.lowering.CBodyAggregate.CBodyValueType;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeArgument;
 import reflaxe.c.lowering.CGenericSpecialization.CGenericTypeCanonicalizer;
@@ -397,11 +398,11 @@ class CBodyEnumRegistry {
 			for (index in 0...constructor.arguments.length) {
 				final argument = constructor.arguments[index];
 				final valueType = resolveValue(argument.type, field.pos, definition.module, sourcePath, fail, '$node.$caseName.${argument.name}');
-				// String is a Haxe reference type, but the admitted literal-backed view has
-				// program-long storage and copies safely by value. Other direct references
-				// still need an explicit ownership or recursive-layout policy.
-				if (valueType.staticStringIdentity() == null && valueType.arrayValue() == null && valueType.classValue() == null)
-					rejectDirectReference(argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
+				// A payload enum becomes a C tag plus shared union storage. Before a
+				// reference enters that storage, its prepared value category must tell
+				// generated copy and destroy helpers exactly how to keep the active
+				// payload alive. Being represented as a C pointer is not enough.
+				validateReferencePayloadPolicy(valueType, argument.type, field.pos, fail, '$node.$caseName.${argument.name}');
 				if (valueType.spanElement() != null)
 					return rejected(fail, field.pos, '$node.$caseName.${argument.name}:borrowed-span-payload-escape');
 				if (valueType.irType == IRTVoid) {
@@ -423,6 +424,49 @@ class CBodyEnumRegistry {
 		return prepared;
 	}
 
+	/**
+	 * Decide whether a reference-like value can be stored safely in a C enum.
+	 *
+	 * A Haxe enum payload becomes a member of shared C union storage. Only the
+	 * member selected by the enum's tag is alive, so generated copy and destroy
+	 * helpers need an exact lifetime rule for that member. Literal-backed
+	 * `String` values copy directly, `Array` and `Bytes` values use typed
+	 * retain/release operations, and class references use garbage-collector
+	 * roots and tracing. Those are admitted because their rules are implemented.
+	 *
+	 * `StringMap`, interface references, and borrowed C strings are rejected
+	 * here because their enum-specific lifetime rules are not implemented. The
+	 * compiler reports an unsupported-value error instead of emitting C that
+	 * could leak memory, free a still-used value, or access the wrong union
+	 * member. Non-reference categories keep the older source-type check as a
+	 * second guard against an incorrect value classification.
+	 *
+	 * The switch is exhaustive: adding a new `CBodyValueKind` stops this compiler
+	 * from building until enum payload ownership is chosen deliberately.
+	 */
+	function validateReferencePayloadPolicy(valueType:CBodyValueType, sourceType:Type, position:Position, fail:(Position, String) -> Void, node:String):Void {
+		switch valueType.kind {
+			case CBVKStaticString(_) | CBVKArray(_) | CBVKBytes(_) | CBVKOwnedClass(_) | CBVKClass(_, _):
+				return;
+			case CBVKStringMap(_):
+				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
+			case CBVKInterface(_):
+				rejected(fail, position, '$node:reference-policy-not-admitted:${valueType.cSpelling}');
+			case CBVKCString:
+				rejected(fail, position, '$node:borrowed-c-string-payload-escape');
+			case CBVKPrimitive(_) | CBVKFixedArray(_, _, _) | CBVKSpan(_, _) | CBVKImport(_) | CBVKAggregate(_) | CBVKEnum(_) | CBVKOptional(_) |
+				CBVKFunction(_, _):
+				rejectDirectReference(sourceType, position, fail, node);
+		}
+	}
+
+	/**
+	 * Reject source references that reached enum storage without a typed policy.
+	 *
+	 * Primitive and unsupported non-reference shapes are handled by their
+	 * prepared value checks. This second boundary exists to stop an unplanned
+	 * Haxe object or native pointer from being copied through a C union.
+	 */
 	function rejectDirectReference(type:Type, position:Position, fail:(Position, String) -> Void, node:String):Void {
 		switch CPrimitiveTypeMapper.map(type, context.profile) {
 			case CTReference(identity, nullable):
