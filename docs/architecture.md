@@ -50,6 +50,102 @@ Build adapter seeds (E1.T08)
   -> executable-only; full toolchain/export orchestration remains E7/E8
 ```
 
+## How Reflaxe participates
+
+haxe.c does use Reflaxe's compiler base classes. The important distinction is
+that Reflaxe hosts the target and delivers Haxe's typed program; it does not
+decide what correct C means or turn haxe.c's intermediate representation into
+C automatically.
+
+This checkout uses Reflaxe `4.0.0-beta` at exact upstream revision
+`73a983112e039daad46b37912ab238df6bf0cf53`. Its source is committed under
+[`vendor/reflaxe`](../vendor/reflaxe), not downloaded from GitHub or installed
+globally during an ordinary build. Lix resolves the checked-in
+[`haxe_libraries/reflaxe.hxml`](../haxe_libraries/reflaxe.hxml), which adds that
+vendored source directory to Haxe's class path. The toolchain lock and
+[third-party provenance inventory](specs/third-party-provenance.json) retain
+the exact revision and license evidence, so a clean build does not silently
+select a different Reflaxe installation. See the
+[machine-readable toolchain lock](specs/toolchain-lock.json) for the bundle
+tree, file count, and content digest.
+
+The actual inheritance chain is:
+
+```text
+CReflaxeCompiler
+  extends GenericCompiler<Bool, Bool, Bool, Bool, Bool>
+  extends BaseCompiler
+```
+
+[`CReflaxeCompiler`](../src/reflaxe/c/CReflaxeCompiler.hx) is therefore a real
+Reflaxe compiler. The five `Bool` parameters satisfy `GenericCompiler`'s typed
+per-class, per-enum, per-expression, per-typedef, and per-abstract result
+contract. haxe.c does not produce those individual results: its corresponding
+`compile*Impl` methods return `null`, so no `Bool` is emitted. Instead, it
+captures the complete typed program and compiles it as one request. This is a
+deliberate use of the framework's lifecycle, not an attempt to bypass it.
+
+### The lifecycle, one step at a time
+
+1. [`CompilerBootstrap`](../src/reflaxe/c/CompilerBootstrap.hx) verifies that
+   the pinned Reflaxe sources are visible before target initialization. The
+   scoped HXML normally supplies them; the bootstrap can add the same vendored
+   class path when that resolution has not happened yet.
+2. [`CompilerInit`](../src/reflaxe/c/CompilerInit.hx) calls
+   `ReflectCompiler.Start()` and registers one `CReflaxeCompiler` through
+   `ReflectCompiler.AddCompiler(...)`.
+3. Reflaxe receives Haxe's `ModuleType` values after typing. A `ModuleType` is
+   Haxe's typed description of one class, enum, typedef, or abstract.
+4. Reflaxe calls `filterTypes` before its later filters and per-type callbacks.
+   haxe.c uses this earliest hook to preserve the complete program, including
+   declarations and original field expressions that later preprocessing may
+   hide or replace.
+5. `onCompileStart` creates fresh request-local state. This is essential for a
+   compilation server, where several builds can run in the same Haxe process.
+6. Reflaxe still walks its normal class, enum, typedef, and abstract callback
+   lifecycle. Their `compile*Impl` methods deliberately return `null`, as does
+   haxe.c's expression callback if invoked. The target does not build unrelated
+   fragments independently.
+7. `onCompileEnd` gives the captured program to `CCompiler`, which performs the
+   whole-program semantic and C-emission pipeline.
+8. Because the target registered Reflaxe's `Manual` output mode,
+   `generateFilesManually` sends the completed `GeneratedFile` set through
+   [`ReflaxeOutputWriter`](../src/reflaxe/c/emit/ReflaxeOutputWriter.hx). That
+   boundary validates every path and ownership record before delegating saves
+   to Reflaxe's `OutputManager`.
+
+The current vendored framework code that defines these hooks lives in
+[`GenericCompiler.hx`](../vendor/reflaxe/src/reflaxe/GenericCompiler.hx),
+[`BaseCompiler.hx`](../vendor/reflaxe/src/reflaxe/BaseCompiler.hx), and
+[`ReflectCompiler.hx`](../vendor/reflaxe/src/reflaxe/ReflectCompiler.hx).
+Those links are useful when adapting another Reflaxe target: they show the
+framework contract separately from haxe.c's policy.
+
+### Framework responsibility versus target responsibility
+
+| Reflaxe provides | haxe.c owns |
+| --- | --- |
+| Registration and callbacks at Haxe compiler lifecycle boundaries | Which Haxe programs and language forms are admitted |
+| Access to Haxe's typed modules, declarations, fields, and expressions | Whole-program reachability, specialization, representation, ownership, and runtime planning |
+| A typed base-class contract for target compilers | HxcIR construction and independent semantic validation |
+| Common per-type callback scheduling and selected typed-input helpers | HxcIR control-flow structuralization and structural `CAST` construction |
+| `OutputManager`, changed-file avoidance, and stale generated-file ownership | C names, declarations, ABI, headers, sources, build facts, and exact runtime slices |
+| The point at which target output is requested | `CASTPrinter` formatting, escaping, precedence, and final C bytes |
+
+In short, `GenericCompiler` means “a Reflaxe compiler may choose typed result
+types for its callbacks.” It does **not** mean “a generic backend already knows
+how to lower every Haxe operation.” Reflaxe deliberately leaves target
+semantics to the target implementation.
+
+Whole-program ownership matters especially for C. A class representation may
+depend on whether its values escape; a call may require an exact runtime
+feature; one source type may need declarations in several headers and source
+files; and reachable subclasses may determine whether dispatch needs a table.
+Producing one isolated target string in each class callback would either decide
+those facts too early or reconstruct them later from partially generated C.
+Capturing first and lowering once gives the compiler one typed, deterministic
+place to make and validate those decisions.
+
 ## Performance-observation boundary
 
 Compiler profiling is opt-in and must not become hidden process-global state.
@@ -101,6 +197,16 @@ in `_GeneratedFiles.json` is validated as engine activity metadata rather than
 normalized into the compiler-artifact comparison.
 
 ## IR boundary
+
+C is deceptively close to Haxe syntactically, but semantically quite distant.
+Both languages have familiar functions, loops, conditionals, and arithmetic,
+yet the same-looking expression can carry different guarantees. Haxe defines
+language behavior that C syntax alone does not record: evaluation sequence,
+expression-valued control flow, object identity, null behavior, managed
+lifetimes, and cleanup. C also has undefined behavior, meaning some operations
+have no valid result at all when their exact preconditions are violated.
+HxcIR makes these differences explicit and independently checkable before the
+compiler selects C syntax.
 
 The pinned Haxe compiler's `TypedExpr` is already the shared high-level IR. It
 owns typed Haxe meaning and remains the preferred input for discovery,

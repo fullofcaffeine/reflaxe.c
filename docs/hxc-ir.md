@@ -3,7 +3,14 @@
 `HxcIR` is the target-owned semantic layer between normalized Haxe input and
 the structural C AST. Its schema is internal to the compiler: schema version 17
 is deterministic and validation-backed, but it is not a public file format or
-ABI promise. E2.T02 connects real primitive bodies to this layer; E2.T03 adds
+ABI promise.
+
+C is deceptively close to Haxe syntactically, but semantically quite distant.
+HxcIR makes those differences explicit before selecting C syntax. This is why
+the layer records meaning such as evaluation order, ownership, failure, and
+cleanup rather than merely copying the spelling of Haxe expressions.
+
+E2.T02 connects real primitive bodies to this layer; E2.T03 adds
 typed parameters, ordered direct calls, explicit argument conversions, and a
 narrow production C consumer. E2.T04 adds primitive global places plus explicit
 branch/jump graphs for lazy and expression-valued control flow. E2.T05 consumes
